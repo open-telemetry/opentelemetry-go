@@ -115,6 +115,8 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		timeout:  conf.timeout,
 		exporter: exporter,
 		cancel:   cancel,
+
+		temporalitySelector: conf.temporalitySelector,
 	}
 
 	r.wg.Add(1)

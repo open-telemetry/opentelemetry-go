@@ -111,3 +111,31 @@ type ReaderOption interface {
 	ManualReaderOption
 	PeriodicReaderOption
 }
+
+// WithTemporality uses the selector to determine the Temporality measurements
+// from instrument should be recorded with.
+func WithTemporality(selector func(instrument InstrumentKind) Temporality) ReaderOption {
+	return temporalitySelectorOption{selector: selector}
+}
+
+type temporalitySelectorOption struct {
+	selector func(instrument InstrumentKind) Temporality
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualReaderConfig {
+	mrc.temporalitySelector = t.selector
+	return mrc
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (t temporalitySelectorOption) applyPeriodic(prc periodicReaderConfig) periodicReaderConfig {
+	prc.temporalitySelector = t.selector
+	return prc
+}
+
+// defaultTemporalitySelector returns the default Temporality measurements
+// from instrument should be recorded with: cumulative.
+func defaultTemporalitySelector(InstrumentKind) Temporality {
+	return CumulativeTemporality
+}

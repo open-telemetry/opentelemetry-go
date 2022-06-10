@@ -20,15 +20,27 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 // InstrumentKind describes the a kind of instrument.
 type InstrumentKind uint8
 
-// The following represent the different kind of instruments that can be
-// created by the SDK.
+// These are all the instrument kinds supported by the SDK.
 const (
+	// undefinedInstrument is an uninitialized instrument kind, should not be used.
 	//nolint:deadcode,varcheck
 	undefinedInstrument InstrumentKind = iota
+	// SyncCounter is an instrument kind that records increasing values
+	// synchronously in application code.
 	SyncCounter
+	// SyncUpDownCounter is an instrument kind that records increasing and
+	// decreasing values synchronously in application code.
 	SyncUpDownCounter
+	// SyncHistogram is an instrument kind that records a distribution of
+	// values synchronously in application code.
 	SyncHistogram
+	// AsyncCounter is an instrument kind that records increasing values in an
+	// asynchronous callback.
 	AsyncCounter
+	// AsyncUpDownCounter is an instrument kind that records increasing and
+	// decreasing values in an asynchronous callback.
 	AsyncUpDownCounter
+	// AsyncGauge is an instrument kind that records current values in an
+	// asynchronous callback.
 	AsyncGauge
 )
