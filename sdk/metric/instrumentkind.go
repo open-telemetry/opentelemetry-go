@@ -17,7 +17,7 @@
 
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
-// InstrumentKind describes the a kind of instrument.
+// InstrumentKind describes the kind of instrument a Meter can create.
 type InstrumentKind uint8
 
 // These are all the instrument kinds supported by the SDK.
