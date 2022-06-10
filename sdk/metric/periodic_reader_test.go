@@ -184,3 +184,40 @@ func BenchmarkPeriodicReader(b *testing.B) {
 		NewPeriodicReader(new(fnExporter)),
 	))
 }
+
+func TestPeriodiclReaderTemporality(t *testing.T) {
+	tests := []struct {
+		name    string
+		options []PeriodicReaderOption
+		// Currently only testing constant temporality. This should be expanded
+		// if we put more advanced selection in the SDK
+		wantTemporality Temporality
+	}{
+		{
+			name:            "default",
+			wantTemporality: CumulativeTemporality,
+		},
+		{
+			name: "delta",
+			options: []PeriodicReaderOption{
+				WithTemporality(deltaTemporalitySelector),
+			},
+			wantTemporality: DeltaTemporality,
+		},
+		{
+			name: "repeats overwrite",
+			options: []PeriodicReaderOption{
+				WithTemporality(deltaTemporalitySelector),
+				WithTemporality(cumulativeTemporalitySelector),
+			},
+			wantTemporality: CumulativeTemporality,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewPeriodicReader(new(fnExporter), tt.options...)
+			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
+		})
+	}
+}

@@ -37,33 +37,35 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval time.Duration
-	timeout  time.Duration
+	interval            time.Duration
+	timeout             time.Duration
+	temporalitySelector func(InstrumentKind) Temporality
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: defaultInterval,
-		timeout:  defaultTimeout,
+		interval:            defaultInterval,
+		timeout:             defaultTimeout,
+		temporalitySelector: defaultTemporalitySelector,
 	}
 	for _, o := range options {
-		c = o.apply(c)
+		c = o.applyPeriodic(c)
 	}
 	return c
 }
 
 // PeriodicReaderOption applies a configuration option value to a PeriodicReader.
 type PeriodicReaderOption interface {
-	apply(periodicReaderConfig) periodicReaderConfig
+	applyPeriodic(periodicReaderConfig) periodicReaderConfig
 }
 
 // periodicReaderOptionFunc applies a set of options to a periodicReaderConfig.
 type periodicReaderOptionFunc func(periodicReaderConfig) periodicReaderConfig
 
-// apply returns a periodicReaderConfig with option(s) applied.
-func (o periodicReaderOptionFunc) apply(conf periodicReaderConfig) periodicReaderConfig {
+// applyPeriodic returns a periodicReaderConfig with option(s) applied.
+func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) periodicReaderConfig {
 	return o(conf)
 }
 
@@ -113,6 +115,8 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		timeout:  conf.timeout,
 		exporter: exporter,
 		cancel:   cancel,
+
+		temporalitySelector: conf.temporalitySelector,
 	}
 
 	r.wg.Add(1)
@@ -131,6 +135,8 @@ type periodicReader struct {
 
 	timeout  time.Duration
 	exporter Exporter
+
+	temporalitySelector func(InstrumentKind) Temporality
 
 	wg           sync.WaitGroup
 	cancel       context.CancelFunc
@@ -171,6 +177,11 @@ func (r *periodicReader) register(p producer) {
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}
+}
+
+// temporality reports the Temporality for the instrument kind provided.
+func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
+	return r.temporalitySelector(kind)
 }
 
 // Collect gathers and returns all metric data related to the Reader from
