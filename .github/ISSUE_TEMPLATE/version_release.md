@@ -8,6 +8,7 @@ assignees: ''
 ---
 
 <!-- markdownlint-disable MD034 -->
+<!--- The current milestones can be found at https://github.com/open-telemetry/opentelemetry-go/milestones -->
 - [ ] Complete [Milestone](https://github.com/open-telemetry/opentelemetry-go/milestone/<Release Milesone>)
 <!-- markdownlint-enable MD034 -->
 - [ ] Update contrib codebase to support changes about to be released (use a git sha version)
