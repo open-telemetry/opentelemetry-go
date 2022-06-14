@@ -19,6 +19,9 @@ package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
 type Aggregator[N int64 | float64] interface {
+	// Record includes value in the aggregation.
 	Record(value N)
+
+	// Aggregate returns an aggregation of all recorded values.
 	Aggregate() Aggregation
 }
