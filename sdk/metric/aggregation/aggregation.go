@@ -33,38 +33,44 @@ type Aggregation struct {
 	Operation operation
 }
 
+var errAgg = errors.New("aggregation")
+
 // Err returns an error if Aggregation a is invalid, nil otherwise.
 func (a Aggregation) Err() error {
 	if a.Operation == nil {
-		return errors.New("aggregation: unset operation")
+		return fmt.Errorf("%w: unset operation", errAgg)
 	}
-	switch a.Operation.(type) {
+	switch v := a.Operation.(type) {
 	case Drop, Sum, LastValue, ExplicitBucketHistogram:
+		if err := v.err(); err != nil {
+			return fmt.Errorf("%w: %v", errAgg, err)
+		}
 		return nil
 	}
-	return fmt.Errorf("aggregation: unknown %T", a.Operation)
+	return fmt.Errorf("%w: unknown %T", errAgg, a.Operation)
 }
 
 // operation is an aggregation operation. The OTel specification does not
 // allow user-defined aggregations, therefore, this is not exported.
 type operation interface {
-	isOperation()
+	// err returns an error for misconfigured operations.
+	err() error
 }
 
 // Drop drops all data recorded.
 type Drop struct{} // The Drop operation has no parameters.
 
-func (Drop) isOperation() {}
+func (Drop) err() error { return nil }
 
 // Sum summarizes a set of measurements as their arithmetic sum.
 type Sum struct{} // The Sum operation has no parameters.
 
-func (Sum) isOperation() {}
+func (Sum) err() error { return nil }
 
 // LastValues summarizes a set of measurements as the last one made.
 type LastValue struct{} // The LastValue operation has no parameters.
 
-func (LastValue) isOperation() {}
+func (LastValue) err() error { return nil }
 
 // ExplicitBucketHistogram summarizes a set of measurements as an histogram
 // with explicitly defined buckets.
@@ -89,4 +95,18 @@ type ExplicitBucketHistogram struct {
 	RecordMinMax bool
 }
 
-func (ExplicitBucketHistogram) isOperation() {}
+func (h ExplicitBucketHistogram) err() error {
+	// Check boundaries are monotonic.
+	if len(h.Boundaries) <= 1 {
+		return nil
+	}
+
+	i := h.Boundaries[0]
+	for _, j := range h.Boundaries[1:] {
+		if i >= j {
+			return fmt.Errorf("non-monotonic boundaries: %v", h.Boundaries)
+		}
+	}
+
+	return nil
+}
