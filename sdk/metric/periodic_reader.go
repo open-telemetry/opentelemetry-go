@@ -26,6 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -40,6 +41,7 @@ type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector func(InstrumentKind) aggregation.Aggregation
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -49,6 +51,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		interval:            defaultInterval,
 		timeout:             defaultTimeout,
 		temporalitySelector: defaultTemporalitySelector,
+		aggregationSelector: defaultAggregationSelector,
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)

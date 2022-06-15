@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -103,12 +104,14 @@ func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector func(InstrumentKind) aggregation.Aggregation
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.
 func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
 		temporalitySelector: defaultTemporalitySelector,
+		aggregationSelector: defaultAggregationSelector,
 	}
 	for _, opt := range opts {
 		cfg = opt.applyManual(cfg)

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -138,4 +139,42 @@ func (t temporalitySelectorOption) applyPeriodic(prc periodicReaderConfig) perio
 // from instrument should be recorded with: cumulative.
 func defaultTemporalitySelector(InstrumentKind) Temporality {
 	return CumulativeTemporality
+}
+
+func WithAggregation(selector func(InstrumentKind) aggregation.Aggregation) ReaderOption {
+	return aggregationSelectorOption{selector: selector}
+}
+
+type aggregationSelectorOption struct {
+	selector func(InstrumentKind) aggregation.Aggregation
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.aggregationSelector = t.selector
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (t aggregationSelectorOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.aggregationSelector = t.selector
+	return c
+}
+
+// defaultAggregationSelector returns the default aggregation measurements
+// from instrument i should be summarized with.
+func defaultAggregationSelector(i InstrumentKind) aggregation.Aggregation {
+	var a aggregation.Aggregation
+	switch i {
+	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
+		a.Operation = aggregation.Sum{}
+	case AsyncGauge:
+		a.Operation = aggregation.LastValue{}
+	case SyncHistogram:
+		a.Operation = aggregation.ExplicitBucketHistogram{
+			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+			RecordMinMax: true,
+		}
+	}
+	return a
 }
