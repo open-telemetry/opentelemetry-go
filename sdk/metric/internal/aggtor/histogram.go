@@ -17,6 +17,8 @@
 
 package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
 
+import "go.opentelemetry.io/otel/attribute"
+
 // histogramAgg summarizes a set of measurements as an histogram with
 // explicitly defined buckets.
 type histogramAgg[N int64 | float64] struct {
@@ -30,11 +32,15 @@ func NewHistogram[N int64 | float64](zero Number[N], bounds []float64, recordMin
 	return &histogramAgg[N]{}
 }
 
-func (s *histogramAgg[N]) Record(value N) {
+func (s *histogramAgg[N]) Record(value N, attr *attribute.Set) {
 	// TODO: implement.
 }
 
-func (s *histogramAgg[N]) Aggregate() Aggregation {
+func (s *histogramAgg[N]) Aggregate() []Aggregation {
 	// TODO: implement.
-	return Aggregation{Value: HistogramValue{ /* TODO: calculate. */ }}
+	return []Aggregation{
+		{
+			Value: HistogramValue{ /* TODO: calculate. */ },
+		},
+	}
 }

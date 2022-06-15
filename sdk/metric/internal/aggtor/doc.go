@@ -15,6 +15,5 @@
 //go:build go1.18
 // +build go1.18
 
-// Package aggtor provides types and functionality to accumulate and aggregate
-// measurements.
+// Package aggtor provides types and functionality to aggregate measurements.
 package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"

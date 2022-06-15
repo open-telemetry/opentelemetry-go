@@ -17,6 +17,8 @@
 
 package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
 
+import "go.opentelemetry.io/otel/attribute"
+
 // lastValueAgg summarizes a set of measurements as the last one made.
 type lastValueAgg[N int64 | float64] struct {
 	// TODO: implement.
@@ -29,11 +31,15 @@ func NewLastValue[N int64 | float64](zero Number[N]) Aggregator[N] {
 	return &lastValueAgg[N]{}
 }
 
-func (s *lastValueAgg[N]) Record(value N) {
+func (s *lastValueAgg[N]) Record(value N, attr *attribute.Set) {
 	// TODO: implement.
 }
 
-func (s *lastValueAgg[N]) Aggregate() Aggregation {
+func (s *lastValueAgg[N]) Aggregate() []Aggregation {
 	// TODO: implement.
-	return Aggregation{Value: SingleValue[N]{ /* TODO: calculate */ }}
+	return []Aggregation{
+		{
+			Value: SingleValue[N]{ /* TODO: calculate */ },
+		},
+	}
 }

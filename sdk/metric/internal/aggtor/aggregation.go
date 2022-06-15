@@ -20,6 +20,8 @@ package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
 import (
 	"errors"
 	"fmt"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // Aggregation is a single data point in a timeseries that summarizes
@@ -29,6 +31,9 @@ type Aggregation struct {
 	// measurements were made for this time span. The time is represented as a
 	// unix timestamp with nanosecond precision.
 	Timestamp uint64
+
+	// Attributes are the unique dimensions Value describes.
+	Attributes *attribute.Set
 
 	// Value is the summarization of the measurements made.
 	Value value
@@ -40,6 +45,9 @@ var errIncompatible = errors.New("incompatible aggregation")
 func (a Aggregation) Fold(other Aggregation) error {
 	if other.Timestamp > a.Timestamp {
 		a.Timestamp = other.Timestamp
+	}
+	if !a.Attributes.Equals(other.Attributes) {
+		return fmt.Errorf("%w: attributes not equal", errIncompatible)
 	}
 	return a.Value.fold(other.Value)
 }

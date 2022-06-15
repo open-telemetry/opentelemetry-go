@@ -17,6 +17,8 @@
 
 package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
 
+import "go.opentelemetry.io/otel/attribute"
+
 // dropAgg drops all recorded data and returns an empty Aggregation.
 type dropAgg[N int64 | float64] struct{}
 
@@ -24,6 +26,6 @@ type dropAgg[N int64 | float64] struct{}
 // empty Aggregation.
 func NewDrop[N int64 | float64]() Aggregator[N] { return &dropAgg[N]{} }
 
-func (s *dropAgg[N]) Record(value N) {}
+func (s *dropAgg[N]) Record(N, *attribute.Set) {}
 
-func (s *dropAgg[N]) Aggregate() Aggregation { return Aggregation{} }
+func (s *dropAgg[N]) Aggregate() []Aggregation { return nil }
