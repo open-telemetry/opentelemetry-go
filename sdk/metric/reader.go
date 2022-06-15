@@ -141,6 +141,8 @@ func defaultTemporalitySelector(InstrumentKind) Temporality {
 	return CumulativeTemporality
 }
 
+// WithAggregation sets the default aggregation a reader will use for an
+// instrument based on the returned value from the selector.
 func WithAggregation(selector func(InstrumentKind) aggregation.Aggregation) ReaderOption {
 	return aggregationSelectorOption{selector: selector}
 }
