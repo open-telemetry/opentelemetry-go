@@ -141,13 +141,37 @@ func defaultTemporalitySelector(InstrumentKind) Temporality {
 	return CumulativeTemporality
 }
 
+// AggregationSelector selects the aggregation and the parameters to use for
+// that aggregation based on the InstrumentKind.
+type AggregationSelector func(InstrumentKind) aggregation.Aggregation
+
+// DefaultAggregationSelector returns the default aggregation and parameters
+// that will be used to summarize measurement made from an instrument of
+// InstrumentKind. This AggregationSelector using the following selection
+// mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
+// Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
+// Histogram ⇨ ExplicitBucketHistogram.
+var DefaultAggregationSelector AggregationSelector = func(ik InstrumentKind) aggregation.Aggregation {
+	var a aggregation.Aggregation
+	switch ik {
+	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
+		a.Operation = aggregation.Sum{}
+	case AsyncGauge:
+		a.Operation = aggregation.LastValue{}
+	case SyncHistogram:
+		a.Operation = aggregation.ExplicitBucketHistogram{
+			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+			RecordMinMax: true,
+		}
+	}
+	return a
+}
+
 // WithAggregation sets the default aggregation a reader will use for an
 // instrument based on the returned value from the selector. If this option is
-// not used, the reader will use the default selector which uses the following
-// selection mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter
-// ⇨ Sum, Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
-// Histogram ⇨ ExplicitBucketHistogram.
-func WithAggregation(selector func(InstrumentKind) aggregation.Aggregation) ReaderOption {
+// not used, the reader will use the DefaultAggregationSelector or the
+// aggregation explicitly passed for a view matching an instrument.
+func WithAggregationSelector(selector AggregationSelector) ReaderOption {
 	return aggregationSelectorOption{selector: selector}
 }
 
@@ -165,22 +189,4 @@ func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReade
 func (t aggregationSelectorOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
 	c.aggregationSelector = t.selector
 	return c
-}
-
-// defaultAggregationSelector returns the default aggregation measurements
-// from instrument i should be summarized with.
-func defaultAggregationSelector(i InstrumentKind) aggregation.Aggregation {
-	var a aggregation.Aggregation
-	switch i {
-	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
-		a.Operation = aggregation.Sum{}
-	case AsyncGauge:
-		a.Operation = aggregation.LastValue{}
-	case SyncHistogram:
-		a.Operation = aggregation.ExplicitBucketHistogram{
-			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-			RecordMinMax: true,
-		}
-	}
-	return a
 }
