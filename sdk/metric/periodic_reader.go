@@ -51,7 +51,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		interval:            defaultInterval,
 		timeout:             defaultTimeout,
 		temporalitySelector: defaultTemporalitySelector,
-		aggregationSelector: defaultAggregationSelector,
+		aggregationSelector: DefaultAggregationSelector,
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)

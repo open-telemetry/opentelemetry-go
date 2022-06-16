@@ -151,7 +151,7 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
 // Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
-var DefaultAggregationSelector AggregationSelector = func(ik InstrumentKind) aggregation.Aggregation {
+func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	var a aggregation.Aggregation
 	switch ik {
 	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
