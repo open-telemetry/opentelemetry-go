@@ -61,6 +61,14 @@ type Drop struct{} // The Drop operation has no parameters.
 
 func (Drop) err() error { return nil }
 
+// Default selects an aggregation based on the instrument type. It will use
+// the following selection mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum,
+// UpDownCounter ⇨ Sum, Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨
+// LastValue, Histogram ⇨ ExplicitBucketHistogram.
+type Default struct{} // The Default operation has no parameters.
+
+func (Default) err() error { return nil }
+
 // Sum summarizes a set of measurements as their arithmetic sum.
 type Sum struct{} // The Sum operation has no parameters.
 

@@ -142,7 +142,11 @@ func defaultTemporalitySelector(InstrumentKind) Temporality {
 }
 
 // WithAggregation sets the default aggregation a reader will use for an
-// instrument based on the returned value from the selector.
+// instrument based on the returned value from the selector. If this option is
+// not used, the reader will use the default selector which uses the following
+// selection mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter
+// ⇨ Sum, Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
+// Histogram ⇨ ExplicitBucketHistogram.
 func WithAggregation(selector func(InstrumentKind) aggregation.Aggregation) ReaderOption {
 	return aggregationSelectorOption{selector: selector}
 }
