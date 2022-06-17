@@ -59,6 +59,9 @@ type Reader interface {
 	// temporality reports the Temporality for the instrument kind provided.
 	temporality(InstrumentKind) Temporality
 
+	// aggregation returns what Aggregation to use for an instrument kind.
+	aggregation(InstrumentKind) aggregation.Aggregation
+
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
 	Collect(context.Context) (export.Metrics, error)

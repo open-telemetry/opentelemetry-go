@@ -140,6 +140,7 @@ type periodicReader struct {
 	exporter Exporter
 
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector func(InstrumentKind) aggregation.Aggregation
 
 	wg           sync.WaitGroup
 	cancel       context.CancelFunc
@@ -185,6 +186,11 @@ func (r *periodicReader) register(p producer) {
 // temporality reports the Temporality for the instrument kind provided.
 func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
 	return r.temporalitySelector(kind)
+}
+
+// aggregation returns what Aggregation to use for kind.
+func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation {
+	return r.aggregationSelector(kind)
 }
 
 // Collect gathers and returns all metric data related to the Reader from

@@ -35,6 +35,7 @@ type manualReader struct {
 	shutdownOnce sync.Once
 
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector func(InstrumentKind) aggregation.Aggregation
 }
 
 // Compile time check the manualReader implements Reader.
@@ -61,6 +62,11 @@ func (mr *manualReader) register(p producer) {
 // temporality reports the Temporality for the instrument kind provided.
 func (mr *manualReader) temporality(kind InstrumentKind) Temporality {
 	return mr.temporalitySelector(kind)
+}
+
+// aggregation returns what Aggregation to use for kind.
+func (mr *manualReader) aggregation(kind InstrumentKind) aggregation.Aggregation {
+	return mr.aggregationSelector(kind)
 }
 
 // ForceFlush is a no-op, it always returns nil.
