@@ -23,57 +23,36 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type invalidOperation struct {
-	operation
-}
-
 func TestAggregationErr(t *testing.T) {
 	t.Run("DropOperation", func(t *testing.T) {
-		agg := Aggregation{Operation: Drop{}}
-		assert.NoError(t, agg.Err())
+		assert.NoError(t, Drop{}.Err())
 	})
 
 	t.Run("SumOperation", func(t *testing.T) {
-		agg := Aggregation{Operation: Sum{}}
-		assert.NoError(t, agg.Err())
+		assert.NoError(t, Sum{}.Err())
 	})
 
 	t.Run("LastValueOperation", func(t *testing.T) {
-		agg := Aggregation{Operation: LastValue{}}
-		assert.NoError(t, agg.Err())
+		assert.NoError(t, LastValue{}.Err())
 	})
 
 	t.Run("ExplicitBucketHistogramOperation", func(t *testing.T) {
-		agg := Aggregation{Operation: ExplicitBucketHistogram{}}
-		assert.NoError(t, agg.Err())
+		assert.NoError(t, ExplicitBucketHistogram{}.Err())
 
-		agg = Aggregation{Operation: ExplicitBucketHistogram{
+		assert.NoError(t, ExplicitBucketHistogram{
 			Boundaries:   []float64{0},
 			RecordMinMax: true,
-		}}
-		assert.NoError(t, agg.Err())
+		}.Err())
 
-		agg = Aggregation{Operation: ExplicitBucketHistogram{
+		assert.NoError(t, ExplicitBucketHistogram{
 			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 			RecordMinMax: true,
-		}}
-		assert.NoError(t, agg.Err())
-	})
-
-	t.Run("UnsetOperation", func(t *testing.T) {
-		agg := Aggregation{}
-		assert.ErrorIs(t, agg.Err(), errAgg)
-	})
-
-	t.Run("UnknownOperation", func(t *testing.T) {
-		agg := Aggregation{Operation: invalidOperation{}}
-		assert.ErrorIs(t, agg.Err(), errAgg)
+		}.Err())
 	})
 
 	t.Run("NonmonotonicHistogramBoundaries", func(t *testing.T) {
-		agg := Aggregation{Operation: ExplicitBucketHistogram{
+		assert.ErrorIs(t, ExplicitBucketHistogram{
 			Boundaries: []float64{2, 1},
-		}}
-		assert.ErrorIs(t, agg.Err(), errAgg)
+		}.Err(), errAgg)
 	})
 }

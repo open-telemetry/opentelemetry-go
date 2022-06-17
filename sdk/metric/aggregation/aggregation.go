@@ -24,63 +24,75 @@ import (
 	"fmt"
 )
 
-// Aggregation is the aggregation used to summarize recorded measurements.
-type Aggregation struct {
-	// Operation is the kind of operation performed by the aggregation and the
-	// configuration for that operation. This can be Drop, Sum, LastValue, or
-	// ExplicitBucketHistogram.
-	Operation operation
-}
-
+// errAgg is wrapped by misconfigured aggregations.
 var errAgg = errors.New("aggregation")
 
-// Err returns an error if Aggregation a is invalid, nil otherwise.
-func (a Aggregation) Err() error {
-	if a.Operation == nil {
-		return fmt.Errorf("%w: unset operation", errAgg)
-	}
-	switch v := a.Operation.(type) {
-	case Drop, Sum, LastValue, ExplicitBucketHistogram:
-		if err := v.err(); err != nil {
-			return fmt.Errorf("%w: %v", errAgg, err)
-		}
-		return nil
-	}
-	return fmt.Errorf("%w: unknown %T", errAgg, a.Operation)
+// Aggregation is the aggregation used to summarize recorded measurements.
+type Aggregation interface {
+	// private attempts to ensure no user-defined Aggregation are allowed. The
+	// OTel specification does not allow user-defined Aggregation currently.
+	private()
+
+	// Err returns an error for any misconfigured Aggregation.
+	Err() error
 }
 
-// operation is an aggregation operation. The OTel specification does not
-// allow user-defined aggregations, therefore, this is not exported.
-type operation interface {
-	// err returns an error for misconfigured operations.
-	err() error
-}
+// Drop is an aggregation that drops all recorded data.
+type Drop struct{} // Drop has no parameters.
 
-// Drop drops all data recorded.
-type Drop struct{} // The Drop operation has no parameters.
+var _ Aggregation = Drop{}
 
-func (Drop) err() error { return nil }
+func (Drop) private() {}
 
-// Default selects an aggregation based on the instrument type. It will use
-// the following selection mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum,
+// Err returns an error for any misconfiguration. A Drop aggregation has no
+// parameters and cannot be misconfigured, therefore this always returns nil.
+func (Drop) Err() error { return nil }
+
+// Default is an aggregation that uses the default instrument kind selection
+// mapping to select another aggregation. A metric reader can be configured to
+// make an aggregation selection based on instrument kind that differs from
+// the default selection mapping. This aggregation ensures that the default
+// instrument kind mapping. The default instrument kind mapping uses the
+// following selection: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum,
 // UpDownCounter ⇨ Sum, Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨
 // LastValue, Histogram ⇨ ExplicitBucketHistogram.
-type Default struct{} // The Default operation has no parameters.
+type Default struct{} // Default has no parameters.
 
-func (Default) err() error { return nil }
+var _ Aggregation = Default{}
 
-// Sum summarizes a set of measurements as their arithmetic sum.
-type Sum struct{} // The Sum operation has no parameters.
+func (Default) private() {}
 
-func (Sum) err() error { return nil }
+// Err returns an error for any misconfiguration. A Default aggregation has no
+// parameters and cannot be misconfigured, therefore this always returns nil.
+func (Default) Err() error { return nil }
 
-// LastValues summarizes a set of measurements as the last one made.
-type LastValue struct{} // The LastValue operation has no parameters.
+// Sum is an aggregation that summarizes a set of measurements as their
+// arithmetic sum.
+type Sum struct{} // Sum has no parameters.
 
-func (LastValue) err() error { return nil }
+var _ Aggregation = Sum{}
 
-// ExplicitBucketHistogram summarizes a set of measurements as an histogram
-// with explicitly defined buckets.
+func (Sum) private() {}
+
+// Err returns an error for any misconfiguration. A Sum aggregation has no
+// parameters and cannot be misconfigured, therefore this always returns nil.
+func (Sum) Err() error { return nil }
+
+// LastValue is an aggregation that summarizes a set of measurements as the
+// last one made.
+type LastValue struct{} // LastValue has no parameters.
+
+var _ Aggregation = LastValue{}
+
+func (LastValue) private() {}
+
+// Err returns an error for any misconfiguration. A LastValue aggregation has
+// no parameters and cannot be misconfigured, therefore this always returns
+// nil.
+func (LastValue) Err() error { return nil }
+
+// ExplicitBucketHistogram is an aggregation that summarizes a set of
+// measurements as an histogram with explicitly defined buckets.
 type ExplicitBucketHistogram struct {
 	// Boundaries are the increasing bucket boundary values. Boundary values
 	// define bucket upper bounds. Buckets are exclusive of their lower
@@ -102,7 +114,15 @@ type ExplicitBucketHistogram struct {
 	RecordMinMax bool
 }
 
-func (h ExplicitBucketHistogram) err() error {
+var _ Aggregation = ExplicitBucketHistogram{}
+
+func (ExplicitBucketHistogram) private() {}
+
+// errHist is returned by misconfigured ExplicitBucketHistograms.
+var errHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
+
+// Err returns an error for any misconfiguration.
+func (h ExplicitBucketHistogram) Err() error {
 	// Check boundaries are monotonic.
 	if len(h.Boundaries) <= 1 {
 		return nil
@@ -111,7 +131,7 @@ func (h ExplicitBucketHistogram) err() error {
 	i := h.Boundaries[0]
 	for _, j := range h.Boundaries[1:] {
 		if i >= j {
-			return fmt.Errorf("non-monotonic boundaries: %v", h.Boundaries)
+			return fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, h.Boundaries)
 		}
 	}
 

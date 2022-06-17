@@ -152,19 +152,18 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
 func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
-	var a aggregation.Aggregation
 	switch ik {
 	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
-		a.Operation = aggregation.Sum{}
+		return aggregation.Sum{}
 	case AsyncGauge:
-		a.Operation = aggregation.LastValue{}
+		return aggregation.LastValue{}
 	case SyncHistogram:
-		a.Operation = aggregation.ExplicitBucketHistogram{
+		return aggregation.ExplicitBucketHistogram{
 			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 			RecordMinMax: true,
 		}
 	}
-	return a
+	panic("unknown instrument kind")
 }
 
 // WithAggregation sets the default aggregation a reader will use for an

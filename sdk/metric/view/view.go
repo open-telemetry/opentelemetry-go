@@ -81,7 +81,7 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 	if v.description != "" {
 		inst.Description = v.description
 	}
-	if v.agg.Operation != nil {
+	if v.agg != nil {
 		inst.Aggregation = v.agg
 	}
 	return inst, true
