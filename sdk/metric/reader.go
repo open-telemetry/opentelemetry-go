@@ -61,7 +61,7 @@ type Reader interface {
 	temporality(InstrumentKind) Temporality
 
 	// aggregation returns what Aggregation to use for an instrument kind.
-	aggregation(InstrumentKind) aggregation.Aggregation
+	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.

@@ -41,7 +41,7 @@ type reader struct {
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation {
+func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationFunc(kind)
 }
 

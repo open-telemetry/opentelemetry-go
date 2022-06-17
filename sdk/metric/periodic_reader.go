@@ -190,7 +190,7 @@ func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation {
+func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationSelector(kind)
 }
 
