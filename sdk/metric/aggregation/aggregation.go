@@ -57,11 +57,10 @@ func (Drop) Err() error { return nil }
 // Default is an aggregation that uses the default instrument kind selection
 // mapping to select another aggregation. A metric reader can be configured to
 // make an aggregation selection based on instrument kind that differs from
-// the default selection mapping. This aggregation ensures that the default
-// instrument kind mapping. The default instrument kind mapping uses the
-// following selection: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum,
-// UpDownCounter ⇨ Sum, Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨
-// LastValue, Histogram ⇨ ExplicitBucketHistogram.
+// the default. This aggregation ensures the default is used.
+//
+// See the "go.opentelemetry.io/otel/sdk/metric".DefaultAggregationSelector
+// for information about the default instrument kind selection mapping.
 type Default struct{} // Default has no parameters.
 
 var _ Aggregation = Default{}
