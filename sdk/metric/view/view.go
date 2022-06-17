@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
@@ -206,9 +207,17 @@ func WithFilterAttributes(keys ...attribute.Key) Option {
 // WithSetAggregation will use the aggregation a for matching instruments. If
 // this option is not provided, the reader defined aggregation for the
 // instrument will be used.
+//
+// If a is misconfigured, it will not be used and an error will be logged.
 func WithSetAggregation(a aggregation.Aggregation) Option {
+	cpA := a.Copy()
+	if err := cpA.Err(); err != nil {
+		global.Error(err, "not using aggregation with view", "aggregation", a)
+		return optionFunc(func(v View) View { return v })
+	}
+
 	return optionFunc(func(v View) View {
-		v.agg = a
+		v.agg = cpA
 		return v
 	})
 }

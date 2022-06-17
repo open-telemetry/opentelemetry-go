@@ -33,6 +33,9 @@ type Aggregation interface {
 	// OTel specification does not allow user-defined Aggregation currently.
 	private()
 
+	// Copy returns a deep copy of the Aggregation.
+	Copy() Aggregation
+
 	// Err returns an error for any misconfigured Aggregation.
 	Err() error
 }
@@ -43,6 +46,9 @@ type Drop struct{} // Drop has no parameters.
 var _ Aggregation = Drop{}
 
 func (Drop) private() {}
+
+// Copy returns a deep copy of d.
+func (d Drop) Copy() Aggregation { return d }
 
 // Err returns an error for any misconfiguration. A Drop aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
@@ -62,6 +68,9 @@ var _ Aggregation = Default{}
 
 func (Default) private() {}
 
+// Copy returns a deep copy of d.
+func (d Default) Copy() Aggregation { return d }
+
 // Err returns an error for any misconfiguration. A Default aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
 func (Default) Err() error { return nil }
@@ -74,6 +83,9 @@ var _ Aggregation = Sum{}
 
 func (Sum) private() {}
 
+// Copy returns a deep copy of s.
+func (s Sum) Copy() Aggregation { return s }
+
 // Err returns an error for any misconfiguration. A Sum aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
 func (Sum) Err() error { return nil }
@@ -85,6 +97,9 @@ type LastValue struct{} // LastValue has no parameters.
 var _ Aggregation = LastValue{}
 
 func (LastValue) private() {}
+
+// Copy returns a deep copy of l.
+func (l LastValue) Copy() Aggregation { return l }
 
 // Err returns an error for any misconfiguration. A LastValue aggregation has
 // no parameters and cannot be misconfigured, therefore this always returns
@@ -140,7 +155,7 @@ func (h ExplicitBucketHistogram) Err() error {
 }
 
 // Copy returns a deep copy of h.
-func (h ExplicitBucketHistogram) Copy() ExplicitBucketHistogram {
+func (h ExplicitBucketHistogram) Copy() Aggregation {
 	b := make([]float64, len(h.Boundaries))
 	for i, v := range h.Boundaries {
 		b[i] = v

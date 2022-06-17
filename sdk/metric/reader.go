@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
@@ -174,7 +175,22 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 // not used, the reader will use the DefaultAggregationSelector or the
 // aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ReaderOption {
-	return aggregationSelectorOption{selector: selector}
+	// Deep copy and validate before using.
+	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
+		a := selector(ik)
+		cpA := a.Copy()
+		if err := cpA.Err(); err != nil {
+			cpA = DefaultAggregationSelector(ik)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", a,
+				"replacement", cpA,
+			)
+		}
+		return cpA
+	}
+
+	return aggregationSelectorOption{selector: wrapped}
 }
 
 type aggregationSelectorOption struct {
