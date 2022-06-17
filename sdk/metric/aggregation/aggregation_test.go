@@ -59,3 +59,12 @@ func TestAggregationErr(t *testing.T) {
 		}.Err(), errAgg)
 	})
 }
+
+func TestExplicitBucketHistogramDeepCopy(t *testing.T) {
+	const orig = 0.0
+	b := []float64{orig}
+	h := ExplicitBucketHistogram{Boundaries: b}
+	cpH := h.Copy().(ExplicitBucketHistogram)
+	b[0] = orig + 1
+	assert.Equal(t, orig, cpH.Boundaries[0], "changing the underlying slice data should not affect the copy")
+}
