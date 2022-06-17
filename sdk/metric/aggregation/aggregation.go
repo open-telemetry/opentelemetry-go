@@ -123,17 +123,30 @@ var errHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
 
 // Err returns an error for any misconfiguration.
 func (h ExplicitBucketHistogram) Err() error {
-	// Check boundaries are monotonic.
 	if len(h.Boundaries) <= 1 {
 		return nil
 	}
 
+	// Check boundaries are monotonic.
 	i := h.Boundaries[0]
 	for _, j := range h.Boundaries[1:] {
 		if i >= j {
 			return fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, h.Boundaries)
 		}
+		i = j
 	}
 
 	return nil
+}
+
+// Copy returns a deep copy of h.
+func (h ExplicitBucketHistogram) Copy() ExplicitBucketHistogram {
+	b := make([]float64, len(h.Boundaries))
+	for i, v := range h.Boundaries {
+		b[i] = v
+	}
+	return ExplicitBucketHistogram{
+		Boundaries:   b,
+		RecordMinMax: h.RecordMinMax,
+	}
 }
