@@ -178,7 +178,7 @@ func WithAggregationSelector(selector AggregationSelector) ReaderOption {
 }
 
 type aggregationSelectorOption struct {
-	selector func(InstrumentKind) aggregation.Aggregation
+	selector AggregationSelector
 }
 
 // applyManual returns a manualReaderConfig with option applied.

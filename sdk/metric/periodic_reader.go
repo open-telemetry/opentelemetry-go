@@ -41,7 +41,7 @@ type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
 	temporalitySelector func(InstrumentKind) Temporality
-	aggregationSelector func(InstrumentKind) aggregation.Aggregation
+	aggregationSelector AggregationSelector
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -120,6 +120,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		cancel:   cancel,
 
 		temporalitySelector: conf.temporalitySelector,
+		aggregationSelector: conf.aggregationSelector,
 	}
 
 	r.wg.Add(1)
@@ -140,7 +141,7 @@ type periodicReader struct {
 	exporter Exporter
 
 	temporalitySelector func(InstrumentKind) Temporality
-	aggregationSelector func(InstrumentKind) aggregation.Aggregation
+	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
 	cancel       context.CancelFunc

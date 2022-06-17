@@ -35,7 +35,7 @@ type manualReader struct {
 	shutdownOnce sync.Once
 
 	temporalitySelector func(InstrumentKind) Temporality
-	aggregationSelector func(InstrumentKind) aggregation.Aggregation
+	aggregationSelector AggregationSelector
 }
 
 // Compile time check the manualReader implements Reader.
@@ -46,6 +46,7 @@ func NewManualReader(opts ...ManualReaderOption) Reader {
 	cfg := newManualReaderConfig(opts)
 	return &manualReader{
 		temporalitySelector: cfg.temporalitySelector,
+		aggregationSelector: cfg.aggregationSelector,
 	}
 }
 
@@ -110,7 +111,7 @@ func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
 	temporalitySelector func(InstrumentKind) Temporality
-	aggregationSelector func(InstrumentKind) aggregation.Aggregation
+	aggregationSelector AggregationSelector
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.

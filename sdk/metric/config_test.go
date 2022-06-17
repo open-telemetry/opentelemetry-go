@@ -33,7 +33,7 @@ import (
 type reader struct {
 	producer        producer
 	temporalityFunc func(InstrumentKind) Temporality
-	aggregationFunc func(InstrumentKind) aggregation.Aggregation
+	aggregationFunc AggregationSelector
 	collectFunc     func(context.Context) (export.Metrics, error)
 	forceFlushFunc  func(context.Context) error
 	shutdownFunc    func(context.Context) error
