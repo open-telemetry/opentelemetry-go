@@ -162,8 +162,8 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 		return aggregation.LastValue{}
 	case SyncHistogram:
 		return aggregation.ExplicitBucketHistogram{
-			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-			RecordMinMax: true,
+			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+			NoMinMax:   false,
 		}
 	}
 	panic("unknown instrument kind")

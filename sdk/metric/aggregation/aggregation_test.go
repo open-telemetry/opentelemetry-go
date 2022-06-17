@@ -40,13 +40,12 @@ func TestAggregationErr(t *testing.T) {
 		assert.NoError(t, ExplicitBucketHistogram{}.Err())
 
 		assert.NoError(t, ExplicitBucketHistogram{
-			Boundaries:   []float64{0},
-			RecordMinMax: true,
+			Boundaries: []float64{0},
+			NoMinMax:   true,
 		}.Err())
 
 		assert.NoError(t, ExplicitBucketHistogram{
-			Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-			RecordMinMax: true,
+			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 		}.Err())
 	})
 

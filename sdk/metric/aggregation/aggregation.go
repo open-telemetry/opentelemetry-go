@@ -109,9 +109,9 @@ type ExplicitBucketHistogram struct {
 	// (50.0, 75.0], (75.0, 100.0], (100.0, 250.0], (250.0, 500.0],
 	// (500.0, 1000.0], (1000.0, +∞)
 	Boundaries []float64
-	// RecordMinMax indicates whether to record the min and max of the
-	// distribution.
-	RecordMinMax bool
+	// NoMinMax indicates whether to not record the min and max of the
+	// distribution. By default, these extremes are recorded.
+	NoMinMax bool
 }
 
 var _ Aggregation = ExplicitBucketHistogram{}
@@ -146,7 +146,7 @@ func (h ExplicitBucketHistogram) Copy() ExplicitBucketHistogram {
 		b[i] = v
 	}
 	return ExplicitBucketHistogram{
-		Boundaries:   b,
-		RecordMinMax: h.RecordMinMax,
+		Boundaries: b,
+		NoMinMax:   h.NoMinMax,
 	}
 }
