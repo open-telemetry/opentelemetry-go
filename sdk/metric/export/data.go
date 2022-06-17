@@ -103,10 +103,12 @@ type Value interface {
 	privateValue()
 }
 
+// Int64 is a container for an int64 value.
 type Int64 int64
 
 func (Int64) privateValue() {}
 
+// Float64 is a container for a float64 value.
 type Float64 float64
 
 func (Float64) privateValue() {}
@@ -114,7 +116,7 @@ func (Float64) privateValue() {}
 // Histogram represents the histogram of all measurements of values from an instrument.
 type Histogram struct {
 	// DataPoints reprents individual aggregated measurements with unique Attributes.
-	DataPoints []HistogramDataPoints
+	DataPoints []HistogramDataPoint
 	// Temporality describes if the aggregation is reported as the change from the
 	// last report time, or the cumulative changes since a fixed start time.
 	Temporality Temporality
@@ -122,7 +124,8 @@ type Histogram struct {
 
 func (Histogram) privateAggregation() {}
 
-type HistogramDataPoints struct {
+// HistogramDataPoint is a single histogram data point in a timeseries.
+type HistogramDataPoint struct {
 	// Attributes is the set of key value pairs that uniquely identify the timeseries.
 	Attributes []attribute.KeyValue
 	// StartTime is when the timeseries was started. (optional)
