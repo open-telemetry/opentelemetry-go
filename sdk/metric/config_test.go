@@ -32,18 +32,20 @@ import (
 type reader struct {
 	producer        producer
 	temporalityFunc func(InstrumentKind) Temporality
-	collectFunc     func(context.Context) (export.Metrics, error)
+	collectFunc     func(context.Context) (export.ResourceMetrics, error)
 	forceFlushFunc  func(context.Context) error
 	shutdownFunc    func(context.Context) error
 }
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) register(p producer)                                 { r.producer = p }
-func (r *reader) temporality(kind InstrumentKind) Temporality         { return r.temporalityFunc(kind) }
-func (r *reader) Collect(ctx context.Context) (export.Metrics, error) { return r.collectFunc(ctx) }
-func (r *reader) ForceFlush(ctx context.Context) error                { return r.forceFlushFunc(ctx) }
-func (r *reader) Shutdown(ctx context.Context) error                  { return r.shutdownFunc(ctx) }
+func (r *reader) register(p producer)                         { r.producer = p }
+func (r *reader) temporality(kind InstrumentKind) Temporality { return r.temporalityFunc(kind) }
+func (r *reader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
+	return r.collectFunc(ctx)
+}
+func (r *reader) ForceFlush(ctx context.Context) error { return r.forceFlushFunc(ctx) }
+func (r *reader) Shutdown(ctx context.Context) error   { return r.shutdownFunc(ctx) }
 
 func TestConfigReaderSignalsEmpty(t *testing.T) {
 	f, s := config{}.readerSignals()

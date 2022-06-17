@@ -20,6 +20,126 @@
 
 package export // import "go.opentelemetry.io/otel/sdk/metric/export"
 
-// Metrics is the result of a single collection.
-type Metrics struct { /* TODO: implement #2889 */
+import (
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+// ResourceMetrics is a collection of ScopeMetrics and the associated Resource
+// that created them.
+type ResourceMetrics struct {
+	// Resource represents the entity that collected the metrics.
+	Resource *resource.Resource
+	// ScopeMetrics are the collection of metrics with unique Scopes.
+	ScopeMetrics []ScopeMetrics
+}
+
+// ScopeMetrics is a collection of Metrics Produces by a Meter.
+type ScopeMetrics struct {
+	// Scope is the Scope that the Meter was created with.
+	Scope instrumentation.Library
+	// Metrics are a list of aggregations created by the Meter.
+	Metrics []Metrics
+}
+
+// Metrics is a collection of one or more aggregated timeseries from an Instrument.
+type Metrics struct {
+	// Name is the name of the Instrument that created this data.
+	Name string
+	// Description is the description of the Instrument, which can be used in documentation.
+	Description string
+	// Unit is the unit in which the Instrument reports.
+	Unit string
+	// Data is the aggregated data from an Instrument.
+	Data Aggregation
+}
+
+// Aggregation is the store of data reported by an Instrument.
+// It will be one of: Gauge, Sum Histogram.
+// TODO: Add ExponentialHistogram and Summary when supported.
+type Aggregation interface {
+	privateAggregation()
+}
+
+// Gauge represents a measurement of the current value of an instrument.
+type Gauge struct {
+	// DataPoints reprents individual aggregated measurements with unique Attributes.
+	DataPoints []DataPoint
+}
+
+func (Gauge) privateAggregation() {}
+
+// Sum represents the sum of all measurements of values from an instrument.
+type Sum struct {
+	// DataPoints reprents individual aggregated measurements with unique Attributes.
+	DataPoints []DataPoint
+	// Temporality describes if the aggregation is reported as the change from the
+	// last report time, or the cumulative changes since a fixed start time.
+	Temporality Temporality
+	// IsMonotonic represents if this aggregation should only increase or decrease.
+	IsMonotonic bool
+}
+
+func (Sum) privateAggregation() {}
+
+// DataPoint is a single data point in a timeseries.
+type DataPoint struct {
+	// Attributes is the set of key value pairs that uniquely identify the timeseries.
+	Attributes []attribute.KeyValue
+	// StartTime is when the timeseries was started. (optional)
+	StartTime time.Time
+	// Time is the time when the timeseries was recorded. (optional)
+	Time time.Time
+	// Value is the of this data point.
+	Value Value
+}
+
+// Value is a int64 or float64. All Values created by the sdk will be either
+// Int64 or Float64.
+type Value interface {
+	privateValue()
+}
+
+type Int64 int64
+
+func (Int64) privateValue() {}
+
+type Float64 float64
+
+func (Float64) privateValue() {}
+
+// Histogram represents the histogram of all measurements of values from an instrument.
+type Histogram struct {
+	// DataPoints reprents individual aggregated measurements with unique Attributes.
+	DataPoints []HistogramDataPoints
+	// Temporality describes if the aggregation is reported as the change from the
+	// last report time, or the cumulative changes since a fixed start time.
+	Temporality Temporality
+}
+
+func (Histogram) privateAggregation() {}
+
+type HistogramDataPoints struct {
+	// Attributes is the set of key value pairs that uniquely identify the timeseries.
+	Attributes []attribute.KeyValue
+	// StartTime is when the timeseries was started. (optional)
+	StartTime time.Time
+	// Time is the time when the timeseries was recorded. (optional)
+	Time time.Time
+
+	// Count is the number of updates this histogram has been calculated with.
+	Count uint64
+	// Bounds are the upper bounds of the buckets of the histogram. Because the
+	// last boundary is +infinity this one is implied.
+	Bounds []float64
+	// BucketCounts is the count of each of the buckets.
+	BucketCounts []uint64
+
+	// Min is the minimum value recorded.
+	Min float64
+	// Max is the maximum value recorded.
+	Max float64
 }

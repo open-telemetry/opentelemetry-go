@@ -82,10 +82,10 @@ func (mr *manualReader) Shutdown(context.Context) error {
 
 // Collect gathers all metrics from the SDK, calling any callbacks necessary.
 // Collect will return an error if called after shutdown.
-func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
+func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
 	p := mr.producer.Load()
 	if p == nil {
-		return export.Metrics{}, ErrReaderNotRegistered
+		return export.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -95,8 +95,9 @@ func (mr *manualReader) Collect(ctx context.Context) (export.Metrics, error) {
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
-		return export.Metrics{}, err
+		return export.ResourceMetrics{}, err
 	}
+
 	return ph.produce(ctx)
 }
 

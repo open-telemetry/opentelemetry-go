@@ -189,10 +189,10 @@ func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (export.Metrics, error) {
+func (r *periodicReader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
 	p := r.producer.Load()
 	if p == nil {
-		return export.Metrics{}, ErrReaderNotRegistered
+		return export.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -202,7 +202,7 @@ func (r *periodicReader) Collect(ctx context.Context) (export.Metrics, error) {
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return export.Metrics{}, err
+		return export.ResourceMetrics{}, err
 	}
 	return ph.produce(ctx)
 }
