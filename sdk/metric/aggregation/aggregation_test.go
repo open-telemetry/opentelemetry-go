@@ -54,5 +54,9 @@ func TestAggregationErr(t *testing.T) {
 		assert.ErrorIs(t, ExplicitBucketHistogram{
 			Boundaries: []float64{2, 1},
 		}.Err(), errAgg)
+
+		assert.ErrorIs(t, ExplicitBucketHistogram{
+			Boundaries: []float64{0, 1, 2, 1, 3, 4},
+		}.Err(), errAgg)
 	})
 }
