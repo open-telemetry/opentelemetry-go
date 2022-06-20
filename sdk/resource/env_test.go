@@ -43,7 +43,7 @@ func TestDetectOnePair(t *testing.T) {
 func TestDetectMultiPairs(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		"x":             "1",
-		resourceAttrKey: "key=value, k = v , a= x, a=z",
+		resourceAttrKey: "key=value, k = v , a= x, a=z, b=c%2Fd",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -51,12 +51,13 @@ func TestDetectMultiPairs(t *testing.T) {
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, NewSchemaless(
+	assert.Equal(t, NewSchemaless(
 		attribute.String("key", "value"),
 		attribute.String("k", "v"),
 		attribute.String("a", "x"),
 		attribute.String("a", "z"),
-	))
+		attribute.String("b", "c/d"),
+	), res)
 }
 
 func TestEmpty(t *testing.T) {

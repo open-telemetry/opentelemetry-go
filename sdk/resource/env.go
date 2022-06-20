@@ -17,6 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -88,7 +89,12 @@ func constructOTResources(s string) (*Resource, error) {
 			invalid = append(invalid, p)
 			continue
 		}
-		k, v := strings.TrimSpace(field[0]), strings.TrimSpace(field[1])
+		k := strings.TrimSpace(field[0])
+		v, err := url.QueryUnescape(strings.TrimSpace(field[1]))
+		if err != nil {
+			// Retain original value if decoding fails.
+			v = field[1]
+		}
 		attrs = append(attrs, attribute.String(k, v))
 	}
 	var err error
