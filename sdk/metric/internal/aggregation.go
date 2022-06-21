@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
 	"errors"

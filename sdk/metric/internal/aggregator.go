@@ -15,17 +15,15 @@
 //go:build go1.18
 // +build go1.18
 
-package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import "go.opentelemetry.io/otel/attribute"
 
-// dropAgg drops all recorded data and returns an empty Aggregation.
-type dropAgg[N int64 | float64] struct{}
+// Aggregator forms an aggregation from a collection of recorded measurements.
+type Aggregator[N int64 | float64] interface {
+	// Record includes value scoped by attr in the aggregation.
+	Record(value N, attr *attribute.Set)
 
-// NewDrop returns an Aggregator that drops all recorded data and returns an
-// empty Aggregation.
-func NewDrop[N int64 | float64]() Aggregator[N] { return &dropAgg[N]{} }
-
-func (s *dropAgg[N]) Record(N, *attribute.Set) {}
-
-func (s *dropAgg[N]) Aggregate() []Aggregation { return nil }
+	// Aggregate returns aggregations of all recorded values.
+	Aggregate() []Aggregation
+}

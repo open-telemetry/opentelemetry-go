@@ -15,15 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
-
-import "go.opentelemetry.io/otel/attribute"
-
-// Aggregator forms an aggregation from a collection of recorded measurements.
-type Aggregator[N int64 | float64] interface {
-	// Record includes value scoped by attr in the aggregation.
-	Record(value N, attr *attribute.Set)
-
-	// Aggregate returns aggregations of all recorded values.
-	Aggregate() []Aggregation
-}
+// Package internal provides types and functionality used to aggregate and
+// cycle the state of metric measurements made by the SDK. These types and
+// functionality are meant only for internal SDK use.
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"

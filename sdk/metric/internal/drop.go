@@ -15,5 +15,17 @@
 //go:build go1.18
 // +build go1.18
 
-// Package aggtor provides types and functionality to aggregate measurements.
-package aggtor // import "go.opentelemetry.io/otel/sdk/metric/internal/aggtor"
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
+
+import "go.opentelemetry.io/otel/attribute"
+
+// dropAgg drops all recorded data and returns an empty Aggregation.
+type dropAgg[N int64 | float64] struct{}
+
+// NewDrop returns an Aggregator that drops all recorded data and returns an
+// empty Aggregation.
+func NewDrop[N int64 | float64]() Aggregator[N] { return &dropAgg[N]{} }
+
+func (s *dropAgg[N]) Record(N, *attribute.Set) {}
+
+func (s *dropAgg[N]) Aggregate() []Aggregation { return nil }
