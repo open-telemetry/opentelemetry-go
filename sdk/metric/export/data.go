@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -52,14 +53,13 @@ type Metrics struct {
 	// Description is the description of the Instrument, which can be used in documentation.
 	Description string
 	// Unit is the unit in which the Instrument reports.
-	Unit string
+	Unit unit.Unit
 	// Data is the aggregated data from an Instrument.
 	Data Aggregation
 }
 
 // Aggregation is the store of data reported by an Instrument.
 // It will be one of: Gauge, Sum Histogram.
-// TODO: Add ExponentialHistogram and Summary when supported.
 type Aggregation interface {
 	privateAggregation()
 }
@@ -145,4 +145,6 @@ type HistogramDataPoint struct {
 	Min float64
 	// Max is the maximum value recorded. (optional)
 	Max float64
+	// Sum is the sum of the values recorded. (optional)
+	Sum float64
 }
