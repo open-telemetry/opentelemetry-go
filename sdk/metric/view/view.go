@@ -23,7 +23,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 // View provides users with the flexibility to customize the metrics that are
@@ -43,7 +45,7 @@ type View struct {
 	filter      attribute.Filter
 	name        string
 	description string
-	// TODO: Aggregation selection
+	agg         aggregation.Aggregation
 }
 
 // New returns a new configured View. If there are any duplicate Options passed,
@@ -79,6 +81,9 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 	}
 	if v.description != "" {
 		inst.Description = v.description
+	}
+	if v.agg != nil {
+		inst.Aggregation = v.agg
 	}
 	return inst, true
 }
@@ -199,4 +204,20 @@ func WithFilterAttributes(keys ...attribute.Key) Option {
 	})
 }
 
-// TODO (#2816): Implement when WithAggregation when Aggregations are defined
+// WithSetAggregation will use the aggregation a for matching instruments. If
+// this option is not provided, the reader defined aggregation for the
+// instrument will be used.
+//
+// If a is misconfigured, it will not be used and an error will be logged.
+func WithSetAggregation(a aggregation.Aggregation) Option {
+	cpA := a.Copy()
+	if err := cpA.Err(); err != nil {
+		global.Error(err, "not using aggregation with view", "aggregation", a)
+		return optionFunc(func(v View) View { return v })
+	}
+
+	return optionFunc(func(v View) View {
+		v.agg = cpA
+		return v
+	})
+}
