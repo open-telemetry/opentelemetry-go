@@ -37,6 +37,9 @@ type Atomic[N int64 | float64] interface {
 	Clone() Atomic[N]
 }
 
+// Int64 is an int64 implementation of an Atomic.
+//
+// An Int64 must not be copied.
 type Int64 struct {
 	value *int64
 }
@@ -54,6 +57,9 @@ func (v Int64) Clone() Atomic[int64] {
 	return NewInt64(v.Load())
 }
 
+// Float64 is a float64 implementation of an Atomic.
+//
+// An Float64 must not be copied.
 type Float64 struct {
 	value *uint64
 }
