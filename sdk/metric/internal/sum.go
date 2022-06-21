@@ -32,11 +32,11 @@ func NewSum[N int64 | float64](zero Number[N]) Aggregator[N] {
 	return &sumAgg[N]{}
 }
 
-func (s *sumAgg[N]) Record(value N, attr *attribute.Set) {
+func (s *sumAgg[N]) Aggregate(value N, attr *attribute.Set) {
 	// TODO: implement.
 }
 
-func (s *sumAgg[N]) Aggregate() []Aggregation {
+func (s *sumAgg[N]) flush() []Aggregation {
 	// TODO: implement.
 	return []Aggregation{
 		{

@@ -31,11 +31,11 @@ func NewLastValue[N int64 | float64](zero Number[N]) Aggregator[N] {
 	return &lastValueAgg[N]{}
 }
 
-func (s *lastValueAgg[N]) Record(value N, attr *attribute.Set) {
+func (s *lastValueAgg[N]) Aggregate(value N, attr *attribute.Set) {
 	// TODO: implement.
 }
 
-func (s *lastValueAgg[N]) Aggregate() []Aggregation {
+func (s *lastValueAgg[N]) flush() []Aggregation {
 	// TODO: implement.
 	return []Aggregation{
 		{

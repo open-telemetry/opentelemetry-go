@@ -26,6 +26,6 @@ type dropAgg[N int64 | float64] struct{}
 // empty Aggregation.
 func NewDrop[N int64 | float64]() Aggregator[N] { return &dropAgg[N]{} }
 
-func (s *dropAgg[N]) Record(N, *attribute.Set) {}
+func (s *dropAgg[N]) Aggregate(N, *attribute.Set) {}
 
-func (s *dropAgg[N]) Aggregate() []Aggregation { return nil }
+func (s *dropAgg[N]) flush() []Aggregation { return nil }

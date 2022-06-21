@@ -35,11 +35,11 @@ func NewHistogram[N int64 | float64](zero Number[N], cfg aggregation.ExplicitBuc
 	return &histogramAgg[N]{}
 }
 
-func (s *histogramAgg[N]) Record(value N, attr *attribute.Set) {
+func (s *histogramAgg[N]) Aggregate(value N, attr *attribute.Set) {
 	// TODO: implement.
 }
 
-func (s *histogramAgg[N]) Aggregate() []Aggregation {
+func (s *histogramAgg[N]) flush() []Aggregation {
 	// TODO: implement.
 	return []Aggregation{
 		{

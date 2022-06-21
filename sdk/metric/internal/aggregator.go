@@ -20,10 +20,18 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import "go.opentelemetry.io/otel/attribute"
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
+// Aggregators are use with Cyclers to collect and produce metrics from
+// instrument measurements. Aggregators handle the collection (and
+// aggregation) of measurements, while Cyclers handle how those aggregated
+// measurements are combined and then produced to the telemetry pipeline.
 type Aggregator[N int64 | float64] interface {
-	// Record includes value scoped by attr in the aggregation.
-	Record(value N, attr *attribute.Set)
+	// Aggregate records the measurement, scoped by attr, and aggregates it
+	// into an aggregation.
+	Aggregate(measurement N, attr *attribute.Set)
 
-	// Aggregate returns aggregations of all recorded values.
-	Aggregate() []Aggregation
+	// flush clears aggregations that have been recorded. The Aggregator
+	// resets itself for a new aggregation period when called, it does not
+	// carry forward any state. If aggregation periods need to be combined it
+	// is the callers responsibility to achieve this.
+	flush() []Aggregation
 }
