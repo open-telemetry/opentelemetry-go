@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -34,6 +35,7 @@ type manualReader struct {
 	shutdownOnce sync.Once
 
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector AggregationSelector
 }
 
 // Compile time check the manualReader implements Reader.
@@ -44,6 +46,7 @@ func NewManualReader(opts ...ManualReaderOption) Reader {
 	cfg := newManualReaderConfig(opts)
 	return &manualReader{
 		temporalitySelector: cfg.temporalitySelector,
+		aggregationSelector: cfg.aggregationSelector,
 	}
 }
 
@@ -60,6 +63,11 @@ func (mr *manualReader) register(p producer) {
 // temporality reports the Temporality for the instrument kind provided.
 func (mr *manualReader) temporality(kind InstrumentKind) Temporality {
 	return mr.temporalitySelector(kind)
+}
+
+// aggregation returns what Aggregation to use for kind.
+func (mr *manualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+	return mr.aggregationSelector(kind)
 }
 
 // ForceFlush is a no-op, it always returns nil.
@@ -104,12 +112,14 @@ func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, er
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector AggregationSelector
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.
 func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
 		temporalitySelector: defaultTemporalitySelector,
+		aggregationSelector: DefaultAggregationSelector,
 	}
 	for _, opt := range opts {
 		cfg = opt.applyManual(cfg)

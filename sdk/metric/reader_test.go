@@ -182,3 +182,20 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 		}
 	}
 }
+
+func TestDefaultAggregationSelector(t *testing.T) {
+	assert.Panics(t, func() { DefaultAggregationSelector(undefinedInstrument) })
+
+	iKinds := []InstrumentKind{
+		SyncCounter,
+		SyncUpDownCounter,
+		SyncHistogram,
+		AsyncCounter,
+		AsyncUpDownCounter,
+		AsyncGauge,
+	}
+
+	for _, ik := range iKinds {
+		assert.NoError(t, DefaultAggregationSelector(ik).Err(), ik)
+	}
+}

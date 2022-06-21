@@ -26,6 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -40,6 +41,7 @@ type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector AggregationSelector
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -49,6 +51,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		interval:            defaultInterval,
 		timeout:             defaultTimeout,
 		temporalitySelector: defaultTemporalitySelector,
+		aggregationSelector: DefaultAggregationSelector,
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -117,6 +120,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		cancel:   cancel,
 
 		temporalitySelector: conf.temporalitySelector,
+		aggregationSelector: conf.aggregationSelector,
 	}
 
 	r.wg.Add(1)
@@ -137,6 +141,7 @@ type periodicReader struct {
 	exporter Exporter
 
 	temporalitySelector func(InstrumentKind) Temporality
+	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
 	cancel       context.CancelFunc
@@ -182,6 +187,11 @@ func (r *periodicReader) register(p producer) {
 // temporality reports the Temporality for the instrument kind provided.
 func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
 	return r.temporalitySelector(kind)
+}
+
+// aggregation returns what Aggregation to use for kind.
+func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+	return r.aggregationSelector(kind)
 }
 
 // Collect gathers and returns all metric data related to the Reader from

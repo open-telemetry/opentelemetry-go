@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -32,12 +33,17 @@ import (
 type reader struct {
 	producer        producer
 	temporalityFunc func(InstrumentKind) Temporality
+	aggregationFunc AggregationSelector
 	collectFunc     func(context.Context) (export.ResourceMetrics, error)
 	forceFlushFunc  func(context.Context) error
 	shutdownFunc    func(context.Context) error
 }
 
 var _ Reader = (*reader)(nil)
+
+func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+	return r.aggregationFunc(kind)
+}
 
 func (r *reader) register(p producer)                         { r.producer = p }
 func (r *reader) temporality(kind InstrumentKind) Temporality { return r.temporalityFunc(kind) }
