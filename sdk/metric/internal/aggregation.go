@@ -18,9 +18,6 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
-	"errors"
-	"fmt"
-
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -42,38 +39,16 @@ type Aggregation struct {
 	Value value
 }
 
-var errIncompatible = errors.New("incompatible aggregation")
-
-// Fold combines other into a.
-func (a Aggregation) Fold(other Aggregation) error {
-	if other.Timestamp > a.Timestamp {
-		a.Timestamp = other.Timestamp
-	}
-	if !a.Attributes.Equals(other.Attributes) {
-		return fmt.Errorf("%w: attributes not equal", errIncompatible)
-	}
-	return a.Value.fold(other.Value)
-}
-
 type value interface {
-	// fold combines other into the value. It will return an errIncompatible
-	// if other is not a compatible type with value.
-	fold(other value) error
+	private()
 }
 
-// SingleValue summarizes a set of measurements as a single numeric value.
+// SingleValue summarizes a set of measurements as a single value.
 type SingleValue[N int64 | float64] struct {
 	Value N
 }
 
-func (v SingleValue[N]) fold(other value) error {
-	o, ok := other.(SingleValue[N])
-	if !ok {
-		return fmt.Errorf("%w: value types %T and %T", errIncompatible, v, other)
-	}
-	v.Value += o.Value
-	return nil
-}
+func (SingleValue[N]) private() {}
 
 // HistogramValue summarizes a set of measurements as a histogram.
 type HistogramValue struct {
@@ -83,35 +58,4 @@ type HistogramValue struct {
 	Min, Max float64
 }
 
-func (v HistogramValue) fold(other value) error {
-	o, ok := other.(HistogramValue)
-	if !ok {
-		return fmt.Errorf("%w: value types %T and %T", errIncompatible, v, other)
-	}
-	if !sliceEqual[float64](v.Bounds, o.Bounds) || len(o.Counts) != len(v.Counts) {
-		return fmt.Errorf("%w: different histogram binning", errIncompatible)
-	}
-	v.Sum += o.Sum
-	for i, c := range o.Counts {
-		v.Counts[i] += c
-	}
-	if o.Min < v.Min {
-		v.Min = o.Min
-	}
-	if o.Max > v.Max {
-		v.Max = o.Max
-	}
-	return nil
-}
-
-func sliceEqual[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}
+func (HistogramValue) private() {}
