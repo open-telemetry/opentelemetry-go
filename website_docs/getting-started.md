@@ -29,7 +29,7 @@ go get go.opentelemetry.io/otel \
   go.opentelemetry.io/otel/exporters/otlp/otlptrace \
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp \
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace \
-  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp \
+  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 ```
 
 ## Create the sample HTTP Server
