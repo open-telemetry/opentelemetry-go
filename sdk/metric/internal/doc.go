@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 // Package internal provides types and functionality used to aggregate and
 // cycle the state of metric measurements made by the SDK. These types and
 // functionality are meant only for internal SDK use.
