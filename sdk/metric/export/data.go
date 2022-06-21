@@ -79,7 +79,7 @@ type Sum struct {
 	// Temporality describes if the aggregation is reported as the change from the
 	// last report time, or the cumulative changes since a fixed start time.
 	Temporality Temporality
-	// IsMonotonic represents if this aggregation should only increase or decrease.
+	// IsMonotonic represents if this aggregation only increases or decreases.
 	IsMonotonic bool
 }
 
@@ -93,7 +93,7 @@ type DataPoint struct {
 	StartTime time.Time
 	// Time is the time when the timeseries was recorded. (optional)
 	Time time.Time
-	// Value is the of this data point.
+	// Value is the value of this data point.
 	Value Value
 }
 
@@ -141,8 +141,8 @@ type HistogramDataPoint struct {
 	// BucketCounts is the count of each of the buckets.
 	BucketCounts []uint64
 
-	// Min is the minimum value recorded.
+	// Min is the minimum value recorded. (optional)
 	Min float64
-	// Max is the maximum value recorded.
+	// Max is the maximum value recorded. (optional)
 	Max float64
 }
