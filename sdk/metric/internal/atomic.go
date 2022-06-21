@@ -22,7 +22,8 @@ import (
 	"sync/atomic"
 )
 
-type Number[N int64 | float64] interface {
+// Atomic provides atomic access to a generic value type.
+type Atomic[N int64 | float64] interface {
 	// Store value atomically.
 	Store(value N)
 
@@ -32,15 +33,15 @@ type Number[N int64 | float64] interface {
 	// Load returns the stored value.
 	Load() N
 
-	// Clone creates a new Number from the current value.
-	Clone() Number[N]
+	// Clone creates an independent copy of the current value.
+	Clone() Atomic[N]
 }
 
 type Int64 struct {
 	value *int64
 }
 
-var _ Number[int64] = Int64{}
+var _ Atomic[int64] = Int64{}
 
 func NewInt64(v int64) Int64 {
 	return Int64{value: &v}
@@ -49,7 +50,7 @@ func NewInt64(v int64) Int64 {
 func (v Int64) Store(value int64) { atomic.StoreInt64(v.value, value) }
 func (v Int64) Add(value int64)   { atomic.AddInt64(v.value, value) }
 func (v Int64) Load() int64       { return atomic.LoadInt64(v.value) }
-func (v Int64) Clone() Number[int64] {
+func (v Int64) Clone() Atomic[int64] {
 	return NewInt64(v.Load())
 }
 
@@ -57,7 +58,7 @@ type Float64 struct {
 	value *uint64
 }
 
-var _ Number[float64] = Float64{}
+var _ Atomic[float64] = Float64{}
 
 func NewFloat64(v float64) Float64 {
 	u := math.Float64bits(v)
@@ -82,6 +83,6 @@ func (v Float64) Load() float64 {
 	return math.Float64frombits(atomic.LoadUint64(v.value))
 }
 
-func (v Float64) Clone() Number[float64] {
+func (v Float64) Clone() Atomic[float64] {
 	return NewFloat64(v.Load())
 }

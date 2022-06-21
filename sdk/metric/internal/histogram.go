@@ -31,7 +31,7 @@ type histogramAgg[N int64 | float64] struct {
 // NewHistogram returns an Aggregator that summarizes a set of measurements as
 // an histogram. The zero value will be used as the start value for all the
 // buckets of new Aggregations.
-func NewHistogram[N int64 | float64](zero Number[N], cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
+func NewHistogram[N int64 | float64](zero Atomic[N], cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
 	return &histogramAgg[N]{}
 }
 
