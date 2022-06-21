@@ -17,7 +17,10 @@
 
 package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
-import "go.opentelemetry.io/otel/sdk/instrumentation"
+import (
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+)
 
 // Instrument uniquely identifies an instrument within a meter.
 type Instrument struct {
@@ -25,4 +28,5 @@ type Instrument struct {
 
 	Name        string
 	Description string
+	Aggregation aggregation.Aggregation
 }

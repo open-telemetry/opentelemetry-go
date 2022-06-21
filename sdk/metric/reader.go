@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
@@ -57,6 +59,9 @@ type Reader interface {
 
 	// temporality reports the Temporality for the instrument kind provided.
 	temporality(InstrumentKind) Temporality
+
+	// aggregation returns what Aggregation to use for an instrument kind.
+	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
@@ -138,4 +143,68 @@ func (t temporalitySelectorOption) applyPeriodic(prc periodicReaderConfig) perio
 // from instrument should be recorded with: cumulative.
 func defaultTemporalitySelector(InstrumentKind) Temporality {
 	return CumulativeTemporality
+}
+
+// AggregationSelector selects the aggregation and the parameters to use for
+// that aggregation based on the InstrumentKind.
+type AggregationSelector func(InstrumentKind) aggregation.Aggregation
+
+// DefaultAggregationSelector returns the default aggregation and parameters
+// that will be used to summarize measurement made from an instrument of
+// InstrumentKind. This AggregationSelector using the following selection
+// mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
+// Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
+// Histogram ⇨ ExplicitBucketHistogram.
+func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
+	switch ik {
+	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
+		return aggregation.Sum{}
+	case AsyncGauge:
+		return aggregation.LastValue{}
+	case SyncHistogram:
+		return aggregation.ExplicitBucketHistogram{
+			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+			NoMinMax:   false,
+		}
+	}
+	panic("unknown instrument kind")
+}
+
+// WithAggregation sets the default aggregation a reader will use for an
+// instrument based on the returned value from the selector. If this option is
+// not used, the reader will use the DefaultAggregationSelector or the
+// aggregation explicitly passed for a view matching an instrument.
+func WithAggregationSelector(selector AggregationSelector) ReaderOption {
+	// Deep copy and validate before using.
+	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
+		a := selector(ik)
+		cpA := a.Copy()
+		if err := cpA.Err(); err != nil {
+			cpA = DefaultAggregationSelector(ik)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", a,
+				"replacement", cpA,
+			)
+		}
+		return cpA
+	}
+
+	return aggregationSelectorOption{selector: wrapped}
+}
+
+type aggregationSelectorOption struct {
+	selector AggregationSelector
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.aggregationSelector = t.selector
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (t aggregationSelectorOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.aggregationSelector = t.selector
+	return c
 }
