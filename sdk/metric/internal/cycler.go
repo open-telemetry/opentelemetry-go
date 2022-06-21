@@ -17,8 +17,8 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-// Cycler cycles aggregation periods. It will handle any state and progression
-// of one period to the next based on the temporality of the cycling.
+// Cycler cycles aggregation periods. It will handle any state progression
+// from one period to the next based on the temporality of the cycling.
 type Cycler interface {
 	// Cycle returns an []Aggregation for the current period. If the cycler
 	// merges state from previous periods into the current, the []Aggregation
