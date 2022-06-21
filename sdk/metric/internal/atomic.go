@@ -41,7 +41,7 @@ func NewInt64(v int64) Int64 {
 
 // Float64 is a float64 implementation of an Atomic.
 //
-// An Float64 must not be copied.
+// A Float64 must not be copied.
 type Float64 struct {
 	value *uint64
 }
