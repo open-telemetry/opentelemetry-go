@@ -113,7 +113,7 @@ func Example() {
 	upDownCount, _ := provider.UpDownCounter("up-down counter example")
 	fmt.Printf("up-down counter aggregator: %T\n", upDownCount.(inst).agg)
 
-	hist, _ := provider.UpDownCounter("histogram example")
+	hist, _ := provider.Histogram("histogram example")
 	fmt.Printf("histogram aggregator: %T\n", hist.(inst).agg)
 
 	fmt.Printf("meter cyclers: %T{%T, %T, %T}\n", m.cyclers, m.cyclers[0], m.cyclers[1], m.cyclers[2])
@@ -121,6 +121,6 @@ func Example() {
 	// Output:
 	// counter aggregator: *internal.sumAgg[int64]
 	// up-down counter aggregator: *internal.lastValueAgg[int64]
-	// histogram aggregator: *internal.lastValueAgg[int64]
+	// histogram aggregator: *internal.histogramAgg[int64]
 	// meter cyclers: []internal.Cycler{internal.cumulativeCylcer[int64], internal.deltaCylcer[int64], internal.deltaCylcer[int64]}
 }
