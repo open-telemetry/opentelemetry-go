@@ -17,29 +17,55 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"sync"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // sumAgg summarizes a set of measurements as their arithmetic sum.
 type sumAgg[N int64 | float64] struct {
-	// TODO(#2972): implement.
+	// zero value used for the base of all new sums.
+	newFunc NewAtomicFunc[N]
+
+	// map[attribute.Set]Atomic[N]
+	current sync.Map
 }
 
-// NewSum returns an Aggregator that summarizes a set of
-// measurements as their arithmetic sum.
-func NewSum[N int64 | float64]() Aggregator[N] {
-	// TODO(#2972): implement.
-	return &sumAgg[N]{}
+// NewSum returns an Aggregator that summarizes a set of measurements as their
+// arithmetic sum. The zero value will be used as the start value for all new
+// Aggregations.
+func NewSum[N int64 | float64](f NewAtomicFunc[N]) Aggregator[N] {
+	return &sumAgg[N]{newFunc: f}
 }
 
 func (s *sumAgg[N]) Aggregate(value N, attr *attribute.Set) {
-	// TODO(#2972): implement.
+	if v, ok := s.current.Load(*attr); ok {
+		v.(Atomic[N]).Add(value)
+		return
+	}
+
+	v, _ := s.current.LoadOrStore(*attr, s.newFunc())
+	v.(Atomic[N]).Add(value)
 }
 
 func (s *sumAgg[N]) flush() []Aggregation {
-	// TODO(#2972): implement.
-	return []Aggregation{
-		{
-			Value: SingleValue[N]{ /* TODO(#2972): calculate */ },
-		},
-	}
+	now := time.Now().UnixNano()
+	var aggs []Aggregation
+	s.current.Range(func(key, val any) bool {
+		attrs := key.(attribute.Set)
+		aggs = append(aggs, Aggregation{
+			Timestamp:  now,
+			Attributes: &attrs,
+			Value:      SingleValue[N]{Value: val.(Atomic[N]).Load()},
+		})
+
+		// Reset.
+		s.current.Delete(key)
+
+		return true
+	})
+
+	return aggs
 }

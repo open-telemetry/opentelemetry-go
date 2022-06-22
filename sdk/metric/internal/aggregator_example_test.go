@@ -48,7 +48,7 @@ func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Cou
 	// Reader and View configuration. Assume here these are determined to be a
 	// cumulative sum.
 
-	aggregator := NewSum[int64]()
+	aggregator := NewSum[int64](NewInt64)
 	count := inst{agg: aggregator}
 
 	cycler := NewCumulativeCylcer(aggregator)
