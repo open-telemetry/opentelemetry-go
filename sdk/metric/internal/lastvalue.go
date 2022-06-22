@@ -25,8 +25,7 @@ type lastValueAgg[N int64 | float64] struct {
 }
 
 // NewLastValue returns an Aggregator that summarizes a set of measurements as
-// the last one made. The zero value will be used as the start value for all
-// new Aggregations.
+// the last one made.
 func NewLastValue[N int64 | float64]() Aggregator[N] {
 	return &lastValueAgg[N]{}
 }

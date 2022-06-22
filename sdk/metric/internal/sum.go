@@ -25,8 +25,7 @@ type sumAgg[N int64 | float64] struct {
 }
 
 // NewSum returns an Aggregator that summarizes a set of
-// measurements as their arithmetic sum. The zero value will be used as the
-// start value for all new Aggregations.
+// measurements as their arithmetic sum.
 func NewSum[N int64 | float64]() Aggregator[N] {
 	// TODO(#2972): implement.
 	return &sumAgg[N]{}
