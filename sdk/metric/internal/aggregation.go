@@ -24,8 +24,8 @@ import (
 // Aggregation is a single data point in a timeseries that summarizes
 // measurements made during a time span.
 type Aggregation struct {
-	// TODO: Replace this with the export.Aggregation type once #2961 is
-	// merged.
+	// TODO(#2968): Replace this with the export.Aggregation type once #2961
+	// is merged.
 
 	// Timestamp defines the time the last measurement was made. If zero, no
 	// measurements were made for this time span. The time is represented as a

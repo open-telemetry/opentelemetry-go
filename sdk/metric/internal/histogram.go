@@ -25,7 +25,7 @@ import (
 // histogramAgg summarizes a set of measurements as an histogram with
 // explicitly defined buckets.
 type histogramAgg[N int64 | float64] struct {
-	// TODO: implement.
+	// TODO(#2970): implement.
 }
 
 // NewHistogram returns an Aggregator that summarizes a set of measurements as
@@ -36,14 +36,14 @@ func NewHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) Ag
 }
 
 func (s *histogramAgg[N]) Aggregate(value N, attr *attribute.Set) {
-	// TODO: implement.
+	// TODO(#2970): implement.
 }
 
 func (s *histogramAgg[N]) flush() []Aggregation {
-	// TODO: implement.
+	// TODO(#2970): implement.
 	return []Aggregation{
 		{
-			Value: HistogramValue{ /* TODO: calculate. */ },
+			Value: HistogramValue{ /* TODO(#2970): calculate. */ },
 		},
 	}
 }

@@ -25,8 +25,8 @@ type Cycler interface {
 	// returned reflects this.
 	Cycle() []Aggregation
 
-	// TODO: Replace the return type with []export.Aggregation once #2961 is
-	// merged.
+	// TODO(#2968): Replace the return type with []export.Aggregation once
+	// #2961 is merged.
 }
 
 // deltaCylcer cycles aggregation periods by returning the aggregation
@@ -47,22 +47,22 @@ func (c deltaCylcer[N]) Cycle() []Aggregation {
 // cumulativeCylcer cycles aggregation periods by returning the cumulative
 // aggregation from its start time until the current period.
 type cumulativeCylcer[N int64 | float64] struct {
-	// TODO: implement a cumulative storing field.
+	// TODO(#2969): implement a cumulative storing field.
 	aggregator Aggregator[N]
 }
 
 func NewCumulativeCylcer[N int64 | float64](a Aggregator[N]) Cycler {
 	c := cumulativeCylcer[N]{aggregator: a}
 
-	// TODO: Initialize a new cumulative storage.
+	// TODO(#2969): Initialize a new cumulative storage.
 
 	return c
 }
 
 func (c cumulativeCylcer[N]) Cycle() []Aggregation {
-	// TODO: Update cumulative storage of aggregations and return them.
+	// TODO(#2969): Update cumulative storage of aggregations and return them.
 
-	// FIXME: currently this returns a delta representation of the
+	// FIXME(#2969): currently this returns a delta representation of the
 	// aggregation. When the cumulative storage is complete it should return a
 	// cumulative representation.
 	return c.aggregator.flush()

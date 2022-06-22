@@ -21,26 +21,26 @@ import "go.opentelemetry.io/otel/attribute"
 
 // sumAgg summarizes a set of measurements as their arithmetic sum.
 type sumAgg[N int64 | float64] struct {
-	// TODO: implement.
+	// TODO(#2972): implement.
 }
 
 // NewSum returns an Aggregator that summarizes a set of
 // measurements as their arithmetic sum. The zero value will be used as the
 // start value for all new Aggregations.
 func NewSum[N int64 | float64]() Aggregator[N] {
-	// TODO: implement.
+	// TODO(#2972): implement.
 	return &sumAgg[N]{}
 }
 
 func (s *sumAgg[N]) Aggregate(value N, attr *attribute.Set) {
-	// TODO: implement.
+	// TODO(#2972): implement.
 }
 
 func (s *sumAgg[N]) flush() []Aggregation {
-	// TODO: implement.
+	// TODO(#2972): implement.
 	return []Aggregation{
 		{
-			Value: SingleValue[N]{ /* TODO: calculate */ },
+			Value: SingleValue[N]{ /* TODO(#2972): calculate */ },
 		},
 	}
 }
