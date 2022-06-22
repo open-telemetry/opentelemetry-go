@@ -50,15 +50,15 @@ func TestManualReaderTemporality(t *testing.T) {
 		{
 			name: "delta",
 			options: []ManualReaderOption{
-				WithTemporality(deltaTemporalitySelector),
+				WithTemporalitySelector(deltaTemporalitySelector),
 			},
 			wantTemporality: DeltaTemporality,
 		},
 		{
 			name: "repeats overwrite",
 			options: []ManualReaderOption{
-				WithTemporality(deltaTemporalitySelector),
-				WithTemporality(cumulativeTemporalitySelector),
+				WithTemporalitySelector(deltaTemporalitySelector),
+				WithTemporalitySelector(cumulativeTemporalitySelector),
 			},
 			wantTemporality: CumulativeTemporality,
 		},
