@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
@@ -92,8 +93,7 @@ func constructOTResources(s string) (*Resource, error) {
 		k := strings.TrimSpace(field[0])
 		v, err := url.QueryUnescape(strings.TrimSpace(field[1]))
 		if err != nil {
-			// Retain original value if decoding fails.
-			v = field[1]
+			otel.Handle(err)
 		}
 		attrs = append(attrs, attribute.String(k, v))
 	}
