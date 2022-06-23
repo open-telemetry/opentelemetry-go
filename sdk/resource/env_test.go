@@ -103,6 +103,21 @@ func TestMissingKeyError(t *testing.T) {
 	))
 }
 
+func TestInvalidPercentDecoding(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		resourceAttrKey: "key=%invalid",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	detector := &fromEnv{}
+	res, err := detector.Detect(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, NewSchemaless(
+		attribute.String("key", "%invalid"),
+	), res)
+}
+
 func TestDetectServiceNameFromEnv(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		resourceAttrKey: "key=value,service.name=foo",
