@@ -29,9 +29,9 @@ import (
 
 type meter struct {
 	// When a reader initiates a collection, the meter would collect
-	// aggregations from each of these cyclers. In this process they will
+	// aggregations from each of these functions. In this process they will
 	// progress the aggregation period of each instrument's aggregator.
-	cyclers []Cycler
+	aggregationFuncs []func() []Aggregation
 }
 
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
@@ -43,51 +43,55 @@ type syncInt64Provider meter
 
 func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Counter, error) {
 	// This is an example of how a synchronous int64 provider would create an
-	// aggregator and cycler for a new counter. At this point the provider
-	// would determine the aggregation and temporality to used based on the
-	// Reader and View configuration. Assume here these are determined to be a
+	// aggregator for a new counter. At this point the provider would
+	// determine the aggregation and temporality to used based on the Reader
+	// and View configuration. Assume here these are determined to be a
 	// cumulative sum.
 
-	aggregator := NewSum[int64]()
-	count := inst{agg: aggregator}
+	aggregator := NewCumulativeSum[int64]()
+	count := inst{aggregateFunc: aggregator.Aggregate}
 
-	cycler := NewCumulativeCylcer(aggregator)
-	p.cyclers = append(p.cyclers, cycler)
+	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+
+	fmt.Printf("using %T aggregator for counter\n", aggregator)
 
 	return count, nil
 }
 
 func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Option) (syncint64.UpDownCounter, error) {
 	// This is an example of how a synchronous int64 provider would create an
-	// aggregator and cycler for a new up-down counter. At this point the
-	// provider would determine the aggregation and temporality to used based
-	// on the Reader and View configuration. Assume here these are determined
-	// to be a delta last-value.
+	// aggregator for a new up-down counter. At this point the provider would
+	// determine the aggregation and temporality to used based on the Reader
+	// and View configuration. Assume here these are determined to be a
+	// last-value aggregation (the temporality does not affect the produced
+	// aggregations).
 
 	aggregator := NewLastValue[int64]()
-	upDownCount := inst{agg: aggregator}
+	upDownCount := inst{aggregateFunc: aggregator.Aggregate}
 
-	cycler := NewDeltaCylcer(aggregator)
-	p.cyclers = append(p.cyclers, cycler)
+	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+
+	fmt.Printf("using %T aggregator for up-down counter\n", aggregator)
 
 	return upDownCount, nil
 }
 
 func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (syncint64.Histogram, error) {
 	// This is an example of how a synchronous int64 provider would create an
-	// aggregator and cycler for a new histogram. At this point the provider
-	// would determine the aggregation and temporality to used based on the
-	// Reader and View configuration. Assume here these are determined to be a
-	// delta explicit-bucket histogram.
+	// aggregator for a new histogram. At this point the provider would
+	// determine the aggregation and temporality to used based on the Reader
+	// and View configuration. Assume here these are determined to be a delta
+	// explicit-bucket histogram.
 
-	aggregator := NewHistogram[int64](aggregation.ExplicitBucketHistogram{
+	aggregator := NewDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
 		Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 		NoMinMax:   false,
 	})
-	hist := inst{agg: aggregator}
+	hist := inst{aggregateFunc: aggregator.Aggregate}
 
-	cycler := NewDeltaCylcer(aggregator)
-	p.cyclers = append(p.cyclers, cycler)
+	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+
+	fmt.Printf("using %T aggregator for histogram\n", aggregator)
 
 	return hist, nil
 }
@@ -97,7 +101,7 @@ func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (syncint64.H
 type inst struct {
 	instrument.Synchronous
 
-	agg Aggregator[int64]
+	aggregateFunc func(int64, *attribute.Set)
 }
 
 func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}
@@ -107,20 +111,12 @@ func Example() {
 	m := meter{}
 	provider := m.SyncInt64()
 
-	count, _ := provider.Counter("counter example")
-	fmt.Printf("counter aggregator: %T\n", count.(inst).agg)
-
-	upDownCount, _ := provider.UpDownCounter("up-down counter example")
-	fmt.Printf("up-down counter aggregator: %T\n", upDownCount.(inst).agg)
-
-	hist, _ := provider.Histogram("histogram example")
-	fmt.Printf("histogram aggregator: %T\n", hist.(inst).agg)
-
-	fmt.Printf("meter cyclers: %T{%T, %T, %T}\n", m.cyclers, m.cyclers[0], m.cyclers[1], m.cyclers[2])
+	provider.Counter("counter example")
+	provider.UpDownCounter("up-down counter example")
+	provider.Histogram("histogram example")
 
 	// Output:
-	// counter aggregator: *internal.sumAgg[int64]
-	// up-down counter aggregator: *internal.lastValueAgg[int64]
-	// histogram aggregator: *internal.histogramAgg[int64]
-	// meter cyclers: []internal.Cycler{internal.cumulativeCylcer[int64], internal.deltaCylcer[int64], internal.deltaCylcer[int64]}
+	// using *internal.cumulativeSum[int64] aggregator for counter
+	// using *internal.lastValue[int64] aggregator for up-down counter
+	// using *internal.deltaHistogram[int64] aggregator for histogram
 }
