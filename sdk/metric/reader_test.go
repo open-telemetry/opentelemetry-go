@@ -201,3 +201,17 @@ func TestDefaultAggregationSelector(t *testing.T) {
 		assert.NoError(t, DefaultAggregationSelector(ik).Err(), ik)
 	}
 }
+
+func TestDefaultTemporalitySelector(t *testing.T) {
+	for _, ik := range []InstrumentKind{
+		undefinedInstrument,
+		SyncCounter,
+		SyncUpDownCounter,
+		SyncHistogram,
+		AsyncCounter,
+		AsyncUpDownCounter,
+		AsyncGauge,
+	} {
+		assert.Equal(t, CumulativeTemporality, DefaultTemporalitySelector(ik))
+	}
+}

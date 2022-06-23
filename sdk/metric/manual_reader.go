@@ -117,7 +117,7 @@ type manualReaderConfig struct {
 // newManualReaderConfig returns a manualReaderConfig configured with options.
 func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
-		temporalitySelector: defaultTemporalitySelector,
+		temporalitySelector: DefaultTemporalitySelector,
 		aggregationSelector: DefaultAggregationSelector,
 	}
 	for _, opt := range opts {
