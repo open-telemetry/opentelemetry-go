@@ -111,9 +111,9 @@ func Example() {
 	m := meter{}
 	provider := m.SyncInt64()
 
-	provider.Counter("counter example")
-	provider.UpDownCounter("up-down counter example")
-	provider.Histogram("histogram example")
+	_, _ = provider.Counter("counter example")
+	_, _ = provider.UpDownCounter("up-down counter example")
+	_, _ = provider.Histogram("histogram example")
 
 	// Output:
 	// using *internal.cumulativeSum[int64] aggregator for counter
