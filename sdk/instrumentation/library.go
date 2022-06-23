@@ -22,4 +22,4 @@ For more information see
 package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
 
 // Library represents the instrumentation library.
-type Library Scope
+type Library = Scope
