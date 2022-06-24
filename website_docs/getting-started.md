@@ -134,7 +134,7 @@ goodbye
 
 The application can be exited with CTRL+C. You should see a similar output as above, if not make sure to go back and fix any errors.
 
-# Trace Instrumentation
+## Trace Instrumentation
 
 OpenTelemetry is split into two parts: an API to instrument code with, and SDKs that implement the API. To start integrating OpenTelemetry into any project, the API is used to define how telemetry is generated. To generate tracing telemetry in your application you will use the OpenTelemetry Trace API from the [`go.opentelemetry.io/otel/trace`] package.
 
@@ -263,7 +263,7 @@ A `Run` span will be a parent to both a `Poll` and `Write` span, and the `Write`
 
 Now how do you actually see the produced spans? To do this you will need to configure and install an SDK.
 
-# SDK Installation
+## SDK Installation
 
 OpenTelemetry is designed to be modular in its implementation of the OpenTelemetry API. The OpenTelemetry Go project offers an SDK package, [`go.opentelemetry.io/otel/sdk`], that implements this API and adheres to the OpenTelemetry specification. To start using this SDK you will first need to create an exporter, but before anything can happen we need to install some packages. Run the following in the `fib` directory to install the trace STDOUT exporter and the SDK.
 
@@ -288,7 +288,7 @@ import (
 )
 ```
 
-## Creating a Console Exporter
+### Creating a Console Exporter
 
 The SDK connects telemetry from the OpenTelemetry API to exporters. Exporters are packages that allow telemetry data to be emitted somewhere - either to the console (which is what we're doing here), or to a remote system or collector for further analysis and/or enrichment. OpenTelemetry supports a variety of exporters through its ecosystem including popular open source tools like [Jaeger](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/jaeger), [Zipkin](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/zipkin), and [Prometheus](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/prometheus).
 
@@ -309,7 +309,7 @@ func newExporter(w io.Writer) (trace.SpanExporter, error) {
 
 This creates a new console exporter with basic options. You will use this function later when you configure the SDK to send telemetry data to it, but first you need to make sure that data is identifiable.
 
-## Creating a Resource
+### Creating a Resource
 
 Telemetry data can be crucial to solving issues with a service. The catch is, you need a way to identify what service, or even what service instance, that data is coming from. OpenTelemetry uses a [`Resource`] to represent the entity producing telemetry. Add the following function to the `main.go` file to create an appropriate [`Resource`] for the application.
 
@@ -331,7 +331,7 @@ func newResource() *resource.Resource {
 
 Any information you would like to associate with all telemetry data the SDK handles can be added to the returned [`Resource`]. This is done by registering the [`Resource`] with the [`TracerProvider`]. Something you can now create!
 
-## Installing a Tracer Provider
+### Installing a Tracer Provider
 
 You have your application instrumented to produce telemetry data and you have an exporter to send that data to the console, but how are they connected? This is where the [`TracerProvider`] is used. It is a centralized point where instrumentation will get a [`Tracer`] from and funnels the telemetry data from these [`Tracer`]s to export pipelines.
 
@@ -372,7 +372,7 @@ There's a fair amount going on here. First you are creating a console exporter t
 
 Do you remember in the previous instrumentation section when we used the global [`TracerProvider`] to get a [`Tracer`]? This last step, registering the [`TracerProvider`] globally, is what will connect that instrumentation's [`Tracer`] with this [`TracerProvider`]. This pattern, using a global [`TracerProvider`], is convenient, but not always appropriate. [`TracerProvider`]s can be explicitly passed to instrumentation or inferred from a context that contains a span. For this simple example using a global provider makes sense, but for more complex or distributed codebases these other ways of passing [`TracerProvider`]s may make more sense.
 
-# Putting It All Together
+## Putting It All Together
 
 You should now have a working application that produces trace telemetry data! Give it a try.
 
@@ -388,7 +388,7 @@ goodbye
 
 A new file named `traces.txt` should be created in your working directory. All the traces created from running your application should be in there!
 
-# (Bonus) Errors
+## (Bonus) Errors
 
 At this point you have a working application and it is producing tracing telemetry data. Unfortunately, it was discovered that there is an error in the core functionality of the `fib` module.
 
@@ -530,7 +530,7 @@ Excellent! The application no longer returns wrong values, and looking at the te
 ]
 ```
 
-# What's Next
+## What's Next
 
 This guide has walked you through adding tracing instrumentation to an
 application and using a console exporter to send telemetry data to a file. There
