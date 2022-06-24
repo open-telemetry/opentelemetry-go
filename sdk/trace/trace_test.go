@@ -412,7 +412,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 			attribute.String("key2", "value2"),
 		},
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "StartSpanAttribute"},
+		instrumentationLibrary: instrumentation.Scope{Name: "StartSpanAttribute"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOnStart: -got +want %s", diff)
@@ -667,7 +667,7 @@ func TestEvents(t *testing.T) {
 			{Name: "bar", Attributes: []attribute.KeyValue{k2v2, k3v3}},
 		},
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "Events"},
+		instrumentationLibrary: instrumentation.Scope{Name: "Events"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Events: -got +want %s", diff)
@@ -719,7 +719,7 @@ func TestEventsOverLimit(t *testing.T) {
 		},
 		droppedEventCount:      2,
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "EventsOverLimit"},
+		instrumentationLibrary: instrumentation.Scope{Name: "EventsOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Message Event over limit: -got +want %s", diff)
@@ -757,7 +757,7 @@ func TestLinks(t *testing.T) {
 		name:                   "span0",
 		links:                  []Link{{l1.SpanContext, l1.Attributes, 0}, {l2.SpanContext, l2.Attributes, 0}},
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "Links"},
+		instrumentationLibrary: instrumentation.Scope{Name: "Links"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)
@@ -813,7 +813,7 @@ func TestLinksOverLimit(t *testing.T) {
 		},
 		droppedLinkCount:       1,
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "LinksOverLimit"},
+		instrumentationLibrary: instrumentation.Scope{Name: "LinksOverLimit"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link over limit: -got +want %s", diff)
@@ -861,7 +861,7 @@ func TestSetSpanStatus(t *testing.T) {
 			Code:        codes.Error,
 			Description: "Error",
 		},
-		instrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+		instrumentationLibrary: instrumentation.Scope{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
@@ -891,7 +891,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 			Code:        codes.Ok,
 			Description: "",
 		},
-		instrumentationLibrary: instrumentation.Library{Name: "SpanStatus"},
+		instrumentationLibrary: instrumentation.Scope{Name: "SpanStatus"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanStatus: -got +want %s", diff)
@@ -1230,7 +1230,7 @@ func TestRecordError(t *testing.T) {
 					},
 				},
 			},
-			instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+			instrumentationLibrary: instrumentation.Scope{Name: "RecordError"},
 		}
 		if diff := cmpDiff(got, want); diff != "" {
 			t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1274,7 +1274,7 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 				},
 			},
 		},
-		instrumentationLibrary: instrumentation.Library{Name: "RecordError"},
+		instrumentationLibrary: instrumentation.Scope{Name: "RecordError"},
 	}
 
 	assert.Equal(t, got.spanContext, want.spanContext)
@@ -1314,7 +1314,7 @@ func TestRecordErrorNil(t *testing.T) {
 			Code:        codes.Unset,
 			Description: "",
 		},
-		instrumentationLibrary: instrumentation.Library{Name: "RecordErrorNil"},
+		instrumentationLibrary: instrumentation.Scope{Name: "RecordErrorNil"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SpanErrorOptions: -got +want %s", diff)
@@ -1430,7 +1430,7 @@ func TestWithResource(t *testing.T) {
 				},
 				spanKind:               trace.SpanKindInternal,
 				resource:               tc.want,
-				instrumentationLibrary: instrumentation.Library{Name: "WithResource"},
+				instrumentationLibrary: instrumentation.Scope{Name: "WithResource"},
 			}
 			if diff := cmpDiff(got, want); diff != "" {
 				t.Errorf("WithResource:\n  -got +want %s", diff)
@@ -1463,7 +1463,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 		parent:   sc.WithRemote(true),
 		name:     "span0",
 		spanKind: trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{
+		instrumentationLibrary: instrumentation.Scope{
 			Name:      "WithInstrumentationVersion",
 			Version:   "v0.1.0",
 			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
@@ -1696,7 +1696,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 			},
 		},
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "AddSpanEventWithOverLimitedAttributes"},
+		instrumentationLibrary: instrumentation.Scope{Name: "AddSpanEventWithOverLimitedAttributes"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("SetSpanAttributesOverLimit: -got +want %s", diff)
@@ -1751,7 +1751,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 			},
 		},
 		spanKind:               trace.SpanKindInternal,
-		instrumentationLibrary: instrumentation.Library{Name: "Links"},
+		instrumentationLibrary: instrumentation.Scope{Name: "Links"},
 	}
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("Link: -got +want %s", diff)

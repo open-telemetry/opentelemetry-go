@@ -65,7 +65,7 @@ type ReadOnlySpan interface {
 	Status() Status
 	// InstrumentationLibrary returns information about the instrumentation
 	// library that created the span.
-	InstrumentationLibrary() instrumentation.Library
+	InstrumentationLibrary() instrumentation.Scope
 	// Resource returns information about the entity that produced the span.
 	Resource() *resource.Resource
 	// DroppedAttributes returns the number of attributes dropped by the span
@@ -584,9 +584,9 @@ func (s *recordingSpan) Status() Status {
 	return s.status
 }
 
-// InstrumentationLibrary returns the instrumentation.Library associated with
+// InstrumentationLibrary returns the instrumentation.Scope associated with
 // the Tracer that created this span.
-func (s *recordingSpan) InstrumentationLibrary() instrumentation.Library {
+func (s *recordingSpan) InstrumentationLibrary() instrumentation.Scope {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.tracer.instrumentationLibrary

@@ -64,9 +64,12 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 	return c, exp
 }
 
-// Library is the same as "sdk/instrumentation".Library but there is
+// Deprecated: please use Scope instead.
+type Library = Scope
+
+// Scope is the same as "sdk/instrumentation".Scope but there is
 // a package cycle to use it so it is redeclared here.
-type Library struct {
+type Scope struct {
 	InstrumentationName    string
 	InstrumentationVersion string
 	SchemaURL              string
@@ -75,7 +78,7 @@ type Library struct {
 // ExportRecord represents one collected datapoint from the Exporter.
 type ExportRecord struct {
 	InstrumentName         string
-	InstrumentationLibrary Library
+	InstrumentationLibrary Scope
 	Attributes             []attribute.KeyValue
 	AggregationKind        aggregation.Kind
 	NumberKind             number.Kind
@@ -95,8 +98,8 @@ func (e *Exporter) Collect(ctx context.Context) error {
 		return err
 	}
 
-	return e.controller.ForEach(func(l instrumentation.Library, r export.Reader) error {
-		lib := Library{
+	return e.controller.ForEach(func(l instrumentation.Scope, r export.Reader) error {
+		lib := Scope{
 			InstrumentationName:    l.Name,
 			InstrumentationVersion: l.Version,
 			SchemaURL:              l.SchemaURL,

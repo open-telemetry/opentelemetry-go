@@ -85,7 +85,7 @@ var _ metric.MeterProvider = &Controller{}
 // with opts.
 func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	cfg := metric.NewMeterConfig(opts...)
-	library := instrumentation.Library{
+	library := instrumentation.Scope{
 		Name:      instrumentationName,
 		Version:   cfg.InstrumentationVersion(),
 		SchemaURL: cfg.SchemaURL(),
@@ -108,7 +108,7 @@ func (c *Controller) Meter(instrumentationName string, opts ...metric.MeterOptio
 type accumulatorCheckpointer struct {
 	*sdk.Accumulator
 	checkpointer export.Checkpointer
-	library      instrumentation.Library
+	library      instrumentation.Scope
 }
 
 var _ sdkapi.MeterImpl = &accumulatorCheckpointer{}
@@ -323,7 +323,7 @@ func (c *Controller) export(ctx context.Context) error { // nolint:revive  // me
 }
 
 // ForEach implements export.InstrumentationLibraryReader.
-func (c *Controller) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
+func (c *Controller) ForEach(readerFunc func(l instrumentation.Scope, r export.Reader) error) error {
 	for _, acPair := range c.accumulatorList() {
 		reader := acPair.checkpointer.Reader()
 		// TODO: We should not fail fast; instead accumulate errors.

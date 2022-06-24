@@ -41,7 +41,7 @@ type snapshot struct {
 	droppedEventCount      int
 	droppedLinkCount       int
 	resource               *resource.Resource
-	instrumentationLibrary instrumentation.Library
+	instrumentationLibrary instrumentation.Scope
 }
 
 var _ ReadOnlySpan = snapshot{}
@@ -104,7 +104,7 @@ func (s snapshot) Status() Status {
 
 // InstrumentationLibrary returns information about the instrumentation
 // library that created the span.
-func (s snapshot) InstrumentationLibrary() instrumentation.Library {
+func (s snapshot) InstrumentationLibrary() instrumentation.Scope {
 	return s.instrumentationLibrary
 }
 

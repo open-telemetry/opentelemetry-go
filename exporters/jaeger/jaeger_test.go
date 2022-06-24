@@ -187,7 +187,7 @@ func TestSpanSnapshotToThrift(t *testing.T) {
 				EndTime:   now,
 				Status:    sdktrace.Status{Code: codes.Error},
 				SpanKind:  trace.SpanKindClient,
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationLibrary: instrumentation.Scope{
 					Name:    instrLibName,
 					Version: instrLibVersion,
 				},
@@ -245,7 +245,7 @@ func TestSpanSnapshotToThrift(t *testing.T) {
 					Description: statusMessage,
 				},
 				SpanKind: trace.SpanKindClient,
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationLibrary: instrumentation.Scope{
 					Name:    instrLibName,
 					Version: instrLibVersion,
 				},
@@ -330,7 +330,7 @@ func TestSpanSnapshotToThrift(t *testing.T) {
 					Description: statusMessage,
 				},
 				SpanKind: trace.SpanKindInternal,
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationLibrary: instrumentation.Scope{
 					Name:    instrLibName,
 					Version: instrLibVersion,
 				},
@@ -383,7 +383,7 @@ func TestSpanSnapshotToThrift(t *testing.T) {
 					Description: statusMessage,
 				},
 				SpanKind: trace.SpanKindInternal,
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationLibrary: instrumentation.Scope{
 					Name:    instrLibName,
 					Version: instrLibVersion,
 				},

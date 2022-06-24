@@ -80,7 +80,7 @@ func TestProcessorTesting(t *testing.T) {
 	)
 
 	err := exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(
-		instrumentation.Library{
+		instrumentation.Scope{
 			Name: "test",
 		},
 		checkpointer.Reader(),

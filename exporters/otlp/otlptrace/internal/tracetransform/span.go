@@ -34,7 +34,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 
 	type key struct {
 		r  attribute.Distinct
-		il instrumentation.Library
+		il instrumentation.Scope
 	}
 	ssm := make(map[key]*tracepb.ScopeSpans)
 
