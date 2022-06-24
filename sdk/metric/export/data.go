@@ -128,9 +128,9 @@ func (Histogram) privateAggregation() {}
 type HistogramDataPoint struct {
 	// Attributes is the set of key value pairs that uniquely identify the timeseries.
 	Attributes []attribute.KeyValue
-	// StartTime is when the timeseries was started. (optional)
+	// StartTime is when the timeseries was started.
 	StartTime time.Time
-	// Time is the time when the timeseries was recorded. (optional)
+	// Time is the time when the timeseries was recorded.
 	Time time.Time
 
 	// Count is the number of updates this histogram has been calculated with.
@@ -142,9 +142,9 @@ type HistogramDataPoint struct {
 	BucketCounts []uint64
 
 	// Min is the minimum value recorded. (optional)
-	Min float64
+	Min *float64
 	// Max is the maximum value recorded. (optional)
-	Max float64
-	// Sum is the sum of the values recorded. (optional)
+	Max *float64
+	// Sum is the sum of the values recorded.
 	Sum float64
 }
