@@ -28,7 +28,7 @@ type histogram[N int64 | float64] struct {
 	// TODO(#2970): implement.
 }
 
-func (s *histogram[N]) Aggregate(value N, attr *attribute.Set) {
+func (s *histogram[N]) Aggregate(value N, attr attribute.Set) {
 	// TODO(#2970): implement.
 }
 

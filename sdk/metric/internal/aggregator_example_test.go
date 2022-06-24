@@ -101,7 +101,7 @@ func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (syncint64.H
 type inst struct {
 	instrument.Synchronous
 
-	aggregateFunc func(int64, *attribute.Set)
+	aggregateFunc func(int64, attribute.Set)
 }
 
 func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}

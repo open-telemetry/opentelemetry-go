@@ -33,7 +33,7 @@ type Aggregation struct {
 	Timestamp uint64
 
 	// Attributes are the unique dimensions Value describes.
-	Attributes *attribute.Set
+	Attributes attribute.Set
 
 	// Value is the summarization of the measurements made.
 	Value value

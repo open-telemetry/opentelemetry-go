@@ -24,7 +24,7 @@ type sum[N int64 | float64] struct {
 	// TODO(#2972): implement.
 }
 
-func (s *sum[N]) Aggregate(value N, attr *attribute.Set) {
+func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
 	// TODO(#2972): implement.
 }
 

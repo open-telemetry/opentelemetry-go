@@ -30,7 +30,7 @@ func NewLastValue[N int64 | float64]() Aggregator[N] {
 	return &lastValue[N]{}
 }
 
-func (s *lastValue[N]) Aggregate(value N, attr *attribute.Set) {
+func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
 	// TODO(#2971): implement.
 }
 

@@ -23,7 +23,7 @@ import "go.opentelemetry.io/otel/attribute"
 type Aggregator[N int64 | float64] interface {
 	// Aggregate records the measurement, scoped by attr, and aggregates it
 	// into an aggregation.
-	Aggregate(measurement N, attr *attribute.Set)
+	Aggregate(measurement N, attr attribute.Set)
 
 	// Aggregations returns a slice of Aggregation, one per each attribute set
 	// used to scope measurement aggregation, and ends an aggregation cycle.
