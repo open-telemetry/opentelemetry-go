@@ -728,7 +728,7 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.Resource, records []testRecord, expected []*metricpb.ResourceMetrics) {
 	exp, driver := newExporter(t, opts...)
 
-	libraryRecs := map[instrumentation.Scope][]export.Record{}
+	libraryRecs := map[instrumentation.Library][]export.Record{}
 	for _, r := range records {
 		lcopy := make([]attribute.KeyValue, len(r.attrs))
 		copy(lcopy, r.attrs)
@@ -771,7 +771,7 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 		require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 
 		meterCfg := metric.NewMeterConfig(r.meterOpts...)
-		lib := instrumentation.Scope{
+		lib := instrumentation.Library{
 			Name:      r.meterName,
 			Version:   meterCfg.InstrumentationVersion(),
 			SchemaURL: meterCfg.SchemaURL(),
@@ -838,7 +838,7 @@ func TestEmptyMetricExport(t *testing.T) {
 		},
 	} {
 		driver.Reset()
-		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Scope][]export.Record{
+		require.NoError(t, exp.Export(context.Background(), resource.Empty(), processortest.MultiInstrumentationLibraryReader(map[instrumentation.Library][]export.Record{
 			{
 				Name: testLibName,
 			}: test.records,

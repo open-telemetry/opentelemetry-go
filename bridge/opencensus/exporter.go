@@ -64,8 +64,8 @@ type censusLibraryReader struct {
 	metrics []*metricdata.Metric
 }
 
-func (r censusLibraryReader) ForEach(readerFunc func(instrumentation.Scope, export.Reader) error) error {
-	return readerFunc(instrumentation.Scope{
+func (r censusLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+	return readerFunc(instrumentation.Library{
 		Name: "OpenCensus Bridge",
 	}, &metricReader{metrics: r.metrics})
 }

@@ -61,7 +61,7 @@ func spans(n int) []tracesdk.ReadOnlySpan {
 			StartTime:   now,
 			EndTime:     now,
 			SpanKind:    trace.SpanKindClient,
-			InstrumentationLibrary: instrumentation.Scope{
+			InstrumentationLibrary: instrumentation.Library{
 				Name: instrLibName,
 			},
 		}

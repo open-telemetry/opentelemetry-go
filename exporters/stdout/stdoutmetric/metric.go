@@ -52,7 +52,7 @@ func (e *metricExporter) TemporalityFor(desc *sdkapi.Descriptor, kind aggregatio
 func (e *metricExporter) Export(_ context.Context, res *resource.Resource, reader export.InstrumentationLibraryReader) error {
 	var aggError error
 	var batch []line
-	aggError = reader.ForEach(func(lib instrumentation.Scope, mr export.Reader) error {
+	aggError = reader.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
 		var instAttrs []attribute.KeyValue
 		if name := lib.Name; name != "" {
 			instAttrs = append(instAttrs, attribute.String("instrumentation.name", name))
