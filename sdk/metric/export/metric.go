@@ -155,7 +155,7 @@ type InstrumentationLibraryReader interface {
 	// ForEach calls the passed function once per instrumentation library,
 	// allowing the caller to emit metrics grouped by the library that
 	// produced them.
-	ForEach(readerFunc func(instrumentation.Scope, Reader) error) error
+	ForEach(readerFunc func(instrumentation.Library, Reader) error) error
 }
 
 // Reader allows a controller to access a complete checkpoint of

@@ -323,7 +323,7 @@ func (c *Controller) export(ctx context.Context) error { // nolint:revive  // me
 }
 
 // ForEach implements export.InstrumentationLibraryReader.
-func (c *Controller) ForEach(readerFunc func(l instrumentation.Scope, r export.Reader) error) error {
+func (c *Controller) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
 	for _, acPair := range c.accumulatorList() {
 		reader := acPair.checkpointer.Reader()
 		// TODO: We should not fail fast; instead accumulate errors.

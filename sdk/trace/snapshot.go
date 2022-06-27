@@ -102,9 +102,15 @@ func (s snapshot) Status() Status {
 	return s.status
 }
 
+// InstrumentationScope returns information about the instrumentation
+// scope that created the span.
+func (s snapshot) InstrumentationScope() instrumentation.Scope {
+	return s.instrumentationLibrary
+}
+
 // InstrumentationLibrary returns information about the instrumentation
 // library that created the span.
-func (s snapshot) InstrumentationLibrary() instrumentation.Scope {
+func (s snapshot) InstrumentationLibrary() instrumentation.Library {
 	return s.instrumentationLibrary
 }
 

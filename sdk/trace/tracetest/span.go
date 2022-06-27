@@ -71,7 +71,7 @@ type SpanStub struct {
 	DroppedLinks           int
 	ChildSpanCount         int
 	Resource               *resource.Resource
-	InstrumentationLibrary instrumentation.Scope
+	InstrumentationLibrary instrumentation.Library
 }
 
 // SpanStubFromReadOnlySpan returns a SpanStub populated from ro.
@@ -141,7 +141,7 @@ type spanSnapshot struct {
 	droppedLinks           int
 	childSpanCount         int
 	resource               *resource.Resource
-	instrumentationLibrary instrumentation.Scope
+	instrumentationLibrary instrumentation.Library
 }
 
 func (s spanSnapshot) Name() string                     { return s.name }
@@ -159,6 +159,9 @@ func (s spanSnapshot) DroppedLinks() int                { return s.droppedLinks 
 func (s spanSnapshot) DroppedEvents() int               { return s.droppedEvents }
 func (s spanSnapshot) ChildSpanCount() int              { return s.childSpanCount }
 func (s spanSnapshot) Resource() *resource.Resource     { return s.resource }
-func (s spanSnapshot) InstrumentationLibrary() instrumentation.Scope {
+func (s spanSnapshot) InstrumentationScope() instrumentation.Scope {
+	return s.instrumentationLibrary
+}
+func (s spanSnapshot) InstrumentationLibrary() instrumentation.Library {
 	return s.instrumentationLibrary
 }

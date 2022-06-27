@@ -142,7 +142,7 @@ func spanToThrift(ss sdktrace.ReadOnlySpan) *gen.Span {
 		}
 	}
 
-	if il := ss.InstrumentationLibrary(); il.Name != "" {
+	if il := ss.InstrumentationScope(); il.Name != "" {
 		tags = append(tags, getStringTag(keyInstrumentationLibraryName, il.Name))
 		if il.Version != "" {
 			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, il.Version))
