@@ -593,7 +593,7 @@ func (s *recordingSpan) Status() Status {
 func (s *recordingSpan) InstrumentationScope() instrumentation.Scope {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.tracer.instrumentationLibrary
+	return s.tracer.instrumentationScope
 }
 
 // InstrumentationLibrary returns the instrumentation.Library associated with
@@ -601,7 +601,7 @@ func (s *recordingSpan) InstrumentationScope() instrumentation.Scope {
 func (s *recordingSpan) InstrumentationLibrary() instrumentation.Library {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.tracer.instrumentationLibrary
+	return s.tracer.instrumentationScope
 }
 
 // Resource returns the Resource associated with the Tracer that created this
@@ -680,7 +680,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	defer s.mu.Unlock()
 
 	sd.endTime = s.endTime
-	sd.instrumentationLibrary = s.tracer.instrumentationLibrary
+	sd.instrumentationScope = s.tracer.instrumentationScope
 	sd.name = s.name
 	sd.parent = s.parent
 	sd.resource = s.tracer.provider.resource

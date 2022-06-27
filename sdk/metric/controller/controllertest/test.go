@@ -75,9 +75,9 @@ func (t MockTicker) C() <-chan time.Time {
 func ReadAll(
 	reader export.InstrumentationLibraryReader,
 	kind aggregation.TemporalitySelector,
-	apply func(instrumentation.Scope, export.Record) error,
+	apply func(instrumentation.Library, export.Record) error,
 ) error {
-	return reader.ForEach(func(library instrumentation.Scope, reader export.Reader) error {
+	return reader.ForEach(func(library instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(kind, func(record export.Record) error {
 			return apply(library, record)
 		})

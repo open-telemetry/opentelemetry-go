@@ -78,7 +78,7 @@ type Scope struct {
 // ExportRecord represents one collected datapoint from the Exporter.
 type ExportRecord struct {
 	InstrumentName         string
-	InstrumentationLibrary Scope
+	InstrumentationLibrary Library
 	Attributes             []attribute.KeyValue
 	AggregationKind        aggregation.Kind
 	NumberKind             number.Kind
@@ -98,8 +98,8 @@ func (e *Exporter) Collect(ctx context.Context) error {
 		return err
 	}
 
-	return e.controller.ForEach(func(l instrumentation.Scope, r export.Reader) error {
-		lib := Scope{
+	return e.controller.ForEach(func(l instrumentation.Library, r export.Reader) error {
+		lib := Library{
 			InstrumentationName:    l.Name,
 			InstrumentationVersion: l.Version,
 			SchemaURL:              l.SchemaURL,

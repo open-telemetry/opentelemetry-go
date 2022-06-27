@@ -471,7 +471,7 @@ func TestCounterObserverEndToEnd(t *testing.T) {
 
 		exporter := processortest.New(eselector, attribute.DefaultEncoder())
 		require.NoError(t, exporter.Export(ctx, resource.Empty(), processortest.OneInstrumentationLibraryReader(
-			instrumentation.Scope{
+			instrumentation.Library{
 				Name: "test",
 			}, reader)))
 

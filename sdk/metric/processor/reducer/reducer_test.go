@@ -106,7 +106,7 @@ func TestFilterBasicProcessor(t *testing.T) {
 	}
 
 	res := resource.NewSchemaless(attribute.String("R", "V"))
-	require.NoError(t, exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(instrumentation.Scope{
+	require.NoError(t, exporter.Export(context.Background(), res, processortest.OneInstrumentationLibraryReader(instrumentation.Library{
 		Name: "test",
 	}, basicProc.Reader())))
 

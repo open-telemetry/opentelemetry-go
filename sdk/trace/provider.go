@@ -141,18 +141,18 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	if name == "" {
 		name = defaultTracerName
 	}
-	il := instrumentation.Scope{
+	is := instrumentation.Scope{
 		Name:      name,
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
 	}
-	t, ok := p.namedTracer[il]
+	t, ok := p.namedTracer[is]
 	if !ok {
 		t = &tracer{
-			provider:               p,
-			instrumentationLibrary: il,
+			provider:             p,
+			instrumentationScope: is,
 		}
-		p.namedTracer[il] = t
+		p.namedTracer[is] = t
 		global.Info("Tracer created", "name", name, "version", c.InstrumentationVersion(), "schemaURL", c.SchemaURL())
 	}
 	return t

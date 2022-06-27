@@ -26,22 +26,22 @@ import (
 // snapshot is an record of a spans state at a particular checkpointed time.
 // It is used as a read-only representation of that state.
 type snapshot struct {
-	name                   string
-	spanContext            trace.SpanContext
-	parent                 trace.SpanContext
-	spanKind               trace.SpanKind
-	startTime              time.Time
-	endTime                time.Time
-	attributes             []attribute.KeyValue
-	events                 []Event
-	links                  []Link
-	status                 Status
-	childSpanCount         int
-	droppedAttributeCount  int
-	droppedEventCount      int
-	droppedLinkCount       int
-	resource               *resource.Resource
-	instrumentationLibrary instrumentation.Scope
+	name                  string
+	spanContext           trace.SpanContext
+	parent                trace.SpanContext
+	spanKind              trace.SpanKind
+	startTime             time.Time
+	endTime               time.Time
+	attributes            []attribute.KeyValue
+	events                []Event
+	links                 []Link
+	status                Status
+	childSpanCount        int
+	droppedAttributeCount int
+	droppedEventCount     int
+	droppedLinkCount      int
+	resource              *resource.Resource
+	instrumentationScope  instrumentation.Scope
 }
 
 var _ ReadOnlySpan = snapshot{}
@@ -105,13 +105,13 @@ func (s snapshot) Status() Status {
 // InstrumentationScope returns information about the instrumentation
 // scope that created the span.
 func (s snapshot) InstrumentationScope() instrumentation.Scope {
-	return s.instrumentationLibrary
+	return s.instrumentationScope
 }
 
 // InstrumentationLibrary returns information about the instrumentation
 // library that created the span.
 func (s snapshot) InstrumentationLibrary() instrumentation.Library {
-	return s.instrumentationLibrary
+	return s.instrumentationScope
 }
 
 // Resource returns information about the entity that produced the span.
