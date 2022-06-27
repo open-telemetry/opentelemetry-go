@@ -67,13 +67,21 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 func (e *exponentMapping) MapToIndex(value float64) int32 {
 	// Note: we can assume not a 0, Inf, or NaN; positive sign bit.
 
+	// Extract the raw exponent.  Note getBase2() returns a fixed
+	// value for subnormal values (which compute 0 correction below):
+	rawExp := getBase2(value)
+
+	// In case the value is an exact power of two, compute a
+	// correction of -1:
+	correction := int32((getSignificand(value) - 1) >> SignificandWidth)
+
 	// Note: bit-shifting does the right thing for negative
 	// exponents, e.g., -1 >> 1 == -1.
-	return getBase2(value) >> e.shift
+	return (rawExp + correction) >> e.shift
 }
 
 func (e *exponentMapping) minIndex() int32 {
-	return int32(MinNormalExponent) >> e.shift
+	return int32(MinNormalExponent-1) >> e.shift
 }
 
 func (e *exponentMapping) maxIndex() int32 {

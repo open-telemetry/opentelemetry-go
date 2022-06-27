@@ -66,7 +66,7 @@ type logarithmMapping struct {
 	// scale is between MinScale and MaxScale
 	scale int32
 
-	// minIndex is the index of MinValue
+	// minIndex is the index of NextAfter(MinValue, 1)
 	minIndex int32
 	// maxIndex is the index of MaxValue
 	maxIndex int32
@@ -135,12 +135,21 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 func (l *logarithmMapping) MapToIndex(value float64) int32 {
 	// Note: we can assume not a 0, Inf, or NaN; positive sign bit.
 	if value <= MinValue {
-		return l.minIndex
+		return l.minIndex - 1
 	}
-	// Use Floor() to round toward 0.
-	index := int32(math.Floor(math.Log(value) * l.scaleFactor))
 
-	if index > l.maxIndex {
+	// Exact power-of-two correctness: an optional special case.
+	if getSignificand(value) == 0 {
+		exp := getBase2(value)
+		return (exp << l.scale) - 1
+	}
+
+	// Use Ceil() to round up, subtract 1.  This ensures the
+	// upper-inclusive bound particularly for the input value 0,
+	// which always maps to index -1.
+	index := int32(math.Ceil(math.Log(value)*l.scaleFactor) - 1)
+
+	if index >= l.maxIndex {
 		return l.maxIndex
 	}
 	return index
@@ -159,6 +168,11 @@ func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {
 	if index <= l.minIndex {
 		if index == l.minIndex {
 			return MinValue, nil
+		} else if index == l.minIndex-1 {
+			// Similar to the logic above, the math.Exp()
+			// formulation is not accurate for subnormal
+			// values.
+			return math.Exp(float64(index+(int32(1)<<l.scale))*l.inverseFactor) / 2, nil
 		}
 		return 0, mapping.ErrUnderflow
 	}
@@ -168,4 +182,19 @@ func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {
 // Scale implements mapping.Mapping.
 func (l *logarithmMapping) Scale() int32 {
 	return l.scale
+}
+
+// getSignificand returns the 52 bit (unsigned) significand as a
+// signed value.
+func getSignificand(value float64) int64 {
+	return int64(math.Float64bits(value)) & exponent.SignificandMask
+}
+
+// getBase2 extracts the normalized base-2 fractional exponent.
+// Unlike Frexp(), this returns k for the equation f x 2**k where f is
+// in the range [1, 2).
+func getBase2(value float64) int32 {
+	rawBits := math.Float64bits(value)
+	rawExponent := (int64(rawBits) & exponent.ExponentMask) >> exponent.SignificandWidth
+	return int32(rawExponent - exponent.ExponentBias)
 }
