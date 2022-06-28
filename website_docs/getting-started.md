@@ -172,7 +172,7 @@ const name = "fib"
 
 Using the full-qualified package name, something that should be unique for Go packages, is the standard way to identify a [`Tracer`]. If your example package name differs, be sure to update the name you use here to match.
 
-Everything should be in place now to start tracing your application. But first, what is a trace? And, how exactly should you build them for you application?
+Everything should be in place now to start tracing your application. But first, what is a trace? And, how exactly should you build them for your application?
 
 To back up a bit, a trace is a type of telemetry that represents work being done by a service. A trace is a record of the connection(s) between participants processing a transaction, often through client/server requests processing and other forms of communication.
 
