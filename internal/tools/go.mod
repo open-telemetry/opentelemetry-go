@@ -13,8 +13,8 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.0.0-20220321164008-b8e03aff061a
 	go.opentelemetry.io/build-tools/multimod v0.0.0-20210920164323-2ceabab23375
 	go.opentelemetry.io/build-tools/semconvgen v0.0.0-20210920164323-2ceabab23375
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
-	golang.org/x/tools v0.1.11
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
+	golang.org/x/tools v0.1.11-0.20220316014157-77aa08bb151a
 )
 
 require (
@@ -183,6 +183,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
