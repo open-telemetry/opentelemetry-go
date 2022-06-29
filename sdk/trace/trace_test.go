@@ -1571,6 +1571,7 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, codes.Ok, ro.Status().Code)
 	assert.Equal(t, "", ro.Status().Description)
 	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationLibrary().Name)
+	assert.Equal(t, "3", ro.InstrumentationLibrary().Version)
 	assert.Equal(t, "ReadOnlySpan", ro.InstrumentationScope().Name)
 	assert.Equal(t, "3", ro.InstrumentationScope().Version)
 	assert.Equal(t, kv.Key, ro.Resource().Attributes()[0].Key)
