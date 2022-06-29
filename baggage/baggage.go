@@ -392,7 +392,7 @@ func New(members ...Member) (Baggage, error) {
 		}
 	}
 
-	// Check member numbers after duplicating.
+	// Check member numbers after deduplication.
 	if len(b) > maxMembers {
 		return Baggage{}, errMemberNumber
 	}
