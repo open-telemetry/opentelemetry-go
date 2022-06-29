@@ -21,6 +21,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Library` struct in the `go.opentelemetry.io/otel/sdk/instrumentation` package is deprecated.
   Use the equivalent `Scope` struct instead. (#2977)
+- The `ReadOnlySpan.InstrumentationLibrary` method from the `go.opentelemetry.io/otel/sdk/trace` package is deprecated.
+  Use the equivalent `ReadOnlySpan.InstrumentationScope` method instead. (#2977)
 
 ## [1.7.0/0.30.0] - 2022-04-28
 
