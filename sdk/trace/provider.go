@@ -162,16 +162,16 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 func (p *TracerProvider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	new := spanProcessorStates{}
+	spss := spanProcessorStates{}
 	if old, ok := p.spanProcessors.Load().(spanProcessorStates); ok {
-		new = append(new, old...)
+		spss = append(spss, old...)
 	}
 	newSpanSync := &spanProcessorState{
 		sp:    s,
 		state: &sync.Once{},
 	}
-	new = append(new, newSpanSync)
-	p.spanProcessors.Store(new)
+	spss = append(spss, newSpanSync)
+	p.spanProcessors.Store(spss)
 }
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors.

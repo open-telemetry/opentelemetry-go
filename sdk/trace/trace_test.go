@@ -1019,7 +1019,7 @@ func TestEndSpanTwice(t *testing.T) {
 	}
 
 	ro := span.(ReadOnlySpan)
-	if ro.EndTime() != et1 {
+	if !ro.EndTime().Equal(et1) {
 		t.Fatalf("2nd call to End() should not modify end time")
 	}
 }
