@@ -69,7 +69,7 @@ func testClientStopHonorsTimeout(t *testing.T, client otlptrace.Client) {
 	defer cancel()
 	<-ctx.Done()
 
-	if err := e.Shutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	if err := e.Shutdown(ctx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("expected context DeadlineExceeded error, got %v", err)
 	}
 }
@@ -88,7 +88,7 @@ func testClientStopHonorsCancel(t *testing.T, client otlptrace.Client) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := e.Shutdown(ctx); !errors.Is(err, context.Canceled) {
+	if err := e.Shutdown(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context canceled error, got %v", err)
 	}
 }
