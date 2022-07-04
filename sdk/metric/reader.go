@@ -88,7 +88,7 @@ type Reader interface {
 	Shutdown(context.Context) error
 }
 
-//  producer produces metrics for a Reader.
+// producer produces metrics for a Reader.
 type producer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
@@ -117,9 +117,20 @@ type ReaderOption interface {
 	PeriodicReaderOption
 }
 
-// WithTemporality uses the selector to determine the Temporality measurements
-// from instrument should be recorded with.
-func WithTemporality(selector func(instrument InstrumentKind) Temporality) ReaderOption {
+// TemporalitySelector selects the temporality to use based on the InstrumentKind.
+type TemporalitySelector func(InstrumentKind) Temporality
+
+// DefaultTemporalitySelector is the default TemporalitySelector used if
+// WithTemporalitySelector is not provided. CumulativeTemporality will be used
+// for all instrument kinds if this TemporalitySelector is used.
+func DefaultTemporalitySelector(InstrumentKind) Temporality {
+	return CumulativeTemporality
+}
+
+// WithTemporalitySelector sets the TemporalitySelector a reader will use to
+// determine the Temporality of an instrument based on its kind. If this
+// option is not used, the reader will use the DefaultTemporalitySelector.
+func WithTemporalitySelector(selector TemporalitySelector) ReaderOption {
 	return temporalitySelectorOption{selector: selector}
 }
 
@@ -137,12 +148,6 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 func (t temporalitySelectorOption) applyPeriodic(prc periodicReaderConfig) periodicReaderConfig {
 	prc.temporalitySelector = t.selector
 	return prc
-}
-
-// defaultTemporalitySelector returns the default Temporality measurements
-// from instrument should be recorded with: cumulative.
-func defaultTemporalitySelector(InstrumentKind) Temporality {
-	return CumulativeTemporality
 }
 
 // AggregationSelector selects the aggregation and the parameters to use for
@@ -170,10 +175,10 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	panic("unknown instrument kind")
 }
 
-// WithAggregation sets the default aggregation a reader will use for an
-// instrument based on the returned value from the selector. If this option is
-// not used, the reader will use the DefaultAggregationSelector or the
-// aggregation explicitly passed for a view matching an instrument.
+// WithAggregationSelector sets the AggregationSelector a reader will use to
+// determine the aggregation to use for an instrument based on its kind. If
+// this option is not used, the reader will use the DefaultAggregationSelector
+// or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ReaderOption {
 	// Deep copy and validate before using.
 	wrapped := func(ik InstrumentKind) aggregation.Aggregation {

@@ -47,7 +47,7 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // By default, the returned MeterProvider is configured with the default
 // Resource and no Readers. Readers cannot be added after a MeterProvider is
 // created. This means the returned MeterProvider, one created with no
-// Readers, will be perform no operations.
+// Readers, will perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 
