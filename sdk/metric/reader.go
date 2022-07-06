@@ -88,7 +88,7 @@ type Reader interface {
 	Shutdown(context.Context) error
 }
 
-//  producer produces metrics for a Reader.
+// producer produces metrics for a Reader.
 type producer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
