@@ -7,7 +7,7 @@ This document is a placeholder for future Aggregator, once seen in [PR
 
 Only the mapping functions have been made available at this time.  The
 equations tested here are specified in the [data model for Exponential
-Histogram data points](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md#exponentialhistogram).
+Histogram data points](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#exponentialhistogram).
 
 ### Mapping function
 
