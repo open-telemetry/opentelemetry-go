@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add support for `opentracing.TextMap` format in the `Inject` and `Extract` methods
+of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911)
+
 ### Changed
 
 - The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
