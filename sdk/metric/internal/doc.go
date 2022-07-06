@@ -12,21 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
-package view // import "go.opentelemetry.io/otel/sdk/metric/view"
-
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-)
-
-// Instrument uniquely identifies an instrument within a meter.
-type Instrument struct {
-	Scope instrumentation.Library
-
-	Name        string
-	Description string
-	Aggregation aggregation.Aggregation
-}
+// Package internal provides types and functionality used to aggregate and
+// cycle the state of metric measurements made by the SDK. These types and
+// functionality are meant only for internal SDK use.
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
