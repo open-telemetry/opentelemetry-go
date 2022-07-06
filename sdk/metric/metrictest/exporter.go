@@ -64,9 +64,12 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 	return c, exp
 }
 
-// Library is the same as "sdk/instrumentation".Library but there is
+// Deprecated: please use Scope instead.
+type Library = Scope
+
+// Scope is the same as "sdk/instrumentation".Scope but there is
 // a package cycle to use it so it is redeclared here.
-type Library struct {
+type Scope struct {
 	InstrumentationName    string
 	InstrumentationVersion string
 	SchemaURL              string

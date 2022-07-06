@@ -218,10 +218,10 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 		delete(m, "error")
 	}
 
-	if il := data.InstrumentationLibrary(); il.Name != "" {
-		m[keyInstrumentationLibraryName] = il.Name
-		if il.Version != "" {
-			m[keyInstrumentationLibraryVersion] = il.Version
+	if is := data.InstrumentationScope(); is.Name != "" {
+		m[keyInstrumentationLibraryName] = is.Name
+		if is.Version != "" {
+			m[keyInstrumentationLibraryVersion] = is.Version
 		}
 	}
 
