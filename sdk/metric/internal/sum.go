@@ -17,15 +17,28 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"sync"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // sum summarizes a set of measurements as their arithmetic sum.
 type sum[N int64 | float64] struct {
-	// TODO(#2972): implement.
+	sync.Mutex
+
+	values map[attribute.Set]N
+}
+
+func newSum[N int64 | float64]() sum[N] {
+	return sum[N]{values: make(map[attribute.Set]N)}
 }
 
 func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
-	// TODO(#2972): implement.
+	s.Lock()
+	s.values[attr] += value
+	s.Unlock()
 }
 
 // NewDeltaSum returns an Aggregator that summarizes a set of measurements as
@@ -35,21 +48,32 @@ func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all sums to zero.
 func NewDeltaSum[N int64 | float64]() Aggregator[N] {
-	// TODO(#2972): implement.
-	return &deltaSum[N]{}
+	return &deltaSum[N]{newSum[N]()}
 }
 
 // deltaSum summarizes a set of measurements made in a single aggregation
 // cycle as their arithmetic sum.
 type deltaSum[N int64 | float64] struct {
 	sum[N]
-
-	// TODO(#2972): implement.
 }
 
 func (s *deltaSum[N]) Aggregations() []Aggregation {
-	// TODO(#2972): implement.
-	return nil
+	s.Lock()
+	defer s.Unlock()
+
+	now := time.Now().UnixNano()
+	aggs := make([]Aggregation, 0, len(s.values))
+
+	for attr, value := range s.values {
+		aggs = append(aggs, Aggregation{
+			Timestamp:  now,
+			Attributes: attr,
+			Value:      SingleValue[N]{Value: value},
+		})
+		delete(s.values, attr)
+	}
+
+	return aggs
 }
 
 // NewCumulativeSum returns an Aggregator that summarizes a set of
@@ -59,8 +83,10 @@ func (s *deltaSum[N]) Aggregations() []Aggregation {
 // arithmetic sum of all values aggregated since the returned Aggregator was
 // created.
 func NewCumulativeSum[N int64 | float64]() Aggregator[N] {
-	// TODO(#2972): implement.
-	return &cumulativeSum[N]{}
+	return &cumulativeSum[N]{
+		sum:   newSum[N](),
+		start: time.Now().UnixNano(),
+	}
 }
 
 // cumulativeSum summarizes a set of measurements made over all aggregation
@@ -68,10 +94,23 @@ func NewCumulativeSum[N int64 | float64]() Aggregator[N] {
 type cumulativeSum[N int64 | float64] struct {
 	sum[N]
 
-	// TODO(#2972): implement.
+	start int64
 }
 
 func (s *cumulativeSum[N]) Aggregations() []Aggregation {
-	// TODO(#2972): implement.
-	return nil
+	s.Lock()
+	defer s.Unlock()
+
+	now := time.Now().UnixNano()
+	aggs := make([]Aggregation, 0, len(s.values))
+
+	for attr, value := range s.values {
+		aggs = append(aggs, Aggregation{
+			Timestamp:  now,
+			Attributes: attr,
+			Value:      SingleValue[N]{Value: value},
+		})
+	}
+
+	return aggs
 }
