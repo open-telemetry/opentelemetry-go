@@ -18,6 +18,7 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 
@@ -130,4 +131,45 @@ func TestInt64CumulativeSum(t *testing.T) {
 
 func TestFloat64CumulativeSum(t *testing.T) {
 	testCumulativeSum(t, NewCumulativeSum[float64]())
+}
+
+var aggsStore []Aggregation
+
+func benchmarkAggregatorN[N int64 | float64](b *testing.B, agg Aggregator[N], count int) {
+	attrs := make([]attribute.Set, count)
+	for i := range attrs {
+		attrs[i] = attribute.NewSet(attribute.Int("value", i))
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		for _, attr := range attrs {
+			agg.Aggregate(1, attr)
+		}
+		aggsStore = agg.Aggregations()
+	}
+}
+
+func benchmarkAggregator[N int64 | float64](a Aggregator[N]) func(*testing.B) {
+	counts := []int{1, 10, 100}
+	return func(b *testing.B) {
+		for _, n := range counts {
+			b.Run(strconv.Itoa(n), func(b *testing.B) {
+				benchmarkAggregatorN(b, a, n)
+			})
+		}
+	}
+}
+
+func BenchmarkSum(b *testing.B) {
+	b.Run("Delta", func(b *testing.B) {
+		b.Run("Int64", benchmarkAggregator(NewDeltaSum[int64]()))
+		b.Run("Float64", benchmarkAggregator(NewDeltaSum[float64]()))
+	})
+	b.Run("Cumulative", func(b *testing.B) {
+		b.Run("Int64", benchmarkAggregator(NewCumulativeSum[int64]()))
+		b.Run("Float64", benchmarkAggregator(NewCumulativeSum[float64]()))
+	})
 }
