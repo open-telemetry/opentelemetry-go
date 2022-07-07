@@ -8,13 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add support for `opentracing.TextMap` format in the `Inject` and `Extract` methods
+of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911)
+
 ### Changed
 
 - The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
+- In the `go.opentelemetry.io/otel/sdk/instrumentation` package rename `Library` to `Scope` and alias `Library` as `Scope` (#2976)
 
 ### Removed
 
 - Support for go1.16. Support is now only for go1.17 and go1.18 (#2917)
+
+### Deprecated
+
+- The `Library` struct in the `go.opentelemetry.io/otel/sdk/instrumentation` package is deprecated.
+  Use the equivalent `Scope` struct instead. (#2977)
+- The `ReadOnlySpan.InstrumentationLibrary` method from the `go.opentelemetry.io/otel/sdk/trace` package is deprecated.
+  Use the equivalent `ReadOnlySpan.InstrumentationScope` method instead. (#2977)
 
 ## [1.7.0/0.30.0] - 2022-04-28
 
