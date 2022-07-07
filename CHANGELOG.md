@@ -29,10 +29,6 @@ of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911
 - The `ReadOnlySpan.InstrumentationLibrary` method from the `go.opentelemetry.io/otel/sdk/trace` package is deprecated.
   Use the equivalent `ReadOnlySpan.InstrumentationScope` method instead. (#2977)
 
-### Removed
-
-- Support for go1.16. Support is now only for go1.17 and go1.18 (#2917)
-
 ## [1.7.0/0.30.0] - 2022-04-28
 
 ### Added
