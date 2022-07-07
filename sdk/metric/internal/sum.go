@@ -26,46 +26,41 @@ import (
 
 // sumAgg summarizes a set of measurements as their arithmetic sum.
 type sumAgg[N int64 | float64] struct {
-	// zero value used for the base of all new sums.
-	newFunc NewAtomicFunc[N]
-
-	// map[attribute.Set]Atomic[N]
-	current sync.Map
+	mu     sync.Mutex
+	values map[attribute.Set]N
 }
 
 // NewSum returns an Aggregator that summarizes a set of measurements as their
 // arithmetic sum. The zero value will be used as the start value for all new
 // Aggregations.
-func NewSum[N int64 | float64](f NewAtomicFunc[N]) Aggregator[N] {
-	return &sumAgg[N]{newFunc: f}
+func NewSum[N int64 | float64]() Aggregator[N] {
+	return &sumAgg[N]{
+		values: map[attribute.Set]N{},
+	}
 }
 
 func (s *sumAgg[N]) Aggregate(value N, attr *attribute.Set) {
-	if v, ok := s.current.Load(*attr); ok {
-		v.(Atomic[N]).Add(value)
-		return
-	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	v, _ := s.current.LoadOrStore(*attr, s.newFunc())
-	v.(Atomic[N]).Add(value)
+	s.values[*attr] += value
 }
 
 func (s *sumAgg[N]) flush() []Aggregation {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	now := time.Now().UnixNano()
-	var aggs []Aggregation
-	s.current.Range(func(key, val any) bool {
-		attrs := key.(attribute.Set)
+	aggs := make([]Aggregation, 0, len(s.values))
+
+	for attr, value := range s.values {
+		attr := attr
 		aggs = append(aggs, Aggregation{
 			Timestamp:  now,
-			Attributes: &attrs,
-			Value:      SingleValue[N]{Value: val.(Atomic[N]).Load()},
+			Attributes: &attr,
+			Value:      SingleValue[N]{Value: value},
 		})
-
-		// Reset.
-		s.current.Delete(key)
-
-		return true
-	})
-
+		delete(s.values, attr)
+	}
 	return aggs
 }
