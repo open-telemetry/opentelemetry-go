@@ -15,18 +15,17 @@
 //go:build go1.18
 // +build go1.18
 
-package view // import "go.opentelemetry.io/otel/sdk/metric/view"
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-)
+import "go.opentelemetry.io/otel/attribute"
 
-// Instrument uniquely identifies an instrument within a meter.
-type Instrument struct {
-	Scope instrumentation.Library
+// Aggregator forms an aggregation from a collection of recorded measurements.
+type Aggregator[N int64 | float64] interface {
+	// Aggregate records the measurement, scoped by attr, and aggregates it
+	// into an aggregation.
+	Aggregate(measurement N, attr attribute.Set)
 
-	Name        string
-	Description string
-	Aggregation aggregation.Aggregation
+	// Aggregations returns a slice of Aggregation, one per each attribute set
+	// used to scope measurement aggregation, and ends an aggregation cycle.
+	Aggregations() []Aggregation
 }
