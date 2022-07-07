@@ -117,20 +117,24 @@ func testCumulativeSum[N int64 | float64](t *testing.T, agg Aggregator[N]) {
 	check(t, want, agg.Aggregations())
 }
 
-func TestInt64DeltaSum(t *testing.T) {
-	testDeltaSum(t, NewDeltaSum[int64]())
-}
+func TestSum(t *testing.T) {
+	t.Run("Delta", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			testDeltaSum(t, NewDeltaSum[int64]())
+		})
+		t.Run("Float64", func(t *testing.T) {
+			testDeltaSum(t, NewDeltaSum[float64]())
+		})
+	})
 
-func TestFloat64DeltaSum(t *testing.T) {
-	testDeltaSum(t, NewDeltaSum[float64]())
-}
-
-func TestInt64CumulativeSum(t *testing.T) {
-	testCumulativeSum(t, NewCumulativeSum[int64]())
-}
-
-func TestFloat64CumulativeSum(t *testing.T) {
-	testCumulativeSum(t, NewCumulativeSum[float64]())
+	t.Run("Cumulative", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			testCumulativeSum(t, NewCumulativeSum[int64]())
+		})
+		t.Run("Float64", func(t *testing.T) {
+			testCumulativeSum(t, NewCumulativeSum[float64]())
+		})
+	})
 }
 
 var aggsStore []Aggregation
@@ -141,8 +145,8 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, agg Aggregator[N], co
 		attrs[i] = attribute.NewSet(attribute.Int("value", i))
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
+	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
 		for _, attr := range attrs {
