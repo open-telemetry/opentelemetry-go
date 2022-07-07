@@ -15,18 +15,26 @@
 //go:build go1.18
 // +build go1.18
 
-package view // import "go.opentelemetry.io/otel/sdk/metric/view"
+package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-)
+import "go.opentelemetry.io/otel/attribute"
 
-// Instrument uniquely identifies an instrument within a meter.
-type Instrument struct {
-	Scope instrumentation.Library
+// lastValue summarizes a set of measurements as the last one made.
+type lastValue[N int64 | float64] struct {
+	// TODO(#2971): implement.
+}
 
-	Name        string
-	Description string
-	Aggregation aggregation.Aggregation
+// NewLastValue returns an Aggregator that summarizes a set of measurements as
+// the last one made.
+func NewLastValue[N int64 | float64]() Aggregator[N] {
+	return &lastValue[N]{}
+}
+
+func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
+	// TODO(#2971): implement.
+}
+
+func (s *lastValue[N]) Aggregations() []Aggregation {
+	// TODO(#2971): implement.
+	return nil
 }
