@@ -27,7 +27,7 @@ func (cfg Config) Description() string {
 	return cfg.description
 }
 
-// Unit describes the measurement unit for a instrument.
+// Unit describes the measurement unit for an instrument.
 func (cfg Config) Unit() unit.Unit {
 	return cfg.unit
 }
