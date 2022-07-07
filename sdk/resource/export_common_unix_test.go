@@ -19,7 +19,6 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 var (
 	Uname                 = uname
-	CharsToString         = charsToString
 	GetFirstAvailableFile = getFirstAvailableFile
 )
 

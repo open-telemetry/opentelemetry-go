@@ -67,7 +67,7 @@ func (f InstrumentationBlacklist) ForceFlush(ctx context.Context) error {
 	return f.Next.ForceFlush(ctx)
 }
 func (f InstrumentationBlacklist) OnEnd(s ReadOnlySpan) {
-	if f.Blacklist != nil && f.Blacklist[s.InstrumentationLibrary().Name] {
+	if f.Blacklist != nil && f.Blacklist[s.InstrumentationScope().Name] {
 		// Drop spans from this instrumentation
 		return
 	}

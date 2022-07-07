@@ -11,7 +11,7 @@ Instrumentation is the process of adding observability code to your application.
 
 To create spans, you'll need to acquire or initialize a tracer first.
 
-### Initiallizing a new tracer
+### Initializing a new tracer
 
 Ensure you have the right packages installed:
 
