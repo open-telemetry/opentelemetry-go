@@ -83,18 +83,13 @@ func (s *deltaSum[N]) Aggregations() []Aggregation {
 // arithmetic sum of all values aggregated since the returned Aggregator was
 // created.
 func NewCumulativeSum[N int64 | float64]() Aggregator[N] {
-	return &cumulativeSum[N]{
-		sum:   newSum[N](),
-		start: time.Now().UnixNano(),
-	}
+	return &cumulativeSum[N]{sum: newSum[N]()}
 }
 
 // cumulativeSum summarizes a set of measurements made over all aggregation
 // cycles as their arithmetic sum.
 type cumulativeSum[N int64 | float64] struct {
 	sum[N]
-
-	start int64
 }
 
 func (s *cumulativeSum[N]) Aggregations() []Aggregation {
