@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add support for `opentracing.TextMap` format in the `Inject` and `Extract` methods
 of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911)
+- Add support for Schema Files format 1.1.x (metric "split" transform). (#2999)
 
 ### Changed
 
