@@ -89,7 +89,7 @@ func aggregationsToMap[N int64 | float64](a []Aggregation) map[attribute.Set]N {
 }
 
 // assertMap asserts expected equals actual. The testify assert.Equal function
-// does not give clear error messages for maps, this attemps to do so.
+// does not give clear error messages for maps, this attempts to do so.
 func assertMap[N int64 | float64](t *testing.T, expected, actual map[attribute.Set]N) {
 	extra := make(map[attribute.Set]struct{})
 	for attr := range actual {
