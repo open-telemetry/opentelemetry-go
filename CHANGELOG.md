@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.8.0/0.31.0] - 2022-07-08
+
 ### Added
 
 - Add support for `opentracing.TextMap` format in the `Inject` and `Extract` methods
@@ -17,6 +19,7 @@ of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911
 
 - The `crosslink` make target has been updated to use the `go.opentelemetry.io/build-tools/crosslink` package. (#2886)
 - In the `go.opentelemetry.io/otel/sdk/instrumentation` package rename `Library` to `Scope` and alias `Library` as `Scope` (#2976)
+- Move metric no-op implementation form `nonrecording` to `metric` package. (#2866)
 
 ### Removed
 
@@ -53,7 +56,6 @@ of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911
   The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
 - The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
   Consequentially, the `Record` type from the same package also has had the embedded method renamed. (#2790)
-- Move metric no-op implementation form `nonrecording` to `metric` package. (#2866)
 
 ### Deprecated
 
@@ -1874,7 +1876,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.8.0...HEAD
+[1.8.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.8.0
 [1.7.0/0.30.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.7.0
 [0.29.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/metric/v0.29.0
 [1.6.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.6.3
