@@ -52,7 +52,7 @@ func newTraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String("ExampleService"),
-		)
+		),
 	)
 	
 	if err != nil {
