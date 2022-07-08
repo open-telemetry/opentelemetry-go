@@ -133,6 +133,31 @@ func cumulativeExpecter[N int64 | float64](incr map[attribute.Set]N) func() map[
 	}
 }
 
+func testDeltaSumReset[N int64 | float64](a Aggregator[N]) func(*testing.T) {
+	return func(t *testing.T) {
+		expect := make(map[attribute.Set]N)
+		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		a.Aggregate(1, alice)
+		expect[alice] = 1
+		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		// The sum should be reset to zero once Aggregations is called.
+		expect[alice] = 0
+		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		// Aggregating another set should not affect the original (alice).
+		a.Aggregate(1, bob)
+		expect[bob] = 1
+		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+	}
+}
+
+func TestDeltaSumReset(t *testing.T) {
+	t.Run("Int64", testDeltaSumReset(NewDeltaSum[int64]()))
+	t.Run("Float64", testDeltaSumReset(NewDeltaSum[float64]()))
+}
+
 var result []Aggregation
 
 func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggregator[N], count int) {
