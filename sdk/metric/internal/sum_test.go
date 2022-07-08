@@ -31,6 +31,7 @@ import (
 const (
 	goroutines   = 5
 	measurements = 30
+	cycles       = 3
 )
 
 var (
@@ -39,103 +40,97 @@ var (
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 )
 
-// apply aggregates all the incr values with agg.
-func apply[N int64 | float64](incr map[attribute.Set]N, agg Aggregator[N]) {
-	var wg sync.WaitGroup
-	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
-		go func() {
-			defer wg.Done()
-			for j := 0; j < measurements; j++ {
-				for attrs, n := range incr {
-					agg.Aggregate(n, attrs)
-				}
-			}
-		}()
-	}
-	wg.Wait()
+func TestSum(t *testing.T) {
+	t.Run("Delta", func(t *testing.T) {
+		t.Run("Int64", testSum(NewDeltaSum[int64](), deltaExpecter[int64]))
+		t.Run("Float64", testSum(NewDeltaSum[float64](), deltaExpecter[float64]))
+	})
+
+	t.Run("Cumulative", func(t *testing.T) {
+		t.Run("Int64", testSum(NewCumulativeSum[int64](), cumulativeExpecter[int64]))
+		t.Run("Float64", testSum(NewCumulativeSum[float64](), cumulativeExpecter[float64]))
+	})
 }
 
-func check[N int64 | float64](t *testing.T, expected map[attribute.Set]N, actual []Aggregation) {
+// expectFunc returns a function that will return a map of expected values of
+// a cycle. Each call advances the cycle.
+type expectFunc[N int64 | float64] func(map[attribute.Set]N) func() map[attribute.Set]N
+
+func testSum[N int64 | float64](a Aggregator[N], expecter expectFunc[N]) func(*testing.T) {
+	increments := map[attribute.Set]N{alice: 1, bob: -1, carol: 2}
+	f := expecter(increments)
+	return func(t *testing.T) {
+		for i := 0; i < cycles; i++ {
+			var wg sync.WaitGroup
+			wg.Add(goroutines)
+			for i := 0; i < goroutines; i++ {
+				go func() {
+					defer wg.Done()
+					for j := 0; j < measurements; j++ {
+						for attrs, n := range increments {
+							a.Aggregate(n, attrs)
+						}
+					}
+				}()
+			}
+			wg.Wait()
+
+			assertMap(t, f(), aggregationsToMap[N](a.Aggregations()))
+		}
+	}
+}
+
+func aggregationsToMap[N int64 | float64](a []Aggregation) map[attribute.Set]N {
+	m := make(map[attribute.Set]N)
+	for _, a := range a {
+		m[a.Attributes] = a.Value.(SingleValue[N]).Value
+	}
+	return m
+}
+
+// assertMap asserts expected equals actual. The testify assert.Equal function
+// does not give clear error messages for maps, this attemps to do so.
+func assertMap[N int64 | float64](t *testing.T, expected, actual map[attribute.Set]N) {
 	extra := make(map[attribute.Set]struct{})
-	// Convert []Aggregation to map[attribute.Set]N
-	aMap := make(map[attribute.Set]N)
-	for _, a := range actual {
-		aMap[a.Attributes] = a.Value.(SingleValue[N]).Value
-		extra[a.Attributes] = struct{}{}
+	for attr := range actual {
+		extra[attr] = struct{}{}
 	}
 
 	for attr, v := range expected {
 		name := attr.Encoded(attribute.DefaultEncoder())
 		t.Run(name, func(t *testing.T) {
-			require.Contains(t, aMap, attr)
+			require.Contains(t, actual, attr)
 			delete(extra, attr)
-			assert.Equal(t, v, aMap[attr])
+			assert.Equal(t, v, actual[attr])
 		})
 	}
 
 	assert.Lenf(t, extra, 0, "unknown values added: %v", extra)
 }
 
-func testDeltaSum[N int64 | float64](t *testing.T, agg Aggregator[N]) {
-	increments := map[attribute.Set]N{alice: 1, bob: -1, carol: 2}
-	apply(increments, agg)
-
-	want := make(map[attribute.Set]N, len(increments))
-	for actor, incr := range increments {
-		want[actor] = incr * measurements * goroutines
+func deltaExpecter[N int64 | float64](incr map[attribute.Set]N) func() map[attribute.Set]N {
+	expect := make(map[attribute.Set]N, len(incr))
+	for actor, incr := range incr {
+		expect[actor] = incr * measurements * goroutines
 	}
-	check(t, want, agg.Aggregations())
-
-	require.IsType(t, &deltaSum[N]{}, agg)
-	ds := agg.(*deltaSum[N])
-	assert.Len(t, ds.values, 0)
-
-	apply(increments, agg)
-	// Delta sums are expected to reset after each call to Aggregations.
-	check(t, want, agg.Aggregations())
+	return func() map[attribute.Set]N { return expect }
 }
 
-func testCumulativeSum[N int64 | float64](t *testing.T, agg Aggregator[N]) {
-	increments := map[attribute.Set]N{alice: 1, bob: -1, carol: 2}
-	apply(increments, agg)
-
-	want := make(map[attribute.Set]N, len(increments))
-	for actor, incr := range increments {
-		want[actor] = incr * measurements * goroutines
+func cumulativeExpecter[N int64 | float64](incr map[attribute.Set]N) func() map[attribute.Set]N {
+	var cycle int
+	base := make(map[attribute.Set]N, len(incr))
+	for actor, incr := range incr {
+		base[actor] = incr * measurements * goroutines
 	}
-	check(t, want, agg.Aggregations())
 
-	require.IsType(t, &cumulativeSum[N]{}, agg)
-	ds := agg.(*cumulativeSum[N])
-	assert.Len(t, ds.values, len(increments))
-
-	apply(increments, agg)
-	// Cumulative sums maintain state, this should double the value.
-	for actor := range want {
-		want[actor] += want[actor]
+	expect := make(map[attribute.Set]N, len(incr))
+	return func() map[attribute.Set]N {
+		cycle++
+		for actor := range base {
+			expect[actor] = base[actor] * N(cycle)
+		}
+		return expect
 	}
-	check(t, want, agg.Aggregations())
-}
-
-func TestSum(t *testing.T) {
-	t.Run("Delta", func(t *testing.T) {
-		t.Run("Int64", func(t *testing.T) {
-			testDeltaSum(t, NewDeltaSum[int64]())
-		})
-		t.Run("Float64", func(t *testing.T) {
-			testDeltaSum(t, NewDeltaSum[float64]())
-		})
-	})
-
-	t.Run("Cumulative", func(t *testing.T) {
-		t.Run("Int64", func(t *testing.T) {
-			testCumulativeSum(t, NewCumulativeSum[int64]())
-		})
-		t.Run("Float64", func(t *testing.T) {
-			testCumulativeSum(t, NewCumulativeSum[float64]())
-		})
-	})
 }
 
 var result []Aggregation
