@@ -58,12 +58,12 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) Aggregations() []Aggregation {
+	now := time.Now().UnixNano()
+
 	s.Lock()
 	defer s.Unlock()
 
-	now := time.Now().UnixNano()
 	aggs := make([]Aggregation, 0, len(s.values))
-
 	for attr, value := range s.values {
 		aggs = append(aggs, Aggregation{
 			Timestamp:  now,
@@ -93,12 +93,12 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) Aggregations() []Aggregation {
+	now := time.Now().UnixNano()
+
 	s.Lock()
 	defer s.Unlock()
 
-	now := time.Now().UnixNano()
 	aggs := make([]Aggregation, 0, len(s.values))
-
 	for attr, value := range s.values {
 		aggs = append(aggs, Aggregation{
 			Timestamp:  now,
