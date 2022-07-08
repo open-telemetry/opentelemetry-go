@@ -54,7 +54,7 @@ func TestSum(t *testing.T) {
 
 // expectFunc returns a function that will return a map of expected values of
 // a cycle. Each call advances the cycle.
-type expectFunc[N int64 | float64] func(map[attribute.Set]N) func() map[attribute.Set]N
+type expectFunc[N int64 | float64] func(increments map[attribute.Set]N) func() map[attribute.Set]N
 
 func testSum[N int64 | float64](a Aggregator[N], expecter expectFunc[N]) func(*testing.T) {
 	increments := map[attribute.Set]N{alice: 1, bob: -1, carol: 2}
