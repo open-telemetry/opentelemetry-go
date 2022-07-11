@@ -106,6 +106,10 @@ func (s *cumulativeSum[N]) Aggregations() []Aggregation {
 			Attributes: attr,
 			Value:      SingleValue[N]{Value: value},
 		})
+		// TODO (#3006): This will use an unbounded amount of memory if there
+		// are unbounded number of attribute sets being aggregated. Attribute
+		// sets that become "stale" need to be fogotten so this will not
+		// overload the system.
 	}
 
 	return aggs
