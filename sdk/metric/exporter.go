@@ -41,7 +41,7 @@ type Exporter interface {
 	// implement any retry logic. All errors returned by this function are
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
-	Export(context.Context, export.Metrics) error
+	Export(context.Context, export.ResourceMetrics) error
 
 	// ForceFlush flushes any metric data held by an exporter.
 	//
