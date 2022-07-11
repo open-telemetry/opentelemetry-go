@@ -30,7 +30,7 @@ type Aggregation struct {
 	// Timestamp defines the time the last measurement was made. If zero, no
 	// measurements were made for this time span. The time is represented as a
 	// unix timestamp with nanosecond precision.
-	Timestamp uint64
+	Timestamp int64
 
 	// Attributes are the unique dimensions Value describes.
 	Attributes attribute.Set
