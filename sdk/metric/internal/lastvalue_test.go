@@ -58,3 +58,8 @@ func TestLastValueReset(t *testing.T) {
 	t.Run("Int64", testLastValueReset(NewLastValue[int64]()))
 	t.Run("Float64", testLastValueReset(NewLastValue[float64]()))
 }
+
+func BenchmarkLastValue(b *testing.B) {
+	b.Run("Int64", benchmarkAggregator(NewLastValue[int64]))
+	b.Run("Float64", benchmarkAggregator(NewLastValue[float64]))
+}
