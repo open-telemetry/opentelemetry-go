@@ -69,7 +69,7 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
-	ts.Equal(export.Metrics{}, m)
+	ts.Equal(export.ResourceMetrics{}, m)
 }
 
 func (ts *readerTestSuite) TestShutdownTwice() {
@@ -88,7 +88,7 @@ func (ts *readerTestSuite) TestMultipleForceFlush() {
 
 func (ts *readerTestSuite) TestMultipleRegister() {
 	p0 := testProducer{
-		produceFunc: func(ctx context.Context) (export.Metrics, error) {
+		produceFunc: func(ctx context.Context) (export.ResourceMetrics, error) {
 			// Differentiate this producer from the second by returning an
 			// error.
 			return testMetrics, assert.AnError
@@ -143,18 +143,18 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
-	ts.Equal(export.Metrics{}, m)
+	ts.Equal(export.ResourceMetrics{}, m)
 }
 
-var testMetrics = export.Metrics{
+var testMetrics = export.ResourceMetrics{
 	// TODO: test with actual data.
 }
 
 type testProducer struct {
-	produceFunc func(context.Context) (export.Metrics, error)
+	produceFunc func(context.Context) (export.ResourceMetrics, error)
 }
 
-func (p testProducer) produce(ctx context.Context) (export.Metrics, error) {
+func (p testProducer) produce(ctx context.Context) (export.ResourceMetrics, error) {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
@@ -168,7 +168,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	// Store bechmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
 	var (
-		collectedMetrics export.Metrics
+		collectedMetrics export.ResourceMetrics
 		err              error
 	)
 
@@ -178,9 +178,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 
 		for n := 0; n < b.N; n++ {
 			collectedMetrics, err = r.Collect(ctx)
-			if collectedMetrics != testMetrics || err != nil {
-				b.Errorf("unexpected Collect response: (%#v, %v)", collectedMetrics, err)
-			}
+			assert.Equalf(b, testMetrics, collectedMetrics, "unexpected Collect response: (%#v, %v)", collectedMetrics, err)
 		}
 	}
 }
