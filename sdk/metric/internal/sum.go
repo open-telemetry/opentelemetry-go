@@ -64,14 +64,14 @@ func (s *deltaSum[N]) Aggregations() []Aggregation {
 	defer s.Unlock()
 
 	aggs := make([]Aggregation, 0, len(s.values))
-	var zero N
 	for attr, value := range s.values {
 		aggs = append(aggs, Aggregation{
 			Timestamp:  now,
 			Attributes: attr,
 			Value:      SingleValue[N]{Value: value},
 		})
-		s.values[attr] = zero
+		// Unused attribute sets do not report.
+		delete(s.values, attr)
 	}
 
 	return aggs

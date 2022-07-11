@@ -142,8 +142,8 @@ func testDeltaSumReset[N int64 | float64](a Aggregator[N]) func(*testing.T) {
 		expect[alice] = 1
 		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
 
-		// The sum should be reset to zero once Aggregations is called.
-		expect[alice] = 0
+		// The attr set should be forgotten once Aggregations is called.
+		delete(expect, alice)
 		assertMap(t, expect, aggregationsToMap[N](a.Aggregations()))
 
 		// Aggregating another set should not affect the original (alice).
