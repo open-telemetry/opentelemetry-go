@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -38,7 +39,7 @@ var (
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 )
 
-// setMap maps atribute sets to a number.
+// setMap maps attribute sets to a number.
 type setMap[N int64 | float64] map[attribute.Set]N
 
 // expectFunc returns a function that will return an setMap of expected
