@@ -41,7 +41,7 @@ type ResourceMetrics struct {
 // ScopeMetrics is a collection of Metrics Produces by a Meter.
 type ScopeMetrics struct {
 	// Scope is the Scope that the Meter was created with.
-	Scope instrumentation.Library
+	Scope instrumentation.Scope
 	// Metrics are a list of aggregations created by the Meter.
 	Metrics []Metrics
 }
@@ -59,7 +59,7 @@ type Metrics struct {
 }
 
 // Aggregation is the store of data reported by an Instrument.
-// It will be one of: Gauge, Sum Histogram.
+// It will be one of: Gauge, Sum, Histogram.
 type Aggregation interface {
 	privateAggregation()
 }
