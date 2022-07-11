@@ -33,3 +33,28 @@ func lastValueExpecter[N int64 | float64](incr setMap[N]) func(int) setMap[N] {
 		return expect
 	}
 }
+
+func testLastValueReset[N int64 | float64](a Aggregator[N]) func(*testing.T) {
+	return func(t *testing.T) {
+		expect := make(setMap[N])
+		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		a.Aggregate(1, alice)
+		expect[alice] = 1
+		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		// The attr set should be forgotten once Aggregations is called.
+		delete(expect, alice)
+		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+
+		// Aggregating another set should not affect the original (alice).
+		a.Aggregate(1, bob)
+		expect[bob] = 1
+		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+	}
+}
+
+func TestLastValueReset(t *testing.T) {
+	t.Run("Int64", testLastValueReset(NewLastValue[int64]()))
+	t.Run("Float64", testLastValueReset(NewLastValue[float64]()))
+}
