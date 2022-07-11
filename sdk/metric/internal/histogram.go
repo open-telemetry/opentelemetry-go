@@ -20,6 +20,7 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 // histogram summarizes a set of measurements as an histogram with
@@ -51,7 +52,7 @@ type deltaHistogram[N int64 | float64] struct {
 	// TODO(#2970): implement.
 }
 
-func (s *deltaHistogram[N]) Aggregations() []Aggregation {
+func (s *deltaHistogram[N]) Aggregations() []export.Aggregation {
 	// TODO(#2970): implement.
 	return nil
 }
@@ -74,7 +75,7 @@ type cumulativeHistogram[N int64 | float64] struct {
 	// TODO(#2970): implement.
 }
 
-func (s *cumulativeHistogram[N]) Aggregations() []Aggregation {
+func (s *cumulativeHistogram[N]) Aggregations() []export.Aggregation {
 	// TODO(#2970): implement.
 	return nil
 }

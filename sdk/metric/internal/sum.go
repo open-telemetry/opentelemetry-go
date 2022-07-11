@@ -17,7 +17,10 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+)
 
 // sum summarizes a set of measurements as their arithmetic sum.
 type sum[N int64 | float64] struct {
@@ -47,7 +50,7 @@ type deltaSum[N int64 | float64] struct {
 	// TODO(#2972): implement.
 }
 
-func (s *deltaSum[N]) Aggregations() []Aggregation {
+func (s *deltaSum[N]) Aggregations() []export.Aggregation {
 	// TODO(#2972): implement.
 	return nil
 }
@@ -71,7 +74,7 @@ type cumulativeSum[N int64 | float64] struct {
 	// TODO(#2972): implement.
 }
 
-func (s *cumulativeSum[N]) Aggregations() []Aggregation {
+func (s *cumulativeSum[N]) Aggregations() []export.Aggregation {
 	// TODO(#2972): implement.
 	return nil
 }
