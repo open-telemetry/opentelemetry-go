@@ -87,8 +87,9 @@ func (Sum) privateAggregation() {}
 
 // DataPoint is a single data point in a timeseries.
 type DataPoint struct {
-	// Attributes is the set of key value pairs that uniquely identify the timeseries.
-	Attributes []attribute.KeyValue
+	// Attributes is the set of key value pairs that uniquely identify the
+	// timeseries.
+	Attributes attribute.Set
 	// StartTime is when the timeseries was started. (optional)
 	StartTime time.Time
 	// Time is the time when the timeseries was recorded. (optional)
@@ -126,8 +127,9 @@ func (Histogram) privateAggregation() {}
 
 // HistogramDataPoint is a single histogram data point in a timeseries.
 type HistogramDataPoint struct {
-	// Attributes is the set of key value pairs that uniquely identify the timeseries.
-	Attributes []attribute.KeyValue
+	// Attributes is the set of key value pairs that uniquely identify the
+	// timeseries.
+	Attributes attribute.Set
 	// StartTime is when the timeseries was started.
 	StartTime time.Time
 	// Time is the time when the timeseries was recorded.
