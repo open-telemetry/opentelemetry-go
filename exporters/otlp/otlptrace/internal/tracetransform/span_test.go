@@ -264,7 +264,7 @@ func TestSpanData(t *testing.T) {
 			attribute.Int64("rk2", 5),
 			attribute.StringSlice("rk3", []string{"sv1", "sv2"}),
 		),
-		InstrumentationLibrary: instrumentation.Library{
+		InstrumentationLibrary: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/test/otel",
 			Version:   "v0.0.1",
 			SchemaURL: semconv.SchemaURL,
