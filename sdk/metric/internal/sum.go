@@ -50,7 +50,7 @@ type deltaSum[N int64 | float64] struct {
 	// TODO(#2972): implement.
 }
 
-func (s *deltaSum[N]) Aggregations() []export.Aggregation {
+func (s *deltaSum[N]) Aggregation() export.Aggregation {
 	// TODO(#2972): implement.
 	return nil
 }
@@ -74,7 +74,7 @@ type cumulativeSum[N int64 | float64] struct {
 	// TODO(#2972): implement.
 }
 
-func (s *cumulativeSum[N]) Aggregations() []export.Aggregation {
+func (s *cumulativeSum[N]) Aggregation() export.Aggregation {
 	// TODO(#2972): implement.
 	return nil
 }

@@ -52,7 +52,7 @@ type deltaHistogram[N int64 | float64] struct {
 	// TODO(#2970): implement.
 }
 
-func (s *deltaHistogram[N]) Aggregations() []export.Aggregation {
+func (s *deltaHistogram[N]) Aggregation() export.Aggregation {
 	// TODO(#2970): implement.
 	return nil
 }
@@ -75,7 +75,7 @@ type cumulativeHistogram[N int64 | float64] struct {
 	// TODO(#2970): implement.
 }
 
-func (s *cumulativeHistogram[N]) Aggregations() []export.Aggregation {
+func (s *cumulativeHistogram[N]) Aggregation() export.Aggregation {
 	// TODO(#2970): implement.
 	return nil
 }

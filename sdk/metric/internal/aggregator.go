@@ -28,7 +28,7 @@ type Aggregator[N int64 | float64] interface {
 	// into an aggregation.
 	Aggregate(measurement N, attr attribute.Set)
 
-	// Aggregations returns a slice of Aggregation, one per each attribute set
-	// used to scope measurement aggregation, and ends an aggregation cycle.
-	Aggregations() []export.Aggregation
+	// Aggregation returns an Aggregation, for all the aggregated
+	// measurements made and ends an aggregation cycle.
+	Aggregation() export.Aggregation
 }

@@ -37,7 +37,7 @@ func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
 	// TODO(#2971): implement.
 }
 
-func (s *lastValue[N]) Aggregations() []export.Aggregation {
+func (s *lastValue[N]) Aggregation() export.Aggregation {
 	// TODO(#2971): implement.
 	return nil
 }
