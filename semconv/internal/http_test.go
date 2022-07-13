@@ -1241,7 +1241,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 	type testcase struct {
 		name          string
 		serverName    string
-		route         string
 		method        string
 		requestURI    string
 		proto         string
