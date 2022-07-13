@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // errDuplicateRegister is logged by a Reader when an attempt to registered it
@@ -65,7 +65,7 @@ type Reader interface {
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
-	Collect(context.Context) (export.ResourceMetrics, error)
+	Collect(context.Context) (metricdata.ResourceMetrics, error)
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
 	//
@@ -93,21 +93,21 @@ type producer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
-	produce(context.Context) (export.ResourceMetrics, error)
+	produce(context.Context) (metricdata.ResourceMetrics, error)
 }
 
 // produceHolder is used as an atomic.Value to wrap the non-concrete producer
 // type.
 type produceHolder struct {
-	produce func(context.Context) (export.ResourceMetrics, error)
+	produce func(context.Context) (metricdata.ResourceMetrics, error)
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.
 type shutdownProducer struct{}
 
 // produce returns an ErrReaderShutdown error.
-func (p shutdownProducer) produce(context.Context) (export.ResourceMetrics, error) {
-	return export.ResourceMetrics{}, ErrReaderShutdown
+func (p shutdownProducer) produce(context.Context) (metricdata.ResourceMetrics, error) {
+	return metricdata.ResourceMetrics{}, ErrReaderShutdown
 }
 
 // ReaderOption applies a configuration option value to either a ManualReader or

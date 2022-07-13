@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type readerTestSuite struct {
@@ -69,7 +69,7 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
-	ts.Equal(export.ResourceMetrics{}, m)
+	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
 func (ts *readerTestSuite) TestShutdownTwice() {
@@ -88,7 +88,7 @@ func (ts *readerTestSuite) TestMultipleForceFlush() {
 
 func (ts *readerTestSuite) TestMultipleRegister() {
 	p0 := testProducer{
-		produceFunc: func(ctx context.Context) (export.ResourceMetrics, error) {
+		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
 			// Differentiate this producer from the second by returning an
 			// error.
 			return testMetrics, assert.AnError
@@ -143,18 +143,18 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
-	ts.Equal(export.ResourceMetrics{}, m)
+	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
-var testMetrics = export.ResourceMetrics{
+var testMetrics = metricdata.ResourceMetrics{
 	// TODO: test with actual data.
 }
 
 type testProducer struct {
-	produceFunc func(context.Context) (export.ResourceMetrics, error)
+	produceFunc func(context.Context) (metricdata.ResourceMetrics, error)
 }
 
-func (p testProducer) produce(ctx context.Context) (export.ResourceMetrics, error) {
+func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
@@ -168,7 +168,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	// Store bechmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
 	var (
-		collectedMetrics export.ResourceMetrics
+		collectedMetrics metricdata.ResourceMetrics
 		err              error
 	)
 

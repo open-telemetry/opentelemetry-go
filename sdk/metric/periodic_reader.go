@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // Default periodic reader timing.
@@ -199,10 +199,10 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
+func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p := r.producer.Load()
 	if p == nil {
-		return export.ResourceMetrics{}, ErrReaderNotRegistered
+		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -212,7 +212,7 @@ func (r *periodicReader) Collect(ctx context.Context) (export.ResourceMetrics, e
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return export.ResourceMetrics{}, err
+		return metricdata.ResourceMetrics{}, err
 	}
 	return ph.produce(ctx)
 }
