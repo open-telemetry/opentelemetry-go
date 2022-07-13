@@ -69,3 +69,11 @@ func TestShutdownDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
 	assert.NotPanics(t, func() { _ = mp.Shutdown(context.Background()) })
 }
+
+func TestMeterProviderReturnsSameMeter(t *testing.T) {
+	mp := MeterProvider{}
+	mtr := mp.Meter("")
+
+	assert.Same(t, mtr, mp.Meter(""))
+	assert.NotSame(t, mtr, mp.Meter("diff"))
+}
