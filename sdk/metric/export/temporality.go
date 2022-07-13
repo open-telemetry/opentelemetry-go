@@ -17,9 +17,6 @@
 
 package export // import "go.opentelemetry.io/otel/sdk/metric/export"
 
-// Temporality defines the window that an aggregation was calculated over.
-type Temporality uint8
-
 const (
 	// undefinedTemporality represents an unset Temporality.
 	//nolint:deadcode,unused,varcheck
@@ -35,3 +32,17 @@ const (
 	// from other cycles do not affect them.
 	DeltaTemporality
 )
+
+// Temporality defines the window that an aggregation was calculated over.
+type Temporality uint8
+
+func (t Temporality) String() string {
+	switch t {
+	case CumulativeTemporality:
+		return "cumulative"
+	case DeltaTemporality:
+		return "delta"
+	default:
+		return "unknown"
+	}
+}
