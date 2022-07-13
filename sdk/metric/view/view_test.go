@@ -28,7 +28,7 @@ import (
 )
 
 var matchInstrument = Instrument{
-	Scope: instrumentation.Library{
+	Scope: instrumentation.Scope{
 		Name:      "bar",
 		Version:   "v1.0.0",
 		SchemaURL: "stuff.test/",
@@ -38,7 +38,7 @@ var matchInstrument = Instrument{
 }
 
 var noMatchInstrument = Instrument{
-	Scope: instrumentation.Library{
+	Scope: instrumentation.Scope{
 		Name:      "notfoo",
 		Version:   "v0.x.0",
 		SchemaURL: "notstuff.test/",
@@ -65,9 +65,9 @@ func TestViewTransformInstrument(t *testing.T) {
 			notMatch: emptyDescription,
 		},
 		{
-			name: "Library name",
+			name: "Scope name",
 			options: []Option{
-				MatchInstrumentationLibrary(instrumentation.Library{
+				MatchInstrumentationScope(instrumentation.Scope{
 					Name: "bar",
 				}),
 			},
@@ -75,9 +75,9 @@ func TestViewTransformInstrument(t *testing.T) {
 			notMatch: emptyDescription,
 		},
 		{
-			name: "Library version",
+			name: "Scope version",
 			options: []Option{
-				MatchInstrumentationLibrary(instrumentation.Library{
+				MatchInstrumentationScope(instrumentation.Scope{
 					Version: "v1.0.0",
 				}),
 			},
@@ -86,9 +86,9 @@ func TestViewTransformInstrument(t *testing.T) {
 			notMatch: emptyDescription,
 		},
 		{
-			name: "Library SchemaURL",
+			name: "Scope SchemaURL",
 			options: []Option{
-				MatchInstrumentationLibrary(instrumentation.Library{
+				MatchInstrumentationScope(instrumentation.Scope{
 					SchemaURL: "stuff.test/",
 				}),
 			},
@@ -107,7 +107,7 @@ func TestViewTransformInstrument(t *testing.T) {
 			name: "composite literal name",
 			options: []Option{
 				MatchInstrumentName("foo"),
-				MatchInstrumentationLibrary(instrumentation.Library{
+				MatchInstrumentationScope(instrumentation.Scope{
 					Name:      "bar",
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
@@ -123,7 +123,7 @@ func TestViewTransformInstrument(t *testing.T) {
 				WithRename("baz"),
 			},
 			match: Instrument{
-				Scope: instrumentation.Library{
+				Scope: instrumentation.Scope{
 					Name:      "bar",
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",
@@ -140,7 +140,7 @@ func TestViewTransformInstrument(t *testing.T) {
 				WithSetDescription("descriptive stuff"),
 			},
 			match: Instrument{
-				Scope: instrumentation.Library{
+				Scope: instrumentation.Scope{
 					Name:      "bar",
 					Version:   "v1.0.0",
 					SchemaURL: "stuff.test/",

@@ -26,24 +26,24 @@ import (
 )
 
 func TestMeterRegistry(t *testing.T) {
-	il0 := instrumentation.Library{Name: "zero"}
-	il1 := instrumentation.Library{Name: "one"}
+	is0 := instrumentation.Scope{Name: "zero"}
+	is1 := instrumentation.Scope{Name: "one"}
 
 	r := meterRegistry{}
 	var m0 *meter
 	t.Run("ZeroValueGetDoesNotPanic", func(t *testing.T) {
-		assert.NotPanics(t, func() { m0 = r.Get(il0) })
-		assert.Equal(t, il0, m0.Library, "uninitialized meter returned")
+		assert.NotPanics(t, func() { m0 = r.Get(is0) })
+		assert.Equal(t, is0, m0.Scope, "uninitialized meter returned")
 	})
 
-	m01 := r.Get(il0)
+	m01 := r.Get(is0)
 	t.Run("GetSameMeter", func(t *testing.T) {
-		assert.Samef(t, m0, m01, "returned different meters: %v", il0)
+		assert.Samef(t, m0, m01, "returned different meters: %v", is0)
 	})
 
-	m1 := r.Get(il1)
+	m1 := r.Get(is1)
 	t.Run("GetDifferentMeter", func(t *testing.T) {
-		assert.NotSamef(t, m0, m1, "returned same meters: %v", il1)
+		assert.NotSamef(t, m0, m1, "returned same meters: %v", is1)
 	})
 
 	t.Run("RangeComplete", func(t *testing.T) {
