@@ -1256,7 +1256,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "stripped",
 			serverName: "",
-			route:      "",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1276,7 +1275,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with server name",
 			serverName: "my-server-name",
-			route:      "",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1297,7 +1295,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with tls",
 			serverName: "my-server-name",
-			route:      "",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1318,7 +1315,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with route",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1339,7 +1335,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with host",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1361,7 +1356,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with host fallback",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1384,7 +1378,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with user agent",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1408,7 +1401,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with proxy info",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.0",
@@ -1433,7 +1425,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with http 1.1",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/1.1",
@@ -1458,7 +1449,6 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		{
 			name:       "with http 2",
 			serverName: "my-server-name",
-			route:      "/user/:id",
 			method:     "GET",
 			requestURI: "/user/123",
 			proto:      "HTTP/2.0",
