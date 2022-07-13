@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `go.opentelemetry.io/otel/semconv/v1.11.0` package.
+  The package contains semantic conventions from the `v1.11.0` version of the OpenTelemetry specification. (#TBD)
+
 ## [1.8.0/0.31.0] - 2022-07-08
 
 ### Added
