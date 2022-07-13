@@ -21,7 +21,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // ErrExporterShutdown is returned if Export or Shutdown are called after an
@@ -41,7 +41,7 @@ type Exporter interface {
 	// implement any retry logic. All errors returned by this function are
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
-	Export(context.Context, export.ResourceMetrics) error
+	Export(context.Context, metricdata.ResourceMetrics) error
 
 	// ForceFlush flushes any metric data held by an exporter.
 	//
