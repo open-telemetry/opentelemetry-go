@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
 	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
