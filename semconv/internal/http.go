@@ -210,7 +210,9 @@ func (sc *SemanticConventions) httpBasicAttributesFromHTTPRequest(request *http.
 // HTTPServerMetricAttributesFromHTTPRequest generates low-cardinality attributes
 // to be used with server-side HTTP metrics.
 func (sc *SemanticConventions) HTTPServerMetricAttributesFromHTTPRequest(serverName string, request *http.Request) []attribute.KeyValue {
-	attrs := []attribute.KeyValue{}
+	attrs := []attribute.KeyValue{
+		sc.HTTPMethodKey.String(request.Method),
+	}
 	if serverName != "" {
 		attrs = append(attrs, sc.HTTPServerNameKey.String(serverName))
 	}
