@@ -32,7 +32,7 @@ import (
 
 type reader struct {
 	producer        producer
-	temporalityFunc func(InstrumentKind) Temporality
+	temporalityFunc func(InstrumentKind) export.Temporality
 	aggregationFunc AggregationSelector
 	collectFunc     func(context.Context) (export.ResourceMetrics, error)
 	forceFlushFunc  func(context.Context) error
@@ -45,8 +45,8 @@ func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // n
 	return r.aggregationFunc(kind)
 }
 
-func (r *reader) register(p producer)                         { r.producer = p }
-func (r *reader) temporality(kind InstrumentKind) Temporality { return r.temporalityFunc(kind) }
+func (r *reader) register(p producer)                                { r.producer = p }
+func (r *reader) temporality(kind InstrumentKind) export.Temporality { return r.temporalityFunc(kind) }
 func (r *reader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
 	return r.collectFunc(ctx)
 }
