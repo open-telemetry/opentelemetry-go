@@ -17,7 +17,10 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+)
 
 // lastValue summarizes a set of measurements as the last one made.
 type lastValue[N int64 | float64] struct {
@@ -34,7 +37,7 @@ func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
 	// TODO(#2971): implement.
 }
 
-func (s *lastValue[N]) Aggregations() []Aggregation {
+func (s *lastValue[N]) Aggregation() export.Aggregation {
 	// TODO(#2971): implement.
 	return nil
 }
