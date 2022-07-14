@@ -58,7 +58,7 @@ type Reader interface {
 	register(producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
-	temporality(InstrumentKind) export.Temporality
+	temporality(InstrumentKind) metricdata.Temporality
 
 	// aggregation returns what Aggregation to use for an instrument kind.
 	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
@@ -118,13 +118,13 @@ type ReaderOption interface {
 }
 
 // TemporalitySelector selects the temporality to use based on the InstrumentKind.
-type TemporalitySelector func(InstrumentKind) export.Temporality
+type TemporalitySelector func(InstrumentKind) metricdata.Temporality
 
 // DefaultTemporalitySelector is the default TemporalitySelector used if
 // WithTemporalitySelector is not provided. CumulativeTemporality will be used
 // for all instrument kinds if this TemporalitySelector is used.
-func DefaultTemporalitySelector(InstrumentKind) export.Temporality {
-	return export.CumulativeTemporality
+func DefaultTemporalitySelector(InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
 }
 
 // WithTemporalitySelector sets the TemporalitySelector a reader will use to
@@ -135,7 +135,7 @@ func WithTemporalitySelector(selector TemporalitySelector) ReaderOption {
 }
 
 type temporalitySelectorOption struct {
-	selector func(instrument InstrumentKind) export.Temporality
+	selector func(instrument InstrumentKind) metricdata.Temporality
 }
 
 // applyManual returns a manualReaderConfig with option applied.
