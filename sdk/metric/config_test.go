@@ -45,8 +45,10 @@ func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // n
 	return r.aggregationFunc(kind)
 }
 
-func (r *reader) register(p producer)                                { r.producer = p }
-func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality { return r.temporalityFunc(kind) }
+func (r *reader) register(p producer) { r.producer = p }
+func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
+	return r.temporalityFunc(kind)
+}
 func (r *reader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	return r.collectFunc(ctx)
 }
