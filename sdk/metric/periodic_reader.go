@@ -40,7 +40,7 @@ const (
 type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) export.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -140,7 +140,7 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) export.Temporality
 	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
@@ -185,7 +185,7 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
+func (r *periodicReader) temporality(kind InstrumentKind) export.Temporality {
 	return r.temporalitySelector(kind)
 }
 

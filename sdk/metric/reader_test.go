@@ -210,6 +210,6 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 		AsyncUpDownCounter,
 		AsyncGauge,
 	} {
-		assert.Equal(t, CumulativeTemporality, DefaultTemporalitySelector(ik))
+		assert.Equal(t, export.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}
 }

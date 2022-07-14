@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 func TestManualReader(t *testing.T) {
@@ -32,8 +34,8 @@ func BenchmarkManualReader(b *testing.B) {
 	b.Run("Collect", benchReaderCollectFunc(NewManualReader()))
 }
 
-var deltaTemporalitySelector = func(InstrumentKind) Temporality { return DeltaTemporality }
-var cumulativeTemporalitySelector = func(InstrumentKind) Temporality { return CumulativeTemporality }
+var deltaTemporalitySelector = func(InstrumentKind) export.Temporality { return export.DeltaTemporality }
+var cumulativeTemporalitySelector = func(InstrumentKind) export.Temporality { return export.CumulativeTemporality }
 
 func TestManualReaderTemporality(t *testing.T) {
 	tests := []struct {
@@ -41,18 +43,18 @@ func TestManualReaderTemporality(t *testing.T) {
 		options []ManualReaderOption
 		// Currently only testing constant temporality. This should be expanded
 		// if we put more advanced selection in the SDK
-		wantTemporality Temporality
+		wantTemporality export.Temporality
 	}{
 		{
 			name:            "default",
-			wantTemporality: CumulativeTemporality,
+			wantTemporality: export.CumulativeTemporality,
 		},
 		{
 			name: "delta",
 			options: []ManualReaderOption{
 				WithTemporalitySelector(deltaTemporalitySelector),
 			},
-			wantTemporality: DeltaTemporality,
+			wantTemporality: export.DeltaTemporality,
 		},
 		{
 			name: "repeats overwrite",
@@ -60,7 +62,7 @@ func TestManualReaderTemporality(t *testing.T) {
 				WithTemporalitySelector(deltaTemporalitySelector),
 				WithTemporalitySelector(cumulativeTemporalitySelector),
 			},
-			wantTemporality: CumulativeTemporality,
+			wantTemporality: export.CumulativeTemporality,
 		},
 	}
 

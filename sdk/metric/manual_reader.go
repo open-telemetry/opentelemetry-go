@@ -34,7 +34,7 @@ type manualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
 
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) export.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -61,7 +61,7 @@ func (mr *manualReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (mr *manualReader) temporality(kind InstrumentKind) Temporality {
+func (mr *manualReader) temporality(kind InstrumentKind) export.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
@@ -111,7 +111,7 @@ func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, er
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) export.Temporality
 	aggregationSelector AggregationSelector
 }
 
