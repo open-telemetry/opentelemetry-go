@@ -40,7 +40,7 @@ import (
 type View struct {
 	instrumentName *regexp.Regexp
 	hasWildcard    bool
-	scope          instrumentation.Library
+	scope          instrumentation.Scope
 
 	filter      attribute.Filter
 	name        string
@@ -57,9 +57,9 @@ func New(opts ...Option) (View, error) {
 		v = opt.apply(v)
 	}
 
-	emptyLibrary := instrumentation.Library{}
+	emptyScope := instrumentation.Scope{}
 	if v.instrumentName == nil &&
-		v.scope == emptyLibrary {
+		v.scope == emptyScope {
 		return View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
@@ -104,23 +104,23 @@ func (v View) matchName(name string) bool {
 	return v.instrumentName == nil || v.instrumentName.MatchString(name)
 }
 
-func (v View) matchLibraryName(name string) bool {
+func (v View) matchScopeName(name string) bool {
 	return v.scope.Name == "" || name == v.scope.Name
 }
 
-func (v View) matchLibraryVersion(version string) bool {
+func (v View) matchScopeVersion(version string) bool {
 	return v.scope.Version == "" || version == v.scope.Version
 }
 
-func (v View) matchLibrarySchemaURL(schemaURL string) bool {
+func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
 
 func (v View) match(i Instrument) bool {
 	return v.matchName(i.Name) &&
-		v.matchLibraryName(i.Scope.Name) &&
-		v.matchLibrarySchemaURL(i.Scope.SchemaURL) &&
-		v.matchLibraryVersion(i.Scope.Version)
+		v.matchScopeName(i.Scope.Name) &&
+		v.matchScopeSchemaURL(i.Scope.SchemaURL) &&
+		v.matchScopeVersion(i.Scope.Version)
 }
 
 // Option applies a Configuration option value to a View. All options
@@ -155,12 +155,12 @@ func MatchInstrumentName(name string) Option {
 // TODO (#2813): Implement MatchInstrumentKind when InstrumentKind is defined.
 // TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
 
-// MatchInstrumentationLibrary will do an exact match on any
+// MatchInstrumentationScope will do an exact match on any
 // instrumentation.Scope field that is non-empty (""). The default is to match all
 // instrumentation scopes.
-func MatchInstrumentationLibrary(lib instrumentation.Library) Option {
+func MatchInstrumentationScope(scope instrumentation.Scope) Option {
 	return optionFunc(func(v View) View {
-		v.scope = lib
+		v.scope = scope
 		return v
 	})
 }
