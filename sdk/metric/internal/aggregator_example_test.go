@@ -25,13 +25,13 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 )
 
 type meter struct {
 	// When a reader initiates a collection, the meter would collect
-	// aggregations from each of these functions. In this process they will
-	// progress the aggregation period of each instrument's aggregator.
-	aggregationFuncs []func() []Aggregation
+	// aggregations from each of these functions.
+	aggregations []export.Aggregation
 }
 
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
@@ -51,7 +51,7 @@ func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Cou
 	aggregator := NewCumulativeSum[int64]()
 	count := inst{aggregateFunc: aggregator.Aggregate}
 
-	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+	p.aggregations = append(p.aggregations, aggregator.Aggregation())
 
 	fmt.Printf("using %T aggregator for counter\n", aggregator)
 
@@ -69,7 +69,7 @@ func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Option) (syncint
 	aggregator := NewLastValue[int64]()
 	upDownCount := inst{aggregateFunc: aggregator.Aggregate}
 
-	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+	p.aggregations = append(p.aggregations, aggregator.Aggregation())
 
 	fmt.Printf("using %T aggregator for up-down counter\n", aggregator)
 
@@ -89,7 +89,7 @@ func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (syncint64.H
 	})
 	hist := inst{aggregateFunc: aggregator.Aggregate}
 
-	p.aggregationFuncs = append(p.aggregationFuncs, aggregator.Aggregations)
+	p.aggregations = append(p.aggregations, aggregator.Aggregation())
 
 	fmt.Printf("using %T aggregator for histogram\n", aggregator)
 
