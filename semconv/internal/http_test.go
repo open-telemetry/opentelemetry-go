@@ -1478,3 +1478,46 @@ func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
 		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
 	}
 }
+
+func TestHttpBasicAttributesFromHTTPRequest(t *testing.T) {
+	type testcase struct {
+		name          string
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
+		expected      []attribute.KeyValue
+	}
+	testcases := []testcase{
+		{
+			name:       "stripped",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    noTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+	}
+	for idx, tc := range testcases {
+		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+		r.ContentLength = tc.contentLength
+		got := sc.httpBasicAttributesFromHTTPRequest(r)
+		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
+	}
+}
