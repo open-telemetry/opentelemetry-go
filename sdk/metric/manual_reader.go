@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // manualReader is a a simple Reader that allows an application to
@@ -34,7 +34,7 @@ type manualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
 
-	temporalitySelector func(InstrumentKind) export.Temporality
+	temporalitySelector func(InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -61,7 +61,7 @@ func (mr *manualReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (mr *manualReader) temporality(kind InstrumentKind) export.Temporality {
+func (mr *manualReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
@@ -90,10 +90,10 @@ func (mr *manualReader) Shutdown(context.Context) error {
 
 // Collect gathers all metrics from the SDK, calling any callbacks necessary.
 // Collect will return an error if called after shutdown.
-func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
+func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p := mr.producer.Load()
 	if p == nil {
-		return export.ResourceMetrics{}, ErrReaderNotRegistered
+		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -103,7 +103,7 @@ func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, er
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
-		return export.ResourceMetrics{}, err
+		return metricdata.ResourceMetrics{}, err
 	}
 
 	return ph.produce(ctx)
@@ -111,7 +111,7 @@ func (mr *manualReader) Collect(ctx context.Context) (export.ResourceMetrics, er
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
-	temporalitySelector func(InstrumentKind) export.Temporality
+	temporalitySelector func(InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 

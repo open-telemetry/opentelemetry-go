@@ -18,7 +18,7 @@
 // TODO: NOTE this is a temporary space, it may be moved following the
 // discussion of #2813, or #2841
 
-package export // import "go.opentelemetry.io/otel/sdk/metric/export"
+package metricdata // import "go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 import (
 	"time"
