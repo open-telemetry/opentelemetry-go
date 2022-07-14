@@ -191,18 +191,18 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 		options []PeriodicReaderOption
 		// Currently only testing constant temporality. This should be expanded
 		// if we put more advanced selection in the SDK
-		wantTemporality export.Temporality
+		wantTemporality metricdata.Temporality
 	}{
 		{
 			name:            "default",
-			wantTemporality: export.CumulativeTemporality,
+			wantTemporality: metricdata.CumulativeTemporality,
 		},
 		{
 			name: "delta",
 			options: []PeriodicReaderOption{
 				WithTemporalitySelector(deltaTemporalitySelector),
 			},
-			wantTemporality: export.DeltaTemporality,
+			wantTemporality: metricdata.DeltaTemporality,
 		},
 		{
 			name: "repeats overwrite",
@@ -210,7 +210,7 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 				WithTemporalitySelector(deltaTemporalitySelector),
 				WithTemporalitySelector(cumulativeTemporalitySelector),
 			},
-			wantTemporality: export.CumulativeTemporality,
+			wantTemporality: metricdata.CumulativeTemporality,
 		},
 	}
 
