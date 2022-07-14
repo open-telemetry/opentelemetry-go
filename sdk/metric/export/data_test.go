@@ -53,6 +53,12 @@ func AssertMetricsEqual(t *testing.T, expected, actual Metrics) bool {
 	return assertCompare(expected.compare(actual))(t)
 }
 
+// AssertAggregationsEqual asserts that two Aggregations are equal.
+func AssertAggregationsEqual(t *testing.T, expected, actual Aggregation) bool {
+	equal, exp := compareAggregations(expected, actual)
+	return assertCompare(equal, []string{exp})(t)
+}
+
 // AssertGaugesEqual asserts that two Gauge are equal.
 func AssertGaugesEqual(t *testing.T, expected, actual Gauge) bool {
 	return assertCompare(expected.compare(actual))(t)
@@ -71,6 +77,12 @@ func AssertHistogramsEqual(t *testing.T, expected, actual Histogram) bool {
 // AssertDataPointsEqual asserts that two DataPoint are equal.
 func AssertDataPointsEqual(t *testing.T, expected, actual DataPoint) bool {
 	return assertCompare(expected.compare(actual))(t)
+}
+
+// AssertValuesEqual asserts that two Values are equal.
+func AssertValuesEqual(t *testing.T, expected, actual Value) bool {
+	equal, exp := compareValues(expected, actual)
+	return assertCompare(equal, []string{exp})(t)
 }
 
 // AssertHistogramDataPointsEqual asserts that two HistogramDataPoint are equal.
@@ -272,7 +284,6 @@ func TestDataPointsComparison(t *testing.T) {
 
 func TestInt64sComparison(t *testing.T) {
 	a := Int64(-1)
-
 	b := Int64(2)
 
 	AssertInt64sEqual(t, a, a)
@@ -285,7 +296,6 @@ func TestInt64sComparison(t *testing.T) {
 
 func TestFloat64sComparison(t *testing.T) {
 	a := Float64(-1)
-
 	b := Float64(2)
 
 	AssertFloat64sEqual(t, a, a)

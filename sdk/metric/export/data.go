@@ -148,45 +148,12 @@ func (m Metrics) compare(other Metrics) (equal bool, explination []string) {
 		)
 	}
 
-	if m.Data == nil || other.Data == nil {
-		if m.Data != other.Data {
-			equal, explination = false, append(explination, notEqualStr(
-				"Data", m.Data, other.Data,
-			))
-		}
-		return equal, explination
-	}
-
-	if reflect.TypeOf(m.Data) != reflect.TypeOf(other.Data) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Data types not equal:\nexpected: %T\nactual: %T",
-			m.Data,
-			other.Data,
+	var exp string
+	equal, exp = compareAggregations(m.Data, other.Data)
+	if !equal {
+		explination = append(explination, fmt.Sprintf(
+			"Metrics Data not equal:\n%s", exp,
 		))
-		return equal, explination
-	}
-
-	switch v := m.Data.(type) {
-	case Gauge:
-		ok, exp := v.compare(other.Data.(Gauge))
-		if !ok {
-			equal, explination = false, append(explination, fmt.Sprintf("Gauge: %s", exp))
-		}
-	case Sum:
-		ok, exp := v.compare(other.Data.(Sum))
-		if !ok {
-			equal, explination = false, append(explination, fmt.Sprintf("Sum: %s", exp))
-		}
-	case Histogram:
-		ok, exp := v.compare(other.Data.(Histogram))
-		if !ok {
-			equal, explination = false, append(explination, fmt.Sprintf("Histogram: %s", exp))
-		}
-	default:
-		equal, explination = false, append(
-			explination,
-			fmt.Sprintf("Data of unknown types %T", m.Data),
-		)
 	}
 	return equal, explination
 }
@@ -195,6 +162,44 @@ func (m Metrics) compare(other Metrics) (equal bool, explination []string) {
 // It will be one of: Gauge, Sum, Histogram.
 type Aggregation interface {
 	privateAggregation()
+}
+
+// compareAggregations returns true when a and b are equivalent. It returns
+// false when they differ, along with a message describing the difference.
+func compareAggregations(a, b Aggregation) (equal bool, explination string) {
+	if a == nil || b == nil {
+		if a != b {
+			equal, explination = false, notEqualStr("Aggregation", a, b)
+		}
+		return equal, explination
+	}
+
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return false, fmt.Sprintf(
+			"Aggregation types not equal:\nexpected: %T\nactual: %T", a, b,
+		)
+	}
+
+	switch v := a.(type) {
+	case Gauge:
+		ok, exp := v.compare(b.(Gauge))
+		if !ok {
+			equal, explination = false, fmt.Sprintf("Gauge: %s", exp)
+		}
+	case Sum:
+		ok, exp := v.compare(b.(Sum))
+		if !ok {
+			equal, explination = false, fmt.Sprintf("Sum: %s", exp)
+		}
+	case Histogram:
+		ok, exp := v.compare(b.(Histogram))
+		if !ok {
+			equal, explination = false, fmt.Sprintf("Histogram: %s", exp)
+		}
+	default:
+		equal, explination = false, fmt.Sprintf("Aggregation of unknown types %T", a)
+	}
+	return equal, explination
 }
 
 // Gauge represents a measurement of the current value of an instrument.
@@ -317,33 +322,14 @@ func (d DataPoint) compare(other DataPoint) (equal bool, explination []string) {
 			other.Time.UnixNano(),
 		))
 	}
-	if reflect.TypeOf(d.Value) != reflect.TypeOf(other.Value) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Value types not equal:\nexpected: %T\nactual: %T",
-			d.Value,
-			other.Value,
+
+	var exp string
+	equal, exp = compareValues(d.Value, other.Value)
+	if !equal {
+		explination = append(explination, fmt.Sprintf(
+			"DataPoint Value not equal:\n%s", exp,
 		))
-		return equal, explination
 	}
-
-	switch v := d.Value.(type) {
-	case Int64:
-		ok, exp := v.compare(other.Value.(Int64))
-		if !ok {
-			equal, explination = false, append(explination, fmt.Sprintf("Int64: %s", exp))
-		}
-	case Float64:
-		ok, exp := v.compare(other.Value.(Float64))
-		if !ok {
-			equal, explination = false, append(explination, fmt.Sprintf("Float64: %s", exp))
-		}
-	default:
-		equal, explination = false, append(
-			explination,
-			fmt.Sprintf("Value of unknown types %T", d.Value),
-		)
-	}
-
 	return equal, explination
 }
 
@@ -351,6 +337,40 @@ func (d DataPoint) compare(other DataPoint) (equal bool, explination []string) {
 // Int64 or Float64.
 type Value interface {
 	privateValue()
+}
+
+// compareValues returns true when a and b are equivalent. It returns false
+// when they differ, along with a message describing the difference.
+func compareValues(a, b Value) (equal bool, explination string) {
+	if a == nil || b == nil {
+		if a != b {
+			equal, explination = false, notEqualStr("Values", a, b)
+		}
+		return equal, explination
+	}
+
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return false, fmt.Sprintf(
+			"Value types not equal:\nexpected: %T\nactual: %T", a, b,
+		)
+	}
+
+	switch v := a.(type) {
+	case Int64:
+		ok, exp := v.compare(b.(Int64))
+		if !ok {
+			equal, explination = false, fmt.Sprintf("Int64: %s", exp)
+		}
+	case Float64:
+		ok, exp := v.compare(b.(Float64))
+		if !ok {
+			equal, explination = false, fmt.Sprintf("Float64: %s", exp)
+		}
+	default:
+		equal, explination = false, fmt.Sprintf("Value of unknown types %T", a)
+	}
+
+	return equal, explination
 }
 
 // Int64 is a container for an int64 value.
