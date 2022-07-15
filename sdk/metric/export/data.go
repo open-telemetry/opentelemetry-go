@@ -21,9 +21,6 @@
 package export // import "go.opentelemetry.io/otel/sdk/metric/export"
 
 import (
-	"bytes"
-	"fmt"
-	"reflect"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -41,75 +38,12 @@ type ResourceMetrics struct {
 	ScopeMetrics []ScopeMetrics
 }
 
-// compare returns true when an other ResourceMetrics is equivalent to this
-// ResourceMetrics. It returns false when they differ, along with messages
-// describing the difference.
-//
-// The ScopeMetrics each ResourceMetrics contains are compared based on
-// containing the same ScopeMetrics, not the order they are stored in.
-func (rm ResourceMetrics) compare(other ResourceMetrics) (equal bool, explination []string) {
-	equal = true
-	if !rm.Resource.Equal(other.Resource) {
-		equal, explination = false, append(
-			explination, notEqualStr("Resources", rm.Resource, other.Resource),
-		)
-	}
-
-	var exp string
-	equal, exp = compareDiff(diffSlices(
-		rm.ScopeMetrics,
-		other.ScopeMetrics,
-		func(a, b ScopeMetrics) bool {
-			equal, _ := a.compare(b)
-			return equal
-		},
-	))
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"ResourceMetrics ScopeMetrics not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
-}
-
 // ScopeMetrics is a collection of Metrics Produces by a Meter.
 type ScopeMetrics struct {
 	// Scope is the Scope that the Meter was created with.
 	Scope instrumentation.Scope
 	// Metrics are a list of aggregations created by the Meter.
 	Metrics []Metrics
-}
-
-// compare returns true when an other ScopeMetrics is equivalent to this
-// ScopeMetrics. It returns false when they differ, along with messages
-// describing the difference.
-//
-// The Metrics each ScopeMetrics contains are compared based on containing the
-// same Metrics, not the order they are stored in.
-func (sm ScopeMetrics) compare(other ScopeMetrics) (equal bool, explination []string) {
-	equal = true
-	if sm.Scope != other.Scope {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Scope", sm.Scope, other.Scope),
-		)
-	}
-
-	var exp string
-	equal, exp = compareDiff(diffSlices(
-		sm.Metrics,
-		other.Metrics,
-		func(a, b Metrics) bool {
-			equal, _ := a.compare(b)
-			return equal
-		},
-	))
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"ScopeMetrics Metrics not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
 }
 
 // Metrics is a collection of one or more aggregated timeseries from an Instrument.
@@ -124,111 +58,16 @@ type Metrics struct {
 	Data Aggregation
 }
 
-// compare returns true when an other is equivalent to this Metrics. It
-// returns false when they differ, along with messages describing the
-// difference.
-func (m Metrics) compare(other Metrics) (equal bool, explination []string) {
-	equal = true
-	if m.Name != other.Name {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Name", m.Name, other.Name),
-		)
-	}
-	if m.Description != other.Description {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Description", m.Description, other.Description),
-		)
-	}
-	if m.Unit != other.Unit {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Unit", m.Unit, other.Unit),
-		)
-	}
-
-	var exp string
-	equal, exp = compareAggregations(m.Data, other.Data)
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"Metrics Data not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
-}
-
 // Aggregation is the store of data reported by an Instrument.
 // It will be one of: Gauge, Sum, Histogram.
 type Aggregation interface {
 	privateAggregation()
 }
 
-// compareAggregations returns true when a and b are equivalent. It returns
-// false when they differ, along with a message describing the difference.
-func compareAggregations(a, b Aggregation) (equal bool, explination string) {
-	if a == nil || b == nil {
-		if a != b {
-			equal, explination = false, notEqualStr("Aggregation", a, b)
-		}
-		return equal, explination
-	}
-
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, fmt.Sprintf(
-			"Aggregation types not equal:\nexpected: %T\nactual: %T", a, b,
-		)
-	}
-
-	switch v := a.(type) {
-	case Gauge:
-		ok, exp := v.compare(b.(Gauge))
-		if !ok {
-			equal, explination = false, fmt.Sprintf("Gauge: %s", exp)
-		}
-	case Sum:
-		ok, exp := v.compare(b.(Sum))
-		if !ok {
-			equal, explination = false, fmt.Sprintf("Sum: %s", exp)
-		}
-	case Histogram:
-		ok, exp := v.compare(b.(Histogram))
-		if !ok {
-			equal, explination = false, fmt.Sprintf("Histogram: %s", exp)
-		}
-	default:
-		equal, explination = false, fmt.Sprintf("Aggregation of unknown types %T", a)
-	}
-	return equal, explination
-}
-
 // Gauge represents a measurement of the current value of an instrument.
 type Gauge struct {
 	// DataPoints reprents individual aggregated measurements with unique Attributes.
 	DataPoints []DataPoint
-}
-
-// compare returns true when an other is equivalent to this Gauge. It returns
-// false when they differ, along with messages describing the difference.
-//
-// The DataPoints each Gauge contains are compared based on containing the
-// same DataPoints, not the order they are stored in.
-func (g Gauge) compare(other Gauge) (equal bool, explination []string) {
-	var exp string
-	equal, exp = compareDiff(diffSlices(
-		g.DataPoints,
-		other.DataPoints,
-		func(a, b DataPoint) bool {
-			equal, _ := a.compare(b)
-			return equal
-		},
-	))
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"Gauge DataPoints not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
 }
 
 func (Gauge) privateAggregation() {}
@@ -242,43 +81,6 @@ type Sum struct {
 	Temporality Temporality
 	// IsMonotonic represents if this aggregation only increases or decreases.
 	IsMonotonic bool
-}
-
-// compare returns true when an other is equivalent to this Sum. It returns
-// false when they differ, along with messages describing the difference.
-//
-// The DataPoints each Sum contains are compared based on containing the same
-// DataPoints, not the order they are stored in.
-func (s Sum) compare(other Sum) (equal bool, explination []string) {
-	equal = true
-	if s.Temporality != other.Temporality {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Temporality", s.Temporality, other.Temporality),
-		)
-	}
-	if s.IsMonotonic != other.IsMonotonic {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("IsMonotonic", s.IsMonotonic, other.IsMonotonic),
-		)
-	}
-
-	var exp string
-	equal, exp = compareDiff(diffSlices(
-		s.DataPoints,
-		other.DataPoints,
-		func(a, b DataPoint) bool {
-			equal, _ := a.compare(b)
-			return equal
-		},
-	))
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"Sum DataPoints not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
 }
 
 func (Sum) privateAggregation() {}
@@ -296,81 +98,10 @@ type DataPoint struct {
 	Value Value
 }
 
-// compare returns true when an other is equivalent to this DataPoint. It
-// returns false when they differ, along with messages describing the
-// difference.
-func (d DataPoint) compare(other DataPoint) (equal bool, explination []string) {
-	equal = true
-	if !d.Attributes.Equals(&other.Attributes) {
-		equal, explination = false, append(explination, notEqualStr(
-			"Attributes",
-			d.Attributes.Encoded(attribute.DefaultEncoder()),
-			other.Attributes.Encoded(attribute.DefaultEncoder()),
-		))
-	}
-	if !d.StartTime.Equal(other.StartTime) {
-		equal, explination = false, append(explination, notEqualStr(
-			"StartTime",
-			d.StartTime.UnixNano(),
-			other.StartTime.UnixNano(),
-		))
-	}
-	if !d.Time.Equal(other.Time) {
-		equal, explination = false, append(explination, notEqualStr(
-			"Time",
-			d.Time.UnixNano(),
-			other.Time.UnixNano(),
-		))
-	}
-
-	var exp string
-	equal, exp = compareValues(d.Value, other.Value)
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"DataPoint Value not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
-}
-
 // Value is a int64 or float64. All Values created by the sdk will be either
 // Int64 or Float64.
 type Value interface {
 	privateValue()
-}
-
-// compareValues returns true when a and b are equivalent. It returns false
-// when they differ, along with a message describing the difference.
-func compareValues(a, b Value) (equal bool, explination string) {
-	if a == nil || b == nil {
-		if a != b {
-			equal, explination = false, notEqualStr("Values", a, b)
-		}
-		return equal, explination
-	}
-
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, fmt.Sprintf(
-			"Value types not equal:\nexpected: %T\nactual: %T", a, b,
-		)
-	}
-
-	switch v := a.(type) {
-	case Int64:
-		ok, exp := v.compare(b.(Int64))
-		if !ok {
-			equal, explination = false, fmt.Sprintf("Int64: %s", exp)
-		}
-	case Float64:
-		ok, exp := v.compare(b.(Float64))
-		if !ok {
-			equal, explination = false, fmt.Sprintf("Float64: %s", exp)
-		}
-	default:
-		equal, explination = false, fmt.Sprintf("Value of unknown types %T", a)
-	}
-
-	return equal, explination
 }
 
 // Int64 is a container for an int64 value.
@@ -378,36 +109,10 @@ type Int64 int64
 
 func (Int64) privateValue() {}
 
-// compare returns true when an other is equivalent to this Int64. It
-// returns false when they differ, along with messages describing the
-// difference.
-func (i Int64) compare(other Int64) (equal bool, explination []string) {
-	equal = true
-	if i != other {
-		equal, explination = false, append(
-			explination, notEqualStr("Int64 value", i, other),
-		)
-	}
-	return equal, explination
-}
-
 // Float64 is a container for a float64 value.
 type Float64 float64
 
 func (Float64) privateValue() {}
-
-// compare returns true when an other is equivalent to this Float64. It
-// returns false when they differ, along with messages describing the
-// difference.
-func (f Float64) compare(other Float64) (equal bool, explination []string) {
-	equal = true
-	if f != other {
-		equal, explination = false, append(
-			explination, notEqualStr("Float64 value", f, other),
-		)
-	}
-	return equal, explination
-}
 
 // Histogram represents the histogram of all measurements of values from an instrument.
 type Histogram struct {
@@ -419,38 +124,6 @@ type Histogram struct {
 }
 
 func (Histogram) privateAggregation() {}
-
-// compare returns true when an other is equivalent to this Histogram. It
-// returns false when they differ, along with messages describing the
-// difference.
-//
-// The DataPoints each Histogram contains are compared based on containing the
-// same HistogramDataPoint, not the order they are stored in.
-func (h Histogram) compare(other Histogram) (equal bool, explination []string) {
-	equal = true
-	if h.Temporality != other.Temporality {
-		equal, explination = false, append(
-			explination,
-			notEqualStr("Temporality", h.Temporality, other.Temporality),
-		)
-	}
-
-	var exp string
-	equal, exp = compareDiff(diffSlices(
-		h.DataPoints,
-		other.DataPoints,
-		func(a, b HistogramDataPoint) bool {
-			equal, _ := a.compare(b)
-			return equal
-		},
-	))
-	if !equal {
-		explination = append(explination, fmt.Sprintf(
-			"Histogram DataPoints not equal:\n%s", exp,
-		))
-	}
-	return equal, explination
-}
 
 // HistogramDataPoint is a single histogram data point in a timeseries.
 type HistogramDataPoint struct {
@@ -476,156 +149,4 @@ type HistogramDataPoint struct {
 	Max *float64
 	// Sum is the sum of the values recorded.
 	Sum float64
-}
-
-// compare returns true when an other is equivalent to this
-// HistogramDataPoint. It returns false when they differ, along with messages
-// describing the difference.
-func (hd HistogramDataPoint) compare(other HistogramDataPoint) (equal bool, explination []string) {
-	equal = true
-	if !hd.Attributes.Equals(&other.Attributes) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Attributes not equal:\nexpected: %s\nactual: %s",
-			hd.Attributes.Encoded(attribute.DefaultEncoder()),
-			other.Attributes.Encoded(attribute.DefaultEncoder()),
-		))
-	}
-	if !hd.StartTime.Equal(other.StartTime) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"StartTime not equal:\nexpected: %d\nactual: %d",
-			hd.StartTime.UnixNano(),
-			other.StartTime.UnixNano(),
-		))
-	}
-	if !hd.Time.Equal(other.Time) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Time not equal:\nexpected: %d\nactual: %d",
-			hd.Time.UnixNano(),
-			other.Time.UnixNano(),
-		))
-	}
-	if hd.Count != other.Count {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Count not equal:\nexpected: %d\nactual: %d",
-			hd.Count,
-			other.Count,
-		))
-	}
-	if !equalSlices(hd.Bounds, other.Bounds) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Bounds not equal:\nexpected: %v\nactual: %v",
-			hd.Bounds,
-			other.Bounds,
-		))
-	}
-	if !equalSlices(hd.BucketCounts, other.BucketCounts) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"BucketCounts not equal:\nexpected: %v\nactual: %v",
-			hd.BucketCounts,
-			other.BucketCounts,
-		))
-	}
-	if !equalPtrValues(hd.Min, other.Min) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Min not equal:\nexpected: %v\nactual: %v",
-			hd.Min,
-			other.Min,
-		))
-	}
-	if !equalPtrValues(hd.Max, other.Max) {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Max not equal:\nexpected: %v\nactual: %v",
-			hd.Max,
-			other.Max,
-		))
-	}
-	if hd.Sum != other.Sum {
-		equal, explination = false, append(explination, fmt.Sprintf(
-			"Sum not equal:\nexpected: %g\nactual: %g",
-			hd.Sum,
-			other.Sum,
-		))
-	}
-	return equal, explination
-}
-
-func notEqualStr(prefix string, expected, actual interface{}) string {
-	return fmt.Sprintf("%s not equal:\nexpected: %v\nactual: %v", prefix, expected, actual)
-}
-
-func equalSlices[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func equalPtrValues[T comparable](a, b *T) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-
-	return *a == *b
-
-}
-
-func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
-	visited := make([]bool, len(b))
-	for i := 0; i < len(a); i++ {
-		found := false
-		for j := 0; j < len(b); j++ {
-			if visited[j] {
-				continue
-			}
-			if equal(a[i], b[j]) {
-				visited[j] = true
-				found = true
-				break
-			}
-		}
-		if !found {
-			extraA = append(extraA, a[i])
-		}
-	}
-
-	for j := 0; j < len(b); j++ {
-		if visited[j] {
-			continue
-		}
-		extraB = append(extraB, b[j])
-	}
-
-	return extraA, extraB
-}
-
-func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explination string) {
-	if len(extraExpected) == 0 && len(extraActual) == 0 {
-		return true, explination
-	}
-
-	formater := func(v T) string {
-		return fmt.Sprintf("%#v", v)
-	}
-
-	var msg bytes.Buffer
-	if len(extraExpected) > 0 {
-		msg.WriteString("missing expected values:\n")
-		for _, v := range extraExpected {
-			msg.WriteString(formater(v) + "\n")
-		}
-	}
-
-	if len(extraActual) > 0 {
-		msg.WriteString("unexpected additional values:\n")
-		for _, v := range extraActual {
-			msg.WriteString(formater(v) + "\n")
-		}
-	}
-
-	return false, msg.String()
 }
