@@ -25,13 +25,13 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type meter struct {
 	// When a reader initiates a collection, the meter would collect
 	// aggregations from each of these functions.
-	aggregations []export.Aggregation
+	aggregations []metricdata.Aggregation
 }
 
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {

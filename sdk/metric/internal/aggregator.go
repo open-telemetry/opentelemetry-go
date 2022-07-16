@@ -19,7 +19,7 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
@@ -30,5 +30,5 @@ type Aggregator[N int64 | float64] interface {
 
 	// Aggregation returns an Aggregation, for all the aggregated
 	// measurements made and ends an aggregation cycle.
-	Aggregation() export.Aggregation
+	Aggregation() metricdata.Aggregation
 }
