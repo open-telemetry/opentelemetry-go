@@ -104,10 +104,6 @@ func centerVal(mapper mapping.Mapping, x int32) float64 {
 	return (lb + ub) / 2
 }
 
-func options(opts ...Option) []Option {
-	return opts
-}
-
 // Tests insertion of [1, 2, 0.5].  The index of 1 (i.e., 0) becomes
 // `indexBase`, the "2" goes to its right and the "0.5" goes in the
 // last position of the backing array.  With 3 binary orders of
@@ -544,8 +540,8 @@ func TestIntegerAggregation(t *testing.T) {
 	require.Equal(t, 2*expect, agg.Sum())
 
 	// Reset!  Repeat with negative.
-	agg.MoveInto(nil)
-	alt.MoveInto(nil)
+	agg.Clear()
+	alt.Clear()
 
 	expect = int64(0)
 	for i := int64(1); i < 256; i++ {
@@ -571,7 +567,7 @@ func TestIntegerAggregation(t *testing.T) {
 	require.Equal(t, int32(5), agg.Scale())
 }
 
-// Tests the reset code path via SynchronizedMove.
+// Tests the reset code path via MoveInto.
 func TestReset(t *testing.T) {
 	agg := NewFloat64(NewConfig(WithMaxSize(256)))
 
@@ -585,7 +581,7 @@ func TestReset(t *testing.T) {
 		0x200000000,
 	} {
 		t.Run(fmt.Sprint(incr), func(t *testing.T) {
-			agg.MoveInto(nil)
+			agg.Clear()
 
 			// Note that scale is zero b/c no values
 			require.Equal(t, int32(0), agg.Scale())
@@ -616,7 +612,7 @@ func TestReset(t *testing.T) {
 
 }
 
-// Tests the move aspect of SynchronizedMove.
+// Tests the swap operation.
 func TestMoveInto(t *testing.T) {
 	agg := NewFloat64(NewConfig(WithMaxSize(256)))
 	cpy := NewFloat64(NewConfig(WithMaxSize(256)))
@@ -628,7 +624,7 @@ func TestMoveInto(t *testing.T) {
 		agg.Update(0)
 	}
 
-	agg.MoveInto(cpy)
+	agg.Swap(cpy)
 
 	// agg was reset
 	require.Equal(t, 0.0, agg.Sum())
@@ -728,13 +724,13 @@ func TestAggregatorMinMax(t *testing.T) {
 	require.Equal(t, -1.0, h2.Max())
 }
 
-// TestAggregatorCopyMove tests both Copy and Move.
-func TestAggregatorCopyMoveInto(t *testing.T) {
+// TestAggregatorCopySwap tests both Copy and Swap.
+func TestAggregatorCopySwap(t *testing.T) {
 	h1 := NewFloat64(NewConfig(), 1, 3, 5, 7, 9, -1, -3, -5)
 	h2 := NewFloat64(NewConfig(), 5, 4, 3, 2)
 	h3 := NewFloat64(NewConfig())
 
-	h1.MoveInto(h2)
+	h1.Swap(h2)
 	h2.CopyInto(h3)
 
 	requireEqual(t, h2, h3)
