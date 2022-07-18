@@ -20,6 +20,9 @@ type Datatypes interface {
 		metricdata.ResourceMetrics |
 		metricdata.ScopeMetrics |
 		metricdata.Sum
+
+	// Interface types are not allowed in union types, therefore the
+	// Aggregation and Value type from metricdata are not included here.
 }
 
 // AssertEqual asserts that the two concrete data-types from the metricdata
