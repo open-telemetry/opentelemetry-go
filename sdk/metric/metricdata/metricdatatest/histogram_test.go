@@ -46,7 +46,7 @@ func TestHistogramsComparison(t *testing.T) {
 	AssertHistogramsEqual(t, a, a)
 	AssertHistogramsEqual(t, b, b)
 
-	equal, explanation := CompareHistogram(a, b)
+	equal, reasons := equalHistograms(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 2, "Temporality and DataPoints do not match")
+	assert.Len(t, reasons, 2, "Temporality and DataPoints do not match")
 }

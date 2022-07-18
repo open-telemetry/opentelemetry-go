@@ -20,8 +20,6 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 import (
 	"bytes"
 	"fmt"
-	"strings"
-	"testing"
 )
 
 func notEqualStr(prefix string, expected, actual interface{}) string {
@@ -77,9 +75,9 @@ func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 	return extraA, extraB
 }
 
-func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explanation string) {
+func compareDiff[T any](extraExpected, extraActual []T) (equal bool, reasons string) {
 	if len(extraExpected) == 0 && len(extraActual) == 0 {
-		return true, explanation
+		return true, reasons
 	}
 
 	formater := func(v T) string {
@@ -102,18 +100,4 @@ func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explanation
 	}
 
 	return false, msg.String()
-}
-
-func assertCompare(equal bool, explanation []string) func(*testing.T) bool { // nolint: revive  // equal is not a control flag.
-	return func(t *testing.T) bool {
-		t.Helper()
-		if !equal {
-			if len(explanation) > 0 {
-				t.Error(strings.Join(explanation, "\n"))
-			} else {
-				t.Fail()
-			}
-		}
-		return equal
-	}
 }

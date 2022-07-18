@@ -53,7 +53,7 @@ func TestGaugesComparison(t *testing.T) {
 	AssertGaugesEqual(t, a, a)
 	AssertGaugesEqual(t, b, b)
 
-	equal, explanation := CompareGauge(a, b)
+	equal, reasons := equalGauges(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 1, "DataPoints do not match")
+	assert.Len(t, reasons, 1, "DataPoints do not match")
 }

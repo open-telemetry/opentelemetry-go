@@ -20,20 +20,19 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 import (
 	"fmt"
 	"reflect"
-	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareAggregations returns true when a and b are equivalent. It returns
-// false when they differ, along with messages describing the difference.
-func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explanation []string) {
+// equalAggregations returns true when a and b are equal. It returns false
+// when they differ, along with the reasons why they differ.
+func equalAggregations(a, b metricdata.Aggregation) (equal bool, reasons []string) {
 	equal = true
 	if a == nil || b == nil {
 		if a != b {
-			equal, explanation = false, []string{notEqualStr("Aggregation", a, b)}
+			equal, reasons = false, []string{notEqualStr("Aggregation", a, b)}
 		}
-		return equal, explanation
+		return equal, reasons
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
@@ -45,34 +44,28 @@ func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explanation [
 	switch v := a.(type) {
 	case metricdata.Gauge:
 		var exp []string
-		equal, exp = CompareGauge(v, b.(metricdata.Gauge))
+		equal, exp = equalGauges(v, b.(metricdata.Gauge))
 		if !equal {
-			explanation = append(explanation, "Gauge not equal:")
-			explanation = append(explanation, exp...)
+			reasons = append(reasons, "Gauge not equal:")
+			reasons = append(reasons, exp...)
 		}
 	case metricdata.Sum:
 		var exp []string
-		equal, exp = CompareSum(v, b.(metricdata.Sum))
+		equal, exp = equalSums(v, b.(metricdata.Sum))
 		if !equal {
-			explanation = append(explanation, "Sum not equal:")
-			explanation = append(explanation, exp...)
+			reasons = append(reasons, "Sum not equal:")
+			reasons = append(reasons, exp...)
 		}
 	case metricdata.Histogram:
 		var exp []string
-		equal, exp = CompareHistogram(v, b.(metricdata.Histogram))
+		equal, exp = equalHistograms(v, b.(metricdata.Histogram))
 		if !equal {
-			explanation = append(explanation, "Histogram not equal:")
-			explanation = append(explanation, exp...)
+			reasons = append(reasons, "Histogram not equal:")
+			reasons = append(reasons, exp...)
 		}
 	default:
 		equal = false
-		explanation = append(explanation, fmt.Sprintf("Aggregation of unknown types %T", a))
+		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
-	return equal, explanation
-}
-
-// AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
-	t.Helper()
-	return assertCompare(CompareAggregations(expected, actual))(t)
+	return equal, reasons
 }

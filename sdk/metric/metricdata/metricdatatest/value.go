@@ -20,19 +20,18 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 import (
 	"fmt"
 	"reflect"
-	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareValues returns true when Values are equivalent. It returns false
-// when they differ, along with a message describing the difference.
-func CompareValues(a, b metricdata.Value) (equal bool, explanation []string) {
+// equalValues returns true when Values are equal. It returns false when they
+// differ, along with the reasons why they differ.
+func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
 	if a == nil || b == nil {
 		if a != b {
-			equal, explanation = false, []string{notEqualStr("Values", a, b)}
+			equal, reasons = false, []string{notEqualStr("Values", a, b)}
 		}
-		return equal, explanation
+		return equal, reasons
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
@@ -44,28 +43,22 @@ func CompareValues(a, b metricdata.Value) (equal bool, explanation []string) {
 	switch v := a.(type) {
 	case metricdata.Int64:
 		var exp []string
-		equal, exp = CompareInt64(v, b.(metricdata.Int64))
+		equal, exp = equalInt64(v, b.(metricdata.Int64))
 		if !equal {
-			explanation = append(explanation, "Int64 not equal:")
-			explanation = append(explanation, exp...)
+			reasons = append(reasons, "Int64 not equal:")
+			reasons = append(reasons, exp...)
 		}
 	case metricdata.Float64:
 		var exp []string
-		equal, exp = CompareFloat64(v, b.(metricdata.Float64))
+		equal, exp = equalFloat64(v, b.(metricdata.Float64))
 		if !equal {
-			explanation = append(explanation, "Int64 not equal:")
-			explanation = append(explanation, exp...)
+			reasons = append(reasons, "Int64 not equal:")
+			reasons = append(reasons, exp...)
 		}
 	default:
 		equal = false
-		explanation = append(explanation, fmt.Sprintf("Value of unknown types %T", a))
+		reasons = append(reasons, fmt.Sprintf("Value of unknown types %T", a))
 	}
 
-	return equal, explanation
-}
-
-// AssertValuesEqual asserts that two Values are equal.
-func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
-	t.Helper()
-	return assertCompare(CompareValues(expected, actual))(t)
+	return equal, reasons
 }

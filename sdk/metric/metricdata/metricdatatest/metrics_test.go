@@ -54,7 +54,7 @@ func TestMetricsComparison(t *testing.T) {
 	AssertMetricsEqual(t, a, a)
 	AssertMetricsEqual(t, b, b)
 
-	equal, explanation := CompareMetrics(a, b)
+	equal, reasons := equalMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 5, "Name, Description, Unit, and Data (Aggregation) do not match")
+	assert.Len(t, reasons, 5, "Name, Description, Unit, and Data (Aggregation) do not match")
 }

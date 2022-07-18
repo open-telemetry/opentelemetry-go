@@ -19,21 +19,20 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareHistogram returns true when Histograms are equivalent. It returns
-// false when they differ, along with messages describing the difference.
+// equalHistograms returns true when Histograms are equal. It returns false
+// when they differ, along with the reasons why they differ.
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func CompareHistogram(a, b metricdata.Histogram) (equal bool, explanation []string) {
+func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("Temporality", a.Temporality, b.Temporality),
 		)
 	}
@@ -43,20 +42,14 @@ func CompareHistogram(a, b metricdata.Histogram) (equal bool, explanation []stri
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.HistogramDataPoint) bool {
-			equal, _ := CompareHistogramDataPoint(a, b)
+			equal, _ := equalHistogramDataPoints(a, b)
 			return equal
 		},
 	))
 	if !equal {
-		explanation = append(explanation, fmt.Sprintf(
+		reasons = append(reasons, fmt.Sprintf(
 			"Histogram DataPoints not equal:\n%s", exp,
 		))
 	}
-	return equal, explanation
-}
-
-// AssertHistogramsEqual asserts that two Histogram are equal.
-func AssertHistogramsEqual(t *testing.T, expected, actual metricdata.Histogram) bool {
-	t.Helper()
-	return assertCompare(CompareHistogram(expected, actual))(t)
+	return equal, reasons
 }

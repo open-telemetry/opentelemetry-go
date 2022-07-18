@@ -39,7 +39,7 @@ func TestScopeMetricsComparison(t *testing.T) {
 	AssertScopeMetricsEqual(t, a, a)
 	AssertScopeMetricsEqual(t, b, b)
 
-	equal, explanation := CompareScopeMetrics(a, b)
+	equal, reasons := equalScopeMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 2, "Scope and Metrics do not match")
+	assert.Len(t, reasons, 2, "Scope and Metrics do not match")
 }

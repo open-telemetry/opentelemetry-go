@@ -19,36 +19,29 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareGauge returns true when Gauges are equivalent. It returns false when
-// they differ, along with messages describing the difference.
+// equalGauges returns true when Gauges are equal. It returns false when they
+// differ, along with the reasons why they differ.
 //
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
-func CompareGauge(a, b metricdata.Gauge) (equal bool, explanation []string) {
+func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
 	var exp string
 	equal, exp = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
-			equal, _ := CompareDataPoint(a, b)
+			equal, _ := equalDataPoints(a, b)
 			return equal
 		},
 	))
 	if !equal {
-		explanation = append(explanation, fmt.Sprintf(
+		reasons = append(reasons, fmt.Sprintf(
 			"Gauge DataPoints not equal:\n%s", exp,
 		))
 	}
-	return equal, explanation
-}
-
-// AssertGaugesEqual asserts that two Gauge are equal.
-func AssertGaugesEqual(t *testing.T, expected, actual metricdata.Gauge) bool {
-	t.Helper()
-	return assertCompare(CompareGauge(expected, actual))(t)
+	return equal, reasons
 }

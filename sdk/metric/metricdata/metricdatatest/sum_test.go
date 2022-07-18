@@ -57,7 +57,7 @@ func TestSumsComparison(t *testing.T) {
 	AssertSumsEqual(t, a, a)
 	AssertSumsEqual(t, b, b)
 
-	equal, explanation := CompareSum(a, b)
+	equal, reasons := equalSums(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 3, "Temporality, IsMonotonic, and DataPoints do not match")
+	assert.Len(t, reasons, 3, "Temporality, IsMonotonic, and DataPoints do not match")
 }

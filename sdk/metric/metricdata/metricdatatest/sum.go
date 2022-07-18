@@ -19,27 +19,26 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareSum returns true when Sums are equivalent. It returns false when
-// they differ, along with messages describing the difference.
+// equalSums returns true when Sums are equal. It returns false when they
+// differ, along with the reasons why they differ.
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func CompareSum(a, b metricdata.Sum) (equal bool, explanation []string) {
+func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("Temporality", a.Temporality, b.Temporality),
 		)
 	}
 	if a.IsMonotonic != b.IsMonotonic {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic),
 		)
 	}
@@ -49,20 +48,14 @@ func CompareSum(a, b metricdata.Sum) (equal bool, explanation []string) {
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
-			equal, _ := CompareDataPoint(a, b)
+			equal, _ := equalDataPoints(a, b)
 			return equal
 		},
 	))
 	if !equal {
-		explanation = append(explanation, fmt.Sprintf(
+		reasons = append(reasons, fmt.Sprintf(
 			"Sum DataPoints not equal:\n%s", exp,
 		))
 	}
-	return equal, explanation
-}
-
-// AssertSumsEqual asserts that two Sum are equal.
-func AssertSumsEqual(t *testing.T, expected, actual metricdata.Sum) bool {
-	t.Helper()
-	return assertCompare(CompareSum(expected, actual))(t)
+	return equal, reasons
 }

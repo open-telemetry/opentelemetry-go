@@ -18,25 +18,15 @@
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
-	"testing"
-
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareFloat64 returns true when Float64s are equivalent. It returns false
-// when they differ, along with messages describing the difference.
-func CompareFloat64(a, b metricdata.Float64) (equal bool, explanation []string) {
-	equal = true
-	if a != b {
-		equal, explanation = false, append(
-			explanation, notEqualStr("Float64 value", a, b),
-		)
+// equalFloat64 returns true when Float64s are equal. It returns false when
+// they differ, along with the reasons why they differ.
+func equalFloat64(a, b metricdata.Float64) (equal bool, reasons []string) {
+	equal = a == b
+	if !equal {
+		reasons = append(reasons, notEqualStr("Float64 value", a, b))
 	}
-	return equal, explanation
-}
-
-// AssertFloat64sEqual asserts that two Float64 are equal.
-func AssertFloat64sEqual(t *testing.T, expected, actual metricdata.Float64) bool {
-	t.Helper()
-	return assertCompare(CompareFloat64(expected, actual))(t)
+	return equal, reasons
 }

@@ -43,7 +43,7 @@ func TestResourceMetricsComparison(t *testing.T) {
 	AssertResourceMetricsEqual(t, a, a)
 	AssertResourceMetricsEqual(t, b, b)
 
-	equal, explanation := CompareResourceMetrics(a, b)
+	equal, reasons := equalResourceMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 2, "Resource and ScopeMetrics do not match")
+	assert.Len(t, reasons, 2, "Resource and ScopeMetrics do not match")
 }

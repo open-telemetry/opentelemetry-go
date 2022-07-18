@@ -29,10 +29,10 @@ func TestInt64sComparison(t *testing.T) {
 	a := metricdata.Int64(-1)
 	b := metricdata.Int64(2)
 
-	AssertInt64sEqual(t, a, a)
+	AssertEqual[metricdata.Int64](t, a, a)
 	AssertInt64sEqual(t, b, b)
 
-	equal, explanation := CompareInt64(a, b)
+	equal, reasons := equalInt64(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 1, "Value does not match")
+	assert.Len(t, reasons, 1, "Value does not match")
 }

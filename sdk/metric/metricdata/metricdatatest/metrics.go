@@ -18,45 +18,37 @@
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
-	"testing"
-
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareMetrics returns true when Metrics are equivalent. It returns false
-// when they differ, along with messages describing the difference.
-func CompareMetrics(a, b metricdata.Metrics) (equal bool, explanation []string) {
+// equalMetrics returns true when Metrics are equal. It returns false when
+// they differ, along with the reasons why they differ.
+func equalMetrics(a, b metricdata.Metrics) (equal bool, reasons []string) {
 	equal = true
 	if a.Name != b.Name {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("Name", a.Name, b.Name),
 		)
 	}
 	if a.Description != b.Description {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("Description", a.Description, b.Description),
 		)
 	}
 	if a.Unit != b.Unit {
-		equal, explanation = false, append(
-			explanation,
+		equal, reasons = false, append(
+			reasons,
 			notEqualStr("Unit", a.Unit, b.Unit),
 		)
 	}
 
 	var exp []string
-	equal, exp = CompareAggregations(a.Data, b.Data)
+	equal, exp = equalAggregations(a.Data, b.Data)
 	if !equal {
-		explanation = append(explanation, "Metrics Data not equal:")
-		explanation = append(explanation, exp...)
+		reasons = append(reasons, "Metrics Data not equal:")
+		reasons = append(reasons, exp...)
 	}
-	return equal, explanation
-}
-
-// AssertMetricsEqual asserts that two Metrics are equal.
-func AssertMetricsEqual(t *testing.T, expected, actual metricdata.Metrics) bool {
-	t.Helper()
-	return assertCompare(CompareMetrics(expected, actual))(t)
+	return equal, reasons
 }

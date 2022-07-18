@@ -54,7 +54,7 @@ func TestHistogramDataPointsComparison(t *testing.T) {
 	AssertHistogramDataPointsEqual(t, a, a)
 	AssertHistogramDataPointsEqual(t, b, b)
 
-	equal, explanation := CompareHistogramDataPoint(a, b)
+	equal, reasons := equalHistogramDataPoints(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 9, "Attributes, StartTime, Time, Count, Bounds, BucketCounts, Max, Min, and Sum do not match")
+	assert.Len(t, reasons, 9, "Attributes, StartTime, Time, Count, Bounds, BucketCounts, Max, Min, and Sum do not match")
 }

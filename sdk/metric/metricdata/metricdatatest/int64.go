@@ -18,25 +18,15 @@
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
-	"testing"
-
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareInt64 returns true when Int64s are equivalent. It returns false when
-// they differ, along with messages describing the difference.
-func CompareInt64(a, b metricdata.Int64) (equal bool, explanation []string) {
-	equal = true
-	if a != b {
-		equal, explanation = false, append(
-			explanation, notEqualStr("Int64 value", a, b),
-		)
+// equalInt64 returns true when Int64s are equal. It returns false when they
+// differ, along with the reasons why they differ.
+func equalInt64(a, b metricdata.Int64) (equal bool, reasons []string) {
+	equal = a == b
+	if !equal {
+		reasons = append(reasons, notEqualStr("Int64 value", a, b))
 	}
-	return equal, explanation
-}
-
-// AssertInt64sEqual asserts that two Int64 are equal.
-func AssertInt64sEqual(t *testing.T, expected, actual metricdata.Int64) bool {
-	t.Helper()
-	return assertCompare(CompareInt64(expected, actual))(t)
+	return equal, reasons
 }

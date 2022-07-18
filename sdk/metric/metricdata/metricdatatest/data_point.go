@@ -18,32 +18,30 @@
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
-	"testing"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// CompareDataPoint returns true when DataPoints are equivalent. It returns
-// false when they differ, along with messages describing the difference.
-func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explanation []string) {
+// equalDataPoints returns true when DataPoints are equal. It returns false
+// when they differ, along with the reasons why they differ.
+func equalDataPoints(a, b metricdata.DataPoint) (equal bool, reasons []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, explanation = false, append(explanation, notEqualStr(
+		equal, reasons = false, append(reasons, notEqualStr(
 			"Attributes",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, explanation = false, append(explanation, notEqualStr(
+		equal, reasons = false, append(reasons, notEqualStr(
 			"StartTime",
 			a.StartTime.UnixNano(),
 			b.StartTime.UnixNano(),
 		))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, explanation = false, append(explanation, notEqualStr(
+		equal, reasons = false, append(reasons, notEqualStr(
 			"Time",
 			a.Time.UnixNano(),
 			b.Time.UnixNano(),
@@ -51,16 +49,10 @@ func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explanation []stri
 	}
 
 	var exp []string
-	equal, exp = CompareValues(a.Value, b.Value)
+	equal, exp = equalValues(a.Value, b.Value)
 	if !equal {
-		explanation = append(explanation, "DataPoint Value not equal:")
-		explanation = append(explanation, exp...)
+		reasons = append(reasons, "DataPoint Value not equal:")
+		reasons = append(reasons, exp...)
 	}
-	return equal, explanation
-}
-
-// AssertDataPointsEqual asserts that two DataPoint are equal.
-func AssertDataPointsEqual(t *testing.T, expected, actual metricdata.DataPoint) bool {
-	t.Helper()
-	return assertCompare(CompareDataPoint(expected, actual))(t)
+	return equal, reasons
 }
