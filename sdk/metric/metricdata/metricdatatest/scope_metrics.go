@@ -15,13 +15,13 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareScopeMetrics returns true when ScopeMetrics are equivalent. It
@@ -30,7 +30,7 @@ import (
 //
 // The Metrics each ScopeMetrics contains are compared based on containing the
 // same Metrics, not the order they are stored in.
-func CompareScopeMetrics(a, b export.ScopeMetrics) (equal bool, explination []string) {
+func CompareScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, explination []string) {
 	equal = true
 	if a.Scope != b.Scope {
 		equal, explination = false, append(
@@ -43,7 +43,7 @@ func CompareScopeMetrics(a, b export.ScopeMetrics) (equal bool, explination []st
 	equal, exp = compareDiff(diffSlices(
 		a.Metrics,
 		b.Metrics,
-		func(a, b export.Metrics) bool {
+		func(a, b metricdata.Metrics) bool {
 			equal, _ := CompareMetrics(a, b)
 			return equal
 		},
@@ -57,6 +57,6 @@ func CompareScopeMetrics(a, b export.ScopeMetrics) (equal bool, explination []st
 }
 
 // AssertScopeMetricsEqual asserts that two ScopeMetrics are equal.
-func AssertScopeMetricsEqual(t *testing.T, expected, actual export.ScopeMetrics) bool {
+func AssertScopeMetricsEqual(t *testing.T, expected, actual metricdata.ScopeMetrics) bool {
 	return assertCompare(CompareScopeMetrics(expected, actual))(t)
 }

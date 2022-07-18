@@ -15,17 +15,17 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareInt64 returns true when Int64s are equivalent. It returns false when
 // they differ, along with messages describing the difference.
-func CompareInt64(a, b export.Int64) (equal bool, explination []string) {
+func CompareInt64(a, b metricdata.Int64) (equal bool, explination []string) {
 	equal = true
 	if a != b {
 		equal, explination = false, append(
@@ -36,6 +36,6 @@ func CompareInt64(a, b export.Int64) (equal bool, explination []string) {
 }
 
 // AssertInt64sEqual asserts that two Int64 are equal.
-func AssertInt64sEqual(t *testing.T, expected, actual export.Int64) bool {
+func AssertInt64sEqual(t *testing.T, expected, actual metricdata.Int64) bool {
 	return assertCompare(CompareInt64(expected, actual))(t)
 }

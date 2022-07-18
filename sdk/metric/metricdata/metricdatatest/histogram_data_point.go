@@ -15,20 +15,20 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareHistogramDataPoint returns true when HistogramDataPoints are
 // equivalent. It returns false when they differ, along with messages
 // describing the difference.
-func CompareHistogramDataPoint(a, b export.HistogramDataPoint) (equal bool, explination []string) {
+func CompareHistogramDataPoint(a, b metricdata.HistogramDataPoint) (equal bool, explination []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
 		equal, explination = false, append(explination, fmt.Sprintf(
@@ -97,6 +97,6 @@ func CompareHistogramDataPoint(a, b export.HistogramDataPoint) (equal bool, expl
 }
 
 // AssertHistogramDataPointsEqual asserts that two HistogramDataPoint are equal.
-func AssertHistogramDataPointsEqual(t *testing.T, expected, actual export.HistogramDataPoint) bool {
+func AssertHistogramDataPointsEqual(t *testing.T, expected, actual metricdata.HistogramDataPoint) bool {
 	return assertCompare(CompareHistogramDataPoint(expected, actual))(t)
 }

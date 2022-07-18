@@ -22,17 +22,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestScopeMetricsComparison(t *testing.T) {
-	a := export.ScopeMetrics{
+	a := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{Name: "a"},
 	}
 
-	b := export.ScopeMetrics{
+	b := metricdata.ScopeMetrics{
 		Scope:   instrumentation.Scope{Name: "b"},
-		Metrics: []export.Metrics{{Name: "b"}},
+		Metrics: []metricdata.Metrics{{Name: "b"}},
 	}
 
 	AssertScopeMetricsEqual(t, a, a)

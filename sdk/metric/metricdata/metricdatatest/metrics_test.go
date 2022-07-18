@@ -24,27 +24,27 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestMetricsComparison(t *testing.T) {
-	a := export.Metrics{
+	a := metricdata.Metrics{
 		Name:        "a",
 		Description: "a desc",
 		Unit:        unit.Dimensionless,
 	}
 
-	b := export.Metrics{
+	b := metricdata.Metrics{
 		Name:        "b",
 		Description: "b desc",
 		Unit:        unit.Bytes,
-		Data: export.Gauge{
-			DataPoints: []export.DataPoint{
+		Data: metricdata.Gauge{
+			DataPoints: []metricdata.DataPoint{
 				{
 					Attributes: attribute.NewSet(attribute.Bool("b", true)),
 					StartTime:  time.Now(),
 					Time:       time.Now(),
-					Value:      export.Int64(1),
+					Value:      metricdata.Int64(1),
 				},
 			},
 		},

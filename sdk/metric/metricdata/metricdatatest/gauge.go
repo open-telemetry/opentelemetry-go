@@ -15,13 +15,13 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareGauge returns true when Gauges are equivalent. It returns false when
@@ -29,12 +29,12 @@ import (
 //
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
-func CompareGauge(a, b export.Gauge) (equal bool, explination []string) {
+func CompareGauge(a, b metricdata.Gauge) (equal bool, explination []string) {
 	var exp string
 	equal, exp = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b export.DataPoint) bool {
+		func(a, b metricdata.DataPoint) bool {
 			equal, _ := CompareDataPoint(a, b)
 			return equal
 		},
@@ -48,6 +48,6 @@ func CompareGauge(a, b export.Gauge) (equal bool, explination []string) {
 }
 
 // AssertGaugesEqual asserts that two Gauge are equal.
-func AssertGaugesEqual(t *testing.T, expected, actual export.Gauge) bool {
+func AssertGaugesEqual(t *testing.T, expected, actual metricdata.Gauge) bool {
 	return assertCompare(CompareGauge(expected, actual))(t)
 }

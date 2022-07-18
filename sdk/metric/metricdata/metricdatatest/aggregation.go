@@ -15,19 +15,19 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareAggregations returns true when a and b are equivalent. It returns
 // false when they differ, along with messages describing the difference.
-func CompareAggregations(a, b export.Aggregation) (equal bool, explination []string) {
+func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explination []string) {
 	if a == nil || b == nil {
 		if a != b {
 			equal, explination = false, []string{notEqualStr("Aggregation", a, b)}
@@ -42,23 +42,23 @@ func CompareAggregations(a, b export.Aggregation) (equal bool, explination []str
 	}
 
 	switch v := a.(type) {
-	case export.Gauge:
+	case metricdata.Gauge:
 		var exp []string
-		equal, exp = CompareGauge(v, b.(export.Gauge))
+		equal, exp = CompareGauge(v, b.(metricdata.Gauge))
 		if !equal {
 			explination = append(explination, "Gauge not equal:")
 			explination = append(explination, exp...)
 		}
-	case export.Sum:
+	case metricdata.Sum:
 		var exp []string
-		equal, exp = CompareSum(v, b.(export.Sum))
+		equal, exp = CompareSum(v, b.(metricdata.Sum))
 		if !equal {
 			explination = append(explination, "Sum not equal:")
 			explination = append(explination, exp...)
 		}
-	case export.Histogram:
+	case metricdata.Histogram:
 		var exp []string
-		equal, exp = CompareHistogram(v, b.(export.Histogram))
+		equal, exp = CompareHistogram(v, b.(metricdata.Histogram))
 		if !equal {
 			explination = append(explination, "Histogram not equal:")
 			explination = append(explination, exp...)
@@ -71,6 +71,6 @@ func CompareAggregations(a, b export.Aggregation) (equal bool, explination []str
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual export.Aggregation) bool {
+func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
 	return assertCompare(CompareAggregations(expected, actual))(t)
 }

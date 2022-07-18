@@ -23,17 +23,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestHistogramsComparison(t *testing.T) {
-	a := export.Histogram{
-		Temporality: export.CumulativeTemporality,
+	a := metricdata.Histogram{
+		Temporality: metricdata.CumulativeTemporality,
 	}
 
-	b := export.Histogram{
-		Temporality: export.DeltaTemporality,
-		DataPoints: []export.HistogramDataPoint{
+	b := metricdata.Histogram{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints: []metricdata.HistogramDataPoint{
 			{
 				Attributes: attribute.NewSet(attribute.Bool("b", true)),
 				StartTime:  time.Now(),

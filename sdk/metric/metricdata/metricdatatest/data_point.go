@@ -15,18 +15,18 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareDataPoint returns true when DataPoints are equivalent. It returns
 // false when they differ, along with messages describing the difference.
-func CompareDataPoint(a, b export.DataPoint) (equal bool, explination []string) {
+func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explination []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
 		equal, explination = false, append(explination, notEqualStr(
@@ -60,6 +60,6 @@ func CompareDataPoint(a, b export.DataPoint) (equal bool, explination []string) 
 }
 
 // AssertDataPointsEqual asserts that two DataPoint are equal.
-func AssertDataPointsEqual(t *testing.T, expected, actual export.DataPoint) bool {
+func AssertDataPointsEqual(t *testing.T, expected, actual metricdata.DataPoint) bool {
 	return assertCompare(CompareDataPoint(expected, actual))(t)
 }

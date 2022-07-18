@@ -15,13 +15,13 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareResourceMetrics returns true when ResourceMetrics are equivalent. It
@@ -30,7 +30,7 @@ import (
 //
 // The ScopeMetrics each ResourceMetrics contains are compared based on
 // containing the same ScopeMetrics, not the order they are stored in.
-func CompareResourceMetrics(a, b export.ResourceMetrics) (equal bool, explination []string) {
+func CompareResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, explination []string) {
 	equal = true
 	if !a.Resource.Equal(b.Resource) {
 		equal, explination = false, append(
@@ -42,7 +42,7 @@ func CompareResourceMetrics(a, b export.ResourceMetrics) (equal bool, explinatio
 	equal, exp = compareDiff(diffSlices(
 		a.ScopeMetrics,
 		b.ScopeMetrics,
-		func(a, b export.ScopeMetrics) bool {
+		func(a, b metricdata.ScopeMetrics) bool {
 			equal, _ := CompareScopeMetrics(a, b)
 			return equal
 		},
@@ -56,6 +56,6 @@ func CompareResourceMetrics(a, b export.ResourceMetrics) (equal bool, explinatio
 }
 
 // AssertResourceMetricsEqual asserts that two ResourceMetrics are equal.
-func AssertResourceMetricsEqual(t *testing.T, expected, actual export.ResourceMetrics) bool {
+func AssertResourceMetricsEqual(t *testing.T, expected, actual metricdata.ResourceMetrics) bool {
 	return assertCompare(CompareResourceMetrics(expected, actual))(t)
 }

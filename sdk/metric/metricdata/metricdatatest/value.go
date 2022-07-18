@@ -15,19 +15,19 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareValues returns true when Values are equivalent. It returns false
 // when they differ, along with a message describing the difference.
-func CompareValues(a, b export.Value) (equal bool, explination []string) {
+func CompareValues(a, b metricdata.Value) (equal bool, explination []string) {
 	if a == nil || b == nil {
 		if a != b {
 			equal, explination = false, []string{notEqualStr("Values", a, b)}
@@ -42,16 +42,16 @@ func CompareValues(a, b export.Value) (equal bool, explination []string) {
 	}
 
 	switch v := a.(type) {
-	case export.Int64:
+	case metricdata.Int64:
 		var exp []string
-		equal, exp = CompareInt64(v, b.(export.Int64))
+		equal, exp = CompareInt64(v, b.(metricdata.Int64))
 		if !equal {
 			explination = append(explination, "Int64 not equal:")
 			explination = append(explination, exp...)
 		}
-	case export.Float64:
+	case metricdata.Float64:
 		var exp []string
-		equal, exp = CompareFloat64(v, b.(export.Float64))
+		equal, exp = CompareFloat64(v, b.(metricdata.Float64))
 		if !equal {
 			explination = append(explination, "Int64 not equal:")
 			explination = append(explination, exp...)
@@ -65,6 +65,6 @@ func CompareValues(a, b export.Value) (equal bool, explination []string) {
 }
 
 // AssertValuesEqual asserts that two Values are equal.
-func AssertValuesEqual(t *testing.T, expected, actual export.Value) bool {
+func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
 	return assertCompare(CompareValues(expected, actual))(t)
 }

@@ -23,22 +23,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestDataPointsComparison(t *testing.T) {
-	a := export.DataPoint{
+	a := metricdata.DataPoint{
 		Attributes: attribute.NewSet(attribute.Bool("a", true)),
 		StartTime:  time.Now(),
 		Time:       time.Now(),
-		Value:      export.Int64(2),
+		Value:      metricdata.Int64(2),
 	}
 
-	b := export.DataPoint{
+	b := metricdata.DataPoint{
 		Attributes: attribute.NewSet(attribute.Bool("b", true)),
 		StartTime:  time.Now(),
 		Time:       time.Now(),
-		Value:      export.Float64(1),
+		Value:      metricdata.Float64(1),
 	}
 
 	AssertDataPointsEqual(t, a, a)

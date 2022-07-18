@@ -23,11 +23,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestHistogramDataPointsComparison(t *testing.T) {
-	a := export.HistogramDataPoint{
+	a := metricdata.HistogramDataPoint{
 		Attributes:   attribute.NewSet(attribute.Bool("a", true)),
 		StartTime:    time.Now(),
 		Time:         time.Now(),
@@ -38,7 +38,7 @@ func TestHistogramDataPointsComparison(t *testing.T) {
 	}
 
 	max, min := 99.0, 3.
-	b := export.HistogramDataPoint{
+	b := metricdata.HistogramDataPoint{
 		Attributes:   attribute.NewSet(attribute.Bool("b", true)),
 		StartTime:    time.Now(),
 		Time:         time.Now(),

@@ -23,32 +23,32 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestSumsComparison(t *testing.T) {
-	a := export.Sum{
-		Temporality: export.CumulativeTemporality,
+	a := metricdata.Sum{
+		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: true,
-		DataPoints: []export.DataPoint{
+		DataPoints: []metricdata.DataPoint{
 			{
 				Attributes: attribute.NewSet(attribute.Bool("a", true)),
 				StartTime:  time.Now(),
 				Time:       time.Now(),
-				Value:      export.Int64(2),
+				Value:      metricdata.Int64(2),
 			},
 		},
 	}
 
-	b := export.Sum{
-		Temporality: export.DeltaTemporality,
+	b := metricdata.Sum{
+		Temporality: metricdata.DeltaTemporality,
 		IsMonotonic: false,
-		DataPoints: []export.DataPoint{
+		DataPoints: []metricdata.DataPoint{
 			{
 				Attributes: attribute.NewSet(attribute.Bool("b", true)),
 				StartTime:  time.Now(),
 				Time:       time.Now(),
-				Value:      export.Int64(1),
+				Value:      metricdata.Int64(1),
 			},
 		},
 	}

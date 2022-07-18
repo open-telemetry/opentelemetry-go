@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestInt64sComparison(t *testing.T) {
-	a := export.Int64(-1)
-	b := export.Int64(2)
+	a := metricdata.Int64(-1)
+	b := metricdata.Int64(2)
 
 	AssertInt64sEqual(t, a, a)
 	AssertInt64sEqual(t, b, b)

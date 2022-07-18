@@ -15,13 +15,13 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareHistogram returns true when Histograms are equivalent. It returns
@@ -29,7 +29,7 @@ import (
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func CompareHistogram(a, b export.Histogram) (equal bool, explination []string) {
+func CompareHistogram(a, b metricdata.Histogram) (equal bool, explination []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
 		equal, explination = false, append(
@@ -42,7 +42,7 @@ func CompareHistogram(a, b export.Histogram) (equal bool, explination []string) 
 	equal, exp = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b export.HistogramDataPoint) bool {
+		func(a, b metricdata.HistogramDataPoint) bool {
 			equal, _ := CompareHistogramDataPoint(a, b)
 			return equal
 		},
@@ -56,6 +56,6 @@ func CompareHistogram(a, b export.Histogram) (equal bool, explination []string) 
 }
 
 // AssertHistogramsEqual asserts that two Histogram are equal.
-func AssertHistogramsEqual(t *testing.T, expected, actual export.Histogram) bool {
+func AssertHistogramsEqual(t *testing.T, expected, actual metricdata.Histogram) bool {
 	return assertCompare(CompareHistogram(expected, actual))(t)
 }

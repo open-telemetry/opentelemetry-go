@@ -23,18 +23,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestResourceMetricsComparison(t *testing.T) {
-	a := export.ResourceMetrics{
+	a := metricdata.ResourceMetrics{
 		Resource: resource.NewSchemaless(attribute.String("resource", "a")),
 	}
 
-	b := export.ResourceMetrics{
+	b := metricdata.ResourceMetrics{
 		Resource: resource.NewSchemaless(attribute.String("resource", "b")),
-		ScopeMetrics: []export.ScopeMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
 			{Scope: instrumentation.Scope{Name: "b"}},
 		},
 	}

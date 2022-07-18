@@ -15,13 +15,13 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // CompareSum returns true when Sums are equivalent. It returns false when
@@ -29,7 +29,7 @@ import (
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func CompareSum(a, b export.Sum) (equal bool, explination []string) {
+func CompareSum(a, b metricdata.Sum) (equal bool, explination []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
 		equal, explination = false, append(
@@ -48,7 +48,7 @@ func CompareSum(a, b export.Sum) (equal bool, explination []string) {
 	equal, exp = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b export.DataPoint) bool {
+		func(a, b metricdata.DataPoint) bool {
 			equal, _ := CompareDataPoint(a, b)
 			return equal
 		},
@@ -62,6 +62,6 @@ func CompareSum(a, b export.Sum) (equal bool, explination []string) {
 }
 
 // AssertSumsEqual asserts that two Sum are equal.
-func AssertSumsEqual(t *testing.T, expected, actual export.Sum) bool {
+func AssertSumsEqual(t *testing.T, expected, actual metricdata.Sum) bool {
 	return assertCompare(CompareSum(expected, actual))(t)
 }
