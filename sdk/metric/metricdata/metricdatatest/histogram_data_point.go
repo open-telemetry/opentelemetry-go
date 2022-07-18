@@ -28,72 +28,72 @@ import (
 // CompareHistogramDataPoint returns true when HistogramDataPoints are
 // equivalent. It returns false when they differ, along with messages
 // describing the difference.
-func CompareHistogramDataPoint(a, b metricdata.HistogramDataPoint) (equal bool, explination []string) {
+func CompareHistogramDataPoint(a, b metricdata.HistogramDataPoint) (equal bool, explanation []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Attributes not equal:\nexpected: %s\nactual: %s",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"StartTime not equal:\nexpected: %d\nactual: %d",
 			a.StartTime.UnixNano(),
 			b.StartTime.UnixNano(),
 		))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Time not equal:\nexpected: %d\nactual: %d",
 			a.Time.UnixNano(),
 			b.Time.UnixNano(),
 		))
 	}
 	if a.Count != b.Count {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Count not equal:\nexpected: %d\nactual: %d",
 			a.Count,
 			b.Count,
 		))
 	}
 	if !equalSlices(a.Bounds, b.Bounds) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Bounds not equal:\nexpected: %v\nactual: %v",
 			a.Bounds,
 			b.Bounds,
 		))
 	}
 	if !equalSlices(a.BucketCounts, b.BucketCounts) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"BucketCounts not equal:\nexpected: %v\nactual: %v",
 			a.BucketCounts,
 			b.BucketCounts,
 		))
 	}
 	if !equalPtrValues(a.Min, b.Min) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Min not equal:\nexpected: %v\nactual: %v",
 			a.Min,
 			b.Min,
 		))
 	}
 	if !equalPtrValues(a.Max, b.Max) {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Max not equal:\nexpected: %v\nactual: %v",
 			a.Max,
 			b.Max,
 		))
 	}
 	if a.Sum != b.Sum {
-		equal, explination = false, append(explination, fmt.Sprintf(
+		equal, explanation = false, append(explanation, fmt.Sprintf(
 			"Sum not equal:\nexpected: %g\nactual: %g",
 			a.Sum,
 			b.Sum,
 		))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertHistogramDataPointsEqual asserts that two HistogramDataPoint are equal.

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -44,7 +45,7 @@ func TestDataPointsComparison(t *testing.T) {
 	AssertDataPointsEqual(t, a, a)
 	AssertDataPointsEqual(t, b, b)
 
-	equal, explination := CompareDataPoint(a, b)
+	equal, explanation := CompareDataPoint(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 4, "Attributes, StartTime, Time and Value do not match")
+	assert.Len(t, explanation, 4, "Attributes, StartTime, Time and Value do not match")
 }

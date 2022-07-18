@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -53,7 +54,7 @@ func TestHistogramDataPointsComparison(t *testing.T) {
 	AssertHistogramDataPointsEqual(t, a, a)
 	AssertHistogramDataPointsEqual(t, b, b)
 
-	equal, explination := CompareHistogramDataPoint(a, b)
+	equal, explanation := CompareHistogramDataPoint(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 9, "Attributes, StartTime, Time, Count, Bounds, BucketCounts, Max, Min, and Sum do not match")
+	assert.Len(t, explanation, 9, "Attributes, StartTime, Time, Count, Bounds, BucketCounts, Max, Min, and Sum do not match")
 }

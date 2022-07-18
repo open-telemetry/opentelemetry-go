@@ -80,9 +80,9 @@ func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 	return extraA, extraB
 }
 
-func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explination string) {
+func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explanation string) {
 	if len(extraExpected) == 0 && len(extraActual) == 0 {
-		return true, explination
+		return true, explanation
 	}
 
 	formater := func(v T) string {
@@ -107,11 +107,11 @@ func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explination
 	return false, msg.String()
 }
 
-func assertCompare(equal bool, explination []string) func(*testing.T) bool {
+func assertCompare(equal bool, explanation []string) func(*testing.T) bool {
 	if equal {
 		return func(*testing.T) bool { return true }
 	}
 	return func(t *testing.T) bool {
-		return assert.Fail(t, strings.Join(explination, "\n"))
+		return assert.Fail(t, strings.Join(explanation, "\n"))
 	}
 }

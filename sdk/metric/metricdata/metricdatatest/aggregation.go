@@ -27,12 +27,12 @@ import (
 
 // CompareAggregations returns true when a and b are equivalent. It returns
 // false when they differ, along with messages describing the difference.
-func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explination []string) {
+func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explanation []string) {
 	if a == nil || b == nil {
 		if a != b {
-			equal, explination = false, []string{notEqualStr("Aggregation", a, b)}
+			equal, explanation = false, []string{notEqualStr("Aggregation", a, b)}
 		}
-		return equal, explination
+		return equal, explanation
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
@@ -46,28 +46,28 @@ func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explination [
 		var exp []string
 		equal, exp = CompareGauge(v, b.(metricdata.Gauge))
 		if !equal {
-			explination = append(explination, "Gauge not equal:")
-			explination = append(explination, exp...)
+			explanation = append(explanation, "Gauge not equal:")
+			explanation = append(explanation, exp...)
 		}
 	case metricdata.Sum:
 		var exp []string
 		equal, exp = CompareSum(v, b.(metricdata.Sum))
 		if !equal {
-			explination = append(explination, "Sum not equal:")
-			explination = append(explination, exp...)
+			explanation = append(explanation, "Sum not equal:")
+			explanation = append(explanation, exp...)
 		}
 	case metricdata.Histogram:
 		var exp []string
 		equal, exp = CompareHistogram(v, b.(metricdata.Histogram))
 		if !equal {
-			explination = append(explination, "Histogram not equal:")
-			explination = append(explination, exp...)
+			explanation = append(explanation, "Histogram not equal:")
+			explanation = append(explanation, exp...)
 		}
 	default:
 		equal = false
-		explination = append(explination, fmt.Sprintf("Aggregation of unknown types %T", a))
+		explanation = append(explanation, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.

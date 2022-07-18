@@ -25,14 +25,14 @@ import (
 
 // CompareFloat64 returns true when Float64s are equivalent. It returns false
 // when they differ, along with messages describing the difference.
-func CompareFloat64(a, b metricdata.Float64) (equal bool, explination []string) {
+func CompareFloat64(a, b metricdata.Float64) (equal bool, explanation []string) {
 	equal = true
 	if a != b {
-		equal, explination = false, append(
-			explination, notEqualStr("Float64 value", a, b),
+		equal, explanation = false, append(
+			explanation, notEqualStr("Float64 value", a, b),
 		)
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertFloat64sEqual asserts that two Float64 are equal.

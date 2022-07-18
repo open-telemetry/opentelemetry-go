@@ -30,11 +30,11 @@ import (
 //
 // The ScopeMetrics each ResourceMetrics contains are compared based on
 // containing the same ScopeMetrics, not the order they are stored in.
-func CompareResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, explination []string) {
+func CompareResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, explanation []string) {
 	equal = true
 	if !a.Resource.Equal(b.Resource) {
-		equal, explination = false, append(
-			explination, notEqualStr("Resources", a.Resource, b.Resource),
+		equal, explanation = false, append(
+			explanation, notEqualStr("Resources", a.Resource, b.Resource),
 		)
 	}
 
@@ -48,11 +48,11 @@ func CompareResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, explin
 		},
 	))
 	if !equal {
-		explination = append(explination, fmt.Sprintf(
+		explanation = append(explanation, fmt.Sprintf(
 			"ResourceMetrics ScopeMetrics not equal:\n%s", exp,
 		))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertResourceMetricsEqual asserts that two ResourceMetrics are equal.

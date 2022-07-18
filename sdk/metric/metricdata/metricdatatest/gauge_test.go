@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -52,7 +53,7 @@ func TestGaugesComparison(t *testing.T) {
 	AssertGaugesEqual(t, a, a)
 	AssertGaugesEqual(t, b, b)
 
-	equal, explination := CompareGauge(a, b)
+	equal, explanation := CompareGauge(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 1, "DataPoints do not match")
+	assert.Len(t, explanation, 1, "DataPoints do not match")
 }

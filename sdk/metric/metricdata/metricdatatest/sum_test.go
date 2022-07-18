@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -56,7 +57,7 @@ func TestSumsComparison(t *testing.T) {
 	AssertSumsEqual(t, a, a)
 	AssertSumsEqual(t, b, b)
 
-	equal, explination := CompareSum(a, b)
+	equal, explanation := CompareSum(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 3, "Temporality, IsMonotonic, and DataPoints do not match")
+	assert.Len(t, explanation, 3, "Temporality, IsMonotonic, and DataPoints do not match")
 }

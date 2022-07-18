@@ -25,14 +25,14 @@ import (
 
 // CompareInt64 returns true when Int64s are equivalent. It returns false when
 // they differ, along with messages describing the difference.
-func CompareInt64(a, b metricdata.Int64) (equal bool, explination []string) {
+func CompareInt64(a, b metricdata.Int64) (equal bool, explanation []string) {
 	equal = true
 	if a != b {
-		equal, explination = false, append(
-			explination, notEqualStr("Int64 value", a, b),
+		equal, explanation = false, append(
+			explanation, notEqualStr("Int64 value", a, b),
 		)
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertInt64sEqual asserts that two Int64 are equal.

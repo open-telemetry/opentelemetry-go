@@ -29,11 +29,11 @@ import (
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func CompareHistogram(a, b metricdata.Histogram) (equal bool, explination []string) {
+func CompareHistogram(a, b metricdata.Histogram) (equal bool, explanation []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Temporality", a.Temporality, b.Temporality),
 		)
 	}
@@ -48,11 +48,11 @@ func CompareHistogram(a, b metricdata.Histogram) (equal bool, explination []stri
 		},
 	))
 	if !equal {
-		explination = append(explination, fmt.Sprintf(
+		explanation = append(explanation, fmt.Sprintf(
 			"Histogram DataPoints not equal:\n%s", exp,
 		))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertHistogramsEqual asserts that two Histogram are equal.

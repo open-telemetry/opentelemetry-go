@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -38,7 +39,7 @@ func TestScopeMetricsComparison(t *testing.T) {
 	AssertScopeMetricsEqual(t, a, a)
 	AssertScopeMetricsEqual(t, b, b)
 
-	equal, explination := CompareScopeMetrics(a, b)
+	equal, explanation := CompareScopeMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 2, "Scope and Metrics do not match")
+	assert.Len(t, explanation, 2, "Scope and Metrics do not match")
 }

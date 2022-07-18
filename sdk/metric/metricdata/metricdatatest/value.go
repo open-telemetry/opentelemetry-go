@@ -27,12 +27,12 @@ import (
 
 // CompareValues returns true when Values are equivalent. It returns false
 // when they differ, along with a message describing the difference.
-func CompareValues(a, b metricdata.Value) (equal bool, explination []string) {
+func CompareValues(a, b metricdata.Value) (equal bool, explanation []string) {
 	if a == nil || b == nil {
 		if a != b {
-			equal, explination = false, []string{notEqualStr("Values", a, b)}
+			equal, explanation = false, []string{notEqualStr("Values", a, b)}
 		}
-		return equal, explination
+		return equal, explanation
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
@@ -46,22 +46,22 @@ func CompareValues(a, b metricdata.Value) (equal bool, explination []string) {
 		var exp []string
 		equal, exp = CompareInt64(v, b.(metricdata.Int64))
 		if !equal {
-			explination = append(explination, "Int64 not equal:")
-			explination = append(explination, exp...)
+			explanation = append(explanation, "Int64 not equal:")
+			explanation = append(explanation, exp...)
 		}
 	case metricdata.Float64:
 		var exp []string
 		equal, exp = CompareFloat64(v, b.(metricdata.Float64))
 		if !equal {
-			explination = append(explination, "Int64 not equal:")
-			explination = append(explination, exp...)
+			explanation = append(explanation, "Int64 not equal:")
+			explanation = append(explanation, exp...)
 		}
 	default:
 		equal = false
-		explination = append(explination, fmt.Sprintf("Value of unknown types %T", a))
+		explanation = append(explanation, fmt.Sprintf("Value of unknown types %T", a))
 	}
 
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertValuesEqual asserts that two Values are equal.

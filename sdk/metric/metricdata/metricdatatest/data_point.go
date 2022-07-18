@@ -26,24 +26,24 @@ import (
 
 // CompareDataPoint returns true when DataPoints are equivalent. It returns
 // false when they differ, along with messages describing the difference.
-func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explination []string) {
+func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explanation []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, explination = false, append(explination, notEqualStr(
+		equal, explanation = false, append(explanation, notEqualStr(
 			"Attributes",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, explination = false, append(explination, notEqualStr(
+		equal, explanation = false, append(explanation, notEqualStr(
 			"StartTime",
 			a.StartTime.UnixNano(),
 			b.StartTime.UnixNano(),
 		))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, explination = false, append(explination, notEqualStr(
+		equal, explanation = false, append(explanation, notEqualStr(
 			"Time",
 			a.Time.UnixNano(),
 			b.Time.UnixNano(),
@@ -53,10 +53,10 @@ func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explination []stri
 	var exp []string
 	equal, exp = CompareValues(a.Value, b.Value)
 	if !equal {
-		explination = append(explination, "DataPoint Value not equal:")
-		explination = append(explination, exp...)
+		explanation = append(explanation, "DataPoint Value not equal:")
+		explanation = append(explanation, exp...)
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertDataPointsEqual asserts that two DataPoint are equal.

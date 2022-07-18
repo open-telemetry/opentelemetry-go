@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -42,7 +43,7 @@ func TestResourceMetricsComparison(t *testing.T) {
 	AssertResourceMetricsEqual(t, a, a)
 	AssertResourceMetricsEqual(t, b, b)
 
-	equal, explination := CompareResourceMetrics(a, b)
+	equal, explanation := CompareResourceMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 2, "Resource and ScopeMetrics do not match")
+	assert.Len(t, explanation, 2, "Resource and ScopeMetrics do not match")
 }

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -31,7 +32,7 @@ func TestInt64sComparison(t *testing.T) {
 	AssertInt64sEqual(t, a, a)
 	AssertInt64sEqual(t, b, b)
 
-	equal, explination := CompareInt64(a, b)
+	equal, explanation := CompareInt64(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 1, "Value does not match")
+	assert.Len(t, explanation, 1, "Value does not match")
 }

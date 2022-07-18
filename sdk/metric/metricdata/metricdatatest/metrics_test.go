@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -53,7 +54,7 @@ func TestMetricsComparison(t *testing.T) {
 	AssertMetricsEqual(t, a, a)
 	AssertMetricsEqual(t, b, b)
 
-	equal, explination := CompareMetrics(a, b)
+	equal, explanation := CompareMetrics(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explination, 4, "Name, Description, Unit, and Data do not match")
+	assert.Len(t, explanation, 4, "Name, Description, Unit, and Data do not match")
 }

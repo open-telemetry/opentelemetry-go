@@ -29,17 +29,17 @@ import (
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func CompareSum(a, b metricdata.Sum) (equal bool, explination []string) {
+func CompareSum(a, b metricdata.Sum) (equal bool, explanation []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Temporality", a.Temporality, b.Temporality),
 		)
 	}
 	if a.IsMonotonic != b.IsMonotonic {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic),
 		)
 	}
@@ -54,11 +54,11 @@ func CompareSum(a, b metricdata.Sum) (equal bool, explination []string) {
 		},
 	))
 	if !equal {
-		explination = append(explination, fmt.Sprintf(
+		explanation = append(explanation, fmt.Sprintf(
 			"Sum DataPoints not equal:\n%s", exp,
 		))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertSumsEqual asserts that two Sum are equal.

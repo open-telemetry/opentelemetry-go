@@ -30,11 +30,11 @@ import (
 //
 // The Metrics each ScopeMetrics contains are compared based on containing the
 // same Metrics, not the order they are stored in.
-func CompareScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, explination []string) {
+func CompareScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, explanation []string) {
 	equal = true
 	if a.Scope != b.Scope {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Scope", a.Scope, b.Scope),
 		)
 	}
@@ -49,11 +49,11 @@ func CompareScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, explination 
 		},
 	))
 	if !equal {
-		explination = append(explination, fmt.Sprintf(
+		explanation = append(explanation, fmt.Sprintf(
 			"ScopeMetrics Metrics not equal:\n%s", exp,
 		))
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertScopeMetricsEqual asserts that two ScopeMetrics are equal.

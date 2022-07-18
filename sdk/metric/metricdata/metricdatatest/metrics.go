@@ -25,23 +25,23 @@ import (
 
 // CompareMetrics returns true when Metrics are equivalent. It returns false
 // when they differ, along with messages describing the difference.
-func CompareMetrics(a, b metricdata.Metrics) (equal bool, explination []string) {
+func CompareMetrics(a, b metricdata.Metrics) (equal bool, explanation []string) {
 	equal = true
 	if a.Name != b.Name {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Name", a.Name, b.Name),
 		)
 	}
 	if a.Description != b.Description {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Description", a.Description, b.Description),
 		)
 	}
 	if a.Unit != b.Unit {
-		equal, explination = false, append(
-			explination,
+		equal, explanation = false, append(
+			explanation,
 			notEqualStr("Unit", a.Unit, b.Unit),
 		)
 	}
@@ -49,10 +49,10 @@ func CompareMetrics(a, b metricdata.Metrics) (equal bool, explination []string) 
 	var exp []string
 	equal, exp = CompareAggregations(a.Data, b.Data)
 	if !equal {
-		explination = append(explination, "Metrics Data not equal:")
-		explination = append(explination, exp...)
+		explanation = append(explanation, "Metrics Data not equal:")
+		explanation = append(explanation, exp...)
 	}
-	return equal, explination
+	return equal, explanation
 }
 
 // AssertMetricsEqual asserts that two Metrics are equal.
