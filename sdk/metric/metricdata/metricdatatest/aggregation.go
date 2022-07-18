@@ -28,6 +28,7 @@ import (
 // CompareAggregations returns true when a and b are equivalent. It returns
 // false when they differ, along with messages describing the difference.
 func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explanation []string) {
+	equal = true
 	if a == nil || b == nil {
 		if a != b {
 			equal, explanation = false, []string{notEqualStr("Aggregation", a, b)}
