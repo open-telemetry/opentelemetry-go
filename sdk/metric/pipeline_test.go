@@ -26,17 +26,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type testSumAggregator struct{}
 
-func (testSumAggregator) Aggregation() export.Aggregation {
-	return export.Sum{
-		Temporality: export.CumulativeTemporality,
+func (testSumAggregator) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum{
+		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
-		DataPoints:  []export.DataPoint{}}
+		DataPoints:  []metricdata.DataPoint{}}
 }
 
 func TestEmptyPipeline(t *testing.T) {

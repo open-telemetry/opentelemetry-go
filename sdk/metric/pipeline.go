@@ -24,12 +24,12 @@ import (
 
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type aggregator interface {
-	Aggregation() export.Aggregation
+	Aggregation() metricdata.Aggregation
 }
 type instrumentKey struct {
 	name        string
@@ -94,7 +94,7 @@ func (p *pipeline) addCallback(callback func(context.Context)) {
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
-func (p *pipeline) produce(ctx context.Context) (export.ResourceMetrics, error) {
+func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -103,17 +103,17 @@ func (p *pipeline) produce(ctx context.Context) (export.ResourceMetrics, error) 
 		callback(ctx)
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
-			return export.ResourceMetrics{}, err
+			return metricdata.ResourceMetrics{}, err
 		}
 	}
 
-	sm := make([]export.ScopeMetrics, 0, len(p.aggregations))
+	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
 	for scope, instruments := range p.aggregations {
-		metrics := make([]export.Metrics, 0, len(instruments))
+		metrics := make([]metricdata.Metrics, 0, len(instruments))
 		for inst, aggregation := range instruments {
 			data := aggregation.Aggregation()
 			if data != nil {
-				metrics = append(metrics, export.Metrics{
+				metrics = append(metrics, metricdata.Metrics{
 					Name:        inst.name,
 					Description: inst.description,
 					Unit:        inst.unit,
@@ -122,14 +122,14 @@ func (p *pipeline) produce(ctx context.Context) (export.ResourceMetrics, error) 
 			}
 		}
 		if len(metrics) > 0 {
-			sm = append(sm, export.ScopeMetrics{
+			sm = append(sm, metricdata.ScopeMetrics{
 				Scope:   scope,
 				Metrics: metrics,
 			})
 		}
 	}
 
-	return export.ResourceMetrics{
+	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
 	}, nil
