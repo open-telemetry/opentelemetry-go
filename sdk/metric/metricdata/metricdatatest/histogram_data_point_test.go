@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package exporttest
+package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
 	"testing"

@@ -15,5 +15,6 @@
 //go:build go1.18
 // +build go1.18
 
-// Pacakge exporttest provides testing functionality for the export package.
-package exporttest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+// Pacakge metricdatatest provides testing functionality for the metricdata
+// package.
+package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
