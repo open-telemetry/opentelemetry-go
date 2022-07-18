@@ -37,8 +37,8 @@ func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
 		)
 	}
 
-	var exp string
-	equal, exp = compareDiff(diffSlices(
+	var r string
+	equal, r = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.HistogramDataPoint) bool {
@@ -48,7 +48,7 @@ func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
 	))
 	if !equal {
 		reasons = append(reasons, fmt.Sprintf(
-			"Histogram DataPoints not equal:\n%s", exp,
+			"Histogram DataPoints not equal:\n%s", r,
 		))
 	}
 	return equal, reasons

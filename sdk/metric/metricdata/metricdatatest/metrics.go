@@ -44,11 +44,11 @@ func equalMetrics(a, b metricdata.Metrics) (equal bool, reasons []string) {
 		)
 	}
 
-	var exp []string
-	equal, exp = equalAggregations(a.Data, b.Data)
+	var r []string
+	equal, r = equalAggregations(a.Data, b.Data)
 	if !equal {
 		reasons = append(reasons, "Metrics Data not equal:")
-		reasons = append(reasons, exp...)
+		reasons = append(reasons, r...)
 	}
 	return equal, reasons
 }

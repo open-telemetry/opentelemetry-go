@@ -43,8 +43,8 @@ func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 		)
 	}
 
-	var exp string
-	equal, exp = compareDiff(diffSlices(
+	var r string
+	equal, r = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
@@ -54,7 +54,7 @@ func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 	))
 	if !equal {
 		reasons = append(reasons, fmt.Sprintf(
-			"Sum DataPoints not equal:\n%s", exp,
+			"Sum DataPoints not equal:\n%s", r,
 		))
 	}
 	return equal, reasons

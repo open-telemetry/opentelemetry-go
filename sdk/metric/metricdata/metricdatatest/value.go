@@ -42,18 +42,18 @@ func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
 
 	switch v := a.(type) {
 	case metricdata.Int64:
-		var exp []string
-		equal, exp = equalInt64(v, b.(metricdata.Int64))
+		var r []string
+		equal, r = equalInt64(v, b.(metricdata.Int64))
 		if !equal {
 			reasons = append(reasons, "Int64 not equal:")
-			reasons = append(reasons, exp...)
+			reasons = append(reasons, r...)
 		}
 	case metricdata.Float64:
-		var exp []string
-		equal, exp = equalFloat64(v, b.(metricdata.Float64))
+		var r []string
+		equal, r = equalFloat64(v, b.(metricdata.Float64))
 		if !equal {
 			reasons = append(reasons, "Int64 not equal:")
-			reasons = append(reasons, exp...)
+			reasons = append(reasons, r...)
 		}
 	default:
 		equal = false

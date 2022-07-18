@@ -43,25 +43,25 @@ func equalAggregations(a, b metricdata.Aggregation) (equal bool, reasons []strin
 
 	switch v := a.(type) {
 	case metricdata.Gauge:
-		var exp []string
-		equal, exp = equalGauges(v, b.(metricdata.Gauge))
+		var r []string
+		equal, r = equalGauges(v, b.(metricdata.Gauge))
 		if !equal {
 			reasons = append(reasons, "Gauge not equal:")
-			reasons = append(reasons, exp...)
+			reasons = append(reasons, r...)
 		}
 	case metricdata.Sum:
-		var exp []string
-		equal, exp = equalSums(v, b.(metricdata.Sum))
+		var r []string
+		equal, r = equalSums(v, b.(metricdata.Sum))
 		if !equal {
 			reasons = append(reasons, "Sum not equal:")
-			reasons = append(reasons, exp...)
+			reasons = append(reasons, r...)
 		}
 	case metricdata.Histogram:
-		var exp []string
-		equal, exp = equalHistograms(v, b.(metricdata.Histogram))
+		var r []string
+		equal, r = equalHistograms(v, b.(metricdata.Histogram))
 		if !equal {
 			reasons = append(reasons, "Histogram not equal:")
-			reasons = append(reasons, exp...)
+			reasons = append(reasons, r...)
 		}
 	default:
 		equal = false

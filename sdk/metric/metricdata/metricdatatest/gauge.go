@@ -29,8 +29,8 @@ import (
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
 func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
-	var exp string
-	equal, exp = compareDiff(diffSlices(
+	var r string
+	equal, r = compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
@@ -40,7 +40,7 @@ func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
 	))
 	if !equal {
 		reasons = append(reasons, fmt.Sprintf(
-			"Gauge DataPoints not equal:\n%s", exp,
+			"Gauge DataPoints not equal:\n%s", r,
 		))
 	}
 	return equal, reasons

@@ -48,11 +48,11 @@ func equalDataPoints(a, b metricdata.DataPoint) (equal bool, reasons []string) {
 		))
 	}
 
-	var exp []string
-	equal, exp = equalValues(a.Value, b.Value)
+	var r []string
+	equal, r = equalValues(a.Value, b.Value)
 	if !equal {
 		reasons = append(reasons, "DataPoint Value not equal:")
-		reasons = append(reasons, exp...)
+		reasons = append(reasons, r...)
 	}
 	return equal, reasons
 }

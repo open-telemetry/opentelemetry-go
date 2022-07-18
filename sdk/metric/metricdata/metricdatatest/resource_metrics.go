@@ -36,8 +36,8 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons 
 		)
 	}
 
-	var exp string
-	equal, exp = compareDiff(diffSlices(
+	var r string
+	equal, r = compareDiff(diffSlices(
 		a.ScopeMetrics,
 		b.ScopeMetrics,
 		func(a, b metricdata.ScopeMetrics) bool {
@@ -47,7 +47,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons 
 	))
 	if !equal {
 		reasons = append(reasons, fmt.Sprintf(
-			"ResourceMetrics ScopeMetrics not equal:\n%s", exp,
+			"ResourceMetrics ScopeMetrics not equal:\n%s", r,
 		))
 	}
 	return equal, reasons
