@@ -98,5 +98,6 @@ func CompareHistogramDataPoint(a, b metricdata.HistogramDataPoint) (equal bool, 
 
 // AssertHistogramDataPointsEqual asserts that two HistogramDataPoint are equal.
 func AssertHistogramDataPointsEqual(t *testing.T, expected, actual metricdata.HistogramDataPoint) bool {
+	t.Helper()
 	return assertCompare(CompareHistogramDataPoint(expected, actual))(t)
 }

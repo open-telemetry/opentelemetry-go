@@ -72,5 +72,6 @@ func CompareAggregations(a, b metricdata.Aggregation) (equal bool, explanation [
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
 func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
+	t.Helper()
 	return assertCompare(CompareAggregations(expected, actual))(t)
 }

@@ -58,5 +58,6 @@ func CompareScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, explanation 
 
 // AssertScopeMetricsEqual asserts that two ScopeMetrics are equal.
 func AssertScopeMetricsEqual(t *testing.T, expected, actual metricdata.ScopeMetrics) bool {
+	t.Helper()
 	return assertCompare(CompareScopeMetrics(expected, actual))(t)
 }

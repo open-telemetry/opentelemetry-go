@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func notEqualStr(prefix string, expected, actual interface{}) string {
@@ -106,11 +104,16 @@ func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explanation
 	return false, msg.String()
 }
 
-func assertCompare(equal bool, explanation []string) func(*testing.T) bool { // nolint: revive  // equal is not a controll flag.
-	if equal {
-		return func(*testing.T) bool { return true }
-	}
+func assertCompare(equal bool, explanation []string) func(*testing.T) bool { // nolint: revive  // equal is not a control flag.
 	return func(t *testing.T) bool {
-		return assert.Fail(t, strings.Join(explanation, "\n"))
+		t.Helper()
+		if !equal {
+			if len(explanation) > 0 {
+				t.Error(strings.Join(explanation, "\n"))
+			} else {
+				t.Fail()
+			}
+		}
+		return equal
 	}
 }

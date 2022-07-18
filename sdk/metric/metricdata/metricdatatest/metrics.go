@@ -57,5 +57,6 @@ func CompareMetrics(a, b metricdata.Metrics) (equal bool, explanation []string) 
 
 // AssertMetricsEqual asserts that two Metrics are equal.
 func AssertMetricsEqual(t *testing.T, expected, actual metricdata.Metrics) bool {
+	t.Helper()
 	return assertCompare(CompareMetrics(expected, actual))(t)
 }

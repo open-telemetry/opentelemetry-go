@@ -57,5 +57,6 @@ func CompareHistogram(a, b metricdata.Histogram) (equal bool, explanation []stri
 
 // AssertHistogramsEqual asserts that two Histogram are equal.
 func AssertHistogramsEqual(t *testing.T, expected, actual metricdata.Histogram) bool {
+	t.Helper()
 	return assertCompare(CompareHistogram(expected, actual))(t)
 }

@@ -57,5 +57,6 @@ func CompareResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, explan
 
 // AssertResourceMetricsEqual asserts that two ResourceMetrics are equal.
 func AssertResourceMetricsEqual(t *testing.T, expected, actual metricdata.ResourceMetrics) bool {
+	t.Helper()
 	return assertCompare(CompareResourceMetrics(expected, actual))(t)
 }

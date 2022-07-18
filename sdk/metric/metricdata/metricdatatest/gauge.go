@@ -49,5 +49,6 @@ func CompareGauge(a, b metricdata.Gauge) (equal bool, explanation []string) {
 
 // AssertGaugesEqual asserts that two Gauge are equal.
 func AssertGaugesEqual(t *testing.T, expected, actual metricdata.Gauge) bool {
+	t.Helper()
 	return assertCompare(CompareGauge(expected, actual))(t)
 }

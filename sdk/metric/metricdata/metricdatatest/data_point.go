@@ -61,5 +61,6 @@ func CompareDataPoint(a, b metricdata.DataPoint) (equal bool, explanation []stri
 
 // AssertDataPointsEqual asserts that two DataPoint are equal.
 func AssertDataPointsEqual(t *testing.T, expected, actual metricdata.DataPoint) bool {
+	t.Helper()
 	return assertCompare(CompareDataPoint(expected, actual))(t)
 }

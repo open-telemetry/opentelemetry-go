@@ -37,5 +37,6 @@ func CompareInt64(a, b metricdata.Int64) (equal bool, explanation []string) {
 
 // AssertInt64sEqual asserts that two Int64 are equal.
 func AssertInt64sEqual(t *testing.T, expected, actual metricdata.Int64) bool {
+	t.Helper()
 	return assertCompare(CompareInt64(expected, actual))(t)
 }

@@ -66,5 +66,6 @@ func CompareValues(a, b metricdata.Value) (equal bool, explanation []string) {
 
 // AssertValuesEqual asserts that two Values are equal.
 func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
+	t.Helper()
 	return assertCompare(CompareValues(expected, actual))(t)
 }

@@ -37,5 +37,6 @@ func CompareFloat64(a, b metricdata.Float64) (equal bool, explanation []string) 
 
 // AssertFloat64sEqual asserts that two Float64 are equal.
 func AssertFloat64sEqual(t *testing.T, expected, actual metricdata.Float64) bool {
+	t.Helper()
 	return assertCompare(CompareFloat64(expected, actual))(t)
 }

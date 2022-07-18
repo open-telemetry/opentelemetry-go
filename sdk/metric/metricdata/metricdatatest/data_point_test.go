@@ -47,5 +47,5 @@ func TestDataPointsComparison(t *testing.T) {
 
 	equal, explanation := CompareDataPoint(a, b)
 	assert.Falsef(t, equal, "%v != %v", a, b)
-	assert.Len(t, explanation, 4, "Attributes, StartTime, Time and Value do not match")
+	assert.Len(t, explanation, 5, "Attributes, StartTime, Time and Value (DataPoint) do not match")
 }

@@ -63,5 +63,6 @@ func CompareSum(a, b metricdata.Sum) (equal bool, explanation []string) {
 
 // AssertSumsEqual asserts that two Sum are equal.
 func AssertSumsEqual(t *testing.T, expected, actual metricdata.Sum) bool {
+	t.Helper()
 	return assertCompare(CompareSum(expected, actual))(t)
 }
