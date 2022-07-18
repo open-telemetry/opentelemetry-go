@@ -48,7 +48,6 @@ func equalPtrValues[T comparable](a, b *T) bool {
 	}
 
 	return *a == *b
-
 }
 
 func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
@@ -91,23 +90,23 @@ func compareDiff[T any](extraExpected, extraActual []T) (equal bool, explanation
 
 	var msg bytes.Buffer
 	if len(extraExpected) > 0 {
-		msg.WriteString("missing expected values:\n")
+		_, _ = msg.WriteString("missing expected values:\n")
 		for _, v := range extraExpected {
-			msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formater(v) + "\n")
 		}
 	}
 
 	if len(extraActual) > 0 {
-		msg.WriteString("unexpected additional values:\n")
+		_, _ = msg.WriteString("unexpected additional values:\n")
 		for _, v := range extraActual {
-			msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formater(v) + "\n")
 		}
 	}
 
 	return false, msg.String()
 }
 
-func assertCompare(equal bool, explanation []string) func(*testing.T) bool {
+func assertCompare(equal bool, explanation []string) func(*testing.T) bool { // nolint: revive  // equal is not a controll flag.
 	if equal {
 		return func(*testing.T) bool { return true }
 	}
