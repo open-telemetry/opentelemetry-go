@@ -186,3 +186,31 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	e, _ = equalAggregations(histogramA, histogramB)
 	assert.Falsef(t, e, "%v != %v", histogramA, histogramB)
 }
+
+type unknownValue struct {
+	metricdata.Value
+}
+
+func TestAssertValuesEqual(t *testing.T) {
+	AssertValuesEqual(t, nil, nil)
+	AssertValuesEqual(t, int64A, int64A)
+	AssertValuesEqual(t, float64A, float64A)
+
+	e, r := equalValues(int64A, nil)
+	assert.False(t, e, "nil comparison")
+	assert.Len(t, r, 1, "should return nil comparison mismatch only")
+
+	e, r = equalValues(int64A, float64A)
+	assert.Falsef(t, e, "%v != %v", sumA, gaugeA)
+	assert.Len(t, r, 1, "should return with type mismatch only")
+
+	e, r = equalValues(unknownValue{}, unknownValue{})
+	assert.False(t, e, "unknown value")
+	assert.Len(t, r, 1, "should return with unknown value only")
+
+	e, _ = equalValues(int64A, int64B)
+	assert.Falsef(t, e, "%v != %v", int64A, int64B)
+
+	e, _ = equalValues(float64A, float64B)
+	assert.Falsef(t, e, "%v != %v", float64A, float64B)
+}

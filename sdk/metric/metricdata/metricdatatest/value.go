@@ -27,6 +27,7 @@ import (
 // equalValues returns true when Values are equal. It returns false when they
 // differ, along with the reasons why they differ.
 func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
+	equal = true
 	if a == nil || b == nil {
 		if a != b {
 			equal, reasons = false, []string{notEqualStr("Values", a, b)}
