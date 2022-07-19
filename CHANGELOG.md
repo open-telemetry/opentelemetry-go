@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.12.0` version of the OpenTelemetry specification. (#3010)
 - Add the `go.opentelemetry.io/otel/semconv/v1.11.0` package.
   The package contains semantic conventions from the `v1.11.0` version of the OpenTelemetry specification. (#3009)
+- Add http.method attribute to http server metric. (#3018)
 
 ## [1.8.0/0.31.0] - 2022-07-08
 
