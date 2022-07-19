@@ -233,18 +233,10 @@ func equalDataPoints(a, b metricdata.DataPoint) (equal bool, reasons []string) {
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, reasons = false, append(reasons, notEqualStr(
-			"StartTime",
-			a.StartTime.UnixNano(),
-			b.StartTime.UnixNano(),
-		))
+		equal, reasons = false, append(reasons, notEqualStr("StartTime", a.StartTime, b.StartTime))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, reasons = false, append(reasons, notEqualStr(
-			"Time",
-			a.Time.UnixNano(),
-			b.Time.UnixNano(),
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Time", a.Time, b.Time))
 	}
 
 	var r []string

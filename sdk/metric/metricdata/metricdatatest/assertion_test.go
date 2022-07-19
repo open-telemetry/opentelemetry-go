@@ -40,24 +40,29 @@ var (
 	int64A = metricdata.Int64(-1)
 	int64B = metricdata.Int64(2)
 
+	startA = time.Now()
+	startB = startA.Add(time.Millisecond)
+	endA   = startA.Add(time.Second)
+	endB   = startB.Add(time.Second)
+
 	dataPointsA = metricdata.DataPoint{
 		Attributes: attrA,
-		StartTime:  time.Now(),
-		Time:       time.Now(),
+		StartTime:  startA,
+		Time:       endA,
 		Value:      int64A,
 	}
 	dataPointsB = metricdata.DataPoint{
 		Attributes: attrB,
-		StartTime:  time.Now(),
-		Time:       time.Now(),
+		StartTime:  startB,
+		Time:       endB,
 		Value:      float64B,
 	}
 
 	max, min            = 99.0, 3.
 	histogramDataPointA = metricdata.HistogramDataPoint{
 		Attributes:   attrA,
-		StartTime:    time.Now(),
-		Time:         time.Now(),
+		StartTime:    startA,
+		Time:         endA,
 		Count:        2,
 		Bounds:       []float64{0, 10},
 		BucketCounts: []uint64{1, 1},
@@ -65,8 +70,8 @@ var (
 	}
 	histogramDataPointB = metricdata.HistogramDataPoint{
 		Attributes:   attrB,
-		StartTime:    time.Now(),
-		Time:         time.Now(),
+		StartTime:    startB,
+		Time:         endB,
 		Count:        3,
 		Bounds:       []float64{0, 10, 100},
 		BucketCounts: []uint64{1, 1, 1},
