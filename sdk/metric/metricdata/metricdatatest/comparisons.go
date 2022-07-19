@@ -34,9 +34,7 @@ import (
 func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons []string) {
 	equal = true
 	if !a.Resource.Equal(b.Resource) {
-		equal, reasons = false, append(
-			reasons, notEqualStr("Resources", a.Resource, b.Resource),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
 	}
 
 	var r string
@@ -49,9 +47,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons 
 		},
 	))
 	if !equal {
-		reasons = append(reasons, fmt.Sprintf(
-			"ResourceMetrics ScopeMetrics not equal:\n%s", r,
-		))
+		reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics not equal:\n%s", r))
 	}
 	return equal, reasons
 }
@@ -64,10 +60,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons 
 func equalScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, reasons []string) {
 	equal = true
 	if a.Scope != b.Scope {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Scope", a.Scope, b.Scope),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
 	}
 
 	var r string
@@ -80,9 +73,7 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, reasons []stri
 		},
 	))
 	if !equal {
-		reasons = append(reasons, fmt.Sprintf(
-			"ScopeMetrics Metrics not equal:\n%s", r,
-		))
+		reasons = append(reasons, fmt.Sprintf("ScopeMetrics Metrics not equal:\n%s", r))
 	}
 	return equal, reasons
 }
@@ -92,22 +83,13 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, reasons []stri
 func equalMetrics(a, b metricdata.Metrics) (equal bool, reasons []string) {
 	equal = true
 	if a.Name != b.Name {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Name", a.Name, b.Name),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Name", a.Name, b.Name))
 	}
 	if a.Description != b.Description {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Description", a.Description, b.Description),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Description", a.Description, b.Description))
 	}
 	if a.Unit != b.Unit {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Unit", a.Unit, b.Unit),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Unit", a.Unit, b.Unit))
 	}
 
 	var r []string
@@ -131,9 +113,7 @@ func equalAggregations(a, b metricdata.Aggregation) (equal bool, reasons []strin
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, []string{fmt.Sprintf(
-			"Aggregation types not equal:\nexpected: %T\nactual: %T", a, b,
-		)}
+		return false, []string{fmt.Sprintf("Aggregation types not equal:\nexpected: %T\nactual: %T", a, b)}
 	}
 
 	switch v := a.(type) {
@@ -181,9 +161,7 @@ func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
 		},
 	))
 	if !equal {
-		reasons = append(reasons, fmt.Sprintf(
-			"Gauge DataPoints not equal:\n%s", r,
-		))
+		reasons = append(reasons, fmt.Sprintf("Gauge DataPoints not equal:\n%s", r))
 	}
 	return equal, reasons
 }
@@ -196,16 +174,10 @@ func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
 func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Temporality", a.Temporality, b.Temporality),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 	if a.IsMonotonic != b.IsMonotonic {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic))
 	}
 
 	var r string
@@ -218,9 +190,7 @@ func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 		},
 	))
 	if !equal {
-		reasons = append(reasons, fmt.Sprintf(
-			"Sum DataPoints not equal:\n%s", r,
-		))
+		reasons = append(reasons, fmt.Sprintf("Sum DataPoints not equal:\n%s", r))
 	}
 	return equal, reasons
 }
@@ -233,10 +203,7 @@ func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
 func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
 	equal = true
 	if a.Temporality != b.Temporality {
-		equal, reasons = false, append(
-			reasons,
-			notEqualStr("Temporality", a.Temporality, b.Temporality),
-		)
+		equal, reasons = false, append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 
 	var r string
@@ -249,9 +216,7 @@ func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
 		},
 	))
 	if !equal {
-		reasons = append(reasons, fmt.Sprintf(
-			"Histogram DataPoints not equal:\n%s", r,
-		))
+		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
 	}
 	return equal, reasons
 }
@@ -296,67 +261,35 @@ func equalDataPoints(a, b metricdata.DataPoint) (equal bool, reasons []string) {
 func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (equal bool, reasons []string) {
 	equal = true
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Attributes not equal:\nexpected: %s\nactual: %s",
+		equal, reasons = false, append(reasons, notEqualStr(
+			"Attributes",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"StartTime not equal:\nexpected: %d\nactual: %d",
-			a.StartTime.UnixNano(),
-			b.StartTime.UnixNano(),
-		))
+		equal, reasons = false, append(reasons, notEqualStr("StartTime", a.StartTime, b.StartTime))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Time not equal:\nexpected: %d\nactual: %d",
-			a.Time.UnixNano(),
-			b.Time.UnixNano(),
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Time", a.Time, b.Time))
 	}
 	if a.Count != b.Count {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Count not equal:\nexpected: %d\nactual: %d",
-			a.Count,
-			b.Count,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Count", a.Count, b.Count))
 	}
 	if !equalSlices(a.Bounds, b.Bounds) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Bounds not equal:\nexpected: %v\nactual: %v",
-			a.Bounds,
-			b.Bounds,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
 	}
 	if !equalSlices(a.BucketCounts, b.BucketCounts) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"BucketCounts not equal:\nexpected: %v\nactual: %v",
-			a.BucketCounts,
-			b.BucketCounts,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
 	}
 	if !equalPtrValues(a.Min, b.Min) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Min not equal:\nexpected: %v\nactual: %v",
-			a.Min,
-			b.Min,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Min", a.Min, b.Min))
 	}
 	if !equalPtrValues(a.Max, b.Max) {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Max not equal:\nexpected: %v\nactual: %v",
-			a.Max,
-			b.Max,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Max", a.Max, b.Max))
 	}
 	if a.Sum != b.Sum {
-		equal, reasons = false, append(reasons, fmt.Sprintf(
-			"Sum not equal:\nexpected: %g\nactual: %g",
-			a.Sum,
-			b.Sum,
-		))
+		equal, reasons = false, append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
 	}
 	return equal, reasons
 }
@@ -373,9 +306,7 @@ func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, []string{fmt.Sprintf(
-			"Value types not equal:\nexpected: %T\nactual: %T", a, b,
-		)}
+		return false, []string{fmt.Sprintf("Value types not equal:\nexpected: %T\nactual: %T", a, b)}
 	}
 
 	switch v := a.(type) {
