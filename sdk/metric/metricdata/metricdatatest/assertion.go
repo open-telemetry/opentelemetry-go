@@ -46,9 +46,12 @@ type Datatypes interface {
 // package are equal.
 func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 	t.Helper()
-	// Generic types cannot be type switch on. Convert them to interfaces by
+	// Generic types cannot be type switched on. Convert them to interfaces by
 	// passing to assertEqual, which performs the correct functionality based
 	// on the type.
+	//
+	// This function exists, instead of just exporting assertEqual, to ensure
+	// the expected and actual types are not any and match.
 	return assertEqual(t, expected, actual)
 }
 
@@ -86,6 +89,9 @@ func assertEqual(t *testing.T, expected, actual interface{}) bool {
 		a := actual.(metricdata.Sum)
 		return assertCompare(equalSums(e, a))(t)
 	default:
+		// assertEqual is unexported and we control all types passed to this
+		// with AssertEqual, panic early to signal to developers when we
+		// change things in an incompatible way early.
 		panic(fmt.Sprintf("unknown types: %T", expected))
 	}
 }
