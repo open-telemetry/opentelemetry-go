@@ -24,7 +24,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-) // equalResourceMetrics returns true when ResourceMetrics are equal. It
+)
+
+// equalResourceMetrics returns true when ResourceMetrics are equal. It
 // returns false when they differ, along with the reasons why they differ.
 //
 // The ScopeMetrics each ResourceMetrics contains are compared based on
