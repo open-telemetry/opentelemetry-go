@@ -29,16 +29,7 @@ import (
 
 // Datatypes are the concrete data-types the metricdata package provides.
 type Datatypes interface {
-	metricdata.DataPoint |
-		metricdata.Float64 |
-		metricdata.Gauge |
-		metricdata.Histogram |
-		metricdata.HistogramDataPoint |
-		metricdata.Int64 |
-		metricdata.Metrics |
-		metricdata.ResourceMetrics |
-		metricdata.ScopeMetrics |
-		metricdata.Sum
+	metricdata.DataPoint | metricdata.Float64 | metricdata.Gauge | metricdata.Histogram | metricdata.HistogramDataPoint | metricdata.Int64 | metricdata.Metrics | metricdata.ResourceMetrics | metricdata.ScopeMetrics | metricdata.Sum
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -61,35 +52,25 @@ func assertEqual(t *testing.T, expected, actual interface{}) bool {
 	t.Helper()
 	switch e := expected.(type) {
 	case metricdata.DataPoint:
-		a := actual.(metricdata.DataPoint)
-		return assertCompare(equalDataPoints(e, a))(t)
+		return assertCompare(equalDataPoints(e, actual.(metricdata.DataPoint)))(t)
 	case metricdata.Float64:
-		a := actual.(metricdata.Float64)
-		return assertCompare(equalFloat64(e, a))(t)
+		return assertCompare(equalFloat64(e, actual.(metricdata.Float64)))(t)
 	case metricdata.Gauge:
-		a := actual.(metricdata.Gauge)
-		return assertCompare(equalGauges(e, a))(t)
+		return assertCompare(equalGauges(e, actual.(metricdata.Gauge)))(t)
 	case metricdata.Histogram:
-		a := actual.(metricdata.Histogram)
-		return assertCompare(equalHistograms(e, a))(t)
+		return assertCompare(equalHistograms(e, actual.(metricdata.Histogram)))(t)
 	case metricdata.HistogramDataPoint:
-		a := actual.(metricdata.HistogramDataPoint)
-		return assertCompare(equalHistogramDataPoints(e, a))(t)
+		return assertCompare(equalHistogramDataPoints(e, actual.(metricdata.HistogramDataPoint)))(t)
 	case metricdata.Int64:
-		a := actual.(metricdata.Int64)
-		return assertCompare(equalInt64(e, a))(t)
+		return assertCompare(equalInt64(e, actual.(metricdata.Int64)))(t)
 	case metricdata.Metrics:
-		a := actual.(metricdata.Metrics)
-		return assertCompare(equalMetrics(e, a))(t)
+		return assertCompare(equalMetrics(e, actual.(metricdata.Metrics)))(t)
 	case metricdata.ResourceMetrics:
-		a := actual.(metricdata.ResourceMetrics)
-		return assertCompare(equalResourceMetrics(e, a))(t)
+		return assertCompare(equalResourceMetrics(e, actual.(metricdata.ResourceMetrics)))(t)
 	case metricdata.ScopeMetrics:
-		a := actual.(metricdata.ScopeMetrics)
-		return assertCompare(equalScopeMetrics(e, a))(t)
+		return assertCompare(equalScopeMetrics(e, actual.(metricdata.ScopeMetrics)))(t)
 	case metricdata.Sum:
-		a := actual.(metricdata.Sum)
-		return assertCompare(equalSums(e, a))(t)
+		return assertCompare(equalSums(e, actual.(metricdata.Sum)))(t)
 	default:
 		// assertEqual is unexported and we control all types passed to this
 		// with AssertEqual, panic early to signal to developers when we
