@@ -143,7 +143,7 @@ func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 		AssertEqual(t, b, b)
 
 		r := f(a, b)
-		assert.Greaterf(t, len(r), 0, "%v != %v", a, b)
+		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
 
@@ -180,13 +180,13 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
 	r = equalAggregations(sumA, sumB)
-	assert.Greaterf(t, len(r), 0, "%v != %v", sumA, sumB)
+	assert.Greaterf(t, len(r), 0, "%v == %v", sumA, sumB)
 
 	r = equalAggregations(gaugeA, gaugeB)
-	assert.Greaterf(t, len(r), 0, "%v != %v", gaugeA, gaugeB)
+	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeA, gaugeB)
 
 	r = equalAggregations(histogramA, histogramB)
-	assert.Greaterf(t, len(r), 0, "%v != %v", histogramA, histogramB)
+	assert.Greaterf(t, len(r), 0, "%v == %v", histogramA, histogramB)
 }
 
 type unknownValue struct {
@@ -208,8 +208,8 @@ func TestAssertValuesEqual(t *testing.T) {
 	assert.Len(t, r, 1, "should return with unknown value only")
 
 	r = equalValues(int64A, int64B)
-	assert.Greaterf(t, len(r), 0, "%v != %v", int64A, int64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", int64A, int64B)
 
 	r = equalValues(float64A, float64B)
-	assert.Greaterf(t, len(r), 0, "%v != %v", float64A, float64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", float64A, float64B)
 }
