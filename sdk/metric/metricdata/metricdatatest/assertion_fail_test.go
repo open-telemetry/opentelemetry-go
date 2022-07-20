@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-// These tests are used to develop the failure messages of this packages
+// These tests are used to develop the failure messages of this package's
 // assertions. They can be run with the following.
 //
 //   go test -tags tests_fail ./...
