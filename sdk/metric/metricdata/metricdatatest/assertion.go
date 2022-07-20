@@ -21,7 +21,6 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -72,7 +71,7 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 	}
 
 	if len(r) > 0 {
-		t.Error(strings.Join(r, "\n"))
+		t.Error(r)
 		return false
 	}
 	return true
@@ -82,7 +81,7 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
 	t.Helper()
 	if r := equalAggregations(expected, actual); len(r) > 0 {
-		t.Error(strings.Join(r, "\n"))
+		t.Error(r)
 		return false
 	}
 	return true
@@ -92,7 +91,7 @@ func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregati
 func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
 	t.Helper()
 	if r := equalValues(expected, actual); len(r) > 0 {
-		t.Error(strings.Join(r, "\n"))
+		t.Error(r)
 		return false
 	}
 	return true
