@@ -313,7 +313,7 @@ func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
 		var r []string
 		equal, r = equalFloat64(v, b.(metricdata.Float64))
 		if !equal {
-			reasons = append(reasons, "Int64 not equal:")
+			reasons = append(reasons, "Float64 not equal:")
 			reasons = append(reasons, r...)
 		}
 	default:
