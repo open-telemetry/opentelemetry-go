@@ -137,7 +137,7 @@ var (
 
 type equalFunc[T Datatypes] func(T, T) []string
 
-func testDatatype[T Datatypes](a, b T, f equalFunc[T], reasN int) func(*testing.T) {
+func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 	return func(t *testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
@@ -148,16 +148,16 @@ func testDatatype[T Datatypes](a, b T, f equalFunc[T], reasN int) func(*testing.
 }
 
 func TestAssertEqual(t *testing.T) {
-	t.Run("ResourceMetrics", testDatatype(resourceMetricsA, resourceMetricsB, equalResourceMetrics, 2))
-	t.Run("ScopeMetrics", testDatatype(scopeMetricsA, scopeMetricsB, equalScopeMetrics, 2))
-	t.Run("Metrics", testDatatype(metricsA, metricsB, equalMetrics, 5))
-	t.Run("Histogram", testDatatype(histogramA, histogramB, equalHistograms, 2))
-	t.Run("Sum", testDatatype(sumA, sumB, equalSums, 3))
-	t.Run("Gauge", testDatatype(gaugeA, gaugeB, equalGauges, 1))
-	t.Run("HistogramDataPoint", testDatatype(histogramDataPointA, histogramDataPointB, equalHistogramDataPoints, 9))
-	t.Run("DataPoint", testDatatype(dataPointsA, dataPointsB, equalDataPoints, 5))
-	t.Run("Int64", testDatatype(int64A, int64B, equalInt64, 1))
-	t.Run("Float64", testDatatype(float64A, float64B, equalFloat64, 1))
+	t.Run("ResourceMetrics", testDatatype(resourceMetricsA, resourceMetricsB, equalResourceMetrics))
+	t.Run("ScopeMetrics", testDatatype(scopeMetricsA, scopeMetricsB, equalScopeMetrics))
+	t.Run("Metrics", testDatatype(metricsA, metricsB, equalMetrics))
+	t.Run("Histogram", testDatatype(histogramA, histogramB, equalHistograms))
+	t.Run("Sum", testDatatype(sumA, sumB, equalSums))
+	t.Run("Gauge", testDatatype(gaugeA, gaugeB, equalGauges))
+	t.Run("HistogramDataPoint", testDatatype(histogramDataPointA, histogramDataPointB, equalHistogramDataPoints))
+	t.Run("DataPoint", testDatatype(dataPointsA, dataPointsB, equalDataPoints))
+	t.Run("Int64", testDatatype(int64A, int64B, equalInt64))
+	t.Run("Float64", testDatatype(float64A, float64B, equalFloat64))
 }
 
 type unknownAggregation struct {
