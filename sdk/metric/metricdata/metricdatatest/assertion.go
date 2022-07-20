@@ -40,38 +40,31 @@ type Datatypes interface {
 func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 	t.Helper()
 
+	// Generic types cannot be type asserted. Use an interface instead.
+	aIface := interface{}(actual)
+
 	var r []string
 	switch e := interface{}(expected).(type) {
 	case metricdata.DataPoint:
-		a := interface{}(actual).(metricdata.DataPoint)
-		r = equalDataPoints(e, a)
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint))
 	case metricdata.Float64:
-		a := interface{}(actual).(metricdata.Float64)
-		r = equalFloat64(e, a)
+		r = equalFloat64(e, aIface.(metricdata.Float64))
 	case metricdata.Gauge:
-		a := interface{}(actual).(metricdata.Gauge)
-		r = equalGauges(e, a)
+		r = equalGauges(e, aIface.(metricdata.Gauge))
 	case metricdata.Histogram:
-		a := interface{}(actual).(metricdata.Histogram)
-		r = equalHistograms(e, a)
+		r = equalHistograms(e, aIface.(metricdata.Histogram))
 	case metricdata.HistogramDataPoint:
-		a := interface{}(actual).(metricdata.HistogramDataPoint)
-		r = equalHistogramDataPoints(e, a)
+		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint))
 	case metricdata.Int64:
-		a := interface{}(actual).(metricdata.Int64)
-		r = equalInt64(e, a)
+		r = equalInt64(e, aIface.(metricdata.Int64))
 	case metricdata.Metrics:
-		a := interface{}(actual).(metricdata.Metrics)
-		r = equalMetrics(e, a)
+		r = equalMetrics(e, aIface.(metricdata.Metrics))
 	case metricdata.ResourceMetrics:
-		a := interface{}(actual).(metricdata.ResourceMetrics)
-		r = equalResourceMetrics(e, a)
+		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics))
 	case metricdata.ScopeMetrics:
-		a := interface{}(actual).(metricdata.ScopeMetrics)
-		r = equalScopeMetrics(e, a)
+		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics))
 	case metricdata.Sum:
-		a := interface{}(actual).(metricdata.Sum)
-		r = equalSums(e, a)
+		r = equalSums(e, aIface.(metricdata.Sum))
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
