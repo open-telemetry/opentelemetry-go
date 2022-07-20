@@ -135,16 +135,15 @@ var (
 	}
 )
 
-type equalFunc[T Datatypes] func(T, T) (bool, []string)
+type equalFunc[T Datatypes] func(T, T) []string
 
 func testDatatype[T Datatypes](a, b T, f equalFunc[T], reasN int) func(*testing.T) {
 	return func(t *testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		e, r := f(a, b)
-		assert.Falsef(t, e, "%v != %v", a, b)
-		assert.Len(t, r, reasN, "number or reasons not equal")
+		r := f(a, b)
+		assert.Greaterf(t, len(r), 0, "%v != %v", a, b)
 	}
 }
 
@@ -171,26 +170,23 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, gaugeA, gaugeA)
 	AssertAggregationsEqual(t, histogramA, histogramA)
 
-	e, r := equalAggregations(sumA, nil)
-	assert.False(t, e, "nil comparison")
+	r := equalAggregations(sumA, nil)
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
 
-	e, r = equalAggregations(sumA, gaugeA)
-	assert.Falsef(t, e, "%v != %v", sumA, gaugeA)
+	r = equalAggregations(sumA, gaugeA)
 	assert.Len(t, r, 1, "should return with type mismatch only")
 
-	e, r = equalAggregations(unknownAggregation{}, unknownAggregation{})
-	assert.False(t, e, "unknown aggregation")
+	r = equalAggregations(unknownAggregation{}, unknownAggregation{})
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
-	e, _ = equalAggregations(sumA, sumB)
-	assert.Falsef(t, e, "%v != %v", sumA, sumB)
+	r = equalAggregations(sumA, sumB)
+	assert.Greaterf(t, len(r), 0, "%v != %v", sumA, sumB)
 
-	e, _ = equalAggregations(gaugeA, gaugeB)
-	assert.Falsef(t, e, "%v != %v", gaugeA, gaugeB)
+	r = equalAggregations(gaugeA, gaugeB)
+	assert.Greaterf(t, len(r), 0, "%v != %v", gaugeA, gaugeB)
 
-	e, _ = equalAggregations(histogramA, histogramB)
-	assert.Falsef(t, e, "%v != %v", histogramA, histogramB)
+	r = equalAggregations(histogramA, histogramB)
+	assert.Greaterf(t, len(r), 0, "%v != %v", histogramA, histogramB)
 }
 
 type unknownValue struct {
@@ -202,21 +198,18 @@ func TestAssertValuesEqual(t *testing.T) {
 	AssertValuesEqual(t, int64A, int64A)
 	AssertValuesEqual(t, float64A, float64A)
 
-	e, r := equalValues(int64A, nil)
-	assert.False(t, e, "nil comparison")
+	r := equalValues(int64A, nil)
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
 
-	e, r = equalValues(int64A, float64A)
-	assert.Falsef(t, e, "%v != %v", sumA, gaugeA)
+	r = equalValues(int64A, float64A)
 	assert.Len(t, r, 1, "should return with type mismatch only")
 
-	e, r = equalValues(unknownValue{}, unknownValue{})
-	assert.False(t, e, "unknown value")
+	r = equalValues(unknownValue{}, unknownValue{})
 	assert.Len(t, r, 1, "should return with unknown value only")
 
-	e, _ = equalValues(int64A, int64B)
-	assert.Falsef(t, e, "%v != %v", int64A, int64B)
+	r = equalValues(int64A, int64B)
+	assert.Greaterf(t, len(r), 0, "%v != %v", int64A, int64B)
 
-	e, _ = equalValues(float64A, float64B)
-	assert.Falsef(t, e, "%v != %v", float64A, float64B)
+	r = equalValues(float64A, float64B)
+	assert.Greaterf(t, len(r), 0, "%v != %v", float64A, float64B)
 }

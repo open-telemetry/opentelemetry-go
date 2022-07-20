@@ -82,17 +82,14 @@ func assertEqual(t *testing.T, expected, actual interface{}) bool {
 // assertCompare evaluates the return value of an equality check function. The
 // return function will produce an appropriate testing error if equal is
 // false.
-func assertCompare(equal bool, reasons []string) func(*testing.T) bool { // nolint: revive  // equal is not a control flag.
+func assertCompare(reasons []string) func(*testing.T) bool {
 	return func(t *testing.T) bool {
 		t.Helper()
-		if !equal {
-			if len(reasons) > 0 {
-				t.Error(strings.Join(reasons, "\n"))
-			} else {
-				t.Fail()
-			}
+		if len(reasons) > 0 {
+			t.Error(strings.Join(reasons, "\n"))
+			return false
 		}
-		return equal
+		return true
 	}
 }
 

@@ -26,322 +26,297 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// equalResourceMetrics returns true when ResourceMetrics are equal. It
-// returns false when they differ, along with the reasons why they differ.
+// equalResourceMetrics returns reasons ResourceMetrics are not equal. If they
+// are equal, the returned reasons will be empty.
 //
 // The ScopeMetrics each ResourceMetrics contains are compared based on
 // containing the same ScopeMetrics, not the order they are stored in.
-func equalResourceMetrics(a, b metricdata.ResourceMetrics) (equal bool, reasons []string) {
-	equal = true
+func equalResourceMetrics(a, b metricdata.ResourceMetrics) (reasons []string) {
 	if !a.Resource.Equal(b.Resource) {
-		equal, reasons = false, append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
+		reasons = append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
 	}
 
-	var r string
-	equal, r = compareDiff(diffSlices(
+	r := compareDiff(diffSlices(
 		a.ScopeMetrics,
 		b.ScopeMetrics,
 		func(a, b metricdata.ScopeMetrics) bool {
-			equal, _ := equalScopeMetrics(a, b)
-			return equal
+			r := equalScopeMetrics(a, b)
+			return len(r) == 0
 		},
 	))
-	if !equal {
+	if r != "" {
 		reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics not equal:\n%s", r))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalScopeMetrics returns true when ScopeMetrics are equal. It returns
-// false when they differ, along with the reasons why they differ.
+// equalScopeMetrics returns reasons ScopeMetrics are not equal. If they are
+// equal, the returned reasons will be empty.
 //
 // The Metrics each ScopeMetrics contains are compared based on containing the
 // same Metrics, not the order they are stored in.
-func equalScopeMetrics(a, b metricdata.ScopeMetrics) (equal bool, reasons []string) {
-	equal = true
+func equalScopeMetrics(a, b metricdata.ScopeMetrics) (reasons []string) {
 	if a.Scope != b.Scope {
-		equal, reasons = false, append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
+		reasons = append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
 	}
 
-	var r string
-	equal, r = compareDiff(diffSlices(
+	r := compareDiff(diffSlices(
 		a.Metrics,
 		b.Metrics,
 		func(a, b metricdata.Metrics) bool {
-			equal, _ := equalMetrics(a, b)
-			return equal
+			r := equalMetrics(a, b)
+			return len(r) == 0
 		},
 	))
-	if !equal {
+	if r != "" {
 		reasons = append(reasons, fmt.Sprintf("ScopeMetrics Metrics not equal:\n%s", r))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalMetrics returns true when Metrics are equal. It returns false when
-// they differ, along with the reasons why they differ.
-func equalMetrics(a, b metricdata.Metrics) (equal bool, reasons []string) {
-	equal = true
+// equalMetrics returns reasons Metrics are not equal. If they are equal, the
+// returned reasons will be empty.
+func equalMetrics(a, b metricdata.Metrics) (reasons []string) {
 	if a.Name != b.Name {
-		equal, reasons = false, append(reasons, notEqualStr("Name", a.Name, b.Name))
+		reasons = append(reasons, notEqualStr("Name", a.Name, b.Name))
 	}
 	if a.Description != b.Description {
-		equal, reasons = false, append(reasons, notEqualStr("Description", a.Description, b.Description))
+		reasons = append(reasons, notEqualStr("Description", a.Description, b.Description))
 	}
 	if a.Unit != b.Unit {
-		equal, reasons = false, append(reasons, notEqualStr("Unit", a.Unit, b.Unit))
+		reasons = append(reasons, notEqualStr("Unit", a.Unit, b.Unit))
 	}
 
-	var r []string
-	equal, r = equalAggregations(a.Data, b.Data)
-	if !equal {
+	r := equalAggregations(a.Data, b.Data)
+	if len(r) > 0 {
 		reasons = append(reasons, "Metrics Data not equal:")
 		reasons = append(reasons, r...)
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalAggregations returns true when a and b are equal. It returns false
-// when they differ, along with the reasons why they differ.
-func equalAggregations(a, b metricdata.Aggregation) (equal bool, reasons []string) {
-	equal = true
+// equalAggregations returns reasons a and b are not equal. If they are equal,
+// the returned reasons will be empty.
+func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
 	if a == nil || b == nil {
 		if a != b {
-			equal, reasons = false, []string{notEqualStr("Aggregation", a, b)}
+			return []string{notEqualStr("Aggregation", a, b)}
 		}
-		return equal, reasons
+		return reasons
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, []string{fmt.Sprintf("Aggregation types not equal:\nexpected: %T\nactual: %T", a, b)}
+		return []string{fmt.Sprintf("Aggregation types not equal:\nexpected: %T\nactual: %T", a, b)}
 	}
 
 	switch v := a.(type) {
 	case metricdata.Gauge:
-		var r []string
-		equal, r = equalGauges(v, b.(metricdata.Gauge))
-		if !equal {
+		r := equalGauges(v, b.(metricdata.Gauge))
+		if len(r) > 0 {
 			reasons = append(reasons, "Gauge not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Sum:
-		var r []string
-		equal, r = equalSums(v, b.(metricdata.Sum))
-		if !equal {
+		r := equalSums(v, b.(metricdata.Sum))
+		if len(r) > 0 {
 			reasons = append(reasons, "Sum not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Histogram:
-		var r []string
-		equal, r = equalHistograms(v, b.(metricdata.Histogram))
-		if !equal {
+		r := equalHistograms(v, b.(metricdata.Histogram))
+		if len(r) > 0 {
 			reasons = append(reasons, "Histogram not equal:")
 			reasons = append(reasons, r...)
 		}
 	default:
-		equal = false
 		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalGauges returns true when Gauges are equal. It returns false when they
-// differ, along with the reasons why they differ.
+// equalGauges returns reasons Gauges are not equal. If they are equal, the
+// returned reasons will be empty.
 //
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
-func equalGauges(a, b metricdata.Gauge) (equal bool, reasons []string) {
-	var r string
-	equal, r = compareDiff(diffSlices(
+func equalGauges(a, b metricdata.Gauge) (reasons []string) {
+	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
-			equal, _ := equalDataPoints(a, b)
-			return equal
+			r := equalDataPoints(a, b)
+			return len(r) == 0
 		},
 	))
-	if !equal {
+	if r != "" {
 		reasons = append(reasons, fmt.Sprintf("Gauge DataPoints not equal:\n%s", r))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalSums returns true when Sums are equal. It returns false when they
-// differ, along with the reasons why they differ.
+// equalSums returns reasons Sums are not equal. If they are equal, the
+// returned reasons will be empty.
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func equalSums(a, b metricdata.Sum) (equal bool, reasons []string) {
-	equal = true
+func equalSums(a, b metricdata.Sum) (reasons []string) {
 	if a.Temporality != b.Temporality {
-		equal, reasons = false, append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 	if a.IsMonotonic != b.IsMonotonic {
-		equal, reasons = false, append(reasons, notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic))
+		reasons = append(reasons, notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic))
 	}
 
-	var r string
-	equal, r = compareDiff(diffSlices(
+	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint) bool {
-			equal, _ := equalDataPoints(a, b)
-			return equal
+			r := equalDataPoints(a, b)
+			return len(r) == 0
 		},
 	))
-	if !equal {
+	if r != "" {
 		reasons = append(reasons, fmt.Sprintf("Sum DataPoints not equal:\n%s", r))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalHistograms returns true when Histograms are equal. It returns false
-// when they differ, along with the reasons why they differ.
+// equalHistograms returns reasons Histograms are not equal. If they are
+// equal, the returned reasons will be empty.
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func equalHistograms(a, b metricdata.Histogram) (equal bool, reasons []string) {
-	equal = true
+func equalHistograms(a, b metricdata.Histogram) (reasons []string) {
 	if a.Temporality != b.Temporality {
-		equal, reasons = false, append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 
-	var r string
-	equal, r = compareDiff(diffSlices(
+	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.HistogramDataPoint) bool {
-			equal, _ := equalHistogramDataPoints(a, b)
-			return equal
+			r := equalHistogramDataPoints(a, b)
+			return len(r) == 0
 		},
 	))
-	if !equal {
+	if r != "" {
 		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalDataPoints returns true when DataPoints are equal. It returns false
-// when they differ, along with the reasons why they differ.
-func equalDataPoints(a, b metricdata.DataPoint) (equal bool, reasons []string) {
-	equal = true
+// equalDataPoints returns reasons DataPoints are not equal. If they are
+// equal, the returned reasons will be empty.
+func equalDataPoints(a, b metricdata.DataPoint) (reasons []string) {
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, reasons = false, append(reasons, notEqualStr(
+		reasons = append(reasons, notEqualStr(
 			"Attributes",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, reasons = false, append(reasons, notEqualStr("StartTime", a.StartTime, b.StartTime))
+		reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, reasons = false, append(reasons, notEqualStr("Time", a.Time, b.Time))
+		reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 	}
 
-	var r []string
-	equal, r = equalValues(a.Value, b.Value)
-	if !equal {
+	r := equalValues(a.Value, b.Value)
+	if len(r) > 0 {
 		reasons = append(reasons, "DataPoint Value not equal:")
 		reasons = append(reasons, r...)
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalHistogramDataPoints returns true when HistogramDataPoints are equal.
-// It returns false when they differ, along with the reasons why they differ.
-func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (equal bool, reasons []string) {
-	equal = true
+// equalHistogramDataPoints returns reasons HistogramDataPoints are not equal.
+// If they are equal, the returned reasons will be empty.
+func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (reasons []string) {
 	if !a.Attributes.Equals(&b.Attributes) {
-		equal, reasons = false, append(reasons, notEqualStr(
+		reasons = append(reasons, notEqualStr(
 			"Attributes",
 			a.Attributes.Encoded(attribute.DefaultEncoder()),
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
 	if !a.StartTime.Equal(b.StartTime) {
-		equal, reasons = false, append(reasons, notEqualStr("StartTime", a.StartTime, b.StartTime))
+		reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
 	}
 	if !a.Time.Equal(b.Time) {
-		equal, reasons = false, append(reasons, notEqualStr("Time", a.Time, b.Time))
+		reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 	}
 	if a.Count != b.Count {
-		equal, reasons = false, append(reasons, notEqualStr("Count", a.Count, b.Count))
+		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
 	}
 	if !equalSlices(a.Bounds, b.Bounds) {
-		equal, reasons = false, append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
+		reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
 	}
 	if !equalSlices(a.BucketCounts, b.BucketCounts) {
-		equal, reasons = false, append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
+		reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
 	}
 	if !equalPtrValues(a.Min, b.Min) {
-		equal, reasons = false, append(reasons, notEqualStr("Min", a.Min, b.Min))
+		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
 	}
 	if !equalPtrValues(a.Max, b.Max) {
-		equal, reasons = false, append(reasons, notEqualStr("Max", a.Max, b.Max))
+		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
 	}
 	if a.Sum != b.Sum {
-		equal, reasons = false, append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalValues returns true when Values are equal. It returns false when they
-// differ, along with the reasons why they differ.
-func equalValues(a, b metricdata.Value) (equal bool, reasons []string) {
-	equal = true
+// equalValues returns reasons Values are not equal. If they are equal, the
+// returned reasons will be empty.
+func equalValues(a, b metricdata.Value) (reasons []string) {
 	if a == nil || b == nil {
 		if a != b {
-			equal, reasons = false, []string{notEqualStr("Values", a, b)}
+			return []string{notEqualStr("Values", a, b)}
 		}
-		return equal, reasons
+		return reasons
 	}
 
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false, []string{fmt.Sprintf("Value types not equal:\nexpected: %T\nactual: %T", a, b)}
+		return []string{fmt.Sprintf("Value types not equal:\nexpected: %T\nactual: %T", a, b)}
 	}
 
 	switch v := a.(type) {
 	case metricdata.Int64:
-		var r []string
-		equal, r = equalInt64(v, b.(metricdata.Int64))
-		if !equal {
+		r := equalInt64(v, b.(metricdata.Int64))
+		if len(r) > 0 {
 			reasons = append(reasons, "Int64 not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Float64:
-		var r []string
-		equal, r = equalFloat64(v, b.(metricdata.Float64))
-		if !equal {
+		r := equalFloat64(v, b.(metricdata.Float64))
+		if len(r) > 0 {
 			reasons = append(reasons, "Float64 not equal:")
 			reasons = append(reasons, r...)
 		}
 	default:
-		equal = false
 		reasons = append(reasons, fmt.Sprintf("Value of unknown types %T", a))
 	}
 
-	return equal, reasons
+	return reasons
 }
 
-// equalFloat64 returns true when Float64s are equal. It returns false when
-// they differ, along with the reasons why they differ.
-func equalFloat64(a, b metricdata.Float64) (equal bool, reasons []string) {
-	equal = a == b
-	if !equal {
+// equalFloat64 returns reasons Float64s are not equal. If they are equal, the
+// returned reasons will be empty.
+func equalFloat64(a, b metricdata.Float64) (reasons []string) {
+	if a != b {
 		reasons = append(reasons, notEqualStr("Float64 value", a, b))
 	}
-	return equal, reasons
+	return reasons
 }
 
-// equalInt64 returns true when Int64s are equal. It returns false when they
-// differ, along with the reasons why they differ.
-func equalInt64(a, b metricdata.Int64) (equal bool, reasons []string) {
-	equal = a == b
-	if !equal {
+// equalInt64 returns reasons Int64s are not equal. If they are equal, the
+// returned reasons will be empty.
+func equalInt64(a, b metricdata.Int64) (reasons []string) {
+	if a != b {
 		reasons = append(reasons, notEqualStr("Int64 value", a, b))
 	}
-	return equal, reasons
+	return reasons
 }
 
 func notEqualStr(prefix string, expected, actual interface{}) string {
@@ -397,9 +372,9 @@ func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 	return extraA, extraB
 }
 
-func compareDiff[T any](extraExpected, extraActual []T) (equal bool, reasons string) {
+func compareDiff[T any](extraExpected, extraActual []T) string {
 	if len(extraExpected) == 0 && len(extraActual) == 0 {
-		return true, reasons
+		return ""
 	}
 
 	formater := func(v T) string {
@@ -421,5 +396,5 @@ func compareDiff[T any](extraExpected, extraActual []T) (equal bool, reasons str
 		}
 	}
 
-	return false, msg.String()
+	return msg.String()
 }
