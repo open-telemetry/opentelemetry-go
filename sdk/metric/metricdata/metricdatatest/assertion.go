@@ -39,68 +39,68 @@ type Datatypes interface {
 // package are equal.
 func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 	t.Helper()
-	// Generic types cannot be type switched on. Convert them to interfaces by
-	// passing to assertEqual, which performs the correct functionality based
-	// on the type.
-	//
-	// This function exists, instead of just exporting assertEqual, to ensure
-	// the expected and actual types are not any and match.
-	return assertEqual(t, expected, actual)
-}
 
-func assertEqual(t *testing.T, expected, actual interface{}) bool {
-	t.Helper()
-	switch e := expected.(type) {
+	var r []string
+	switch e := interface{}(expected).(type) {
 	case metricdata.DataPoint:
-		return assertCompare(equalDataPoints(e, actual.(metricdata.DataPoint)))(t)
+		a := interface{}(actual).(metricdata.DataPoint)
+		r = equalDataPoints(e, a)
 	case metricdata.Float64:
-		return assertCompare(equalFloat64(e, actual.(metricdata.Float64)))(t)
+		a := interface{}(actual).(metricdata.Float64)
+		r = equalFloat64(e, a)
 	case metricdata.Gauge:
-		return assertCompare(equalGauges(e, actual.(metricdata.Gauge)))(t)
+		a := interface{}(actual).(metricdata.Gauge)
+		r = equalGauges(e, a)
 	case metricdata.Histogram:
-		return assertCompare(equalHistograms(e, actual.(metricdata.Histogram)))(t)
+		a := interface{}(actual).(metricdata.Histogram)
+		r = equalHistograms(e, a)
 	case metricdata.HistogramDataPoint:
-		return assertCompare(equalHistogramDataPoints(e, actual.(metricdata.HistogramDataPoint)))(t)
+		a := interface{}(actual).(metricdata.HistogramDataPoint)
+		r = equalHistogramDataPoints(e, a)
 	case metricdata.Int64:
-		return assertCompare(equalInt64(e, actual.(metricdata.Int64)))(t)
+		a := interface{}(actual).(metricdata.Int64)
+		r = equalInt64(e, a)
 	case metricdata.Metrics:
-		return assertCompare(equalMetrics(e, actual.(metricdata.Metrics)))(t)
+		a := interface{}(actual).(metricdata.Metrics)
+		r = equalMetrics(e, a)
 	case metricdata.ResourceMetrics:
-		return assertCompare(equalResourceMetrics(e, actual.(metricdata.ResourceMetrics)))(t)
+		a := interface{}(actual).(metricdata.ResourceMetrics)
+		r = equalResourceMetrics(e, a)
 	case metricdata.ScopeMetrics:
-		return assertCompare(equalScopeMetrics(e, actual.(metricdata.ScopeMetrics)))(t)
+		a := interface{}(actual).(metricdata.ScopeMetrics)
+		r = equalScopeMetrics(e, a)
 	case metricdata.Sum:
-		return assertCompare(equalSums(e, actual.(metricdata.Sum)))(t)
+		a := interface{}(actual).(metricdata.Sum)
+		r = equalSums(e, a)
 	default:
-		// assertEqual is unexported and we control all types passed to this
-		// with AssertEqual, panic early to signal to developers when we
-		// change things in an incompatible way early.
+		// We control all types passed to this, panic to signal developers
+		// early they changed things in an incompatible way.
 		panic(fmt.Sprintf("unknown types: %T", expected))
 	}
-}
 
-// assertCompare evaluates the return value of an equality check function. The
-// return function will produce an appropriate testing error if equal is
-// false.
-func assertCompare(reasons []string) func(*testing.T) bool {
-	return func(t *testing.T) bool {
-		t.Helper()
-		if len(reasons) > 0 {
-			t.Error(strings.Join(reasons, "\n"))
-			return false
-		}
-		return true
+	if len(r) > 0 {
+		t.Error(strings.Join(r, "\n"))
+		return false
 	}
+	return true
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
 func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
 	t.Helper()
-	return assertCompare(equalAggregations(expected, actual))(t)
+	if r := equalAggregations(expected, actual); len(r) > 0 {
+		t.Error(strings.Join(r, "\n"))
+		return false
+	}
+	return true
 }
 
 // AssertValuesEqual asserts that two Values are equal.
 func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
 	t.Helper()
-	return assertCompare(equalValues(expected, actual))(t)
+	if r := equalValues(expected, actual); len(r) > 0 {
+		t.Error(strings.Join(r, "\n"))
+		return false
+	}
+	return true
 }
