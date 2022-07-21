@@ -37,8 +37,6 @@ type MeterProvider struct {
 	readers   map[Reader][]view.View
 	providers map[Reader]*pipeline
 
-	// callbackMutex sync.Mutex
-	// callbacks map[Reader][]callbacks
 
 	forceFlush, shutdown func(context.Context) error
 }

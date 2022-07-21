@@ -47,9 +47,9 @@ func newPipeline(res *resource.Resource) *pipeline {
 	}
 }
 
-// A pipeline connects all of the instruments created by a meter provider to a Reader.
+// pipeline connects all of the instruments created by a meter provider to a Reader.
 // This is the object that will be `Reader.register()` when a meter provider is created.
-
+//
 // As instruments are created the instrument should be checked if it exists in the
 // views of a the Reader, and if so each aggregator should be added to the pipeline.
 type pipeline struct {
@@ -60,8 +60,8 @@ type pipeline struct {
 	callbacks    []func(context.Context)
 }
 
-// addAggregator will stores an aggregator with an instrument description.  This
-// is used when `produce()` is called to create a new metric.
+// addAggregator will stores an aggregator with an instrument description.  The aggregator
+// is used when `produce()` is called.
 func (p *pipeline) addAggregator(scope instrumentation.Scope, name, description string, instUnit unit.Unit, agg aggregator) error {
 	p.Lock()
 	defer p.Unlock()
@@ -84,7 +84,7 @@ func (p *pipeline) addAggregator(scope instrumentation.Scope, name, description 
 	return nil
 }
 
-// addCallback registers a callback to be run when `produce()` is first called.
+// addCallback registers a callback to be run when `produce()` is called.
 func (p *pipeline) addCallback(callback func(context.Context)) {
 	p.Lock()
 	defer p.Unlock()
@@ -99,7 +99,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	defer p.Unlock()
 
 	for _, callback := range p.callbacks {
-		// TODO make the callbacks parallel.
+		// TODO make the callbacks parallel. ( #3034 )
 		callback(ctx)
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
