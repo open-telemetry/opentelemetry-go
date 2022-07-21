@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -97,6 +98,15 @@ func TestPipelineDuplicateRegistration(t *testing.T) {
 	assert.NoError(t, err)
 	require.Len(t, output.ScopeMetrics, 1)
 	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
+}
+
+func TestPipelineUsesResource(t *testing.T) {
+	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
+	pipe := newPipeline(res)
+
+	output, err := pipe.produce(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, res, output.Resource)
 }
 
 func TestPipelineConcurrency(t *testing.T) {
