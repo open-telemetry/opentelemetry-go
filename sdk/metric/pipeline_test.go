@@ -58,7 +58,8 @@ func TestEmptyPipeline(t *testing.T) {
 	output, err = pipe.produce(context.Background())
 	require.NoError(t, err)
 	assert.Nil(t, output.Resource)
-	assert.Len(t, output.ScopeMetrics, 1)
+	require.Len(t, output.ScopeMetrics, 1)
+	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
 }
 
 func TestNewPipeline(t *testing.T) {
@@ -79,7 +80,8 @@ func TestNewPipeline(t *testing.T) {
 	output, err = pipe.produce(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
-	assert.Len(t, output.ScopeMetrics, 1)
+	require.Len(t, output.ScopeMetrics, 1)
+	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
 }
 
 func TestPipelineDuplicateRegistration(t *testing.T) {

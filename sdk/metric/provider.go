@@ -37,7 +37,6 @@ type MeterProvider struct {
 	readers   map[Reader][]view.View
 	providers map[Reader]*pipeline
 
-
 	forceFlush, shutdown func(context.Context) error
 }
 
@@ -66,8 +65,6 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		res:       conf.res,
 		readers:   conf.readers,
 		providers: providers,
-
-		meters: meterRegistry{},
 
 		forceFlush: flush,
 		shutdown:   sdown,
