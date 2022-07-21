@@ -18,99 +18,236 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// sum summarizes a set of measurements as their arithmetic sum.
-type sum[N int64 | float64] struct {
+var errNegVal = errors.New("monotonic increasing sum: negative value")
+
+// valueMap is the sum aggregator storage.
+type valueMap[N int64 | float64] struct {
 	sync.Mutex
 
 	values map[attribute.Set]N
 }
 
-func newSum[N int64 | float64]() sum[N] {
-	return sum[N]{values: make(map[attribute.Set]N)}
+// newValueMap returns an instantiated valueMap.
+func newValueMap[N int64 | float64]() valueMap[N] {
+	return valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
-func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
-	s.Lock()
-	s.values[attr] += value
-	s.Unlock()
+func (v *valueMap[N]) add(value N, attr attribute.Set) {
+	v.Lock()
+	v.values[attr] += value
+	v.Unlock()
 }
 
-// NewDeltaSum returns an Aggregator that summarizes a set of measurements as
-// their arithmetic sum. Each sum is scoped by attributes and the aggregation
-// cycle the measurements were made in.
-//
-// Each aggregation cycle is treated independently. When the returned
-// Aggregator's Aggregations method is called it will reset all sums to zero.
-func NewDeltaSum[N int64 | float64]() Aggregator[N] {
-	return &deltaSum[N]{newSum[N]()}
+// nonMonotonicSum summarizes a set of measurements as their arithmetic sum.
+type nonMonotonicSum[N int64 | float64] struct {
+	valueMap[N]
+}
+
+func (s *nonMonotonicSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.add(value, attr)
+}
+
+// monotonicSum summarizes a set of monotonically increasing measurements as
+// their arithmetic sum.
+type monotonicSum[N int64 | float64] struct {
+	valueMap[N]
+}
+
+func (s *monotonicSum[N]) Aggregate(value N, attr attribute.Set) {
+	if value < 0 {
+		otel.Handle(fmt.Errorf("%w: %v", errNegVal, value))
+	}
+	s.add(value, attr)
 }
 
 // deltaSum summarizes a set of measurements made in a single aggregation
 // cycle as their arithmetic sum.
 type deltaSum[N int64 | float64] struct {
-	sum[N]
+	valueMap[N]
+
+	start time.Time
 }
 
-func (s *deltaSum[N]) Aggregations() []Aggregation {
-	now := time.Now().UnixNano()
-
+func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint {
 	s.Lock()
 	defer s.Unlock()
 
-	aggs := make([]Aggregation, 0, len(s.values))
+	if len(s.values) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+
+	data := make([]metricdata.DataPoint, 0, len(s.values))
 	for attr, value := range s.values {
-		aggs = append(aggs, Aggregation{
-			Timestamp:  now,
+		value = value // FIXME: remove when Value is assigned below.
+		data = append(data, metricdata.DataPoint{
 			Attributes: attr,
-			Value:      SingleValue[N]{Value: value},
+			StartTime:  s.start,
+			Time:       now,
+			// FIXME: Value: ...
 		})
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
 	}
 
-	return aggs
-}
-
-// NewCumulativeSum returns an Aggregator that summarizes a set of
-// measurements as their arithmetic sum. Each sum is scoped by attributes.
-//
-// Each aggregation cycle builds from the previous, the sums are the
-// arithmetic sum of all values aggregated since the returned Aggregator was
-// created.
-func NewCumulativeSum[N int64 | float64]() Aggregator[N] {
-	return &cumulativeSum[N]{sum: newSum[N]()}
+	// The delta collection cycle resets.
+	s.start = now
+	return data
 }
 
 // cumulativeSum summarizes a set of measurements made over all aggregation
 // cycles as their arithmetic sum.
 type cumulativeSum[N int64 | float64] struct {
-	sum[N]
+	valueMap[N]
+
+	start time.Time
 }
 
-func (s *cumulativeSum[N]) Aggregations() []Aggregation {
-	now := time.Now().UnixNano()
-
+func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint {
 	s.Lock()
 	defer s.Unlock()
 
-	aggs := make([]Aggregation, 0, len(s.values))
+	if len(s.values) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+
+	data := make([]metricdata.DataPoint, 0, len(s.values))
 	for attr, value := range s.values {
-		aggs = append(aggs, Aggregation{
-			Timestamp:  now,
+		value = value // FIXME: remove when Value is assigned below.
+		data = append(data, metricdata.DataPoint{
 			Attributes: attr,
-			Value:      SingleValue[N]{Value: value},
+			StartTime:  s.start,
+			Time:       now,
+			// FIXME: Value: ...
 		})
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be fogotten so this will not
+		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
 	}
 
-	return aggs
+	return data
+}
+
+func NewNonMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
+	v := newValueMap[N]()
+	return &nonMonotonicDeltaSum[N]{
+		nonMonotonicSum: nonMonotonicSum[N]{v},
+		deltaSum: deltaSum[N]{
+			valueMap: v,
+			start:    time.Now(),
+		},
+	}
+}
+
+type nonMonotonicDeltaSum[N int64 | float64] struct {
+	nonMonotonicSum[N]
+	deltaSum[N]
+}
+
+func (s *nonMonotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: false,
+		DataPoints:  s.deltaSum.dataPoints(),
+	}
+}
+
+// NewMonotonicDeltaSum returns an Aggregator that summarizes a set of
+// monotonically increasing measurements as their arithmetic sum. Each sum is
+// scoped by attributes and the aggregation cycle the measurements were made
+// in.
+//
+// Each aggregation cycle is treated independently. When the returned
+// Aggregator's Aggregation method is called it will reset all sums to zero.
+func NewMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
+	v := newValueMap[N]()
+	return &monotonicDeltaSum[N]{
+		monotonicSum: monotonicSum[N]{v},
+		deltaSum: deltaSum[N]{
+			valueMap: v,
+			start:    time.Now(),
+		},
+	}
+}
+
+type monotonicDeltaSum[N int64 | float64] struct {
+	monotonicSum[N]
+	deltaSum[N]
+}
+
+func (s *monotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: true,
+		DataPoints:  s.deltaSum.dataPoints(),
+	}
+}
+
+func NewNonMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
+	v := newValueMap[N]()
+	return &nonMonotonicCumulativeSum[N]{
+		nonMonotonicSum: nonMonotonicSum[N]{v},
+		cumulativeSum: cumulativeSum[N]{
+			valueMap: v,
+			start:    time.Now(),
+		},
+	}
+}
+
+type nonMonotonicCumulativeSum[N int64 | float64] struct {
+	nonMonotonicSum[N]
+	cumulativeSum[N]
+}
+
+func (s *nonMonotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: false,
+		DataPoints:  s.cumulativeSum.dataPoints(),
+	}
+}
+
+// NewMonotonicCumulativeSum returns an Aggregator that summarizes a set of
+// monotonically increasing measurements as their arithmetic sum. Each sum is
+// scoped by attributes and the aggregation cycle the measurements were made
+// in.
+//
+// Each aggregation cycle is treated independently. When the returned
+// Aggregator's Aggregation method is called it will reset all sums to zero.
+func NewMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
+	v := newValueMap[N]()
+	return &monotonicCumulativeSum[N]{
+		monotonicSum: monotonicSum[N]{v},
+		cumulativeSum: cumulativeSum[N]{
+			valueMap: v,
+			start:    time.Now(),
+		},
+	}
+}
+
+type monotonicCumulativeSum[N int64 | float64] struct {
+	monotonicSum[N]
+	cumulativeSum[N]
+}
+
+func (s *monotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  s.cumulativeSum.dataPoints(),
+	}
 }
