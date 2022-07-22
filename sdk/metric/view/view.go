@@ -157,7 +157,6 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// TODO (#2813): Implement MatchInstrumentKind when InstrumentKind is defined.
 // TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
 
 // MatchInstrumentationScope will do an exact match on any
