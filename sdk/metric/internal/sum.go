@@ -78,7 +78,7 @@ type deltaSum[N int64 | float64] struct {
 	start time.Time
 }
 
-func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint {
+func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	s.Lock()
 	defer s.Unlock()
 
@@ -88,14 +88,13 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint {
 
 	now := time.Now()
 
-	data := make([]metricdata.DataPoint, 0, len(s.values))
+	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
-		value = value // FIXME: remove when Value is assigned below.
-		data = append(data, metricdata.DataPoint{
+		data = append(data, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
 			Time:       now,
-			// FIXME: Value: ...
+			Value:      value,
 		})
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
@@ -114,7 +113,7 @@ type cumulativeSum[N int64 | float64] struct {
 	start time.Time
 }
 
-func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint {
+func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	s.Lock()
 	defer s.Unlock()
 
@@ -124,14 +123,13 @@ func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint {
 
 	now := time.Now()
 
-	data := make([]metricdata.DataPoint, 0, len(s.values))
+	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
-		value = value // FIXME: remove when Value is assigned below.
-		data = append(data, metricdata.DataPoint{
+		data = append(data, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
 			Time:       now,
-			// FIXME: Value: ...
+			Value:      value,
 		})
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -159,7 +157,7 @@ type nonMonotonicDeltaSum[N int64 | float64] struct {
 }
 
 func (s *nonMonotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum{
+	return metricdata.Sum[N]{
 		Temporality: metricdata.DeltaTemporality,
 		IsMonotonic: false,
 		DataPoints:  s.deltaSum.dataPoints(),
@@ -190,7 +188,7 @@ type monotonicDeltaSum[N int64 | float64] struct {
 }
 
 func (s *monotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum{
+	return metricdata.Sum[N]{
 		Temporality: metricdata.DeltaTemporality,
 		IsMonotonic: true,
 		DataPoints:  s.deltaSum.dataPoints(),
@@ -214,7 +212,7 @@ type nonMonotonicCumulativeSum[N int64 | float64] struct {
 }
 
 func (s *nonMonotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum{
+	return metricdata.Sum[N]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
 		DataPoints:  s.cumulativeSum.dataPoints(),
@@ -245,7 +243,7 @@ type monotonicCumulativeSum[N int64 | float64] struct {
 }
 
 func (s *monotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum{
+	return metricdata.Sum[N]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: true,
 		DataPoints:  s.cumulativeSum.dataPoints(),
