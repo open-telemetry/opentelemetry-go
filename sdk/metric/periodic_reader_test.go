@@ -217,7 +217,7 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rdr := NewPeriodicReader(new(fnExporter), tt.options...)
-			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
+			assert.Equal(t, tt.wantTemporality, rdr.temporality(0))
 		})
 	}
 }
