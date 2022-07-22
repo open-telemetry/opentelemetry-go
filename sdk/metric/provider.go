@@ -33,8 +33,9 @@ import (
 type MeterProvider struct {
 	res *resource.Resource
 
-	meters  meterRegistry
-	readers map[Reader][]view.View
+	meters    meterRegistry
+	readers   map[Reader][]view.View
+	providers map[Reader]*pipeline
 
 	forceFlush, shutdown func(context.Context) error
 }
@@ -53,9 +54,18 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 	flush, sdown := conf.readerSignals()
 
+	providers := make(map[Reader]*pipeline, len(conf.readers))
+	for reader := range conf.readers {
+		pipe := newPipeline(conf.res)
+		providers[reader] = pipe
+		reader.register(pipe)
+	}
+
 	return &MeterProvider{
-		res:        conf.res,
-		readers:    conf.readers,
+		res:       conf.res,
+		readers:   conf.readers,
+		providers: providers,
+
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
