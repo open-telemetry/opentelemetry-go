@@ -34,28 +34,34 @@ var (
 	attrA = attribute.NewSet(attribute.Bool("A", true))
 	attrB = attribute.NewSet(attribute.Bool("B", true))
 
-	float64A = metricdata.Float64(-1.0)
-	float64B = metricdata.Float64(2.0)
-
-	int64A = metricdata.Int64(-1)
-	int64B = metricdata.Int64(2)
-
 	startA = time.Now()
 	startB = startA.Add(time.Millisecond)
 	endA   = startA.Add(time.Second)
 	endB   = startB.Add(time.Second)
 
-	dataPointsA = metricdata.DataPoint{
+	dataPointInt64A = metricdata.DataPoint[int64]{
 		Attributes: attrA,
 		StartTime:  startA,
 		Time:       endA,
-		Value:      int64A,
+		Value:      -1,
 	}
-	dataPointsB = metricdata.DataPoint{
+	dataPointFloat64A = metricdata.DataPoint[float64]{
+		Attributes: attrA,
+		StartTime:  startA,
+		Time:       endA,
+		Value:      -1.0,
+	}
+	dataPointInt64B = metricdata.DataPoint[int64]{
 		Attributes: attrB,
 		StartTime:  startB,
 		Time:       endB,
-		Value:      float64B,
+		Value:      2,
+	}
+	dataPointFloat64B = metricdata.DataPoint[float64]{
+		Attributes: attrB,
+		StartTime:  startB,
+		Time:       endB,
+		Value:      2.0,
 	}
 
 	max, min            = 99.0, 3.
@@ -80,18 +86,38 @@ var (
 		Sum:          3,
 	}
 
-	gaugeA = metricdata.Gauge{DataPoints: []metricdata.DataPoint{dataPointsA}}
-	gaugeB = metricdata.Gauge{DataPoints: []metricdata.DataPoint{dataPointsB}}
+	gaugeInt64A = metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{dataPointInt64A},
+	}
+	gaugeFloat64A = metricdata.Gauge[float64]{
+		DataPoints: []metricdata.DataPoint[float64]{dataPointFloat64A},
+	}
+	gaugeInt64B = metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{dataPointInt64B},
+	}
+	gaugeFloat64B = metricdata.Gauge[float64]{
+		DataPoints: []metricdata.DataPoint[float64]{dataPointFloat64B},
+	}
 
-	sumA = metricdata.Sum{
+	sumInt64A = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: true,
-		DataPoints:  []metricdata.DataPoint{dataPointsA},
+		DataPoints:  []metricdata.DataPoint[int64]{dataPointInt64A},
 	}
-	sumB = metricdata.Sum{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: false,
-		DataPoints:  []metricdata.DataPoint{dataPointsB},
+	sumFloat64A = metricdata.Sum[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  []metricdata.DataPoint[float64]{dataPointFloat64A},
+	}
+	sumInt64B = metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  []metricdata.DataPoint[int64]{dataPointInt64B},
+	}
+	sumFloat64B = metricdata.Sum[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  []metricdata.DataPoint[float64]{dataPointFloat64B},
 	}
 
 	histogramA = metricdata.Histogram{
@@ -107,13 +133,13 @@ var (
 		Name:        "A",
 		Description: "A desc",
 		Unit:        unit.Dimensionless,
-		Data:        sumA,
+		Data:        sumInt64A,
 	}
 	metricsB = metricdata.Metrics{
 		Name:        "B",
 		Description: "B desc",
 		Unit:        unit.Bytes,
-		Data:        gaugeB,
+		Data:        gaugeFloat64B,
 	}
 
 	scopeMetricsA = metricdata.ScopeMetrics{
@@ -152,12 +178,13 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("ScopeMetrics", testDatatype(scopeMetricsA, scopeMetricsB, equalScopeMetrics))
 	t.Run("Metrics", testDatatype(metricsA, metricsB, equalMetrics))
 	t.Run("Histogram", testDatatype(histogramA, histogramB, equalHistograms))
-	t.Run("Sum", testDatatype(sumA, sumB, equalSums))
-	t.Run("Gauge", testDatatype(gaugeA, gaugeB, equalGauges))
+	t.Run("SumInt64", testDatatype(sumInt64A, sumInt64B, equalSums[int64]))
+	t.Run("SumFloat64", testDatatype(sumFloat64A, sumFloat64B, equalSums[float64]))
+	t.Run("GaugeInt64", testDatatype(gaugeInt64A, gaugeInt64B, equalGauges[int64]))
+	t.Run("GaugeFloat64", testDatatype(gaugeFloat64A, gaugeFloat64B, equalGauges[float64]))
 	t.Run("HistogramDataPoint", testDatatype(histogramDataPointA, histogramDataPointB, equalHistogramDataPoints))
-	t.Run("DataPoint", testDatatype(dataPointsA, dataPointsB, equalDataPoints))
-	t.Run("Int64", testDatatype(int64A, int64B, equalInt64))
-	t.Run("Float64", testDatatype(float64A, float64B, equalFloat64))
+	t.Run("DataPointInt64", testDatatype(dataPointInt64A, dataPointInt64B, equalDataPoints[int64]))
+	t.Run("DataPointFloat64", testDatatype(dataPointFloat64A, dataPointFloat64B, equalDataPoints[float64]))
 }
 
 type unknownAggregation struct {
@@ -166,50 +193,33 @@ type unknownAggregation struct {
 
 func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, nil, nil)
-	AssertAggregationsEqual(t, sumA, sumA)
-	AssertAggregationsEqual(t, gaugeA, gaugeA)
+	AssertAggregationsEqual(t, sumInt64A, sumInt64A)
+	AssertAggregationsEqual(t, sumFloat64A, sumFloat64A)
+	AssertAggregationsEqual(t, gaugeInt64A, gaugeInt64A)
+	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64A)
 	AssertAggregationsEqual(t, histogramA, histogramA)
 
-	r := equalAggregations(sumA, nil)
+	r := equalAggregations(sumInt64A, nil)
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
 
-	r = equalAggregations(sumA, gaugeA)
+	r = equalAggregations(sumInt64A, gaugeInt64A)
 	assert.Len(t, r, 1, "should return with type mismatch only")
 
 	r = equalAggregations(unknownAggregation{}, unknownAggregation{})
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
-	r = equalAggregations(sumA, sumB)
-	assert.Greaterf(t, len(r), 0, "%v == %v", sumA, sumB)
+	r = equalAggregations(sumInt64A, sumInt64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64B)
 
-	r = equalAggregations(gaugeA, gaugeB)
-	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeA, gaugeB)
+	r = equalAggregations(sumFloat64A, sumFloat64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64B)
+
+	r = equalAggregations(gaugeInt64A, gaugeInt64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64B)
+
+	r = equalAggregations(gaugeFloat64A, gaugeFloat64B)
+	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64B)
 
 	r = equalAggregations(histogramA, histogramB)
 	assert.Greaterf(t, len(r), 0, "%v == %v", histogramA, histogramB)
-}
-
-type unknownValue struct {
-	metricdata.Value
-}
-
-func TestAssertValuesEqual(t *testing.T) {
-	AssertValuesEqual(t, nil, nil)
-	AssertValuesEqual(t, int64A, int64A)
-	AssertValuesEqual(t, float64A, float64A)
-
-	r := equalValues(int64A, nil)
-	assert.Len(t, r, 1, "should return nil comparison mismatch only")
-
-	r = equalValues(int64A, float64A)
-	assert.Len(t, r, 1, "should return with type mismatch only")
-
-	r = equalValues(unknownValue{}, unknownValue{})
-	assert.Len(t, r, 1, "should return with unknown value only")
-
-	r = equalValues(int64A, int64B)
-	assert.Greaterf(t, len(r), 0, "%v == %v", int64A, int64B)
-
-	r = equalValues(float64A, float64B)
-	assert.Greaterf(t, len(r), 0, "%v == %v", float64A, float64B)
 }

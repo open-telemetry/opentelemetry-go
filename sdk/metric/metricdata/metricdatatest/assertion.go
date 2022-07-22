@@ -28,7 +28,17 @@ import (
 
 // Datatypes are the concrete data-types the metricdata package provides.
 type Datatypes interface {
-	metricdata.DataPoint | metricdata.Float64 | metricdata.Gauge | metricdata.Histogram | metricdata.HistogramDataPoint | metricdata.Int64 | metricdata.Metrics | metricdata.ResourceMetrics | metricdata.ScopeMetrics | metricdata.Sum
+	metricdata.DataPoint[float64] |
+		metricdata.DataPoint[int64] |
+		metricdata.Gauge[float64] |
+		metricdata.Gauge[int64] |
+		metricdata.Histogram |
+		metricdata.HistogramDataPoint |
+		metricdata.Metrics |
+		metricdata.ResourceMetrics |
+		metricdata.ScopeMetrics |
+		metricdata.Sum[float64] |
+		metricdata.Sum[int64]
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -44,26 +54,28 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 
 	var r []string
 	switch e := interface{}(expected).(type) {
-	case metricdata.DataPoint:
-		r = equalDataPoints(e, aIface.(metricdata.DataPoint))
-	case metricdata.Float64:
-		r = equalFloat64(e, aIface.(metricdata.Float64))
-	case metricdata.Gauge:
-		r = equalGauges(e, aIface.(metricdata.Gauge))
+	case metricdata.DataPoint[int64]:
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]))
+	case metricdata.DataPoint[float64]:
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[float64]))
+	case metricdata.Gauge[int64]:
+		r = equalGauges(e, aIface.(metricdata.Gauge[int64]))
+	case metricdata.Gauge[float64]:
+		r = equalGauges(e, aIface.(metricdata.Gauge[float64]))
 	case metricdata.Histogram:
 		r = equalHistograms(e, aIface.(metricdata.Histogram))
 	case metricdata.HistogramDataPoint:
 		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint))
-	case metricdata.Int64:
-		r = equalInt64(e, aIface.(metricdata.Int64))
 	case metricdata.Metrics:
 		r = equalMetrics(e, aIface.(metricdata.Metrics))
 	case metricdata.ResourceMetrics:
 		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics))
 	case metricdata.ScopeMetrics:
 		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics))
-	case metricdata.Sum:
-		r = equalSums(e, aIface.(metricdata.Sum))
+	case metricdata.Sum[int64]:
+		r = equalSums(e, aIface.(metricdata.Sum[int64]))
+	case metricdata.Sum[float64]:
+		r = equalSums(e, aIface.(metricdata.Sum[float64]))
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -81,16 +93,6 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
 	t.Helper()
 	if r := equalAggregations(expected, actual); len(r) > 0 {
-		t.Error(r)
-		return false
-	}
-	return true
-}
-
-// AssertValuesEqual asserts that two Values are equal.
-func AssertValuesEqual(t *testing.T, expected, actual metricdata.Value) bool {
-	t.Helper()
-	if r := equalValues(expected, actual); len(r) > 0 {
 		t.Error(r)
 		return false
 	}

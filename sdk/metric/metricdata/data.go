@@ -65,17 +65,17 @@ type Aggregation interface {
 }
 
 // Gauge represents a measurement of the current value of an instrument.
-type Gauge struct {
+type Gauge[N int64 | float64] struct {
 	// DataPoints reprents individual aggregated measurements with unique Attributes.
-	DataPoints []DataPoint
+	DataPoints []DataPoint[N]
 }
 
-func (Gauge) privateAggregation() {}
+func (Gauge[N]) privateAggregation() {}
 
 // Sum represents the sum of all measurements of values from an instrument.
-type Sum struct {
+type Sum[N int64 | float64] struct {
 	// DataPoints reprents individual aggregated measurements with unique Attributes.
-	DataPoints []DataPoint
+	DataPoints []DataPoint[N]
 	// Temporality describes if the aggregation is reported as the change from the
 	// last report time, or the cumulative changes since a fixed start time.
 	Temporality Temporality
@@ -83,10 +83,10 @@ type Sum struct {
 	IsMonotonic bool
 }
 
-func (Sum) privateAggregation() {}
+func (Sum[N]) privateAggregation() {}
 
 // DataPoint is a single data point in a timeseries.
-type DataPoint struct {
+type DataPoint[N int64 | float64] struct {
 	// Attributes is the set of key value pairs that uniquely identify the
 	// timeseries.
 	Attributes attribute.Set
@@ -95,24 +95,8 @@ type DataPoint struct {
 	// Time is the time when the timeseries was recorded. (optional)
 	Time time.Time
 	// Value is the value of this data point.
-	Value Value
+	Value N
 }
-
-// Value is a int64 or float64. All Values created by the sdk will be either
-// Int64 or Float64.
-type Value interface {
-	privateValue()
-}
-
-// Int64 is a container for an int64 value.
-type Int64 int64
-
-func (Int64) privateValue() {}
-
-// Float64 is a container for a float64 value.
-type Float64 float64
-
-func (Float64) privateValue() {}
 
 // Histogram represents the histogram of all measurements of values from an instrument.
 type Histogram struct {
