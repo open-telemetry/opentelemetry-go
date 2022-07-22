@@ -368,7 +368,7 @@ type nonDeferWrapperTracer struct {
 
 func (t *nonDeferWrapperTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	// Run start on the parent wrapper with a brand new context
-	// So `WithDeferredSetup` hasn't been called, and the Opentracing context is injected
+	// so `WithDeferredSetup` hasn't been called, and the OpenTracing context is injected.
 	return t.WrapperTracer.Start(context.Background(), name, opts...)
 }
 
