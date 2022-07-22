@@ -159,6 +159,15 @@ func MatchInstrumentName(name string) Option {
 
 // TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
 
+// MatchInstrumentKind with match an instrument based on the instrument's kind.
+// The default is to match all instrument kinds.
+func MatchInstrumentKind(kind InstrumentKind) Option {
+	return optionFunc(func(v View) View {
+		v.instrumentKind = kind
+		return v
+	})
+}
+
 // MatchInstrumentationScope will do an exact match on any
 // instrumentation.Scope field that is non-empty (""). The default is to match all
 // instrumentation scopes.
