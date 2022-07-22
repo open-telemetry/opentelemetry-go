@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Invalid warning for context setup being deferred in Opentracing bridge (#3029).
+- Invalid warning for context setup being deferred in OpenTracing bridge (#3029).
 
 ## [1.8.0/0.31.0] - 2022-07-08
 
