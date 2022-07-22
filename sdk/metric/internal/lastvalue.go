@@ -22,11 +22,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
-	timestamp int64
+	timestamp time.Time
 	value     N
 }
 
@@ -44,25 +45,33 @@ func NewLastValue[N int64 | float64]() Aggregator[N] {
 }
 
 func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
-	d := datapoint[N]{timestamp: time.Now().UnixNano(), value: value}
+	d := datapoint[N]{timestamp: time.Now(), value: value}
 	s.Lock()
 	s.values[attr] = d
 	s.Unlock()
 }
 
-func (s *lastValue[N]) Aggregations() []Aggregation {
+func (s *lastValue[N]) Aggregation() metricdata.Aggregation {
+	gauge := metricdata.Gauge[N]{}
+
 	s.Lock()
 	defer s.Unlock()
 
-	aggs := make([]Aggregation, 0, len(s.values))
+	if len(s.values) == 0 {
+		return gauge
+	}
+
+	gauge.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
 	for a, v := range s.values {
-		aggs = append(aggs, Aggregation{
-			Timestamp:  v.timestamp,
+		gauge.DataPoints = append(gauge.DataPoints, metricdata.DataPoint[N]{
 			Attributes: a,
-			Value:      SingleValue[N]{Value: v.value},
+			// The event time is the only meaningful timestamp, StartTime is
+			// ignored.
+			Time:  v.timestamp,
+			Value: v.value,
 		})
 		// Do not report stale values.
 		delete(s.values, a)
 	}
-	return aggs
+	return gauge
 }

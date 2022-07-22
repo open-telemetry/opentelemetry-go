@@ -15,7 +15,7 @@
 //go:build go1.17
 // +build go1.17
 
-package export // import "go.opentelemetry.io/otel/sdk/metric/export"
+package metricdata // import "go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 // Temporality defines the window that an aggregation was calculated over.
 type Temporality uint8

@@ -24,7 +24,7 @@ import (
 
 // Instrument uniquely identifies an instrument within a meter.
 type Instrument struct {
-	Scope instrumentation.Library
+	Scope instrumentation.Scope
 
 	Name        string
 	Description string

@@ -31,7 +31,7 @@ import (
 )
 
 // meterRegistry keeps a record of initialized meters for instrumentation
-// libraries. A meter is unique to an instrumentation library and if multiple
+// scopes. A meter is unique to an instrumentation scope and if multiple
 // requests for that meter are made a meterRegistry ensure the same instance
 // is used.
 //
@@ -43,31 +43,31 @@ import (
 type meterRegistry struct {
 	sync.Mutex
 
-	meters map[instrumentation.Library]*meter
+	meters map[instrumentation.Scope]*meter
 }
 
-// Get returns a registered meter matching the instrumentation library if it
+// Get returns a registered meter matching the instrumentation scope if it
 // exists in the meterRegistry. Otherwise, a new meter configured for the
-// instrumentation library is registered and then returned.
+// instrumentation scope is registered and then returned.
 //
 // Get is safe to call concurrently.
-func (r *meterRegistry) Get(l instrumentation.Library) *meter {
+func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 	r.Lock()
 	defer r.Unlock()
 
 	if r.meters == nil {
-		m := &meter{Library: l}
-		r.meters = map[instrumentation.Library]*meter{l: m}
+		m := &meter{Scope: s}
+		r.meters = map[instrumentation.Scope]*meter{s: m}
 		return m
 	}
 
-	m, ok := r.meters[l]
+	m, ok := r.meters[s]
 	if ok {
 		return m
 	}
 
-	m = &meter{Library: l}
-	r.meters[l] = m
+	m = &meter{Scope: s}
+	r.meters[s] = m
 	return m
 }
 
@@ -91,7 +91,7 @@ func (r *meterRegistry) Range(f func(*meter) bool) {
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	instrumentation.Library
+	instrumentation.Scope
 
 	// TODO (#2815, 2814): implement.
 }

@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // Default periodic reader timing.
@@ -40,7 +40,7 @@ const (
 type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -140,7 +140,7 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 
-	temporalitySelector func(InstrumentKind) Temporality
+	temporalitySelector func(InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
@@ -185,7 +185,7 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind InstrumentKind) Temporality {
+func (r *periodicReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalitySelector(kind)
 }
 
@@ -199,10 +199,10 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (export.ResourceMetrics, error) {
+func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p := r.producer.Load()
 	if p == nil {
-		return export.ResourceMetrics{}, ErrReaderNotRegistered
+		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -212,7 +212,7 @@ func (r *periodicReader) Collect(ctx context.Context) (export.ResourceMetrics, e
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return export.ResourceMetrics{}, err
+		return metricdata.ResourceMetrics{}, err
 	}
 	return ph.produce(ctx)
 }
