@@ -110,16 +110,28 @@ func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
 	}
 
 	switch v := a.(type) {
-	case metricdata.Gauge:
-		r := equalGauges(v, b.(metricdata.Gauge))
+	case metricdata.Gauge[int64]:
+		r := equalGauges(v, b.(metricdata.Gauge[int64]))
 		if len(r) > 0 {
-			reasons = append(reasons, "Gauge not equal:")
+			reasons = append(reasons, "Gauge[int64] not equal:")
 			reasons = append(reasons, r...)
 		}
-	case metricdata.Sum:
-		r := equalSums(v, b.(metricdata.Sum))
+	case metricdata.Gauge[float64]:
+		r := equalGauges(v, b.(metricdata.Gauge[float64]))
 		if len(r) > 0 {
-			reasons = append(reasons, "Sum not equal:")
+			reasons = append(reasons, "Gauge[float64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Sum[int64]:
+		r := equalSums(v, b.(metricdata.Sum[int64]))
+		if len(r) > 0 {
+			reasons = append(reasons, "Sum[int64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Sum[float64]:
+		r := equalSums(v, b.(metricdata.Sum[float64]))
+		if len(r) > 0 {
+			reasons = append(reasons, "Sum[float64] not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Histogram:
@@ -139,11 +151,11 @@ func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
 //
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
-func equalGauges(a, b metricdata.Gauge) (reasons []string) {
+func equalGauges[N int64 | float64](a, b metricdata.Gauge[N]) (reasons []string) {
 	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.DataPoint) bool {
+		func(a, b metricdata.DataPoint[N]) bool {
 			r := equalDataPoints(a, b)
 			return len(r) == 0
 		},
@@ -159,7 +171,7 @@ func equalGauges(a, b metricdata.Gauge) (reasons []string) {
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func equalSums(a, b metricdata.Sum) (reasons []string) {
+func equalSums[N int64 | float64](a, b metricdata.Sum[N]) (reasons []string) {
 	if a.Temporality != b.Temporality {
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
@@ -170,7 +182,7 @@ func equalSums(a, b metricdata.Sum) (reasons []string) {
 	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.DataPoint) bool {
+		func(a, b metricdata.DataPoint[N]) bool {
 			r := equalDataPoints(a, b)
 			return len(r) == 0
 		},
@@ -207,7 +219,7 @@ func equalHistograms(a, b metricdata.Histogram) (reasons []string) {
 
 // equalDataPoints returns reasons DataPoints are not equal. If they are
 // equal, the returned reasons will be empty.
-func equalDataPoints(a, b metricdata.DataPoint) (reasons []string) {
+func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N]) (reasons []string) {
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -222,10 +234,8 @@ func equalDataPoints(a, b metricdata.DataPoint) (reasons []string) {
 		reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 	}
 
-	r := equalValues(a.Value, b.Value)
-	if len(r) > 0 {
-		reasons = append(reasons, "DataPoint Value not equal:")
-		reasons = append(reasons, r...)
+	if a.Value != b.Value {
+		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
 	}
 	return reasons
 }
@@ -263,58 +273,6 @@ func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (reasons []str
 	}
 	if a.Sum != b.Sum {
 		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
-	}
-	return reasons
-}
-
-// equalValues returns reasons Values are not equal. If they are equal, the
-// returned reasons will be empty.
-func equalValues(a, b metricdata.Value) (reasons []string) {
-	if a == nil || b == nil {
-		if a != b {
-			return []string{notEqualStr("Values", a, b)}
-		}
-		return reasons
-	}
-
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return []string{fmt.Sprintf("Value types not equal:\nexpected: %T\nactual: %T", a, b)}
-	}
-
-	switch v := a.(type) {
-	case metricdata.Int64:
-		r := equalInt64(v, b.(metricdata.Int64))
-		if len(r) > 0 {
-			reasons = append(reasons, "Int64 not equal:")
-			reasons = append(reasons, r...)
-		}
-	case metricdata.Float64:
-		r := equalFloat64(v, b.(metricdata.Float64))
-		if len(r) > 0 {
-			reasons = append(reasons, "Float64 not equal:")
-			reasons = append(reasons, r...)
-		}
-	default:
-		reasons = append(reasons, fmt.Sprintf("Value of unknown types %T", a))
-	}
-
-	return reasons
-}
-
-// equalFloat64 returns reasons Float64s are not equal. If they are equal, the
-// returned reasons will be empty.
-func equalFloat64(a, b metricdata.Float64) (reasons []string) {
-	if a != b {
-		reasons = append(reasons, notEqualStr("Float64 value", a, b))
-	}
-	return reasons
-}
-
-// equalInt64 returns reasons Int64s are not equal. If they are equal, the
-// returned reasons will be empty.
-func equalInt64(a, b metricdata.Int64) (reasons []string) {
-	if a != b {
-		reasons = append(reasons, notEqualStr("Int64 value", a, b))
 	}
 	return reasons
 }

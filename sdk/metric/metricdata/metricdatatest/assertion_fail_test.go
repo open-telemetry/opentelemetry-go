@@ -37,27 +37,23 @@ func TestFailAssertEqual(t *testing.T) {
 	t.Run("ScopeMetrics", testFailDatatype(scopeMetricsA, scopeMetricsB))
 	t.Run("Metrics", testFailDatatype(metricsA, metricsB))
 	t.Run("Histogram", testFailDatatype(histogramA, histogramB))
-	t.Run("Sum", testFailDatatype(sumA, sumB))
-	t.Run("Gauge", testFailDatatype(gaugeA, gaugeB))
+	t.Run("SumInt64", testFailDatatype(sumInt64A, sumInt64B))
+	t.Run("SumFloat64", testFailDatatype(sumFloat64A, sumFloat64B))
+	t.Run("GaugeInt64", testFailDatatype(gaugeInt64A, gaugeInt64B))
+	t.Run("GaugeFloat64", testFailDatatype(gaugeFloat64A, gaugeFloat64B))
 	t.Run("HistogramDataPoint", testFailDatatype(histogramDataPointA, histogramDataPointB))
-	t.Run("DataPoint", testFailDatatype(dataPointsA, dataPointsB))
-	t.Run("Int64", testFailDatatype(int64A, int64B))
-	t.Run("Float64", testFailDatatype(float64A, float64B))
+	t.Run("DataPointInt64", testFailDatatype(dataPointInt64A, dataPointInt64B))
+	t.Run("DataPointFloat64", testFailDatatype(dataPointFloat64A, dataPointFloat64B))
+
 }
 
 func TestFailAssertAggregationsEqual(t *testing.T) {
-	AssertAggregationsEqual(t, sumA, nil)
-	AssertAggregationsEqual(t, sumA, gaugeA)
+	AssertAggregationsEqual(t, sumInt64A, nil)
+	AssertAggregationsEqual(t, sumFloat64A, gaugeFloat64A)
 	AssertAggregationsEqual(t, unknownAggregation{}, unknownAggregation{})
-	AssertAggregationsEqual(t, sumA, sumB)
-	AssertAggregationsEqual(t, gaugeA, gaugeB)
+	AssertAggregationsEqual(t, sumInt64A, sumInt64B)
+	AssertAggregationsEqual(t, sumFloat64A, sumFloat64B)
+	AssertAggregationsEqual(t, gaugeInt64A, gaugeInt64B)
+	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64B)
 	AssertAggregationsEqual(t, histogramA, histogramB)
-}
-
-func TestFailAssertValuesEqual(t *testing.T) {
-	AssertValuesEqual(t, int64A, nil)
-	AssertValuesEqual(t, int64A, float64A)
-	AssertValuesEqual(t, unknownValue{}, unknownValue{})
-	AssertValuesEqual(t, int64A, int64B)
-	AssertValuesEqual(t, float64A, float64B)
 }

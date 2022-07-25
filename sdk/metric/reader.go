@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // errDuplicateRegister is logged by a Reader when an attempt to registered it
@@ -58,10 +59,10 @@ type Reader interface {
 	register(producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
-	temporality(InstrumentKind) metricdata.Temporality
+	temporality(view.InstrumentKind) metricdata.Temporality
 
 	// aggregation returns what Aggregation to use for an instrument kind.
-	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
+	aggregation(view.InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
@@ -118,12 +119,12 @@ type ReaderOption interface {
 }
 
 // TemporalitySelector selects the temporality to use based on the InstrumentKind.
-type TemporalitySelector func(InstrumentKind) metricdata.Temporality
+type TemporalitySelector func(view.InstrumentKind) metricdata.Temporality
 
 // DefaultTemporalitySelector is the default TemporalitySelector used if
 // WithTemporalitySelector is not provided. CumulativeTemporality will be used
 // for all instrument kinds if this TemporalitySelector is used.
-func DefaultTemporalitySelector(InstrumentKind) metricdata.Temporality {
+func DefaultTemporalitySelector(view.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
 
@@ -135,7 +136,7 @@ func WithTemporalitySelector(selector TemporalitySelector) ReaderOption {
 }
 
 type temporalitySelectorOption struct {
-	selector func(instrument InstrumentKind) metricdata.Temporality
+	selector func(instrument view.InstrumentKind) metricdata.Temporality
 }
 
 // applyManual returns a manualReaderConfig with option applied.
@@ -152,7 +153,7 @@ func (t temporalitySelectorOption) applyPeriodic(prc periodicReaderConfig) perio
 
 // AggregationSelector selects the aggregation and the parameters to use for
 // that aggregation based on the InstrumentKind.
-type AggregationSelector func(InstrumentKind) aggregation.Aggregation
+type AggregationSelector func(view.InstrumentKind) aggregation.Aggregation
 
 // DefaultAggregationSelector returns the default aggregation and parameters
 // that will be used to summarize measurement made from an instrument of
@@ -160,13 +161,13 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
 // Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
-func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
+func DefaultAggregationSelector(ik view.InstrumentKind) aggregation.Aggregation {
 	switch ik {
-	case SyncCounter, SyncUpDownCounter, AsyncCounter, AsyncUpDownCounter:
+	case view.SyncCounter, view.SyncUpDownCounter, view.AsyncCounter, view.AsyncUpDownCounter:
 		return aggregation.Sum{}
-	case AsyncGauge:
+	case view.AsyncGauge:
 		return aggregation.LastValue{}
-	case SyncHistogram:
+	case view.SyncHistogram:
 		return aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 			NoMinMax:   false,
@@ -181,7 +182,7 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 // or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ReaderOption {
 	// Deep copy and validate before using.
-	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
+	wrapped := func(ik view.InstrumentKind) aggregation.Aggregation {
 		a := selector(ik)
 		cpA := a.Copy()
 		if err := cpA.Err(); err != nil {
