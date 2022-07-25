@@ -28,5 +28,6 @@ type Instrument struct {
 
 	Name        string
 	Description string
+	Kind        InstrumentKind
 	Aggregation aggregation.Aggregation
 }

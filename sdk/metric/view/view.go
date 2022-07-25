@@ -41,6 +41,7 @@ type View struct {
 	instrumentName *regexp.Regexp
 	hasWildcard    bool
 	scope          instrumentation.Scope
+	instrumentKind InstrumentKind
 
 	filter      attribute.Filter
 	name        string
@@ -115,12 +116,16 @@ func (v View) matchScopeVersion(version string) bool {
 func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
+func (v View) matchInstrumentKind(kind InstrumentKind) bool {
+	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
+}
 
 func (v View) match(i Instrument) bool {
 	return v.matchName(i.Name) &&
 		v.matchScopeName(i.Scope.Name) &&
 		v.matchScopeSchemaURL(i.Scope.SchemaURL) &&
-		v.matchScopeVersion(i.Scope.Version)
+		v.matchScopeVersion(i.Scope.Version) &&
+		v.matchInstrumentKind(i.Kind)
 }
 
 // Option applies a Configuration option value to a View. All options
@@ -152,8 +157,16 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// TODO (#2813): Implement MatchInstrumentKind when InstrumentKind is defined.
 // TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
+
+// MatchInstrumentKind with match an instrument based on the instrument's kind.
+// The default is to match all instrument kinds.
+func MatchInstrumentKind(kind InstrumentKind) Option {
+	return optionFunc(func(v View) View {
+		v.instrumentKind = kind
+		return v
+	})
+}
 
 // MatchInstrumentationScope will do an exact match on any
 // instrumentation.Scope field that is non-empty (""). The default is to match all

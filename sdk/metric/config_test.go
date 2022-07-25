@@ -27,12 +27,13 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type reader struct {
 	producer        producer
-	temporalityFunc func(InstrumentKind) metricdata.Temporality
+	temporalityFunc func(view.InstrumentKind) metricdata.Temporality
 	aggregationFunc AggregationSelector
 	collectFunc     func(context.Context) (metricdata.ResourceMetrics, error)
 	forceFlushFunc  func(context.Context) error
@@ -41,12 +42,12 @@ type reader struct {
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *reader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationFunc(kind)
 }
 
 func (r *reader) register(p producer) { r.producer = p }
-func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
+func (r *reader) temporality(kind view.InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
 func (r *reader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
