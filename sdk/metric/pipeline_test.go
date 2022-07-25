@@ -35,10 +35,10 @@ import (
 type testSumAggregator struct{}
 
 func (testSumAggregator) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum{
+	return metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
-		DataPoints:  []metricdata.DataPoint{}}
+		DataPoints:  []metricdata.DataPoint[int64]{}}
 }
 
 func TestEmptyPipeline(t *testing.T) {
