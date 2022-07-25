@@ -32,7 +32,7 @@ import (
 // follow any spec prescribed aggregation.
 type testStableAggregator[N int64 | float64] struct {
 	sync.Mutex
-	values []metricdata.DataPoint
+	values []metricdata.DataPoint[N]
 }
 
 // Aggregate records the measurement, scoped by attr, and aggregates it
@@ -41,24 +41,16 @@ func (a *testStableAggregator[N]) Aggregate(measurement N, attr attribute.Set) {
 	a.Lock()
 	defer a.Unlock()
 
-	var value metricdata.Value
-	switch v := interface{}(measurement).(type) {
-	case int64:
-		value = metricdata.Int64(v)
-	case float64:
-		value = metricdata.Float64(v)
-	}
-
-	a.values = append(a.values, metricdata.DataPoint{
+	a.values = append(a.values, metricdata.DataPoint[N]{
 		Attributes: attr,
-		Value:      value,
+		Value:      measurement,
 	})
 }
 
 // Aggregation returns an Aggregation, for all the aggregated
 // measurements made and ends an aggregation cycle.
 func (a *testStableAggregator[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Gauge{
+	return metricdata.Gauge[N]{
 		DataPoints: a.values,
 	}
 }
@@ -95,17 +87,11 @@ func TestNewFilter(t *testing.T) {
 	})
 }
 
-func testDataPoint[N int64 | float64](attr attribute.Set) metricdata.DataPoint {
-	var n N
-	if _, ok := interface{}(n).(int64); ok {
-		return metricdata.DataPoint{
-			Attributes: attr,
-			Value:      metricdata.Int64(1),
-		}
-	}
-	return metricdata.DataPoint{
+func testDataPoint[N int64 | float64](attr attribute.Set) metricdata.DataPoint[N] {
+
+	return metricdata.DataPoint[N]{
 		Attributes: attr,
-		Value:      metricdata.Float64(1),
+		Value:      1,
 	}
 }
 
@@ -113,7 +99,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 	testCases := []struct {
 		name      string
 		inputAttr []attribute.Set
-		output    []metricdata.DataPoint
+		output    []metricdata.DataPoint[N]
 	}{
 		{
 			name: "Will filter all out",
@@ -123,7 +109,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 					attribute.Float64("lifeUniverseEverything", 42.0),
 				),
 			},
-			output: []metricdata.DataPoint{
+			output: []metricdata.DataPoint[N]{
 				testDataPoint[N](*attribute.EmptySet()),
 			},
 		},
@@ -140,7 +126,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 					attribute.Int("power-level", 9001),
 				),
 			},
-			output: []metricdata.DataPoint{
+			output: []metricdata.DataPoint[N]{
 				// A real Aggregator will combine these, the testAggregator doesn't for list stability.
 				testDataPoint[N](attribute.NewSet(attribute.Int("power-level", 9001))),
 				testDataPoint[N](attribute.NewSet(attribute.Int("power-level", 9001))),
@@ -156,7 +142,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 					attribute.Float64("lifeUniverseEverything", 42.0),
 				),
 			},
-			output: []metricdata.DataPoint{
+			output: []metricdata.DataPoint[N]{
 				// A real Aggregator will combine these, the testAggregator doesn't for list stability.
 				testDataPoint[N](*attribute.EmptySet()),
 				testDataPoint[N](*attribute.EmptySet()),
@@ -170,7 +156,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 			for _, set := range tt.inputAttr {
 				f.Aggregate(1, set)
 			}
-			out := f.Aggregation().(metricdata.Gauge)
+			out := f.Aggregation().(metricdata.Gauge[N])
 			assert.Equal(t, tt.output, out.DataPoints)
 		})
 	}
@@ -183,4 +169,36 @@ func TestFilterAggregate(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
 		testFilterAggregate[float64](t)
 	})
+}
+
+func testFilterConcurrent[N int64 | float64](t *testing.T) {
+	f := NewFilter[N](&testStableAggregator[N]{}, testAttributeFilter)
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		f.Aggregate(1, attribute.NewSet(
+			attribute.String("foo", "bar"),
+		))
+		wg.Done()
+	}()
+
+	go func() {
+		f.Aggregate(1, attribute.NewSet(
+			attribute.Int("power-level", 9001),
+		))
+		wg.Done()
+	}()
+
+	wg.Wait()
+}
+
+func TestFilterConcurrent(t *testing.T) {
+	t.Run("int64", func(t *testing.T) {
+		testFilterConcurrent[int64](t)
+	})
+	t.Run("float64", func(t *testing.T) {
+		testFilterConcurrent[float64](t)
+	})
+
 }
