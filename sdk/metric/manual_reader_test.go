@@ -69,8 +69,9 @@ func TestManualReaderTemporality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var undefinedInstrument view.InstrumentKind
 			rdr := NewManualReader(tt.options...)
-			assert.Equal(t, tt.wantTemporality, rdr.temporality(0))
+			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
 		})
 	}
 }

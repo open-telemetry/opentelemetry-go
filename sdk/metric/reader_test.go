@@ -185,7 +185,8 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 }
 
 func TestDefaultAggregationSelector(t *testing.T) {
-	assert.Panics(t, func() { DefaultAggregationSelector(0) })
+	var undefinedInstrument view.InstrumentKind
+	assert.Panics(t, func() { DefaultAggregationSelector(undefinedInstrument) })
 
 	iKinds := []view.InstrumentKind{
 		view.SyncCounter,
