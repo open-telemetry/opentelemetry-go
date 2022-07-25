@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // manualReader is a a simple Reader that allows an application to
@@ -34,7 +35,7 @@ type manualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
 
-	temporalitySelector func(InstrumentKind) metricdata.Temporality
+	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -61,12 +62,12 @@ func (mr *manualReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (mr *manualReader) temporality(kind InstrumentKind) metricdata.Temporality {
+func (mr *manualReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (mr *manualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (mr *manualReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
 }
 
@@ -111,7 +112,7 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
-	temporalitySelector func(InstrumentKind) metricdata.Temporality
+	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 

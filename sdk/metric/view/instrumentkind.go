@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 // InstrumentKind describes the kind of instrument a Meter can create.
 type InstrumentKind uint8

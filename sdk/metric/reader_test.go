@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 type readerTestSuite struct {
@@ -184,15 +185,16 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 }
 
 func TestDefaultAggregationSelector(t *testing.T) {
+	var undefinedInstrument view.InstrumentKind
 	assert.Panics(t, func() { DefaultAggregationSelector(undefinedInstrument) })
 
-	iKinds := []InstrumentKind{
-		SyncCounter,
-		SyncUpDownCounter,
-		SyncHistogram,
-		AsyncCounter,
-		AsyncUpDownCounter,
-		AsyncGauge,
+	iKinds := []view.InstrumentKind{
+		view.SyncCounter,
+		view.SyncUpDownCounter,
+		view.SyncHistogram,
+		view.AsyncCounter,
+		view.AsyncUpDownCounter,
+		view.AsyncGauge,
 	}
 
 	for _, ik := range iKinds {
@@ -201,14 +203,15 @@ func TestDefaultAggregationSelector(t *testing.T) {
 }
 
 func TestDefaultTemporalitySelector(t *testing.T) {
-	for _, ik := range []InstrumentKind{
+	var undefinedInstrument view.InstrumentKind
+	for _, ik := range []view.InstrumentKind{
 		undefinedInstrument,
-		SyncCounter,
-		SyncUpDownCounter,
-		SyncHistogram,
-		AsyncCounter,
-		AsyncUpDownCounter,
-		AsyncGauge,
+		view.SyncCounter,
+		view.SyncUpDownCounter,
+		view.SyncHistogram,
+		view.AsyncCounter,
+		view.AsyncUpDownCounter,
+		view.AsyncGauge,
 	} {
 		assert.Equal(t, metricdata.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}
