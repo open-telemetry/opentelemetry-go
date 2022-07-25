@@ -317,14 +317,15 @@ func TestViewTransformAttributes(t *testing.T) {
 	)
 
 	tests := []struct {
-		name   string
-		filter []attribute.Key
-		want   attribute.Set
+		name          string
+		filter        []attribute.Key
+		want          attribute.Set
+		wantNilFilter bool
 	}{
 		{
-			name:   "empty should match all",
-			filter: []attribute.Key{},
-			want:   inputSet,
+			name:          "empty should match all",
+			filter:        []attribute.Key{},
+			wantNilFilter: true,
 		},
 		{
 			name: "Match 1",
@@ -371,8 +372,12 @@ func TestViewTransformAttributes(t *testing.T) {
 				WithFilterAttributes(tt.filter...),
 			)
 			require.NoError(t, err)
-
-			got := v.TransformAttributes(inputSet)
+			filter := v.AttributeFilter()
+			if tt.wantNilFilter {
+				assert.Nil(t, filter)
+				return
+			}
+			got := filter(inputSet)
 			assert.Equal(t, got.Equivalent(), tt.want.Equivalent())
 		})
 	}
