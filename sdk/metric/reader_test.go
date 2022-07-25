@@ -203,8 +203,9 @@ func TestDefaultAggregationSelector(t *testing.T) {
 }
 
 func TestDefaultTemporalitySelector(t *testing.T) {
+	var undefinedInstrument view.InstrumentKind
 	for _, ik := range []view.InstrumentKind{
-		0,
+		undefinedInstrument,
 		view.SyncCounter,
 		view.SyncUpDownCounter,
 		view.SyncHistogram,
