@@ -161,15 +161,18 @@ func TestDeltaSumReset(t *testing.T) {
 	})
 }
 
-/*
 func BenchmarkSum(b *testing.B) {
+	b.Run("Int64", benchmarkSum[int64])
+	b.Run("Float64", benchmarkSum[float64])
+}
+
+func benchmarkSum[N int64 | float64](b *testing.B) {
 	b.Run("Delta", func(b *testing.B) {
-		b.Run("Int64", benchmarkAggregator(NewDeltaSum[int64]))
-		b.Run("Float64", benchmarkAggregator(NewDeltaSum[float64]))
+		b.Run("Monotonic", benchmarkAggregator(NewMonotonicDeltaSum[int64]))
+		b.Run("NonMonotonic", benchmarkAggregator(NewNonMonotonicDeltaSum[int64]))
 	})
 	b.Run("Cumulative", func(b *testing.B) {
-		b.Run("Int64", benchmarkAggregator(NewCumulativeSum[int64]))
-		b.Run("Float64", benchmarkAggregator(NewCumulativeSum[float64]))
+		b.Run("Monotonic", benchmarkAggregator(NewMonotonicCumulativeSum[int64]))
+		b.Run("NonMonotonic", benchmarkAggregator(NewNonMonotonicCumulativeSum[int64]))
 	})
 }
-*/

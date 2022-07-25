@@ -18,6 +18,7 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -96,8 +97,7 @@ func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap, eFunc expectFun
 	}
 }
 
-/*
-var bmarkResults []Aggregation
+var bmarkResults metricdata.Aggregation
 
 func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggregator[N], count int) {
 	attrs := make([]attribute.Set, count)
@@ -115,7 +115,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 				agg.Aggregate(1, attr)
 			}
 		}
-		assert.Len(b, agg.Aggregations(), count)
+		bmarkResults = agg.Aggregation()
 	})
 
 	b.Run("Aggregations", func(b *testing.B) {
@@ -132,7 +132,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			bmarkResults = aggs[n].Aggregations()
+			bmarkResults = aggs[n].Aggregation()
 		}
 	})
 }
@@ -147,4 +147,3 @@ func benchmarkAggregator[N int64 | float64](factory func() Aggregator[N]) func(*
 		}
 	}
 }
-*/
