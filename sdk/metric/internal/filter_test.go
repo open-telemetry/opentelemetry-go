@@ -88,7 +88,6 @@ func TestNewFilter(t *testing.T) {
 }
 
 func testDataPoint[N int64 | float64](attr attribute.Set) metricdata.DataPoint[N] {
-
 	return metricdata.DataPoint[N]{
 		Attributes: attr,
 		Value:      1,
@@ -200,5 +199,4 @@ func TestFilterConcurrent(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
 		testFilterConcurrent[float64](t)
 	})
-
 }
