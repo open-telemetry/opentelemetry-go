@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // Default periodic reader timing.
@@ -40,7 +41,7 @@ const (
 type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
-	temporalitySelector func(InstrumentKind) metricdata.Temporality
+	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 }
 
@@ -140,7 +141,7 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 
-	temporalitySelector func(InstrumentKind) metricdata.Temporality
+	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
 	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
@@ -185,12 +186,12 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind InstrumentKind) metricdata.Temporality {
+func (r *periodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
 	return r.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationSelector(kind)
 }
 
