@@ -18,6 +18,8 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"sync"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -28,6 +30,7 @@ type filter[N int64 | float64] struct {
 	filter     func(attribute.Set) attribute.Set
 	aggregator Aggregator[N]
 
+	sync.Mutex
 	seen map[attribute.Set]attribute.Set
 }
 
@@ -45,6 +48,8 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn func(attribute.Set) attr
 // Aggregate records the measurement, scoped by attr, and aggregates it
 // into an aggregation.
 func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
+	f.Lock()
+	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
 	if !ok {
 		fAttr = f.filter(attr)
