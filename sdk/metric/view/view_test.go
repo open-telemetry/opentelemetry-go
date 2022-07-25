@@ -377,6 +377,7 @@ func TestViewTransformAttributes(t *testing.T) {
 				assert.Nil(t, filter)
 				return
 			}
+			require.NotNil(t, filter)
 			got := filter(inputSet)
 			assert.Equal(t, got.Equivalent(), tt.want.Equivalent())
 		})

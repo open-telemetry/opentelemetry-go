@@ -90,7 +90,7 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 
 // AttributeFilter returns a function that returns only attributes specified by
 // WithFilterAttributes.
-// If no filter was provided a nil is returned.
+// If no filter was provided nil is returned.
 func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
 		return nil
