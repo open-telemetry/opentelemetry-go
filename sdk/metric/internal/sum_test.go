@@ -18,68 +18,150 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"fmt"
 	"testing"
+	"time"
+
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestSum(t *testing.T) {
+	t.Run("Int64", testSum[int64])
+	t.Run("Float64", testSum[float64])
+}
+
+func testSum[N int64 | float64](t *testing.T) {
+	defer func(f func() time.Time) { now = f }(now)
+	now = staticNowFunc
+
+	expecter := sumExpecterFactory[N]{}
+
+	tester := &aggregatorTester[N]{
+		GoroutineN:   defaultGoroutines,
+		MeasurementN: defaultMeasurements,
+		CycleN:       defaultCycles,
+	}
+
 	t.Run("Delta", func(t *testing.T) {
-		t.Run("Int64", testAggregator(NewDeltaSum[int64](), deltaSumExpecter[int64]))
-		t.Run("Float64", testAggregator(NewDeltaSum[float64](), deltaSumExpecter[float64]))
+		temp := metricdata.DeltaTemporality
+		t.Run("Monotonic", func(t *testing.T) {
+			incr := monoIncr
+			eFunc := expecter.ExpecterFunc(incr, temp, true)
+			tester.Run(NewMonotonicDeltaSum[N](), incr, eFunc)
+		})
+		t.Run("NonMonotonic", func(t *testing.T) {
+			incr := nonMonoIncr
+			eFunc := expecter.ExpecterFunc(incr, temp, false)
+			tester.Run(NewNonMonotonicDeltaSum[N](), incr, eFunc)
+		})
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
-		t.Run("Int64", testAggregator(NewCumulativeSum[int64](), cumuSumExpecter[int64]))
-		t.Run("Float64", testAggregator(NewCumulativeSum[float64](), cumuSumExpecter[float64]))
+		temp := metricdata.CumulativeTemporality
+		t.Run("Monotonic", func(t *testing.T) {
+			incr := monoIncr
+			eFunc := expecter.ExpecterFunc(incr, temp, true)
+			tester.Run(NewMonotonicCumulativeSum[N](), incr, eFunc)
+		})
+		t.Run("NonMonotonic", func(t *testing.T) {
+			incr := nonMonoIncr
+			eFunc := expecter.ExpecterFunc(incr, temp, false)
+			tester.Run(NewNonMonotonicCumulativeSum[N](), incr, eFunc)
+		})
 	})
 }
 
-func deltaSumExpecter[N int64 | float64](incr setMap[N]) func(m int) setMap[N] {
-	expect := make(setMap[N], len(incr))
-	return func(m int) setMap[N] {
-		for actor, incr := range incr {
-			expect[actor] = incr * N(m)
+type sumExpecterFactory[N int64 | float64] struct{}
+
+func (s *sumExpecterFactory[N]) ExpecterFunc(increments setMap, t metricdata.Temporality, monotonic bool) expectFunc {
+	sum := metricdata.Sum[N]{
+		Temporality: t,
+		IsMonotonic: monotonic,
+	}
+
+	switch t {
+	case metricdata.DeltaTemporality:
+		return func(m int) metricdata.Aggregation {
+			sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(increments))
+			for actor, incr := range increments {
+				sum.DataPoints = append(sum.DataPoints, metricdata.DataPoint[N]{
+					Attributes: actor,
+					StartTime:  now(),
+					Time:       now(),
+					Value:      N(incr * m),
+				})
+			}
+			return sum
 		}
-		return expect
+	case metricdata.CumulativeTemporality:
+		var cycle int
+		return func(m int) metricdata.Aggregation {
+			cycle++
+			sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(increments))
+			for actor, incr := range increments {
+				sum.DataPoints = append(sum.DataPoints, metricdata.DataPoint[N]{
+					Attributes: actor,
+					StartTime:  now(),
+					Time:       now(),
+					Value:      N(incr * cycle * m),
+				})
+			}
+			return sum
+		}
+	default:
+		panic(fmt.Sprintf("unsupported temporality: %v", t))
 	}
 }
 
-func cumuSumExpecter[N int64 | float64](incr setMap[N]) func(m int) setMap[N] {
-	var cycle int
-	expect := make(setMap[N], len(incr))
-	return func(m int) setMap[N] {
-		cycle++
-		for actor := range incr {
-			expect[actor] = incr[actor] * N(cycle) * N(m)
+func testDeltaSumReset[N int64 | float64](t *testing.T) {
+	defer func(f func() time.Time) { now = f }(now)
+	now = staticNowFunc
+
+	f := func(expect metricdata.Sum[N], a Aggregator[N]) func(*testing.T) {
+		return func(t *testing.T) {
+			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+			a.Aggregate(1, alice)
+			expect.DataPoints = []metricdata.DataPoint[N]{{
+				Attributes: alice,
+				StartTime:  now(),
+				Time:       now(),
+				Value:      1,
+			}}
+			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+			// The attr set should be forgotten once Aggregations is called.
+			expect.DataPoints = nil
+			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+			// Aggregating another set should not affect the original (alice).
+			a.Aggregate(1, bob)
+			expect.DataPoints = []metricdata.DataPoint[N]{{
+				Attributes: bob,
+				StartTime:  now(),
+				Time:       now(),
+				Value:      1,
+			}}
+			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 		}
-		return expect
 	}
-}
 
-func testDeltaSumReset[N int64 | float64](a Aggregator[N]) func(*testing.T) {
-	return func(t *testing.T) {
-		expect := make(setMap[N])
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
+	t.Run("NonMonotonic", f(sum, NewNonMonotonicDeltaSum[N]()))
 
-		a.Aggregate(1, alice)
-		expect[alice] = 1
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
-
-		// The attr set should be forgotten once Aggregations is called.
-		delete(expect, alice)
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
-
-		// Aggregating another set should not affect the original (alice).
-		a.Aggregate(1, bob)
-		expect[bob] = 1
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
-	}
+	sum.IsMonotonic = true
+	t.Run("Monotonic", f(sum, NewMonotonicDeltaSum[N]()))
 }
 
 func TestDeltaSumReset(t *testing.T) {
-	t.Run("Int64", testDeltaSumReset(NewDeltaSum[int64]()))
-	t.Run("Float64", testDeltaSumReset(NewDeltaSum[float64]()))
+	t.Run("Monotonic", func(t *testing.T) {
+		t.Run("Int64", testDeltaSumReset[int64])
+		t.Run("Float64", testDeltaSumReset[float64])
+	})
 }
 
+/*
 func BenchmarkSum(b *testing.B) {
 	b.Run("Delta", func(b *testing.B) {
 		b.Run("Int64", benchmarkAggregator(NewDeltaSum[int64]))
@@ -90,3 +172,4 @@ func BenchmarkSum(b *testing.B) {
 		b.Run("Float64", benchmarkAggregator(NewCumulativeSum[float64]))
 	})
 }
+*/

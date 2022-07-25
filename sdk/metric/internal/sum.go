@@ -30,6 +30,10 @@ import (
 
 var errNegVal = errors.New("monotonic increasing sum: negative value")
 
+// now is used to return the current local time while allowing tests to
+// override the the default time.Now function.
+var now = time.Now
+
 // valueMap is the sum aggregator storage.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
@@ -86,14 +90,14 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 		return nil
 	}
 
-	now := time.Now()
+	t := now()
 
 	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		data = append(data, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
-			Time:       now,
+			Time:       t,
 			Value:      value,
 		})
 		// Unused attribute sets do not report.
@@ -101,7 +105,7 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	}
 
 	// The delta collection cycle resets.
-	s.start = now
+	s.start = t
 	return data
 }
 
@@ -121,14 +125,14 @@ func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
 		return nil
 	}
 
-	now := time.Now()
+	t := now()
 
 	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		data = append(data, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
-			Time:       now,
+			Time:       t,
 			Value:      value,
 		})
 		// TODO (#3006): This will use an unbounded amount of memory if there
@@ -146,7 +150,7 @@ func NewNonMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
 		nonMonotonicSum: nonMonotonicSum[N]{v},
 		deltaSum: deltaSum[N]{
 			valueMap: v,
-			start:    time.Now(),
+			start:    now(),
 		},
 	}
 }
@@ -177,7 +181,7 @@ func NewMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
 		monotonicSum: monotonicSum[N]{v},
 		deltaSum: deltaSum[N]{
 			valueMap: v,
-			start:    time.Now(),
+			start:    now(),
 		},
 	}
 }
@@ -201,7 +205,7 @@ func NewNonMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
 		nonMonotonicSum: nonMonotonicSum[N]{v},
 		cumulativeSum: cumulativeSum[N]{
 			valueMap: v,
-			start:    time.Now(),
+			start:    now(),
 		},
 	}
 }
@@ -232,7 +236,7 @@ func NewMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
 		monotonicSum: monotonicSum[N]{v},
 		cumulativeSum: cumulativeSum[N]{
 			valueMap: v,
-			start:    time.Now(),
+			start:    now(),
 		},
 	}
 }

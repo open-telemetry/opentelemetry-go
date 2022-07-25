@@ -48,7 +48,7 @@ func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Cou
 	// and View configuration. Assume here these are determined to be a
 	// cumulative sum.
 
-	aggregator := NewCumulativeSum[int64]()
+	aggregator := NewMonotonicCumulativeSum[int64]()
 	count := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
@@ -116,7 +116,7 @@ func Example() {
 	_, _ = provider.Histogram("histogram example")
 
 	// Output:
-	// using *internal.cumulativeSum[int64] aggregator for counter
+	// using *internal.monotonicCumulativeSum[int64] aggregator for counter
 	// using *internal.lastValue[int64] aggregator for up-down counter
 	// using *internal.deltaHistogram[int64] aggregator for histogram
 }
