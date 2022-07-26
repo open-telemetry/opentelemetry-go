@@ -155,10 +155,8 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 }
 
 func TestDeltaSumReset(t *testing.T) {
-	t.Run("Monotonic", func(t *testing.T) {
-		t.Run("Int64", testDeltaSumReset[int64])
-		t.Run("Float64", testDeltaSumReset[float64])
-	})
+	t.Run("Int64", testDeltaSumReset[int64])
+	t.Run("Float64", testDeltaSumReset[float64])
 }
 
 func BenchmarkSum(b *testing.B) {
