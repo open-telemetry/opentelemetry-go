@@ -41,6 +41,7 @@ type View struct {
 	instrumentName *regexp.Regexp
 	hasWildcard    bool
 	scope          instrumentation.Scope
+	instrumentKind InstrumentKind
 
 	filter      attribute.Filter
 	name        string
@@ -88,14 +89,17 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 	return inst, true
 }
 
-// TransformAttributes filters an attribute set to the keys in the View. If no
-// filter was provided the original set is returned.
-func (v View) TransformAttributes(input attribute.Set) attribute.Set {
+// AttributeFilter returns a function that returns only attributes specified by
+// WithFilterAttributes.
+// If no filter was provided nil is returned.
+func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
-		return input
+		return nil
 	}
-	out, _ := input.Filter(v.filter)
-	return out
+	return func(input attribute.Set) attribute.Set {
+		out, _ := input.Filter(v.filter)
+		return out
+	}
 }
 
 // TODO: Provide Transform* for AggregationKind (#2816)
@@ -115,12 +119,16 @@ func (v View) matchScopeVersion(version string) bool {
 func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
+func (v View) matchInstrumentKind(kind InstrumentKind) bool {
+	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
+}
 
 func (v View) match(i Instrument) bool {
 	return v.matchName(i.Name) &&
 		v.matchScopeName(i.Scope.Name) &&
 		v.matchScopeSchemaURL(i.Scope.SchemaURL) &&
-		v.matchScopeVersion(i.Scope.Version)
+		v.matchScopeVersion(i.Scope.Version) &&
+		v.matchInstrumentKind(i.Kind)
 }
 
 // Option applies a Configuration option value to a View. All options
@@ -152,8 +160,16 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// TODO (#2813): Implement MatchInstrumentKind when InstrumentKind is defined.
 // TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
+
+// MatchInstrumentKind with match an instrument based on the instrument's kind.
+// The default is to match all instrument kinds.
+func MatchInstrumentKind(kind InstrumentKind) Option {
+	return optionFunc(func(v View) View {
+		v.instrumentKind = kind
+		return v
+	})
+}
 
 // MatchInstrumentationScope will do an exact match on any
 // instrumentation.Scope field that is non-empty (""). The default is to match all
