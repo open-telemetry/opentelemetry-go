@@ -20,11 +20,15 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -110,8 +114,8 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
 	for scope, instruments := range p.aggregations {
 		metrics := make([]metricdata.Metrics, 0, len(instruments))
-		for inst, aggregation := range instruments {
-			data := aggregation.Aggregation()
+		for inst, agg := range instruments {
+			data := agg.Aggregation()
 			if data != nil {
 				metrics = append(metrics, metricdata.Metrics{
 					Name:        inst.name,
@@ -133,4 +137,130 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 		Resource:     p.resource,
 		ScopeMetrics: sm,
 	}, nil
+}
+
+// pipelineRegistry manages creating pipelines, and aggregators.  The meters can
+// retrieve new aggregators from a registry.
+type pipelineRegistry struct {
+	views     map[Reader][]view.View
+	pipelines map[Reader]*pipeline
+}
+
+func newPipelineRegistry(views map[Reader][]view.View) *pipelineRegistry {
+	reg := &pipelineRegistry{
+		views:     views,
+		pipelines: map[Reader]*pipeline{},
+	}
+	for rdr := range reg.views {
+		pipe := &pipeline{}
+		rdr.register(pipe)
+		reg.pipelines[rdr] = pipe
+	}
+	return reg
+}
+
+// createInt64Aggregators will create all backing aggregators for an instrument.
+// It will return an error if an instrument is registered more than once.
+// Note: There may be returned aggregators with an error.
+func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[int64], error) {
+	var aggs []internal.Aggregator[int64]
+
+	errs := &multierror{}
+	for rdr, views := range reg.views {
+		pipe := reg.pipelines[rdr]
+		rdrAggs := createAggregators[int64](rdr, views, inst)
+		for inst, agg := range rdrAggs {
+			err := pipe.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+			if err != nil {
+				errs.append(err)
+			}
+			aggs = append(aggs, agg)
+		}
+	}
+	return aggs, errs.errorOrNil()
+}
+
+// createFloat64Aggregators will create all backing aggregators for an instrument.
+// It will return an error if an instrument is registered more than once.
+// Note: There may be returned aggregators with an error.
+func (reg *pipelineRegistry) createFloat64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[float64], error) {
+	var aggs []internal.Aggregator[float64]
+
+	errs := &multierror{}
+	for rdr, views := range reg.views {
+		pipe := reg.pipelines[rdr]
+		rdrAggs := createAggregators[float64](rdr, views, inst)
+		for inst, agg := range rdrAggs {
+			err := pipe.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+			if err != nil {
+				errs.append(err)
+			}
+			aggs = append(aggs, agg)
+		}
+	}
+	return aggs, errs.errorOrNil()
+}
+
+func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
+	for _, pipe := range reg.pipelines {
+		pipe.addCallback(fn)
+	}
+}
+
+type multierror struct {
+	errors []string
+}
+
+func (m *multierror) errorOrNil() error {
+	if len(m.errors) == 0 {
+		return nil
+	}
+	return fmt.Errorf(strings.Join(m.errors, "; "))
+}
+func (m *multierror) append(err error) {
+	m.errors = append(m.errors, err.Error())
+}
+
+func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) map[view.Instrument]internal.Aggregator[N] {
+	aggs := map[view.Instrument]internal.Aggregator[N]{}
+	for _, v := range views {
+		inst, match := v.TransformInstrument(inst)
+		if inst.Aggregation == nil {
+			inst.Aggregation = rdr.aggregation(inst.Kind)
+		}
+		if match {
+			if _, ok := aggs[inst]; ok {
+				continue
+			}
+			agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind))
+			if agg != nil {
+				// TODO (#3011): If filtering is done at the instrument level add here.
+				// This is where the aggregator and the view are both in scope.
+				aggs[inst] = agg
+			}
+		}
+	}
+	return aggs
+}
+
+// createAggregator takes the config (Aggregation and Temporality) and produces a memory backed Aggregator.
+// TODO (#3011): If filterting is done by the Aggregator it should be passed here.
+func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporality metricdata.Temporality) internal.Aggregator[N] {
+	switch agg := agg.(type) {
+	case aggregation.Drop:
+		return nil
+	case aggregation.LastValue:
+		return internal.NewLastValue[N]()
+	case aggregation.Sum:
+		if temporality == metricdata.CumulativeTemporality {
+			return internal.NewCumulativeSum[N]()
+		}
+		return internal.NewDeltaSum[N]()
+	case aggregation.ExplicitBucketHistogram:
+		if temporality == metricdata.CumulativeTemporality {
+			return internal.NewCumulativeHistogram[N](agg)
+		}
+		return internal.NewDeltaHistogram[N](agg)
+	}
+	return nil
 }
