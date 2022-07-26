@@ -39,14 +39,13 @@ var (
 	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 
-	monoIncr    = setMap{alice: 1, bob: 10, carol: 2}
-	nonMonoIncr = setMap{alice: 1, bob: -1, carol: 2}
+	monoIncr = setMap{alice: 1, bob: 10, carol: 2}
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)
 	staticNowFunc = func() time.Time { return staticTime }
 	// Pass to t.Cleanup to override the now function with staticNowFunc and
-	// revert once the test completes. E.g. t.Cleanup(mockTime(now))
+	// revert once the test completes. E.g. t.Cleanup(mockTime(now)).
 	mockTime = func(orig func() time.Time) (cleanup func()) {
 		now = staticNowFunc
 		return func() { now = orig }
