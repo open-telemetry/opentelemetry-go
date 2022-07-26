@@ -42,8 +42,8 @@ type valueMap[N int64 | float64] struct {
 }
 
 // newValueMap returns an instantiated valueMap.
-func newValueMap[N int64 | float64]() valueMap[N] {
-	return valueMap[N]{values: make(map[attribute.Set]N)}
+func newValueMap[N int64 | float64]() *valueMap[N] {
+	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
 func (v *valueMap[N]) add(value N, attr attribute.Set) {
@@ -54,7 +54,7 @@ func (v *valueMap[N]) add(value N, attr attribute.Set) {
 
 // nonMonotonicSum summarizes a set of measurements as their arithmetic sum.
 type nonMonotonicSum[N int64 | float64] struct {
-	valueMap[N]
+	*valueMap[N]
 }
 
 func (s *nonMonotonicSum[N]) Aggregate(value N, attr attribute.Set) {
@@ -64,7 +64,7 @@ func (s *nonMonotonicSum[N]) Aggregate(value N, attr attribute.Set) {
 // monotonicSum summarizes a set of monotonically increasing measurements as
 // their arithmetic sum.
 type monotonicSum[N int64 | float64] struct {
-	valueMap[N]
+	*valueMap[N]
 }
 
 func (s *monotonicSum[N]) Aggregate(value N, attr attribute.Set) {
@@ -77,7 +77,7 @@ func (s *monotonicSum[N]) Aggregate(value N, attr attribute.Set) {
 // deltaSum summarizes a set of measurements made in a single aggregation
 // cycle as their arithmetic sum.
 type deltaSum[N int64 | float64] struct {
-	valueMap[N]
+	*valueMap[N]
 
 	start time.Time
 }
@@ -112,7 +112,7 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 // cumulativeSum summarizes a set of measurements made over all aggregation
 // cycles as their arithmetic sum.
 type cumulativeSum[N int64 | float64] struct {
-	valueMap[N]
+	*valueMap[N]
 
 	start time.Time
 }

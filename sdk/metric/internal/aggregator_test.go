@@ -42,7 +42,7 @@ var (
 	monoIncr    = setMap{alice: 1, bob: 10, carol: 2}
 	nonMonoIncr = setMap{alice: 1, bob: -1, carol: 2}
 
-	// Sat Jan 01 2000 00:00:00 GMT+0000
+	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)
 	staticNowFunc = func() time.Time { return staticTime }
 )
