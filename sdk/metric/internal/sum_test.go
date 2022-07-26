@@ -20,28 +20,24 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestSum(t *testing.T) {
+	t.Cleanup(mockTime(now))
 	t.Run("Int64", testSum[int64])
 	t.Run("Float64", testSum[float64])
 }
 
 func testSum[N int64 | float64](t *testing.T) {
-	defer func(f func() time.Time) { now = f }(now)
-	now = staticNowFunc
-
-	expecter := sumExpecterFactory[N]{}
-
 	tester := &aggregatorTester[N]{
 		GoroutineN:   defaultGoroutines,
 		MeasurementN: defaultMeasurements,
 		CycleN:       defaultCycles,
 	}
+	expecter := sumExpecterFactory[N]{}
 
 	t.Run("Delta", func(t *testing.T) {
 		temp := metricdata.DeltaTemporality
@@ -115,8 +111,7 @@ func (s *sumExpecterFactory[N]) ExpecterFunc(increments setMap, t metricdata.Tem
 }
 
 func testDeltaSumReset[N int64 | float64](t *testing.T) {
-	defer func(f func() time.Time) { now = f }(now)
-	now = staticNowFunc
+	t.Cleanup(mockTime(now))
 
 	f := func(expect metricdata.Sum[N], a Aggregator[N]) func(*testing.T) {
 		return func(t *testing.T) {
