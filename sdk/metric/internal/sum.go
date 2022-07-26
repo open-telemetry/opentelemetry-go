@@ -34,7 +34,7 @@ var errNegVal = errors.New("monotonic increasing sum: negative value")
 // override the the default time.Now function.
 var now = time.Now
 
-// valueMap is the sum aggregator storage.
+// valueMap is the aggregator storage for all sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
 
@@ -144,6 +144,12 @@ func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	return data
 }
 
+// NewNonMonotonicDeltaSum returns an Aggregator that summarizes a set of
+// measurements as their arithmetic sum. Each sum is scoped by attributes and
+// the aggregation cycle the measurements were made in.
+//
+// Each aggregation cycle is treated independently. When the returned
+// Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewNonMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
 	v := newValueMap[N]()
 	return &nonMonotonicDeltaSum[N]{
@@ -199,6 +205,12 @@ func (s *monotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
 	}
 }
 
+// NewNonMonotonicCumulativeSum returns an Aggregator that summarizes a set of
+// measurements as their arithmetic sum. Each sum is scoped by attributes and
+// the aggregation cycle the measurements were made in.
+//
+// Each aggregation cycle is treated independently. When the returned
+// Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewNonMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
 	v := newValueMap[N]()
 	return &nonMonotonicCumulativeSum[N]{
