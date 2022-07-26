@@ -309,7 +309,32 @@ func TestViewMatchName(t *testing.T) {
 	}
 }
 
-func TestViewTransformAttributes(t *testing.T) {
+func TestViewAttributeFilterNoFilter(t *testing.T) {
+	v, err := New(
+		MatchInstrumentName("*"),
+	)
+	require.NoError(t, err)
+	filter := v.AttributeFilter()
+	assert.Nil(t, filter)
+
+	v, err = New(
+		MatchInstrumentName("*"),
+		WithFilterAttributes(),
+	)
+	require.NoError(t, err)
+	filter = v.AttributeFilter()
+	assert.Nil(t, filter)
+
+	v, err = New(
+		MatchInstrumentName("*"),
+		WithFilterAttributes([]attribute.Key{}...),
+	)
+	require.NoError(t, err)
+	filter = v.AttributeFilter()
+	assert.Nil(t, filter)
+}
+
+func TestViewAttributeFilter(t *testing.T) {
 	inputSet := attribute.NewSet(
 		attribute.String("foo", "bar"),
 		attribute.Int("power-level", 9001),
@@ -321,11 +346,6 @@ func TestViewTransformAttributes(t *testing.T) {
 		filter []attribute.Key
 		want   attribute.Set
 	}{
-		{
-			name:   "empty should match all",
-			filter: []attribute.Key{},
-			want:   inputSet,
-		},
 		{
 			name: "Match 1",
 			filter: []attribute.Key{
@@ -371,8 +391,10 @@ func TestViewTransformAttributes(t *testing.T) {
 				WithFilterAttributes(tt.filter...),
 			)
 			require.NoError(t, err)
+			filter := v.AttributeFilter()
+			require.NotNil(t, filter)
 
-			got := v.TransformAttributes(inputSet)
+			got := filter(inputSet)
 			assert.Equal(t, got.Equivalent(), tt.want.Equivalent())
 		})
 	}
