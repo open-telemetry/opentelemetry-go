@@ -25,6 +25,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// now is used to return the current local time while allowing tests to
+// override the the default time.Now function.
+var now = time.Now
+
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
 	timestamp time.Time
@@ -45,7 +49,7 @@ func NewLastValue[N int64 | float64]() Aggregator[N] {
 }
 
 func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
-	d := datapoint[N]{timestamp: time.Now(), value: value}
+	d := datapoint[N]{timestamp: now(), value: value}
 	s.Lock()
 	s.values[attr] = d
 	s.Unlock()

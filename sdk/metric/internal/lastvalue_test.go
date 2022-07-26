@@ -17,46 +17,72 @@
 
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
-import "testing"
+import (
+	"testing"
+
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+)
 
 func TestLastValue(t *testing.T) {
-	t.Run("Int64", testAggregator(NewLastValue[int64](), lastValueExpecter[int64]))
-	t.Run("Float64", testAggregator(NewLastValue[float64](), lastValueExpecter[float64]))
+	t.Cleanup(mockTime(now))
+
+	t.Run("Int64", testLastValue[int64]())
+	t.Run("Float64", testLastValue[float64]())
 }
 
-func lastValueExpecter[N int64 | float64](incr setMap[N]) func(int) setMap[N] {
-	expect := make(setMap[N], len(incr))
-	for actor, incr := range incr {
-		expect[actor] = incr
+func testLastValue[N int64 | float64]() func(*testing.T) {
+	tester := &aggregatorTester[N]{
+		GoroutineN:   defaultGoroutines,
+		MeasurementN: defaultMeasurements,
+		CycleN:       defaultCycles,
 	}
-	return func(int) setMap[N] {
-		return expect
+
+	eFunc := func(increments setMap) expectFunc {
+		data := make([]metricdata.DataPoint[N], 0, len(increments))
+		for a, v := range increments {
+			point := metricdata.DataPoint[N]{Attributes: a, Time: now(), Value: N(v)}
+			data = append(data, point)
+		}
+		gauge := metricdata.Gauge[N]{DataPoints: data}
+		return func(int) metricdata.Aggregation { return gauge }
 	}
+	incr := monoIncr
+	return tester.Run(NewLastValue[N](), incr, eFunc(incr))
 }
 
-func testLastValueReset[N int64 | float64](a Aggregator[N]) func(*testing.T) {
-	return func(t *testing.T) {
-		expect := make(setMap[N])
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+func testLastValueReset[N int64 | float64](t *testing.T) {
+	t.Cleanup(mockTime(now))
 
-		a.Aggregate(1, alice)
-		expect[alice] = 1
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+	a := NewLastValue[N]()
+	expect := metricdata.Gauge[N]{}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
-		// The attr set should be forgotten once Aggregations is called.
-		delete(expect, alice)
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
+	a.Aggregate(1, alice)
+	expect.DataPoints = []metricdata.DataPoint[N]{{
+		Attributes: alice,
+		Time:       now(),
+		Value:      1,
+	}}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
-		// Aggregating another set should not affect the original (alice).
-		a.Aggregate(1, bob)
-		expect[bob] = 1
-		assertSetMap(t, expect, aggregationsToMap[N](a.Aggregations()))
-	}
+	// The attr set should be forgotten once Aggregations is called.
+	expect.DataPoints = nil
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+	// Aggregating another set should not affect the original (alice).
+	a.Aggregate(1, bob)
+	expect.DataPoints = []metricdata.DataPoint[N]{{
+		Attributes: bob,
+		Time:       now(),
+		Value:      1,
+	}}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 }
 
 func TestLastValueReset(t *testing.T) {
-	t.Run("Int64", testLastValueReset(NewLastValue[int64]()))
-	t.Run("Float64", testLastValueReset(NewLastValue[float64]()))
+	t.Run("Int64", testLastValueReset[int64])
+	t.Run("Float64", testLastValueReset[float64])
 }
 
 func BenchmarkLastValue(b *testing.B) {

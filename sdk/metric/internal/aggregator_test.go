@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 const (
@@ -38,25 +38,28 @@ var (
 	alice = attribute.NewSet(attribute.String("user", "alice"), attribute.Bool("admin", true))
 	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
+
+	monoIncr    = setMap{alice: 1, bob: 10, carol: 2}
+	nonMonoIncr = setMap{alice: 1, bob: -1, carol: 2}
+
+	// Sat Jan 01 2000 00:00:00 GMT+0000.
+	staticTime    = time.Unix(946684800, 0)
+	staticNowFunc = func() time.Time { return staticTime }
+	// Pass to t.Cleanup to override the now function with staticNowFunc and
+	// revert once the test completes. E.g. t.Cleanup(mockTime(now))
+	mockTime = func(orig func() time.Time) (cleanup func()) {
+		now = staticNowFunc
+		return func() { now = orig }
+	}
 )
 
 // setMap maps attribute sets to a number.
-type setMap[N int64 | float64] map[attribute.Set]N
+type setMap map[attribute.Set]int
 
-// expectFunc returns a function that will return an setMap of expected
-// values of a cycle that contains m measurements (total across all
-// goroutines). Each call advances the cycle.
-type expectFunc[N int64 | float64] func(increments setMap[N]) func(m int) setMap[N]
-
-// testAggregator tests aggregator a produces the expecter defined values
-// using an aggregatorTester.
-func testAggregator[N int64 | float64](a Aggregator[N], expecter expectFunc[N]) func(*testing.T) {
-	return (&aggregatorTester[N]{
-		GoroutineN:   defaultGoroutines,
-		MeasurementN: defaultMeasurements,
-		CycleN:       defaultCycles,
-	}).Run(a, expecter)
-}
+// expectFunc is a function that returns an Aggregation of expected values for
+// a cycle that contains m measurements (total across all goroutines). Each
+// call advances the cycle.
+type expectFunc func(m int) metricdata.Aggregation
 
 // aggregatorTester runs an acceptance test on an Aggregator. It will ask an
 // Aggregator to aggregate a set of values as if they were real measurements
@@ -77,9 +80,7 @@ type aggregatorTester[N int64 | float64] struct {
 	CycleN int
 }
 
-func (at *aggregatorTester[N]) Run(a Aggregator[N], expecter expectFunc[N]) func(*testing.T) {
-	increments := map[attribute.Set]N{alice: 1, bob: -1, carol: 2}
-	f := expecter(increments)
+func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap, eFunc expectFunc) func(*testing.T) {
 	m := at.MeasurementN * at.GoroutineN
 	return func(t *testing.T) {
 		for i := 0; i < at.CycleN; i++ {
@@ -89,49 +90,20 @@ func (at *aggregatorTester[N]) Run(a Aggregator[N], expecter expectFunc[N]) func
 				go func() {
 					defer wg.Done()
 					for j := 0; j < at.MeasurementN; j++ {
-						for attrs, n := range increments {
-							a.Aggregate(n, attrs)
+						for attrs, n := range incr {
+							a.Aggregate(N(n), attrs)
 						}
 					}
 				}()
 			}
 			wg.Wait()
 
-			assertSetMap(t, f(m), aggregationsToMap[N](a.Aggregations()))
+			metricdatatest.AssertAggregationsEqual(t, eFunc(m), a.Aggregation())
 		}
 	}
 }
 
-func aggregationsToMap[N int64 | float64](a []Aggregation) setMap[N] {
-	m := make(setMap[N])
-	for _, a := range a {
-		m[a.Attributes] = a.Value.(SingleValue[N]).Value
-	}
-	return m
-}
-
-// assertSetMap asserts expected equals actual. The testify assert.Equal
-// function does not give clear error messages for maps, this attempts to do
-// so.
-func assertSetMap[N int64 | float64](t *testing.T, expected, actual setMap[N]) {
-	extra := make(map[attribute.Set]struct{})
-	for attr := range actual {
-		extra[attr] = struct{}{}
-	}
-
-	for attr, v := range expected {
-		name := attr.Encoded(attribute.DefaultEncoder())
-		t.Run(name, func(t *testing.T) {
-			require.Contains(t, actual, attr)
-			delete(extra, attr)
-			assert.Equal(t, v, actual[attr])
-		})
-	}
-
-	assert.Lenf(t, extra, 0, "unknown values added: %v", extra)
-}
-
-var bmarkResults []Aggregation
+var bmarkResults metricdata.Aggregation
 
 func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggregator[N], count int) {
 	attrs := make([]attribute.Set, count)
@@ -149,7 +121,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 				agg.Aggregate(1, attr)
 			}
 		}
-		assert.Len(b, agg.Aggregations(), count)
+		bmarkResults = agg.Aggregation()
 	})
 
 	b.Run("Aggregations", func(b *testing.B) {
@@ -166,7 +138,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			bmarkResults = aggs[n].Aggregations()
+			bmarkResults = aggs[n].Aggregation()
 		}
 	})
 }
