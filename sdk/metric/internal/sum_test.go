@@ -20,6 +20,8 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -125,6 +127,22 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 func TestDeltaSumReset(t *testing.T) {
 	t.Run("Int64", testDeltaSumReset[int64])
 	t.Run("Float64", testDeltaSumReset[float64])
+}
+
+func testMonotonicError[N int64 | float64](t *testing.T) {
+	f := func(a Aggregator[N]) func(t *testing.T) {
+		var err error
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) { err = e }))
+		a.Aggregate(-1, alice) // Should error.
+		return func(t *testing.T) { assert.ErrorIs(t, err, errNegVal) }
+	}
+	t.Run("Delta", f(NewMonotonicDeltaSum[N]()))
+	t.Run("Cumulative", f(NewMonotonicCumulativeSum[N]()))
+}
+
+func TestMonotonicError(t *testing.T) {
+	t.Run("Int64", testMonotonicError[int64])
+	t.Run("Float64", testMonotonicError[float64])
 }
 
 func BenchmarkSum(b *testing.B) {
