@@ -18,9 +18,15 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// now is used to return the current local time while allowing tests to
+// override the the default time.Now function.
+var now = time.Now
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
 type Aggregator[N int64 | float64] interface {

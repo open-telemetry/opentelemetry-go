@@ -46,7 +46,7 @@ var (
 	staticTime    = time.Unix(946684800, 0)
 	staticNowFunc = func() time.Time { return staticTime }
 	// Pass to t.Cleanup to override the now function with staticNowFunc and
-	// revert once the test completes. E.g. t.Cleanup(mockTime(now))
+	// revert once the test completes. E.g. t.Cleanup(mockTime(now)).
 	mockTime = func(orig func() time.Time) (cleanup func()) {
 		now = staticNowFunc
 		return func() { now = orig }

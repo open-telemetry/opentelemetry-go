@@ -30,10 +30,6 @@ import (
 
 var errNegVal = errors.New("monotonic increasing sum: negative value")
 
-// now is used to return the current local time while allowing tests to
-// override the the default time.Now function.
-var now = time.Now
-
 // valueMap is the aggregator storage for all sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
