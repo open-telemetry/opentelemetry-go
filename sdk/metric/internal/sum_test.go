@@ -18,9 +18,9 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
-	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -37,76 +37,65 @@ func testSum[N int64 | float64](t *testing.T) {
 		MeasurementN: defaultMeasurements,
 		CycleN:       defaultCycles,
 	}
-	expecter := sumExpecterFactory[N]{}
 
 	t.Run("Delta", func(t *testing.T) {
-		temp := metricdata.DeltaTemporality
 		t.Run("Monotonic", func(t *testing.T) {
 			incr := monoIncr
-			eFunc := expecter.ExpecterFunc(incr, temp, true)
+			eFunc := deltaExpecter[N](incr, true)
 			tester.Run(NewMonotonicDeltaSum[N](), incr, eFunc)
 		})
 		t.Run("NonMonotonic", func(t *testing.T) {
 			incr := nonMonoIncr
-			eFunc := expecter.ExpecterFunc(incr, temp, false)
+			eFunc := deltaExpecter[N](incr, false)
 			tester.Run(NewNonMonotonicDeltaSum[N](), incr, eFunc)
 		})
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
-		temp := metricdata.CumulativeTemporality
 		t.Run("Monotonic", func(t *testing.T) {
 			incr := monoIncr
-			eFunc := expecter.ExpecterFunc(incr, temp, true)
+			eFunc := cumuExpecter[N](incr, true)
 			tester.Run(NewMonotonicCumulativeSum[N](), incr, eFunc)
 		})
 		t.Run("NonMonotonic", func(t *testing.T) {
 			incr := nonMonoIncr
-			eFunc := expecter.ExpecterFunc(incr, temp, false)
+			eFunc := cumuExpecter[N](incr, false)
 			tester.Run(NewNonMonotonicCumulativeSum[N](), incr, eFunc)
 		})
 	})
 }
 
-type sumExpecterFactory[N int64 | float64] struct{}
-
-func (s *sumExpecterFactory[N]) ExpecterFunc(increments setMap, t metricdata.Temporality, monotonic bool) expectFunc {
-	sum := metricdata.Sum[N]{
-		Temporality: t,
-		IsMonotonic: monotonic,
+func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality, IsMonotonic: mono}
+	return func(m int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*m)))
+		}
+		return sum
 	}
+}
 
-	switch t {
-	case metricdata.DeltaTemporality:
-		return func(m int) metricdata.Aggregation {
-			sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(increments))
-			for actor, incr := range increments {
-				sum.DataPoints = append(sum.DataPoints, metricdata.DataPoint[N]{
-					Attributes: actor,
-					StartTime:  now(),
-					Time:       now(),
-					Value:      N(incr * m),
-				})
-			}
-			return sum
+func cumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	var cycle int
+	sum := metricdata.Sum[N]{Temporality: metricdata.CumulativeTemporality, IsMonotonic: mono}
+	return func(m int) metricdata.Aggregation {
+		cycle++
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*cycle*m)))
 		}
-	case metricdata.CumulativeTemporality:
-		var cycle int
-		return func(m int) metricdata.Aggregation {
-			cycle++
-			sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(increments))
-			for actor, incr := range increments {
-				sum.DataPoints = append(sum.DataPoints, metricdata.DataPoint[N]{
-					Attributes: actor,
-					StartTime:  now(),
-					Time:       now(),
-					Value:      N(incr * cycle * m),
-				})
-			}
-			return sum
-		}
-	default:
-		panic(fmt.Sprintf("unsupported temporality: %v", t))
+		return sum
+	}
+}
+
+// point returns a DataPoint that started and ended now.
+func point[N int64 | float64](a attribute.Set, v N) metricdata.DataPoint[N] {
+	return metricdata.DataPoint[N]{
+		Attributes: a,
+		StartTime:  now(),
+		Time:       now(),
+		Value:      N(v),
 	}
 }
 
@@ -118,12 +107,7 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 			a.Aggregate(1, alice)
-			expect.DataPoints = []metricdata.DataPoint[N]{{
-				Attributes: alice,
-				StartTime:  now(),
-				Time:       now(),
-				Value:      1,
-			}}
+			expect.DataPoints = []metricdata.DataPoint[N]{point[N](alice, 1)}
 			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 			// The attr set should be forgotten once Aggregations is called.
@@ -132,12 +116,7 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 
 			// Aggregating another set should not affect the original (alice).
 			a.Aggregate(1, bob)
-			expect.DataPoints = []metricdata.DataPoint[N]{{
-				Attributes: bob,
-				StartTime:  now(),
-				Time:       now(),
-				Value:      1,
-			}}
+			expect.DataPoints = []metricdata.DataPoint[N]{point[N](bob, 1)}
 			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 		}
 	}
