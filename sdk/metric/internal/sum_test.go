@@ -20,9 +20,6 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -99,51 +96,27 @@ func point[N int64 | float64](a attribute.Set, v N) metricdata.DataPoint[N] {
 func testDeltaSumReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	f := func(expect metricdata.Sum[N], a Aggregator[N]) func(*testing.T) {
-		return func(t *testing.T) {
-			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	expect := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
+	a := NewDeltaSum[N](false)
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
-			a.Aggregate(1, alice)
-			expect.DataPoints = []metricdata.DataPoint[N]{point[N](alice, 1)}
-			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	a.Aggregate(1, alice)
+	expect.DataPoints = []metricdata.DataPoint[N]{point[N](alice, 1)}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
-			// The attr set should be forgotten once Aggregations is called.
-			expect.DataPoints = nil
-			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	// The attr set should be forgotten once Aggregations is called.
+	expect.DataPoints = nil
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
-			// Aggregating another set should not affect the original (alice).
-			a.Aggregate(1, bob)
-			expect.DataPoints = []metricdata.DataPoint[N]{point[N](bob, 1)}
-			metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
-		}
-	}
-
-	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
-	t.Run("NonMonotonic", f(sum, NewDeltaSum[N](false)))
-
-	sum.IsMonotonic = true
-	t.Run("Monotonic", f(sum, NewDeltaSum[N](true)))
+	// Aggregating another set should not affect the original (alice).
+	a.Aggregate(1, bob)
+	expect.DataPoints = []metricdata.DataPoint[N]{point[N](bob, 1)}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 }
 
 func TestDeltaSumReset(t *testing.T) {
 	t.Run("Int64", testDeltaSumReset[int64])
 	t.Run("Float64", testDeltaSumReset[float64])
-}
-
-func testMonotonicError[N int64 | float64](t *testing.T) {
-	f := func(a Aggregator[N]) func(t *testing.T) {
-		var err error
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) { err = e }))
-		a.Aggregate(-1, alice) // Should error.
-		return func(t *testing.T) { assert.ErrorIs(t, err, errNegVal) }
-	}
-	t.Run("Delta", f(NewDeltaSum[N](true)))
-	t.Run("Cumulative", f(NewCumulativeSum[N](true)))
-}
-
-func TestMonotonicError(t *testing.T) {
-	t.Run("Int64", testMonotonicError[int64])
-	t.Run("Float64", testMonotonicError[float64])
 }
 
 func BenchmarkSum(b *testing.B) {
@@ -152,16 +125,11 @@ func BenchmarkSum(b *testing.B) {
 }
 
 func benchmarkSum[N int64 | float64](b *testing.B) {
-	b.Run("Delta", func(b *testing.B) {
-		factory := func() Aggregator[N] { return NewDeltaSum[N](true) }
-		b.Run("Monotonic", benchmarkAggregator(factory))
-		factory = func() Aggregator[N] { return NewDeltaSum[N](false) }
-		b.Run("NonMonotonic", benchmarkAggregator(factory))
-	})
-	b.Run("Cumulative", func(b *testing.B) {
-		factory := func() Aggregator[N] { return NewCumulativeSum[N](true) }
-		b.Run("Monotonic", benchmarkAggregator(factory))
-		factory = func() Aggregator[N] { return NewCumulativeSum[N](false) }
-		b.Run("NonMonotonic", benchmarkAggregator(factory))
-	})
+	// The monotonic argument is only used to annotate the Sum returned from
+	// the Aggregation method. It should not have an effect on operational
+	// performance, therefore, only monotonic=false is benchmarked here.
+	factory := func() Aggregator[N] { return NewDeltaSum[N](false) }
+	b.Run("Delta", benchmarkAggregator(factory))
+	factory = func() Aggregator[N] { return NewCumulativeSum[N](false) }
+	b.Run("Cumulative", benchmarkAggregator(factory))
 }

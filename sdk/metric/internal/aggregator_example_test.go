@@ -116,7 +116,7 @@ func Example() {
 	_, _ = provider.Histogram("histogram example")
 
 	// Output:
-	// using *internal.monotonicCumulativeSum[int64] aggregator for counter
+	// using *internal.cumulativeSum[int64] aggregator for counter
 	// using *internal.lastValue[int64] aggregator for up-down counter
 	// using *internal.deltaHistogram[int64] aggregator for histogram
 }
