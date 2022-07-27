@@ -39,29 +39,23 @@ func testSum[N int64 | float64](t *testing.T) {
 	}
 
 	t.Run("Delta", func(t *testing.T) {
-		t.Run("Monotonic", func(t *testing.T) {
-			incr := monoIncr
-			eFunc := deltaExpecter[N](incr, true)
-			tester.Run(NewMonotonicDeltaSum[N](), incr, eFunc)
-		})
-		t.Run("NonMonotonic", func(t *testing.T) {
-			incr := nonMonoIncr
-			eFunc := deltaExpecter[N](incr, false)
-			tester.Run(NewNonMonotonicDeltaSum[N](), incr, eFunc)
-		})
+		incr := monoIncr
+		eFunc := deltaExpecter[N](incr, true)
+		t.Run("Monotonic", tester.Run(NewMonotonicDeltaSum[N](), incr, eFunc))
+
+		incr = nonMonoIncr
+		eFunc = deltaExpecter[N](incr, false)
+		t.Run("NonMonotonic", tester.Run(NewNonMonotonicDeltaSum[N](), incr, eFunc))
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
-		t.Run("Monotonic", func(t *testing.T) {
-			incr := monoIncr
-			eFunc := cumuExpecter[N](incr, true)
-			tester.Run(NewMonotonicCumulativeSum[N](), incr, eFunc)
-		})
-		t.Run("NonMonotonic", func(t *testing.T) {
-			incr := nonMonoIncr
-			eFunc := cumuExpecter[N](incr, false)
-			tester.Run(NewNonMonotonicCumulativeSum[N](), incr, eFunc)
-		})
+		incr := monoIncr
+		eFunc := cumuExpecter[N](incr, true)
+		t.Run("Monotonic", tester.Run(NewMonotonicCumulativeSum[N](), incr, eFunc))
+
+		incr = nonMonoIncr
+		eFunc = cumuExpecter[N](incr, false)
+		t.Run("NonMonotonic", tester.Run(NewNonMonotonicCumulativeSum[N](), incr, eFunc))
 	})
 }
 
