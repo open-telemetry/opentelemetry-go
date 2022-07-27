@@ -126,11 +126,10 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		view.WithRename("bar"),
 	)
 	testCases := []struct {
-		name           string
-		views          map[Reader][]view.View
-		inst           view.Instrument
-		wantInt64Agg   []internal.Aggregator[int64]   // Should match len and type
-		wantFloat64Agg []internal.Aggregator[float64] // Should match len and type
+		name      string
+		views     map[Reader][]view.View
+		inst      view.Instrument
+		wantCount int
 	}{
 		{
 			name: "No views have no aggregators",
@@ -144,12 +143,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 					{},
 				},
 			},
-			wantInt64Agg: []internal.Aggregator[int64]{
-				internal.NewLastValue[int64](),
-			},
-			wantFloat64Agg: []internal.Aggregator[float64]{
-				internal.NewLastValue[float64](),
-			},
+			wantCount: 1,
 		},
 		{
 			name: "1 reader 2 views gets 2 aggregator",
@@ -160,14 +154,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 					renameView,
 				},
 			},
-			wantInt64Agg: []internal.Aggregator[int64]{
-				internal.NewLastValue[int64](),
-				internal.NewLastValue[int64](),
-			},
-			wantFloat64Agg: []internal.Aggregator[float64]{
-				internal.NewLastValue[float64](),
-				internal.NewLastValue[float64](),
-			},
+			wantCount: 2,
 		},
 		{
 			name: "2 readers 1 view each gets 2 aggregators",
@@ -180,14 +167,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 					{},
 				},
 			},
-			wantInt64Agg: []internal.Aggregator[int64]{
-				internal.NewLastValue[int64](),
-				internal.NewLastValue[int64](),
-			},
-			wantFloat64Agg: []internal.Aggregator[float64]{
-				internal.NewLastValue[float64](),
-				internal.NewLastValue[float64](),
-			},
+			wantCount: 2,
 		},
 		{
 			name: "2 reader 2 views each gets 4 aggregators",
@@ -202,18 +182,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 					renameView,
 				},
 			},
-			wantInt64Agg: []internal.Aggregator[int64]{
-				internal.NewLastValue[int64](),
-				internal.NewLastValue[int64](),
-				internal.NewLastValue[int64](),
-				internal.NewLastValue[int64](),
-			},
-			wantFloat64Agg: []internal.Aggregator[float64]{
-				internal.NewLastValue[float64](),
-				internal.NewLastValue[float64](),
-				internal.NewLastValue[float64](),
-				internal.NewLastValue[float64](),
-			},
+			wantCount: 4,
 		},
 		{
 			name: "An instrument is duplicated in two views share the same aggregator",
@@ -224,37 +193,33 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 					{},
 				},
 			},
-			wantInt64Agg: []internal.Aggregator[int64]{
-				internal.NewLastValue[int64](),
-			},
-			wantFloat64Agg: []internal.Aggregator[float64]{
-				internal.NewLastValue[float64](),
-			},
+			wantCount: 1,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newPipelineRegistry(tt.views)
-
-			intAggs, err := reg.createInt64Aggregators(tt.inst, unit.Dimensionless)
-			assert.NoError(t, err)
-
-			require.Len(t, intAggs, len(tt.wantInt64Agg))
-			for i, agg := range intAggs {
-				assert.IsType(t, tt.wantInt64Agg[i], agg)
-			}
-
-			reg = newPipelineRegistry(tt.views)
-
-			floatAggs, err := reg.createFloat64Aggregators(tt.inst, unit.Dimensionless)
-			assert.NoError(t, err)
-
-			require.Len(t, floatAggs, len(tt.wantFloat64Agg))
-			for i, agg := range floatAggs {
-				assert.IsType(t, tt.wantFloat64Agg[i], agg)
-			}
+			intReg, _ := newPipelineRegistries(tt.views)
+			testPipelineRegistryCreateAggregators(t, intReg, tt.wantCount)
+			_, floatReg := newPipelineRegistries(tt.views)
+			testPipelineRegistryCreateAggregators(t, floatReg, tt.wantCount)
 		})
+	}
+}
+
+func testPipelineRegistryCreateAggregators[N int64 | float64](t *testing.T, reg *pipelineRegistry[N], wantCount int) {
+	inst := view.Instrument{Name: "foo"}
+	want := make([]internal.Aggregator[N], wantCount)
+	for i := range want {
+		want[i] = internal.NewLastValue[N]()
+	}
+
+	aggs, err := reg.createAggregators(inst, unit.Dimensionless)
+	assert.NoError(t, err)
+
+	require.Len(t, aggs, wantCount)
+	for i, agg := range aggs {
+		assert.IsType(t, want[i], agg)
 	}
 }
 
@@ -273,20 +238,27 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := view.Instrument{Name: "foo"}
 	barInst := view.Instrument{Name: "bar"}
 
-	reg := newPipelineRegistry(views)
+	intReg, floatReg := newPipelineRegistries(views)
 
-	_, err := reg.createInt64Aggregators(fooInst, unit.Dimensionless)
+	_, err := intReg.createAggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 
-	intAggs, err := reg.createInt64Aggregators(barInst, unit.Dimensionless)
+	// The Rename view should error, because it creates a foo instrument.
+	intAggs, err := intReg.createAggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 2)
 
-	reg = newPipelineRegistry(views)
-	_, err = reg.createFloat64Aggregators(fooInst, unit.Dimensionless)
+	// Creating a float foo instrument should error because there is an int foo instrument.
+	floatAggs, err := floatReg.createAggregators(fooInst, unit.Dimensionless)
+	assert.Error(t, err)
+	assert.Len(t, floatAggs, 1)
+
+	fooInst = view.Instrument{Name: "foo-float"}
+
+	_, err = floatReg.createAggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 
-	floatAggs, err := reg.createFloat64Aggregators(barInst, unit.Dimensionless)
+	floatAggs, err = floatReg.createAggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 2)
 }

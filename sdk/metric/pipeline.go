@@ -141,34 +141,37 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 // pipelineRegistry manages creating pipelines, and aggregators.  The meters can
 // retrieve new aggregators from a registry.
-type pipelineRegistry struct {
+type pipelineRegistry[N int64 | float64] struct {
 	views     map[Reader][]view.View
 	pipelines map[Reader]*pipeline
 }
 
-func newPipelineRegistry(views map[Reader][]view.View) *pipelineRegistry {
-	reg := &pipelineRegistry{
-		views:     views,
-		pipelines: map[Reader]*pipeline{},
-	}
-	for rdr := range reg.views {
+func newPipelineRegistries(views map[Reader][]view.View) (*pipelineRegistry[int64], *pipelineRegistry[float64]) {
+	pipelines := map[Reader]*pipeline{}
+	for rdr := range views {
 		pipe := &pipeline{}
 		rdr.register(pipe)
-		reg.pipelines[rdr] = pipe
+		pipelines[rdr] = pipe
 	}
-	return reg
+	return &pipelineRegistry[int64]{
+			views:     views,
+			pipelines: pipelines,
+		}, &pipelineRegistry[float64]{
+			views:     views,
+			pipelines: pipelines,
+		}
 }
 
-// createInt64Aggregators will create all backing aggregators for an instrument.
+// createAggregators will create all backing aggregators for an instrument.
 // It will return an error if an instrument is registered more than once.
 // Note: There may be returned aggregators with an error.
-func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[int64], error) {
-	var aggs []internal.Aggregator[int64]
+func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
 	for rdr, views := range reg.views {
 		pipe := reg.pipelines[rdr]
-		rdrAggs := createAggregators[int64](rdr, views, inst)
+		rdrAggs := createAggregators[N](rdr, views, inst)
 		for inst, agg := range rdrAggs {
 			err := pipe.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
 			if err != nil {
@@ -180,28 +183,7 @@ func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUn
 	return aggs, errs.errorOrNil()
 }
 
-// createFloat64Aggregators will create all backing aggregators for an instrument.
-// It will return an error if an instrument is registered more than once.
-// Note: There may be returned aggregators with an error.
-func (reg *pipelineRegistry) createFloat64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[float64], error) {
-	var aggs []internal.Aggregator[float64]
-
-	errs := &multierror{}
-	for rdr, views := range reg.views {
-		pipe := reg.pipelines[rdr]
-		rdrAggs := createAggregators[float64](rdr, views, inst)
-		for inst, agg := range rdrAggs {
-			err := pipe.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
-			if err != nil {
-				errs.append(err)
-			}
-			aggs = append(aggs, agg)
-		}
-	}
-	return aggs, errs.errorOrNil()
-}
-
-func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
+func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
 	for _, pipe := range reg.pipelines {
 		pipe.addCallback(fn)
 	}
