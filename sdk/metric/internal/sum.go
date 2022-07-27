@@ -25,18 +25,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// sum is the aggregator storage for all sums.
-type sum[N int64 | float64] struct {
+// valueMap is the storage for all sums.
+type valueMap[N int64 | float64] struct {
 	sync.Mutex
-
 	values map[attribute.Set]N
 }
 
-func newSum[N int64 | float64]() *sum[N] {
-	return &sum[N]{values: make(map[attribute.Set]N)}
+func newValueMap[N int64 | float64]() *valueMap[N] {
+	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
-func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
+func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Lock()
 	s.values[attr] += value
 	s.Unlock()
@@ -54,7 +53,7 @@ func (s *sum[N]) Aggregate(value N, attr attribute.Set) {
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	return &deltaSum[N]{
-		sum:       newSum[N](),
+		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
 		start:     now(),
 	}
@@ -63,7 +62,7 @@ func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 // deltaSum summarizes a set of measurements made in a single aggregation
 // cycle as their arithmetic sum.
 type deltaSum[N int64 | float64] struct {
-	*sum[N]
+	*valueMap[N]
 
 	monotonic bool
 	start     time.Time
@@ -111,7 +110,7 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	return &cumulativeSum[N]{
-		sum:       newSum[N](),
+		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
 		start:     now(),
 	}
@@ -120,7 +119,7 @@ func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
 // cumulativeSum summarizes a set of measurements made over all aggregation
 // cycles as their arithmetic sum.
 type cumulativeSum[N int64 | float64] struct {
-	*sum[N]
+	*valueMap[N]
 
 	monotonic bool
 	start     time.Time
