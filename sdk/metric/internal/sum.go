@@ -28,8 +28,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-var errNegVal = errors.New("monotonic increasing sum: negative value")
-
 // valueMap is the aggregator storage for all sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
@@ -62,6 +60,8 @@ func (s *nonMonotonicSum[N]) Aggregate(value N, attr attribute.Set) {
 type monotonicSum[N int64 | float64] struct {
 	*valueMap[N]
 }
+
+var errNegVal = errors.New("monotonic increasing sum: negative value")
 
 func (s *monotonicSum[N]) Aggregate(value N, attr attribute.Set) {
 	if value < 0 {
