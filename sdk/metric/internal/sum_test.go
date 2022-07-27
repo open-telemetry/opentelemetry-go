@@ -42,23 +42,23 @@ func testSum[N int64 | float64](t *testing.T) {
 	}
 
 	t.Run("Delta", func(t *testing.T) {
-		incr := monoIncr
-		eFunc := deltaExpecter[N](incr, true)
-		t.Run("Monotonic", tester.Run(NewMonotonicDeltaSum[N](), incr, eFunc))
+		incr, mono := monoIncr, true
+		eFunc := deltaExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
 
-		incr = nonMonoIncr
-		eFunc = deltaExpecter[N](incr, false)
-		t.Run("NonMonotonic", tester.Run(NewNonMonotonicDeltaSum[N](), incr, eFunc))
+		incr, mono = nonMonoIncr, false
+		eFunc = deltaExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
-		incr := monoIncr
-		eFunc := cumuExpecter[N](incr, true)
-		t.Run("Monotonic", tester.Run(NewMonotonicCumulativeSum[N](), incr, eFunc))
+		incr, mono := monoIncr, true
+		eFunc := cumuExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 
-		incr = nonMonoIncr
-		eFunc = cumuExpecter[N](incr, false)
-		t.Run("NonMonotonic", tester.Run(NewNonMonotonicCumulativeSum[N](), incr, eFunc))
+		incr, mono = nonMonoIncr, false
+		eFunc = cumuExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
 }
 
@@ -119,10 +119,10 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 	}
 
 	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
-	t.Run("NonMonotonic", f(sum, NewNonMonotonicDeltaSum[N]()))
+	t.Run("NonMonotonic", f(sum, NewDeltaSum[N](false)))
 
 	sum.IsMonotonic = true
-	t.Run("Monotonic", f(sum, NewMonotonicDeltaSum[N]()))
+	t.Run("Monotonic", f(sum, NewDeltaSum[N](true)))
 }
 
 func TestDeltaSumReset(t *testing.T) {
@@ -137,8 +137,8 @@ func testMonotonicError[N int64 | float64](t *testing.T) {
 		a.Aggregate(-1, alice) // Should error.
 		return func(t *testing.T) { assert.ErrorIs(t, err, errNegVal) }
 	}
-	t.Run("Delta", f(NewMonotonicDeltaSum[N]()))
-	t.Run("Cumulative", f(NewMonotonicCumulativeSum[N]()))
+	t.Run("Delta", f(NewDeltaSum[N](true)))
+	t.Run("Cumulative", f(NewCumulativeSum[N](true)))
 }
 
 func TestMonotonicError(t *testing.T) {
@@ -153,11 +153,15 @@ func BenchmarkSum(b *testing.B) {
 
 func benchmarkSum[N int64 | float64](b *testing.B) {
 	b.Run("Delta", func(b *testing.B) {
-		b.Run("Monotonic", benchmarkAggregator(NewMonotonicDeltaSum[int64]))
-		b.Run("NonMonotonic", benchmarkAggregator(NewNonMonotonicDeltaSum[int64]))
+		factory := func() Aggregator[N] { return NewDeltaSum[N](true) }
+		b.Run("Monotonic", benchmarkAggregator(factory))
+		factory = func() Aggregator[N] { return NewDeltaSum[N](false) }
+		b.Run("NonMonotonic", benchmarkAggregator(factory))
 	})
 	b.Run("Cumulative", func(b *testing.B) {
-		b.Run("Monotonic", benchmarkAggregator(NewMonotonicCumulativeSum[int64]))
-		b.Run("NonMonotonic", benchmarkAggregator(NewNonMonotonicCumulativeSum[int64]))
+		factory := func() Aggregator[N] { return NewCumulativeSum[N](true) }
+		b.Run("Monotonic", benchmarkAggregator(factory))
+		factory = func() Aggregator[N] { return NewCumulativeSum[N](false) }
+		b.Run("NonMonotonic", benchmarkAggregator(factory))
 	})
 }

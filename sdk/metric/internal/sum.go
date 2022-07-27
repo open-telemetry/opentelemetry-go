@@ -75,7 +75,8 @@ func (s *monotonicSum[N]) Aggregate(value N, attr attribute.Set) {
 type deltaSum[N int64 | float64] struct {
 	*valueMap[N]
 
-	start time.Time
+	monotonic bool
+	start     time.Time
 }
 
 func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
@@ -87,7 +88,6 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	}
 
 	t := now()
-
 	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		data = append(data, metricdata.DataPoint[N]{
@@ -99,10 +99,17 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
 	}
-
 	// The delta collection cycle resets.
 	s.start = t
 	return data
+}
+
+func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  s.dataPoints(),
+	}
 }
 
 // cumulativeSum summarizes a set of measurements made over all aggregation
@@ -110,7 +117,8 @@ func (s *deltaSum[N]) dataPoints() []metricdata.DataPoint[N] {
 type cumulativeSum[N int64 | float64] struct {
 	*valueMap[N]
 
-	start time.Time
+	monotonic bool
+	start     time.Time
 }
 
 func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
@@ -122,7 +130,6 @@ func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
 	}
 
 	t := now()
-
 	data := make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		data = append(data, metricdata.DataPoint[N]{
@@ -136,24 +143,43 @@ func (s *cumulativeSum[N]) dataPoints() []metricdata.DataPoint[N] {
 		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
 	}
-
 	return data
 }
 
-// NewNonMonotonicDeltaSum returns an Aggregator that summarizes a set of
-// measurements as their arithmetic sum. Each sum is scoped by attributes and
-// the aggregation cycle the measurements were made in.
+func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
+	return metricdata.Sum[N]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  s.dataPoints(),
+	}
+}
+
+// NewDeltaSum returns an Aggregator that summarizes a set of measurements as
+// their arithmetic sum. Each sum is scoped by attributes and the aggregation
+// cycle the measurements were made in.
+//
+// If monotonic is true, the returned Aggregator will only accept increments
+// zero or greater. Otherwise, an error is sent to the OTel ErrorHandler an
+// no value is aggregated.
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewNonMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
+func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	v := newValueMap[N]()
+	ds := deltaSum[N]{
+		valueMap:  v,
+		monotonic: monotonic,
+		start:     now(),
+	}
+	if monotonic {
+		return &monotonicDeltaSum[N]{
+			monotonicSum: monotonicSum[N]{v},
+			deltaSum:     ds,
+		}
+	}
 	return &nonMonotonicDeltaSum[N]{
 		nonMonotonicSum: nonMonotonicSum[N]{v},
-		deltaSum: deltaSum[N]{
-			valueMap: v,
-			start:    now(),
-		},
+		deltaSum:        ds,
 	}
 }
 
@@ -162,59 +188,37 @@ type nonMonotonicDeltaSum[N int64 | float64] struct {
 	deltaSum[N]
 }
 
-func (s *nonMonotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: false,
-		DataPoints:  s.deltaSum.dataPoints(),
-	}
-}
-
-// NewMonotonicDeltaSum returns an Aggregator that summarizes a set of
-// monotonically increasing measurements as their arithmetic sum. Each sum is
-// scoped by attributes and the aggregation cycle the measurements were made
-// in.
-//
-// Each aggregation cycle is treated independently. When the returned
-// Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewMonotonicDeltaSum[N int64 | float64]() Aggregator[N] {
-	v := newValueMap[N]()
-	return &monotonicDeltaSum[N]{
-		monotonicSum: monotonicSum[N]{v},
-		deltaSum: deltaSum[N]{
-			valueMap: v,
-			start:    now(),
-		},
-	}
-}
-
 type monotonicDeltaSum[N int64 | float64] struct {
 	monotonicSum[N]
 	deltaSum[N]
 }
 
-func (s *monotonicDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: true,
-		DataPoints:  s.deltaSum.dataPoints(),
-	}
-}
-
-// NewNonMonotonicCumulativeSum returns an Aggregator that summarizes a set of
+// NewCumulativeSum returns an Aggregator that summarizes a set of
 // measurements as their arithmetic sum. Each sum is scoped by attributes and
 // the aggregation cycle the measurements were made in.
 //
+// If monotonic is true, the returned Aggregator will only accept increments
+// zero or greater. Otherwise, an error is sent to the OTel ErrorHandler an
+// no value is aggregated.
+//
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewNonMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
+func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	v := newValueMap[N]()
+	cs := cumulativeSum[N]{
+		valueMap:  v,
+		monotonic: monotonic,
+		start:     now(),
+	}
+	if monotonic {
+		return &monotonicCumulativeSum[N]{
+			monotonicSum:  monotonicSum[N]{v},
+			cumulativeSum: cs,
+		}
+	}
 	return &nonMonotonicCumulativeSum[N]{
 		nonMonotonicSum: nonMonotonicSum[N]{v},
-		cumulativeSum: cumulativeSum[N]{
-			valueMap: v,
-			start:    now(),
-		},
+		cumulativeSum:   cs,
 	}
 }
 
@@ -223,41 +227,7 @@ type nonMonotonicCumulativeSum[N int64 | float64] struct {
 	cumulativeSum[N]
 }
 
-func (s *nonMonotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: false,
-		DataPoints:  s.cumulativeSum.dataPoints(),
-	}
-}
-
-// NewMonotonicCumulativeSum returns an Aggregator that summarizes a set of
-// monotonically increasing measurements as their arithmetic sum. Each sum is
-// scoped by attributes and the aggregation cycle the measurements were made
-// in.
-//
-// Each aggregation cycle is treated independently. When the returned
-// Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewMonotonicCumulativeSum[N int64 | float64]() Aggregator[N] {
-	v := newValueMap[N]()
-	return &monotonicCumulativeSum[N]{
-		monotonicSum: monotonicSum[N]{v},
-		cumulativeSum: cumulativeSum[N]{
-			valueMap: v,
-			start:    now(),
-		},
-	}
-}
-
 type monotonicCumulativeSum[N int64 | float64] struct {
 	monotonicSum[N]
 	cumulativeSum[N]
-}
-
-func (s *monotonicCumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: true,
-		DataPoints:  s.cumulativeSum.dataPoints(),
-	}
 }

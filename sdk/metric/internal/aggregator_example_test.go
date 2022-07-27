@@ -48,7 +48,7 @@ func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Cou
 	// and View configuration. Assume here these are determined to be a
 	// cumulative sum.
 
-	aggregator := NewMonotonicCumulativeSum[int64]()
+	aggregator := NewCumulativeSum[int64](true)
 	count := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
