@@ -101,6 +101,9 @@ func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 		//
 		//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 		b = newBuckets(len(s.bounds) + 1)
+		// Ensure min and max are recorded values (not zero), for new buckets.
+		b.min, b.max = v, v
+		s.values[attr] = b
 	}
 	b.bin(idx, v)
 }
