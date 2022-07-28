@@ -231,7 +231,6 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 			hdp.Max = &max
 		}
 		h.DataPoints = append(h.DataPoints, hdp)
-
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
