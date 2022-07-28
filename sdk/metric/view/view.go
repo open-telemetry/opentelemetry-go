@@ -60,7 +60,8 @@ func New(opts ...Option) (View, error) {
 
 	emptyScope := instrumentation.Scope{}
 	if v.instrumentName == nil &&
-		v.scope == emptyScope {
+		v.scope == emptyScope &&
+		v.instrumentKind == undefinedInstrument {
 		return View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
@@ -119,6 +120,7 @@ func (v View) matchScopeVersion(version string) bool {
 func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
+
 func (v View) matchInstrumentKind(kind InstrumentKind) bool {
 	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
 }
