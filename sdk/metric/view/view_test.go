@@ -34,6 +34,7 @@ var matchInstrument = Instrument{
 		SchemaURL: "stuff.test/",
 	},
 	Name:        "foo",
+	Kind:        SyncCounter,
 	Description: "",
 }
 
@@ -45,6 +46,7 @@ var noMatchInstrument = Instrument{
 	},
 	Name:        "notstuff",
 	Description: "",
+	Kind:        undefinedInstrument,
 }
 
 var emptyDescription = Instrument{}
@@ -94,6 +96,13 @@ func TestViewTransformInstrument(t *testing.T) {
 			},
 			match:    matchInstrument,
 			notMatch: emptyDescription,
+		}, {
+			name: "instrument kind",
+			options: []Option{
+				MatchInstrumentKind(SyncCounter),
+			},
+			match:    matchInstrument,
+			notMatch: emptyDescription,
 		},
 		{
 			name: "Expands *",
@@ -130,6 +139,7 @@ func TestViewTransformInstrument(t *testing.T) {
 				},
 				Name:        "baz",
 				Description: "",
+				Kind:        SyncCounter,
 			},
 			notMatch: emptyDescription,
 		},
@@ -147,6 +157,7 @@ func TestViewTransformInstrument(t *testing.T) {
 				},
 				Name:        "foo",
 				Description: "descriptive stuff",
+				Kind:        SyncCounter,
 			},
 			notMatch: emptyDescription,
 		},
