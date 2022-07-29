@@ -96,3 +96,15 @@ func hPoint(a attribute.Set, v float64, multi uint64) metricdata.HistogramDataPo
 		Sum:          v * float64(multi),
 	}
 }
+
+func BenchmarkHistogram(b *testing.B) {
+	b.Run("Int64", benchmarkHistogram[int64])
+	b.Run("Float64", benchmarkHistogram[float64])
+}
+
+func benchmarkHistogram[N int64 | float64](b *testing.B) {
+	factory := func() Aggregator[N] { return NewDeltaHistogram[N](histConf) }
+	b.Run("Delta", benchmarkAggregator(factory))
+	factory = func() Aggregator[N] { return NewCumulativeHistogram[N](histConf) }
+	b.Run("Cumulative", benchmarkAggregator(factory))
+}
