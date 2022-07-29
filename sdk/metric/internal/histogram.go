@@ -212,6 +212,9 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 	for a, b := range s.values {
 		// The HistogramDataPoint field values returned need to be copies of
 		// the buckets value as we will keep updating them.
+		//
+		// TODO (#3047): Making copies for bounds and counts incurs a large
+		// memory allocation footprint. Alternatives should be explored.
 		counts := make([]uint64, len(b.counts))
 		copy(counts, b.counts)
 
