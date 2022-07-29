@@ -21,9 +21,12 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 var (
@@ -95,6 +98,95 @@ func hPoint(a attribute.Set, v float64, multi uint64) metricdata.HistogramDataPo
 		Max:          &v,
 		Sum:          v * float64(multi),
 	}
+}
+
+func TestBucketsBin(t *testing.T) {
+	b := newBuckets(3)
+	assertB := func(counts []uint64, count uint64, sum, min, max float64) {
+		assert.Equal(t, counts, b.counts)
+		assert.Equal(t, count, b.count)
+		assert.Equal(t, sum, b.sum)
+		assert.Equal(t, min, b.min)
+		assert.Equal(t, max, b.max)
+	}
+
+	assertB([]uint64{0, 0, 0}, 0, 0, 0, 0)
+	b.bin(1, 2)
+	assertB([]uint64{0, 1, 0}, 1, 2, 0, 2)
+	b.bin(0, -1)
+	assertB([]uint64{1, 1, 0}, 2, 1, -1, 2)
+}
+
+func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBucketHistogram) Aggregator[N], getBounds func(Aggregator[N]) []float64) func(t *testing.T) {
+	b := []float64{0, 1, 2}
+	cpB := make([]float64, len(b))
+	copy(cpB, b)
+
+	a := newA(aggregation.ExplicitBucketHistogram{Boundaries: b})
+	return func(t *testing.T) {
+		require.Equal(t, cpB, getBounds(a))
+
+		b[0] = 10
+		assert.Equal(t, cpB, getBounds(a), "modifying the bounds argument should not change the bounds")
+
+		a.Aggregate(5, alice)
+		hdp := a.Aggregation().(metricdata.Histogram).DataPoints[0]
+		hdp.Bounds[1] = 10
+		assert.Equal(t, cpB, getBounds(a), "modifying the Aggregation bounds should not change the bounds")
+	}
+}
+
+func TestHistogramImmutableBounds(t *testing.T) {
+	t.Run("Delta", testHistImmutableBounds[int64](
+		NewDeltaHistogram[int64],
+		func(a Aggregator[int64]) []float64 {
+			deltaH := a.(*deltaHistogram[int64])
+			return deltaH.bounds
+		},
+	))
+
+	t.Run("Cumulative", testHistImmutableBounds[int64](
+		NewCumulativeHistogram[int64],
+		func(a Aggregator[int64]) []float64 {
+			cumuH := a.(*cumulativeHistogram[int64])
+			return cumuH.bounds
+		},
+	))
+}
+
+func TestCumulativeHistogramImutableCounts(t *testing.T) {
+	a := NewCumulativeHistogram[int64](histConf)
+	a.Aggregate(5, alice)
+	hdp := a.Aggregation().(metricdata.Histogram).DataPoints[0]
+
+	cumuH := a.(*cumulativeHistogram[int64])
+	require.Equal(t, hdp.BucketCounts, cumuH.values[alice].counts)
+
+	cpCounts := make([]uint64, len(hdp.BucketCounts))
+	copy(cpCounts, hdp.BucketCounts)
+	hdp.BucketCounts[0] = 10
+	assert.Equal(t, cpCounts, cumuH.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+}
+
+func TestDeltaHistogramReset(t *testing.T) {
+	t.Cleanup(mockTime(now))
+
+	expect := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
+	a := NewDeltaHistogram[int64](histConf)
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+	a.Aggregate(1, alice)
+	expect.DataPoints = []metricdata.HistogramDataPoint{hPoint(alice, 1, 1)}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+	// The attr set should be forgotten once Aggregations is called.
+	expect.DataPoints = nil
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+
+	// Aggregating another set should not affect the original (alice).
+	a.Aggregate(1, bob)
+	expect.DataPoints = []metricdata.HistogramDataPoint{hPoint(bob, 1, 1)}
+	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 }
 
 func BenchmarkHistogram(b *testing.B) {
