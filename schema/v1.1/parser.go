@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package schema // import "go.opentelemetry.io/otel/schema/v1.0"
+package schema // import "go.opentelemetry.io/otel/schema/v1.1"
 
 import (
 	"io"
@@ -21,14 +21,14 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"go.opentelemetry.io/otel/schema/internal"
-	"go.opentelemetry.io/otel/schema/v1.0/ast"
+	"go.opentelemetry.io/otel/schema/v1.1/ast"
 )
 
 // Major file version number that this library supports.
 const supportedFormatMajor = 1
 
 // Maximum minor version number that this library supports.
-const supportedFormatMinor = 0
+const supportedFormatMinor = 1
 
 // ParseFile a schema file. schemaFilePath is the file path.
 func ParseFile(schemaFilePath string) (*ast.Schema, error) {
