@@ -60,7 +60,8 @@ func New(opts ...Option) (View, error) {
 
 	emptyScope := instrumentation.Scope{}
 	if v.instrumentName == nil &&
-		v.scope == emptyScope {
+		v.scope == emptyScope &&
+		v.instrumentKind == undefinedInstrument {
 		return View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
@@ -89,14 +90,17 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 	return inst, true
 }
 
-// TransformAttributes filters an attribute set to the keys in the View. If no
-// filter was provided the original set is returned.
-func (v View) TransformAttributes(input attribute.Set) attribute.Set {
+// AttributeFilter returns a function that returns only attributes specified by
+// WithFilterAttributes.
+// If no filter was provided nil is returned.
+func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
-		return input
+		return nil
 	}
-	out, _ := input.Filter(v.filter)
-	return out
+	return func(input attribute.Set) attribute.Set {
+		out, _ := input.Filter(v.filter)
+		return out
+	}
 }
 
 // TODO: Provide Transform* for AggregationKind (#2816)
@@ -116,6 +120,7 @@ func (v View) matchScopeVersion(version string) bool {
 func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
+
 func (v View) matchInstrumentKind(kind InstrumentKind) bool {
 	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
 }

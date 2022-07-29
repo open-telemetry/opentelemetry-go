@@ -18,26 +18,64 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"sync"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// now is used to return the current local time while allowing tests to
+// override the the default time.Now function.
+var now = time.Now
+
+// datapoint is timestamped measurement data.
+type datapoint[N int64 | float64] struct {
+	timestamp time.Time
+	value     N
+}
+
 // lastValue summarizes a set of measurements as the last one made.
 type lastValue[N int64 | float64] struct {
-	// TODO(#2971): implement.
+	sync.Mutex
+
+	values map[attribute.Set]datapoint[N]
 }
 
 // NewLastValue returns an Aggregator that summarizes a set of measurements as
 // the last one made.
 func NewLastValue[N int64 | float64]() Aggregator[N] {
-	return &lastValue[N]{}
+	return &lastValue[N]{values: make(map[attribute.Set]datapoint[N])}
 }
 
 func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
-	// TODO(#2971): implement.
+	d := datapoint[N]{timestamp: now(), value: value}
+	s.Lock()
+	s.values[attr] = d
+	s.Unlock()
 }
 
 func (s *lastValue[N]) Aggregation() metricdata.Aggregation {
-	// TODO(#2971): implement.
-	return nil
+	gauge := metricdata.Gauge[N]{}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if len(s.values) == 0 {
+		return gauge
+	}
+
+	gauge.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	for a, v := range s.values {
+		gauge.DataPoints = append(gauge.DataPoints, metricdata.DataPoint[N]{
+			Attributes: a,
+			// The event time is the only meaningful timestamp, StartTime is
+			// ignored.
+			Time:  v.timestamp,
+			Value: v.value,
+		})
+		// Do not report stale values.
+		delete(s.values, a)
+	}
+	return gauge
 }
