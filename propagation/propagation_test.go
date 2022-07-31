@@ -135,3 +135,14 @@ func TestMapCarrierKeys(t *testing.T) {
 	sort.Strings(keys)
 	assert.Equal(t, []string{"baz", "foo"}, keys)
 }
+
+func TestHeaderCarrier(t *testing.T) {
+	t.Run("it maintains the key case", func(t *testing.T) {
+		carrier := propagation.HeaderCarrier{}
+
+		carrier.Set("traceparent", "test")
+
+		assert.Equal(t, "test", carrier.Get("traceparent"))
+		assert.Equal(t, "", carrier.Get("Traceparent"))
+	})
+}
