@@ -110,7 +110,6 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-
 			got, err := createAggregators[N](tt.reader, tt.views, inst)
 			assert.NoError(t, err)
 			require.Len(t, got, tt.wantLen)

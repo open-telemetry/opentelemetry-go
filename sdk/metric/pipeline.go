@@ -253,7 +253,6 @@ func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst vi
 			// This is where the aggregator and the view are both in scope.
 			aggs[ident] = agg
 		}
-
 	}
 	return aggs, errs.errorOrNil()
 }
@@ -280,7 +279,7 @@ func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporalit
 	return nil
 }
 
-var errIncompatibleAggregation error = errors.New("incompatible aggregation")
+var errIncompatibleAggregation = errors.New("incompatible aggregation")
 
 // is aggregatorCompatible checks if the aggregation can be used by the instrument.
 // Current compatibility:
@@ -292,7 +291,7 @@ var errIncompatibleAggregation error = errors.New("incompatible aggregation")
 // | Sync Histogram       | X    |           | X   | X         | X                     |
 // | Async Counter        | X    |           | X   |           |                       |
 // | Async UpDown Counter | X    |           | X   |           |                       |
-// | Async Gauge          | X    | X         |     |           |                       |
+// | Async Gauge          | X    | X         |     |           |                       |.
 func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.ExplicitBucketHistogram:
