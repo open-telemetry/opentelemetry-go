@@ -19,10 +19,12 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -139,8 +141,8 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}, nil
 }
 
-// pipelineRegistry manages creating pipelines, and aggregators.  The meters can
-// retrieve new aggregators from a registry.
+// pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
+// new Aggregators from a pipelineRegistry.
 type pipelineRegistry[N int64 | float64] struct {
 	views     map[Reader][]view.View
 	pipelines map[Reader]*pipeline
@@ -171,9 +173,12 @@ func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit
 	errs := &multierror{}
 	for rdr, views := range reg.views {
 		pipe := reg.pipelines[rdr]
-		rdrAggs := createAggregators[N](rdr, views, inst)
+		rdrAggs, err := createAggregators[N](rdr, views, inst)
+		if err != nil {
+			errs.append(err)
+		}
 		for inst, agg := range rdrAggs {
-			err := pipe.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+			err := pipe.addAggregator(inst.scope, inst.name, inst.description, instUnit, agg)
 			if err != nil {
 				errs.append(err)
 			}
@@ -183,6 +188,7 @@ func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit
 	return aggs, errs.errorOrNil()
 }
 
+// TODO (#3053) Only register callbacks if any instrument matches in a view.
 func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
 	for _, pipe := range reg.pipelines {
 		pipe.addCallback(fn)
@@ -199,30 +205,57 @@ func (m *multierror) errorOrNil() error {
 	}
 	return fmt.Errorf(strings.Join(m.errors, "; "))
 }
+
 func (m *multierror) append(err error) {
 	m.errors = append(m.errors, err.Error())
 }
 
-func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) map[view.Instrument]internal.Aggregator[N] {
-	aggs := map[view.Instrument]internal.Aggregator[N]{}
+// instrumentIdentifier is used to identify multiple instruments being mapped to the same aggregator.
+// e.g. using an exact match view with a name=* view.
+// You can't use a view.Instrument here because not all Aggregators are hashable.
+type instrumentIdentifier struct {
+	scope       instrumentation.Scope
+	name        string
+	description string
+}
+
+func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentIdentifier]internal.Aggregator[N], error) {
+	aggs := map[instrumentIdentifier]internal.Aggregator[N]{}
+	errs := &multierror{}
 	for _, v := range views {
 		inst, match := v.TransformInstrument(inst)
+
+		ident := instrumentIdentifier{
+			scope:       inst.Scope,
+			name:        inst.Name,
+			description: inst.Description,
+		}
+
+		if _, ok := aggs[ident]; ok || !match {
+			continue
+		}
+
 		if inst.Aggregation == nil {
 			inst.Aggregation = rdr.aggregation(inst.Kind)
+		} else if _, ok := inst.Aggregation.(aggregation.Default); ok {
+			inst.Aggregation = rdr.aggregation(inst.Kind)
 		}
-		if match {
-			if _, ok := aggs[inst]; ok {
-				continue
-			}
-			agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind))
-			if agg != nil {
-				// TODO (#3011): If filtering is done at the instrument level add here.
-				// This is where the aggregator and the view are both in scope.
-				aggs[inst] = agg
-			}
+
+		if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
+			global.Error(err, "creating aggregator", "instrumentKind", inst.Kind, "aggregation", inst.Aggregation)
+			errs.append(err)
+			continue
 		}
+
+		agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind))
+		if agg != nil {
+			// TODO (#3011): If filtering is done at the instrument level add here.
+			// This is where the aggregator and the view are both in scope.
+			aggs[ident] = agg
+		}
+
 	}
-	return aggs
+	return aggs, errs.errorOrNil()
 }
 
 // createAggregator takes the config (Aggregation and Temporality) and produces a memory backed Aggregator.
@@ -245,4 +278,44 @@ func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporalit
 		return internal.NewDeltaHistogram[N](agg)
 	}
 	return nil
+}
+
+var errIncompatibleAggregation error = errors.New("incompatible aggregation")
+
+// is aggregatorCompatible checks if the aggregation can be used by the instrument.
+// Current compatibility:
+//
+// | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
+// |----------------------|------|-----------|-----|-----------|-----------------------|
+// | Sync Counter         | X    |           | X   | X         | X                     |
+// | Sync UpDown Counter  | X    |           | X   |           |                       |
+// | Sync Histogram       | X    |           | X   | X         | X                     |
+// | Async Counter        | X    |           | X   |           |                       |
+// | Async UpDown Counter | X    |           | X   |           |                       |
+// | Async Gauge          | X    | X         |     |           |                       |
+func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregation) error {
+	switch agg.(type) {
+	case aggregation.ExplicitBucketHistogram:
+		if kind == view.SyncCounter || kind == view.SyncHistogram {
+			return nil
+		}
+		return errIncompatibleAggregation
+	case aggregation.Sum:
+		switch kind {
+		case view.AsyncCounter, view.AsyncUpDownCounter, view.SyncCounter, view.SyncHistogram, view.SyncUpDownCounter:
+			return nil
+		default:
+			return errIncompatibleAggregation
+		}
+	case aggregation.LastValue:
+		if kind == view.AsyncGauge {
+			return nil
+		}
+		return errIncompatibleAggregation
+	case aggregation.Drop:
+		return nil
+	default:
+		// This is used passed checking for default, it should be an error at this point.
+		return errIncompatibleAggregation
+	}
 }
