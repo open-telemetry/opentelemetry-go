@@ -74,7 +74,7 @@ func newHistValues[N int64 | float64](bounds []float64) *histValues[N] {
 }
 
 // Aggregate records the measurement value, scoped by attr, and aggregates it
-// into an histogram.
+// into a histogram.
 func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 	// Accept all types to satisfy the Aggregator interface. However, since
 	// the Aggregation produced by this Aggregator is only float64, convert
