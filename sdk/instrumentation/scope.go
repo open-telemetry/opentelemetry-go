@@ -29,5 +29,5 @@ type Scope struct {
 	// Version is the version of the instrumentation scope.
 	Version string
 	// SchemaURL of the telemetry emitted by the scope.
-	SchemaURL string
+	SchemaURL string `json:",omitempty"`
 }

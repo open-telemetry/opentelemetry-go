@@ -35,3 +35,18 @@ const (
 	// from other cycles do not affect them.
 	DeltaTemporality
 )
+
+var temporalityString = map[Temporality]string{
+	CumulativeTemporality: "cumulative",
+	DeltaTemporality:      "delta",
+}
+
+// String returns the string name of t.
+func (t Temporality) String() string {
+	return temporalityString[t]
+}
+
+// MarshalText returns the byte encoded of t.
+func (t Temporality) MarshalText() ([]byte, error) {
+	return []byte(temporalityString[t]), nil
+}
