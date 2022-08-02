@@ -56,16 +56,16 @@ func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) 
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
 
-func (e *exporter) ForceFlush(context.Context) error {
+func (e *exporter) ForceFlush(ctx context.Context) error {
 	// exporter holds no state, nothing to flush.
-	return nil
+	return ctx.Err()
 }
 
-func (e *exporter) Shutdown(context.Context) error {
+func (e *exporter) Shutdown(ctx context.Context) error {
 	e.shutdownOnce.Do(func() {
 		e.encVal.Store(encoderHolder{
 			encoder: shutdownEncoder{},
 		})
 	})
-	return nil
+	return ctx.Err()
 }
