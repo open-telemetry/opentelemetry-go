@@ -125,7 +125,7 @@ func Example() {
 	_ = exp.Export(ctx, mockData)
 
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
-	sdk.Shutdown(ctx)
+	_ = sdk.Shutdown(ctx)
 
 	// Output:
 	// {
