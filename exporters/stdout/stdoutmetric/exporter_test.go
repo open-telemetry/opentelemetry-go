@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func testEncoderOption(t *testing.T) stdoutmetric.Option {
+func testEncoderOption() stdoutmetric.Option {
 	// Discard export output for testing.
 	enc := json.NewEncoder(io.Discard)
 	return stdoutmetric.WithEncoder(enc)
@@ -69,19 +69,19 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 
 func TestExporterHonorsContextErrors(t *testing.T) {
 	t.Run("Shutdown", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption(t))
+		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
 		return exp.Shutdown
 	}))
 
 	t.Run("ForceFlush", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption(t))
+		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
 		return exp.ForceFlush
 	}))
 
 	t.Run("Export", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption(t))
+		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
 		return func(ctx context.Context) error {
 			var data metricdata.ResourceMetrics
@@ -94,7 +94,7 @@ func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	var (
 		data     metricdata.ResourceMetrics
 		ctx      = context.Background()
-		exp, err = stdoutmetric.New(testEncoderOption(t))
+		exp, err = stdoutmetric.New(testEncoderOption())
 	)
 	require.NoError(t, err)
 	require.NoError(t, exp.Shutdown(ctx))
