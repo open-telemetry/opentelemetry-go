@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+package stdoutmetric_test // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
 	"context"
@@ -23,46 +23,50 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 )
 
-func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
 
-	e, err := New()
-	if err != nil {
-		t.Fatalf("failed to create exporter: %v", err)
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
+
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
+		})
+
+		t.Run("NoError", func(t *testing.T) {
+			f := factory(t)
+			assert.NoError(t, f(ctx))
+		})
 	}
-
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-	defer innerCancel()
-	<-innerCtx.Done()
-	err = e.Shutdown(innerCtx)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
-func TestExporterShutdownHonorsCancel(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+func TestExporterHonorsContextErrors(t *testing.T) {
+	t.Run("Shutdown", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
+		exp, err := stdoutmetric.New()
+		require.NoError(t, err)
+		return exp.Shutdown
+	}))
 
-	e, err := New()
-	if err != nil {
-		t.Fatalf("failed to create exporter: %v", err)
-	}
-
-	innerCtx, innerCancel := context.WithCancel(ctx)
-	innerCancel()
-	err = e.Shutdown(innerCtx)
-	assert.ErrorIs(t, err, context.Canceled)
-}
-
-func TestExporterShutdownNoError(t *testing.T) {
-	e, err := New()
-	if err != nil {
-		t.Fatalf("failed to create exporter: %v", err)
-	}
-
-	if err := e.Shutdown(context.Background()); err != nil {
-		t.Errorf("shutdown errored: expected nil, got %v", err)
-	}
+	t.Run("ForceFlush", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
+		exp, err := stdoutmetric.New()
+		require.NoError(t, err)
+		return exp.ForceFlush
+	}))
 }
