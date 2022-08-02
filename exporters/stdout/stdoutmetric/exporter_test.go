@@ -81,3 +81,14 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 		}
 	}))
 }
+
+func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
+	var (
+		data     metricdata.ResourceMetrics
+		ctx      = context.Background()
+		exp, err = stdoutmetric.New()
+	)
+	require.NoError(t, err)
+	require.NoError(t, exp.Shutdown(ctx))
+	assert.EqualError(t, exp.Export(ctx, data), "exporter shutdown")
+}
