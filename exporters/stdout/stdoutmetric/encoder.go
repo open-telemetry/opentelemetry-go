@@ -22,8 +22,7 @@ import "errors"
 // Encoder encodes and outputs OpenTelemetry metric data-types as human
 // readable text.
 type Encoder interface {
-	// Encode handles the encoding and writing OpenTelemetry metric data-types
-	// that the exporter will pass to it.
+	// Encode handles the encoding and writing of OpenTelemetry metric data.
 	Encode(v any) error
 }
 

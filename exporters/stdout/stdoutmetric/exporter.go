@@ -33,10 +33,10 @@ type exporter struct {
 	shutdownOnce sync.Once
 }
 
-// New returns a configured metric Exporter.
+// New returns a configured metric exporter.
 //
 // If no options are passed, the default exporter returned will use a JSON
-// encoder with tab indentations.
+// encoder with tab indentations that output to STDOUT.
 func New(options ...Option) (metric.Exporter, error) {
 	cfg := newConfig(options...)
 	exp := &exporter{}
