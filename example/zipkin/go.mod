@@ -9,10 +9,10 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/otel v1.8.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.8.0
-	go.opentelemetry.io/otel/sdk v1.8.0
-	go.opentelemetry.io/otel/trace v1.8.0
+	go.opentelemetry.io/otel v1.9.0
+	go.opentelemetry.io/otel/exporters/zipkin v1.9.0
+	go.opentelemetry.io/otel/sdk v1.9.0
+	go.opentelemetry.io/otel/trace v1.9.0
 )
 
 require (
