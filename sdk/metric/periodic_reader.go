@@ -41,7 +41,7 @@ const (
 type periodicReaderConfig struct {
 	interval            time.Duration
 	timeout             time.Duration
-	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
+	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 }
 
@@ -141,7 +141,7 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 
-	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
+	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 
 	wg           sync.WaitGroup
