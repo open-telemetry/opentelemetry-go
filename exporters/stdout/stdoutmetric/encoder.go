@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package stdoutmetric
+package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import "errors"
 
