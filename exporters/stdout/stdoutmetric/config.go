@@ -53,7 +53,7 @@ func (o optionFunc) apply(c config) config {
 	return o(c)
 }
 
-// WithEncoder sets the exporter to use ecoder to encode all the metric
+// WithEncoder sets the exporter to use encoder to encode all the metric
 // data-types to an output.
 func WithEncoder(encoder Encoder) Option {
 	return optionFunc(func(c config) config {
