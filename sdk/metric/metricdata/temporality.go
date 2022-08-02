@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=Temporality
 //go:build go1.17
 // +build go1.17
 
@@ -36,17 +37,7 @@ const (
 	DeltaTemporality
 )
 
-var temporalityString = map[Temporality]string{
-	CumulativeTemporality: "cumulative",
-	DeltaTemporality:      "delta",
-}
-
-// String returns the string name of t.
-func (t Temporality) String() string {
-	return temporalityString[t]
-}
-
 // MarshalText returns the byte encoded of t.
 func (t Temporality) MarshalText() ([]byte, error) {
-	return []byte(temporalityString[t]), nil
+	return []byte(t.String()), nil
 }
