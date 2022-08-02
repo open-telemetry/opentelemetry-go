@@ -19,16 +19,11 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import "errors"
 
-var ErrUnrecognized = errors.New("unrecognized metric data")
-
 // Encoder encodes and outputs OpenTelemetry metric data-types as human
 // readable text.
 type Encoder interface {
 	// Encode handles the encoding and writing OpenTelemetry metric data-types
 	// that the exporter will pass to it.
-	//
-	// Any data-type that is not recognized by the encoder and not output to
-	// the user, will have an ErrUnrecognized returned from Encode.
 	Encode(v any) error
 }
 
