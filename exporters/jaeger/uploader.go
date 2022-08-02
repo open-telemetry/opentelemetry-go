@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -308,7 +307,7 @@ func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error 
 		return err
 	}
 
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 	if err = resp.Body.Close(); err != nil {
 		return err
 	}
