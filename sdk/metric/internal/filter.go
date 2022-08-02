@@ -34,6 +34,7 @@ type filter[N int64 | float64] struct {
 	seen map[attribute.Set]attribute.Set
 }
 
+// NewFilter wraps an Aggregator with an attribute filtering function.
 func NewFilter[N int64 | float64](agg Aggregator[N], fn func(attribute.Set) attribute.Set) Aggregator[N] {
 	if fn == nil {
 		return agg
@@ -47,6 +48,8 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn func(attribute.Set) attr
 
 // Aggregate records the measurement, scoped by attr, and aggregates it
 // into an aggregation.
+
+// TODO (#3006): drop stale attributes from seen.
 func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 	f.Lock()
 	defer f.Unlock()
