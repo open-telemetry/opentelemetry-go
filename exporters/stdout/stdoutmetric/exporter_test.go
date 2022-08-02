@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
@@ -68,5 +69,14 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 		exp, err := stdoutmetric.New()
 		require.NoError(t, err)
 		return exp.ForceFlush
+	}))
+
+	t.Run("Export", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
+		exp, err := stdoutmetric.New()
+		require.NoError(t, err)
+		return func(ctx context.Context) error {
+			var data metricdata.ResourceMetrics
+			return exp.Export(ctx, data)
+		}
 	}))
 }
