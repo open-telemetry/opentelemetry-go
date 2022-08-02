@@ -35,7 +35,7 @@ import (
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	now = time.Unix(946684800, 0)
+	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
 	res = resource.NewSchemaless(
 		semconv.ServiceNameKey.String("stdoutmetric-example"),
@@ -161,8 +161,8 @@ func Example() {
 	//                     }
 	//                   }
 	//                 ],
-	//                 "StartTime": "1999-12-31T16:00:00-08:00",
-	//                 "Time": "1999-12-31T16:00:01-08:00",
+	//                 "StartTime": "2000-01-01T00:00:00Z",
+	//                 "Time": "2000-01-01T00:00:01Z",
 	//                 "Value": 5
 	//               }
 	//             ],
@@ -186,8 +186,8 @@ func Example() {
 	//                     }
 	//                   }
 	//                 ],
-	//                 "StartTime": "1999-12-31T16:00:00-08:00",
-	//                 "Time": "1999-12-31T16:00:01-08:00",
+	//                 "StartTime": "2000-01-01T00:00:00Z",
+	//                 "Time": "2000-01-01T00:00:01Z",
 	//                 "Count": 10,
 	//                 "Bounds": [
 	//                   1,
@@ -223,7 +223,7 @@ func Example() {
 	//                   }
 	//                 ],
 	//                 "StartTime": "0001-01-01T00:00:00Z",
-	//                 "Time": "1999-12-31T16:00:01-08:00",
+	//                 "Time": "2000-01-01T00:00:01Z",
 	//                 "Value": 32.4
 	//               }
 	//             ]
