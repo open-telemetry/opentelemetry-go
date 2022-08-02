@@ -150,7 +150,7 @@ func Example() {
 	//                 "Value": 5
 	//               }
 	//             ],
-	//             "Temporality": "delta",
+	//             "Temporality": "DeltaTemporality",
 	//             "IsMonotonic": true
 	//           }
 	//         },
@@ -187,7 +187,7 @@ func Example() {
 	//                 "Sum": 57
 	//               }
 	//             ],
-	//             "Temporality": "delta"
+	//             "Temporality": "DeltaTemporality"
 	//           }
 	//         },
 	//         {
