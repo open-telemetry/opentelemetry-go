@@ -15,63 +15,54 @@
 //go:build go1.18
 // +build go1.18
 
-package stdoutmetric
+package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
 	"context"
+	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"github.com/stretchr/testify/assert"
 )
 
-func ExampleExporter_Export() {
-	exampleData := metricdata.ResourceMetrics{
-		Resource: resource.NewWithAttributes("example", attribute.String("resource-foo", "bar")),
-		ScopeMetrics: []metricdata.ScopeMetrics{
-			{
-				Scope: instrumentation.Scope{
-					Name:      "Scope1",
-					Version:   "v1",
-					SchemaURL: "anotherExample",
-				},
-				Metrics: []metricdata.Metrics{
-					{
-						Name:        "",
-						Description: "",
-						Unit:        "",
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(),
-									StartTime:  time.Now().Add(-1 * time.Minute),
-									Time:       time.Now(),
-									Value:      3,
-								},
-							},
-						},
-					},
-					{},
-					{},
-				},
-			},
-			{
-				Scope: instrumentation.Scope{
-					Name:      "Scope2",
-					Version:   "v2",
-					SchemaURL: "aDifferentExample",
-				},
-				Metrics: []metricdata.Metrics{
-					{},
-					{},
-					{},
-				},
-			},
-		},
+func TestExporterShutdownHonorsTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	e, err := New()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
 	}
-	exp, _ := New()
-	exp.Export(context.Background(), exampleData)
-	// Output: Hello
+
+	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+	defer innerCancel()
+	<-innerCtx.Done()
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestExporterShutdownHonorsCancel(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	e, err := New()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	innerCancel()
+	err = e.Shutdown(innerCtx)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestExporterShutdownNoError(t *testing.T) {
+	e, err := New()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	if err := e.Shutdown(context.Background()); err != nil {
+		t.Errorf("shutdown errored: expected nil, got %v", err)
+	}
 }

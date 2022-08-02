@@ -20,22 +20,30 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func New() (*Exporter, error) {
+// New creates an Exporter with the passed options.
+func New(options ...Option) (*Exporter, error) {
+	cfg, err := newConfig(options...)
+	if err != nil {
+		return nil, err
+	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "\t")
+	enc := json.NewEncoder(cfg.Writer)
+	if cfg.PrettyPrint {
+		enc.SetIndent("", "\t")
+	}
+
 	return &Exporter{
 		encoder: enc,
 	}, nil
 }
 
+// Exporter is an implementation of metric.Exporter that writes ResourceMetrics to stdout.
 type Exporter struct {
 	encoder   *json.Encoder
 	encoderMu sync.Mutex
