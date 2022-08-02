@@ -38,11 +38,7 @@ type exporter struct {
 // If no options are passed, the default exporter returned will use a JSON
 // encoder with tab indentations.
 func New(options ...Option) (metric.Exporter, error) {
-	cfg, err := newConfig(options...)
-	if err != nil {
-		return nil, err
-	}
-
+	cfg := newConfig(options...)
 	exp := &exporter{}
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
