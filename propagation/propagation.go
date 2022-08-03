@@ -69,20 +69,30 @@ func (c MapCarrier) Keys() []string {
 // HeaderCarrier adapts http.Header to satisfy the TextMapCarrier interface.
 type HeaderCarrier http.Header
 
-// Get returns the value associated with the passed key. Use the underlying map to avoid normalising the key and so changing
-// its value.
+// Get returns the first value associated with the passed key. The key is
+// case-sensitive and will only return the value that matches exactly. If there
+// are no values associated with the key, Get returns "".
 func (hc HeaderCarrier) Get(key string) string {
+    // Use the underlying map to avoid normalising the key and thereby
+    // changing its value.
+	if hc == nil {
+		return ""
+	}
 	value, ok := http.Header(hc)[key]
-	if !ok {
+	if !ok || len(value) == 0 {
 		return ""
 	}
 
 	return value[0]
 }
 
-// Set stores the key-value pair. Use the underlying map to set the value to avoid normalising the key and so changing
-// its value.
+// Set sets the header entries associated with key to the single element value.
+// It replaces any existing values associated with key.
+//
+// The key is case-sensitive, it is used exactly as passed.
 func (hc HeaderCarrier) Set(key string, value string) {
+    // Use the underlying map to set the value to avoid normalising the key and
+    // thereby changing its value.
 	http.Header(hc)[key] = []string{value}
 }
 
