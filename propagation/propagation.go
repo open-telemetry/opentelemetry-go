@@ -17,6 +17,7 @@ package propagation // import "go.opentelemetry.io/otel/propagation"
 import (
 	"context"
 	"net/http"
+	"strings"
 )
 
 // TextMapCarrier is the storage medium used by a TextMapPropagator.
@@ -73,8 +74,8 @@ type HeaderCarrier http.Header
 // case-sensitive and will only return the value that matches exactly. If there
 // are no values associated with the key, Get returns "".
 func (hc HeaderCarrier) Get(key string) string {
-    // Use the underlying map to avoid normalising the key and thereby
-    // changing its value.
+	// Use the underlying map to avoid normalising the key and thereby
+	// changing its value.
 	if hc == nil {
 		return ""
 	}
@@ -91,9 +92,9 @@ func (hc HeaderCarrier) Get(key string) string {
 //
 // The key is case-sensitive, it is used exactly as passed.
 func (hc HeaderCarrier) Set(key string, value string) {
-    // Use the underlying map to set the value to avoid normalising the key and
-    // thereby changing its value.
-	http.Header(hc)[key] = []string{value}
+	// Use the underlying map to set the value to avoid normalising the key and
+	// thereby changing its value.
+	http.Header(hc)[strings.ToLower(key)] = []string{value}
 }
 
 // Keys lists the keys stored in this carrier.

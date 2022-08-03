@@ -137,12 +137,40 @@ func TestMapCarrierKeys(t *testing.T) {
 }
 
 func TestHeaderCarrier(t *testing.T) {
-	t.Run("it maintains the key case", func(t *testing.T) {
-		carrier := propagation.HeaderCarrier{}
+	type testCase struct {
+		name              string
+		headerKey         string
+		headerValue       string
+		expectedHeaderKey string
+	}
 
-		carrier.Set("traceparent", "test")
+	testCases := []testCase{
+		{
+			name:              "lowercase",
+			headerKey:         "traceparent",
+			headerValue:       "test",
+			expectedHeaderKey: "traceparent",
+		},
+		{
+			name:              "uppercase",
+			headerKey:         "Traceparent",
+			headerValue:       "test",
+			expectedHeaderKey: "traceparent",
+		},
+		{
+			name:              "mixed case",
+			headerKey:         "TraceParent",
+			headerValue:       "test",
+			expectedHeaderKey: "traceparent",
+		},
+	}
 
-		assert.Equal(t, "test", carrier.Get("traceparent"))
-		assert.Equal(t, "", carrier.Get("Traceparent"))
-	})
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			carrier := propagation.HeaderCarrier{}
+			carrier.Set(testCase.headerKey, testCase.headerValue)
+
+			assert.Equal(t, testCase.headerValue, carrier.Get(testCase.expectedHeaderKey))
+		})
+	}
 }
