@@ -17,7 +17,7 @@ package otel
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"testing"
@@ -129,9 +129,9 @@ func TestHandlerRace(t *testing.T) {
 }
 
 func BenchmarkErrorHandler(b *testing.B) {
-	primary := &errLogger{l: log.New(ioutil.Discard, "", 0)}
-	secondary := &errLogger{l: log.New(ioutil.Discard, "", 0)}
-	tertiary := &errLogger{l: log.New(ioutil.Discard, "", 0)}
+	primary := &errLogger{l: log.New(io.Discard, "", 0)}
+	secondary := &errLogger{l: log.New(io.Discard, "", 0)}
+	tertiary := &errLogger{l: log.New(io.Discard, "", 0)}
 
 	globalErrorHandler.setDelegate(primary)
 
@@ -167,7 +167,7 @@ func BenchmarkGetDefaultErrorHandler(b *testing.B) {
 }
 
 func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
-	SetErrorHandler(&errLogger{l: log.New(ioutil.Discard, "", 0)})
+	SetErrorHandler(&errLogger{l: log.New(io.Discard, "", 0)})
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -180,7 +180,7 @@ func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
 
 func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 	globalErrorHandler.setDelegate(
-		&errLogger{l: log.New(ioutil.Discard, "", 0)},
+		&errLogger{l: log.New(io.Discard, "", 0)},
 	)
 
 	eh := GetErrorHandler()
@@ -197,7 +197,7 @@ func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
 
 func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 	eh := GetErrorHandler()
-	SetErrorHandler(&errLogger{l: log.New(ioutil.Discard, "", 0)})
+	SetErrorHandler(&errLogger{l: log.New(io.Discard, "", 0)})
 	err := errors.New("benchmark delegated error handler handle")
 
 	b.ReportAllocs()
@@ -210,7 +210,7 @@ func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
 }
 
 func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
-	alt := &errLogger{l: log.New(ioutil.Discard, "", 0)}
+	alt := &errLogger{l: log.New(io.Discard, "", 0)}
 
 	b.ReportAllocs()
 	b.ResetTimer()
