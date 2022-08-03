@@ -96,12 +96,23 @@ func (p *pipeline) addCallback(callback func(context.Context)) {
 	p.callbacks = append(p.callbacks, callback)
 }
 
+// The key type is unexported to prevent collisions with context keys defined in
+// other packages.
+type callbackKey int
+
+// produceKey is the context key to tell if a Observe is called within a callback.
+// Its value of zero is arbitrary. If this package defined other context keys,
+// they would have different integer values.
+const produceKey callbackKey = 0
+
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p.Lock()
 	defer p.Unlock()
+
+	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
 	for _, callback := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )

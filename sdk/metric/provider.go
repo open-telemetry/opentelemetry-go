@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -33,9 +32,9 @@ import (
 type MeterProvider struct {
 	res *resource.Resource
 
-	meters    meterRegistry
-	readers   map[Reader][]view.View
-	providers map[Reader]*pipeline
+	meters        meterRegistry
+	intRegistry   *pipelineRegistry[int64]
+	floatRegistry *pipelineRegistry[float64]
 
 	forceFlush, shutdown func(context.Context) error
 }
@@ -54,17 +53,15 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 	flush, sdown := conf.readerSignals()
 
-	providers := make(map[Reader]*pipeline, len(conf.readers))
-	for reader := range conf.readers {
-		pipe := newPipeline(conf.res)
-		providers[reader] = pipe
-		reader.register(pipe)
-	}
+	intRegistry, floatRegistry := newPipelineRegistries(conf.readers)
 
 	return &MeterProvider{
-		res:       conf.res,
-		readers:   conf.readers,
-		providers: providers,
+		res: conf.res,
+
+		meters: meterRegistry{
+			intRegistry:   intRegistry,
+			floatRegistry: floatRegistry,
+		},
 
 		forceFlush: flush,
 		shutdown:   sdown,
