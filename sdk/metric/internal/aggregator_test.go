@@ -39,7 +39,8 @@ var (
 	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 
-	monoIncr = setMap{alice: 1, bob: 10, carol: 2}
+	monoIncr    = setMap{alice: 1, bob: 10, carol: 2}
+	nonMonoIncr = setMap{alice: 1, bob: -1, carol: 2}
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)

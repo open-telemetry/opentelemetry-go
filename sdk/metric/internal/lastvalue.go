@@ -25,10 +25,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// now is used to return the current local time while allowing tests to
-// override the the default time.Now function.
-var now = time.Now
-
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
 	timestamp time.Time

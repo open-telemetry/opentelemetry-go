@@ -35,7 +35,7 @@ type manualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
 
-	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
+	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 }
 
@@ -112,7 +112,7 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
-	temporalitySelector func(view.InstrumentKind) metricdata.Temporality
+	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 }
 
