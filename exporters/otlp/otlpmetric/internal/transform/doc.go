@@ -13,5 +13,5 @@
 // limitations under the License.
 
 // Package transform provides transformation functionality from the
-// OpenTelemetry Go metric telemetry data-types to OTLP data-types.
+// sdk/metric/metricdata data-types into OTLP data-types.
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
