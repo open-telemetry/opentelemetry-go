@@ -28,6 +28,10 @@ type (
 	// buckets.  It is configured with a maximum scale factor
 	// which determines resolution.  Scale is automatically
 	// adjusted to accommodate the range of input data.
+	//
+	// Note that the generic type `N` determines the type of the
+	// Sum, Min, and Max fields.  Bucket boundaries are handled in
+	// floating point regardless of the type of N.
 	Histogram[N ValueType] struct {
 		// maxSize is the maximum capacity of the positive and
 		// negative ranges.  it is set by Init(), preserved by
@@ -125,10 +129,10 @@ type (
 		high int32
 	}
 
-	// Int64 is an integer histogram.
+	// Int64 is an integer-valued histogram.
 	Int64 = Histogram[int64]
 
-	// Float64 is an integer histogram.
+	// Float64 is a float64-valued histogram.
 	Float64 = Histogram[float64]
 )
 
@@ -257,8 +261,7 @@ func (h *Histogram[N]) CopyInto(dest *Histogram[N]) {
 	dest.MergeFrom(h)
 }
 
-// UpdateByIncr supports updating a histogram with a non-negative
-// increment.
+// Update supports updating a histogram with a single count.
 func (h *Histogram[N]) Update(number N) {
 	h.UpdateByIncr(number, 1)
 }
@@ -349,7 +352,7 @@ func (h *Histogram[N]) update(b *Buckets, value float64, incr uint64) {
 	}
 }
 
-// increment determines if the index lies inside the current range
+// incrementIndexBy determines if the index lies inside the current range
 // [indexStart, indexEnd] and, if not, returns the minimum size (up to
 // maxSize) will satisfy the new value.
 func (h *Histogram[N]) incrementIndexBy(b *Buckets, index int32, incr uint64) (highLow, bool) {
