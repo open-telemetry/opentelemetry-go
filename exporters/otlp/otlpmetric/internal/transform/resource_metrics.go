@@ -29,7 +29,7 @@ func ResourceMetrics(rm metricdata.ResourceMetrics) (*mpb.ResourceMetrics, error
 	sms, err := ScopeMetrics(rm.ScopeMetrics)
 	return &mpb.ResourceMetrics{
 		Resource: &rpb.Resource{
-			Attributes: Iterator(rm.Resource.Iter()),
+			Attributes: AttrIter(rm.Resource.Iter()),
 		},
 		ScopeMetrics: sms,
 		SchemaUrl:    rm.Resource.SchemaURL(),

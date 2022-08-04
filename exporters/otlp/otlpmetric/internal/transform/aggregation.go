@@ -47,7 +47,7 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 	out := make([]*mpb.NumberDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		ndp := &mpb.NumberDataPoint{
-			Attributes:        Iterator(dPt.Attributes.Iter()),
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
 			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
 		}
@@ -80,7 +80,7 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		out = append(out, &mpb.HistogramDataPoint{
-			Attributes:        Iterator(dPt.Attributes.Iter()),
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
 			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
 			Count:             dPt.Count,

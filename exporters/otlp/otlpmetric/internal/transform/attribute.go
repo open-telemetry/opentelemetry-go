@@ -22,8 +22,8 @@ import (
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
-// Iterator transforms an attribute iterator into OTLP key-values.
-func Iterator(iter attribute.Iterator) []*cpb.KeyValue {
+// AttrIter transforms an attribute iterator into OTLP key-values.
+func AttrIter(iter attribute.Iterator) []*cpb.KeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil
