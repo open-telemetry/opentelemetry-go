@@ -15,13 +15,14 @@
 package schema
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/schema/v1.0/ast"
-	"go.opentelemetry.io/otel/schema/v1.0/types"
+	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
+	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
+	ast11 "go.opentelemetry.io/otel/schema/v1.1/ast"
+	types11 "go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
 func TestParseSchemaFile(t *testing.T) {
@@ -29,17 +30,17 @@ func TestParseSchemaFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ts)
 	assert.EqualValues(
-		t, &ast.Schema{
-			FileFormat: "1.0.0",
+		t, &ast11.Schema{
+			FileFormat: "1.1.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",
-			Versions: map[types.TelemetryVersion]ast.VersionDef{
+			Versions: map[types11.TelemetryVersion]ast11.VersionDef{
 				"1.0.0": {},
 
 				"1.1.0": {
-					All: ast.Attributes{
-						Changes: []ast.AttributeChange{
+					All: ast10.Attributes{
+						Changes: []ast10.AttributeChange{
 							{
-								RenameAttributes: &ast.AttributeMap{
+								RenameAttributes: &ast10.AttributeMap{
 									"k8s.cluster.name":     "kubernetes.cluster.name",
 									"k8s.namespace.name":   "kubernetes.namespace.name",
 									"k8s.node.name":        "kubernetes.node.name",
@@ -65,42 +66,42 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Resources: ast.Attributes{
-						Changes: []ast.AttributeChange{
+					Resources: ast10.Attributes{
+						Changes: []ast10.AttributeChange{
 							{
-								RenameAttributes: &ast.AttributeMap{
+								RenameAttributes: &ast10.AttributeMap{
 									"telemetry.auto.version": "telemetry.auto_instr.version",
 								},
 							},
 						},
 					},
 
-					Spans: ast.Spans{
-						Changes: []ast.SpansChange{
+					Spans: ast10.Spans{
+						Changes: []ast10.SpansChange{
 							{
-								RenameAttributes: &ast.AttributeMapForSpans{
-									AttributeMap: ast.AttributeMap{
+								RenameAttributes: &ast10.AttributeMapForSpans{
+									AttributeMap: ast10.AttributeMap{
 										"peer.service": "peer.service.name",
 									},
-									ApplyToSpans: []types.SpanName{"HTTP GET"},
+									ApplyToSpans: []types10.SpanName{"HTTP GET"},
 								},
 							},
 						},
 					},
 
-					SpanEvents: ast.SpanEvents{
-						Changes: []ast.SpanEventsChange{
+					SpanEvents: ast10.SpanEvents{
+						Changes: []ast10.SpanEventsChange{
 							{
-								RenameEvents: &ast.RenameSpanEvents{
+								RenameEvents: &ast10.RenameSpanEvents{
 									EventNameMap: map[string]string{
 										"exception.stacktrace": "exception.stack_trace",
 									},
 								},
 							},
 							{
-								RenameAttributes: &ast.RenameSpanEventAttributes{
-									ApplyToEvents: []types.EventName{"exception.stack_trace"},
-									AttributeMap: ast.AttributeMap{
+								RenameAttributes: &ast10.RenameSpanEventAttributes{
+									ApplyToEvents: []types10.EventName{"exception.stack_trace"},
+									AttributeMap: ast10.AttributeMap{
 										"peer.service": "peer.service.name",
 									},
 								},
@@ -108,10 +109,10 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Logs: ast.Logs{
-						Changes: []ast.LogsChange{
+					Logs: ast10.Logs{
+						Changes: []ast10.LogsChange{
 							{
-								RenameAttributes: &ast.RenameAttributes{
+								RenameAttributes: &ast10.RenameAttributes{
 									AttributeMap: map[string]string{
 										"process.executable_name": "process.executable.name",
 									},
@@ -120,24 +121,24 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Metrics: ast.Metrics{
-						Changes: []ast.MetricsChange{
+					Metrics: ast11.Metrics{
+						Changes: []ast11.MetricsChange{
 							{
-								RenameAttributes: &ast.AttributeMapForMetrics{
+								RenameAttributes: &ast10.AttributeMapForMetrics{
 									AttributeMap: map[string]string{
 										"http.status_code": "http.response_status_code",
 									},
 								},
 							},
 							{
-								RenameMetrics: map[types.MetricName]types.MetricName{
+								RenameMetrics: map[types10.MetricName]types10.MetricName{
 									"container.cpu.usage.total":  "cpu.usage.total",
 									"container.memory.usage.max": "memory.usage.max",
 								},
 							},
 							{
-								RenameAttributes: &ast.AttributeMapForMetrics{
-									ApplyToMetrics: []types.MetricName{
+								RenameAttributes: &ast10.AttributeMapForMetrics{
+									ApplyToMetrics: []types10.MetricName{
 										"system.cpu.utilization",
 										"system.memory.usage",
 										"system.memory.utilization",
@@ -145,6 +146,16 @@ func TestParseSchemaFile(t *testing.T) {
 									},
 									AttributeMap: map[string]string{
 										"status": "state",
+									},
+								},
+							},
+							{
+								Split: &ast11.SplitMetric{
+									ApplyToMetric: "system.paging.operations",
+									ByAttribute:   "direction",
+									MetricsFromAttributes: map[types10.MetricName]types11.AttributeValue{
+										"system.paging.operations.in":  "in",
+										"system.paging.operations.out": "out",
 									},
 								},
 							},
@@ -160,19 +171,4 @@ func TestFailParseSchemaFile(t *testing.T) {
 	ts, err := ParseFile("testdata/unsupported-file-format.yaml")
 	assert.Error(t, err)
 	assert.Nil(t, ts)
-
-	ts, err = ParseFile("testdata/invalid-schema-url.yaml")
-	assert.Error(t, err)
-	assert.Nil(t, ts)
-}
-
-func TestFailParseSchema(t *testing.T) {
-	_, err := Parse(bytes.NewReader([]byte("")))
-	assert.Error(t, err)
-
-	_, err = Parse(bytes.NewReader([]byte("invalid yaml")))
-	assert.Error(t, err)
-
-	_, err = Parse(bytes.NewReader([]byte("file_format: 1.0.0")))
-	assert.Error(t, err)
 }

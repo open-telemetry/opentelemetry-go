@@ -24,6 +24,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -357,6 +358,70 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
 				}
 			}
+		})
+	}
+}
+
+type nonDeferWrapperTracer struct {
+	*WrapperTracer
+}
+
+func (t *nonDeferWrapperTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	// Run start on the parent wrapper with a brand new context
+	// so `WithDeferredSetup` hasn't been called, and the OpenTracing context is injected.
+	return t.WrapperTracer.Start(context.Background(), name, opts...)
+}
+
+func TestBridgeTracer_StartSpan(t *testing.T) {
+	testCases := []struct {
+		name           string
+		before         func(*testing.T, *BridgeTracer)
+		expectWarnings []string
+	}{
+		{
+			name: "with no option set",
+			expectWarnings: []string{
+				"The OpenTelemetry tracer is not set, default no-op tracer is used! Call SetOpenTelemetryTracer to set it up.\n",
+			},
+		},
+		{
+			name: "with wrapper tracer set",
+			before: func(t *testing.T, bridge *BridgeTracer) {
+				wTracer := NewWrapperTracer(bridge, otel.Tracer("test"))
+				bridge.SetOpenTelemetryTracer(wTracer)
+			},
+			expectWarnings: []string(nil),
+		},
+		{
+			name: "with a non-defered wrapper tracer",
+			before: func(t *testing.T, bridge *BridgeTracer) {
+				wTracer := &nonDeferWrapperTracer{
+					NewWrapperTracer(bridge, otel.Tracer("test")),
+				}
+				bridge.SetOpenTelemetryTracer(wTracer)
+			},
+			expectWarnings: []string{
+				"SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var warningMessages []string
+			bridge := NewBridgeTracer()
+			bridge.SetWarningHandler(func(msg string) {
+				warningMessages = append(warningMessages, msg)
+			})
+
+			if tc.before != nil {
+				tc.before(t, bridge)
+			}
+
+			span := bridge.StartSpan("test")
+			assert.NotNil(t, span)
+
+			assert.Equal(t, tc.expectWarnings, warningMessages)
 		})
 	}
 }

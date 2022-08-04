@@ -14,6 +14,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.12.0` version of the OpenTelemetry specification. (#3010)
 - Add the `go.opentelemetry.io/otel/semconv/v1.11.0` package.
   The package contains semantic conventions from the `v1.11.0` version of the OpenTelemetry specification. (#3009)
+- Add http.method attribute to http server metric. (#3018)
+
+### Fixed
+
+- Invalid warning for context setup being deferred in OpenTracing bridge (#3029).
 
 ## [1.8.0/0.31.0] - 2022-07-08
 
@@ -21,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add support for `opentracing.TextMap` format in the `Inject` and `Extract` methods
 of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911)
+- Add support for Schema Files format 1.1.x (metric "split" transform). (#2999)
 
 ### Changed
 
