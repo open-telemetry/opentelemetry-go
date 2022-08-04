@@ -80,14 +80,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
-			wantKind: internal.NewDeltaSum[N](),
+			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
-			wantKind: internal.NewCumulativeSum[N](),
+			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -104,7 +104,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				temp: metricdata.DeltaTemporality,
 			},
 			views:    []view.View{{}, renameView},
-			wantKind: internal.NewDeltaSum[N](),
+			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  2,
 		},
 	}

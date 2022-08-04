@@ -247,7 +247,7 @@ func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst vi
 			continue
 		}
 
-		agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind))
+		agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind), isMonotonic(inst.Kind))
 		if agg != nil {
 			// TODO (#3011): If filtering is done at the instrument level add here.
 			// This is where the aggregator and the view are both in scope.
@@ -257,9 +257,17 @@ func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst vi
 	return aggs, errs.errorOrNil()
 }
 
+func isMonotonic(kind view.InstrumentKind) bool {
+	switch kind {
+	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
+		return true
+	}
+	return false
+}
+
 // createAggregator takes the config (Aggregation and Temporality) and produces a memory backed Aggregator.
 // TODO (#3011): If filterting is done by the Aggregator it should be passed here.
-func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporality metricdata.Temporality) internal.Aggregator[N] {
+func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporality metricdata.Temporality, monotonic bool) internal.Aggregator[N] {
 	switch agg := agg.(type) {
 	case aggregation.Drop:
 		return nil
@@ -267,9 +275,9 @@ func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporalit
 		return internal.NewLastValue[N]()
 	case aggregation.Sum:
 		if temporality == metricdata.CumulativeTemporality {
-			return internal.NewCumulativeSum[N]()
+			return internal.NewCumulativeSum[N](monotonic)
 		}
-		return internal.NewDeltaSum[N]()
+		return internal.NewDeltaSum[N](monotonic)
 	case aggregation.ExplicitBucketHistogram:
 		if temporality == metricdata.CumulativeTemporality {
 			return internal.NewCumulativeHistogram[N](agg)
