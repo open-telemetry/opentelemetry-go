@@ -260,3 +260,50 @@ func newOTelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyVal
 		},
 	}
 }
+
+func TestAttrIter(t *testing.T) {
+	tests := []struct {
+		kvs      []attribute.KeyValue
+		expected []*commonpb.KeyValue
+	}{
+		{
+			nil,
+			nil,
+		},
+		{
+			[]attribute.KeyValue{},
+			nil,
+		},
+		{
+			[]attribute.KeyValue{
+				attribute.Bool("true", true),
+				attribute.Int64("one", 1),
+				attribute.Int64("two", 2),
+				attribute.Float64("three", 3),
+				attribute.Int("four", 4),
+				attribute.Int("five", 5),
+				attribute.Float64("six", 6),
+				attribute.Int("seven", 7),
+				attribute.Int("eight", 8),
+				attribute.String("the", "final word"),
+			},
+			[]*commonpb.KeyValue{
+				{Key: "eight", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 8}}},
+				{Key: "five", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 5}}},
+				{Key: "four", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 4}}},
+				{Key: "one", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 1}}},
+				{Key: "seven", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 7}}},
+				{Key: "six", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 6.0}}},
+				{Key: "the", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "final word"}}},
+				{Key: "three", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.0}}},
+				{Key: "true", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: true}}},
+				{Key: "two", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 2}}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		labels := attribute.NewSet(test.kvs...)
+		assert.Equal(t, test.expected, AttrIter(labels.Iter()))
+	}
+}
