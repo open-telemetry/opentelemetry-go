@@ -26,6 +26,9 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
+// ScopeMetrics returns a slice of OTLP ScopeMetrics generated from sms. If
+// sms contains invalid metric values, an error will be returned along with a
+// slice that contains partial OTLP ScopeMetrics.
 func ScopeMetrics(sms []metricdata.ScopeMetrics) ([]*mpb.ScopeMetrics, error) {
 	var errs []string
 	out := make([]*mpb.ScopeMetrics, 0, len(sms))

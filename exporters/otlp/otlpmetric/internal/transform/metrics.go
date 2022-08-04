@@ -25,6 +25,9 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
+// Metrics returns a slice of OTLP Metric generated from ms. If ms contains
+// invalid metric values, an error will be returned along with a slice that
+// contains partial OTLP Metrics.
 func Metrics(ms []metricdata.Metrics) ([]*mpb.Metric, error) {
 	var errs []string
 	out := make([]*mpb.Metric, 0, len(ms))

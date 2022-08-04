@@ -24,6 +24,7 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
+// Gauge returns an OTLP Metric_Gauge generated from g.
 func Gauge[N int64 | float64](g metricdata.Gauge[N]) *mpb.Metric_Gauge {
 	return &mpb.Metric_Gauge{
 		Gauge: &mpb.Gauge{
@@ -32,6 +33,8 @@ func Gauge[N int64 | float64](g metricdata.Gauge[N]) *mpb.Metric_Gauge {
 	}
 }
 
+// Sum returns an OTLP Metric_Sum generated from s. An error is returned with
+// a partial Metric_Sum if the temporality of s is unknown.
 func Sum[N int64 | float64](s metricdata.Sum[N]) (*mpb.Metric_Sum, error) {
 	t, err := Temporality(s.Temporality)
 	return &mpb.Metric_Sum{
@@ -43,6 +46,7 @@ func Sum[N int64 | float64](s metricdata.Sum[N]) (*mpb.Metric_Sum, error) {
 	}, err
 }
 
+// DataPoints returns a slice of OTLP NumberDataPoint generated from dPts.
 func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.NumberDataPoint {
 	out := make([]*mpb.NumberDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
@@ -66,6 +70,9 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 	return out
 }
 
+// Histogram returns an OTLP Metric_Histogram generated from h. An error is
+// returned with a partial Metric_Histogram if the temporality of h is
+// unknown.
 func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
 	t, err := Temporality(h.Temporality)
 	return &mpb.Metric_Histogram{
@@ -76,6 +83,8 @@ func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
 	}, err
 }
 
+// HistogramDataPoints returns a slice of OTLP HistogramDataPoint generated
+// from dPts.
 func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramDataPoint {
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
@@ -94,6 +103,9 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 	return out
 }
 
+// Temporality returns an OTLP AggregationTemporality generated from t. If t
+// is unknown, an error is returned along with the invalid
+// AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED.
 func Temporality(t metricdata.Temporality) (mpb.AggregationTemporality, error) {
 	switch t {
 	case metricdata.DeltaTemporality:

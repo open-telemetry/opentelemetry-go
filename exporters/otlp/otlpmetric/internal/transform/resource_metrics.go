@@ -23,8 +23,9 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
-// ResourceMetrics transforms a metricdata.ResourceMetrics type into an OTLP
-// ReResourceMetrics type.
+// ResourceMetrics returns an OTLP ResourceMetrics generated from rm. If rm
+// contains invalid ScopeMetrics, an error will be returned along with an OTLP
+// ResourceMetrics that contains partial OTLP ScopeMetrics.
 func ResourceMetrics(rm metricdata.ResourceMetrics) (*mpb.ResourceMetrics, error) {
 	sms, err := ScopeMetrics(rm.ScopeMetrics)
 	return &mpb.ResourceMetrics{
