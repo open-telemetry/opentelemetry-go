@@ -285,7 +285,7 @@ func (h *Histogram[N]) UpdateByIncr(number N, incr uint64) {
 	h.count += incr
 
 	if value == 0 {
-		h.zeroCount++
+		h.zeroCount += incr
 		return
 	}
 

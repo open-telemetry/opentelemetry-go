@@ -736,6 +736,16 @@ func TestAggregatorCopySwap(t *testing.T) {
 	requireEqual(t, h2, h3)
 }
 
+// TestZeroCountByIncr verifies that zero counts are incremented properly.
+func TestZeroCountByIncr(t *testing.T) {
+	// 10 "0" values
+	h1 := NewFloat64(NewConfig(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+	h2 := NewFloat64(NewConfig())
+	h2.UpdateByIncr(0, 10)
+
+	requireEqual(t, h1, h2)
+}
+
 // Benchmarks the Update() function for values in the range [1,2)
 func BenchmarkLinear(b *testing.B) {
 	src := rand.NewSource(77777677777)
