@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=Temporality
 //go:build go1.17
 // +build go1.17
 
@@ -35,3 +36,8 @@ const (
 	// from other cycles do not affect them.
 	DeltaTemporality
 )
+
+// MarshalText returns the byte encoded of t.
+func (t Temporality) MarshalText() ([]byte, error) {
+	return []byte(t.String()), nil
+}

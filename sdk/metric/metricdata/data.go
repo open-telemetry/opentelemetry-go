@@ -91,9 +91,9 @@ type DataPoint[N int64 | float64] struct {
 	// timeseries.
 	Attributes attribute.Set
 	// StartTime is when the timeseries was started. (optional)
-	StartTime time.Time
+	StartTime time.Time `json:",omitempty"`
 	// Time is the time when the timeseries was recorded. (optional)
-	Time time.Time
+	Time time.Time `json:",omitempty"`
 	// Value is the value of this data point.
 	Value N
 }
@@ -128,9 +128,9 @@ type HistogramDataPoint struct {
 	BucketCounts []uint64
 
 	// Min is the minimum value recorded. (optional)
-	Min *float64
+	Min *float64 `json:",omitempty"`
 	// Max is the maximum value recorded. (optional)
-	Max *float64
+	Max *float64 `json:",omitempty"`
 	// Sum is the sum of the values recorded.
 	Sum float64
 }
