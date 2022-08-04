@@ -48,9 +48,8 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn func(attribute.Set) attr
 
 // Aggregate records the measurement, scoped by attr, and aggregates it
 // into an aggregation.
-
-// TODO (#3006): drop stale attributes from seen.
 func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
+	// TODO (#3006): drop stale attributes from seen.
 	f.Lock()
 	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
