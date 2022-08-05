@@ -23,287 +23,175 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+)
+
+var (
+	attrBool         = attribute.Bool("bool", true)
+	attrBoolSlice    = attribute.BoolSlice("bool slice", []bool{true, false})
+	attrInt          = attribute.Int("int", 1)
+	attrIntSlice     = attribute.IntSlice("int slice", []int{-1, 1})
+	attrInt64        = attribute.Int64("int64", 1)
+	attrInt64Slice   = attribute.Int64Slice("int64 slice", []int64{-1, 1})
+	attrFloat64      = attribute.Float64("float64", 1)
+	attrFloat64Slice = attribute.Float64Slice("float64 slice", []float64{-1, 1})
+	attrString       = attribute.String("string", "o")
+	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
+	attrInvalid      = attribute.KeyValue{
+		Key:   attribute.Key("invalid"),
+		Value: attribute.Value{},
+	}
+
+	valBoolTrue  = &cpb.AnyValue{Value: &cpb.AnyValue_BoolValue{BoolValue: true}}
+	valBoolFalse = &cpb.AnyValue{Value: &cpb.AnyValue_BoolValue{BoolValue: false}}
+	valBoolSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{valBoolTrue, valBoolFalse},
+		},
+	}}
+	valIntOne   = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: 1}}
+	valIntNOne  = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: -1}}
+	valIntSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{valIntNOne, valIntOne},
+		},
+	}}
+	valDblOne   = &cpb.AnyValue{Value: &cpb.AnyValue_DoubleValue{DoubleValue: 1}}
+	valDblNOne  = &cpb.AnyValue{Value: &cpb.AnyValue_DoubleValue{DoubleValue: -1}}
+	valDblSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{valDblNOne, valDblOne},
+		},
+	}}
+	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valStrN     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
+	valStrSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{valStrO, valStrN},
+		},
+	}}
+
+	kvBool         = &cpb.KeyValue{Key: "bool", Value: valBoolTrue}
+	kvBoolSlice    = &cpb.KeyValue{Key: "bool slice", Value: valBoolSlice}
+	kvInt          = &cpb.KeyValue{Key: "int", Value: valIntOne}
+	kvIntSlice     = &cpb.KeyValue{Key: "int slice", Value: valIntSlice}
+	kvInt64        = &cpb.KeyValue{Key: "int64", Value: valIntOne}
+	kvInt64Slice   = &cpb.KeyValue{Key: "int64 slice", Value: valIntSlice}
+	kvFloat64      = &cpb.KeyValue{Key: "float64", Value: valDblOne}
+	kvFloat64Slice = &cpb.KeyValue{Key: "float64 slice", Value: valDblSlice}
+	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
+	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
+	kvInvalid      = &cpb.KeyValue{
+		Key: "invalid",
+		Value: &cpb.AnyValue{
+			Value: &cpb.AnyValue_StringValue{StringValue: "INVALID"},
+		},
+	}
 )
 
 type attributeTest struct {
-	attrs    []attribute.KeyValue
-	expected []*commonpb.KeyValue
+	name string
+	in   []attribute.KeyValue
+	want []*cpb.KeyValue
 }
 
-func TestAttributes(t *testing.T) {
+func TestAttributeTransforms(t *testing.T) {
 	for _, test := range []attributeTest{
-		{nil, nil},
+		{"nil", nil, nil},
+		{"empty", []attribute.KeyValue{}, nil},
 		{
+			"invalid",
+			[]attribute.KeyValue{attrInvalid},
+			[]*cpb.KeyValue{kvInvalid},
+		},
+		{
+			"bool",
+			[]attribute.KeyValue{attrBool},
+			[]*cpb.KeyValue{kvBool},
+		},
+		{
+			"bool slice",
+			[]attribute.KeyValue{attrBoolSlice},
+			[]*cpb.KeyValue{kvBoolSlice},
+		},
+		{
+			"int",
+			[]attribute.KeyValue{attrInt},
+			[]*cpb.KeyValue{kvInt},
+		},
+		{
+			"int slice",
+			[]attribute.KeyValue{attrIntSlice},
+			[]*cpb.KeyValue{kvIntSlice},
+		},
+		{
+			"int64",
+			[]attribute.KeyValue{attrInt64},
+			[]*cpb.KeyValue{kvInt64},
+		},
+		{
+			"int64 slice",
+			[]attribute.KeyValue{attrInt64Slice},
+			[]*cpb.KeyValue{kvInt64Slice},
+		},
+		{
+			"float64",
+			[]attribute.KeyValue{attrFloat64},
+			[]*cpb.KeyValue{kvFloat64},
+		},
+		{
+			"float64 slice",
+			[]attribute.KeyValue{attrFloat64Slice},
+			[]*cpb.KeyValue{kvFloat64Slice},
+		},
+		{
+			"string",
+			[]attribute.KeyValue{attrString},
+			[]*cpb.KeyValue{kvString},
+		},
+		{
+			"string slice",
+			[]attribute.KeyValue{attrStringSlice},
+			[]*cpb.KeyValue{kvStringSlice},
+		},
+		{
+			"all",
 			[]attribute.KeyValue{
-				attribute.Int("int to int", 123),
-				attribute.Int64("int64 to int64", 1234567),
-				attribute.Float64("float64 to double", 1.61),
-				attribute.String("string to string", "string"),
-				attribute.Bool("bool to bool", true),
+				attrBool,
+				attrBoolSlice,
+				attrInt,
+				attrIntSlice,
+				attrInt64,
+				attrInt64Slice,
+				attrFloat64,
+				attrFloat64Slice,
+				attrString,
+				attrStringSlice,
+				attrInvalid,
 			},
-			[]*commonpb.KeyValue{
-				{
-					Key: "int to int",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 123,
-						},
-					},
-				},
-				{
-					Key: "int64 to int64",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_IntValue{
-							IntValue: 1234567,
-						},
-					},
-				},
-				{
-					Key: "float64 to double",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_DoubleValue{
-							DoubleValue: 1.61,
-						},
-					},
-				},
-				{
-					Key: "string to string",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_StringValue{
-							StringValue: "string",
-						},
-					},
-				},
-				{
-					Key: "bool to bool",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_BoolValue{
-							BoolValue: true,
-						},
-					},
-				},
+			[]*cpb.KeyValue{
+				kvBool,
+				kvBoolSlice,
+				kvInt,
+				kvIntSlice,
+				kvInt64,
+				kvInt64Slice,
+				kvFloat64,
+				kvFloat64Slice,
+				kvString,
+				kvStringSlice,
+				kvInvalid,
 			},
 		},
 	} {
-		got := KeyValues(test.attrs)
-		if !assert.Len(t, got, len(test.expected)) {
-			continue
-		}
-		for i, actual := range got {
-			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
-				e, ok := test.expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
-				if !ok {
-					t.Errorf("expected AnyValue_DoubleValue, got %T", test.expected[i].Value.Value)
-					continue
-				}
-				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
-					continue
-				}
-				e.DoubleValue = a.DoubleValue
-			}
-			assert.Equal(t, test.expected[i], actual)
-		}
-	}
-}
-
-func TestArrayAttributes(t *testing.T) {
-	// Array KeyValue supports only arrays of primitive types:
-	// "bool", "int", "int64",
-	// "float64", "string",
-	for _, test := range []attributeTest{
-		{nil, nil},
-		{
-			[]attribute.KeyValue{
-				{
-					Key:   attribute.Key("invalid"),
-					Value: attribute.Value{},
-				},
-			},
-			[]*commonpb.KeyValue{
-				{
-					Key: "invalid",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_StringValue{
-							StringValue: "INVALID",
-						},
-					},
-				},
-			},
-		},
-		{
-			[]attribute.KeyValue{
-				attribute.BoolSlice("bool slice to bool array", []bool{true, false}),
-				attribute.IntSlice("int slice to int64 array", []int{1, 2, 3}),
-				attribute.Int64Slice("int64 slice to int64 array", []int64{1, 2, 3}),
-				attribute.Float64Slice("float64 slice to double array", []float64{1.11, 2.22, 3.33}),
-				attribute.StringSlice("string slice to string array", []string{"foo", "bar", "baz"}),
-			},
-			[]*commonpb.KeyValue{
-				newOTelBoolArray("bool slice to bool array", []bool{true, false}),
-				newOTelIntArray("int slice to int64 array", []int64{1, 2, 3}),
-				newOTelIntArray("int64 slice to int64 array", []int64{1, 2, 3}),
-				newOTelDoubleArray("float64 slice to double array", []float64{1.11, 2.22, 3.33}),
-				newOTelStringArray("string slice to string array", []string{"foo", "bar", "baz"}),
-			},
-		},
-	} {
-		actualArrayAttributes := KeyValues(test.attrs)
-		expectedArrayAttributes := test.expected
-		if !assert.Len(t, actualArrayAttributes, len(expectedArrayAttributes)) {
-			continue
-		}
-
-		for i, actualArrayAttr := range actualArrayAttributes {
-			expectedArrayAttr := expectedArrayAttributes[i]
-			expectedKey, actualKey := expectedArrayAttr.Key, actualArrayAttr.Key
-			if !assert.Equal(t, expectedKey, actualKey) {
-				continue
-			}
-
-			expected := expectedArrayAttr.Value.GetArrayValue()
-			actual := actualArrayAttr.Value.GetArrayValue()
-			if expected == nil {
-				assert.Nil(t, actual)
-				continue
-			}
-			if assert.NotNil(t, actual, "expected not nil for %s", actualKey) {
-				assertExpectedArrayValues(t, expected.Values, actual.Values)
-			}
-		}
-
-	}
-}
-
-func assertExpectedArrayValues(t *testing.T, expectedValues, actualValues []*commonpb.AnyValue) {
-	for i, actual := range actualValues {
-		expected := expectedValues[i]
-		if a, ok := actual.Value.(*commonpb.AnyValue_DoubleValue); ok {
-			e, ok := expected.Value.(*commonpb.AnyValue_DoubleValue)
-			if !ok {
-				t.Errorf("expected AnyValue_DoubleValue, got %T", expected.Value)
-				continue
-			}
-			if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
-				continue
-			}
-			e.DoubleValue = a.DoubleValue
-		}
-		assert.Equal(t, expected, actual)
-	}
-}
-
-func newOTelBoolArray(key string, values []bool) *commonpb.KeyValue {
-	arrayValues := []*commonpb.AnyValue{}
-	for _, b := range values {
-		arrayValues = append(arrayValues, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_BoolValue{
-				BoolValue: b,
-			},
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("KeyValues", func(t *testing.T) {
+				assert.ElementsMatch(t, test.want, KeyValues(test.in))
+			})
+			t.Run("AttrIter", func(t *testing.T) {
+				s := attribute.NewSet(test.in...)
+				assert.ElementsMatch(t, test.want, AttrIter(s.Iter()))
+			})
 		})
-	}
-
-	return newOTelArray(key, arrayValues)
-}
-
-func newOTelIntArray(key string, values []int64) *commonpb.KeyValue {
-	arrayValues := []*commonpb.AnyValue{}
-
-	for _, i := range values {
-		arrayValues = append(arrayValues, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_IntValue{
-				IntValue: i,
-			},
-		})
-	}
-
-	return newOTelArray(key, arrayValues)
-}
-
-func newOTelDoubleArray(key string, values []float64) *commonpb.KeyValue {
-	arrayValues := []*commonpb.AnyValue{}
-
-	for _, d := range values {
-		arrayValues = append(arrayValues, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_DoubleValue{
-				DoubleValue: d,
-			},
-		})
-	}
-
-	return newOTelArray(key, arrayValues)
-}
-
-func newOTelStringArray(key string, values []string) *commonpb.KeyValue {
-	arrayValues := []*commonpb.AnyValue{}
-
-	for _, s := range values {
-		arrayValues = append(arrayValues, &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_StringValue{
-				StringValue: s,
-			},
-		})
-	}
-
-	return newOTelArray(key, arrayValues)
-}
-
-func newOTelArray(key string, arrayValues []*commonpb.AnyValue) *commonpb.KeyValue {
-	return &commonpb.KeyValue{
-		Key: key,
-		Value: &commonpb.AnyValue{
-			Value: &commonpb.AnyValue_ArrayValue{
-				ArrayValue: &commonpb.ArrayValue{
-					Values: arrayValues,
-				},
-			},
-		},
-	}
-}
-
-func TestAttrIter(t *testing.T) {
-	tests := []struct {
-		kvs      []attribute.KeyValue
-		expected []*commonpb.KeyValue
-	}{
-		{
-			nil,
-			nil,
-		},
-		{
-			[]attribute.KeyValue{},
-			nil,
-		},
-		{
-			[]attribute.KeyValue{
-				attribute.Bool("true", true),
-				attribute.Int64("one", 1),
-				attribute.Int64("two", 2),
-				attribute.Float64("three", 3),
-				attribute.Int("four", 4),
-				attribute.Int("five", 5),
-				attribute.Float64("six", 6),
-				attribute.Int("seven", 7),
-				attribute.Int("eight", 8),
-				attribute.String("the", "final word"),
-			},
-			[]*commonpb.KeyValue{
-				{Key: "eight", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 8}}},
-				{Key: "five", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 5}}},
-				{Key: "four", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 4}}},
-				{Key: "one", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 1}}},
-				{Key: "seven", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 7}}},
-				{Key: "six", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 6.0}}},
-				{Key: "the", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "final word"}}},
-				{Key: "three", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.0}}},
-				{Key: "true", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: true}}},
-				{Key: "two", Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 2}}},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		labels := attribute.NewSet(test.kvs...)
-		assert.Equal(t, test.expected, AttrIter(labels.Iter()))
 	}
 }
