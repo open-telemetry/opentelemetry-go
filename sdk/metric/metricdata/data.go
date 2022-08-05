@@ -15,9 +15,6 @@
 //go:build go1.18
 // +build go1.18
 
-// TODO: NOTE this is a temporary space, it may be moved following the
-// discussion of #2813, or #2841
-
 package metricdata // import "go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 import (
