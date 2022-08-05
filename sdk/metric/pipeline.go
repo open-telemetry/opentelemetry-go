@@ -24,7 +24,6 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -196,36 +195,41 @@ func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
 }
 
 type multierror struct {
-	errors []string
+	wrapped error
+	errors  []string
 }
 
 func (m *multierror) errorOrNil() error {
 	if len(m.errors) == 0 {
 		return nil
 	}
-	return fmt.Errorf(strings.Join(m.errors, "; "))
+	return fmt.Errorf("%w: %s", m.wrapped, strings.Join(m.errors, "; "))
 }
 
 func (m *multierror) append(err error) {
 	m.errors = append(m.errors, err.Error())
 }
 
-// instrumentIdentifier is used to identify multiple instruments being mapped to the same aggregator.
+// instrumentID is used to identify multiple instruments being mapped to the same aggregator.
 // e.g. using an exact match view with a name=* view.
-// You can't use a view.Instrument here because not all Aggregators are hashable.
-type instrumentIdentifier struct {
+// You can't use a view.Instrument here because not all Aggregators are comparable.
+type instrumentID struct {
 	scope       instrumentation.Scope
 	name        string
 	description string
 }
 
-func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentIdentifier]internal.Aggregator[N], error) {
-	aggs := map[instrumentIdentifier]internal.Aggregator[N]{}
-	errs := &multierror{}
+var errCreatingAggregators = errors.New("could not create all aggregators")
+
+func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
+	aggs := map[instrumentID]internal.Aggregator[N]{}
+	errs := &multierror{
+		wrapped: errCreatingAggregators,
+	}
 	for _, v := range views {
 		inst, match := v.TransformInstrument(inst)
 
-		ident := instrumentIdentifier{
+		ident := instrumentID{
 			scope:       inst.Scope,
 			name:        inst.Name,
 			description: inst.Description,
@@ -242,7 +246,7 @@ func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst vi
 		}
 
 		if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
-			global.Error(err, "creating aggregator", "instrumentKind", inst.Kind, "aggregation", inst.Aggregation)
+			err = fmt.Errorf("creating aggregator with instrumentKind: %d, aggregation %v: %w", inst.Kind, inst.Aggregation, err)
 			errs.append(err)
 			continue
 		}
@@ -287,7 +291,9 @@ func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporalit
 	return nil
 }
 
+// TODO: review need for aggregation check after https://github.com/open-telemetry/opentelemetry-specification/issues/2710
 var errIncompatibleAggregation = errors.New("incompatible aggregation")
+var errUnknownAggregation = errors.New("unrecognized aggregation")
 
 // is aggregatorCompatible checks if the aggregation can be used by the instrument.
 // Current compatibility:
@@ -323,6 +329,6 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 		return nil
 	default:
 		// This is used passed checking for default, it should be an error at this point.
-		return errIncompatibleAggregation
+		return fmt.Errorf("%w: %v", errUnknownAggregation, agg)
 	}
 }

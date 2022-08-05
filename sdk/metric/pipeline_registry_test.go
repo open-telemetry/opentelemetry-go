@@ -18,7 +18,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,23 +26,19 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-type testReader struct {
-	agg  aggregation.Aggregation
-	temp metricdata.Temporality
+type invalidAggregation struct {
+	aggregation.Aggregation
 }
 
-func (t testReader) register(producer)                                       {}
-func (t testReader) temporality(view.InstrumentKind) metricdata.Temporality  { return t.temp }
-func (t testReader) aggregation(view.InstrumentKind) aggregation.Aggregation { return t.agg } // nolint:revive  // import-shadow for method scoped by type.
-func (t testReader) Collect(context.Context) (metricdata.ResourceMetrics, error) {
-	return metricdata.ResourceMetrics{}, nil
+func (invalidAggregation) Copy() aggregation.Aggregation {
+	return invalidAggregation{}
 }
-func (t testReader) ForceFlush(context.Context) error { return nil }
-func (t testReader) Shutdown(context.Context) error   { return nil }
+func (invalidAggregation) Err() error {
+	return nil
+}
 
 func testCreateAggregators[N int64 | float64](t *testing.T) {
 	changeAggView, _ := view.New(
@@ -58,28 +53,81 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		view.MatchInstrumentName("foo"),
 		view.WithSetAggregation(aggregation.Default{}),
 	)
+	invalidAggView, _ := view.New(
+		view.MatchInstrumentName("foo"),
+		view.WithSetAggregation(invalidAggregation{}),
+	)
 
-	inst := view.Instrument{
-		Name: "foo",
-		Kind: view.SyncCounter,
+	instruments := []view.Instrument{
+		{Name: "foo", Kind: view.InstrumentKind(0)}, //Unknown kind
+		{Name: "foo", Kind: view.SyncCounter},
+		{Name: "foo", Kind: view.SyncUpDownCounter},
+		{Name: "foo", Kind: view.SyncHistogram},
+		{Name: "foo", Kind: view.AsyncCounter},
+		{Name: "foo", Kind: view.AsyncUpDownCounter},
+		{Name: "foo", Kind: view.AsyncGauge},
 	}
 
 	testcases := []struct {
 		name     string
 		reader   Reader
 		views    []view.View
+		inst     view.Instrument
 		wantKind internal.Aggregator[N] //Aggregators should match len and types
 		wantLen  int
+		wantErr  error
 	}{
 		{
 			name:   "drop should return 0 aggregators",
 			reader: NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
 			views:  []view.View{{}},
+			inst:   instruments[view.SyncCounter],
 		},
 		{
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
+			inst:     instruments[view.SyncUpDownCounter],
+			wantKind: internal.NewDeltaSum[N](false),
+			wantLen:  1,
+		},
+		{
+			name:     "default agg should use reader",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			views:    []view.View{defaultAggView},
+			inst:     instruments[view.SyncHistogram],
+			wantKind: internal.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantLen:  1,
+		},
+		{
+			name:     "default agg should use reader",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			views:    []view.View{defaultAggView},
+			inst:     instruments[view.AsyncCounter],
+			wantKind: internal.NewDeltaSum[N](true),
+			wantLen:  1,
+		},
+		{
+			name:     "default agg should use reader",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			views:    []view.View{defaultAggView},
+			inst:     instruments[view.AsyncUpDownCounter],
+			wantKind: internal.NewDeltaSum[N](false),
+			wantLen:  1,
+		},
+		{
+			name:     "default agg should use reader",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			views:    []view.View{defaultAggView},
+			inst:     instruments[view.AsyncGauge],
+			wantKind: internal.NewLastValue[N](),
+			wantLen:  1,
+		},
+		{
+			name:     "default agg should use reader",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			views:    []view.View{defaultAggView},
+			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
@@ -87,6 +135,47 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
+			inst:     instruments[view.SyncUpDownCounter],
+			wantKind: internal.NewCumulativeSum[N](false),
+			wantLen:  1,
+		},
+		{
+			name:     "reader should set default agg",
+			reader:   NewManualReader(),
+			views:    []view.View{{}},
+			inst:     instruments[view.SyncHistogram],
+			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantLen:  1,
+		},
+		{
+			name:     "reader should set default agg",
+			reader:   NewManualReader(),
+			views:    []view.View{{}},
+			inst:     instruments[view.AsyncCounter],
+			wantKind: internal.NewCumulativeSum[N](true),
+			wantLen:  1,
+		},
+		{
+			name:     "reader should set default agg",
+			reader:   NewManualReader(),
+			views:    []view.View{{}},
+			inst:     instruments[view.AsyncUpDownCounter],
+			wantKind: internal.NewCumulativeSum[N](false),
+			wantLen:  1,
+		},
+		{
+			name:     "reader should set default agg",
+			reader:   NewManualReader(),
+			views:    []view.View{{}},
+			inst:     instruments[view.AsyncGauge],
+			wantKind: internal.NewLastValue[N](),
+			wantLen:  1,
+		},
+		{
+			name:     "reader should set default agg",
+			reader:   NewManualReader(),
+			views:    []view.View{{}},
+			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
@@ -94,30 +183,59 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "view should overwrite reader",
 			reader:   NewManualReader(),
 			views:    []view.View{changeAggView},
+			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
-			name: "multiple views should create multiple aggregators",
-			reader: testReader{
-				agg:  aggregation.Sum{},
-				temp: metricdata.DeltaTemporality,
-			},
+			name:     "multiple views should create multiple aggregators",
+			reader:   NewManualReader(),
 			views:    []view.View{{}, renameView},
-			wantKind: internal.NewDeltaSum[N](true),
+			inst:     instruments[view.SyncCounter],
+			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  2,
+		},
+		{
+			name:    "reader with invalid aggregation should error",
+			reader:  NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
+			views:   []view.View{{}},
+			inst:    instruments[view.SyncCounter],
+			wantErr: errCreatingAggregators,
+		},
+		{
+			name:    "view with invalid aggregation should error",
+			reader:  NewManualReader(),
+			views:   []view.View{invalidAggView},
+			inst:    instruments[view.SyncCounter],
+			wantErr: errCreatingAggregators,
 		},
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := createAggregators[N](tt.reader, tt.views, inst)
-			assert.NoError(t, err)
+			got, err := createAggregators[N](tt.reader, tt.views, tt.inst)
+			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
 			for _, agg := range got {
 				assert.IsType(t, tt.wantKind, agg)
 			}
+
 		})
 	}
+}
+
+func testInvalidInstrumentShouldPanic[N int64 | float64]() {
+	reader := NewManualReader()
+	views := []view.View{{}}
+	inst := view.Instrument{
+		Name: "foo",
+		Kind: view.InstrumentKind(255),
+	}
+	createAggregators[N](reader, views, inst)
+}
+
+func TestInvalidInstrumentShouldPanic(t *testing.T) {
+	assert.Panics(t, testInvalidInstrumentShouldPanic[int64])
+	assert.Panics(t, testInvalidInstrumentShouldPanic[float64])
 }
 
 func TestCreateAggregators(t *testing.T) {
@@ -250,7 +368,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 		view.WithRename("foo"),
 	)
 	views := map[Reader][]view.View{
-		testReader{agg: aggregation.Sum{}}: {
+		NewManualReader(): {
 			{},
 			renameView,
 		},
@@ -289,174 +407,171 @@ func TestIsAggregatorCompatible(t *testing.T) {
 	var undefinedInstrument view.InstrumentKind
 
 	testCases := []struct {
-		name    string
-		kind    view.InstrumentKind
-		agg     aggregation.Aggregation
-		wantErr bool
+		name string
+		kind view.InstrumentKind
+		agg  aggregation.Aggregation
+		want error
 	}{
 		{
-			name:    "SyncCounter and Drop",
-			kind:    view.SyncCounter,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "SyncCounter and Drop",
+			kind: view.SyncCounter,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "SyncCounter and LastValue",
-			kind:    view.SyncCounter,
-			agg:     aggregation.LastValue{},
-			wantErr: true,
+			name: "SyncCounter and LastValue",
+			kind: view.SyncCounter,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "SyncCounter and Sum",
-			kind:    view.SyncCounter,
-			agg:     aggregation.Sum{},
-			wantErr: false,
+			name: "SyncCounter and Sum",
+			kind: view.SyncCounter,
+			agg:  aggregation.Sum{},
 		},
 		{
-			name:    "SyncCounter and ExplicitBucketHistogram",
-			kind:    view.SyncCounter,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: false,
+			name: "SyncCounter and ExplicitBucketHistogram",
+			kind: view.SyncCounter,
+			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
-			name:    "SyncUpDownCounter and Drop",
-			kind:    view.SyncUpDownCounter,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "SyncUpDownCounter and Drop",
+			kind: view.SyncUpDownCounter,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "SyncUpDownCounter and LastValue",
-			kind:    view.SyncUpDownCounter,
-			agg:     aggregation.LastValue{},
-			wantErr: true,
+			name: "SyncUpDownCounter and LastValue",
+			kind: view.SyncUpDownCounter,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "SyncUpDownCounter and Sum",
-			kind:    view.SyncUpDownCounter,
-			agg:     aggregation.Sum{},
-			wantErr: false,
+			name: "SyncUpDownCounter and Sum",
+			kind: view.SyncUpDownCounter,
+			agg:  aggregation.Sum{},
 		},
 		{
-			name:    "SyncUpDownCounter and ExplicitBucketHistogram",
-			kind:    view.SyncUpDownCounter,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: true,
+			name: "SyncUpDownCounter and ExplicitBucketHistogram",
+			kind: view.SyncUpDownCounter,
+			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "SyncHistogram and Drop",
-			kind:    view.SyncHistogram,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "SyncHistogram and Drop",
+			kind: view.SyncHistogram,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "SyncHistogram and LastValue",
-			kind:    view.SyncHistogram,
-			agg:     aggregation.LastValue{},
-			wantErr: true,
+			name: "SyncHistogram and LastValue",
+			kind: view.SyncHistogram,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "SyncHistogram and Sum",
-			kind:    view.SyncHistogram,
-			agg:     aggregation.Sum{},
-			wantErr: false,
+			name: "SyncHistogram and Sum",
+			kind: view.SyncHistogram,
+			agg:  aggregation.Sum{},
 		},
 		{
-			name:    "SyncHistogram and ExplicitBucketHistogram",
-			kind:    view.SyncHistogram,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: false,
+			name: "SyncHistogram and ExplicitBucketHistogram",
+			kind: view.SyncHistogram,
+			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
-			name:    "AsyncCounter and Drop",
-			kind:    view.AsyncCounter,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "AsyncCounter and Drop",
+			kind: view.AsyncCounter,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "AsyncCounter and LastValue",
-			kind:    view.AsyncCounter,
-			agg:     aggregation.LastValue{},
-			wantErr: true,
+			name: "AsyncCounter and LastValue",
+			kind: view.AsyncCounter,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "AsyncCounter and Sum",
-			kind:    view.AsyncCounter,
-			agg:     aggregation.Sum{},
-			wantErr: false,
+			name: "AsyncCounter and Sum",
+			kind: view.AsyncCounter,
+			agg:  aggregation.Sum{},
 		},
 		{
-			name:    "AsyncCounter and ExplicitBucketHistogram",
-			kind:    view.AsyncCounter,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: true,
+			name: "AsyncCounter and ExplicitBucketHistogram",
+			kind: view.AsyncCounter,
+			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "AsyncUpDownCounter and Drop",
-			kind:    view.AsyncUpDownCounter,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "AsyncUpDownCounter and Drop",
+			kind: view.AsyncUpDownCounter,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "AsyncUpDownCounter and LastValue",
-			kind:    view.AsyncUpDownCounter,
-			agg:     aggregation.LastValue{},
-			wantErr: true,
+			name: "AsyncUpDownCounter and LastValue",
+			kind: view.AsyncUpDownCounter,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "AsyncUpDownCounter and Sum",
-			kind:    view.AsyncUpDownCounter,
-			agg:     aggregation.Sum{},
-			wantErr: false,
+			name: "AsyncUpDownCounter and Sum",
+			kind: view.AsyncUpDownCounter,
+			agg:  aggregation.Sum{},
 		},
 		{
-			name:    "AsyncUpDownCounter and ExplicitBucketHistogram",
-			kind:    view.AsyncUpDownCounter,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: true,
+			name: "AsyncUpDownCounter and ExplicitBucketHistogram",
+			kind: view.AsyncUpDownCounter,
+			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "AsyncGauge and Drop",
-			kind:    view.AsyncGauge,
-			agg:     aggregation.Drop{},
-			wantErr: false,
+			name: "AsyncGauge and Drop",
+			kind: view.AsyncGauge,
+			agg:  aggregation.Drop{},
 		},
 		{
-			name:    "AsyncGauge and aggregation.LastValue{}",
-			kind:    view.AsyncGauge,
-			agg:     aggregation.LastValue{},
-			wantErr: false,
+			name: "AsyncGauge and aggregation.LastValue{}",
+			kind: view.AsyncGauge,
+			agg:  aggregation.LastValue{},
 		},
 		{
-			name:    "AsyncGauge and Sum",
-			kind:    view.AsyncGauge,
-			agg:     aggregation.Sum{},
-			wantErr: true,
+			name: "AsyncGauge and Sum",
+			kind: view.AsyncGauge,
+			agg:  aggregation.Sum{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "AsyncGauge and ExplicitBucketHistogram",
-			kind:    view.AsyncGauge,
-			agg:     aggregation.ExplicitBucketHistogram{},
-			wantErr: true,
+			name: "AsyncGauge and ExplicitBucketHistogram",
+			kind: view.AsyncGauge,
+			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
 		},
 		{
-			name:    "Default aggregation should error",
-			kind:    view.SyncCounter,
-			agg:     aggregation.Default{},
-			wantErr: true,
+			name: "Default aggregation should error",
+			kind: view.SyncCounter,
+			agg:  aggregation.Default{},
+			want: errUnknownAggregation,
 		},
 		{
-			name:    "unknown kind should error",
-			kind:    undefinedInstrument,
-			agg:     aggregation.Sum{},
-			wantErr: true,
+			name: "unknown kind with Sum should error",
+			kind: undefinedInstrument,
+			agg:  aggregation.Sum{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "unknown kind with LastValue should error",
+			kind: undefinedInstrument,
+			agg:  aggregation.LastValue{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "unknown kind with Histogram should error",
+			kind: undefinedInstrument,
+			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			err := isAggregatorCompatible(tt.kind, tt.agg)
-
-			assert.Equal(t, tt.wantErr, (err != nil))
+			assert.ErrorIs(t, err, tt.want)
 		})
 	}
 }

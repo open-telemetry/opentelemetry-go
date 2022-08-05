@@ -217,7 +217,7 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 	}
 }
 
-func TestReadersAreHashable(t *testing.T) {
+func TestReadersAreComparable(t *testing.T) {
 	var _ map[Reader]struct{} = map[Reader]struct{}{
 		NewManualReader():                  {},
 		NewPeriodicReader(new(fnExporter)): {},
