@@ -18,6 +18,7 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -190,6 +191,8 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 	return out
 }
 
+var errUnknownTemporality = errors.New("unknown temporality")
+
 // Temporality returns an OTLP AggregationTemporality generated from t. If t
 // is unknown, an error is returned along with the invalid
 // AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED.
@@ -200,7 +203,7 @@ func Temporality(t metricdata.Temporality) (mpb.AggregationTemporality, error) {
 	case metricdata.CumulativeTemporality:
 		return mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, nil
 	default:
-		err := fmt.Errorf("unknown temporality: %s", t)
+		err := fmt.Errorf("%w: %s", errUnknownTemporality, t)
 		return mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED, err
 	}
 }
