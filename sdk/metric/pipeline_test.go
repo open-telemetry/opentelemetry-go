@@ -174,7 +174,6 @@ func TestPipelineDuplicateRegistration(t *testing.T) {
 				require.Len(t, output.ScopeMetrics, tt.wantScopeLen)
 				require.Len(t, output.ScopeMetrics[0].Metrics, tt.wantMetricsLen)
 			}
-
 		})
 	}
 }
