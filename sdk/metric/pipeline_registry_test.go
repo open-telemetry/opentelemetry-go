@@ -218,7 +218,6 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			for _, agg := range got {
 				assert.IsType(t, tt.wantKind, agg)
 			}
-
 		})
 	}
 }
@@ -230,7 +229,7 @@ func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
 	}
-	createAggregators[N](reader, views, inst)
+	_, _ = createAggregators[N](reader, views, inst)
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {
