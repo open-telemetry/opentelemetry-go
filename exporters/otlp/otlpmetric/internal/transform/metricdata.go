@@ -18,9 +18,7 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -46,12 +44,12 @@ func ResourceMetrics(rm metricdata.ResourceMetrics) (*mpb.ResourceMetrics, error
 // sms contains invalid metric values, an error will be returned along with a
 // slice that contains partial OTLP ScopeMetrics.
 func ScopeMetrics(sms []metricdata.ScopeMetrics) ([]*mpb.ScopeMetrics, error) {
-	var errs []string
+	errs := &multiErr{datatype: "ScopeMetrics"}
 	out := make([]*mpb.ScopeMetrics, 0, len(sms))
 	for _, sm := range sms {
 		ms, err := Metrics(sm.Metrics)
 		if err != nil {
-			errs = append(errs, err.Error())
+			errs.append(err)
 		}
 
 		out = append(out, &mpb.ScopeMetrics{
@@ -63,29 +61,25 @@ func ScopeMetrics(sms []metricdata.ScopeMetrics) ([]*mpb.ScopeMetrics, error) {
 			SchemaUrl: sm.Scope.SchemaURL,
 		})
 	}
-	if len(errs) > 0 {
-		return out, fmt.Errorf("transform ScopeMetrics: %s", strings.Join(errs, "; "))
-	}
-	return out, nil
+	return out, errs.errOrNil()
 }
 
 // Metrics returns a slice of OTLP Metric generated from ms. If ms contains
 // invalid metric values, an error will be returned along with a slice that
 // contains partial OTLP Metrics.
 func Metrics(ms []metricdata.Metrics) ([]*mpb.Metric, error) {
-	var errs []string
+	errs := &multiErr{datatype: "Metrics"}
 	out := make([]*mpb.Metric, 0, len(ms))
 	for _, m := range ms {
 		o, err := metric(m)
 		if err != nil {
-			errs = append(errs, err.Error())
+			// Do not include invalid data. Drop the metric, report the error.
+			errs.append(errMetric{m: o, err: err})
+			continue
 		}
 		out = append(out, o)
 	}
-	if len(errs) > 0 {
-		return out, fmt.Errorf("transform Metrics: %s", strings.Join(errs, ", "))
-	}
-	return out, nil
+	return out, errs.errOrNil()
 }
 
 func metric(m metricdata.Metrics) (*mpb.Metric, error) {
@@ -107,7 +101,7 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 	case metricdata.Histogram:
 		out.Data, err = Histogram(a)
 	default:
-		return out, fmt.Errorf("unknown aggregation: %T", a)
+		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
 	}
 	return out, err
 }
@@ -190,8 +184,6 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 	}
 	return out
 }
-
-var errUnknownTemporality = errors.New("unknown temporality")
 
 // Temporality returns an OTLP AggregationTemporality generated from t. If t
 // is unknown, an error is returned along with the invalid

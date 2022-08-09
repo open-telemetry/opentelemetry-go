@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -32,6 +33,10 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
+
+type unknownAgg struct {
+	metricdata.Aggregation
+}
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
@@ -49,7 +54,7 @@ var (
 	}}
 
 	min, max, sum = 2.0, 4.0, 90.0
-	otelHDP       = metricdata.HistogramDataPoint{
+	otelHDP       = []metricdata.HistogramDataPoint{metricdata.HistogramDataPoint{
 		Attributes:   alice,
 		StartTime:    start,
 		Time:         end,
@@ -59,13 +64,9 @@ var (
 		Min:          &min,
 		Max:          &max,
 		Sum:          sum,
-	}
-	otelHist = metricdata.Histogram{
-		Temporality: metricdata.DeltaTemporality,
-		DataPoints:  []metricdata.HistogramDataPoint{otelHDP},
-	}
+	}}
 
-	pbHDP = &mpb.HistogramDataPoint{
+	pbHDP = []*mpb.HistogramDataPoint{&mpb.HistogramDataPoint{
 		Attributes:        []*cpb.KeyValue{pbAlice},
 		StartTimeUnixNano: uint64(start.UnixNano()),
 		TimeUnixNano:      uint64(end.UnixNano()),
@@ -75,10 +76,16 @@ var (
 		BucketCounts:      []uint64{0, 30, 0},
 		Min:               &min,
 		Max:               &max,
+	}}
+
+	otelHist = metricdata.Histogram{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelHDP,
 	}
+
 	pbHist = &mpb.Histogram{
 		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-		DataPoints:             []*mpb.HistogramDataPoint{pbHDP},
+		DataPoints:             pbHDP,
 	}
 
 	otelDPtsInt64 = []metricdata.DataPoint[int64]{
@@ -266,10 +273,46 @@ var (
 	}
 )
 
-func TestResourceMetricsTransformation(t *testing.T) {
-	got, err := ResourceMetrics(otelResourceMetrics)
+func TestTransformations(t *testing.T) {
+	// Run tests from the "bottom-up" of the metricdata data-types and halt
+	// when a failure occurs to ensure the clearest failure message (as
+	// opposed to the opposite of testing from the top-down which will obscure
+	// errors deep inside the structs).
+
+	// DataPoint types.
+	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDP))
+	assert.Equal(t, pbDPtsInt64, DataPoints[int64](otelDPtsInt64))
+	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
+
+	// Aggregations.
+	h, err := Histogram(otelHist)
 	assert.NoError(t, err)
-	assert.Equal(t, pbResourceMetrics, got)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+
+	s, err := Sum[int64](otelSumInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Sum{pbSumInt64}, s)
+	s, err = Sum[float64](otelSumFloat64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Sum{pbSumFloat64}, s)
+
+	assert.Equal(t, &mpb.Metric_Gauge{pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
+	require.Equal(t, &mpb.Metric_Gauge{pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
+
+	// Metrics.
+	m, err := Metrics(otelMetrics)
+	assert.NoError(t, err)
+	require.Equal(t, pbMetrics, m)
+
+	// Scope Metrics.
+	sm, err := ScopeMetrics(otelScopeMetrics)
+	assert.NoError(t, err)
+	require.Equal(t, pbScopeMetrics, sm)
+
+	// Resource Metrics.
+	rm, err := ResourceMetrics(otelResourceMetrics)
+	assert.NoError(t, err)
+	require.Equal(t, pbResourceMetrics, rm)
 }
 
 func TestMetricUnknownAggregationError(t *testing.T) {
