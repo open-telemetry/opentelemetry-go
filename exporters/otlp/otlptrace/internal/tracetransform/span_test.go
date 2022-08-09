@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -264,7 +264,7 @@ func TestSpanData(t *testing.T) {
 			attribute.Int64("rk2", 5),
 			attribute.StringSlice("rk3", []string{"sv1", "sv2"}),
 		),
-		InstrumentationLibrary: instrumentation.Library{
+		InstrumentationLibrary: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/test/otel",
 			Version:   "v0.0.1",
 			SchemaURL: semconv.SchemaURL,
