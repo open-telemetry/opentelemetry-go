@@ -55,7 +55,7 @@ var (
 	}}
 
 	min, max, sum = 2.0, 4.0, 90.0
-	otelHDP       = []metricdata.HistogramDataPoint{metricdata.HistogramDataPoint{
+	otelHDP       = []metricdata.HistogramDataPoint{{
 		Attributes:   alice,
 		StartTime:    start,
 		Time:         end,
@@ -67,7 +67,7 @@ var (
 		Sum:          sum,
 	}}
 
-	pbHDP = []*mpb.HistogramDataPoint{&mpb.HistogramDataPoint{
+	pbHDP = []*mpb.HistogramDataPoint{{
 		Attributes:        []*cpb.KeyValue{pbAlice},
 		StartTimeUnixNano: uint64(start.UnixNano()),
 		TimeUnixNano:      uint64(end.UnixNano()),
