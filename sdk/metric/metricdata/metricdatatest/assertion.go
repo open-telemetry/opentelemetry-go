@@ -83,27 +83,27 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 	var r []string
 	switch e := interface{}(expected).(type) {
 	case metricdata.DataPoint[int64]:
-		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]), cfg.ignoreTimestamp)
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]), cfg)
 	case metricdata.DataPoint[float64]:
-		r = equalDataPoints(e, aIface.(metricdata.DataPoint[float64]), cfg.ignoreTimestamp)
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[float64]), cfg)
 	case metricdata.Gauge[int64]:
-		r = equalGauges(e, aIface.(metricdata.Gauge[int64]), cfg.ignoreTimestamp)
+		r = equalGauges(e, aIface.(metricdata.Gauge[int64]), cfg)
 	case metricdata.Gauge[float64]:
-		r = equalGauges(e, aIface.(metricdata.Gauge[float64]), cfg.ignoreTimestamp)
+		r = equalGauges(e, aIface.(metricdata.Gauge[float64]), cfg)
 	case metricdata.Histogram:
-		r = equalHistograms(e, aIface.(metricdata.Histogram), cfg.ignoreTimestamp)
+		r = equalHistograms(e, aIface.(metricdata.Histogram), cfg)
 	case metricdata.HistogramDataPoint:
-		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint), cfg.ignoreTimestamp)
+		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint), cfg)
 	case metricdata.Metrics:
-		r = equalMetrics(e, aIface.(metricdata.Metrics), cfg.ignoreTimestamp)
+		r = equalMetrics(e, aIface.(metricdata.Metrics), cfg)
 	case metricdata.ResourceMetrics:
-		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics), cfg.ignoreTimestamp)
+		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics), cfg)
 	case metricdata.ScopeMetrics:
-		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics), cfg.ignoreTimestamp)
+		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics), cfg)
 	case metricdata.Sum[int64]:
-		r = equalSums(e, aIface.(metricdata.Sum[int64]), cfg.ignoreTimestamp)
+		r = equalSums(e, aIface.(metricdata.Sum[int64]), cfg)
 	case metricdata.Sum[float64]:
-		r = equalSums(e, aIface.(metricdata.Sum[float64]), cfg.ignoreTimestamp)
+		r = equalSums(e, aIface.(metricdata.Sum[float64]), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -118,9 +118,15 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
+func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
-	if r := equalAggregations(expected, actual, false); len(r) > 0 {
+
+	cfg := config{}
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
+	}
+
+	if r := equalAggregations(expected, actual, cfg); len(r) > 0 {
 		t.Error(r)
 		return false
 	}

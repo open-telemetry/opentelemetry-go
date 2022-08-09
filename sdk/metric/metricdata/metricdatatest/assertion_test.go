@@ -216,14 +216,14 @@ var (
 	}
 )
 
-type equalFunc[T Datatypes] func(T, T, bool) []string
+type equalFunc[T Datatypes] func(T, T, config) []string
 
 func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 	return func(t *testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, false)
+		r := f(a, b, config{})
 		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
@@ -233,7 +233,7 @@ func testDatatypeIgnoreTime[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, true)
+		r := f(a, b, config{ignoreTimestamp: true})
 		assert.Equalf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
@@ -278,42 +278,42 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64A)
 	AssertAggregationsEqual(t, histogramA, histogramA)
 
-	r := equalAggregations(sumInt64A, nil, false)
+	r := equalAggregations(sumInt64A, nil, config{})
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
 
-	r = equalAggregations(sumInt64A, gaugeInt64A, false)
+	r = equalAggregations(sumInt64A, gaugeInt64A, config{})
 	assert.Len(t, r, 1, "should return with type mismatch only")
 
-	r = equalAggregations(unknownAggregation{}, unknownAggregation{}, false)
+	r = equalAggregations(unknownAggregation{}, unknownAggregation{}, config{})
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
-	r = equalAggregations(sumInt64A, sumInt64B, false)
+	r = equalAggregations(sumInt64A, sumInt64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64B)
 
-	r = equalAggregations(sumInt64A, sumInt64C, true)
+	r = equalAggregations(sumInt64A, sumInt64C, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64C)
 
-	r = equalAggregations(sumFloat64A, sumFloat64B, false)
+	r = equalAggregations(sumFloat64A, sumFloat64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64B)
 
-	r = equalAggregations(sumFloat64A, sumFloat64C, true)
+	r = equalAggregations(sumFloat64A, sumFloat64C, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64C)
 
-	r = equalAggregations(gaugeInt64A, gaugeInt64B, false)
+	r = equalAggregations(gaugeInt64A, gaugeInt64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64B)
 
-	r = equalAggregations(gaugeInt64A, gaugeInt64C, true)
+	r = equalAggregations(gaugeInt64A, gaugeInt64C, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64C)
 
-	r = equalAggregations(gaugeFloat64A, gaugeFloat64B, false)
+	r = equalAggregations(gaugeFloat64A, gaugeFloat64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64B)
 
-	r = equalAggregations(gaugeFloat64A, gaugeFloat64C, true)
+	r = equalAggregations(gaugeFloat64A, gaugeFloat64C, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64C)
 
-	r = equalAggregations(histogramA, histogramB, false)
+	r = equalAggregations(histogramA, histogramB, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", histogramA, histogramB)
 
-	r = equalAggregations(histogramA, histogramC, true)
+	r = equalAggregations(histogramA, histogramC, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", histogramA, histogramC)
 }
