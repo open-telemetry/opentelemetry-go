@@ -323,16 +323,16 @@ func TestTransformations(t *testing.T) {
 
 	s, err := Sum[int64](otelSumInt64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_Sum{pbSumInt64}, s)
+	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumInt64}, s)
 	s, err = Sum[float64](otelSumFloat64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_Sum{pbSumFloat64}, s)
+	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumFloat64}, s)
 	s, err = Sum[float64](otelSumInvalid)
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, s)
 
-	assert.Equal(t, &mpb.Metric_Gauge{pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
-	require.Equal(t, &mpb.Metric_Gauge{pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
+	assert.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
+	require.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
 
 	// Metrics.
 	m, err := Metrics(otelMetrics)
