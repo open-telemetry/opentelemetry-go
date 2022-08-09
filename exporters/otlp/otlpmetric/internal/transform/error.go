@@ -48,14 +48,15 @@ func (e errMetric) Is(target error) bool {
 	return errors.Is(e.err, target)
 }
 
-// multiErr is used by the data-type transform functions wrap multiple errors
-// into a single return value. The error message will show all errors as a
-// list and scope them by the datatype name that is returning them.
+// multiErr is used by the data-type transform functions to wrap multiple
+// errors into a single return value. The error message will show all errors
+// as a list and scope them by the datatype name that is returning them.
 type multiErr struct {
 	datatype string
 	errs     []error
 }
 
+// errOrNil returns nil if e contains no errors, otherwise it returns e.
 func (e *multiErr) errOrNil() error {
 	if len(e.errs) == 0 {
 		return nil
@@ -63,6 +64,7 @@ func (e *multiErr) errOrNil() error {
 	return e
 }
 
+// append adds err to e. If err is a multiErr, its errs are flattened into e.
 func (e *multiErr) append(err error) {
 	// Do not use errors.As here, this should only be flattened one layer. If
 	// there is a *multiErr several steps down the chain, all the errors above
