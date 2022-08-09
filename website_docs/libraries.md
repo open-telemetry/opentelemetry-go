@@ -5,7 +5,7 @@ linkTitle: Libraries
 aliases: [/docs/instrumentation/go/using_instrumentation_libraries, /docs/instrumentation/go/automatic_instrumentation]
 ---
 
-Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/http` will automatically create spans that track inbound and outbound requests once you configure it in your code.
+Go does not support truly automatic instrumentation like other languages today. Instead, you'll need to depend on [instrumentation libraries](https://opentelemetry.io/docs/reference/specification/glossary/#instrumentation-library) that generate telemetry data for a particular instrumented library. For example, the instrumentation library for `net/http` will automatically create spans that track inbound and outbound requests once you configure it in your code.
 
 ## Setup
 
