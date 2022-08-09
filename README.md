@@ -41,14 +41,19 @@ This project is tested on the following systems.
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
+| Ubuntu  | 1.19       | amd64        |
 | Ubuntu  | 1.18       | amd64        |
 | Ubuntu  | 1.17       | amd64        |
+| Ubuntu  | 1.19       | 386          |
 | Ubuntu  | 1.18       | 386          |
 | Ubuntu  | 1.17       | 386          |
+| MacOS   | 1.19       | amd64        |
 | MacOS   | 1.18       | amd64        |
 | MacOS   | 1.17       | amd64        |
+| Windows | 1.19       | amd64        |
 | Windows | 1.18       | amd64        |
 | Windows | 1.17       | amd64        |
+| Windows | 1.19       | 386          |
 | Windows | 1.18       | 386          |
 | Windows | 1.17       | 386          |
 
