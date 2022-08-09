@@ -119,13 +119,16 @@ func Gauge[N int64 | float64](g metricdata.Gauge[N]) *mpb.Metric_Gauge {
 // a partial Metric_Sum if the temporality of s is unknown.
 func Sum[N int64 | float64](s metricdata.Sum[N]) (*mpb.Metric_Sum, error) {
 	t, err := Temporality(s.Temporality)
+	if err != nil {
+		return nil, err
+	}
 	return &mpb.Metric_Sum{
 		Sum: &mpb.Sum{
 			AggregationTemporality: t,
 			IsMonotonic:            s.IsMonotonic,
 			DataPoints:             DataPoints(s.DataPoints),
 		},
-	}, err
+	}, nil
 }
 
 // DataPoints returns a slice of OTLP NumberDataPoint generated from dPts.
@@ -157,12 +160,15 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 // unknown.
 func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
 	t, err := Temporality(h.Temporality)
+	if err != nil {
+		return nil, err
+	}
 	return &mpb.Metric_Histogram{
 		Histogram: &mpb.Histogram{
 			AggregationTemporality: t,
 			DataPoints:             HistogramDataPoints(h.DataPoints),
 		},
-	}, err
+	}, nil
 }
 
 // HistogramDataPoints returns a slice of OTLP HistogramDataPoint generated

@@ -34,7 +34,7 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
-type unknownAgg struct {
+type unknownAggT struct {
 	metricdata.Aggregation
 }
 
@@ -80,6 +80,11 @@ var (
 
 	otelHist = metricdata.Histogram{
 		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelHDP,
+	}
+	invalidTemporality metricdata.Temporality
+	otelHistInvalid    = metricdata.Histogram{
+		Temporality: invalidTemporality,
 		DataPoints:  otelHDP,
 	}
 
@@ -136,6 +141,11 @@ var (
 		IsMonotonic: false,
 		DataPoints:  otelDPtsFloat64,
 	}
+	otelSumInvalid = metricdata.Sum[float64]{
+		Temporality: invalidTemporality,
+		IsMonotonic: false,
+		DataPoints:  otelDPtsFloat64,
+	}
 
 	pbSumInt64 = &mpb.Sum{
 		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
@@ -154,6 +164,7 @@ var (
 	pbGaugeInt64   = &mpb.Gauge{DataPoints: pbDPtsInt64}
 	pbGaugeFloat64 = &mpb.Gauge{DataPoints: pbDPtsFloat64}
 
+	unknownAgg  unknownAggT
 	otelMetrics = []metricdata.Metrics{
 		{
 			Name:        "int64-gauge",
@@ -180,10 +191,28 @@ var (
 			Data:        otelSumFloat64,
 		},
 		{
+			Name:        "invalid-sum",
+			Description: "Sum with invalid temporality",
+			Unit:        unit.Dimensionless,
+			Data:        otelSumInvalid,
+		},
+		{
 			Name:        "histogram",
 			Description: "Histogram",
 			Unit:        unit.Dimensionless,
 			Data:        otelHist,
+		},
+		{
+			Name:        "invalid-histogram",
+			Description: "Invalid histogram",
+			Unit:        unit.Dimensionless,
+			Data:        otelHistInvalid,
+		},
+		{
+			Name:        "unknown",
+			Description: "Unknown aggregation",
+			Unit:        unit.Dimensionless,
+			Data:        unknownAgg,
 		},
 	}
 
@@ -288,6 +317,9 @@ func TestTransformations(t *testing.T) {
 	h, err := Histogram(otelHist)
 	assert.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	h, err = Histogram(otelHistInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, h)
 
 	s, err := Sum[int64](otelSumInt64)
 	assert.NoError(t, err)
@@ -295,33 +327,28 @@ func TestTransformations(t *testing.T) {
 	s, err = Sum[float64](otelSumFloat64)
 	assert.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Sum{pbSumFloat64}, s)
+	s, err = Sum[float64](otelSumInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, s)
 
 	assert.Equal(t, &mpb.Metric_Gauge{pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
 	require.Equal(t, &mpb.Metric_Gauge{pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
 
 	// Metrics.
 	m, err := Metrics(otelMetrics)
-	assert.NoError(t, err)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbMetrics, m)
 
 	// Scope Metrics.
 	sm, err := ScopeMetrics(otelScopeMetrics)
-	assert.NoError(t, err)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbScopeMetrics, sm)
 
 	// Resource Metrics.
 	rm, err := ResourceMetrics(otelResourceMetrics)
-	assert.NoError(t, err)
-	require.Equal(t, pbResourceMetrics, rm)
-}
-
-func TestMetricUnknownAggregationError(t *testing.T) {
-	// TODO:
-}
-
-func TestTemporalityUnknownTemporalityError(t *testing.T) {
-	var unknownTemporality metricdata.Temporality
-	pbT, err := Temporality(unknownTemporality)
 	assert.ErrorIs(t, err, errUnknownTemporality)
-	assert.Equal(t, mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED, pbT)
+	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.Equal(t, pbResourceMetrics, rm)
 }
