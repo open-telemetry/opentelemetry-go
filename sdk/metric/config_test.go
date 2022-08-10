@@ -132,3 +132,14 @@ func TestWithReader(t *testing.T) {
 	c := newConfig([]Option{WithReader(r)})
 	assert.Contains(t, c.readers, r)
 }
+
+func TestWithReaderNil(t *testing.T) {
+	c := newConfig([]Option{WithReader[*reader](nil)})
+	assert.Len(t, c.readers, 0)
+
+	c = newConfig([]Option{WithReader[*manualReader](nil)})
+	assert.Len(t, c.readers, 0)
+
+	c = newConfig([]Option{WithReader[*periodicReader](nil)})
+	assert.Len(t, c.readers, 0)
+}

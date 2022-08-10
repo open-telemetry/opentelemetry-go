@@ -115,6 +115,12 @@ func WithResource(res *resource.Resource) Option {
 	})
 }
 
+// ComparableReader is a constraint on readers accepted by the SDK.
+type ComparableReader interface {
+	comparable
+	Reader
+}
+
 // WithReader associates a Reader with a MeterProvider. Any passed view config
 // will be used to associate a view with the Reader. If no configs are passed
 // the default view will be use for the Reader.
@@ -124,8 +130,14 @@ func WithResource(res *resource.Resource) Option {
 //
 // By default, if this option is not used, the MeterProvider will perform no
 // operations; no data will be exported without a Reader.
-func WithReader(r Reader, views ...view.View) Option {
+func WithReader[R ComparableReader](r R, views ...view.View) Option {
 	return optionFunc(func(cfg config) config {
+		// This check is overconstrained, because it will reject non-pointer default structs.
+		// e.g. if manualReader, not *manualReader, implemented Reader and manualReader{} was passed.
+		var nilReader R
+		if r == nilReader {
+			return cfg
+		}
 		if cfg.readers == nil {
 			cfg.readers = make(map[Reader][]view.View)
 		}
