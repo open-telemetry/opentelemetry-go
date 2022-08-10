@@ -19,7 +19,7 @@ package resource_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -67,8 +67,8 @@ func TestUnameError(t *testing.T) {
 func TestGetFirstAvailableFile(t *testing.T) {
 	tempDir := t.TempDir()
 
-	file1, _ := ioutil.TempFile(tempDir, "candidate_")
-	file2, _ := ioutil.TempFile(tempDir, "candidate_")
+	file1, _ := os.CreateTemp(tempDir, "candidate_")
+	file2, _ := os.CreateTemp(tempDir, "candidate_")
 
 	filename1, filename2 := file1.Name(), file2.Name()
 
