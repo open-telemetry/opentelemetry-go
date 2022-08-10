@@ -29,9 +29,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-// manualReader is a a simple Reader that allows an application to
+// ManualReader is a a simple Reader that allows an application to
 // read metrics on demand.
-type manualReader struct {
+type ManualReader struct {
 	producer     atomic.Value
 	shutdownOnce sync.Once
 
@@ -40,12 +40,12 @@ type manualReader struct {
 }
 
 // Compile time check the manualReader implements Reader.
-var _ Reader = &manualReader{}
+var _ Reader = &ManualReader{}
 
 // NewManualReader returns a Reader which is directly called to collect metrics.
-func NewManualReader(opts ...ManualReaderOption) Reader {
+func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 	cfg := newManualReaderConfig(opts)
-	return &manualReader{
+	return &ManualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
 	}
@@ -53,7 +53,7 @@ func NewManualReader(opts ...ManualReaderOption) Reader {
 
 // register stores the Producer which enables the caller to read
 // metrics on demand.
-func (mr *manualReader) register(p producer) {
+func (mr *ManualReader) register(p producer) {
 	// Only register once. If producer is already set, do nothing.
 	if !mr.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
 		msg := "did not register manual reader"
@@ -62,22 +62,22 @@ func (mr *manualReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (mr *manualReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
+func (mr *ManualReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (mr *manualReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (mr *ManualReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
 }
 
 // ForceFlush is a no-op, it always returns nil.
-func (mr *manualReader) ForceFlush(context.Context) error {
+func (mr *ManualReader) ForceFlush(context.Context) error {
 	return nil
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
-func (mr *manualReader) Shutdown(context.Context) error {
+func (mr *ManualReader) Shutdown(context.Context) error {
 	err := ErrReaderShutdown
 	mr.shutdownOnce.Do(func() {
 		// Any future call to Collect will now return ErrReaderShutdown.
@@ -91,7 +91,7 @@ func (mr *manualReader) Shutdown(context.Context) error {
 
 // Collect gathers all metrics from the SDK, calling any callbacks necessary.
 // Collect will return an error if called after shutdown.
-func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (mr *ManualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p := mr.producer.Load()
 	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered

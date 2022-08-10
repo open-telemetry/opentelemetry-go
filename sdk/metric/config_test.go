@@ -137,9 +137,9 @@ func TestWithReaderNil(t *testing.T) {
 	c := newConfig([]Option{WithReader[*reader](nil)})
 	assert.Len(t, c.readers, 0)
 
-	c = newConfig([]Option{WithReader[*manualReader](nil)})
+	c = newConfig([]Option{WithReader[*ManualReader](nil)})
 	assert.Len(t, c.readers, 0)
 
-	c = newConfig([]Option{WithReader[*periodicReader](nil)})
+	c = newConfig([]Option{WithReader[*PeriodicReader](nil)})
 	assert.Len(t, c.readers, 0)
 }

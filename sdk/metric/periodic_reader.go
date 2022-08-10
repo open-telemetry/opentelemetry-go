@@ -112,10 +112,10 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // The Collect method of the returned Reader continues to gather and return
 // metric data to the user. It will not automatically send that data to the
 // exporter. That is left to the user to accomplish.
-func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reader {
+func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *PeriodicReader {
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &periodicReader{
+	r := &PeriodicReader{
 		timeout:  conf.timeout,
 		exporter: exporter,
 		cancel:   cancel,
@@ -133,9 +133,9 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 	return r
 }
 
-// periodicReader is a Reader that continuously collects and exports metric
+// PeriodicReader is a Reader that continuously collects and exports metric
 // data at a set interval.
-type periodicReader struct {
+type PeriodicReader struct {
 	producer atomic.Value
 
 	timeout  time.Duration
@@ -154,7 +154,7 @@ var newTicker = time.NewTicker
 
 // run continuously collects and exports metric data at the specified
 // interval. This will run until ctx is canceled or times out.
-func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
+func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
 	ticker := newTicker(interval)
 	defer ticker.Stop()
 
@@ -177,7 +177,7 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 }
 
 // register registers p as the producer of this reader.
-func (r *periodicReader) register(p producer) {
+func (r *PeriodicReader) register(p producer) {
 	// Only register once. If producer is already set, do nothing.
 	if !r.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
 		msg := "did not register periodic reader"
@@ -186,12 +186,12 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
+func (r *PeriodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
 	return r.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *PeriodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationSelector(kind)
 }
 
@@ -200,7 +200,7 @@ func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggre
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (r *PeriodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p := r.producer.Load()
 	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
@@ -219,12 +219,12 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 }
 
 // ForceFlush flushes the Exporter.
-func (r *periodicReader) ForceFlush(ctx context.Context) error {
+func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 	return r.exporter.ForceFlush(ctx)
 }
 
 // Shutdown stops the export pipeline.
-func (r *periodicReader) Shutdown(ctx context.Context) error {
+func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
 		// Stop the run loop.
