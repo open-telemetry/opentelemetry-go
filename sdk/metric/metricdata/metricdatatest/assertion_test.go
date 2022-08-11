@@ -63,6 +63,18 @@ var (
 		Time:       endB,
 		Value:      2.0,
 	}
+	dataPointInt64C = metricdata.DataPoint[int64]{
+		Attributes: attrA,
+		StartTime:  startB,
+		Time:       endB,
+		Value:      -1,
+	}
+	dataPointFloat64C = metricdata.DataPoint[float64]{
+		Attributes: attrA,
+		StartTime:  startB,
+		Time:       endB,
+		Value:      -1.0,
+	}
 
 	max, min            = 99.0, 3.
 	histogramDataPointA = metricdata.HistogramDataPoint{
@@ -85,6 +97,15 @@ var (
 		Min:          &min,
 		Sum:          3,
 	}
+	histogramDataPointC = metricdata.HistogramDataPoint{
+		Attributes:   attrA,
+		StartTime:    startB,
+		Time:         endB,
+		Count:        2,
+		Bounds:       []float64{0, 10},
+		BucketCounts: []uint64{1, 1},
+		Sum:          2,
+	}
 
 	gaugeInt64A = metricdata.Gauge[int64]{
 		DataPoints: []metricdata.DataPoint[int64]{dataPointInt64A},
@@ -97,6 +118,12 @@ var (
 	}
 	gaugeFloat64B = metricdata.Gauge[float64]{
 		DataPoints: []metricdata.DataPoint[float64]{dataPointFloat64B},
+	}
+	gaugeInt64C = metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{dataPointInt64C},
+	}
+	gaugeFloat64C = metricdata.Gauge[float64]{
+		DataPoints: []metricdata.DataPoint[float64]{dataPointFloat64C},
 	}
 
 	sumInt64A = metricdata.Sum[int64]{
@@ -119,6 +146,16 @@ var (
 		IsMonotonic: true,
 		DataPoints:  []metricdata.DataPoint[float64]{dataPointFloat64B},
 	}
+	sumInt64C = metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  []metricdata.DataPoint[int64]{dataPointInt64C},
+	}
+	sumFloat64C = metricdata.Sum[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  []metricdata.DataPoint[float64]{dataPointFloat64C},
+	}
 
 	histogramA = metricdata.Histogram{
 		Temporality: metricdata.CumulativeTemporality,
@@ -127,6 +164,10 @@ var (
 	histogramB = metricdata.Histogram{
 		Temporality: metricdata.DeltaTemporality,
 		DataPoints:  []metricdata.HistogramDataPoint{histogramDataPointB},
+	}
+	histogramC = metricdata.Histogram{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint{histogramDataPointC},
 	}
 
 	metricsA = metricdata.Metrics{
@@ -141,6 +182,12 @@ var (
 		Unit:        unit.Bytes,
 		Data:        gaugeFloat64B,
 	}
+	metricsC = metricdata.Metrics{
+		Name:        "A",
+		Description: "A desc",
+		Unit:        unit.Dimensionless,
+		Data:        sumInt64C,
+	}
 
 	scopeMetricsA = metricdata.ScopeMetrics{
 		Scope:   instrumentation.Scope{Name: "A"},
@@ -149,6 +196,10 @@ var (
 	scopeMetricsB = metricdata.ScopeMetrics{
 		Scope:   instrumentation.Scope{Name: "B"},
 		Metrics: []metricdata.Metrics{metricsB},
+	}
+	scopeMetricsC = metricdata.ScopeMetrics{
+		Scope:   instrumentation.Scope{Name: "A"},
+		Metrics: []metricdata.Metrics{metricsC},
 	}
 
 	resourceMetricsA = metricdata.ResourceMetrics{
@@ -159,17 +210,31 @@ var (
 		Resource:     resource.NewSchemaless(attribute.String("resource", "B")),
 		ScopeMetrics: []metricdata.ScopeMetrics{scopeMetricsB},
 	}
+	resourceMetricsC = metricdata.ResourceMetrics{
+		Resource:     resource.NewSchemaless(attribute.String("resource", "A")),
+		ScopeMetrics: []metricdata.ScopeMetrics{scopeMetricsC},
+	}
 )
 
-type equalFunc[T Datatypes] func(T, T) []string
+type equalFunc[T Datatypes] func(T, T, config) []string
 
 func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 	return func(t *testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b)
+		r := f(a, b, config{})
 		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
+	}
+}
+
+func testDatatypeIgnoreTime[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
+	return func(t *testing.T) {
+		AssertEqual(t, a, a)
+		AssertEqual(t, b, b)
+
+		r := f(a, b, config{ignoreTimestamp: true})
+		assert.Equalf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
 
@@ -187,6 +252,20 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("DataPointFloat64", testDatatype(dataPointFloat64A, dataPointFloat64B, equalDataPoints[float64]))
 }
 
+func TestAssertEqualIgnoreTime(t *testing.T) {
+	t.Run("ResourceMetrics", testDatatypeIgnoreTime(resourceMetricsA, resourceMetricsC, equalResourceMetrics))
+	t.Run("ScopeMetrics", testDatatypeIgnoreTime(scopeMetricsA, scopeMetricsC, equalScopeMetrics))
+	t.Run("Metrics", testDatatypeIgnoreTime(metricsA, metricsC, equalMetrics))
+	t.Run("Histogram", testDatatypeIgnoreTime(histogramA, histogramC, equalHistograms))
+	t.Run("SumInt64", testDatatypeIgnoreTime(sumInt64A, sumInt64C, equalSums[int64]))
+	t.Run("SumFloat64", testDatatypeIgnoreTime(sumFloat64A, sumFloat64C, equalSums[float64]))
+	t.Run("GaugeInt64", testDatatypeIgnoreTime(gaugeInt64A, gaugeInt64C, equalGauges[int64]))
+	t.Run("GaugeFloat64", testDatatypeIgnoreTime(gaugeFloat64A, gaugeFloat64C, equalGauges[float64]))
+	t.Run("HistogramDataPoint", testDatatypeIgnoreTime(histogramDataPointA, histogramDataPointC, equalHistogramDataPoints))
+	t.Run("DataPointInt64", testDatatypeIgnoreTime(dataPointInt64A, dataPointInt64C, equalDataPoints[int64]))
+	t.Run("DataPointFloat64", testDatatypeIgnoreTime(dataPointFloat64A, dataPointFloat64C, equalDataPoints[float64]))
+}
+
 type unknownAggregation struct {
 	metricdata.Aggregation
 }
@@ -199,27 +278,42 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64A)
 	AssertAggregationsEqual(t, histogramA, histogramA)
 
-	r := equalAggregations(sumInt64A, nil)
+	r := equalAggregations(sumInt64A, nil, config{})
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
 
-	r = equalAggregations(sumInt64A, gaugeInt64A)
+	r = equalAggregations(sumInt64A, gaugeInt64A, config{})
 	assert.Len(t, r, 1, "should return with type mismatch only")
 
-	r = equalAggregations(unknownAggregation{}, unknownAggregation{})
+	r = equalAggregations(unknownAggregation{}, unknownAggregation{}, config{})
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
-	r = equalAggregations(sumInt64A, sumInt64B)
+	r = equalAggregations(sumInt64A, sumInt64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64B)
 
-	r = equalAggregations(sumFloat64A, sumFloat64B)
+	r = equalAggregations(sumInt64A, sumInt64C, config{ignoreTimestamp: true})
+	assert.Equalf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64C)
+
+	r = equalAggregations(sumFloat64A, sumFloat64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64B)
 
-	r = equalAggregations(gaugeInt64A, gaugeInt64B)
+	r = equalAggregations(sumFloat64A, sumFloat64C, config{ignoreTimestamp: true})
+	assert.Equalf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64C)
+
+	r = equalAggregations(gaugeInt64A, gaugeInt64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64B)
 
-	r = equalAggregations(gaugeFloat64A, gaugeFloat64B)
+	r = equalAggregations(gaugeInt64A, gaugeInt64C, config{ignoreTimestamp: true})
+	assert.Equalf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64C)
+
+	r = equalAggregations(gaugeFloat64A, gaugeFloat64B, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64B)
 
-	r = equalAggregations(histogramA, histogramB)
+	r = equalAggregations(gaugeFloat64A, gaugeFloat64C, config{ignoreTimestamp: true})
+	assert.Equalf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64C)
+
+	r = equalAggregations(histogramA, histogramB, config{})
 	assert.Greaterf(t, len(r), 0, "%v == %v", histogramA, histogramB)
+
+	r = equalAggregations(histogramA, histogramC, config{ignoreTimestamp: true})
+	assert.Equalf(t, len(r), 0, "%v == %v", histogramA, histogramC)
 }

@@ -44,10 +44,38 @@ type Datatypes interface {
 	// Aggregation and Value type from metricdata are not included here.
 }
 
+type config struct {
+	ignoreTimestamp bool
+}
+
+// Option allows for fine grain control over how AssertEqual operates.
+type Option interface {
+	apply(cfg config) config
+}
+
+type fnOption func(cfg config) config
+
+func (fn fnOption) apply(cfg config) config {
+	return fn(cfg)
+}
+
+// IgnoreTimestamp disables checking if timestamps are different.
+func IgnoreTimestamp() Option {
+	return fnOption(func(cfg config) config {
+		cfg.ignoreTimestamp = true
+		return cfg
+	})
+}
+
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
-func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
+func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) bool {
 	t.Helper()
+
+	cfg := config{}
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
+	}
 
 	// Generic types cannot be type asserted. Use an interface instead.
 	aIface := interface{}(actual)
@@ -55,27 +83,27 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 	var r []string
 	switch e := interface{}(expected).(type) {
 	case metricdata.DataPoint[int64]:
-		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]))
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]), cfg)
 	case metricdata.DataPoint[float64]:
-		r = equalDataPoints(e, aIface.(metricdata.DataPoint[float64]))
+		r = equalDataPoints(e, aIface.(metricdata.DataPoint[float64]), cfg)
 	case metricdata.Gauge[int64]:
-		r = equalGauges(e, aIface.(metricdata.Gauge[int64]))
+		r = equalGauges(e, aIface.(metricdata.Gauge[int64]), cfg)
 	case metricdata.Gauge[float64]:
-		r = equalGauges(e, aIface.(metricdata.Gauge[float64]))
+		r = equalGauges(e, aIface.(metricdata.Gauge[float64]), cfg)
 	case metricdata.Histogram:
-		r = equalHistograms(e, aIface.(metricdata.Histogram))
+		r = equalHistograms(e, aIface.(metricdata.Histogram), cfg)
 	case metricdata.HistogramDataPoint:
-		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint))
+		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint), cfg)
 	case metricdata.Metrics:
-		r = equalMetrics(e, aIface.(metricdata.Metrics))
+		r = equalMetrics(e, aIface.(metricdata.Metrics), cfg)
 	case metricdata.ResourceMetrics:
-		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics))
+		r = equalResourceMetrics(e, aIface.(metricdata.ResourceMetrics), cfg)
 	case metricdata.ScopeMetrics:
-		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics))
+		r = equalScopeMetrics(e, aIface.(metricdata.ScopeMetrics), cfg)
 	case metricdata.Sum[int64]:
-		r = equalSums(e, aIface.(metricdata.Sum[int64]))
+		r = equalSums(e, aIface.(metricdata.Sum[int64]), cfg)
 	case metricdata.Sum[float64]:
-		r = equalSums(e, aIface.(metricdata.Sum[float64]))
+		r = equalSums(e, aIface.(metricdata.Sum[float64]), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -90,9 +118,15 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T) bool {
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation) bool {
+func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
-	if r := equalAggregations(expected, actual); len(r) > 0 {
+
+	cfg := config{}
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
+	}
+
+	if r := equalAggregations(expected, actual, cfg); len(r) > 0 {
 		t.Error(r)
 		return false
 	}
