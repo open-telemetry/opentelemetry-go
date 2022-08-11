@@ -11,9 +11,9 @@ then import the corresponding package and use the `Parse` or `ParseFile` functio
 like this:
 
 ```go
-import schema "go.opentelemetry.io/otel/schema/v1.0"
+import schema "go.opentelemetry.io/otel/schema/v1.1"
 
-// Load the schema from a file in v1.0.x file format.
+// Load the schema from a file in v1.1.x file format.
 func loadSchemaFromFile() error {
 	telSchema, err := schema.ParseFile("schema-file.yaml")
 	if err != nil {
