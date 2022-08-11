@@ -29,14 +29,11 @@ import (
 )
 
 // View provides users with the flexibility to customize the metrics that are
-// output by the SDK. A View can be used to:
+// output by the SDK. A View can be used to ignore, change the name,
+// description, and aggregation of, and customize which attribute(s) are to be
+// reported by Instruments.
 //
-// * Ignore Instruments.
-// * Change the name of an Instrument.
-// * Change the aggregation of an Instrument.
-// * Customize which attribute(s) are to be reported by the Instrument.
-//
-// An empty config will match all instruments, and do no modifications.
+// An empty View will match all instruments, and do no transformations.
 type View struct {
 	instrumentName *regexp.Regexp
 	hasWildcard    bool
@@ -50,7 +47,10 @@ type View struct {
 }
 
 // New returns a new configured View. If there are any duplicate Options passed,
-// the last one passed will take precedence.
+// the last one passed will take precedence. The unique, de-duplicated,
+// Options are all applied to the View. An instrument needs to match all of
+// the match Options passed for the View to be applied to it. Similarly, all
+// transform operation Options are applied to matched Instruments.
 func New(opts ...Option) (View, error) {
 	v := View{}
 
@@ -91,8 +91,7 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 }
 
 // AttributeFilter returns a function that returns only attributes specified by
-// WithFilterAttributes.
-// If no filter was provided nil is returned.
+// WithFilterAttributes. If no filter was provided nil is returned.
 func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
 		return nil
@@ -133,8 +132,7 @@ func (v View) match(i Instrument) bool {
 		v.matchInstrumentKind(i.Kind)
 }
 
-// Option applies a Configuration option value to a View. All options
-// will be used together to determine match and transforms.
+// Option applies a configuration option value to a View.
 type Option interface {
 	apply(View) View
 }
