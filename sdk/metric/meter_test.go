@@ -75,7 +75,7 @@ func TestMeterRegistry(t *testing.T) {
 // A meter should be able to make instruments concurrently.
 func TestMeterInstrumentConcurrency(t *testing.T) {
 	wg := &sync.WaitGroup{}
-	wg.Add(12)
+	wg.Add(6)
 
 	m := NewMeterProvider().Meter("inst-concurrency")
 
@@ -103,30 +103,6 @@ func TestMeterInstrumentConcurrency(t *testing.T) {
 		_, _ = m.AsyncInt64().Gauge("AIGauge")
 		wg.Done()
 	}()
-	go func() {
-		_, _ = m.SyncFloat64().Counter("SFCounter")
-		wg.Done()
-	}()
-	go func() {
-		_, _ = m.SyncFloat64().UpDownCounter("SFUpDownCounter")
-		wg.Done()
-	}()
-	go func() {
-		_, _ = m.SyncFloat64().Histogram("SFHistogram")
-		wg.Done()
-	}()
-	go func() {
-		_, _ = m.SyncInt64().Counter("SICounter")
-		wg.Done()
-	}()
-	go func() {
-		_, _ = m.SyncInt64().UpDownCounter("SIUpDownCounter")
-		wg.Done()
-	}()
-	go func() {
-		_, _ = m.SyncInt64().Histogram("SIHistogram")
-		wg.Done()
-	}()
 
 	wg.Wait()
 }
@@ -151,73 +127,11 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 // Instruments should produce correct ResourceMetrics
 
 func TestMeterCreatesInstruments(t *testing.T) {
-	var seven = 7.0
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
 		want metricdata.Metrics
 	}{
-		{
-			name: "Sync Int Counter",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncInt64().Counter("sint")
-				assert.NoError(t, err)
-				ctr.Add(context.Background(), 5)
-			},
-			want: metricdata.Metrics{
-				Name: "sint",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-		{
-			name: "Sync Int UpDownCounter",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncInt64().UpDownCounter("sint")
-				assert.NoError(t, err)
-				ctr.Add(context.Background(), 7)
-			},
-			want: metricdata.Metrics{
-				Name: "sint",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: false,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 7},
-					},
-				},
-			},
-		},
-		{
-			name: "Sync Int Histogram",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncInt64().Histogram("sint")
-				assert.NoError(t, err)
-				ctr.Record(context.Background(), 7)
-			},
-			want: metricdata.Metrics{
-				Name: "sint",
-				Data: metricdata.Histogram{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint{
-						{
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-							BucketCounts: []uint64{0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-							Min:          &seven,
-							Max:          &seven,
-							Sum:          7.0,
-							Count:        1,
-						},
-					},
-				},
-			},
-		},
-		//TODO Floats
 		{
 			name: "Aync Int Count",
 			fn: func(t *testing.T, m metric.Meter) {
