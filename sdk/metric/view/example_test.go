@@ -24,6 +24,60 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
+func Example() {
+	// The "active-users" instrument created by the
+	// "github.com/super/noisy/instrumentation/package" your project includes
+	// has a bug, it records a measurment any time a user has any activity.
+	// This is causing a lot of strain on your program without providing any
+	// value to you. The next version of
+	// "github.com/super/noisy/instrumentation/package" corrects the
+	// instrumentation to only record a value when a user logs in, but it
+	// isn't out yet.
+	//
+	// Use a View to drop these measurments while you wait for the fix to come
+	// from upstream.
+
+	v, err := New(
+		MatchInstrumentName("active-users"),
+		MatchInstrumentationScope(instrumentation.Scope{
+			Name:    "github.com/super/noisy/instrumentation/package",
+			Version: "v0.22.0", // Only match the problematic instrumentation version.
+		}),
+		WithSetAggregation(aggregation.Drop{}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// The SDK this view is registered with calls TransformInstrument when an
+	// instrument is created. Test that our fix will work as intented.
+	i, _ := v.TransformInstrument(Instrument{
+		Name: "active-users",
+		Scope: instrumentation.Scope{
+			Name:    "github.com/super/noisy/instrumentation/package",
+			Version: "v0.22.0",
+		},
+		Aggregation: aggregation.LastValue{},
+	})
+	fmt.Printf("Instrument{%q: %s}: %#v\n", i.Name, i.Scope.Version, i.Aggregation)
+
+	// Also, ensure the next version will not be transformed.
+	_, ok := v.TransformInstrument(Instrument{
+		Name: "active-users",
+		Scope: instrumentation.Scope{
+			Name:    "github.com/super/noisy/instrumentation/package",
+			Version: "v0.23.0",
+		},
+		Aggregation: aggregation.LastValue{},
+	})
+	fmt.Printf("Instrument{\"active-users\": v0.23.0} matched: %t\n", ok)
+
+	// Output:
+	//
+	// Instrument{"active-users": v0.22.0}: aggregation.Drop{}
+	// Instrument{"active-users": v0.23.0} matched: false
+}
+
 func ExampleMatchInstrumentName() {
 	v, err := New(MatchInstrumentName("request-*")) // Wildcard match.
 	if err != nil {
