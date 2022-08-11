@@ -149,6 +149,9 @@ type periodicReader struct {
 	shutdownOnce sync.Once
 }
 
+// Compile time check the periodicReader implements Reader and is comparable.
+var _ = map[Reader]struct{}{&periodicReader{}: {}}
+
 // newTicker allows testing override.
 var newTicker = time.NewTicker
 
