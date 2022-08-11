@@ -50,7 +50,7 @@ func Example() {
 	}
 
 	// The SDK this view is registered with calls TransformInstrument when an
-	// instrument is created. Test that our fix will work as intented.
+	// instrument is created. Test that our fix will work as intended.
 	i, _ := v.TransformInstrument(Instrument{
 		Name: "active-users",
 		Scope: instrumentation.Scope{
@@ -71,7 +71,6 @@ func Example() {
 		Aggregation: aggregation.LastValue{},
 	})
 	fmt.Printf("Instrument{\"active-users\": v0.23.0} matched: %t\n", ok)
-
 	// Output:
 	//
 	// Instrument{"active-users": v0.22.0}: aggregation.Drop{}
@@ -85,15 +84,14 @@ func ExampleMatchInstrumentName() {
 	}
 
 	for _, i := range []Instrument{
-		Instrument{Name: "request-count"},
-		Instrument{Name: "request-rate"},
-		Instrument{Name: "latency"},
+		{Name: "request-count"},
+		{Name: "request-rate"},
+		{Name: "latency"},
 	} {
 		// The SDK calls TransformInstrument when an instrument is created.
 		_, ok := v.TransformInstrument(i)
 		fmt.Printf("Instrument{%q} matched: %t\n", i.Name, ok)
 	}
-
 	// Output:
 	// Instrument{"request-count"} matched: true
 	// Instrument{"request-rate"} matched: true
@@ -107,15 +105,14 @@ func ExampleMatchInstrumentKind() {
 	}
 
 	for _, i := range []Instrument{
-		Instrument{Name: "synchronous counter", Kind: SyncCounter},
-		Instrument{Name: "synchronous histogram", Kind: SyncHistogram},
-		Instrument{Name: "asynchronous counter", Kind: AsyncCounter},
+		{Name: "synchronous counter", Kind: SyncCounter},
+		{Name: "synchronous histogram", Kind: SyncHistogram},
+		{Name: "asynchronous counter", Kind: AsyncCounter},
 	} {
 		// The SDK calls TransformInstrument when an instrument is created.
 		_, ok := v.TransformInstrument(i)
 		fmt.Printf("Instrument{%q} matched: %t\n", i.Name, ok)
 	}
-
 	// Output:
 	// Instrument{"synchronous counter"} matched: true
 	// Instrument{"synchronous histogram"} matched: false
@@ -132,11 +129,11 @@ func ExampleMatchInstrumentationScope() {
 	}
 
 	for _, i := range []Instrument{
-		Instrument{Name: "v1.0.0 instrumentation", Scope: instrumentation.Scope{
+		{Name: "v1.0.0 instrumentation", Scope: instrumentation.Scope{
 			Name:    "custom/instrumentation/package",
 			Version: "v1.0.0",
 		}},
-		Instrument{Name: "v0.22.0 instrumentation", Scope: instrumentation.Scope{
+		{Name: "v0.22.0 instrumentation", Scope: instrumentation.Scope{
 			Name:    "custom/instrumentation/package",
 			Version: "v0.22.0",
 		}},
@@ -145,7 +142,6 @@ func ExampleMatchInstrumentationScope() {
 		_, ok := v.TransformInstrument(i)
 		fmt.Printf("Instrument{%q} matched: %t\n", i.Name, ok)
 	}
-
 	// Output:
 	// Instrument{"v1.0.0 instrumentation"} matched: false
 	// Instrument{"v0.22.0 instrumentation"} matched: true
@@ -160,7 +156,6 @@ func ExampleWithRename() {
 	// The SDK calls TransformInstrument when an instrument is created.
 	i, _ := v.TransformInstrument(Instrument{Name: "bad-name"})
 	fmt.Printf("Instrument{%q}\n", i.Name)
-
 	// Output: Instrument{"good-name"}
 }
 
@@ -179,7 +174,6 @@ func ExampleWithSetDescription() {
 		Description: "incorrect description",
 	})
 	fmt.Printf("Instrument{%q: %s}\n", i.Name, i.Description)
-
 	// Output: Instrument{"requests": Number of requests received}
 }
 
@@ -201,6 +195,5 @@ func ExampleWithSetAggregation() {
 		Aggregation: aggregation.LastValue{},
 	})
 	fmt.Printf("Instrument{%q}: %#v\n", i.Name, i.Aggregation)
-
 	// Output: Instrument{"active-users"}: aggregation.Drop{}
 }
