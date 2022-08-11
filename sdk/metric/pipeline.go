@@ -36,6 +36,7 @@ type instrumentKey struct {
 	name string
 	unit unit.Unit
 }
+
 type instrumentValue struct {
 	description string
 	aggregator  aggregator
