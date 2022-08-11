@@ -116,7 +116,7 @@ func WithResource(res *resource.Resource) Option {
 }
 
 // WithReader associates a Reader with a MeterProvider. Any passed view config
-// will be used to associate a view with the Reader. If no configs are passed
+// will be used to associate a view with the Reader. If no views are passed
 // the default view will be use for the Reader.
 //
 // Passing this option multiple times for the same Reader will overwrite. The
