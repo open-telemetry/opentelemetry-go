@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 // Package view provides types and functionality that customize the metric
 // telemetry an SDK will produce. The View type is used when a Reader is
 // registered with a MeterProvider in the go.opentelemetry.io/otel/sdk/metric
