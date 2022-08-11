@@ -31,7 +31,7 @@ import (
 //
 // The ScopeMetrics each ResourceMetrics contains are compared based on
 // containing the same ScopeMetrics, not the order they are stored in.
-func equalResourceMetrics(a, b metricdata.ResourceMetrics) (reasons []string) {
+func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons []string) {
 	if !a.Resource.Equal(b.Resource) {
 		reasons = append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
 	}
@@ -40,7 +40,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (reasons []string) {
 		a.ScopeMetrics,
 		b.ScopeMetrics,
 		func(a, b metricdata.ScopeMetrics) bool {
-			r := equalScopeMetrics(a, b)
+			r := equalScopeMetrics(a, b, cfg)
 			return len(r) == 0
 		},
 	))
@@ -55,7 +55,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics) (reasons []string) {
 //
 // The Metrics each ScopeMetrics contains are compared based on containing the
 // same Metrics, not the order they are stored in.
-func equalScopeMetrics(a, b metricdata.ScopeMetrics) (reasons []string) {
+func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []string) {
 	if a.Scope != b.Scope {
 		reasons = append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
 	}
@@ -64,7 +64,7 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics) (reasons []string) {
 		a.Metrics,
 		b.Metrics,
 		func(a, b metricdata.Metrics) bool {
-			r := equalMetrics(a, b)
+			r := equalMetrics(a, b, cfg)
 			return len(r) == 0
 		},
 	))
@@ -76,7 +76,7 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics) (reasons []string) {
 
 // equalMetrics returns reasons Metrics are not equal. If they are equal, the
 // returned reasons will be empty.
-func equalMetrics(a, b metricdata.Metrics) (reasons []string) {
+func equalMetrics(a, b metricdata.Metrics, cfg config) (reasons []string) {
 	if a.Name != b.Name {
 		reasons = append(reasons, notEqualStr("Name", a.Name, b.Name))
 	}
@@ -87,7 +87,7 @@ func equalMetrics(a, b metricdata.Metrics) (reasons []string) {
 		reasons = append(reasons, notEqualStr("Unit", a.Unit, b.Unit))
 	}
 
-	r := equalAggregations(a.Data, b.Data)
+	r := equalAggregations(a.Data, b.Data, cfg)
 	if len(r) > 0 {
 		reasons = append(reasons, "Metrics Data not equal:")
 		reasons = append(reasons, r...)
@@ -97,7 +97,7 @@ func equalMetrics(a, b metricdata.Metrics) (reasons []string) {
 
 // equalAggregations returns reasons a and b are not equal. If they are equal,
 // the returned reasons will be empty.
-func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
+func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []string) {
 	if a == nil || b == nil {
 		if a != b {
 			return []string{notEqualStr("Aggregation", a, b)}
@@ -111,31 +111,31 @@ func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
 
 	switch v := a.(type) {
 	case metricdata.Gauge[int64]:
-		r := equalGauges(v, b.(metricdata.Gauge[int64]))
+		r := equalGauges(v, b.(metricdata.Gauge[int64]), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Gauge[int64] not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Gauge[float64]:
-		r := equalGauges(v, b.(metricdata.Gauge[float64]))
+		r := equalGauges(v, b.(metricdata.Gauge[float64]), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Gauge[float64] not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Sum[int64]:
-		r := equalSums(v, b.(metricdata.Sum[int64]))
+		r := equalSums(v, b.(metricdata.Sum[int64]), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Sum[int64] not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Sum[float64]:
-		r := equalSums(v, b.(metricdata.Sum[float64]))
+		r := equalSums(v, b.(metricdata.Sum[float64]), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Sum[float64] not equal:")
 			reasons = append(reasons, r...)
 		}
 	case metricdata.Histogram:
-		r := equalHistograms(v, b.(metricdata.Histogram))
+		r := equalHistograms(v, b.(metricdata.Histogram), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Histogram not equal:")
 			reasons = append(reasons, r...)
@@ -151,12 +151,12 @@ func equalAggregations(a, b metricdata.Aggregation) (reasons []string) {
 //
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
-func equalGauges[N int64 | float64](a, b metricdata.Gauge[N]) (reasons []string) {
+func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reasons []string) {
 	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint[N]) bool {
-			r := equalDataPoints(a, b)
+			r := equalDataPoints(a, b, cfg)
 			return len(r) == 0
 		},
 	))
@@ -171,7 +171,7 @@ func equalGauges[N int64 | float64](a, b metricdata.Gauge[N]) (reasons []string)
 //
 // The DataPoints each Sum contains are compared based on containing the same
 // DataPoints, not the order they are stored in.
-func equalSums[N int64 | float64](a, b metricdata.Sum[N]) (reasons []string) {
+func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons []string) {
 	if a.Temporality != b.Temporality {
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
@@ -183,7 +183,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N]) (reasons []string) {
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.DataPoint[N]) bool {
-			r := equalDataPoints(a, b)
+			r := equalDataPoints(a, b, cfg)
 			return len(r) == 0
 		},
 	))
@@ -198,7 +198,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N]) (reasons []string) {
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func equalHistograms(a, b metricdata.Histogram) (reasons []string) {
+func equalHistograms(a, b metricdata.Histogram, cfg config) (reasons []string) {
 	if a.Temporality != b.Temporality {
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
@@ -207,7 +207,7 @@ func equalHistograms(a, b metricdata.Histogram) (reasons []string) {
 		a.DataPoints,
 		b.DataPoints,
 		func(a, b metricdata.HistogramDataPoint) bool {
-			r := equalHistogramDataPoints(a, b)
+			r := equalHistogramDataPoints(a, b, cfg)
 			return len(r) == 0
 		},
 	))
@@ -219,7 +219,7 @@ func equalHistograms(a, b metricdata.Histogram) (reasons []string) {
 
 // equalDataPoints returns reasons DataPoints are not equal. If they are
 // equal, the returned reasons will be empty.
-func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N]) (reasons []string) {
+func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -227,11 +227,14 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N]) (reasons [
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
-	if !a.StartTime.Equal(b.StartTime) {
-		reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
-	}
-	if !a.Time.Equal(b.Time) {
-		reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
 	}
 
 	if a.Value != b.Value {
@@ -242,7 +245,7 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N]) (reasons [
 
 // equalHistogramDataPoints returns reasons HistogramDataPoints are not equal.
 // If they are equal, the returned reasons will be empty.
-func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (reasons []string) {
+func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint, cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -250,11 +253,13 @@ func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint) (reasons []str
 			b.Attributes.Encoded(attribute.DefaultEncoder()),
 		))
 	}
-	if !a.StartTime.Equal(b.StartTime) {
-		reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
-	}
-	if !a.Time.Equal(b.Time) {
-		reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
 	}
 	if a.Count != b.Count {
 		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))

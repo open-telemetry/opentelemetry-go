@@ -328,7 +328,8 @@ var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			otelTracer: noopTracer,
+			warningHandler: func(msg string) {},
+			otelTracer:     noopTracer,
 		},
 		warningHandler: func(msg string) {},
 		propagator:     nil,
@@ -434,7 +435,7 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 		trace.WithLinks(links...),
 		trace.WithSpanKind(kind),
 	)
-	if checkCtx != checkCtx2 {
+	if ot.SpanFromContext(checkCtx2) != nil {
 		t.warnOnce.Do(func() {
 			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n")
 		})
