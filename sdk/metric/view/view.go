@@ -102,8 +102,6 @@ func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	}
 }
 
-// TODO: Provide Transform* for AggregationKind (#2816)
-
 func (v View) matchName(name string) bool {
 	return v.instrumentName == nil || v.instrumentName.MatchString(name)
 }
