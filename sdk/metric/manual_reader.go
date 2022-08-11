@@ -39,8 +39,8 @@ type manualReader struct {
 	aggregationSelector AggregationSelector
 }
 
-// Compile time check the manualReader implements Reader.
-var _ Reader = &manualReader{}
+// Compile time check the manualReader implements Reader and is comparable.
+var _ = map[Reader]struct{}{&manualReader{}: {}}
 
 // NewManualReader returns a Reader which is directly called to collect metrics.
 func NewManualReader(opts ...ManualReaderOption) Reader {

@@ -216,10 +216,3 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 		assert.Equal(t, metricdata.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}
 }
-
-func TestReadersAreComparable(t *testing.T) {
-	var _ map[Reader]struct{} = map[Reader]struct{}{
-		NewManualReader():                  {},
-		NewPeriodicReader(new(fnExporter)): {},
-	}
-}
