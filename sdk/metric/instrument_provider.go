@@ -18,6 +18,8 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
@@ -45,7 +47,7 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 		Kind:        view.SyncCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -63,7 +65,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 		Kind:        view.SyncUpDownCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -81,7 +83,7 @@ func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (sy
 		Kind:        view.SyncHistogram,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -106,7 +108,7 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 		Kind:        view.SyncCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -124,7 +126,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 		Kind:        view.SyncUpDownCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -142,7 +144,7 @@ func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (
 		Kind:        view.SyncHistogram,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -167,7 +169,7 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -185,7 +187,7 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -203,7 +205,7 @@ func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (async
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -228,7 +230,7 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -246,7 +248,7 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -264,7 +266,7 @@ func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asy
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		return nil, err
+		err = fmt.Errorf("instrument not part of any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
