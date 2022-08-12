@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 
 import (
 	"crypto/tls"
