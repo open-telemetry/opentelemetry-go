@@ -75,8 +75,9 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// New constructs a new Exporter. The client is assumed to be fully started
-// and able to communicate with its OTLP receiving endpoint.
+// New return an Exporter that uses client to transmits the OTLP data it
+// produces. The client is assumed to be fully started and able to communicate
+// with its OTLP receiving endpoint.
 func New(client Client) metric.Exporter {
 	return &exporter{client: client}
 }
