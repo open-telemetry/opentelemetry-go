@@ -27,9 +27,6 @@ import (
 type Client interface {
 	// UploadMetrics transmits metric data to an OTLP receiver.
 	//
-	// UploadMetrics is called synchronously by the Exporter, however, it may
-	// be called concurrently with Shutdown or ForceFlush.
-	//
 	// All retry logic must be handled by UploadMetrics alone, the Exporter
 	// does not implement any retry logic. All returned errors are considered
 	// unrecoverable.
@@ -47,10 +44,9 @@ type Client interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
-	// Shutdown may be called concurrently with UploadMetrics or ForceFlush.
-	//
 	// Shutdown will only be called once by the Exporter. Once a return value
 	// is recieved by the Exporter from Shutdown the Client will not be used
-	// anymore.
+	// anymore. Therefore all computational resources need to be released
+	// after this is called so the Client can be garbage collected.
 	Shutdown(context.Context) error
 }
