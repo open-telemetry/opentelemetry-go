@@ -37,9 +37,13 @@ type aggregator interface {
 	Aggregation() metricdata.Aggregation
 }
 type instrumentKey struct {
-	name        string
+	name string
+	unit unit.Unit
+}
+
+type instrumentValue struct {
 	description string
-	unit        unit.Unit
+	aggregator  aggregator
 }
 
 func newPipeline(res *resource.Resource) *pipeline {
@@ -48,7 +52,7 @@ func newPipeline(res *resource.Resource) *pipeline {
 	}
 	return &pipeline{
 		resource:     res,
-		aggregations: make(map[instrumentation.Scope]map[instrumentKey]aggregator),
+		aggregations: make(map[instrumentation.Scope]map[instrumentKey]instrumentValue),
 	}
 }
 
@@ -61,9 +65,11 @@ type pipeline struct {
 	resource *resource.Resource
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope]map[instrumentKey]aggregator
+	aggregations map[instrumentation.Scope]map[instrumentKey]instrumentValue
 	callbacks    []func(context.Context)
 }
+
+var errAlreadyRegistered = errors.New("instrument already registered")
 
 // addAggregator will stores an aggregator with an instrument description.  The aggregator
 // is used when `produce()` is called.
@@ -71,21 +77,23 @@ func (p *pipeline) addAggregator(scope instrumentation.Scope, name, description 
 	p.Lock()
 	defer p.Unlock()
 	if p.aggregations == nil {
-		p.aggregations = map[instrumentation.Scope]map[instrumentKey]aggregator{}
+		p.aggregations = map[instrumentation.Scope]map[instrumentKey]instrumentValue{}
 	}
 	if p.aggregations[scope] == nil {
-		p.aggregations[scope] = map[instrumentKey]aggregator{}
+		p.aggregations[scope] = map[instrumentKey]instrumentValue{}
 	}
 	inst := instrumentKey{
-		name:        name,
-		description: description,
-		unit:        instUnit,
+		name: name,
+		unit: instUnit,
 	}
 	if _, ok := p.aggregations[scope][inst]; ok {
-		return fmt.Errorf("instrument already registered: name %s, scope: %s", name, scope)
+		return fmt.Errorf("%w: name %s, scope: %s", errAlreadyRegistered, name, scope)
 	}
 
-	p.aggregations[scope][inst] = agg
+	p.aggregations[scope][inst] = instrumentValue{
+		description: description,
+		aggregator:  agg,
+	}
 	return nil
 }
 
@@ -115,12 +123,12 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
 	for scope, instruments := range p.aggregations {
 		metrics := make([]metricdata.Metrics, 0, len(instruments))
-		for inst, agg := range instruments {
-			data := agg.Aggregation()
+		for inst, instValue := range instruments {
+			data := instValue.aggregator.Aggregation()
 			if data != nil {
 				metrics = append(metrics, metricdata.Metrics{
 					Name:        inst.name,
-					Description: inst.description,
+					Description: instValue.description,
 					Unit:        inst.unit,
 					Data:        data,
 				})
