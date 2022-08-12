@@ -23,7 +23,7 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-// Client handles the transmission of OTLP data to an OTLP recieving endpoint.
+// Client handles the transmission of OTLP data to an OTLP receiving endpoint.
 type Client interface {
 	// UploadMetrics transmits metric data to an OTLP receiver.
 	//
@@ -45,7 +45,7 @@ type Client interface {
 	// appropriate error should be returned in these situations.
 	//
 	// Shutdown will only be called once by the Exporter. Once a return value
-	// is recieved by the Exporter from Shutdown the Client will not be used
+	// is received by the Exporter from Shutdown the Client will not be used
 	// anymore. Therefore all computational resources need to be released
 	// after this is called so the Client can be garbage collected.
 	Shutdown(context.Context) error

@@ -30,7 +30,7 @@ import (
 
 // exporter exports metrics data as OTLP.
 type exporter struct {
-	// Ensure syncronous access to the client accross all functionality.
+	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
 	client   Client
 

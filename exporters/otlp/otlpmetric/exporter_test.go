@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
