@@ -72,6 +72,28 @@ func TestFailedProcessorShutdown(t *testing.T) {
 	assert.Equal(t, err, spErr)
 }
 
+func TestFailedProcessorsShutdown(t *testing.T) {
+	stp := NewTracerProvider()
+	spErr1 := errors.New("basic span processor shutdown failure1")
+	spErr2 := errors.New("basic span processor shutdown failure2")
+	sp1 := &basicSpanProcesor{
+		running:             true,
+		injectShutdownError: spErr1,
+	}
+	sp2 := &basicSpanProcesor{
+		running:             true,
+		injectShutdownError: spErr2,
+	}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	err := stp.Shutdown(context.Background())
+	assert.Error(t, err)
+	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
+	assert.False(t, sp1.running)
+	assert.False(t, sp2.running)
+}
+
 func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 	handler.Reset()
 	stp := NewTracerProvider()
