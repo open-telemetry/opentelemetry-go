@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -135,7 +135,7 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 }
 
 func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
-	jsonBytes, err := ioutil.ReadAll(r.Body)
+	jsonBytes, err := io.ReadAll(r.Body)
 	require.NoError(c.t, err)
 	var models []zkmodel.SpanModel
 	err = json.Unmarshal(jsonBytes, &models)

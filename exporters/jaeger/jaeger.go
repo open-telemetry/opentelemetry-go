@@ -26,7 +26,7 @@ import (
 	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -142,10 +142,10 @@ func spanToThrift(ss sdktrace.ReadOnlySpan) *gen.Span {
 		}
 	}
 
-	if il := ss.InstrumentationLibrary(); il.Name != "" {
-		tags = append(tags, getStringTag(keyInstrumentationLibraryName, il.Name))
-		if il.Version != "" {
-			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, il.Version))
+	if is := ss.InstrumentationScope(); is.Name != "" {
+		tags = append(tags, getStringTag(keyInstrumentationLibraryName, is.Name))
+		if is.Version != "" {
+			tags = append(tags, getStringTag(keyInstrumentationLibraryVersion, is.Version))
 		}
 	}
 

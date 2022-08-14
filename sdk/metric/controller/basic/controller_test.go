@@ -43,7 +43,7 @@ func getMap(t *testing.T, cont *controller.Controller) map[string]float64 {
 	out := processortest.NewOutput(attribute.DefaultEncoder())
 
 	require.NoError(t, cont.ForEach(
-		func(_ instrumentation.Library, reader export.Reader) error {
+		func(_ instrumentation.Scope, reader export.Reader) error {
 			return reader.ForEach(
 				aggregation.CumulativeTemporalitySelector(),
 				func(record export.Record) error {
