@@ -1236,3 +1236,288 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
+	type testcase struct {
+		name          string
+		serverName    string
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
+		expected      []attribute.KeyValue
+	}
+	testcases := []testcase{
+		{
+			name:       "stripped",
+			serverName: "",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    noTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
+			},
+		},
+		{
+			name:       "with server name",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    noTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+			},
+		},
+		{
+			name:       "with tls",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+			},
+		},
+		{
+			name:       "with route",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+			},
+		},
+		{
+			name:       "with host",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with host fallback",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "",
+			url: &url.URL{
+				Host: "example.com",
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with user agent",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent": []string{"foodownloader"},
+			},
+			tls: withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with proxy info",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent":      []string{"foodownloader"},
+				"X-Forwarded-For": []string{"203.0.113.195, 70.41.3.18, 150.172.238.178"},
+			},
+			tls: withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with http 1.1",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.1",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent":      []string{"foodownloader"},
+				"X-Forwarded-For": []string{"1.2.3.4"},
+			},
+			tls: withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "1.1"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+		{
+			name:       "with http 2",
+			serverName: "my-server-name",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/2.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: http.Header{
+				"User-Agent":      []string{"foodownloader"},
+				"X-Forwarded-For": []string{"1.2.3.4"},
+			},
+			tls: withTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "https"),
+				attribute.String("http.flavor", "2"),
+				attribute.String("http.server_name", "my-server-name"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+	}
+	for idx, tc := range testcases {
+		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+		r.ContentLength = tc.contentLength
+		got := sc.HTTPServerMetricAttributesFromHTTPRequest(tc.serverName, r)
+		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
+	}
+}
+
+func TestHttpBasicAttributesFromHTTPRequest(t *testing.T) {
+	type testcase struct {
+		name          string
+		method        string
+		requestURI    string
+		proto         string
+		remoteAddr    string
+		host          string
+		url           *url.URL
+		header        http.Header
+		tls           tlsOption
+		contentLength int64
+		expected      []attribute.KeyValue
+	}
+	testcases := []testcase{
+		{
+			name:       "stripped",
+			method:     "GET",
+			requestURI: "/user/123",
+			proto:      "HTTP/1.0",
+			remoteAddr: "",
+			host:       "example.com",
+			url: &url.URL{
+				Path: "/user/123",
+			},
+			header: nil,
+			tls:    noTLS,
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("http.flavor", "1.0"),
+				attribute.String("http.host", "example.com"),
+			},
+		},
+	}
+	for idx, tc := range testcases {
+		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
+		r.ContentLength = tc.contentLength
+		got := sc.httpBasicAttributesFromHTTPRequest(r)
+		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
+	}
+}

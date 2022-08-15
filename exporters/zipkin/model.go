@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -218,10 +218,10 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 		delete(m, "error")
 	}
 
-	if il := data.InstrumentationLibrary(); il.Name != "" {
-		m[keyInstrumentationLibraryName] = il.Name
-		if il.Version != "" {
-			m[keyInstrumentationLibraryVersion] = il.Version
+	if is := data.InstrumentationScope(); is.Name != "" {
+		m[keyInstrumentationLibraryName] = is.Name
+		if is.Version != "" {
+			m[keyInstrumentationLibraryVersion] = is.Version
 		}
 	}
 
