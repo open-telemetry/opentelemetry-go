@@ -12,121 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.18
+// +build go1.18
+
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
 	"context"
-	"errors"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 )
 
-func RunExporterShutdownTest(t *testing.T, factory func() otlpmetric.Client) {
-	t.Run("testClientStopHonorsTimeout", func(t *testing.T) {
-		testClientStopHonorsTimeout(t, factory())
-	})
+func ClientContextErrorTests(factory func() otlpmetric.Client) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
 
-	t.Run("testClientStopHonorsCancel", func(t *testing.T) {
-		testClientStopHonorsCancel(t, factory())
-	})
+		t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
+			return factory().Shutdown
+		}))
 
-	t.Run("testClientStopNoError", func(t *testing.T) {
-		testClientStopNoError(t, factory())
-	})
+		t.Run("ForceFlush", testCtxErrs(func() func(context.Context) error {
+			return factory().ForceFlush
+		}))
 
-	t.Run("testClientStopManyTimes", func(t *testing.T) {
-		testClientStopManyTimes(t, factory())
-	})
-}
-
-func initializeExporter(t *testing.T, client otlpmetric.Client) *otlpmetric.Exporter {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
-	e, err := otlpmetric.New(ctx, client)
-	if err != nil {
-		t.Fatalf("failed to create exporter")
-	}
-
-	return e
-}
-
-func testClientStopHonorsTimeout(t *testing.T, client otlpmetric.Client) {
-	t.Cleanup(func() {
-		// The test is looking for a failed shut down. Call Stop a second time
-		// with an un-expired context to give the client a second chance at
-		// cleaning up. There is not guarantee from the Client interface this
-		// will succeed, therefore, no need to check the error (just give it a
-		// best try).
-		_ = client.Stop(context.Background())
-	})
-	e := initializeExporter(t, client)
-
-	innerCtx, innerCancel := context.WithTimeout(context.Background(), time.Microsecond)
-	<-innerCtx.Done()
-	if err := e.Shutdown(innerCtx); err == nil {
-		t.Error("expected context DeadlineExceeded error, got nil")
-	} else if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("expected context DeadlineExceeded error, got %v", err)
-	}
-	innerCancel()
-}
-
-func testClientStopHonorsCancel(t *testing.T, client otlpmetric.Client) {
-	t.Cleanup(func() {
-		// The test is looking for a failed shut down. Call Stop a second time
-		// with an un-expired context to give the client a second chance at
-		// cleaning up. There is not guarantee from the Client interface this
-		// will succeed, therefore, no need to check the error (just give it a
-		// best try).
-		_ = client.Stop(context.Background())
-	})
-	e := initializeExporter(t, client)
-
-	ctx, innerCancel := context.WithCancel(context.Background())
-	innerCancel()
-	if err := e.Shutdown(ctx); err == nil {
-		t.Error("expected context canceled error, got nil")
-	} else if !errors.Is(err, context.Canceled) {
-		t.Errorf("expected context canceled error, got %v", err)
+		t.Run("UploadMetrics", testCtxErrs(func() func(context.Context) error {
+			return func(ctx context.Context) error {
+				return factory().UploadMetrics(ctx, nil)
+			}
+		}))
 	}
 }
 
-func testClientStopNoError(t *testing.T, client otlpmetric.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
 
-	e := initializeExporter(t, client)
-	if err := e.Shutdown(ctx); err != nil {
-		t.Errorf("shutdown errored: expected nil, got %v", err)
-	}
-}
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
 
-func testClientStopManyTimes(t *testing.T, client otlpmetric.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-	e := initializeExporter(t, client)
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
 
-	ch := make(chan struct{})
-	wg := sync.WaitGroup{}
-	const num int = 20
-	wg.Add(num)
-	errs := make([]error, num)
-	for i := 0; i < num; i++ {
-		go func(idx int) {
-			defer wg.Done()
-			<-ch
-			errs[idx] = e.Shutdown(ctx)
-		}(i)
-	}
-	close(ch)
-	wg.Wait()
-	for _, err := range errs {
-		if err != nil {
-			t.Fatalf("failed to shutdown exporter: %v", err)
-		}
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
+		})
+
+		t.Run("NoError", func(t *testing.T) {
+			f := factory()
+			assert.NoError(t, f(ctx))
+		})
 	}
 }
