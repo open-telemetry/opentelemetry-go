@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -47,7 +47,7 @@ type client struct {
 	stopFunc context.CancelFunc
 
 	// ourConn keeps track of where conn was created: true if created here on
-	// Start, or false if passed with an option. This is important on Shutdown
+	// start, or false if passed with an option. This is important on Shutdown
 	// as the conn should only be closed if created here on start. Otherwise,
 	// it is up to the processes that passed the conn to close it.
 	ourConn bool
@@ -56,16 +56,14 @@ type client struct {
 	msc     colmetricpb.MetricsServiceClient
 }
 
-// Compile time check *client implements otlpmetric.Client.
-var _ otlpmetric.Client = (*client)(nil)
-
 // NewClient creates a new gRPC metric client.
-func NewClient(opts ...Option) otlpmetric.Client {
-	return newClient(opts...)
+func NewClient(ctx context.Context, options ...Option) (otlpmetric.Client, error) {
+	c := newClient(options...)
+	return c, c.start(ctx)
 }
 
 func newClient(opts ...Option) *client {
-	cfg := otlpconfig.NewGRPCConfig(asGRPCOptions(opts)...)
+	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -86,8 +84,8 @@ func newClient(opts ...Option) *client {
 	return c
 }
 
-// Start establishes a gRPC connection to the collector.
-func (c *client) Start(ctx context.Context) error {
+// start establishes a gRPC connection to the collector.
+func (c *client) start(ctx context.Context) error {
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
@@ -110,9 +108,35 @@ func (c *client) Start(ctx context.Context) error {
 	return nil
 }
 
+// ForceFlush ensures that any uploads have completed. An error is returned if
+// that is not achieved in the lifetime of ctx.
+func (c *client) ForceFlush(ctx context.Context) error {
+	// Acquire the c.mscMu lock within the ctx lifetime.
+	acquired := make(chan struct{})
+	go func() {
+		c.mscMu.Lock()
+		// Unlock right away. This ensures no exports are currently happening,
+		// and, if this goroutine was abandoned, there are no deadlocks.
+		c.mscMu.Unlock()
+
+		close(acquired)
+	}()
+	select {
+	case <-ctx.Done():
+		// If ctx has timed-out, it commonly means the whole program is about
+		// to be suspended. Leaving things in a dirty state for the sake of
+		// allowing the caller to log a message about the dirty flush is more
+		// valuable than waiting for things to be clean. Therefore, leave
+		// acquired to be cleaned up by the abandoned goroutine.
+		return ctx.Err()
+	case <-acquired:
+		return nil
+	}
+}
+
 var errAlreadyStopped = errors.New("the client is already stopped")
 
-// Stop shuts down the client.
+// Shutdown shuts down the client.
 //
 // Any active connections to a remote endpoint are closed if they were created
 // by the client. Any gRPC connection passed during creation using
@@ -127,7 +151,7 @@ var errAlreadyStopped = errors.New("the client is already stopped")
 //
 // If the client has already stopped, an error will be returned describing
 // this.
-func (c *client) Stop(ctx context.Context) error {
+func (c *client) Shutdown(ctx context.Context) error {
 	// Acquire the c.mscMu lock within the ctx lifetime.
 	acquired := make(chan struct{})
 	go func() {
@@ -137,9 +161,9 @@ func (c *client) Stop(ctx context.Context) error {
 	var err error
 	select {
 	case <-ctx.Done():
-		// The Stop timeout is reached. Kill any remaining exports to force
-		// the clear of the lock and save the timeout error to return and
-		// signal the shutdown timed out before cleanly stopping.
+		// The Shutdown timeout is reached. Kill any remaining exports to
+		// force the clear of the lock and save the timeout error to return
+		// and signal the shutdown timed out before cleanly stopping.
 		c.stopFunc()
 		err = ctx.Err()
 
@@ -154,7 +178,7 @@ func (c *client) Stop(ctx context.Context) error {
 	defer c.mscMu.Unlock()
 
 	// The otlpmetric.Client interface states this method is called only
-	// once, but there is no guarantee it is called after Start. Ensure the
+	// once, but there is no guarantee it is called after start. Ensure the
 	// client is started before doing anything and let the called know if they
 	// made a mistake.
 	if c.msc == nil {
@@ -183,8 +207,8 @@ var errShutdown = errors.New("the client is shutdown")
 func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
-	// write lock acquire (i.e. Stop), meaning if the client is shutting down
-	// this will come after the shut down.
+	// write lock acquire (i.e. Shutdown), meaning if the client is shutting
+	// down this will come after the shut down.
 	c.mscMu.RLock()
 	defer c.mscMu.RUnlock()
 
