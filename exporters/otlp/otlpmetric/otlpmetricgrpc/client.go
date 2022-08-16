@@ -124,7 +124,7 @@ func (c *client) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// UploadMetrics sends a batch of spans.
+// UploadMetrics sends protoMetrics to connected endpoint.
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
