@@ -23,18 +23,18 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
 // Option applies an option to the gRPC driver.
 type Option interface {
-	applyGRPCOption(otlpconfig.Config) otlpconfig.Config
+	applyGRPCOption(oconf.Config) oconf.Config
 }
 
-func asGRPCOptions(opts []Option) []otlpconfig.GRPCOption {
-	converted := make([]otlpconfig.GRPCOption, len(opts))
+func asGRPCOptions(opts []Option) []oconf.GRPCOption {
+	converted := make([]oconf.GRPCOption, len(opts))
 	for i, o := range opts {
-		converted[i] = otlpconfig.NewGRPCOption(o.applyGRPCOption)
+		converted[i] = oconf.NewGRPCOption(o.applyGRPCOption)
 	}
 	return converted
 }
@@ -47,10 +47,10 @@ func asGRPCOptions(opts []Option) []otlpconfig.GRPCOption {
 type RetryConfig retry.Config
 
 type wrappedOption struct {
-	otlpconfig.GRPCOption
+	oconf.GRPCOption
 }
 
-func (w wrappedOption) applyGRPCOption(cfg otlpconfig.Config) otlpconfig.Config {
+func (w wrappedOption) applyGRPCOption(cfg oconf.Config) oconf.Config {
 	return w.ApplyGRPCOption(cfg)
 }
 
@@ -61,7 +61,7 @@ func (w wrappedOption) applyGRPCOption(cfg otlpconfig.Config) otlpconfig.Config 
 //
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
-	return wrappedOption{otlpconfig.WithInsecure()}
+	return wrappedOption{oconf.WithInsecure()}
 }
 
 // WithEndpoint sets the target endpoint the exporter will connect to. If
@@ -69,7 +69,7 @@ func WithInsecure() Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
+	return wrappedOption{oconf.WithEndpoint(endpoint)}
 }
 
 // WithReconnectionPeriod set the minimum amount of time between connection
@@ -77,19 +77,19 @@ func WithEndpoint(endpoint string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithReconnectionPeriod(rp time.Duration) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
 		cfg.ReconnectionPeriod = rp
 		return cfg
 	})}
 }
 
-func compressorToCompression(compressor string) otlpconfig.Compression {
+func compressorToCompression(compressor string) oconf.Compression {
 	if compressor == "gzip" {
-		return otlpconfig.GzipCompression
+		return oconf.GzipCompression
 	}
 
 	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
-	return otlpconfig.NoCompression
+	return oconf.NoCompression
 }
 
 // WithCompressor sets the compressor for the gRPC client to use when sending
@@ -101,12 +101,12 @@ func compressorToCompression(compressor string) otlpconfig.Compression {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
-	return wrappedOption{otlpconfig.WithCompression(compressorToCompression(compressor))}
+	return wrappedOption{oconf.WithCompression(compressorToCompression(compressor))}
 }
 
 // WithHeaders will send the provided headers with each gRPC requests.
 func WithHeaders(headers map[string]string) Option {
-	return wrappedOption{otlpconfig.WithHeaders(headers)}
+	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
 // WithTLSCredentials allows the connection to use TLS credentials when
@@ -117,7 +117,7 @@ func WithHeaders(headers map[string]string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
 		cfg.Metrics.GRPCCredentials = creds
 		return cfg
 	})}
@@ -127,7 +127,7 @@ func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithServiceConfig(serviceConfig string) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
 		cfg.ServiceConfig = serviceConfig
 		return cfg
 	})}
@@ -140,7 +140,7 @@ func WithServiceConfig(serviceConfig string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
 		cfg.DialOptions = opts
 		return cfg
 	})}
@@ -155,7 +155,7 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 // It is the callers responsibility to close the passed conn. The client
 // Shutdown method will not close this connection.
 func WithGRPCConn(conn *grpc.ClientConn) Option {
-	return wrappedOption{otlpconfig.NewGRPCOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
 		cfg.GRPCConn = conn
 		return cfg
 	})}
@@ -168,7 +168,7 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 //
 // If unset, the default timeout will be set to 10 seconds.
 func WithTimeout(duration time.Duration) Option {
-	return wrappedOption{otlpconfig.WithTimeout(duration)}
+	return wrappedOption{oconf.WithTimeout(duration)}
 }
 
 // WithRetry sets the retry policy for transient retryable errors that may be
@@ -185,5 +185,5 @@ func WithTimeout(duration time.Duration) Option {
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(settings RetryConfig) Option {
-	return wrappedOption{otlpconfig.WithRetry(retry.Config(settings))}
+	return wrappedOption{oconf.WithRetry(retry.Config(settings))}
 }
