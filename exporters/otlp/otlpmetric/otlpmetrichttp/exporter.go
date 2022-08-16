@@ -27,8 +27,3 @@ import (
 func New(ctx context.Context, opts ...Option) (*otlpmetric.Exporter, error) {
 	return otlpmetric.New(ctx, NewClient(opts...))
 }
-
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(opts ...Option) *otlpmetric.Exporter {
-	return otlpmetric.NewUnstarted(NewClient(opts...))
-}
