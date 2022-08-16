@@ -70,8 +70,6 @@ type client struct {
 	generalCfg  oconf.Config
 	requestFunc retry.RequestFunc
 	client      *http.Client
-	stopCh      chan struct{}
-	stopOnce    sync.Once
 }
 
 // NewClient creates a new HTTP metric client.
@@ -88,12 +86,10 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 		httpClient.Transport = transport
 	}
 
-	stopCh := make(chan struct{})
 	return &client{
 		cfg:         cfg.Metrics,
 		generalCfg:  cfg,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
-		stopCh:      stopCh,
 		client:      httpClient,
 	}, nil
 }
@@ -101,21 +97,26 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 // ForceFlush does nothing, the client holds no state.
 func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 
-// Shutdown shuts down the client and interrupt any in-flight request.
-func (d *client) Shutdown(ctx context.Context) error {
-	d.stopOnce.Do(func() {
-		close(d.stopCh)
-	})
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-	return nil
+// Shutdown shuts down the client, freeing all resources.
+func (c *client) Shutdown(ctx context.Context) error {
+	// The otlpmetric.Exporter synchronizes access to client methods and
+	// ensures this is called only once. The only thing that needs to be done
+	// here is to release any computational resources the client holds.
+
+	c.requestFunc = nil
+	c.client = nil
+	return ctx.Err()
 }
 
-// UploadMetrics sends a batch of metrics to the collector.
-func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
+// UploadMetrics sends protoMetrics to connected endpoint.
+//
+// Retryable errors from the server will be handled according to any
+// RetryConfig the client was created with.
+func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
+	// The otlpmetric.Exporter synchronizes access to client methods, and
+	// ensures this is not called after the Exporter is shutdown. Only thing
+	// to do here is send data.
+
 	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
@@ -124,15 +125,12 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		return err
 	}
 
-	ctx, cancel := d.contextWithStop(ctx)
-	defer cancel()
-
-	request, err := d.newRequest(rawRequest)
+	request, err := c.newRequest(rawRequest)
 	if err != nil {
 		return err
 	}
 
-	return d.requestFunc(ctx, func(ctx context.Context) error {
+	return c.requestFunc(ctx, func(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -140,7 +138,7 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 
 		request.reset(ctx)
-		resp, err := d.client.Do(request.Request)
+		resp, err := c.client.Do(request.Request)
 		if err != nil {
 			return err
 		}
@@ -274,20 +272,4 @@ func (d *client) getScheme() string {
 		return "http"
 	}
 	return "https"
-}
-
-func (d *client) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
-	// Unify the parent context Done signal with the client's stop
-	// channel.
-	ctx, cancel := context.WithCancel(ctx)
-	go func(ctx context.Context, cancel context.CancelFunc) {
-		select {
-		case <-ctx.Done():
-			// Nothing to do, either cancelled or deadline
-			// happened.
-		case <-d.stopCh:
-			cancel()
-		}
-	}(ctx, cancel)
-	return ctx, cancel
 }
