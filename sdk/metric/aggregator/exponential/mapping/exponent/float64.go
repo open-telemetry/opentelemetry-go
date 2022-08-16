@@ -55,7 +55,7 @@ const (
 	MaxValue = math.MaxFloat64
 )
 
-// getBase2 extracts the normalized base-2 fractional exponent.
+// getNormalBase2 extracts the normalized base-2 fractional exponent.
 // Unlike Frexp(), this returns k for the equation f x 2**k where f is
 // in the range [1, 2).  Note that this function is not called for
 // subnormal numbers.
