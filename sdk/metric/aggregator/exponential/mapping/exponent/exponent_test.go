@@ -30,25 +30,25 @@ type expectMapping struct {
 	index int32
 }
 
-// Tests that getBase2 returns the base-2 exponent as documented, unlike
+// Tests that getNormalBase2 returns the base-2 exponent as documented, unlike
 // math.Frexp.
 func TestGetBase2(t *testing.T) {
 	require.Equal(t, int32(-1022), MinNormalExponent)
 	require.Equal(t, int32(+1023), MaxNormalExponent)
 
-	require.Equal(t, MaxNormalExponent, getBase2(0x1p+1023))
-	require.Equal(t, int32(1022), getBase2(0x1p+1022))
+	require.Equal(t, MaxNormalExponent, getNormalBase2(0x1p+1023))
+	require.Equal(t, int32(1022), getNormalBase2(0x1p+1022))
 
-	require.Equal(t, int32(0), getBase2(1))
+	require.Equal(t, int32(0), getNormalBase2(1))
 
-	require.Equal(t, int32(-1021), getBase2(0x1p-1021))
-	require.Equal(t, int32(-1022), getBase2(0x1p-1022))
+	require.Equal(t, int32(-1021), getNormalBase2(0x1p-1021))
+	require.Equal(t, int32(-1022), getNormalBase2(0x1p-1022))
 
 	// Subnormals below this point
-	require.Equal(t, int32(-1023), getBase2(0x1p-1023))
-	require.Equal(t, int32(-1023), getBase2(0x1p-1024))
-	require.Equal(t, int32(-1023), getBase2(0x1p-1025))
-	require.Equal(t, int32(-1023), getBase2(0x1p-1074))
+	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1023))
+	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1024))
+	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1025))
+	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1074))
 }
 
 // Tests a few cases with scale=0.

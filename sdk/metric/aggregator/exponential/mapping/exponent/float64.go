@@ -57,8 +57,9 @@ const (
 
 // getBase2 extracts the normalized base-2 fractional exponent.
 // Unlike Frexp(), this returns k for the equation f x 2**k where f is
-// in the range [1, 2).
-func getBase2(value float64) int32 {
+// in the range [1, 2).  Note that this function is not called for
+// subnormal numbers.
+func getNormalBase2(value float64) int32 {
 	rawBits := math.Float64bits(value)
 	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
 	return int32(rawExponent - ExponentBias)

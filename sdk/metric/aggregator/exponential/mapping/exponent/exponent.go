@@ -96,7 +96,7 @@ func (e *exponentMapping) MapToIndex(value float64) int32 {
 	}
 
 	// Extract the raw exponent.
-	rawExp := getBase2(value)
+	rawExp := getNormalBase2(value)
 
 	// In case the value is an exact power of two, compute a
 	// correction of -1:
