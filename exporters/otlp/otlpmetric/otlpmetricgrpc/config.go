@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
-// Option applies a configuration option to the gRPC Exporter.
+// Option applies a configuration option to the Exporter.
 type Option interface {
 	applyGRPCOption(oconf.Config) oconf.Config
 }
@@ -58,15 +58,29 @@ func (w wrappedOption) applyGRPCOption(cfg oconf.Config) oconf.Config {
 // connection, just like grpc.WithInsecure()
 // (https://pkg.go.dev/google.golang.org/grpc#WithInsecure) does.
 //
-// By default, client security is required unless WithInsecure is used.
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used to determine client security. If the endpoint has a
+// scheme of "http" or "unix" client security will be disabled. If both are
+// set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, client security will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
 	return wrappedOption{oconf.WithInsecure()}
 }
 
-// WithEndpoint sets the target endpoint the Exporter will connect to. If
-// unset, localhost:4317 will be used as a default.
+// WithEndpoint sets the target endpoint the Exporter will connect to.
+//
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, "localhost:4317" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
@@ -102,17 +116,45 @@ func compressorToCompression(compressor string) oconf.Compression {
 //
 //    import _ "google.golang.org/grpc/encoding/gzip"
 //
+// If the OTEL_EXPORTER_OTLP_COMPRESSION or
+// OTEL_EXPORTER_OTLP_METRICS_COMPRESSION environment variable is set, and
+// this option is not passed, that variable value will be used. That value can
+// be either "none" or "gzip". If both are set,
+// OTEL_EXPORTER_OTLP_METRICS_COMPRESSION will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, no compressor will be used.
+//
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
 	return wrappedOption{oconf.WithCompression(compressorToCompression(compressor))}
 }
 
 // WithHeaders will send the provided headers with each gRPC requests.
+//
+// If the OTEL_EXPORTER_OTLP_HEADERS or OTEL_EXPORTER_OTLP_METRICS_HEADERS
+// environment variable is set, and this option is not passed, that variable
+// value will be used. The value will be parsed as a list of key value pairs.
+// These pairs are expected to be in the W3C Correlation-Context format
+// without additional semi-colon delimited metadata (i.e. "k1=v1,k2=v2"). If
+// both are set, OTEL_EXPORTER_OTLP_METRICS_HEADERS will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
 // WithTLSCredentials sets the gRPC connection to use creds.
+//
+// If the OTEL_EXPORTER_OTLP_CERTIFICATE or
+// OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE environment variable is set, and
+// this option is not passed, that variable value will be used. The value will
+// be parsed the filepath of the TLS certificate chain to use. If both are
+// set, OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, no TLS credentials will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
@@ -166,7 +208,14 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 // this time limit has been reached the export is abandoned and the metric
 // data is dropped.
 //
-// If unset, the default timeout will be set to 10 seconds.
+// If the OTEL_EXPORTER_OTLP_TIMEOUT or OTEL_EXPORTER_OTLP_METRICS_TIMEOUT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. The value will be parsed as an integer representing the
+// timeout in milliseconds. If both are set,
+// OTEL_EXPORTER_OTLP_METRICS_TIMEOUT will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
 	return wrappedOption{oconf.WithTimeout(duration)}
 }
