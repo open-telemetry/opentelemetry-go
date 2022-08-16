@@ -128,19 +128,19 @@ func TestClientHonorsContextErrors(t *testing.T) {
 	ctx := context.Background()
 	var emptyConn *grpc.ClientConn
 	t.Run("Shutdown", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		c, err := newClient(ctx, WithGRPCConn(emptyConn))
 		require.NoError(t, err)
 		return c.Shutdown
 	}))
 
 	t.Run("ForceFlush", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		c, err := newClient(ctx, WithGRPCConn(emptyConn))
 		require.NoError(t, err)
 		return c.ForceFlush
 	}))
 
 	t.Run("UploadMetrics", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		c, err := newClient(ctx, WithGRPCConn(emptyConn))
 		require.NoError(t, err)
 		return func(ctx context.Context) error {
 			return c.UploadMetrics(ctx, nil)
