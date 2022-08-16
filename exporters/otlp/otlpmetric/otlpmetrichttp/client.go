@@ -66,7 +66,6 @@ var ourTransport = &http.Transport{
 }
 
 type client struct {
-	name        string
 	cfg         oconf.SignalConfig
 	generalCfg  oconf.Config
 	requestFunc retry.RequestFunc
@@ -91,7 +90,6 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 
 	stopCh := make(chan struct{})
 	return &client{
-		name:        "metrics",
 		cfg:         cfg.Metrics,
 		generalCfg:  cfg,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
@@ -162,7 +160,7 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				return err
 			}
 		default:
-			rErr = fmt.Errorf("failed to send %s to %s: %s", d.name, request.URL, resp.Status)
+			rErr = fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
 		}
 
 		if err := resp.Body.Close(); err != nil {
