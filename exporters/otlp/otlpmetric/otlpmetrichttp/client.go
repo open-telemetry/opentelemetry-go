@@ -34,7 +34,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -67,8 +67,8 @@ var ourTransport = &http.Transport{
 
 type client struct {
 	name        string
-	cfg         otlpconfig.SignalConfig
-	generalCfg  otlpconfig.Config
+	cfg         oconf.SignalConfig
+	generalCfg  oconf.Config
 	requestFunc retry.RequestFunc
 	client      *http.Client
 	stopCh      chan struct{}
@@ -77,7 +77,7 @@ type client struct {
 
 // NewClient creates a new HTTP metric client.
 func NewClient(opts ...Option) otlpmetric.Client {
-	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,

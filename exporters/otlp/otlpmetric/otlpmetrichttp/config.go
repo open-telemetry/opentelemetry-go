@@ -22,31 +22,31 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
 // Compression describes the compression used for payloads sent to the
 // collector.
-type Compression otlpconfig.Compression
+type Compression oconf.Compression
 
 const (
 	// NoCompression tells the driver to send payloads without
 	// compression.
-	NoCompression = Compression(otlpconfig.NoCompression)
+	NoCompression = Compression(oconf.NoCompression)
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
-	GzipCompression = Compression(otlpconfig.GzipCompression)
+	GzipCompression = Compression(oconf.GzipCompression)
 )
 
 // Option applies an option to the HTTP client.
 type Option interface {
-	applyHTTPOption(otlpconfig.Config) otlpconfig.Config
+	applyHTTPOption(oconf.Config) oconf.Config
 }
 
-func asHTTPOptions(opts []Option) []otlpconfig.HTTPOption {
-	converted := make([]otlpconfig.HTTPOption, len(opts))
+func asHTTPOptions(opts []Option) []oconf.HTTPOption {
+	converted := make([]oconf.HTTPOption, len(opts))
 	for i, o := range opts {
-		converted[i] = otlpconfig.NewHTTPOption(o.applyHTTPOption)
+		converted[i] = oconf.NewHTTPOption(o.applyHTTPOption)
 	}
 	return converted
 }
@@ -56,10 +56,10 @@ func asHTTPOptions(opts []Option) []otlpconfig.HTTPOption {
 type RetryConfig retry.Config
 
 type wrappedOption struct {
-	otlpconfig.HTTPOption
+	oconf.HTTPOption
 }
 
-func (w wrappedOption) applyHTTPOption(cfg otlpconfig.Config) otlpconfig.Config {
+func (w wrappedOption) applyHTTPOption(cfg oconf.Config) oconf.Config {
 	return w.ApplyHTTPOption(cfg)
 }
 
@@ -68,18 +68,18 @@ func (w wrappedOption) applyHTTPOption(cfg otlpconfig.Config) otlpconfig.Config 
 // the default endpoint (localhost:4318). Note that the endpoint must not
 // contain any URL path.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
+	return wrappedOption{oconf.WithEndpoint(endpoint)}
 }
 
 // WithCompression tells the driver to compress the sent data.
 func WithCompression(compression Compression) Option {
-	return wrappedOption{otlpconfig.WithCompression(otlpconfig.Compression(compression))}
+	return wrappedOption{oconf.WithCompression(oconf.Compression(compression))}
 }
 
 // WithURLPath allows one to override the default URL path used
 // for sending metrics. If unset, default ("/v1/metrics") will be used.
 func WithURLPath(urlPath string) Option {
-	return wrappedOption{otlpconfig.WithURLPath(urlPath)}
+	return wrappedOption{oconf.WithURLPath(urlPath)}
 }
 
 // WithMaxAttempts allows one to override how many times the driver
@@ -93,7 +93,7 @@ func WithMaxAttempts(maxAttempts int) Option {
 		maxAttempts = 5
 	}
 	return wrappedOption{
-		otlpconfig.NewHTTPOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+		oconf.NewHTTPOption(func(cfg oconf.Config) oconf.Config {
 			cfg.RetryConfig.Enabled = true
 
 			var (
@@ -138,7 +138,7 @@ func WithBackoff(duration time.Duration) Option {
 		duration = 300 * time.Millisecond
 	}
 	return wrappedOption{
-		otlpconfig.NewHTTPOption(func(cfg otlpconfig.Config) otlpconfig.Config {
+		oconf.NewHTTPOption(func(cfg oconf.Config) oconf.Config {
 			cfg.RetryConfig.Enabled = true
 			cfg.RetryConfig.MaxInterval = duration
 			if cfg.RetryConfig.InitialInterval == 0 {
@@ -156,26 +156,26 @@ func WithBackoff(duration time.Duration) Option {
 // configuration for the client used to send payloads to the
 // collector. Use it if you want to use a custom certificate.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return wrappedOption{otlpconfig.WithTLSClientConfig(tlsCfg)}
+	return wrappedOption{oconf.WithTLSClientConfig(tlsCfg)}
 }
 
 // WithInsecure tells the driver to connect to the collector using the
 // HTTP scheme, instead of HTTPS.
 func WithInsecure() Option {
-	return wrappedOption{otlpconfig.WithInsecure()}
+	return wrappedOption{oconf.WithInsecure()}
 }
 
 // WithHeaders allows one to tell the driver to send additional HTTP
 // headers with the payloads. Specifying headers like Content-Length,
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
-	return wrappedOption{otlpconfig.WithHeaders(headers)}
+	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
 // WithTimeout tells the driver the max waiting time for the backend to process
 // each metrics batch.  If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
-	return wrappedOption{otlpconfig.WithTimeout(duration)}
+	return wrappedOption{oconf.WithTimeout(duration)}
 }
 
 // WithRetry configures the retry policy for transient errors that may occurs
@@ -184,5 +184,5 @@ func WithTimeout(duration time.Duration) Option {
 // policy will retry after 5 seconds and increase exponentially after each
 // error for a total of 1 minute.
 func WithRetry(rc RetryConfig) Option {
-	return wrappedOption{otlpconfig.WithRetry(retry.Config(rc))}
+	return wrappedOption{oconf.WithRetry(retry.Config(rc))}
 }
