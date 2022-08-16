@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -135,7 +135,7 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 }
 
 func (c *mockZipkinCollector) handler(w http.ResponseWriter, r *http.Request) {
-	jsonBytes, err := ioutil.ReadAll(r.Body)
+	jsonBytes, err := io.ReadAll(r.Body)
 	require.NoError(c.t, err)
 	var models []zkmodel.SpanModel
 	err = json.Unmarshal(jsonBytes, &models)
