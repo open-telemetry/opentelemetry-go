@@ -100,6 +100,9 @@ func NewClient(opts ...Option) otlpmetric.Client {
 	}
 }
 
+// ForceFlush does nothing, the client holds no state.
+func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
+
 // Stop shuts down the client and interrupt any in-flight request.
 func (d *client) Stop(ctx context.Context) error {
 	d.stopOnce.Do(func() {
