@@ -100,17 +100,6 @@ func NewClient(opts ...Option) otlpmetric.Client {
 	}
 }
 
-// Start does nothing in a HTTP client.
-func (d *client) Start(ctx context.Context) error {
-	// nothing to do
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-	return nil
-}
-
 // Stop shuts down the client and interrupt any in-flight request.
 func (d *client) Stop(ctx context.Context) error {
 	d.stopOnce.Do(func() {
