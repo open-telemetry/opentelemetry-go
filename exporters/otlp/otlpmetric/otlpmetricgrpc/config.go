@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
-// Option applies an option to the gRPC driver.
+// Option applies a configuration option to the gRPC Exporter.
 type Option interface {
 	applyGRPCOption(oconf.Config) oconf.Config
 }
@@ -39,8 +39,8 @@ func asGRPCOptions(opts []Option) []oconf.GRPCOption {
 	return converted
 }
 
-// RetryConfig defines configuration for retrying export of span batches that
-// failed to be received by the target endpoint.
+// RetryConfig defines configuration for retrying the export of metric data
+// that failed.
 //
 // This configuration does not define any network retry strategy. That is
 // entirely handled by the gRPC ClientConn.
@@ -54,17 +54,18 @@ func (w wrappedOption) applyGRPCOption(cfg oconf.Config) oconf.Config {
 	return w.ApplyGRPCOption(cfg)
 }
 
-// WithInsecure disables client transport security for the exporter's gRPC
-// connection just like grpc.WithInsecure()
-// (https://pkg.go.dev/google.golang.org/grpc#WithInsecure) does. Note, by
-// default, client security is required unless WithInsecure is used.
+// WithInsecure disables client transport security for the Exporter's gRPC
+// connection, just like grpc.WithInsecure()
+// (https://pkg.go.dev/google.golang.org/grpc#WithInsecure) does.
+//
+// By default, client security is required unless WithInsecure is used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
 	return wrappedOption{oconf.WithInsecure()}
 }
 
-// WithEndpoint sets the target endpoint the exporter will connect to. If
+// WithEndpoint sets the target endpoint the Exporter will connect to. If
 // unset, localhost:4317 will be used as a default.
 //
 // This option has no effect if WithGRPCConn is used.
@@ -92,12 +93,14 @@ func compressorToCompression(compressor string) oconf.Compression {
 	return oconf.NoCompression
 }
 
-// WithCompressor sets the compressor for the gRPC client to use when sending
-// requests. It is the responsibility of the caller to ensure that the
-// compressor set has been registered with google.golang.org/grpc/encoding.
-// This can be done by encoding.RegisterCompressor. Some compressors
-// auto-register on import, such as gzip, which can be registered by calling
-// `import _ "google.golang.org/grpc/encoding/gzip"`.
+// WithCompressor sets the compressor the gRPC client uses.
+//
+// It is the responsibility of the caller to ensure that the compressor set
+// has been registered with google.golang.org/grpc/encoding (see
+// encoding.RegisterCompressor for more information). For example, to register
+// the gzip compressor import the package:
+//
+//    import _ "google.golang.org/grpc/encoding/gzip"
 //
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
@@ -109,11 +112,7 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
-// WithTLSCredentials allows the connection to use TLS credentials when
-// talking to the server. It takes in grpc.TransportCredentials instead of say
-// a Certificate file or a tls.Certificate, because the retrieving of these
-// credentials can be done in many ways e.g. plain file, in code tls.Config or
-// by certificate rotation, so it is up to the caller to decide what to use.
+// WithTLSCredentials sets the gRPC connection to use creds.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
@@ -133,8 +132,8 @@ func WithServiceConfig(serviceConfig string) Option {
 	})}
 }
 
-// WithDialOption sets explicit grpc.DialOptions to use when making a
-// connection. The options here are appended to the internal grpc.DialOptions
+// WithDialOption sets explicit grpc.DialOptions to use when establishing a
+// gRPC connection. The options here are appended to the internal grpc.DialOptions
 // used so they will take precedence over any other internal grpc.DialOptions
 // they might conflict with.
 //
@@ -152,7 +151,7 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 // establishing or persisting a gRPC connection to a target endpoint. Any
 // other option of those types passed will be ignored.
 //
-// It is the callers responsibility to close the passed conn. The client
+// It is the callers responsibility to close the passed conn. The Exporter
 // Shutdown method will not close this connection.
 func WithGRPCConn(conn *grpc.ClientConn) Option {
 	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
@@ -161,21 +160,22 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 	})}
 }
 
-// WithTimeout sets the max amount of time a client will attempt to export a
-// batch of spans. This takes precedence over any retry settings defined with
-// WithRetry, once this time limit has been reached the export is abandoned
-// and the batch of spans is dropped.
+// WithTimeout sets the max amount of time an Exporter will attempt an export.
+//
+// This takes precedence over any retry settings defined by WithRetry. Once
+// this time limit has been reached the export is abandoned and the metric
+// data is dropped.
 //
 // If unset, the default timeout will be set to 10 seconds.
 func WithTimeout(duration time.Duration) Option {
 	return wrappedOption{oconf.WithTimeout(duration)}
 }
 
-// WithRetry sets the retry policy for transient retryable errors that may be
-// returned by the target endpoint when exporting a batch of spans.
+// WithRetry sets the retry policy for transient retryable errors that are
+// returned by the target endpoint.
 //
 // If the target endpoint responds with not only a retryable error, but
-// explicitly returns a backoff time in the response. That time will take
+// explicitly returns a backoff time in the response, that time will take
 // precedence over these settings.
 //
 // These settings do not define any network retry strategy. That is entirely
