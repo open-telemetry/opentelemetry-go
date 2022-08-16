@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -34,12 +35,12 @@ func TestThrottleDuration(t *testing.T) {
 		expected time.Duration
 	}{
 		{
-			status:   status.New(c, "no retry info"),
+			status:   status.New(c, "NoRetryInfo"),
 			expected: 0,
 		},
 		{
 			status: func() *status.Status {
-				s, err := status.New(c, "single retry info").WithDetails(
+				s, err := status.New(c, "SingleRetryInfo").WithDetails(
 					&errdetails.RetryInfo{
 						RetryDelay: durationpb.New(15 * time.Millisecond),
 					},
@@ -51,7 +52,7 @@ func TestThrottleDuration(t *testing.T) {
 		},
 		{
 			status: func() *status.Status {
-				s, err := status.New(c, "error info").WithDetails(
+				s, err := status.New(c, "ErrorInfo").WithDetails(
 					&errdetails.ErrorInfo{Reason: "no throttle detail"},
 				)
 				require.NoError(t, err)
@@ -61,7 +62,7 @@ func TestThrottleDuration(t *testing.T) {
 		},
 		{
 			status: func() *status.Status {
-				s, err := status.New(c, "error and retry info").WithDetails(
+				s, err := status.New(c, "ErrorAndRetryInfo").WithDetails(
 					&errdetails.ErrorInfo{Reason: "with throttle detail"},
 					&errdetails.RetryInfo{
 						RetryDelay: durationpb.New(13 * time.Minute),
@@ -74,7 +75,7 @@ func TestThrottleDuration(t *testing.T) {
 		},
 		{
 			status: func() *status.Status {
-				s, err := status.New(c, "double retry info").WithDetails(
+				s, err := status.New(c, "DoubleRetryInfo").WithDetails(
 					&errdetails.RetryInfo{
 						RetryDelay: durationpb.New(13 * time.Minute),
 					},
@@ -123,71 +124,51 @@ func TestRetryable(t *testing.T) {
 	}
 }
 
-func TestUnstartedStop(t *testing.T) {
-	client := NewClient()
-	assert.ErrorIs(t, client.Stop(context.Background()), errAlreadyStopped)
-}
+func TestClientHonorsContextErrors(t *testing.T) {
+	ctx := context.Background()
+	var emptyConn *grpc.ClientConn
+	t.Run("Shutdown", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		require.NoError(t, err)
+		return c.Shutdown
+	}))
 
-func TestUnstartedUploadMetric(t *testing.T) {
-	client := NewClient()
-	assert.ErrorIs(t, client.UploadMetrics(context.Background(), nil), errShutdown)
-}
+	t.Run("ForceFlush", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		require.NoError(t, err)
+		return c.ForceFlush
+	}))
 
-func TestExportContextHonorsParentDeadline(t *testing.T) {
-	now := time.Now()
-	ctx, cancel := context.WithDeadline(context.Background(), now)
-	t.Cleanup(cancel)
-
-	// Without a client timeout, the parent deadline should be used.
-	client := newClient(WithTimeout(0))
-	eCtx, eCancel := client.exportContext(ctx)
-	t.Cleanup(eCancel)
-
-	deadline, ok := eCtx.Deadline()
-	assert.True(t, ok, "deadline not propagated to child context")
-	assert.Equal(t, now, deadline)
-}
-
-func TestExportContextHonorsClientTimeout(t *testing.T) {
-	// Setting a timeout should ensure a deadline is set on the context.
-	client := newClient(WithTimeout(1 * time.Second))
-	ctx, cancel := client.exportContext(context.Background())
-	t.Cleanup(cancel)
-
-	_, ok := ctx.Deadline()
-	assert.True(t, ok, "timeout not set as deadline for child context")
-}
-
-func TestExportContextLinksStopSignal(t *testing.T) {
-	rootCtx := context.Background()
-
-	client := newClient(WithInsecure())
-	t.Cleanup(func() { require.NoError(t, client.Stop(rootCtx)) })
-	require.NoError(t, client.Start(rootCtx))
-
-	ctx, cancel := client.exportContext(rootCtx)
-	t.Cleanup(cancel)
-
-	require.False(t, func() bool {
-		select {
-		case <-ctx.Done():
-			return true
-		default:
+	t.Run("UploadMetrics", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := NewClient(ctx, WithGRPCConn(emptyConn))
+		require.NoError(t, err)
+		return func(ctx context.Context) error {
+			return c.UploadMetrics(ctx, nil)
 		}
-		return false
-	}(), "context should not be done prior to canceling it")
+	}))
+}
 
-	// The client.stopFunc cancels the client.stopCtx. This should have been
-	// setup as a parent of ctx. Therefore, it should cancel ctx as well.
-	client.stopFunc()
+func testCtxErr(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
 
-	// Assert this with Eventually to account for goroutine scheduler timing.
-	assert.Eventually(t, func() bool {
-		select {
-		case <-ctx.Done():
-			return true
-		default:
-		}
-		return false
-	}, 10*time.Second, time.Microsecond)
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
+
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
+		})
+	}
 }
