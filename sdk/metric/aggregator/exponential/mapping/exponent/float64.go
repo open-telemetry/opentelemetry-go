@@ -57,19 +57,8 @@ const (
 
 // getBase2 extracts the normalized base-2 fractional exponent.
 // Unlike Frexp(), this returns k for the equation f x 2**k where f is
-// in the range [1, 2).  Unlike Frexp(), all subnormal values return
-// -1023.  This definition is tailored to work with the correction
-// calculated in (*exponentMapping).MapToIndex().
+// in the range [1, 2).
 func getBase2(value float64) int32 {
-	if value < MinValue {
-		// There will be 0 correction in the MapToIndex() code
-		// path because _if the significand were also zero_
-		// then we would have had a zero value and never
-		// entered this code path.  This, we are returning the
-		// correct exponent for all values with upper-boundary
-		// 0x1p-1022.
-		return MinNormalExponent - 1
-	}
 	rawBits := math.Float64bits(value)
 	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
 	return int32(rawExponent - ExponentBias)

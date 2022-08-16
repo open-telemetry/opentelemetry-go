@@ -313,7 +313,13 @@ func TestExponentIndexMin(t *testing.T) {
 		boundary, err := m.LowerBoundary(minIndex)
 		require.NoError(t, err)
 
-		correctMinIndex := int64(MinNormalExponent-1) >> -scale
+		// The correct index for MinValue depends on whether
+		// 2**(-scale) evenly divides -1022.  This is true for
+		// scales -1 and 0.
+		correctMinIndex := int64(MinNormalExponent) >> -scale
+		if MinNormalExponent%(int32(1)<<-scale) == 0 {
+			correctMinIndex--
+		}
 
 		require.Greater(t, correctMinIndex, int64(math.MinInt32))
 		require.Equal(t, int32(correctMinIndex), minIndex)
@@ -324,13 +330,13 @@ func TestExponentIndexMin(t *testing.T) {
 		require.Greater(t, roundedBoundary(scale, int32(correctMinIndex+1)), boundary)
 
 		// Subnormal values map to the min index:
-		require.Equal(t, m.MapToIndex(MinValue/2), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(MinValue/3), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(MinValue/100), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1050), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1073), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1.1p-1073), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1074), int32(correctMinIndex))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/2))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/3))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/100))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1050))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1073))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1.1p-1073))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1074))
 
 		// One smaller index will underflow.
 		_, err = m.LowerBoundary(minIndex - 1)
@@ -339,6 +345,9 @@ func TestExponentIndexMin(t *testing.T) {
 		// Next value above MinValue (not a power of two).
 		minPlus1Index := m.MapToIndex(math.Nextafter(MinValue, math.Inf(+1)))
 
+		// The following boundary equation always works for
+		// non-powers of two (same as correctMinIndex before its
+		// power-of-two correction, above).
 		correctMinPlus1Index := int64(MinNormalExponent) >> -scale
 		require.Equal(t, int32(correctMinPlus1Index), minPlus1Index)
 	}
