@@ -66,7 +66,9 @@ var ourTransport = &http.Transport{
 }
 
 type client struct {
-	cfg         oconf.SignalConfig
+	url         string
+	compression Compression
+	headers     map[string]string
 	requestFunc retry.RequestFunc
 	client      *http.Client
 }
@@ -85,8 +87,30 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 		httpClient.Transport = transport
 	}
 
+	format := "https://%s%s"
+	if cfg.Metrics.Insecure {
+		format = "http://%s%s"
+	}
+	rawURL := fmt.Sprintf(format, cfg.Metrics.Endpoint, cfg.Metrics.URLPath)
+	// Ensure target URL is valid at start, instead of every export call.
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make a copy of headers so the underlying value does not change.
+	var h map[string]string
+	if n := len(cfg.Metrics.Headers); n > 0 {
+		h = make(map[string]string, n)
+		for k, v := range cfg.Metrics.Headers {
+			h[k] = v
+		}
+	}
+
 	return &client{
-		cfg:         cfg.Metrics,
+		url:         u.String(),
+		compression: Compression(cfg.Metrics.Compression),
+		headers:     h,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		client:      httpClient,
 	}, nil
@@ -166,20 +190,19 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	})
 }
 
-func (d *client) newRequest(body []byte) (request, error) {
-	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
-	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
+func (c *client) newRequest(body []byte) (request, error) {
+	r, err := http.NewRequest(http.MethodPost, c.url, nil)
 	if err != nil {
 		return request{Request: r}, err
 	}
 
-	for k, v := range d.cfg.Headers {
+	for k, v := range c.headers {
 		r.Header.Set(k, v)
 	}
 	r.Header.Set("Content-Type", contentTypeProto)
 
 	req := request{Request: r}
-	switch Compression(d.cfg.Compression) {
+	switch c.compression {
 	case NoCompression:
 		r.ContentLength = (int64)(len(body))
 		req.bodyReader = bodyReader(body)
@@ -263,11 +286,4 @@ func evaluate(err error) (bool, time.Duration) {
 	}
 
 	return true, time.Duration(rErr.throttle)
-}
-
-func (d *client) getScheme() string {
-	if d.cfg.Insecure {
-		return "http"
-	}
-	return "https"
 }
