@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package otlpmetricgrpc provides an otlpmetric.Client that can be used with
+// an otlpmetric.Exporter to send OpenTelemetry metric data to an OTLP
+// receiving endpoint using gRPC.
 package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 
 import (
@@ -27,9 +30,26 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/sdk/metric"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
+
+// New returns an OpenTelemetry metric Exporter that can be used with a
+// PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
+// endpoint using gRPC.
+//
+// If an already established gRPC ClientConn is not passed in options using
+// WithGRPCConn, a connection to the OTLP endpoint will be established based
+// on options. If a connection cannot be establishes in the lifetime of ctx
+// based on the options, an error will be returned.
+func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
+	c, err := NewClient(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+	return otlpmetric.New(c), nil
+}
 
 type client struct {
 	metadata      metadata.MD
