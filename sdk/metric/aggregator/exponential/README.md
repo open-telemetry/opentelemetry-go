@@ -190,7 +190,6 @@ greater maximum scale.  Supporting numbers smaller than 0x1p-1022
 would mean changing the valid scale interval to [-11,19] compared with
 [-10,20].
 
-
 ### UpdateByIncr interface
 
 The OpenTelemetry metrics SDK `Aggregator` type supports an `Update()`
