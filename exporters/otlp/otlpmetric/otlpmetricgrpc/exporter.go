@@ -18,14 +18,21 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-// New constructs a new Exporter and starts it.
-func New(ctx context.Context, opts ...Option) (*otlpmetric.Exporter, error) {
-	return otlpmetric.New(ctx, NewClient(opts...))
-}
-
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(opts ...Option) *otlpmetric.Exporter {
-	return otlpmetric.NewUnstarted(NewClient(opts...))
+// New returns an OpenTelemetry metric Exporter that can be used with a
+// PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
+// endpoint using gRPC.
+//
+// If an already established gRPC ClientConn is not passed in options using
+// WithGRPCConn, a connection to the OTLP endpoint will be established based
+// on options. If a connection cannot be establishes in the lifetime of ctx
+// based on the options, an error will be returned.
+func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
+	c, err := NewClient(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+	return otlpmetric.New(c), nil
 }
