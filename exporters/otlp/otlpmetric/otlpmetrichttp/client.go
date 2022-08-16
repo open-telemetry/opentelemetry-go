@@ -51,7 +51,7 @@ var gzPool = sync.Pool{
 // Keep it in sync with golang's DefaultTransport from net/http! We
 // have our own copy to avoid handling a situation where the
 // DefaultTransport is overwritten with some different implementation
-// of http.RoundTripper or it's modified by other package.
+// of http.RoundTripper or it's modified by another package.
 var ourTransport = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,
 	DialContext: (&net.Dialer{
@@ -67,7 +67,6 @@ var ourTransport = &http.Transport{
 
 type client struct {
 	cfg         oconf.SignalConfig
-	generalCfg  oconf.Config
 	requestFunc retry.RequestFunc
 	client      *http.Client
 }
@@ -88,7 +87,6 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 
 	return &client{
 		cfg:         cfg.Metrics,
-		generalCfg:  cfg,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		client:      httpClient,
 	}, nil
@@ -108,7 +106,7 @@ func (c *client) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// UploadMetrics sends protoMetrics to connected endpoint.
+// UploadMetrics sends protoMetrics to the connected endpoint.
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
