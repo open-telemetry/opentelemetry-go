@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otlpmetricgrpc provides an otlpmetric.Exporter that communicates
-// with an OTLP receiving endpoint using gRPC.
+//go:build go1.18
+// +build go1.18
+
 package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 
 import (
