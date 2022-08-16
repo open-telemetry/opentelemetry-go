@@ -51,7 +51,7 @@ func NewTestMeterProvider(opts ...Option) (metric.MeterProvider, *Exporter) {
 
 	c := controller.New(
 		processor.NewFactory(
-			selector.NewWithHistogramDistribution(),
+			selector.NewWithHistogramDistribution(cfg.histogramOptions...),
 			cfg.temporalitySelector,
 		),
 		controller.WithCollectPeriod(0),

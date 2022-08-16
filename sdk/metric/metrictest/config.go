@@ -14,10 +14,14 @@
 
 package metrictest // import "go.opentelemetry.io/otel/sdk/metric/metrictest"
 
-import "go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+import (
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+)
 
 type config struct {
 	temporalitySelector aggregation.TemporalitySelector
+	histogramOptions    []histogram.Option
 }
 
 func newConfig(opts ...Option) config {
@@ -52,6 +56,15 @@ func WithTemporalitySelector(ts aggregation.TemporalitySelector) Option {
 			return cfg
 		}
 		cfg.temporalitySelector = ts
+		return cfg
+	})
+}
+
+// WithHistogramOptions allows for the use of use of histogram options,
+// such as overriding the buckets used.
+func WithHistogramOptions(histogramOptions ...histogram.Option) Option {
+	return functionOption(func(cfg config) config {
+		cfg.histogramOptions = histogramOptions
 		return cfg
 	})
 }

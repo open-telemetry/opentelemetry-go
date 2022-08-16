@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 )
@@ -364,6 +365,34 @@ func TestAsyncInstruments(t *testing.T) {
 		assert.EqualValues(t, 25, out.LastValue.AsInt64())
 		assert.Equal(t, aggregation.LastValueKind, out.AggregationKind)
 	})
+}
+
+func TestUseHistogramOption(t *testing.T) {
+	ctx := context.Background()
+	mp, exp := metrictest.NewTestMeterProvider(
+		metrictest.WithTemporalitySelector(aggregation.DeltaTemporalitySelector()),
+		metrictest.WithHistogramOptions(histogram.WithExplicitBoundaries(
+			[]float64{1, 5, 10},
+		)),
+	)
+	meter := mp.Meter("go.opentelemetry.io/otel/sdk/metric/metrictest/exporter_Test_CanUseHistogramOption")
+
+	fhis, err := meter.SyncFloat64().Histogram("fHist")
+	require.NoError(t, err)
+
+	fhis.Record(ctx, 3)
+	fhis.Record(ctx, 5)
+	fhis.Record(ctx, 7)
+	fhis.Record(ctx, 11)
+
+	err = exp.Collect(context.Background())
+	require.NoError(t, err)
+
+	out, err := exp.GetByName("fHist")
+	require.NoError(t, err)
+	assert.EqualValues(t, []float64{1, 5, 10}, out.Histogram.Boundaries)
+	assert.EqualValues(t, []uint64{0, 1, 2, 1}, out.Histogram.Counts)
+	assert.Equal(t, aggregation.HistogramKind, out.AggregationKind)
 }
 
 func ExampleExporter_GetByName() {
