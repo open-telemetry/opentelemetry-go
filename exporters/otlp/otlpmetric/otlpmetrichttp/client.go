@@ -76,7 +76,7 @@ type client struct {
 }
 
 // NewClient creates a new HTTP metric client.
-func NewClient(opts ...Option) otlpmetric.Client {
+func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
@@ -97,7 +97,7 @@ func NewClient(opts ...Option) otlpmetric.Client {
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		stopCh:      stopCh,
 		client:      httpClient,
-	}
+	}, nil
 }
 
 // ForceFlush does nothing, the client holds no state.

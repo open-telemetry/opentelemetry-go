@@ -21,9 +21,14 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // New constructs a new Exporter and starts it.
-func New(ctx context.Context, opts ...Option) (*otlpmetric.Exporter, error) {
-	return otlpmetric.New(ctx, NewClient(opts...))
+func New(ctx context.Context, opts ...Option) (metric.Exporter, error) {
+	c, err := NewClient(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return otlpmetric.New(c), nil
 }
