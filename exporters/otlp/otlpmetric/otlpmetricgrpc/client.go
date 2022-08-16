@@ -16,8 +16,6 @@ package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"context"
-	"errors"
-	"sync"
 	"time"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -34,46 +32,26 @@ import (
 )
 
 type client struct {
-	endpoint      string
-	dialOpts      []grpc.DialOption
 	metadata      metadata.MD
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
 
-	// stopCtx is used as a parent context for all exports. Therefore, when it
-	// is canceled with the stopFunc all exports are canceled.
-	stopCtx context.Context
-	// stopFunc cancels stopCtx, stopping any active exports.
-	stopFunc context.CancelFunc
-
-	// ourConn keeps track of where conn was created: true if created here on
-	// start, or false if passed with an option. This is important on Shutdown
-	// as the conn should only be closed if created here on start. Otherwise,
+	// ourConn keeps track of where conn was created: true if created here in
+	// NewClient, or false if passed with an option. This is important on
+	// Shutdown as the conn should only be closed if we created it. Otherwise,
 	// it is up to the processes that passed the conn to close it.
 	ourConn bool
 	conn    *grpc.ClientConn
-	mscMu   sync.RWMutex
 	msc     colmetricpb.MetricsServiceClient
 }
 
 // NewClient creates a new gRPC metric client.
 func NewClient(ctx context.Context, options ...Option) (otlpmetric.Client, error) {
-	c := newClient(options...)
-	return c, c.start(ctx)
-}
-
-func newClient(opts ...Option) *client {
-	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
-
-	ctx, cancel := context.WithCancel(context.Background())
+	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
 
 	c := &client{
-		endpoint:      cfg.Metrics.Endpoint,
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
-		dialOpts:      cfg.DialOptions,
-		stopCtx:       ctx,
-		stopFunc:      cancel,
 		conn:          cfg.GRPCConn,
 	}
 
@@ -81,17 +59,12 @@ func newClient(opts ...Option) *client {
 		c.metadata = metadata.New(cfg.Metrics.Headers)
 	}
 
-	return c
-}
-
-// start establishes a gRPC connection to the collector.
-func (c *client) start(ctx context.Context) error {
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
-		conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
+		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Keep track that we own the lifecycle of this conn and need to close
 		// it on Shutdown.
@@ -99,121 +72,52 @@ func (c *client) start(ctx context.Context) error {
 		c.conn = conn
 	}
 
-	// The otlpmetric.Client interface states this method is called just once,
-	// so no need to check if already started.
-	c.mscMu.Lock()
 	c.msc = colmetricpb.NewMetricsServiceClient(c.conn)
-	c.mscMu.Unlock()
 
-	return nil
+	return c, nil
 }
 
-// ForceFlush ensures that any uploads have completed. An error is returned if
-// that is not achieved in the lifetime of ctx.
-func (c *client) ForceFlush(ctx context.Context) error {
-	// Acquire the c.mscMu lock within the ctx lifetime.
-	acquired := make(chan struct{})
-	go func() {
-		c.mscMu.Lock()
-		// Unlock right away. This ensures no exports are currently happening,
-		// and, if this goroutine was abandoned, there are no deadlocks.
-		c.mscMu.Unlock()
+// ForceFlush does nothing, the client holds no state.
+func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 
-		close(acquired)
-	}()
-	select {
-	case <-ctx.Done():
-		// If ctx has timed-out, it commonly means the whole program is about
-		// to be suspended. Leaving things in a dirty state for the sake of
-		// allowing the caller to log a message about the dirty flush is more
-		// valuable than waiting for things to be clean. Therefore, leave
-		// acquired to be cleaned up by the abandoned goroutine.
-		return ctx.Err()
-	case <-acquired:
-		return nil
-	}
-}
-
-var errAlreadyStopped = errors.New("the client is already stopped")
-
-// Shutdown shuts down the client.
+// Shutdown shuts down the client, freeing all resource.
 //
 // Any active connections to a remote endpoint are closed if they were created
 // by the client. Any gRPC connection passed during creation using
 // WithGRPCConn will not be closed. It is the caller's responsibility to
 // handle cleanup of that resource.
-//
-// This method synchronizes with the UploadMetrics method of the client. It
-// will wait for any active calls to that method to complete unimpeded, or it
-// will cancel any active calls if ctx expires. If ctx expires, the context
-// error will be forwarded as the returned error. All client held resources
-// will still be released in this situation.
-//
-// If the client has already stopped, an error will be returned describing
-// this.
 func (c *client) Shutdown(ctx context.Context) error {
-	// Acquire the c.mscMu lock within the ctx lifetime.
-	acquired := make(chan struct{})
-	go func() {
-		c.mscMu.Lock()
-		close(acquired)
-	}()
-	var err error
-	select {
-	case <-ctx.Done():
-		// The Shutdown timeout is reached. Kill any remaining exports to
-		// force the clear of the lock and save the timeout error to return
-		// and signal the shutdown timed out before cleanly stopping.
-		c.stopFunc()
-		err = ctx.Err()
+	// The otlpmetric.Exporter synchronizes access to client methods and
+	// ensures this is called only once. The only thing that needs to be done
+	// here is to release any computational resources the client holds.
 
-		// To ensure the client is not left in a dirty state c.msc needs to be
-		// set to nil. To avoid the race condition when doing this, ensure
-		// that all the exports are killed (initiated by c.stopFunc).
-		<-acquired
-	case <-acquired:
-	}
-	// Hold the mscMu lock for the rest of the function to ensure no new
-	// exports are started.
-	defer c.mscMu.Unlock()
-
-	// The otlpmetric.Client interface states this method is called only
-	// once, but there is no guarantee it is called after start. Ensure the
-	// client is started before doing anything and let the called know if they
-	// made a mistake.
-	if c.msc == nil {
-		return errAlreadyStopped
-	}
-
-	// Clear c.msc to signal the client is stopped.
+	c.metadata = nil
+	c.requestFunc = nil
 	c.msc = nil
 
-	if c.ourConn {
-		closeErr := c.conn.Close()
-		// A context timeout error takes precedence over this error.
-		if err == nil && closeErr != nil {
-			err = closeErr
-		}
+	err := ctx.Err()
+	if err == nil && c.ourConn {
+		// ctx is not expired, and we control conn; cleanly close it.
+		err = c.conn.Close()
 	}
+	c.conn = nil
 	return err
 }
-
-var errShutdown = errors.New("the client is shutdown")
 
 // UploadMetrics sends a batch of spans.
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
 func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
-	// Hold a read lock to ensure a shut down initiated after this starts does
-	// not abandon the export. This read lock acquire has less priority than a
-	// write lock acquire (i.e. Shutdown), meaning if the client is shutting
-	// down this will come after the shut down.
-	c.mscMu.RLock()
-	defer c.mscMu.RUnlock()
+	// The otlpmetric.Exporter synchronizes access to client methods, and
+	// ensures this is not called after the Exporter is shutdown. Only thing
+	// to do here is send data.
 
-	if c.msc == nil {
-		return errShutdown
+	select {
+	case <-ctx.Done():
+		// Do not upload if the context is already expired.
+		return ctx.Err()
+	default:
 	}
 
 	ctx, cancel := c.exportContext(ctx)
@@ -233,7 +137,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 }
 
 // exportContext returns a copy of parent with an appropriate deadline and
-// cancellation function.
+// cancellation function based on the clients configured export timeout.
 //
 // It is the callers responsibility to cancel the returned context once its
 // use is complete, via the parent or directly with the returned CancelFunc, to
@@ -254,23 +158,12 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 		ctx = metadata.NewOutgoingContext(ctx, c.metadata)
 	}
 
-	// Unify the client stopCtx with the parent.
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-c.stopCtx.Done():
-			// Cancel the export as the shutdown has timed out.
-			cancel()
-		}
-	}()
-
 	return ctx, cancel
 }
 
 // retryable returns if err identifies a request that can be retried and a
 // duration to wait for if an explicit throttle time is included in err.
 func retryable(err error) (bool, time.Duration) {
-	//func retryable(err error) (bool, time.Duration) {
 	s := status.Convert(err)
 	switch s.Code() {
 	case codes.Canceled,
