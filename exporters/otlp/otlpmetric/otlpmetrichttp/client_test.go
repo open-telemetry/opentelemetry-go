@@ -18,6 +18,7 @@
 package otlpmetrichttp
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,47 +26,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnreasonableBackoff(t *testing.T) {
-	cIface := newClient(
-		WithEndpoint("http://localhost"),
-		WithInsecure(),
-		WithBackoff(-time.Microsecond),
-	)
-	require.IsType(t, &client{}, cIface)
-	c := cIface.(*client)
-	assert.True(t, c.generalCfg.RetryConfig.Enabled)
-	assert.Equal(t, 5*time.Second, c.generalCfg.RetryConfig.InitialInterval)
-	assert.Equal(t, 300*time.Millisecond, c.generalCfg.RetryConfig.MaxInterval)
-	assert.Equal(t, time.Minute, c.generalCfg.RetryConfig.MaxElapsedTime)
+func TestClientHonorsContextErrors(t *testing.T) {
+	t.Run("Shutdown", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := newClient()
+		require.NoError(t, err)
+		return c.Shutdown
+	}))
+
+	t.Run("ForceFlush", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := newClient()
+		require.NoError(t, err)
+		return c.ForceFlush
+	}))
+
+	t.Run("UploadMetrics", testCtxErr(func(t *testing.T) func(context.Context) error {
+		c, err := newClient()
+		require.NoError(t, err)
+		return func(ctx context.Context) error {
+			return c.UploadMetrics(ctx, nil)
+		}
+	}))
 }
 
-func TestUnreasonableMaxAttempts(t *testing.T) {
-	type testcase struct {
-		name        string
-		maxAttempts int
-	}
-	for _, tc := range []testcase{
-		{
-			name:        "negative max attempts",
-			maxAttempts: -3,
-		},
-		{
-			name:        "too large max attempts",
-			maxAttempts: 10,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			cIface := newClient(
-				WithEndpoint("http://localhost"),
-				WithInsecure(),
-				WithMaxAttempts(tc.maxAttempts),
-			)
-			require.IsType(t, &client{}, cIface)
-			c := cIface.(*client)
-			assert.True(t, c.generalCfg.RetryConfig.Enabled)
-			assert.Equal(t, 5*time.Second, c.generalCfg.RetryConfig.InitialInterval)
-			assert.Equal(t, 30*time.Second, c.generalCfg.RetryConfig.MaxInterval)
-			assert.Equal(t, 145*time.Second, c.generalCfg.RetryConfig.MaxElapsedTime)
+func testCtxErr(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
+
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory(t)
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
 		})
 	}
 }
