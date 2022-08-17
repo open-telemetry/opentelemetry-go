@@ -55,7 +55,7 @@ type client struct {
 	req         *http.Request
 	compression Compression
 	requestFunc retry.RequestFunc
-	client      *http.Client
+	httpClient  *http.Client
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -111,7 +111,7 @@ func newClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 		compression: Compression(cfg.Metrics.Compression),
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
-		client:      httpClient,
+		httpClient:  httpClient,
 	}, nil
 }
 
@@ -125,7 +125,7 @@ func (c *client) Shutdown(ctx context.Context) error {
 	// here is to release any computational resources the client holds.
 
 	c.requestFunc = nil
-	c.client = nil
+	c.httpClient = nil
 	return ctx.Err()
 }
 
@@ -158,7 +158,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 
 		request.reset(iCtx)
-		resp, err := c.client.Do(request.Request)
+		resp, err := c.httpClient.Do(request.Request)
 		if err != nil {
 			return err
 		}
