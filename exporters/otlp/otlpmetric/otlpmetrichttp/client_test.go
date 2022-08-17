@@ -26,7 +26,7 @@ import (
 )
 
 func TestUnreasonableBackoff(t *testing.T) {
-	cIface := NewClient(
+	cIface := newClient(
 		WithEndpoint("http://localhost"),
 		WithInsecure(),
 		WithBackoff(-time.Microsecond),
@@ -55,7 +55,7 @@ func TestUnreasonableMaxAttempts(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			cIface := NewClient(
+			cIface := newClient(
 				WithEndpoint("http://localhost"),
 				WithInsecure(),
 				WithMaxAttempts(tc.maxAttempts),

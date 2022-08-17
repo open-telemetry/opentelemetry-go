@@ -34,17 +34,28 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/sdk/metric"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-const contentTypeProto = "application/x-protobuf"
+// New returns an OpenTelemetry metric Exporter. The Exporter can be used with
+// a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
+// endpoint using protobufs over HTTP.
+func New(ctx context.Context, opts ...Option) (metric.Exporter, error) {
+	c, err := newClient(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return otlpmetric.New(c), nil
+}
 
-var gzPool = sync.Pool{
-	New: func() interface{} {
-		w := gzip.NewWriter(io.Discard)
-		return w
-	},
+type client struct {
+	// req is cloned for every upload the client makes.
+	req         *http.Request
+	compression Compression
+	requestFunc retry.RequestFunc
+	client      *http.Client
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -64,16 +75,8 @@ var ourTransport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 }
 
-type client struct {
-	// req is cloned for every upload the client makes.
-	req         *http.Request
-	compression Compression
-	requestFunc retry.RequestFunc
-	client      *http.Client
-}
-
-// NewClient creates a new HTTP metric client.
-func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
+// newClient creates a new HTTP metric client.
+func newClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
@@ -102,7 +105,7 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 			req.Header.Set(k, v)
 		}
 	}
-	req.Header.Set("Content-Type", contentTypeProto)
+	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
@@ -183,6 +186,13 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 		return rErr
 	})
+}
+
+var gzPool = sync.Pool{
+	New: func() interface{} {
+		w := gzip.NewWriter(io.Discard)
+		return w
+	},
 }
 
 func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
