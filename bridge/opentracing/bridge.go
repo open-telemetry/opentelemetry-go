@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -501,7 +502,11 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
-			switch v {
+			sk := v
+			if s, ok := v.(string); ok {
+				sk = otext.SpanKindEnum(strings.ToLower(s))
+			}
+			switch sk {
 			case otext.SpanKindRPCClientEnum:
 				kind = trace.SpanKindClient
 			case otext.SpanKindRPCServerEnum:

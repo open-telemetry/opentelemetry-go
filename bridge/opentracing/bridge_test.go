@@ -447,6 +447,16 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			opt:      []ot.StartSpanOption{ext.RPCServerOption(sc)},
 			expected: trace.SpanKindServer,
 		},
+		{
+			name:     "client string",
+			opt:      []ot.StartSpanOption{ot.Tag{Key: "span.kind", Value: "client"}},
+			expected: trace.SpanKindClient,
+		},
+		{
+			name:     "server string",
+			opt:      []ot.StartSpanOption{ot.Tag{Key: "span.kind", Value: "server"}},
+			expected: trace.SpanKindServer,
+		},
 	}
 
 	for _, tc := range testCases {
