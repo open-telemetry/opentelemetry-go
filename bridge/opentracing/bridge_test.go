@@ -24,9 +24,9 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )

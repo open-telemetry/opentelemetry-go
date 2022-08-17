@@ -13,6 +13,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support Go 1.19.
   Include compatibility testing and document support. (#3077)
 
+### Fixed
+- Fix misidentification of otel spanKind in opentracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`)
 ## [1.9.0/0.0.3] - 2022-08-01
 
 ### Added
