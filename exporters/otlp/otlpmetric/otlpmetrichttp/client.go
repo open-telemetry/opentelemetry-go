@@ -25,7 +25,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -66,9 +65,9 @@ var ourTransport = &http.Transport{
 }
 
 type client struct {
-	url         string
+	// req is cloned for every upload the client makes.
+	req         *http.Request
 	compression Compression
-	headers     map[string]string
 	requestFunc retry.RequestFunc
 	client      *http.Client
 }
@@ -92,25 +91,22 @@ func NewClient(ctx context.Context, opts ...Option) (otlpmetric.Client, error) {
 		format = "http://%s%s"
 	}
 	rawURL := fmt.Sprintf(format, cfg.Metrics.Endpoint, cfg.Metrics.URLPath)
-	// Ensure target URL is valid at start, instead of every export call.
-	u, err := url.Parse(rawURL)
+	// Body is set when this is cloned during upload.
+	req, err := http.NewRequest(http.MethodPost, rawURL, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
 
-	// Make a copy of headers so the underlying value does not change.
-	var h map[string]string
 	if n := len(cfg.Metrics.Headers); n > 0 {
-		h = make(map[string]string, n)
 		for k, v := range cfg.Metrics.Headers {
-			h[k] = v
+			req.Header.Set(k, v)
 		}
 	}
+	req.Header.Set("Content-Type", contentTypeProto)
 
 	return &client{
-		url:         u.String(),
 		compression: Compression(cfg.Metrics.Compression),
-		headers:     h,
+		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		client:      httpClient,
 	}, nil
@@ -142,24 +138,23 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
-	rawRequest, err := proto.Marshal(pbRequest)
+	body, err := proto.Marshal(pbRequest)
+	if err != nil {
+		return err
+	}
+	request, err := c.newRequest(ctx, body)
 	if err != nil {
 		return err
 	}
 
-	request, err := c.newRequest(rawRequest)
-	if err != nil {
-		return err
-	}
-
-	return c.requestFunc(ctx, func(ctx context.Context) error {
+	return c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-iCtx.Done():
+			return iCtx.Err()
 		default:
 		}
 
-		request.reset(ctx)
+		request.reset(iCtx)
 		resp, err := c.client.Do(request.Request)
 		if err != nil {
 			return err
@@ -190,18 +185,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	})
 }
 
-func (c *client) newRequest(body []byte) (request, error) {
-	r, err := http.NewRequest(http.MethodPost, c.url, nil)
-	if err != nil {
-		return request{Request: r}, err
-	}
-
-	for k, v := range c.headers {
-		r.Header.Set(k, v)
-	}
-	r.Header.Set("Content-Type", contentTypeProto)
-
+func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
+	r := c.req.Clone(ctx)
 	req := request{Request: r}
+
 	switch c.compression {
 	case NoCompression:
 		r.ContentLength = (int64)(len(body))
