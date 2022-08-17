@@ -22,7 +22,9 @@ import (
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -422,6 +424,37 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 			assert.NotNil(t, span)
 
 			assert.Equal(t, tc.expectWarnings, warningMessages)
+		})
+	}
+}
+
+func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
+	tracer := internal.NewMockTracer()
+	sc := &bridgeSpanContext{}
+
+	testCases := []struct {
+		name     string
+		opt      []ot.StartSpanOption
+		expected trace.SpanKind
+	}{
+		{
+			name:     "client",
+			opt:      []ot.StartSpanOption{ext.SpanKindRPCClient},
+			expected: trace.SpanKindClient,
+		},
+		{
+			name:     "server",
+			opt:      []ot.StartSpanOption{ext.RPCServerOption(sc)},
+			expected: trace.SpanKindServer,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, _ := NewTracerPair(tracer)
+
+			s := b.StartSpan(tc.name, tc.opt...)
+			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind, tc.expected)
 		})
 	}
 }
