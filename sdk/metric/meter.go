@@ -104,7 +104,6 @@ func (r *meterRegistry) Range(f func(*meter) bool) {
 type meter struct {
 	instrumentation.Scope
 
-	// TODO (#2815, 2814): implement.
 	intRegistry   *pipelineRegistry[int64]
 	floatRegistry *pipelineRegistry[float64]
 }
@@ -114,14 +113,12 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	// TODO (#2815): implement.
-	return asyncInt64Provider{registry: m.intRegistry}
+	return asyncInt64Provider{scope: m.Scope, registry: m.intRegistry}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	// TODO (#2815): implement.
-	return asyncFloat64Provider{registry: m.floatRegistry}
+	return asyncFloat64Provider{scope: m.Scope, registry: m.floatRegistry}
 }
 
 // RegisterCallback registers the function f to be called when any of the
