@@ -23,26 +23,54 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 )
 
-func ClientContextErrorTests(factory func() otlpmetric.Client) func(*testing.T) {
+// ClientFactory is a function that when called returns a
+// otlpmetric.Client implementation that is connected to also returned
+// Collector implementation. The Client is ready to upload metric data to the
+// Collector which is ready to store that data.
+type ClientFactory func() (otlpmetric.Client, Collector)
+
+func RunClientTests(f ClientFactory) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
+		t.Run("ClientHonorsContextErrors", func(t *testing.T) {
+			t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
+				c, _ := f()
+				return c.Shutdown
+			}))
 
-		t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
-			return factory().Shutdown
-		}))
+			t.Run("ForceFlush", testCtxErrs(func() func(context.Context) error {
+				c, _ := f()
+				return c.ForceFlush
+			}))
 
-		t.Run("ForceFlush", testCtxErrs(func() func(context.Context) error {
-			return factory().ForceFlush
-		}))
+			t.Run("UploadMetrics", testCtxErrs(func() func(context.Context) error {
+				c, _ := f()
+				return func(ctx context.Context) error {
+					return c.UploadMetrics(ctx, nil)
+				}
+			}))
+		})
 
-		t.Run("UploadMetrics", testCtxErrs(func() func(context.Context) error {
-			return func(ctx context.Context) error {
-				return factory().UploadMetrics(ctx, nil)
-			}
-		}))
+		t.Run("ForceFlushFlushes", func(t *testing.T) {
+			ctx := context.Background()
+			client, collector := f()
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+
+			require.NoError(t, client.ForceFlush(ctx))
+			rm := collector.Collect().dump()
+			// Data correctness is not important, just it was received.
+			require.Greater(t, len(rm), 0, "no data uploaded")
+
+			require.NoError(t, client.Shutdown(ctx))
+			rm = collector.Collect().dump()
+			assert.Len(t, rm, 0, "client did not flush all data")
+		})
+
+		t.Run("UploadMetrics", testUploadMetrics(f))
 	}
 }
 
@@ -67,11 +95,6 @@ func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) 
 
 			f := factory()
 			assert.ErrorIs(t, f(innerCtx), context.Canceled)
-		})
-
-		t.Run("NoError", func(t *testing.T) {
-			f := factory()
-			assert.NoError(t, f(ctx))
 		})
 	}
 }
