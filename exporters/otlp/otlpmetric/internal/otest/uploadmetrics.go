@@ -18,9 +18,12 @@
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/metric/unit"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -161,5 +164,41 @@ var (
 )
 
 func testUploadMetrics(f ClientFactory) func(*testing.T) {
-	return func(t *testing.T) {}
+	return func(t *testing.T) {
+		t.Run("Empty", func(t *testing.T) {
+			ctx := context.Background()
+			client, coll := f()
+
+			emptyRM := &mpb.ResourceMetrics{
+				Resource:  res,
+				SchemaUrl: semconv.SchemaURL,
+			}
+			require.NoError(t, client.UploadMetrics(ctx, emptyRM))
+
+			emptySM := &mpb.ResourceMetrics{
+				Resource: res,
+				ScopeMetrics: []*mpb.ScopeMetrics{{
+					Scope:     scope,
+					SchemaUrl: semconv.SchemaURL,
+				}},
+				SchemaUrl: semconv.SchemaURL,
+			}
+			require.NoError(t, client.UploadMetrics(ctx, emptySM))
+
+			require.NoError(t, client.Shutdown(ctx))
+			got := coll.Collect().dump()
+			assert.Contains(t, got, emptyRM)
+			assert.Contains(t, got, emptySM)
+		})
+
+		t.Run("All", func(t *testing.T) {
+			ctx := context.Background()
+			client, coll := f()
+
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			require.NoError(t, client.Shutdown(ctx))
+			got := coll.Collect().dump()
+			assert.Contains(t, got, resourceMetrics)
+		})
+	}
 }
