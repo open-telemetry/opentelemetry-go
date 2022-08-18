@@ -56,7 +56,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 	providers := make(map[Reader]*pipeline, len(conf.readers))
 	for reader := range conf.readers {
-		pipe := newPipeline(conf.res)
+		pipe := newPipeline(conf.res, conf.producers)
 		providers[reader] = pipe
 		reader.register(pipe)
 	}

@@ -46,12 +46,13 @@ type instrumentValue struct {
 	aggregator  aggregator
 }
 
-func newPipeline(res *resource.Resource) *pipeline {
+func newPipeline(res *resource.Resource, producers map[instrumentation.Scope]Producer) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
 	return &pipeline{
 		resource:     res,
+		producers:    producers,
 		aggregations: make(map[instrumentation.Scope]map[instrumentKey]instrumentValue),
 	}
 }
@@ -67,6 +68,7 @@ type pipeline struct {
 	sync.Mutex
 	aggregations map[instrumentation.Scope]map[instrumentKey]instrumentValue
 	callbacks    []func(context.Context)
+	producers    map[instrumentation.Scope]Producer
 }
 
 var errAlreadyRegistered = errors.New("instrument already registered")
@@ -133,6 +135,19 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 					Data:        data,
 				})
 			}
+		}
+		if len(metrics) > 0 {
+			sm = append(sm, metricdata.ScopeMetrics{
+				Scope:   scope,
+				Metrics: metrics,
+			})
+		}
+	}
+
+	for scope, prod := range p.producers {
+		metrics, err := prod.Produce(ctx)
+		if err != nil {
+			return metricdata.ResourceMetrics{}, err
 		}
 		if len(metrics) > 0 {
 			sm = append(sm, metricdata.ScopeMetrics{
