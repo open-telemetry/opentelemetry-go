@@ -68,7 +68,7 @@ func (k InstrumentKind) Grouping() bool {
 // Monotonic returns whether this kind of instrument exposes a non-decreasing sum.
 func (k InstrumentKind) Monotonic() bool {
 	switch k {
-	case CounterInstrumentKind, CounterObserverInstrumentKind:
+	case HistogramInstrumentKind, CounterInstrumentKind, CounterObserverInstrumentKind:
 		return true
 	}
 	return false

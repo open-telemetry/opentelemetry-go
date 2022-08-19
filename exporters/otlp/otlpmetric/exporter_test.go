@@ -92,6 +92,7 @@ type testRecord struct {
 	name  string
 	iKind sdkapi.InstrumentKind
 	nKind number.Kind
+	aKind aggregation.Kind
 	attrs []attribute.KeyValue
 
 	meterName string
@@ -102,6 +103,7 @@ func record(
 	name string,
 	iKind sdkapi.InstrumentKind,
 	nKind number.Kind,
+	aKind aggregation.Kind,
 	attrs []attribute.KeyValue,
 	meterName string,
 	meterOpts ...metric.MeterOption) testRecord {
@@ -109,6 +111,7 @@ func record(
 		name:      name,
 		iKind:     iKind,
 		nKind:     nKind,
+		aKind:     aKind,
 		attrs:     attrs,
 		meterName: meterName,
 		meterOpts: meterOpts,
@@ -177,6 +180,7 @@ func TestNoGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				testLibName,
 			),
@@ -184,6 +188,7 @@ func TestNoGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(2)),
 				testLibName,
 			),
@@ -230,6 +235,7 @@ func TestHistogramInt64MetricGroupingExport(t *testing.T) {
 		"int64-histogram",
 		sdkapi.HistogramInstrumentKind,
 		number.Int64Kind,
+		aggregation.HistogramKind,
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
@@ -281,6 +287,7 @@ func TestHistogramFloat64MetricGroupingExport(t *testing.T) {
 		"float64-histogram",
 		sdkapi.HistogramInstrumentKind,
 		number.Float64Kind,
+		aggregation.HistogramKind,
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
@@ -332,6 +339,7 @@ func TestCountInt64MetricGroupingExport(t *testing.T) {
 		"int64-count",
 		sdkapi.CounterInstrumentKind,
 		number.Int64Kind,
+		aggregation.SumKind,
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
@@ -382,6 +390,7 @@ func TestCountFloat64MetricGroupingExport(t *testing.T) {
 		"float64-count",
 		sdkapi.CounterInstrumentKind,
 		number.Float64Kind,
+		aggregation.SumKind,
 		append(baseKeyValues, cpuKey.Int(1)),
 		testLibName,
 	)
@@ -437,6 +446,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				testLibName,
 			),
@@ -444,6 +454,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				testLibName,
 			),
@@ -451,6 +462,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(2)),
 				testLibName,
 			),
@@ -458,6 +470,7 @@ func TestResourceMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				testLibName,
 			),
@@ -526,6 +539,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				countingLib,
 				version1,
@@ -534,6 +548,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				countingLib,
 				version2,
@@ -542,6 +557,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				countingLib,
 				version1,
@@ -550,6 +566,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(2)),
 				countingLib,
 				version1,
@@ -558,6 +575,7 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 				"int64-count",
 				sdkapi.CounterInstrumentKind,
 				number.Int64Kind,
+				aggregation.SumKind,
 				append(baseKeyValues, cpuKey.Int(1)),
 				summingLib,
 				specialSchema,
@@ -661,6 +679,10 @@ func TestResourceInstLibMetricGroupingExport(t *testing.T) {
 }
 
 func TestStatelessAggregationTemporality(t *testing.T) {
+	// In this test, all outputs are Sums, including histograms.  This tests the
+	// behavior of the current behavior of NewWithInexpensiveDistribution(), which
+	// exposes a Sum from Histogram instruments.  This test ensures the result is
+	// monotonic.
 	type testcase struct {
 		name           string
 		instrumentKind sdkapi.InstrumentKind
@@ -673,6 +695,7 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 		{"updowncounter", sdkapi.UpDownCounterInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, false},
 		{"counterobserver", sdkapi.CounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, true},
 		{"updowncounterobserver", sdkapi.UpDownCounterObserverInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, false},
+		{"histogram", sdkapi.HistogramInstrumentKind, metricpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA, true},
 	} {
 		t.Run(k.name, func(t *testing.T) {
 			runMetricExportTests(
@@ -688,6 +711,7 @@ func TestStatelessAggregationTemporality(t *testing.T) {
 						"instrument",
 						k.instrumentKind,
 						number.Int64Kind,
+						aggregation.SumKind, // Note: see comment above.
 						append(baseKeyValues, cpuKey.Int(1)),
 						testLibName,
 					),
@@ -736,12 +760,15 @@ func runMetricExportTests(t *testing.T, opts []otlpmetric.Option, res *resource.
 		labs := attribute.NewSet(lcopy...)
 
 		var agg, ckpt aggregator.Aggregator
-		if r.iKind.Adding() {
+		switch r.aKind {
+		case aggregation.SumKind:
 			sums := sum.New(2)
 			agg, ckpt = &sums[0], &sums[1]
-		} else {
+		case aggregation.HistogramKind:
 			histos := histogram.New(2, &desc, histogram.WithExplicitBoundaries(testHistogramBoundaries))
 			agg, ckpt = &histos[0], &histos[1]
+		default:
+			t.Fatal("case not tested")
 		}
 
 		ctx := context.Background()
