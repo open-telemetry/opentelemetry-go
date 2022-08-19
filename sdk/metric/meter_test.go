@@ -123,9 +123,10 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 		_ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
 		wg.Done()
 	}()
+	wg.Wait()
 }
 
-// Instruments should produce correct ResourceMetrics
+// Instruments should produce correct ResourceMetrics.
 // TODO (2814): include sync instruments.
 func TestMeterCreatesInstruments(t *testing.T) {
 	testCases := []struct {
@@ -134,7 +135,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		want metricdata.Metrics
 	}{
 		{
-			name: "Aync Int Count",
+			name: "AyncInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncInt64().Counter("aint")
 				assert.NoError(t, err)
@@ -155,7 +156,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "Aync Int UpDownCount",
+			name: "AyncInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncInt64().UpDownCounter("aint")
 				assert.NoError(t, err)
@@ -176,17 +177,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "Aync Int Gauge",
+			name: "AyncInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncInt64().Gauge("aint")
+				gauge, err := m.AsyncInt64().Gauge("agauge")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 11)
+				err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
 			},
 			want: metricdata.Metrics{
-				Name: "aint",
+				Name: "agauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Value: 11},
@@ -195,7 +196,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "Aync Float Count",
+			name: "AyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncFloat64().Counter("afloat")
 				assert.NoError(t, err)
@@ -216,7 +217,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "Aync Float UpDownCount",
+			name: "AyncFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncFloat64().UpDownCounter("afloat")
 				assert.NoError(t, err)
@@ -237,17 +238,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "Aync Float Gauge",
+			name: "AyncFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncFloat64().Gauge("afloat")
+				gauge, err := m.AsyncFloat64().Gauge("agauge")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 11)
+				err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
 			},
 			want: metricdata.Metrics{
-				Name: "afloat",
+				Name: "agauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Value: 11},

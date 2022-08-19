@@ -45,7 +45,11 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
 	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+		if err != nil {
+			err = fmt.Errorf("instrument does not match any view")
+		} else {
+			err = fmt.Errorf("instrument does not match any view: %w", err)
+		}
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,

@@ -104,8 +104,7 @@ func (p *pipeline) addCallback(callback func(context.Context)) {
 	p.callbacks = append(p.callbacks, callback)
 }
 
-// The key type is unexported to prevent collisions with context keys defined in
-// other packages.
+// callbackKey is a context key type used to identify context that came from the SDK.
 type callbackKey int
 
 // produceKey is the context key to tell if a Observe is called within a callback.

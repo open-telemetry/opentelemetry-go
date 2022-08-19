@@ -41,6 +41,7 @@ var _ asyncint64.UpDownCounter = &instrumentImpl[int64]{}
 var _ asyncint64.Gauge = &instrumentImpl[int64]{}
 
 func (i *instrumentImpl[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
+	// Only record a value if this is being called from the MetricProvider.
 	_, ok := ctx.Value(produceKey).(struct{})
 	if !ok {
 		return
