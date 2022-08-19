@@ -27,7 +27,6 @@ import (
 func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {
 	b.Run(fmt.Sprintf("mapping_%s", name), func(b *testing.B) {
 		src := rand.New(rand.NewSource(54979))
-
 		for i := 0; i < b.N; i++ {
 			_ = mapper.MapToIndex(1 + src.Float64())
 		}
@@ -37,7 +36,6 @@ func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {
 func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 	b.Run(fmt.Sprintf("boundary_%s", name), func(b *testing.B) {
 		src := rand.New(rand.NewSource(54979))
-
 		for i := 0; i < b.N; i++ {
 			_, _ = mapper.LowerBoundary(int32(src.Int63()))
 		}

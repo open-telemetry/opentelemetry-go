@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/exponent"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
 )
 
 const (
@@ -45,10 +45,10 @@ const (
 	MaxScale int32 = 20
 
 	// MinValue is the smallest normal number.
-	MinValue = 0x1p-1022
+	MinValue = internal.MinValue
 
 	// MaxValue is the largest normal number.
-	MaxValue = math.MaxFloat64
+	MaxValue = internal.MaxValue
 )
 
 // logarithmMapping contains the constants used to implement the
@@ -121,7 +121,7 @@ func NewMapping(scale int32) (mapping.Mapping, error) {
 // (MinValue, MinValue*base].  One less than this index corresponds
 // with the bucket containing values <= MinValue.
 func (l *logarithmMapping) minNormalLowerBoundaryIndex() int32 {
-	return int32(exponent.MinNormalExponent << l.scale)
+	return int32(internal.MinNormalExponent << l.scale)
 }
 
 // maxNormalLowerBoundaryIndex is the index such that base**index equals the
@@ -131,7 +131,7 @@ func (l *logarithmMapping) minNormalLowerBoundaryIndex() int32 {
 // boundary cannot be represented.  One greater than this index
 // corresponds with the bucket containing values > 0x1p1024.
 func (l *logarithmMapping) maxNormalLowerBoundaryIndex() int32 {
-	return (int32(exponent.MaxNormalExponent+1) << l.scale) - 1
+	return (int32(internal.MaxNormalExponent+1) << l.scale) - 1
 }
 
 // MapToIndex implements mapping.Mapping.
@@ -142,8 +142,8 @@ func (l *logarithmMapping) MapToIndex(value float64) int32 {
 	}
 
 	// Exact power-of-two correctness: an optional special case.
-	if getSignificand(value) == 0 {
-		exp := getBase2(value)
+	if internal.GetSignificand(value) == 0 {
+		exp := internal.GetNormalBase2(value)
 		return (exp << l.scale) - 1
 	}
 
@@ -187,18 +187,4 @@ func (l *logarithmMapping) LowerBoundary(index int32) (float64, error) {
 // Scale implements mapping.Mapping.
 func (l *logarithmMapping) Scale() int32 {
 	return l.scale
-}
-
-// getSignificand returns the 52 bit (unsigned) significand as a
-// signed value.
-func getSignificand(value float64) int64 {
-	return int64(math.Float64bits(value)) & exponent.SignificandMask
-}
-
-// getBase2 extracts the normalized base-2 fractional exponent.  This
-// returns k for the equation value == f x 2**k where f is in the range [1, 2).
-func getBase2(value float64) int32 {
-	rawBits := math.Float64bits(value)
-	rawExponent := (int64(rawBits) & exponent.ExponentMask) >> exponent.SignificandWidth
-	return int32(rawExponent - exponent.ExponentBias)
 }

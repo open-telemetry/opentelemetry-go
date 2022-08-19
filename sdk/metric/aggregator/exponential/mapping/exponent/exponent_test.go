@@ -23,32 +23,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
+)
+
+const (
+	MaxNormalExponent = internal.MaxNormalExponent
+	MinNormalExponent = internal.MinNormalExponent
+	MaxValue          = internal.MaxValue
+	MinValue          = internal.MinValue
 )
 
 type expectMapping struct {
 	value float64
 	index int32
-}
-
-// Tests that getNormalBase2 returns the base-2 exponent as documented, unlike
-// math.Frexp.
-func TestGetBase2(t *testing.T) {
-	require.Equal(t, int32(-1022), MinNormalExponent)
-	require.Equal(t, int32(+1023), MaxNormalExponent)
-
-	require.Equal(t, MaxNormalExponent, getNormalBase2(0x1p+1023))
-	require.Equal(t, int32(1022), getNormalBase2(0x1p+1022))
-
-	require.Equal(t, int32(0), getNormalBase2(1))
-
-	require.Equal(t, int32(-1021), getNormalBase2(0x1p-1021))
-	require.Equal(t, int32(-1022), getNormalBase2(0x1p-1022))
-
-	// Subnormals below this point
-	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1023))
-	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1024))
-	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1025))
-	require.Equal(t, int32(-1023), getNormalBase2(0x1p-1074))
 }
 
 // Tests a few cases with scale=0.

@@ -23,7 +23,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/exponent"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
+)
+
+const (
+	MaxNormalExponent = internal.MaxNormalExponent
+	MinNormalExponent = internal.MinNormalExponent
 )
 
 type expectMapping struct {
@@ -121,7 +126,7 @@ func TestLogarithmIndexMax(t *testing.T) {
 		// Correct max index is one less than the first index
 		// that overflows math.MaxFloat64, i.e., one less than
 		// the index of +Inf.
-		maxIndex64 := (int64(exponent.MaxNormalExponent+1) << scale) - 1
+		maxIndex64 := (int64(MaxNormalExponent+1) << scale) - 1
 		require.Less(t, maxIndex64, int64(math.MaxInt32))
 		require.Equal(t, index, int32(maxIndex64))
 
@@ -156,7 +161,7 @@ func TestLogarithmIndexMin(t *testing.T) {
 
 		minIndex := m.MapToIndex(MinValue)
 
-		correctMinIndex := (int64(exponent.MinNormalExponent) << scale) - 1
+		correctMinIndex := (int64(MinNormalExponent) << scale) - 1
 		require.Greater(t, correctMinIndex, int64(math.MinInt32))
 		require.Equal(t, minIndex, int32(correctMinIndex))
 
@@ -204,7 +209,7 @@ func TestExponentIndexMax(t *testing.T) {
 		// Correct max index is one less than the first index
 		// that overflows math.MaxFloat64, i.e., one less than
 		// the index of +Inf.
-		maxIndex64 := (int64(exponent.MaxNormalExponent+1) << scale) - 1
+		maxIndex64 := (int64(MaxNormalExponent+1) << scale) - 1
 		require.Less(t, maxIndex64, int64(math.MaxInt32))
 		require.Equal(t, index, int32(maxIndex64))
 
