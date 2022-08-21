@@ -8,9 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support Go 1.19.
+  Include compatibility testing and document support. (#3077)
+
+### Fixed
+
+- Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
+
 ### Changed
 
-- Decode urlencoded values from the `OTEL_RESOURCE_ATTRIBUTES` environment variable (#2963)
+- Decode urlencoded values from the `OTEL_RESOURCE_ATTRIBUTES` environment variable. (#2963)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
