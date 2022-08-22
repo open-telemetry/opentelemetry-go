@@ -74,7 +74,7 @@ func toNanos(t time.Time) uint64 {
 func InstrumentationLibraryReader(ctx context.Context, temporalitySelector aggregation.TemporalitySelector, res *resource.Resource, ilmr export.InstrumentationLibraryReader, numWorkers uint) (*metricpb.ResourceMetrics, error) {
 	var sms []*metricpb.ScopeMetrics
 
-	err := ilmr.ForEach(func(lib instrumentation.Library, mr export.Reader) error {
+	err := ilmr.ForEach(func(lib instrumentation.Scope, mr export.Reader) error {
 		records, errc := source(ctx, temporalitySelector, mr)
 
 		// Start a fixed number of goroutines to transform records.

@@ -46,12 +46,12 @@ var ErrControllerStarted = fmt.Errorf("controller already started")
 // both "pull" and "push" configurations.  This supports two distinct
 // modes:
 //
-// - Push and Pull: Start() must be called to begin calling the exporter;
-//   Collect() is called periodically by a background thread after starting
-//   the controller.
-// - Pull-Only: Start() is optional in this case, to call Collect periodically.
-//   If Start() is not called, Collect() can be called manually to initiate
-//   collection
+//   - Push and Pull: Start() must be called to begin calling the exporter;
+//     Collect() is called periodically by a background thread after starting
+//     the controller.
+//   - Pull-Only: Start() is optional in this case, to call Collect periodically.
+//     If Start() is not called, Collect() can be called manually to initiate
+//     collection
 //
 // The controller supports mixing push and pull access to metric data
 // using the export.Reader RWLock interface.  Collection will
@@ -323,7 +323,7 @@ func (c *Controller) export(ctx context.Context) error { // nolint:revive  // me
 }
 
 // ForEach implements export.InstrumentationLibraryReader.
-func (c *Controller) ForEach(readerFunc func(l instrumentation.Library, r export.Reader) error) error {
+func (c *Controller) ForEach(readerFunc func(l instrumentation.Scope, r export.Reader) error) error {
 	for _, acPair := range c.accumulatorList() {
 		reader := acPair.checkpointer.Reader()
 		// TODO: We should not fail fast; instead accumulate errors.
