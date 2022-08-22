@@ -19,6 +19,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
@@ -30,6 +31,9 @@ import (
 type asyncInt64Provider struct {
 	scope    instrumentation.Scope
 	registry *pipelineRegistry[int64]
+
+	cacheLock sync.Mutex
+	cache     map[instrumentKey]instrument.Asynchronous
 }
 
 var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
@@ -44,13 +48,10 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 		Description: cfg.Description(),
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		if err != nil {
-			err = fmt.Errorf("instrument does not match any view")
-		} else {
-			err = fmt.Errorf("instrument does not match any view: %w", err)
-		}
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
+
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
 	}, err
@@ -66,8 +67,8 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 		Description: cfg.Description(),
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -84,8 +85,8 @@ func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (async
 		Description: cfg.Description(),
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
 	return &instrumentImpl[int64]{
 		aggregators: aggs,
@@ -95,6 +96,9 @@ func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (async
 type asyncFloat64Provider struct {
 	scope    instrumentation.Scope
 	registry *pipelineRegistry[float64]
+
+	cacheLock sync.Mutex
+	cache     map[instrumentKey]instrument.Asynchronous
 }
 
 var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
@@ -109,8 +113,8 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 		Description: cfg.Description(),
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -127,8 +131,8 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 		Description: cfg.Description(),
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
@@ -145,8 +149,8 @@ func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asy
 		Description: cfg.Description(),
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
-	if len(aggs) == 0 {
-		err = fmt.Errorf("instrument not part of any view: %w", err)
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
 	return &instrumentImpl[float64]{
 		aggregators: aggs,
