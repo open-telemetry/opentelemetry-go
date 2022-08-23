@@ -18,7 +18,6 @@ ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
-GOLINT_GO_VERSION = '1.18'
 
 GO = go
 TIMEOUT = 60
@@ -144,7 +143,7 @@ golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
-		&& $(GOLANGCI_LINT) run --allow-serial-runners --go=$(GOLINT_GO_VERSION) $(ARGS)
+		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
 .PHONY: crosslink
 crosslink: | $(CROSSLINK)
