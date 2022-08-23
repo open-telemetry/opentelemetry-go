@@ -135,7 +135,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		want metricdata.Metrics
 	}{
 		{
-			name: "AyncInt64Count",
+			name: "AsyncInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncInt64().Counter("aint")
 				assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AyncInt64UpDownCount",
+			name: "AsyncInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncInt64().UpDownCounter("aint")
 				assert.NoError(t, err)
@@ -177,7 +177,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AyncInt64Gauge",
+			name: "AsyncInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.AsyncInt64().Gauge("agauge")
 				assert.NoError(t, err)
@@ -196,7 +196,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AyncFloat64Count",
+			name: "AsyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncFloat64().Counter("afloat")
 				assert.NoError(t, err)
@@ -217,7 +217,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AyncFloat64UpDownCount",
+			name: "AsyncFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.AsyncFloat64().UpDownCounter("afloat")
 				assert.NoError(t, err)
@@ -238,7 +238,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AyncFloat64Gauge",
+			name: "AsyncFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.AsyncFloat64().Gauge("agauge")
 				assert.NoError(t, err)
