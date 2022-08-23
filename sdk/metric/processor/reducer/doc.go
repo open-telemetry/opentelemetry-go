@@ -28,33 +28,33 @@ collecting high cardinality metric data.
 For example, to compose a push controller with a reducer and a basic
 metric processor:
 
-type someFilter struct{
-        // configuration for this filter
-        // ...
-}
+	type someFilter struct{
+	        // configuration for this filter
+	        // ...
+	}
 
-func (someFilter) AttributeFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
-        return func(attr kv.KeyValue) bool {
-                // return true to keep this attr, false to drop this attr.
-                // ...
-        }
-}
+	func (someFilter) AttributeFilterFor(_ *sdkapi.Descriptor) attribute.Filter {
+	        return func(attr kv.KeyValue) bool {
+	                // return true to keep this attr, false to drop this attr.
+	                // ...
+	        }
+	}
 
-func setupMetrics(exporter export.Exporter) (stop func()) {
-        basicProcessorFactory := basic.NewFactory(
-                simple.NewWithHistogramDistribution(),
-                exporter,
-        )
+	func setupMetrics(exporter export.Exporter) (stop func()) {
+	        basicProcessorFactory := basic.NewFactory(
+	                simple.NewWithHistogramDistribution(),
+	                exporter,
+	        )
 
-        reducerProcessor := reducer.NewFactory(someFilter{...}, basicProcessorFactory)
+	        reducerProcessor := reducer.NewFactory(someFilter{...}, basicProcessorFactory)
 
-        controller := controller.New(
-                reducerProcessor,
-                exporter,
-                opts...,
-        )
-        controller.Start()
-        global.SetMeterProvider(controller.Provider())
-        return controller.Stop
+	        controller := controller.New(
+	                reducerProcessor,
+	                exporter,
+	                opts...,
+	        )
+	        controller.Start()
+	        global.SetMeterProvider(controller.Provider())
+	        return controller.Stop
 */
 package reducer // import "go.opentelemetry.io/otel/sdk/metric/processor/reducer"

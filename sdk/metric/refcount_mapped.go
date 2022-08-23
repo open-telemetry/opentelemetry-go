@@ -44,8 +44,9 @@ func (rm *refcountMapped) unref() {
 
 // tryUnmap flips the mapped bit to "unmapped" state and returns true if both of the
 // following conditions are true upon entry to this function:
-//  * There are no active references;
-//  * The mapped bit is in "mapped" state.
+//   - There are no active references;
+//   - The mapped bit is in "mapped" state.
+//
 // Otherwise no changes are done to mapped bit and false is returned.
 func (rm *refcountMapped) tryUnmap() bool {
 	if atomic.LoadInt64(&rm.value) != 0 {
