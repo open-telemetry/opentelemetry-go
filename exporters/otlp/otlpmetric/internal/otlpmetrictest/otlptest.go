@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -171,4 +172,12 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlpmetric.Exporter
 			assert.Fail(t, fmt.Sprintf("no metric(s) exported for %q", i))
 		}
 	}
+}
+
+func OTelErrors() *[]error {
+	errors := new([]error)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		*errors = append(*errors, err)
+	}))
+	return errors
 }

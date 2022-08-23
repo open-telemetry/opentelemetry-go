@@ -29,6 +29,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
+	otlpinternal "go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
@@ -170,6 +172,25 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 		default:
 			rErr = fmt.Errorf("failed to send %s to %s: %s", d.name, request.URL, resp.Status)
+		}
+
+		// Read the partial success message, if any.
+		var respData bytes.Buffer
+		if _, err := io.Copy(&respData, resp.Body); err != nil {
+			return err
+		}
+		if respData.Len() != 0 {
+			var respProto coltracepb.ExportTraceServiceResponse
+			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				return err
+			}
+			if respProto.PartialSuccess != nil {
+				otel.Handle(otlpinternal.PartialSuccessToError(
+					"spans",
+					respProto.PartialSuccess.RejectedSpans,
+					respProto.PartialSuccess.ErrorMessage,
+				))
+			}
 		}
 
 		if err := resp.Body.Close(); err != nil {

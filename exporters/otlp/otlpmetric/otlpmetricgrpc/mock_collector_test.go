@@ -36,6 +36,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 		metricSvc: &mockMetricService{
 			storage: otlpmetrictest.NewMetricsStorage(),
 			errors:  mockConfig.errors,
+			partial: mockConfig.partial,
 		},
 	}
 }
@@ -45,6 +46,7 @@ type mockMetricService struct {
 
 	requests int
 	errors   []error
+	partial  *collectormetricpb.ExportMetricsPartialSuccess
 
 	headers metadata.MD
 	mu      sync.RWMutex
@@ -75,7 +77,9 @@ func (mms *mockMetricService) Export(ctx context.Context, exp *collectormetricpb
 		mms.mu.Unlock()
 	}()
 
-	reply := &collectormetricpb.ExportMetricsServiceResponse{}
+	reply := &collectormetricpb.ExportMetricsServiceResponse{
+		PartialSuccess: mms.partial,
+	}
 	if mms.requests < len(mms.errors) {
 		idx := mms.requests
 		return reply, mms.errors[idx]
@@ -99,6 +103,7 @@ type mockCollector struct {
 type mockConfig struct {
 	errors   []error
 	endpoint string
+	partial  *collectormetricpb.ExportMetricsPartialSuccess
 }
 
 var _ collectormetricpb.MetricsServiceServer = (*mockMetricService)(nil)

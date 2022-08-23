@@ -36,6 +36,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 		traceSvc: &mockTraceService{
 			storage: otlptracetest.NewSpansStorage(),
 			errors:  mockConfig.errors,
+			partial: mockConfig.partial,
 		},
 	}
 }
@@ -44,6 +45,7 @@ type mockTraceService struct {
 	collectortracepb.UnimplementedTraceServiceServer
 
 	errors      []error
+	partial     *collectortracepb.ExportTracePartialSuccess
 	requests    int
 	mu          sync.RWMutex
 	storage     otlptracetest.SpansStorage
@@ -82,7 +84,9 @@ func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.E
 		<-mts.exportBlock
 	}
 
-	reply := &collectortracepb.ExportTraceServiceResponse{}
+	reply := &collectortracepb.ExportTraceServiceResponse{
+		PartialSuccess: mts.partial,
+	}
 	if mts.requests < len(mts.errors) {
 		idx := mts.requests
 		return reply, mts.errors[idx]
@@ -106,6 +110,7 @@ type mockCollector struct {
 type mockConfig struct {
 	errors   []error
 	endpoint string
+	partial  *collectortracepb.ExportTracePartialSuccess
 }
 
 var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
