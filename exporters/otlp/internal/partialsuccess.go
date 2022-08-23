@@ -16,8 +16,14 @@ package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
 
 import "fmt"
 
+// ErrPartialSuccess is the underlying error for all handling OTLP
+// partial success messages.  Use `errors.Is(err, ErrPartialSuccess)`
+// to test whether `err` belongs to this category.
 var ErrPartialSuccess = fmt.Errorf("OTLP partial success")
 
+// PartialSuccessToError produces an error suitable for passing to
+// `otel.Handle()` out of the fields in a partial success response,
+// independent of which signal produced the outcome.
 func PartialSuccessToError(itemPlural string, itemsRejected int64, errorMessage string) error {
 	if errorMessage == "" {
 		errorMessage = "empty message"
