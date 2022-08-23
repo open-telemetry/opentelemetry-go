@@ -32,9 +32,7 @@ import (
 type MeterProvider struct {
 	res *resource.Resource
 
-	meters        meterRegistry
-	intRegistry   *pipelineRegistry[int64]
-	floatRegistry *pipelineRegistry[float64]
+	meters meterRegistry
 
 	forceFlush, shutdown func(context.Context) error
 }

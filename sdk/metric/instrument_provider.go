@@ -19,7 +19,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"fmt"
-	"sync"
 
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
@@ -31,9 +30,6 @@ import (
 type asyncInt64Provider struct {
 	scope    instrumentation.Scope
 	registry *pipelineRegistry[int64]
-
-	cacheLock sync.Mutex
-	cache     map[instrumentKey]instrument.Asynchronous
 }
 
 var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
@@ -96,9 +92,6 @@ func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (async
 type asyncFloat64Provider struct {
 	scope    instrumentation.Scope
 	registry *pipelineRegistry[float64]
-
-	cacheLock sync.Mutex
-	cache     map[instrumentKey]instrument.Asynchronous
 }
 
 var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
