@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -143,6 +142,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					ctr.Observe(ctx, 3)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "aint",
@@ -164,6 +166,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					ctr.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "aint",
@@ -185,6 +190,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				gauge.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "agauge",
@@ -204,6 +212,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					ctr.Observe(ctx, 3)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "afloat",
@@ -225,6 +236,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					ctr.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "afloat",
@@ -246,6 +260,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
+
+				// Observed outside of a callback, it should be ignored.
+				gauge.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "agauge",
@@ -275,184 +292,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
 		})
 	}
-}
-
-func testIntAsyncCallback(t *testing.T) {
-	type Observer interface {
-		instrument.Asynchronous
-		Observe(context.Context, int64, ...attribute.KeyValue)
-	}
-	testCases := []struct {
-		name          string
-		genInstrument func(metric.Meter) Observer
-		want          metricdata.Metrics
-	}{
-		{
-			name: "Counter",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncInt64().Counter("counter")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "counter",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-		{
-			name: "UpDownCounter",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncInt64().UpDownCounter("UpDownCounter")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "UpDownCounter",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: false,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-		{
-			name: "Gauge",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncInt64().Gauge("Gauge")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "Gauge",
-				Data: metricdata.Gauge[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewManualReader()
-			m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
-
-			inst := tt.genInstrument(m)
-			err := m.RegisterCallback([]instrument.Asynchronous{inst}, func(ctx context.Context) {
-				inst.Observe(ctx, 5)
-			})
-			assert.NoError(t, err)
-
-			inst.Observe(context.Background(), 7)
-
-			rm, err := rdr.Collect(context.Background())
-			assert.NoError(t, err)
-
-			require.Len(t, rm.ScopeMetrics, 1)
-			sm := rm.ScopeMetrics[0]
-			require.Len(t, sm.Metrics, 1)
-			got := sm.Metrics[0]
-			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
-		})
-	}
-}
-
-func testFloatAsyncCallback(t *testing.T) {
-	type Observer interface {
-		instrument.Asynchronous
-		Observe(context.Context, float64, ...attribute.KeyValue)
-	}
-	testCases := []struct {
-		name          string
-		genInstrument func(metric.Meter) Observer
-		want          metricdata.Metrics
-	}{
-		{
-			name: "Counter",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncFloat64().Counter("counter")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "counter",
-				Data: metricdata.Sum[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-		{
-			name: "UpDownCounter",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncFloat64().UpDownCounter("UpDownCounter")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "UpDownCounter",
-				Data: metricdata.Sum[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: false,
-					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-		{
-			name: "Gauge",
-			genInstrument: func(m metric.Meter) Observer {
-				ctr, _ := m.AsyncFloat64().Gauge("Gauge")
-				return ctr
-			},
-			want: metricdata.Metrics{
-				Name: "Gauge",
-				Data: metricdata.Gauge[float64]{
-					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 5},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewManualReader()
-			m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
-
-			inst := tt.genInstrument(m)
-			err := m.RegisterCallback([]instrument.Asynchronous{inst}, func(ctx context.Context) {
-				inst.Observe(ctx, 5)
-			})
-			assert.NoError(t, err)
-
-			inst.Observe(context.Background(), 7)
-
-			rm, err := rdr.Collect(context.Background())
-			assert.NoError(t, err)
-
-			require.Len(t, rm.ScopeMetrics, 1)
-			sm := rm.ScopeMetrics[0]
-			require.Len(t, sm.Metrics, 1)
-			got := sm.Metrics[0]
-			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
-		})
-	}
-}
-
-// Async Instruments should not be usable outside of callback.
-func TestAsyncInstrumentsWithinCallback(t *testing.T) {
-	t.Run("Int64", testIntAsyncCallback)
-	t.Run("Float64", testFloatAsyncCallback)
 }
 
 func TestMetersProvideScope(t *testing.T) {
