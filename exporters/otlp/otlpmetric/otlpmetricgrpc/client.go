@@ -202,7 +202,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 		})
 		if resp != nil && resp.PartialSuccess != nil {
-			otel.Handle(otlpinternal.PartialSuccessToError("data points", resp.PartialSuccess.RejectedDataPoints, resp.PartialSuccess.ErrorMessage))
+			otel.Handle(otlpinternal.PartialSuccessToError("metric data points", resp.PartialSuccess.RejectedDataPoints, resp.PartialSuccess.ErrorMessage))
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
