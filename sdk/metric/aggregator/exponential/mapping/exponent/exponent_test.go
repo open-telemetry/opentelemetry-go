@@ -23,32 +23,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
+)
+
+const (
+	MaxNormalExponent = internal.MaxNormalExponent
+	MinNormalExponent = internal.MinNormalExponent
+	MaxValue          = internal.MaxValue
+	MinValue          = internal.MinValue
 )
 
 type expectMapping struct {
 	value float64
 	index int32
-}
-
-// Tests that getBase2 returns the base-2 exponent as documented, unlike
-// math.Frexp.
-func TestGetBase2(t *testing.T) {
-	require.Equal(t, int32(-1022), MinNormalExponent)
-	require.Equal(t, int32(+1023), MaxNormalExponent)
-
-	require.Equal(t, MaxNormalExponent, getBase2(0x1p+1023))
-	require.Equal(t, int32(1022), getBase2(0x1p+1022))
-
-	require.Equal(t, int32(0), getBase2(1))
-
-	require.Equal(t, int32(-1021), getBase2(0x1p-1021))
-	require.Equal(t, int32(-1022), getBase2(0x1p-1022))
-
-	// Subnormals below this point
-	require.Equal(t, int32(-1022), getBase2(0x1p-1023))
-	require.Equal(t, int32(-1022), getBase2(0x1p-1024))
-	require.Equal(t, int32(-1022), getBase2(0x1p-1025))
-	require.Equal(t, int32(-1022), getBase2(0x1p-1074))
 }
 
 // Tests a few cases with scale=0.
@@ -59,22 +46,41 @@ func TestExponentMappingZero(t *testing.T) {
 	require.Equal(t, int32(0), m.Scale())
 
 	for _, pair := range []expectMapping{
+		// Near +Inf
 		{math.MaxFloat64, MaxNormalExponent},
-		{0x1p+1023, MaxNormalExponent},
-		{0x1p-1022, MinNormalExponent},
-		{math.SmallestNonzeroFloat64, MinNormalExponent},
-		{4, 2},
+		{math.MaxFloat64, 1023},
+		{0x1p+1023, 1022},
+		{0x1.1p+1023, 1023},
+		{0x1p+1022, 1021},
+		{0x1.1p+1022, 1022},
+
+		// Near 0
+		{0x1p-1022, -1023},
+		{0x1.1p-1022, -1022},
+		{0x1p-1021, -1022},
+		{0x1.1p-1021, -1021},
+
+		{0x1p-1022, MinNormalExponent - 1},
+		{0x1p-1021, MinNormalExponent},
+		{math.SmallestNonzeroFloat64, MinNormalExponent - 1},
+
+		// Near 1
+		{4, 1},
 		{3, 1},
-		{2, 1},
+		{2, 0},
 		{1.5, 0},
-		{1, 0},
+		{1, -1},
 		{0.75, -1},
-		{0.5, -1},
-		{0.25, -2},
+		{0.51, -1},
+		{0.5, -2},
+		{0.26, -2},
+		{0.25, -3},
+		{0.126, -3},
+		{0.125, -4},
 	} {
 		idx := m.MapToIndex(pair.value)
 
-		require.Equal(t, pair.index, idx)
+		require.Equal(t, pair.index, idx, "value:%x", pair.value)
 	}
 }
 
@@ -86,7 +92,8 @@ func TestExponentMappingMinScale(t *testing.T) {
 	require.Equal(t, MinScale, m.Scale())
 
 	for _, pair := range []expectMapping{
-		{1, 0},
+		{1.000001, 0},
+		{1, -1},
 		{math.MaxFloat64 / 2, 0},
 		{math.MaxFloat64, 0},
 		{math.SmallestNonzeroFloat64, -1},
@@ -116,24 +123,25 @@ func TestExponentMappingNegOne(t *testing.T) {
 	m, _ := NewMapping(-1)
 
 	for _, pair := range []expectMapping{
-		{16, 2},
+		{17, 2},
+		{16, 1},
 		{15, 1},
 		{9, 1},
 		{8, 1},
 		{5, 1},
-		{4, 1},
+		{4, 0},
 		{3, 0},
 		{2, 0},
 		{1.5, 0},
-		{1, 0},
+		{1, -1},
 		{0.75, -1},
 		{0.5, -1},
-		{0.25, -1},
+		{0.25, -2},
 		{0.20, -2},
 		{0.13, -2},
 		{0.125, -2},
 		{0.10, -2},
-		{0.0625, -2},
+		{0.0625, -3},
 		{0.06, -3},
 	} {
 		idx := m.MapToIndex(pair.value)
@@ -148,55 +156,58 @@ func TestExponentMappingNegFour(t *testing.T) {
 	require.Equal(t, int32(-4), m.Scale())
 
 	for _, pair := range []expectMapping{
-		{float64(0x1), 0},
+		{float64(0x1), -1},
 		{float64(0x10), 0},
 		{float64(0x100), 0},
 		{float64(0x1000), 0},
-		{float64(0x10000), 1}, // Base == 2**16
+		{float64(0x10000), 0}, // Base == 2**16
 		{float64(0x100000), 1},
 		{float64(0x1000000), 1},
 		{float64(0x10000000), 1},
-		{float64(0x100000000), 2}, // == 2**32
+		{float64(0x100000000), 1}, // == 2**32
 		{float64(0x1000000000), 2},
 		{float64(0x10000000000), 2},
 		{float64(0x100000000000), 2},
-		{float64(0x1000000000000), 3}, // 2**48
+		{float64(0x1000000000000), 2}, // 2**48
 		{float64(0x10000000000000), 3},
 		{float64(0x100000000000000), 3},
 		{float64(0x1000000000000000), 3},
-		{float64(0x10000000000000000), 4}, // 2**64
+		{float64(0x10000000000000000), 3}, // 2**64
 		{float64(0x100000000000000000), 4},
 		{float64(0x1000000000000000000), 4},
 		{float64(0x10000000000000000000), 4},
-		{float64(0x100000000000000000000), 5},
+		{float64(0x100000000000000000000), 4}, // 2**80
+		{float64(0x1000000000000000000000), 5},
 
-		{1 / float64(0x1), 0},
+		{1 / float64(0x1), -1},
 		{1 / float64(0x10), -1},
 		{1 / float64(0x100), -1},
 		{1 / float64(0x1000), -1},
-		{1 / float64(0x10000), -1}, // 2**-16
+		{1 / float64(0x10000), -2}, // 2**-16
 		{1 / float64(0x100000), -2},
 		{1 / float64(0x1000000), -2},
 		{1 / float64(0x10000000), -2},
-		{1 / float64(0x100000000), -2}, // 2**-32
+		{1 / float64(0x100000000), -3}, // 2**-32
 		{1 / float64(0x1000000000), -3},
 		{1 / float64(0x10000000000), -3},
 		{1 / float64(0x100000000000), -3},
-		{1 / float64(0x1000000000000), -3}, // 2**-48
+		{1 / float64(0x1000000000000), -4}, // 2**-48
 		{1 / float64(0x10000000000000), -4},
 		{1 / float64(0x100000000000000), -4},
 		{1 / float64(0x1000000000000000), -4},
-		{1 / float64(0x10000000000000000), -4}, // 2**-64
+		{1 / float64(0x10000000000000000), -5}, // 2**-64
 		{1 / float64(0x100000000000000000), -5},
 
 		// Max values
 		{0x1.FFFFFFFFFFFFFp1023, 63},
 		{0x1p1023, 63},
 		{0x1p1019, 63},
-		{0x1p1008, 63},
+		{0x1p1009, 63},
+		{0x1p1008, 62},
 		{0x1p1007, 62},
 		{0x1p1000, 62},
-		{0x1p0992, 62},
+		{0x1p0993, 62},
+		{0x1p0992, 61},
 		{0x1p0991, 61},
 
 		// Min and subnormal values
@@ -212,11 +223,14 @@ func TestExponentMappingNegFour(t *testing.T) {
 		{0x1p-1023, -64},
 		{0x1p-1022, -64},
 		{0x1p-1009, -64},
-		{0x1p-1008, -63},
+		{0x1p-1008, -64},
+		{0x1p-1007, -63},
 		{0x1p-0993, -63},
-		{0x1p-0992, -62},
+		{0x1p-0992, -63},
+		{0x1p-0991, -62},
 		{0x1p-0977, -62},
-		{0x1p-0976, -61},
+		{0x1p-0976, -62},
+		{0x1p-0975, -61},
 	} {
 		t.Run(fmt.Sprintf("%x", pair.value), func(t *testing.T) {
 			index := m.MapToIndex(pair.value)
@@ -280,12 +294,20 @@ func TestExponentIndexMin(t *testing.T) {
 		m, err := NewMapping(scale)
 		require.NoError(t, err)
 
+		// Test the smallest normal value.
 		minIndex := m.MapToIndex(MinValue)
 
 		boundary, err := m.LowerBoundary(minIndex)
 		require.NoError(t, err)
 
+		// The correct index for MinValue depends on whether
+		// 2**(-scale) evenly divides -1022.  This is true for
+		// scales -1 and 0.
 		correctMinIndex := int64(MinNormalExponent) >> -scale
+		if MinNormalExponent%(int32(1)<<-scale) == 0 {
+			correctMinIndex--
+		}
+
 		require.Greater(t, correctMinIndex, int64(math.MinInt32))
 		require.Equal(t, int32(correctMinIndex), minIndex)
 
@@ -295,16 +317,25 @@ func TestExponentIndexMin(t *testing.T) {
 		require.Greater(t, roundedBoundary(scale, int32(correctMinIndex+1)), boundary)
 
 		// Subnormal values map to the min index:
-		require.Equal(t, m.MapToIndex(MinValue/2), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(MinValue/3), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(MinValue/100), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1050), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1073), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1.1p-1073), int32(correctMinIndex))
-		require.Equal(t, m.MapToIndex(0x1p-1074), int32(correctMinIndex))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/2))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/3))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(MinValue/100))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1050))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1073))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1.1p-1073))
+		require.Equal(t, int32(correctMinIndex), m.MapToIndex(0x1p-1074))
 
 		// One smaller index will underflow.
 		_, err = m.LowerBoundary(minIndex - 1)
 		require.Equal(t, err, mapping.ErrUnderflow)
+
+		// Next value above MinValue (not a power of two).
+		minPlus1Index := m.MapToIndex(math.Nextafter(MinValue, math.Inf(+1)))
+
+		// The following boundary equation always works for
+		// non-powers of two (same as correctMinIndex before its
+		// power-of-two correction, above).
+		correctMinPlus1Index := int64(MinNormalExponent) >> -scale
+		require.Equal(t, int32(correctMinPlus1Index), minPlus1Index)
 	}
 }
