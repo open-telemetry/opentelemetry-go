@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support Go 1.19.
   Include compatibility testing and document support. (#3077)
-- Support the OTLP ExportTracePartialSuccess and ExportMetricsPartialSuccess 
+- Support the OTLP ExportTracePartialSuccess and ExportMetricsPartialSuccess
   responses; these are passed to the registered error handler. (#3106)
 
 ### Fixed
