@@ -298,5 +298,5 @@ func TestExportPartialSuccess(t *testing.T) {
 
 	require.Equal(t, 1, len(*errors))
 	require.Contains(t, (*errors)[0].Error(), "partially successful")
-	require.Contains(t, (*errors)[0].Error(), "2 data points rejected")
+	require.Contains(t, (*errors)[0].Error(), "2 metric data points rejected")
 }

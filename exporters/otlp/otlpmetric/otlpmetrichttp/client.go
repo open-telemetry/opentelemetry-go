@@ -184,7 +184,7 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			}
 			if respProto.PartialSuccess != nil {
 				otel.Handle(otlpinternal.PartialSuccessToError(
-					"data points",
+					"metric data points",
 					respProto.PartialSuccess.RejectedDataPoints,
 					respProto.PartialSuccess.ErrorMessage,
 				))
