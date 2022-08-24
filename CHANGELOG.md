@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support Go 1.19.
   Include compatibility testing and document support. (#3077)
+- Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
 
 ### Fixed
 
