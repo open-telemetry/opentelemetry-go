@@ -15,9 +15,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support the OTLP ExportTracePartialSuccess and ExportMetricsPartialSuccess
   responses; these are passed to the registered error handler. (#3106)
 
-### Fixed
+### Changed
 
 - Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
+- The exponential histogram mapping functions have been updated with
+  exact upper-inclusive boundary support following the [corresponding
+  specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
