@@ -100,7 +100,6 @@ func WithCompression(compression Compression) Option {
 // contained in that variable value will be used. If both are set,
 // OTEL_EXPORTER_OTLP_METRICS_ENDPOINT will take precedence.
 //
-//
 // By default, if an environment variable is not set, and this option is not
 // passed, "/v1/metrics" will be used.
 func WithURLPath(urlPath string) Option {
