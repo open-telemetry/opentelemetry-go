@@ -14,12 +14,12 @@
 
 package structure // import "go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/structure"
 
-// Test helpers
-
+// NewFloat64 is a test helper for constructing float64-valued histograms.
 func NewFloat64(cfg Config, values ...float64) *Float64 {
 	return newHist[float64](cfg, values)
 }
 
+// NewFloat64 is a test helper for constructing int64-valued histograms.
 func NewInt64(cfg Config, values ...int64) *Int64 {
 	return newHist[int64](cfg, values)
 }

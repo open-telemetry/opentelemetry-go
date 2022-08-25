@@ -44,7 +44,8 @@ type Option interface {
 	apply(Config) Config
 }
 
-// WithMaxSize sets
+// WithMaxSize sets the maximum size of each range (positive and/or
+// negative) in the histogram.
 func WithMaxSize(size int32) Option {
 	return maxSize(size)
 }

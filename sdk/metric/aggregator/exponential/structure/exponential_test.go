@@ -615,7 +615,6 @@ func TestReset(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // Tests the swap operation.
@@ -753,7 +752,7 @@ func TestZeroCountByIncr(t *testing.T) {
 	requireEqual(t, h1, h2)
 }
 
-// Benchmarks the Update() function for values in the range [1,2)
+// Benchmarks the Update() function for values in the range [1,2).
 func BenchmarkLinear(b *testing.B) {
 	src := rand.NewSource(77777677777)
 	rnd := rand.New(src)
@@ -764,7 +763,7 @@ func BenchmarkLinear(b *testing.B) {
 	}
 }
 
-// Benchmarks the Update() function for values in the range (0, MaxValue]
+// Benchmarks the Update() function for values in the range (0, MaxValue].
 func BenchmarkExponential(b *testing.B) {
 	src := rand.NewSource(77777677777)
 	rnd := rand.New(src)
@@ -822,7 +821,6 @@ func BenchmarkReverseMapping(b *testing.B) {
 // Statistical test: how biased are the exact power-of-two boundaries?
 func TestBoundaryStatistics(t *testing.T) {
 	for scale := logarithm.MinScale; scale <= logarithm.MaxScale; scale++ {
-
 		m, _ := logarithm.NewMapping(scale)
 
 		var above, below int
@@ -840,10 +838,9 @@ func TestBoundaryStatistics(t *testing.T) {
 			bound, err := m.LowerBoundary(index + 1)
 			require.NoError(t, err)
 
-			if bound == value {
-			} else if bound < value {
+			if bound < value {
 				above++
-			} else {
+			} else if bound > value {
 				below++
 			}
 		}

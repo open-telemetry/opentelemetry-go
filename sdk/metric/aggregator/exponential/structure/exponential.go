@@ -161,8 +161,8 @@ func (h *Histogram[N]) Init(cfg Config) {
 
 	h.maxSize = cfg.maxSize
 
-	mapping, _ := newMapping(logarithm.MaxScale)
-	h.mapping = mapping
+	m, _ := newMapping(logarithm.MaxScale)
+	h.mapping = m
 }
 
 // Sum implements aggregation.Histogram.
@@ -461,7 +461,7 @@ func (h *Histogram[N]) grow(b *Buckets, needed int32) {
 	b.backing.growTo(newSize, oldPositiveLimit, newPositiveLimit)
 }
 
-// downscale first rotates, then collapses 2**`by`-to-1 buckets
+// downscale first rotates, then collapses 2**`by`-to-1 buckets.
 func (b *Buckets) downscale(by int32) {
 	b.rotate()
 
@@ -623,7 +623,7 @@ func (h *highLow) with(o highLow) highLow {
 	}
 }
 
-// empty indicates whether there are any values in a highLow
+// empty indicates whether there are any values in a highLow.
 func (h *highLow) empty() bool {
 	return h.low > h.high
 }
