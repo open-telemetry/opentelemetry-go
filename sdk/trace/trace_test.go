@@ -400,9 +400,6 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 	if s3.SpanContext().IsSampled() {
 		t.Error(fmt.Errorf("got child span is sampled, want child span WithNewRoot() and with sampler: ParentBased(NeverSample()) to not be sampled"))
 	}
-
-	// Test we get a successful span as a new root if a nil context is sent in
-	_, s4 := neverSampledTr.Start(nil, "span3-new-root", trace.WithNewRoot())
 }
 
 func TestSetSpanAttributesOnStart(t *testing.T) {
