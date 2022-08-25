@@ -156,9 +156,7 @@ func (h ExplicitBucketHistogram) Err() error {
 // Copy returns a deep copy of h.
 func (h ExplicitBucketHistogram) Copy() Aggregation {
 	b := make([]float64, len(h.Boundaries))
-	for i, v := range h.Boundaries {
-		b[i] = v
-	}
+	copy(b, h.Boundaries)
 	return ExplicitBucketHistogram{
 		Boundaries: b,
 		NoMinMax:   h.NoMinMax,

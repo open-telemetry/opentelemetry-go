@@ -44,6 +44,9 @@ type meterRegistry struct {
 	sync.Mutex
 
 	meters map[instrumentation.Scope]*meter
+
+	intRegistry   *pipelineRegistry[int64]
+	floatRegistry *pipelineRegistry[float64]
 }
 
 // Get returns a registered meter matching the instrumentation scope if it
@@ -56,7 +59,11 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 	defer r.Unlock()
 
 	if r.meters == nil {
-		m := &meter{Scope: s}
+		m := &meter{
+			Scope:         s,
+			intRegistry:   r.intRegistry,
+			floatRegistry: r.floatRegistry,
+		}
 		r.meters = map[instrumentation.Scope]*meter{s: m}
 		return m
 	}
@@ -66,7 +73,11 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 		return m
 	}
 
-	m = &meter{Scope: s}
+	m = &meter{
+		Scope:         s,
+		intRegistry:   r.intRegistry,
+		floatRegistry: r.floatRegistry,
+	}
 	r.meters[s] = m
 	return m
 }
@@ -93,7 +104,8 @@ func (r *meterRegistry) Range(f func(*meter) bool) {
 type meter struct {
 	instrumentation.Scope
 
-	// TODO (#2815, 2814): implement.
+	intRegistry   *pipelineRegistry[int64]
+	floatRegistry *pipelineRegistry[float64]
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -101,20 +113,19 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	// TODO (#2815): implement.
-	return nil
+	return asyncInt64Provider{scope: m.Scope, registry: m.intRegistry}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	// TODO (#2815): implement.
-	return nil
+	return asyncFloat64Provider{scope: m.Scope, registry: m.floatRegistry}
 }
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
-	// TODO (#2815): implement.
+	// Because the pipelines are shared only one of the registries needs to be invoked
+	m.intRegistry.registerCallback(f)
 	return nil
 }
 
