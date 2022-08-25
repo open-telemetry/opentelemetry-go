@@ -375,7 +375,7 @@ func TestStartSpanWithNilContext(t *testing.T) {
         }
     }()
 
-	_, _ := sampledTr.Start(nil, "should-not-panic")
+	_, _ = sampledTr.Start(nil, "should-not-panic")
 }
 
 func TestStartSpanNewRootNotSampled(t *testing.T) {
