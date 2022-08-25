@@ -363,9 +363,9 @@ func (b *state) ForEach(exporter aggregation.TemporalitySelector, f func(export.
 			return fmt.Errorf("%v: %w", aggTemp, ErrInvalidTemporality)
 		}
 
-		// If the processor does not have Config.Memory and it was not updated
-		// in the prior round, do not visit this value.
-		if !b.config.Memory && value.updated != (b.finishedCollection-1) {
+		// If the aggregation temporality is delta or the processor does not have Config.Memory,
+		// and this value was not updated in the prior round, do not visit it.
+		if (aggTemp.Includes(aggregation.DeltaTemporality) || !b.config.Memory) && value.updated != (b.finishedCollection-1) {
 			continue
 		}
 

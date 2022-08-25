@@ -126,7 +126,7 @@ func testProcessor(
 ) {
 	// This code tests for errors when the export kind is Delta
 	// and the instrument kind is PrecomputedSum().
-	expectConversion := !(aggTemp == aggregation.DeltaTemporality && mkind.PrecomputedSum())
+	expectConversion := !(aggTemp.Includes(aggregation.DeltaTemporality) && mkind.PrecomputedSum())
 	requireConversion := func(t *testing.T, err error) {
 		if expectConversion {
 			require.NoError(t, err)
@@ -142,8 +142,9 @@ func testProcessor(
 	labs1 := []attribute.KeyValue{attribute.String("L1", "V")}
 	labs2 := []attribute.KeyValue{attribute.String("L2", "V")}
 
-	testBody := func(t *testing.T, hasMemory bool, nAccum, nCheckpoint int) {
-		processor := basic.New(selector, aggregation.ConstantTemporalitySelector(aggTemp), basic.WithMemory(hasMemory))
+	testBody := func(t *testing.T, nAccum, nCheckpoint int) {
+		memory := (aggTemp == aggregation.CumulativeTemporality)
+		processor := basic.New(selector, aggregation.ConstantTemporalitySelector(aggTemp), basic.WithMemory(memory))
 
 		instSuffix := fmt.Sprint(".", strings.ToLower(akind.String()))
 
@@ -201,14 +202,14 @@ func testProcessor(
 					// number of Accumulators, unless LastValue aggregation.
 					// If a precomputed sum, we expect cumulative inputs.
 					if mkind.PrecomputedSum() {
-						require.NotEqual(t, aggTemp, aggregation.DeltaTemporality)
+						require.False(t, aggTemp.Includes(aggregation.DeltaTemporality))
 						if akind == aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier
 						} else {
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						}
 					} else {
-						if aggTemp == aggregation.CumulativeTemporality && akind != aggregation.LastValueKind {
+						if aggTemp.Includes(aggregation.CumulativeTemporality) && akind != aggregation.LastValueKind {
 							multiplier = cumulativeMultiplier * int64(nAccum)
 						} else if akind == aggregation.LastValueKind {
 							multiplier = 1
@@ -220,7 +221,7 @@ func testProcessor(
 					// Synchronous accumulate results from multiple accumulators,
 					// use that number as the baseline multiplier.
 					multiplier = int64(nAccum)
-					if aggTemp == aggregation.CumulativeTemporality {
+					if aggTemp.Includes(aggregation.CumulativeTemporality) {
 						// If a cumulative exporter, include prior checkpoints.
 						multiplier *= cumulativeMultiplier
 					}
@@ -231,7 +232,7 @@ func testProcessor(
 				}
 
 				exp := map[string]float64{}
-				if hasMemory || !repetitionAfterEmptyInterval {
+				if memory || !repetitionAfterEmptyInterval {
 					exp = map[string]float64{
 						fmt.Sprintf("inst1%s/L1=V/", instSuffix): float64(multiplier * 10), // attrs1
 						fmt.Sprintf("inst2%s/L2=V/", instSuffix): float64(multiplier * 10), // attrs2
@@ -243,17 +244,13 @@ func testProcessor(
 		}
 	}
 
-	for _, hasMem := range []bool{false, true} {
-		t.Run(fmt.Sprintf("HasMemory=%v", hasMem), func(t *testing.T) {
-			// For 1 to 3 checkpoints:
-			for nAccum := 1; nAccum <= 3; nAccum++ {
-				t.Run(fmt.Sprintf("NumAccum=%d", nAccum), func(t *testing.T) {
-					// For 1 to 3 accumulators:
-					for nCheckpoint := 1; nCheckpoint <= 3; nCheckpoint++ {
-						t.Run(fmt.Sprintf("NumCkpt=%d", nCheckpoint), func(t *testing.T) {
-							testBody(t, hasMem, nAccum, nCheckpoint)
-						})
-					}
+	// For 1 to 3 checkpoints:
+	for nAccum := 1; nAccum <= 3; nAccum++ {
+		t.Run(fmt.Sprintf("NumAccum=%d", nAccum), func(t *testing.T) {
+			// For 1 to 3 accumulators:
+			for nCheckpoint := 1; nCheckpoint <= 3; nCheckpoint++ {
+				t.Run(fmt.Sprintf("NumCkpt=%d", nCheckpoint), func(t *testing.T) {
+					testBody(t, nAccum, nCheckpoint)
 				})
 			}
 		})

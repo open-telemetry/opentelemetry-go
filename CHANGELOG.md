@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Fix metrics exporter issue when using both Delta and Cumulative temporality (#3073)
 - Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
 - The exponential histogram mapping functions have been updated with
   exact upper-inclusive boundary support following the [corresponding
@@ -188,7 +189,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
   - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT`
   - `OTEL_SPAN_LINK_COUNT_LIMIT`
   - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
-  
+
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
 - Add resource container ID detection. (#2418)
