@@ -117,7 +117,7 @@ func compressorToCompression(compressor string) oconf.Compression {
 // encoding.RegisterCompressor for more information). For example, to register
 // the gzip compressor import the package:
 //
-//    import _ "google.golang.org/grpc/encoding/gzip"
+//	import _ "google.golang.org/grpc/encoding/gzip"
 //
 // If the OTEL_EXPORTER_OTLP_COMPRESSION or
 // OTEL_EXPORTER_OTLP_METRICS_COMPRESSION environment variable is set, and
