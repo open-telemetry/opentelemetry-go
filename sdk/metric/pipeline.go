@@ -104,12 +104,22 @@ func (p *pipeline) addCallback(callback func(context.Context)) {
 	p.callbacks = append(p.callbacks, callback)
 }
 
+// callbackKey is a context key type used to identify context that came from the SDK.
+type callbackKey int
+
+// produceKey is the context key to tell if a Observe is called within a callback.
+// Its value of zero is arbitrary. If this package defined other context keys,
+// they would have different integer values.
+const produceKey callbackKey = 0
+
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p.Lock()
 	defer p.Unlock()
+
+	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
 	for _, callback := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
@@ -196,6 +206,8 @@ func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
+//
+//nolint:unused // used by instrument creation.  Resolved with (#2815)
 func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
 	for _, pipe := range reg.pipelines {
 		pipe.addCallback(fn)

@@ -502,17 +502,19 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 	for k, v := range tags {
 		switch k {
 		case string(otext.SpanKind):
+			sk := v
 			if s, ok := v.(string); ok {
-				switch strings.ToLower(s) {
-				case "client":
-					kind = trace.SpanKindClient
-				case "server":
-					kind = trace.SpanKindServer
-				case "producer":
-					kind = trace.SpanKindProducer
-				case "consumer":
-					kind = trace.SpanKindConsumer
-				}
+				sk = otext.SpanKindEnum(strings.ToLower(s))
+			}
+			switch sk {
+			case otext.SpanKindRPCClientEnum:
+				kind = trace.SpanKindClient
+			case otext.SpanKindRPCServerEnum:
+				kind = trace.SpanKindServer
+			case otext.SpanKindProducerEnum:
+				kind = trace.SpanKindProducer
+			case otext.SpanKindConsumerEnum:
+				kind = trace.SpanKindConsumer
 			}
 		case string(otext.Error):
 			if b, ok := v.(bool); ok && b {
