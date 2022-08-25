@@ -207,7 +207,7 @@ func (s *Storage) dump() []*mpb.ResourceMetrics {
 
 // RunClientTests runs a suite of Client integration tests. For example:
 //
-// 	t.Run("Integration", RunClientTests(factory))
+//	t.Run("Integration", RunClientTests(factory))
 func RunClientTests(f ClientFactory) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
