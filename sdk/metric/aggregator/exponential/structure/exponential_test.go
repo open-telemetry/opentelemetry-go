@@ -104,33 +104,34 @@ func centerVal(mapper mapping.Mapping, x int32) float64 {
 	return (lb + ub) / 2
 }
 
-// Tests insertion of [1, 2, 0.5].  The index of 1 (i.e., 0) becomes
-// `indexBase`, the "2" goes to its right and the "0.5" goes in the
-// last position of the backing array.  With 3 binary orders of
-// magnitude and MaxSize=4, this must finish with scale=0 and offset=-1.
+// Tests insertion of [2, 4, 1].  The index of 2 (i.e., 0) becomes
+// `indexBase`, the 4 goes to its right and the 1 goes in the last
+// position of the backing array.  With 3 binary orders of magnitude
+// and MaxSize=4, this must finish with scale=0; with minimum value 1
+// this must finish with offset=-1 (all scales).
 func TestAlternatingGrowth1(t *testing.T) {
 	agg := NewFloat64(NewConfig(WithMaxSize(4)))
-	agg.Update(1)
 	agg.Update(2)
-	agg.Update(0.5)
+	agg.Update(4)
+	agg.Update(1)
 
 	require.Equal(t, int32(-1), agg.Positive().Offset())
 	require.Equal(t, int32(0), agg.Scale())
 	require.Equal(t, []uint64{1, 1, 1}, getCounts(agg.Positive()))
 }
 
-// Tests insertion of [1, 1, 2, 0.5, 5, 0.25].  The test proceeds as
+// Tests insertion of [2, 2, 4, 1, 8, 0.5].  The test proceeds as
 // above but then downscales once further to scale=-1, thus index -1
 // holds range [0.25, 1.0), index 0 holds range [1.0, 4), index 1
 // holds range [4, 16).
 func TestAlternatingGrowth2(t *testing.T) {
 	agg := NewFloat64(NewConfig(WithMaxSize(4)))
-	agg.Update(1)
-	agg.Update(1)
 	agg.Update(2)
+	agg.Update(2)
+	agg.Update(2)
+	agg.Update(1)
+	agg.Update(8)
 	agg.Update(0.5)
-	agg.Update(4)
-	agg.Update(0.25)
 
 	require.Equal(t, int32(-1), agg.Positive().Offset())
 	require.Equal(t, int32(-1), agg.Scale())
@@ -151,14 +152,14 @@ func TestScaleNegOneCentered(t *testing.T) {
 		t.Run(fmt.Sprint(j), func(t *testing.T) {
 			agg := NewFloat64(NewConfig(WithMaxSize(2)), order...)
 
-			// After three updates: scale set to -1, expect counts[0] == 1 (the
-			// (1/2), counts[1] == 2 (the 1 and 2).
+			// After three updates: scale set to -1, expect counts[0] == 2 (the
+			// (1/2 and 1), counts[1] == 1 (the 2).
 
 			require.Equal(t, int32(-1), agg.Scale())
 			require.Equal(t, int32(-1), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
-			require.Equal(t, uint64(1), agg.Positive().At(0))
-			require.Equal(t, uint64(2), agg.Positive().At(1))
+			require.Equal(t, uint64(2), agg.Positive().At(0))
+			require.Equal(t, uint64(1), agg.Positive().At(1))
 		})
 	}
 }
@@ -178,12 +179,12 @@ func TestScaleNegOnePositive(t *testing.T) {
 			agg := NewFloat64(NewConfig(WithMaxSize(2)), order...)
 
 			// After three updates: scale set to -1, expect counts[0] == 1 (the
-			// 1 and 2), counts[1] == 2 (the 4).
+			// 1), counts[1] == 2 (the 2 and 4).
 			require.Equal(t, int32(-1), agg.Scale())
-			require.Equal(t, int32(0), agg.Positive().Offset())
+			require.Equal(t, int32(-1), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
-			require.Equal(t, uint64(2), agg.Positive().At(0))
-			require.Equal(t, uint64(1), agg.Positive().At(1))
+			require.Equal(t, uint64(1), agg.Positive().At(0))
+			require.Equal(t, uint64(2), agg.Positive().At(1))
 		})
 	}
 }
@@ -205,10 +206,10 @@ func TestScaleNegOneNegative(t *testing.T) {
 			// After 3 updates: scale set to -1, expect counts[0] == 2 (the
 			// 1/4 and 1/2, counts[1] == 2 (the 1).
 			require.Equal(t, int32(-1), agg.Scale())
-			require.Equal(t, int32(-1), agg.Positive().Offset())
+			require.Equal(t, int32(-2), agg.Positive().Offset())
 			require.Equal(t, uint32(2), agg.Positive().Len())
-			require.Equal(t, uint64(2), agg.Positive().At(0))
-			require.Equal(t, uint64(1), agg.Positive().At(1))
+			require.Equal(t, uint64(1), agg.Positive().At(0))
+			require.Equal(t, uint64(2), agg.Positive().At(1))
 		})
 	}
 }
@@ -288,15 +289,15 @@ func testAscendingSequence(t *testing.T, maxSize, offset, initScale int32) {
 	}
 }
 
-// Tests a simple case of merging [1, 2, 4, 8] with [1/2, 1/4, 1/8, 1/16].
+// Tests a simple case of merging [2, 4, 8, 16] with [1, 1/2, 1/4, 1/8].
 func TestMergeSimpleEven(t *testing.T) {
 	agg0 := NewFloat64(NewConfig(WithMaxSize(4)))
 	agg1 := NewFloat64(NewConfig(WithMaxSize(4)))
 	agg2 := NewFloat64(NewConfig(WithMaxSize(4)))
 
 	for i := 0; i < 4; i++ {
-		f1 := float64(int64(1) << i)   // 1, 2, 4, 8
-		f2 := 1 / float64(int64(2)<<i) // 1/2, 1/4, 1/8, 1/16
+		f1 := float64(int64(2) << i)   // 2, 4, 8, 16
+		f2 := 1 / float64(int64(1)<<i) // 1, 1/2, 1/4, 1/8
 
 		agg0.Update(f1)
 		agg1.Update(f2)
@@ -323,15 +324,15 @@ func TestMergeSimpleEven(t *testing.T) {
 	requireEqual(t, agg0, agg2)
 }
 
-// Tests a simple case of merging [1, 2, 4, 8] with [1, 1/2, 1/4, 1/8].
+// Tests a simple case of merging [2, 4, 8, 16] with [2, 1, 1/2, 1/4].
 func TestMergeSimpleOdd(t *testing.T) {
 	agg0 := NewFloat64(NewConfig(WithMaxSize(4)))
 	agg1 := NewFloat64(NewConfig(WithMaxSize(4)))
 	agg2 := NewFloat64(NewConfig(WithMaxSize(4)))
 
 	for i := 0; i < 4; i++ {
-		f1 := float64(int64(1) << i)
-		f2 := 1 / float64(int64(1)<<i) // Diff from above test: 1 here vs 2 above.
+		f1 := float64(int64(2) << i)
+		f2 := 2 / float64(int64(1)<<i) // Diff from above test: 1 here vs 2 above.
 
 		agg0.Update(f1)
 		agg1.Update(f2)
@@ -497,7 +498,7 @@ func TestIntegerAggregation(t *testing.T) {
 	alt := NewInt64(NewConfig(WithMaxSize(256)))
 
 	expect := int64(0)
-	for i := int64(1); i < 256; i++ {
+	for i := int64(2); i <= 256; i++ {
 		expect += i
 		agg.Update(i)
 		alt.Update(i)
@@ -514,14 +515,17 @@ func TestIntegerAggregation(t *testing.T) {
 	// = 2**((2**-5)*(2**8))
 	// = 2**(2**3)
 	// = 2**8
-	require.Equal(t, int32(5), agg.Scale())
+	scale := agg.Scale()
+	require.Equal(t, int32(5), scale)
 
 	expect0 := func(b *Buckets) {
 		require.Equal(t, uint32(0), b.Len())
 	}
 	expect256 := func(b *Buckets, factor int) {
-		require.Equal(t, uint32(256), b.Len())
-		require.Equal(t, int32(0), b.Offset())
+		// The min value 2 has index (1<<scale)-1, which determines
+		// the Len and Offset:
+		require.Equal(t, uint32(256-(1<<scale-1)), b.Len())
+		require.Equal(t, int32((1<<scale)-1), b.Offset())
 		// Bucket 254 has 6 elements, bucket 255 has 5
 		// bucket 253 has 5, ...
 		for i := uint32(0); i < 256; i++ {
@@ -544,7 +548,7 @@ func TestIntegerAggregation(t *testing.T) {
 	alt.Clear()
 
 	expect = int64(0)
-	for i := int64(1); i < 256; i++ {
+	for i := int64(2); i <= 256; i++ {
 		expect -= i
 		agg.Update(-i)
 		alt.Update(-i)
@@ -587,7 +591,7 @@ func TestReset(t *testing.T) {
 			require.Equal(t, int32(0), agg.Scale())
 
 			expect := 0.0
-			for i := int64(1); i < 256; i++ {
+			for i := int64(2); i <= 256; i++ {
 				expect += float64(i) * float64(incr)
 				agg.UpdateByIncr(float64(i), incr)
 			}
@@ -595,13 +599,15 @@ func TestReset(t *testing.T) {
 			require.Equal(t, expect, agg.Sum())
 			require.Equal(t, uint64(255)*incr, agg.Count())
 
-			// See TestIntegerAggregation about why scale is 5.
-			require.Equal(t, int32(5), agg.Scale())
+			// See TestIntegerAggregation about why scale is 5, why
+			// Len is 256-(1<<scale)-1, Offset is 1<<scale-1.
+			scale := agg.Scale()
+			require.Equal(t, int32(5), scale)
 
 			pos := agg.Positive()
 
-			require.Equal(t, uint32(256), pos.Len())
-			require.Equal(t, int32(0), pos.Offset())
+			require.Equal(t, uint32(256-(1<<scale-1)), pos.Len())
+			require.Equal(t, int32((1<<scale)-1), pos.Offset())
 			// Bucket 254 has 6 elements, bucket 255 has 5
 			// bucket 253 has 5, ...
 			for i := uint32(0); i < 256; i++ {
@@ -618,7 +624,7 @@ func TestMoveInto(t *testing.T) {
 	cpy := NewFloat64(NewConfig(WithMaxSize(256)))
 
 	expect := 0.0
-	for i := int64(1); i < 256; i++ {
+	for i := int64(2); i <= 256; i++ {
 		expect += float64(i)
 		agg.Update(float64(i))
 		agg.Update(0)
@@ -639,12 +645,13 @@ func TestMoveInto(t *testing.T) {
 
 	// See TestIntegerAggregation about why scale is 5,
 	// max bucket count is 6, and so on.
-	require.Equal(t, int32(5), cpy.Scale())
+	scale := cpy.Scale()
+	require.Equal(t, int32(5), scale)
 
 	pos := cpy.Positive()
 
-	require.Equal(t, uint32(256), pos.Len())
-	require.Equal(t, int32(0), pos.Offset())
+	require.Equal(t, uint32(256-(1<<scale-1)), pos.Len())
+	require.Equal(t, int32((1<<scale)-1), pos.Offset())
 	for i := uint32(0); i < 256; i++ {
 		require.LessOrEqual(t, pos.At(i), uint64(6))
 	}
@@ -672,10 +679,10 @@ func TestVeryLargeNumbers(t *testing.T) {
 
 	expectBalanced(1)
 
-	agg.Update(0x1p-128)
-	agg.Update(0x1p+127)
+	agg.Update(0x1p-127)
+	agg.Update(0x1p+128)
 
-	require.InEpsilon(t, 0x1p127, agg.Sum(), 1e-5)
+	require.InEpsilon(t, 0x1p128, agg.Sum(), 1e-5)
 	require.Equal(t, uint64(4), agg.Count())
 	require.Equal(t, int32(-7), agg.Scale())
 
@@ -709,8 +716,8 @@ func TestFullRange(t *testing.T) {
 
 	require.Equal(t, uint32(MinSize), pos.Len())
 	require.Equal(t, int32(-1), pos.Offset())
-	require.Equal(t, pos.At(0), uint64(1))
-	require.Equal(t, pos.At(1), uint64(2))
+	require.Equal(t, pos.At(0), uint64(2))
+	require.Equal(t, pos.At(1), uint64(1))
 }
 
 // TestAggregatorMinMax verifies the min and max values.
@@ -820,6 +827,7 @@ func TestBoundaryStatistics(t *testing.T) {
 
 		var above, below int
 
+		// Copied from ../mapping/internal
 		const MinNormalExponent = -1022
 		const MaxNormalExponent = 1023
 
@@ -829,7 +837,7 @@ func TestBoundaryStatistics(t *testing.T) {
 
 			index := m.MapToIndex(value)
 
-			bound, err := m.LowerBoundary(index)
+			bound, err := m.LowerBoundary(index + 1)
 			require.NoError(t, err)
 
 			if bound == value {
@@ -841,7 +849,7 @@ func TestBoundaryStatistics(t *testing.T) {
 		}
 
 		// The sample results here not guaranteed.  Test that this is approximately unbiased.
-		// (Results on dev machine: 1059 above, 963 below, 24 equal, total = 2046.)
+		// (Results on dev machine: 1015 above, 1007 below, 24 equal, total = 2046.)
 		require.InEpsilon(t, 0.5, float64(above)/float64(total), 0.05)
 		require.InEpsilon(t, 0.5, float64(below)/float64(total), 0.06)
 	}
