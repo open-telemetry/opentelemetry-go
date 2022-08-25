@@ -36,7 +36,7 @@ Asynchronous instruments are managed by an internal
 AsyncInstrumentState, which coordinates calling batch and single
 instrument callbacks.
 
-Internal Structure
+# Internal Structure
 
 Each observer also has its own kind of record stored in the SDK. This
 record contains a set of recorders for every specific attribute set used in
@@ -60,7 +60,7 @@ events since its last checkpoint.  Aggregators may be lock-free or they may
 use locking, but they should expect to be called concurrently.  Aggregators
 must be capable of merging with another aggregator of the same type.
 
-Export Pipeline
+# Export Pipeline
 
 While the SDK serves to maintain a current set of records and
 coordinate collection, the behavior of a metrics export pipeline is
@@ -126,6 +126,5 @@ collection.  Either way, the job of the controller is to call the SDK
 Collect() method, then read the checkpoint, then invoke the exporter.
 Controllers are expected to implement the public metric.MeterProvider
 API, meaning they can be installed as the global Meter provider.
-
 */
 package metric // import "go.opentelemetry.io/otel/sdk/metric"

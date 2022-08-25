@@ -180,9 +180,10 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 }
 
 // TraceIDRatioBased sampler requirements state
-//  "A TraceIDRatioBased sampler with a given sampling rate MUST also sample
-//   all traces that any TraceIDRatioBased sampler with a lower sampling rate
-//   would sample."
+//
+//	"A TraceIDRatioBased sampler with a given sampling rate MUST also sample
+//	 all traces that any TraceIDRatioBased sampler with a lower sampling rate
+//	 would sample."
 func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 	const (
 		numSamplers = 1000
