@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/sdk v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/sdk/metric v0.0.0-00010101000000-000000000000
-	go.opentelemetry.io/proto/otlp v0.18.0
+	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.42.0
 )
 
@@ -31,12 +31,12 @@ require (
 
 replace go.opentelemetry.io/otel/metric => ../../../metric
 
-replace go.opentelemetry.io/otel => ../../..
-
 replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
 
-replace go.opentelemetry.io/otel/trace => ../../../trace
+replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../sdk
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry
+
+replace go.opentelemetry.io/otel/trace => ../../../trace

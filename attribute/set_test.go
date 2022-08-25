@@ -185,6 +185,6 @@ func TestLookup(t *testing.T) {
 	require.True(t, has)
 	require.Equal(t, int64(1), value.AsInt64())
 
-	value, has = set.Value("D")
+	_, has = set.Value("D")
 	require.False(t, has)
 }

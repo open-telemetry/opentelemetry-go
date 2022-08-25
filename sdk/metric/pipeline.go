@@ -206,6 +206,8 @@ func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
+//
+//nolint:unused // used by instrument creation.  Resolved with (#2815)
 func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
 	for _, pipe := range reg.pipelines {
 		pipe.addCallback(fn)
