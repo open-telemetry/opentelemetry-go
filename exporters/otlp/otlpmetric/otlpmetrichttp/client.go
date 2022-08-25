@@ -42,7 +42,7 @@ import (
 // New returns an OpenTelemetry metric Exporter. The Exporter can be used with
 // a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
 // endpoint using protobufs over HTTP.
-func New(opts ...Option) (metric.Exporter, error) {
+func New(_ context.Context, opts ...Option) (metric.Exporter, error) {
 	c, err := newClient(opts...)
 	if err != nil {
 		return nil, err
