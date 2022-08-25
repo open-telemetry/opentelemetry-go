@@ -74,7 +74,7 @@ func (c Config) Valid() bool {
 	return err == nil
 }
 
-// Validate returns the nearest valid Config object to th einput and a
+// Validate returns the nearest valid Config object to the input and a
 // boolean indicating whether the the input was a valid
 // configurations.
 func (c Config) Validate() (Config, error) {

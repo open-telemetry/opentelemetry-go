@@ -102,15 +102,15 @@ type (
 		// size returns the physical size of the backing
 		// array, which is >= buckets.Len() the number allocated.
 		size() int32
-		// growTo grows a backing array and copies old enties
+		// growTo grows a backing array and copies old entries
 		// into their correct new positions.
 		growTo(newSize, oldPositiveLimit, newPositiveLimit int32)
 		// reverse reverse the items in a backing array in the
 		// range [from, limit).
 		reverse(from, limit int32)
-		// moveCount empies the count from a bucket, for
+		// emptyBucket empties the count from a bucket, for
 		// moving into another.
-		moveCount(src int32) uint64
+		emptyBucket(src int32) uint64
 		// tryIncrement increments a bucket by `incr`, returns
 		// false if the result would overflow the current
 		// backing width.
@@ -470,7 +470,7 @@ func (b *Buckets) relocateBucket(dest, src int32) {
 		return
 	}
 
-	b.incrementBucket(dest, b.backing.moveCount(src))
+	b.incrementBucket(dest, b.backing.emptyBucket(src))
 }
 
 // incrementBucket increments the backing array index by `incr`.
@@ -633,7 +633,7 @@ func (b *bucketsVarwidth[N]) reverse(from, limit int32) {
 	}
 }
 
-func (b *bucketsVarwidth[N]) moveCount(src int32) uint64 {
+func (b *bucketsVarwidth[N]) emptyBucket(src int32) uint64 {
 	tmp := b.counts[src]
 	b.counts[src] = 0
 	return uint64(tmp)

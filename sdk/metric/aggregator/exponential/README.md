@@ -98,7 +98,7 @@ histogram to maintain the ideal scale without shifting values inside
 the array.
 
 The `indexStart` and `indexEnd` fields store the current minimum and
-maximum bucket number.  The initial conditition is `indexBase ==
+maximum bucket number.  The initial condition is `indexBase ==
 indexStart == indexEnd`, representing a single bucket.
 
 Following the first observation, new observations may fall into a
@@ -107,7 +107,7 @@ adjusting either `indexEnd` or `indexStart` as long as the constraint
 `indexEnd-indexStart < size` remains true.
 
 Bucket numbers in the range `[indexBase, indexEnd]` are stored in the
-interval `[0, indexEnd-indexBase+1]` of the backing array.  Buckets in
+interval `[0, indexEnd-indexBase]` of the backing array.  Buckets in
 the range `[indexStart, indexBase-1]` are stored in the interval
 `[size+indexStart-indexBase, size-1]` of the backing array.
 
