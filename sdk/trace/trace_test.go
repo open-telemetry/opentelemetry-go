@@ -374,7 +374,7 @@ func TestStartSpanWithNilContext(t *testing.T) {
 			t.Error("unexpected panic creating span with nil context")
 		}
 	}()
-	//nolint // no nil context, but that's the point of the test
+	//nolint:staticcheck // no nil context, but that's the point of the test
 	sampledTr.Start(nil, "should-not-panic")
 }
 
