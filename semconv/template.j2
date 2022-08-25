@@ -16,12 +16,16 @@ Type: {{ attr.attr_type }}
 {%- else %}
 Type: Enum
 {%- endif %}
-{%- if attr.required == Required.ALWAYS %}
-Required: Always
-{%- elif attr.required == Required.CONDITIONAL %}
-Required: {{ attr.required_msg }}
+{%- if attr.requirement_level == RequirementLevel.REQUIRED %}
+RequirementLevel: Required
+{%- elif attr.requirement_level == RequirementLevel.CONDITIONALLY_REQUIRED %}
+RequirementLevel: ConditionallyRequired
+  {%- if attr.requirement_level_msg != "" %} ({{ attr.requirement_level_msg }}){%- endif %}
+{%- elif attr.requirement_level == RequirementLevel.RECOMMENDED %}
+RequirementLevel: Recommended
+  {%- if attr.requirement_level_msg != "" %} ({{ attr.requirement_level_msg }}){%- endif %}
 {%- else %}
-Required: No
+RequirementLevel: Optional
 {%- endif %}
 {{ attr.stability |  replace("Level.", ": ") | capitalize }}
 {%- if attr.deprecated != None %}

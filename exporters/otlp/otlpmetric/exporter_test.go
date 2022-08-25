@@ -34,17 +34,17 @@ type client struct {
 	n int
 }
 
-func (c client) UploadMetrics(context.Context, *mpb.ResourceMetrics) error {
+func (c *client) UploadMetrics(context.Context, *mpb.ResourceMetrics) error {
 	c.n++
 	return nil
 }
 
-func (c client) ForceFlush(context.Context) error {
+func (c *client) ForceFlush(context.Context) error {
 	c.n++
 	return nil
 }
 
-func (c client) Shutdown(context.Context) error {
+func (c *client) Shutdown(context.Context) error {
 	c.n++
 	return nil
 }
@@ -52,7 +52,7 @@ func (c client) Shutdown(context.Context) error {
 func TestExporterClientConcurrency(t *testing.T) {
 	const goroutines = 5
 
-	exp := New(client{})
+	exp := New(&client{})
 	rm := metricdata.ResourceMetrics{}
 	ctx := context.Background()
 

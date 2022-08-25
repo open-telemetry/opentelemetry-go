@@ -39,16 +39,19 @@ type exporter struct {
 
 // Export transforms and transmits metric data to an OTLP receiver.
 func (e *exporter) Export(ctx context.Context, rm metricdata.ResourceMetrics) error {
-	otlpRm, tErr := transform.ResourceMetrics(rm)
+	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
 	if upErr != nil {
-		// Prioritize the upload error over the transform error.
-		return upErr
+		if err == nil {
+			return upErr
+		}
+		// Merge the two errors.
+		return fmt.Errorf("failed to upload incomplete metrics (%s): %w", err, upErr)
 	}
-	return tErr
+	return err
 }
 
 // ForceFlush flushes any metric data held by an exporter.

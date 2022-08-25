@@ -12,6 +12,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support Go 1.19.
   Include compatibility testing and document support. (#3077)
+- Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
+
+### Changed
+
+- Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
+- The exponential histogram mapping functions have been updated with
+  exact upper-inclusive boundary support following the [corresponding
+  specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
