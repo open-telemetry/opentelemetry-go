@@ -67,9 +67,22 @@ type (
 		// backing is a slice of nil, []uint8, []uint16, []uint32, or []uint64
 		backing bucketsBacking
 
+		// The term "index" refers to the number of the
+		// histogram bucket used to determine its boundaries.
+		// The lower-boundary of a bucket is determined by
+		// formula base**index and the upper-boundary of a
+		// bucket is base**(index+1).  Index values are signed
+		// to account for values less than or equal to 1.
+		//
+		// Note that the width of this field is determined by
+		// the field being stated as int32 in the OTLP
+		// protocol.  The meaning of this field can be
+		// extended to wider types, however this it would
+		// would be an extremely high-resolution histogram.
+
 		// indexBase is index of the 0th position in the
-		// backing array, i.e., backing[0] is the count associated with
-		// indexBase which is in [indexStart, indexEnd]
+		// backing array, i.e., backing[0] is the count
+		// in the bucket with index `indexBase`.
 		indexBase int32
 
 		// indexStart is the smallest index value represented
@@ -101,6 +114,13 @@ type (
 	bucketsBacking interface {
 		// size returns the physical size of the backing
 		// array, which is >= buckets.Len() the number allocated.
+		//
+		// Note this is logically an unsigned quantity,
+		// however it creates fewer type conversions in the
+		// code with this as int32, because: (a) this is not
+		// allowed to grow to outside the range of a signed
+		// int32, and (b) this is frequently involved in
+		// arithmetic with signed index values.
 		size() int32
 		// growTo grows a backing array and copies old entries
 		// into their correct new positions.
@@ -404,6 +424,20 @@ func (h *Histogram[N]) incrementIndexBy(b *Buckets, index int32, incr uint64) (h
 	return highLow{}, true
 }
 
+func powTwoRoundedUp(v int32) int32 {
+	fmt.Println("IN", v)
+	v = int32(1) << (32 - bits.LeadingZeros32(uint32(v)))	
+	// v--
+	// v |= v >> 1
+	// v |= v >> 2
+	// v |= v >> 4
+	// v |= v >> 8
+	// v |= v >> 16
+	// v++
+	fmt.Println("OUT", v)
+	return v
+}
+
 // grow resizes the backing array by doubling in size up to maxSize.
 // this extends the array with a bunch of zeros and copies the
 // existing counts to the same position.
@@ -411,7 +445,10 @@ func (h *Histogram[N]) grow(b *Buckets, needed int32) {
 	size := b.backing.size()
 	bias := b.indexBase - b.indexStart
 	oldPositiveLimit := size - bias
-	newSize := int32(1) << (32 - bits.LeadingZeros32(uint32(needed)))
+	// The following expression computes the least power-of-two
+	// that is >= needed.  There are a number of tricky ways to
+	// do this, see https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+	newSize := powTwoRoundedUp(needed)
 	if newSize > h.maxSize {
 		newSize = h.maxSize
 	}

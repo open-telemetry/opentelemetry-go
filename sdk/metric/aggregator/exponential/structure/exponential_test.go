@@ -820,8 +820,11 @@ func TestBoundaryStatistics(t *testing.T) {
 
 		var above, below int
 
-		total := exponent.MaxNormalExponent - exponent.MinNormalExponent + 1
-		for exp := exponent.MinNormalExponent; exp <= exponent.MaxNormalExponent; exp++ {
+		const MinNormalExponent = -1022
+		const MaxNormalExponent = 1023
+
+		total := MaxNormalExponent - MinNormalExponent + 1
+		for exp := MinNormalExponent; exp <= MaxNormalExponent; exp++ {
 			value := math.Ldexp(1, int(exp))
 
 			index := m.MapToIndex(value)
