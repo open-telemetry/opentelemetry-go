@@ -328,6 +328,9 @@ func (h *Histogram[N]) UpdateByIncr(number N, incr uint64) {
 
 // downscale subtracts `change` from the current mapping scale.
 func (h *Histogram[N]) downscale(change int32) {
+	if change == 0 {
+		return
+	}
 	if change < 0 {
 		panic(fmt.Sprint("impossible change of scale", change))
 	}
@@ -425,8 +428,11 @@ func (h *Histogram[N]) incrementIndexBy(b *Buckets, index int32, incr uint64) (h
 }
 
 func powTwoRoundedUp(v int32) int32 {
-	fmt.Println("IN", v)
-	v = int32(1) << (32 - bits.LeadingZeros32(uint32(v)))	
+	// The following expression computes the least power-of-two
+	// that is >= needed.  There are a number of tricky ways to
+	// do this, see https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
+
+	v = int32(1) << (32 - bits.LeadingZeros32(uint32(v)))
 	// v--
 	// v |= v >> 1
 	// v |= v >> 2
@@ -434,7 +440,6 @@ func powTwoRoundedUp(v int32) int32 {
 	// v |= v >> 8
 	// v |= v >> 16
 	// v++
-	fmt.Println("OUT", v)
 	return v
 }
 
@@ -445,9 +450,6 @@ func (h *Histogram[N]) grow(b *Buckets, needed int32) {
 	size := b.backing.size()
 	bias := b.indexBase - b.indexStart
 	oldPositiveLimit := size - bias
-	// The following expression computes the least power-of-two
-	// that is >= needed.  There are a number of tricky ways to
-	// do this, see https://stackoverflow.com/questions/466204/rounding-up-to-next-power-of-2
 	newSize := powTwoRoundedUp(needed)
 	if newSize > h.maxSize {
 		newSize = h.maxSize
