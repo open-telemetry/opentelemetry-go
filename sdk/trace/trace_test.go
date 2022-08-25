@@ -369,13 +369,8 @@ func TestStartSpanWithNilContext(t *testing.T) {
 	tp := NewTracerProvider()
 	tr := tp.Tracer("NoPanic")
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Error("unexpected panic creating span with nil context")
-		}
-	}()
-	//nolint:staticcheck // no nil context, but that's the point of the test
-	tr.Start(nil, "should-not-panic")
+	// nolint:staticcheck // no nil context, but that's the point of the test.
+	assert.NotPanics(t, func() { tr.Start(nil, "should-not-panic") })
 }
 
 func TestStartSpanNewRootNotSampled(t *testing.T) {
