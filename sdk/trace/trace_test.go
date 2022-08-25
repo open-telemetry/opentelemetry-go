@@ -363,6 +363,21 @@ func TestStartSpanWithParent(t *testing.T) {
 	}
 }
 
+// Test we get a successful span as a new root if a nil context is sent in, as opposed to a panic. 
+// See https://github.com/open-telemetry/opentelemetry-go/issues/3109
+func TestStartSpanWithNilContext(t *testing.T) {
+	alwaysSampleTp := NewTracerProvider()
+	sampledTr := alwaysSampleTp.Tracer("AlwaysSampled")
+
+	defer func() {
+        if r := recover(); r != nil {
+            t.Error("unexpected panic creating span with nil context")
+        }
+    }()
+
+	_, _ := sampledTr.Start(nil, "should-not-panic")
+}
+
 func TestStartSpanNewRootNotSampled(t *testing.T) {
 	alwaysSampleTp := NewTracerProvider()
 	sampledTr := alwaysSampleTp.Tracer("AlwaysSampled")
@@ -385,6 +400,9 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 	if s3.SpanContext().IsSampled() {
 		t.Error(fmt.Errorf("got child span is sampled, want child span WithNewRoot() and with sampler: ParentBased(NeverSample()) to not be sampled"))
 	}
+
+	// Test we get a successful span as a new root if a nil context is sent in
+	_, s4 := neverSampledTr.Start(nil, "span3-new-root", trace.WithNewRoot())
 }
 
 func TestSetSpanAttributesOnStart(t *testing.T) {
