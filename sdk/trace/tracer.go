@@ -37,8 +37,8 @@ var _ trace.Tracer = &tracer{}
 func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanStartOption) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(options...)
 
-	// If ctx is nil, set to context.Background() as context.WithValue will panic on a nil value.
 	if ctx == nil {
+		// Prevent trace.ContextWithSpan from panicking.
 		ctx = context.Background()
 	}
 
