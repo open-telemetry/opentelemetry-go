@@ -37,6 +37,11 @@ var _ trace.Tracer = &tracer{}
 func (tr *tracer) Start(ctx context.Context, name string, options ...trace.SpanStartOption) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(options...)
 
+	// If ctx is nil, set to context.Background() as context.WithValue will panic on a nil value.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	// For local spans created by this SDK, track child span count.
 	if p := trace.SpanFromContext(ctx); p != nil {
 		if sdkSpan, ok := p.(*recordingSpan); ok {
