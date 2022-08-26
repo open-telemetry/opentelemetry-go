@@ -202,7 +202,7 @@ func createAggregators[N int64 | float64](reg *pipelineRegistry, inst view.Instr
 	errs := &multierror{}
 	for rdr, views := range reg.views {
 		pipe := reg.pipelines[rdr]
-		rdrAggs, err := createAggregatorsForViews[N](rdr, views, inst)
+		rdrAggs, err := createAggregatorsForReader[N](rdr, views, inst)
 		if err != nil {
 			errs.append(err)
 		}
@@ -244,7 +244,7 @@ type instrumentID struct {
 
 var errCreatingAggregators = errors.New("could not create all aggregators")
 
-func createAggregatorsForViews[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
+func createAggregatorsForReader[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
 	aggs := map[instrumentID]internal.Aggregator[N]{}
 	errs := &multierror{
 		wrapped: errCreatingAggregators,

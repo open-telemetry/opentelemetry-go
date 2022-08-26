@@ -212,7 +212,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := createAggregatorsForViews[N](tt.reader, tt.views, tt.inst)
+			got, err := createAggregatorsForReader[N](tt.reader, tt.views, tt.inst)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
 			for _, agg := range got {
@@ -229,7 +229,7 @@ func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
 	}
-	_, _ = createAggregatorsForViews[N](reader, views, inst)
+	_, _ = createAggregatorsForReader[N](reader, views, inst)
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {
