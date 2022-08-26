@@ -24,21 +24,35 @@ import (
 // WrapperTracerProvider is an OpenTelemetry TracerProvider that wraps an
 // OpenTracing Tracer.
 type WrapperTracerProvider struct {
-	wTracer *WrapperTracer
+	getWrappedTracer func(name string, opts ...trace.TracerOption) *WrapperTracer
 }
 
 var _ trace.TracerProvider = (*WrapperTracerProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
-func (p *WrapperTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
-	return p.wTracer
+func (p *WrapperTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return p.getWrappedTracer(name, opts...)
 }
 
 // NewWrappedTracerProvider creates a new trace provider that creates a single
-// instance of WrapperTracer that wraps OpenTelemetry tracer.
+// instance of WrapperTracer that wraps OpenTelemetry tracer, and always returns
+// it unmodified from Tracer().
 func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *WrapperTracerProvider {
+	wTracer := NewWrapperTracer(bridge, tracer)
 	return &WrapperTracerProvider{
-		wTracer: NewWrapperTracer(bridge, tracer),
+		getWrappedTracer: func(_ string, _ ...trace.TracerOption) *WrapperTracer {
+			return wTracer
+		},
+	}
+}
+
+// NewDynamicWrappedTracerProvider creates a new trace provider that creates new
+// instances of WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
+func NewDynamicWrappedTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
+	return &WrapperTracerProvider{
+		getWrappedTracer: func(name string, opts ...trace.TracerOption) *WrapperTracer {
+			return NewWrapperTracer(bridge, provider.Tracer(name, opts...))
+		},
 	}
 }
 
