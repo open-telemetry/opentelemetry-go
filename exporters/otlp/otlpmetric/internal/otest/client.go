@@ -19,19 +19,19 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/metric/unit"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -172,45 +172,11 @@ var (
 // Collector which is ready to store that data.
 type ClientFactory func() (otlpmetric.Client, Collector)
 
-// Collector is the collection target a Client sends metric uploads to.
-type Collector interface {
-	Collect() *Storage
-}
-
-// Storage stores uploaded OTLP metric data in their proto form.
-type Storage struct {
-	dataMu sync.Mutex
-	data   []*mpb.ResourceMetrics
-}
-
-// NewStorage returns a configure storage ready to store recieved requests.
-func NewStorage() *Storage {
-	return &Storage{}
-}
-
-// Add adds the request to the Storage.
-func (s *Storage) Add(request *collpb.ExportMetricsServiceRequest) {
-	s.dataMu.Lock()
-	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceMetrics...)
-}
-
-// dump returns all added ResourceMetrics and clears the storage.
-func (s *Storage) dump() []*mpb.ResourceMetrics {
-	s.dataMu.Lock()
-	defer s.dataMu.Unlock()
-
-	var data []*mpb.ResourceMetrics
-	data, s.data = s.data, []*mpb.ResourceMetrics{}
-	return data
-}
-
 // RunClientTests runs a suite of Client integration tests. For example:
 //
 //	t.Run("Integration", RunClientTests(factory))
 func RunClientTests(f ClientFactory) func(*testing.T) {
 	return func(t *testing.T) {
-		t.Helper()
 		t.Run("ClientHonorsContextErrors", func(t *testing.T) {
 			t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
 				c, _ := f()
@@ -245,7 +211,19 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			assert.Len(t, rm, 0, "client did not flush all data")
 		})
 
-		t.Run("UploadMetrics", testUploadMetrics(f))
+		t.Run("UploadMetrics", func(t *testing.T) {
+			ctx := context.Background()
+			client, coll := f()
+
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			require.NoError(t, client.Shutdown(ctx))
+			got := coll.Collect().dump()
+			require.Len(t, got, 1, "upload of one ResourceMetrics")
+			diff := cmp.Diff(got[0], resourceMetrics, cmp.Comparer(proto.Equal))
+			if diff != "" {
+				t.Fatalf("unexpected ResourceMetrics:\n%s", diff)
+			}
+		})
 	}
 }
 
@@ -270,46 +248,6 @@ func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) 
 
 			f := factory()
 			assert.ErrorIs(t, f(innerCtx), context.Canceled)
-		})
-	}
-}
-
-func testUploadMetrics(f ClientFactory) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Run("Empty", func(t *testing.T) {
-			ctx := context.Background()
-			client, coll := f()
-
-			emptyRM := &mpb.ResourceMetrics{
-				Resource:  res,
-				SchemaUrl: semconv.SchemaURL,
-			}
-			require.NoError(t, client.UploadMetrics(ctx, emptyRM))
-
-			emptySM := &mpb.ResourceMetrics{
-				Resource: res,
-				ScopeMetrics: []*mpb.ScopeMetrics{{
-					Scope:     scope,
-					SchemaUrl: semconv.SchemaURL,
-				}},
-				SchemaUrl: semconv.SchemaURL,
-			}
-			require.NoError(t, client.UploadMetrics(ctx, emptySM))
-
-			require.NoError(t, client.Shutdown(ctx))
-			got := coll.Collect().dump()
-			assert.Contains(t, got, emptyRM)
-			assert.Contains(t, got, emptySM)
-		})
-
-		t.Run("All", func(t *testing.T) {
-			ctx := context.Background()
-			client, coll := f()
-
-			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
-			require.NoError(t, client.Shutdown(ctx))
-			got := coll.Collect().dump()
-			assert.Contains(t, got, resourceMetrics)
 		})
 	}
 }
