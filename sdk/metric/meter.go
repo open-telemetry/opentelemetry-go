@@ -120,7 +120,6 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
-	// Because the pipelines are shared only one of the registries needs to be invoked
 	m.registry.registerCallback(f)
 	return nil
 }

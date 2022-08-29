@@ -178,14 +178,6 @@ func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
 	}
 }
 
-func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[int64], error) {
-	return createAggregators[int64](reg, inst, instUnit)
-}
-
-func (reg *pipelineRegistry) createFloat64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[float64], error) {
-	return createAggregators[float64](reg, inst, instUnit)
-}
-
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
 func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
 	for _, pipe := range reg.pipelines {
