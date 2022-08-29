@@ -16,6 +16,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/trace"
@@ -46,12 +47,37 @@ func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *Wrappe
 	}
 }
 
+type wrappedTracerKey struct {
+	name    string
+	version string
+}
+
 // NewDynamicWrappedTracerProvider creates a new trace provider that creates new
 // instances of WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
 func NewDynamicWrappedTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
+	var (
+		mtx     sync.Mutex
+		tracers = make(map[wrappedTracerKey]*WrapperTracer)
+	)
+
 	return &WrapperTracerProvider{
 		getWrappedTracer: func(name string, opts ...trace.TracerOption) *WrapperTracer {
-			return NewWrapperTracer(bridge, provider.Tracer(name, opts...))
+			mtx.Lock()
+			defer mtx.Unlock()
+
+			c := trace.NewTracerConfig(opts...)
+			key := wrappedTracerKey{
+				name:    name,
+				version: c.InstrumentationVersion(),
+			}
+
+			if t, ok := tracers[key]; ok {
+				return t
+			}
+
+			wrapper := NewWrapperTracer(bridge, provider.Tracer(name, opts...))
+			tracers[key] = wrapper
+			return wrapper
 		},
 	}
 }
