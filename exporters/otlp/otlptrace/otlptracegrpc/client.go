@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
-	otlpinternal "go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
@@ -202,7 +202,11 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			ResourceSpans: protoSpans,
 		})
 		if resp != nil && resp.PartialSuccess != nil {
-			otel.Handle(otlpinternal.PartialSuccessToError("spans", resp.PartialSuccess.RejectedSpans, resp.PartialSuccess.ErrorMessage))
+			otel.Handle(otlp.PartialSuccessToError(
+				otlp.TracingPartialSuccess,
+				resp.PartialSuccess.RejectedSpans,
+				resp.PartialSuccess.ErrorMessage,
+			))
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {

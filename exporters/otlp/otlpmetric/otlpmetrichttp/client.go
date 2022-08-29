@@ -30,7 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
-	otlpinternal "go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
@@ -183,8 +183,8 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				return err
 			}
 			if respProto.PartialSuccess != nil {
-				otel.Handle(otlpinternal.PartialSuccessToError(
-					"metric data points",
+				otel.Handle(otlp.PartialSuccessToError(
+					otlp.MetricsPartialSuccess,
 					respProto.PartialSuccess.RejectedDataPoints,
 					respProto.PartialSuccess.ErrorMessage,
 				))

@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
-	otlpinternal "go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
@@ -202,7 +202,11 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 		})
 		if resp != nil && resp.PartialSuccess != nil {
-			otel.Handle(otlpinternal.PartialSuccessToError("metric data points", resp.PartialSuccess.RejectedDataPoints, resp.PartialSuccess.ErrorMessage))
+			otel.Handle(otlp.PartialSuccessToError(
+				otlp.MetricsPartialSuccess,
+				resp.PartialSuccess.RejectedDataPoints,
+				resp.PartialSuccess.ErrorMessage,
+			))
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
