@@ -18,14 +18,10 @@
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
-	"context"
-	"net"
 	"sync"
 
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 // Collector is the collection target a Client sends metric uploads to.
@@ -39,7 +35,7 @@ type Storage struct {
 	data   []*mpb.ResourceMetrics
 }
 
-// NewStorage returns a configure storage ready to store recieved requests.
+// NewStorage returns a configure storage ready to store received requests.
 func NewStorage() *Storage {
 	return &Storage{}
 }
@@ -59,88 +55,4 @@ func (s *Storage) dump() []*mpb.ResourceMetrics {
 	var data []*mpb.ResourceMetrics
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
-}
-
-// GRPCCollector is an OTLP gRPC server that collects all requests it receives.
-type GRPCCollector struct {
-	collpb.UnimplementedMetricsServiceServer
-
-	headersMu sync.Mutex
-	headers   metadata.MD
-	storage   *Storage
-
-	errCh    <-chan error
-	listener net.Listener
-	srv      *grpc.Server
-}
-
-// NewGRPCCollector returns a *GRPCCollector that is listening at the provided
-// endpoint.
-//
-// If endpoint is an empty string, the returned collector will be listeing on
-// the localhost interface at an OS chosen port.
-//
-// If errCh is not nil, the collector will respond to Export calls with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
-func NewGRPCCollector(endpoint string, errCh <-chan error) (*GRPCCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
-	}
-
-	c := &GRPCCollector{
-		storage: NewStorage(),
-		errCh:   errCh,
-	}
-
-	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	c.srv = grpc.NewServer()
-	collpb.RegisterMetricsServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
-
-	return c, nil
-}
-
-// Shutdown shuts down the gRPC server closing all open connections and
-// listeners immediately.
-func (c *GRPCCollector) Shutdown() { c.srv.Stop() }
-
-// Addr returns the net.Addr c is listening at.
-func (c *GRPCCollector) Addr() net.Addr {
-	return c.listener.Addr()
-}
-
-// Collect returns the Storage holding all collected requests.
-func (c *GRPCCollector) Collect() *Storage {
-	return c.storage
-}
-
-// Headers returns the headers received for all requests.
-func (c *GRPCCollector) Headers() map[string][]string {
-	// Makes a copy.
-	c.headersMu.Lock()
-	defer c.headersMu.Unlock()
-	return metadata.Join(c.headers)
-}
-
-// Export handles the export req.
-func (c *GRPCCollector) Export(ctx context.Context, req *collpb.ExportMetricsServiceRequest) (*collpb.ExportMetricsServiceResponse, error) {
-	c.storage.Add(req)
-
-	if h, ok := metadata.FromIncomingContext(ctx); ok {
-		c.headersMu.Lock()
-		c.headers = metadata.Join(c.headers, h)
-		c.headersMu.Unlock()
-	}
-
-	var err error
-	if c.errCh != nil {
-		err = <-c.errCh
-	}
-	return &collpb.ExportMetricsServiceResponse{}, err
 }
