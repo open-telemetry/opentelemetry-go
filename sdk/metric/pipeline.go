@@ -160,37 +160,41 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 // pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
 // new Aggregators from a pipelineRegistry.
-type pipelineRegistry[N int64 | float64] struct {
+type pipelineRegistry struct {
 	views     map[Reader][]view.View
 	pipelines map[Reader]*pipeline
 }
 
-func newPipelineRegistries(views map[Reader][]view.View) (*pipelineRegistry[int64], *pipelineRegistry[float64]) {
+func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
 	pipelines := map[Reader]*pipeline{}
 	for rdr := range views {
 		pipe := &pipeline{}
 		rdr.register(pipe)
 		pipelines[rdr] = pipe
 	}
-	return &pipelineRegistry[int64]{
-			views:     views,
-			pipelines: pipelines,
-		}, &pipelineRegistry[float64]{
-			views:     views,
-			pipelines: pipelines,
-		}
+	return &pipelineRegistry{
+		views:     views,
+		pipelines: pipelines,
+	}
+}
+
+// TODO (#3053) Only register callbacks if any instrument matches in a view.
+func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
+	for _, pipe := range reg.pipelines {
+		pipe.addCallback(fn)
+	}
 }
 
 // createAggregators will create all backing aggregators for an instrument.
 // It will return an error if an instrument is registered more than once.
 // Note: There may be returned aggregators with an error.
-func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func createAggregators[N int64 | float64](reg *pipelineRegistry, inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
 	for rdr, views := range reg.views {
 		pipe := reg.pipelines[rdr]
-		rdrAggs, err := createAggregators[N](rdr, views, inst)
+		rdrAggs, err := createAggregatorsForReader[N](rdr, views, inst)
 		if err != nil {
 			errs.append(err)
 		}
@@ -203,15 +207,6 @@ func (reg *pipelineRegistry[N]) createAggregators(inst view.Instrument, instUnit
 		}
 	}
 	return aggs, errs.errorOrNil()
-}
-
-// TODO (#3053) Only register callbacks if any instrument matches in a view.
-//
-//nolint:unused // used by instrument creation.  Resolved with (#2815)
-func (reg *pipelineRegistry[N]) registerCallback(fn func(context.Context)) {
-	for _, pipe := range reg.pipelines {
-		pipe.addCallback(fn)
-	}
 }
 
 type multierror struct {
@@ -241,7 +236,7 @@ type instrumentID struct {
 
 var errCreatingAggregators = errors.New("could not create all aggregators")
 
-func createAggregators[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
+func createAggregatorsForReader[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
 	aggs := map[instrumentID]internal.Aggregator[N]{}
 	errs := &multierror{
 		wrapped: errCreatingAggregators,
