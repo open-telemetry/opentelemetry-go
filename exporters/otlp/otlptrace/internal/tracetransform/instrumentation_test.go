@@ -15,17 +15,37 @@
 package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
-func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationScope {
-	if il == (instrumentation.Scope{}) {
-		return nil
-	}
-	return &commonpb.InstrumentationScope{
-		Name:       il.Name,
-		Version:    il.Version,
-		Attributes: Iterator(il.Attributes.Iter()),
-	}
+func TestInstrumentationScope(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		assert.Nil(t, InstrumentationScope(instrumentation.Scope{}))
+	})
+
+	t.Run("Mapping", func(t *testing.T) {
+		var (
+			name    = "instrumentation name"
+			version = "v0.1.0"
+			attr    = attribute.NewSet(attribute.String("domain", "trace"))
+			attrPb  = Iterator(attr.Iter())
+		)
+		expected := &commonpb.InstrumentationScope{
+			Name:       name,
+			Version:    version,
+			Attributes: attrPb,
+		}
+		actual := InstrumentationScope(instrumentation.Scope{
+			Name:       name,
+			Version:    version,
+			SchemaURL:  "http://this.is.mapped.elsewhere.com",
+			Attributes: attr,
+		})
+		assert.Equal(t, expected, actual)
+	})
 }
