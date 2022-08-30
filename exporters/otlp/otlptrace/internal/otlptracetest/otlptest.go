@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -123,12 +122,4 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 			}
 		}
 	}
-}
-
-func OTelErrors() *[]error {
-	errors := new([]error)
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		*errors = append(*errors, err)
-	}))
-	return errors
 }
