@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package instrumentation provides types to represent the code libraries that
+// provide OpenTelemetry instrumentation. These types are used in the
+// OpenTelemetry signal pipelines to identify the source of telemetry.
+//
+// See
+// https://github.com/open-telemetry/oteps/blob/d226b677d73a785523fe9b9701be13225ebc528d/text/0083-component.md
+// and
+// https://github.com/open-telemetry/oteps/blob/d226b677d73a785523fe9b9701be13225ebc528d/text/0201-scope-attributes.md
+// for more information.
 package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
-
-// Scope represents the instrumentation scope.
-type Scope struct {
-	// Name is the name of the instrumentation scope. This should be the
-	// Go package name of that scope.
-	Name string
-	// Version is the version of the instrumentation scope.
-	Version string
-	// SchemaURL of the telemetry emitted by the scope.
-	SchemaURL string
-}
