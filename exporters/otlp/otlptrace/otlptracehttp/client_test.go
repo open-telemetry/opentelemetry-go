@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -370,8 +371,10 @@ func TestPartialSuccess(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 
-	errors := otlptracetest.OTelErrors()
-
+	errors := new([]error)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		*errors = append(*errors, err)
+	}))
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 

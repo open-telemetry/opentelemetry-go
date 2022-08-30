@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -341,7 +342,10 @@ func TestNewExporterWithPartialSuccess(t *testing.T) {
 	defer func() {
 		_ = mc.stop()
 	}()
-	errors := otlpmetrictest.OTelErrors()
+	errors := new([]error)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		*errors = append(*errors, err)
+	}))
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	require.NoError(t, exp.Export(ctx, testResource, oneRecord))

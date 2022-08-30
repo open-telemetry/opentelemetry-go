@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -291,11 +292,12 @@ func TestExportPartialSuccess(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 
-	errors := otlpmetrictest.OTelErrors()
-
+	errors := new([]error)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		*errors = append(*errors, err)
+	}))
 	err = exporter.Export(ctx, testResource, oneRecord)
 	assert.NoError(t, err)
-
 	require.Equal(t, 1, len(*errors))
 	require.Contains(t, (*errors)[0].Error(), "partially successful")
 	require.Contains(t, (*errors)[0].Error(), "2 metric data points rejected")
