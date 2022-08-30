@@ -174,20 +174,21 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 		// Read the partial success message, if any.
 		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, resp.Body); err != nil {
-			return err
-		}
-		if respData.Len() != 0 {
-			var respProto colmetricpb.ExportMetricsServiceResponse
-			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-				return err
+		_, ioerr := io.Copy(&respData, resp.Body)
+		if ioerr != nil || (ioerr == nil && respData.Len() != 0) {
+			if ioerr == nil {
+				var respProto colmetricpb.ExportMetricsServiceResponse
+				ioerr = proto.Unmarshal(respData.Bytes(), &respProto)
+				if ioerr == nil && respProto.PartialSuccess != nil {
+					ioerr = otlp.PartialSuccessToError(
+						otlp.MetricsPartialSuccess,
+						respProto.PartialSuccess.RejectedDataPoints,
+						respProto.PartialSuccess.ErrorMessage,
+					)
+				}
 			}
-			if respProto.PartialSuccess != nil {
-				otel.Handle(otlp.PartialSuccessToError(
-					otlp.MetricsPartialSuccess,
-					respProto.PartialSuccess.RejectedDataPoints,
-					respProto.PartialSuccess.ErrorMessage,
-				))
+			if ioerr != nil {
+				otel.Handle(ioerr)
 			}
 		}
 
