@@ -163,6 +163,16 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 type pipelineRegistry struct {
 	views     map[Reader][]view.View
 	pipelines map[Reader]*pipeline
+
+	cacheLock  sync.Mutex
+	cacheInt   map[instrumentID]pipelineCacheResult[int64]
+	cacheFloat map[instrumentID]pipelineCacheResult[float64]
+}
+
+type pipelineCacheResult[N int64 | float64] struct {
+	aggregators    []internal.Aggregator[N]
+	err            error
+	instrumentKind view.InstrumentKind
 }
 
 func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
@@ -175,7 +185,72 @@ func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
 	return &pipelineRegistry{
 		views:     views,
 		pipelines: pipelines,
+
+		cacheInt:   map[instrumentID]pipelineCacheResult[int64]{},
+		cacheFloat: map[instrumentID]pipelineCacheResult[float64]{},
 	}
+}
+
+func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[int64], error) {
+	reg.cacheLock.Lock()
+	defer reg.cacheLock.Unlock()
+	key := instrumentID{
+		scope:       inst.Scope,
+		name:        inst.Name,
+		description: inst.Description,
+	}
+
+	if result, ok := reg.cacheInt[key]; ok {
+		if inst.Kind != result.instrumentKind {
+			return nil, fmt.Errorf("instruments collide")
+		}
+		return result.aggregators, result.err
+	}
+
+	aggs, err := createAggregators[int64](reg, inst, instUnit)
+	reg.cacheInt[key] = pipelineCacheResult[int64]{
+		aggregators:    aggs,
+		err:            err,
+		instrumentKind: inst.Kind,
+	}
+	missedCacheInstrumentKind := view.InstrumentKind(254)
+	reg.cacheFloat[key] = pipelineCacheResult[float64]{
+		aggregators:    nil,
+		err:            nil,
+		instrumentKind: missedCacheInstrumentKind,
+	}
+	return aggs, err
+}
+
+func (reg *pipelineRegistry) createFloat64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[float64], error) {
+	reg.cacheLock.Lock()
+	defer reg.cacheLock.Unlock()
+	key := instrumentID{
+		scope:       inst.Scope,
+		name:        inst.Name,
+		description: inst.Description,
+	}
+
+	if result, ok := reg.cacheFloat[key]; ok {
+		if inst.Kind != result.instrumentKind {
+			return nil, fmt.Errorf("instruments collide")
+		}
+		return result.aggregators, result.err
+	}
+
+	aggs, err := createAggregators[float64](reg, inst, instUnit)
+	reg.cacheFloat[key] = pipelineCacheResult[float64]{
+		aggregators:    aggs,
+		err:            err,
+		instrumentKind: inst.Kind,
+	}
+	missedCacheInstrumentKind := view.InstrumentKind(254)
+	reg.cacheInt[key] = pipelineCacheResult[int64]{
+		aggregators:    nil,
+		err:            nil,
+		instrumentKind: missedCacheInstrumentKind,
+	}
+	return aggs, err
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.

@@ -515,3 +515,115 @@ func TestMetersProvideScope(t *testing.T) {
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
+
+func TestDuplicateInstruments(t *testing.T) {
+	testCases := []struct {
+		name               string
+		generateInstrument func(*testing.T, metric.Meter) any
+	}{
+		{
+			name: "AsyncInt64Counter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncInt64().Counter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "AsyncInt64UpDownCounter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncInt64().UpDownCounter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "AsyncInt64Gauge",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncInt64().Gauge("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "AsyncFloat64Counter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncFloat64().Counter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "AsyncFloat64UpDownCounter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncFloat64().UpDownCounter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "AsyncFloat64Gauge",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.AsyncFloat64().Gauge("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncInt64Counter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncInt64().Counter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncInt64UpDownCounter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncInt64().UpDownCounter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncInt64().Histogram("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncFloat64Counter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncFloat64().Counter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCounter",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncFloat64().UpDownCounter("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			generateInstrument: func(t *testing.T, m metric.Meter) any {
+				inst, err := m.SyncFloat64().Histogram("duplicate")
+				assert.NoError(t, err)
+				return inst
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMeterProvider(WithReader(NewManualReader())).Meter("DuplicateInstruments")
+			inst := tt.generateInstrument(t, m)
+
+			assert.Equal(t, inst, tt.generateInstrument(t, m))
+		})
+	}
+}
