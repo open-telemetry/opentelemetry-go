@@ -51,14 +51,13 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 	flush, sdown := conf.readerSignals()
 
-	intRegistry, floatRegistry := newPipelineRegistries(conf.readers)
+	registry := newPipelineRegistries(conf.readers)
 
 	return &MeterProvider{
 		res: conf.res,
 
 		meters: meterRegistry{
-			intRegistry:   intRegistry,
-			floatRegistry: floatRegistry,
+			registry: registry,
 		},
 
 		forceFlush: flush,
