@@ -20,7 +20,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The exponential histogram mapping functions have been updated with
   exact upper-inclusive boundary support following the [corresponding
   specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
+- Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
 - OpenTelemetry Exponential histogram data structure for public use. (#3022)
+>>>>>>> 55b49c407e07dc13bdba245c2c13935a37bad971
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
