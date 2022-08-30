@@ -55,24 +55,18 @@ func (i *instrumentImpl[N]) Observe(ctx context.Context, val N, attrs ...attribu
 	if !ok {
 		return
 	}
-	if err := ctx.Err(); err != nil {
-		return
-	}
-	for _, agg := range i.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
-	}
+	i.aggregate(ctx, val, attrs)
 }
 
 func (i *instrumentImpl[N]) Add(ctx context.Context, val N, attrs ...attribute.KeyValue) {
-	if err := ctx.Err(); err != nil {
-		return
-	}
-	for _, agg := range i.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
-	}
+	i.aggregate(ctx, val, attrs)
 }
 
 func (i *instrumentImpl[N]) Record(ctx context.Context, val N, attrs ...attribute.KeyValue) {
+	i.aggregate(ctx, val, attrs)
+}
+
+func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attribute.KeyValue) {
 	if err := ctx.Err(); err != nil {
 		return
 	}
