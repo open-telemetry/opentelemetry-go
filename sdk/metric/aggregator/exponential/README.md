@@ -201,7 +201,7 @@ metric events (e.g. in the [OpenTelemetry statsd
 receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/statsdreceiver)).
 
 Another use for `UpdateByIncr` is in a Span-to-metrics pipeline
-following [probability sampling in OpenTelemetry tracing](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/tracestate-probability-sampling.md) (e.g., for computing an exponential 
+following [probability sampling in OpenTelemetry tracing](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/tracestate-probability-sampling.md) (e.g., for computing an exponential
 histogram of probability-sampled span duration).
 
 ## Acknowledgements
