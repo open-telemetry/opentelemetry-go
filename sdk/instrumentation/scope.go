@@ -26,8 +26,8 @@ import "go.opentelemetry.io/otel/attribute"
 // Scope represents the instrumentation source of OpenTelemetry data.
 //
 // Code that uses OpenTelemetry APIs or data-models to produce telemetry needs
-// to be identifiable by the receiver of that that data. A Scope is used for
-// this purpose. It uniquely identify that code as the source and the extent to
+// to be identifiable by the receiver of that data. A Scope is used for this
+// purpose, it uniquely identifies that code as the source and the extent to
 // which it is relevant.
 type Scope struct {
 	// Name is the name of the instrumentation scope. This should be the
