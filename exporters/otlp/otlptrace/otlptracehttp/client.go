@@ -176,21 +176,20 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 		// Read the partial success message, if any.
 		var respData bytes.Buffer
-		_, ioerr := io.Copy(&respData, resp.Body)
-		if ioerr != nil || (ioerr == nil && respData.Len() != 0) {
-			if ioerr == nil {
-				var respProto coltracepb.ExportTraceServiceResponse
-				ioerr = proto.Unmarshal(respData.Bytes(), &respProto)
-				if ioerr == nil && respProto.PartialSuccess != nil {
-					ioerr = otlp.PartialSuccessToError(
-						otlp.TracingPartialSuccess,
-						respProto.PartialSuccess.RejectedSpans,
-						respProto.PartialSuccess.ErrorMessage,
-					)
-				}
+		if _, err := io.Copy(&respData, resp.Body); err != nil {
+			return err
+		}
+		if respData.Len() != 0 {
+			var respProto coltracepb.ExportTraceServiceResponse
+			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				return err
 			}
-			if ioerr != nil {
-				otel.Handle(ioerr)
+			if respProto.PartialSuccess != nil {
+				otel.Handle(otlp.PartialSuccessToError(
+					otlp.TracingPartialSuccess,
+					respProto.PartialSuccess.RejectedSpans,
+					respProto.PartialSuccess.ErrorMessage,
+				))
 			}
 		}
 
