@@ -536,11 +536,11 @@ type TracerProvider interface {
 	// data.
 	//
 	// If the same name and options are passed multiple times, the same Tracer
-	// will be returned (it is up the implementation if this will be the same
-	// underlying instance of that Tracer or not). It is not necessary to call
-	// this multiple times with the same name and options to get an up-to-date
-	// Tracer. All implementation will ensure any TracerProvider configuration
-	// changes are propagate to all provided Tracers.
+	// will be returned (it is up to the implementation if this will be the
+	// same underlying instance of that Tracer or not). It is not necessary to
+	// call this multiple times with the same name and options to get an
+	// up-to-date Tracer. All implementations will ensure any TracerProvider
+	// configuration changes are propagated to all provided Tracers.
 	//
 	// If name is empty, then an implementation defined default name will be
 	// used instead.
