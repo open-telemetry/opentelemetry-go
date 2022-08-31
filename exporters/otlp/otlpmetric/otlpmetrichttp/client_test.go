@@ -24,12 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/sdk/resource"
-	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 const (
@@ -270,35 +268,4 @@ func TestStopWhileExporting(t *testing.T) {
 	err = exporter.Shutdown(ctx)
 	assert.NoError(t, err)
 	<-doneCh
-}
-
-func TestExportPartialSuccess(t *testing.T) {
-	mcCfg := mockCollectorConfig{
-		Partial: &collectormetricpb.ExportMetricsPartialSuccess{
-			RejectedDataPoints: 2,
-			ErrorMessage:       "partially successful",
-		},
-	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlpmetrichttp.NewClient(
-		otlpmetrichttp.WithEndpoint(mc.Endpoint()),
-		otlpmetrichttp.WithInsecure(),
-	)
-	ctx := context.Background()
-	exporter, err := otlpmetric.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
-
-	errors := new([]error)
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		*errors = append(*errors, err)
-	}))
-	err = exporter.Export(ctx, testResource, oneRecord)
-	assert.NoError(t, err)
-	require.Equal(t, 1, len(*errors))
-	require.Contains(t, (*errors)[0].Error(), "partially successful")
-	require.Contains(t, (*errors)[0].Error(), "2 metric data points rejected")
 }

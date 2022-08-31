@@ -29,8 +29,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpconfig"
@@ -170,25 +168,6 @@ func (d *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			}
 		default:
 			rErr = fmt.Errorf("failed to send %s to %s: %s", d.name, request.URL, resp.Status)
-		}
-
-		// Read the partial success message, if any.
-		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, resp.Body); err != nil {
-			return err
-		}
-		if respData.Len() != 0 {
-			var respProto colmetricpb.ExportMetricsServiceResponse
-			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-				return err
-			}
-			if respProto.PartialSuccess != nil {
-				otel.Handle(otlp.PartialSuccessToError(
-					otlp.MetricsPartialSuccess,
-					respProto.PartialSuccess.RejectedDataPoints,
-					respProto.PartialSuccess.ErrorMessage,
-				))
-			}
 		}
 
 		if err := resp.Body.Close(); err != nil {
