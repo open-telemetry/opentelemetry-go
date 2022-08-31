@@ -542,7 +542,7 @@ type TracerProvider interface {
 	// Tracer. All implementation will ensure any TracerProvider configuration
 	// changes are propagate to all provided Tracers.
 	//
-	// If name is empty, then a implementation defined default name will be
+	// If name is empty, then an implementation defined default name will be
 	// used instead.
 	//
 	// This method is safe to call concurrently.
