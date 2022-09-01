@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -75,7 +76,7 @@ func TestMeterRegistry(t *testing.T) {
 // A meter should be able to make instruments concurrently.
 func TestMeterInstrumentConcurrency(t *testing.T) {
 	wg := &sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(12)
 
 	m := NewMeterProvider().Meter("inst-concurrency")
 
@@ -103,6 +104,30 @@ func TestMeterInstrumentConcurrency(t *testing.T) {
 		_, _ = m.AsyncInt64().Gauge("AIGauge")
 		wg.Done()
 	}()
+	go func() {
+		_, _ = m.SyncFloat64().Counter("SFCounter")
+		wg.Done()
+	}()
+	go func() {
+		_, _ = m.SyncFloat64().UpDownCounter("SFUpDownCounter")
+		wg.Done()
+	}()
+	go func() {
+		_, _ = m.SyncFloat64().Histogram("SFHistogram")
+		wg.Done()
+	}()
+	go func() {
+		_, _ = m.SyncInt64().Counter("SICounter")
+		wg.Done()
+	}()
+	go func() {
+		_, _ = m.SyncInt64().UpDownCounter("SIUpDownCounter")
+		wg.Done()
+	}()
+	go func() {
+		_, _ = m.SyncInt64().Histogram("SIHistogram")
+		wg.Done()
+	}()
 
 	wg.Wait()
 }
@@ -126,8 +151,8 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 }
 
 // Instruments should produce correct ResourceMetrics.
-// TODO (2814): include sync instruments.
 func TestMeterCreatesInstruments(t *testing.T) {
+	var seven float64 = 7.0
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -269,6 +294,135 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Value: 11},
+					},
+				},
+			},
+		},
+
+		{
+			name: "SyncInt64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.SyncInt64().Counter("sint")
+				assert.NoError(t, err)
+
+				ctr.Add(context.Background(), 3)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 3},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.SyncInt64().UpDownCounter("sint")
+				assert.NoError(t, err)
+
+				ctr.Add(context.Background(), 11)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 11},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.SyncInt64().Histogram("histogram")
+				assert.NoError(t, err)
+
+				gauge.Record(context.Background(), 7)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint{
+						{
+							Attributes:   attribute.Set{},
+							Count:        1,
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          &seven,
+							Max:          &seven,
+							Sum:          7.0,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.SyncFloat64().Counter("sfloat")
+				assert.NoError(t, err)
+
+				ctr.Add(context.Background(), 3)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 3},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.SyncFloat64().UpDownCounter("sfloat")
+				assert.NoError(t, err)
+
+				ctr.Add(context.Background(), 11)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 11},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.SyncFloat64().Histogram("histogram")
+				assert.NoError(t, err)
+
+				gauge.Record(context.Background(), 7)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint{
+						{
+							Attributes:   attribute.Set{},
+							Count:        1,
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          &seven,
+							Max:          &seven,
+							Sum:          7.0,
+						},
 					},
 				},
 			},
