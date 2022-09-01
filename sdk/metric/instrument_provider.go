@@ -195,7 +195,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 	}, err
 }
 
-// Gauge creates an instrument for recording the current value.
+// Histogram creates an instrument for recording the current value.
 func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
@@ -256,7 +256,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 	}, err
 }
 
-// Gauge creates an instrument for recording the current value.
+// Histogram creates an instrument for recording the current value.
 func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
