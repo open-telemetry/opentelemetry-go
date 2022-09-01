@@ -30,11 +30,13 @@ type WrapperTracerProvider struct {
 
 var _ trace.TracerProvider = (*WrapperTracerProvider)(nil)
 
-// Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
+// Tracer creates a WrapperTracer associated with the WrapperTracerProvider.
 func (p *WrapperTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	return p.getWrappedTracer(name, opts...)
 }
 
+// Deprecated: Use NewTracerProvider(...) instead.
+//
 // NewWrappedTracerProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer, and always returns
 // it unmodified from Tracer().
@@ -52,9 +54,9 @@ type wrappedTracerKey struct {
 	version string
 }
 
-// NewDynamicWrappedTracerProvider creates a new trace provider that creates new
-// instances of WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
-func NewDynamicWrappedTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
+// NewTracerProvider creates a new trace provider that creates new instances of
+// WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
+func NewTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
 	var (
 		mtx     sync.Mutex
 		tracers = make(map[wrappedTracerKey]*WrapperTracer)

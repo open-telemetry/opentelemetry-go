@@ -24,7 +24,7 @@ func (p *namedMockTracerProvider) Tracer(name string, opts ...trace.TracerOption
 	}
 }
 
-func TestDynamicWrappedTracerProvider(t *testing.T) {
+func TestTracerProvider(t *testing.T) {
 	// assertMockTracerName casts tracer into a named mock tracer provided by
 	// namedMockTracerProvider, and asserts against its name
 	assertMockTracerName := func(t *testing.T, tracer trace.Tracer, name string) {
@@ -45,7 +45,7 @@ func TestDynamicWrappedTracerProvider(t *testing.T) {
 	var (
 		foobar   = "foobar"
 		bazbar   = "bazbar"
-		provider = NewDynamicWrappedTracerProvider(nil, &namedMockTracerProvider{})
+		provider = NewTracerProvider(nil, &namedMockTracerProvider{})
 	)
 
 	t.Run("Tracers should be created with foobar from provider", func(t *testing.T) {
