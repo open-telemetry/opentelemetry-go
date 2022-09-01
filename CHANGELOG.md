@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
 - Add an `Attribute` field to the `Scope` type in `go.opentelemetry.io/otel/sdk/instrumentation`. (#3131)
 - Add the `WithScopeAttributes` `TracerOption` to the `go.opentelemetry.io/otel/trace` package. (#3131)
+- Add the `WithScopeAttributes` `MeterOption` to the `go.opentelemetry.io/otel/metric` package. (#3132)
 
 ### Changed
 
