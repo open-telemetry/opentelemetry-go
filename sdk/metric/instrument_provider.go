@@ -23,6 +23,8 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
+	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
@@ -141,6 +143,128 @@ func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asy
 		Name:        name,
 		Description: cfg.Description(),
 		Kind:        view.AsyncGauge,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[float64]{
+		aggregators: aggs,
+	}, err
+}
+
+type syncInt64Provider struct {
+	scope    instrumentation.Scope
+	registry *pipelineRegistry
+}
+
+var _ syncint64.InstrumentProvider = syncInt64Provider{}
+
+// Counter creates an instrument for recording increasing values.
+func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncCounter,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[int64]{
+		aggregators: aggs,
+	}, err
+}
+
+// UpDownCounter creates an instrument for recording changes of a value.
+func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncUpDownCounter,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[int64]{
+		aggregators: aggs,
+	}, err
+}
+
+// Histogram creates an instrument for recording the current value.
+func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncHistogram,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[int64]{
+		aggregators: aggs,
+	}, err
+}
+
+type syncFloat64Provider struct {
+	scope    instrumentation.Scope
+	registry *pipelineRegistry
+}
+
+var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
+
+// Counter creates an instrument for recording increasing values.
+func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncCounter,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[float64]{
+		aggregators: aggs,
+	}, err
+}
+
+// UpDownCounter creates an instrument for recording changes of a value.
+func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncUpDownCounter,
+	}, cfg.Unit())
+	if len(aggs) == 0 && err != nil {
+		err = fmt.Errorf("instrument does not match any view: %w", err)
+	}
+	return &instrumentImpl[float64]{
+		aggregators: aggs,
+	}, err
+}
+
+// Histogram creates an instrument for recording the current value.
+func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
+	cfg := instrument.NewConfig(opts...)
+
+	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+		Scope:       p.scope,
+		Name:        name,
+		Description: cfg.Description(),
+		Kind:        view.SyncHistogram,
 	}, cfg.Unit())
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
