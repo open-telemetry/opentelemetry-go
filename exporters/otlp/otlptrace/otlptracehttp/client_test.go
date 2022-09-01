@@ -371,14 +371,14 @@ func TestPartialSuccess(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 
-	errors := new([]error)
+	errors := []error{}
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		*errors = append(*errors, err)
+		errors = append(errors, err)
 	}))
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 
-	require.Equal(t, 1, len(*errors))
-	require.Contains(t, (*errors)[0].Error(), "partially successful")
-	require.Contains(t, (*errors)[0].Error(), "2 spans rejected")
+	require.Equal(t, 1, len(errors))
+	require.Contains(t, errors[0].Error(), "partially successful")
+	require.Contains(t, errors[0].Error(), "2 spans rejected")
 }
