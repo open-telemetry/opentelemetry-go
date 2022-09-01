@@ -398,16 +398,16 @@ func TestPartialSuccess(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	errors := new([]error)
+	errors := []error{}
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		*errors = append(*errors, err)
+		errors = append(errors, err)
 	}))
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
-	require.Equal(t, 1, len(*errors))
-	require.Contains(t, (*errors)[0].Error(), "partially successful")
-	require.Contains(t, (*errors)[0].Error(), "2 spans rejected")
+	require.Equal(t, 1, len(errors))
+	require.Contains(t, errors[0].Error(), "partially successful")
+	require.Contains(t, errors[0].Error(), "2 spans rejected")
 }
