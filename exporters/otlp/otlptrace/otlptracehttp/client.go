@@ -156,47 +156,48 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			return err
 		}
 
-		var rErr error
+		if resp != nil && resp.Body != nil {
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					otel.Handle(err)
+				}
+			}()
+		}
+
 		switch resp.StatusCode {
 		case http.StatusOK:
 			// Success, do not retry.
-		case http.StatusTooManyRequests,
-			http.StatusServiceUnavailable:
-			// Retry-able failure.
-			rErr = newResponseError(resp.Header)
+			// Read the partial success message, if any.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
+				return err
+			}
 
-			// Going to retry, drain the body to reuse the connection.
+			if respData.Len() != 0 {
+				var respProto coltracepb.ExportTraceServiceResponse
+				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+					return err
+				}
+
+				if respProto.PartialSuccess != nil {
+					otel.Handle(otlp.PartialSuccessToError(
+						otlp.TracingPartialSuccess,
+						respProto.PartialSuccess.RejectedSpans,
+						respProto.PartialSuccess.ErrorMessage,
+					))
+				}
+			}
+			return nil
+
+		case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+			// Retry-able failures.  Drain the body to reuse the connection.
 			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-				_ = resp.Body.Close()
-				return err
+				otel.Handle(err)
 			}
+			return newResponseError(resp.Header)
 		default:
-			rErr = fmt.Errorf("failed to send %s to %s: %s", d.name, request.URL, resp.Status)
+			return fmt.Errorf("failed to send %s to %s: %s", d.name, request.URL, resp.Status)
 		}
-
-		// Read the partial success message, if any.
-		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, resp.Body); err != nil {
-			return err
-		}
-		if respData.Len() != 0 {
-			var respProto coltracepb.ExportTraceServiceResponse
-			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-				return err
-			}
-			if respProto.PartialSuccess != nil {
-				otel.Handle(otlp.PartialSuccessToError(
-					otlp.TracingPartialSuccess,
-					respProto.PartialSuccess.RejectedSpans,
-					respProto.PartialSuccess.ErrorMessage,
-				))
-			}
-		}
-
-		if err := resp.Body.Close(); err != nil {
-			return err
-		}
-		return rErr
 	})
 }
 
