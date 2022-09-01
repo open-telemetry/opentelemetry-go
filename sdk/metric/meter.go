@@ -126,12 +126,10 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	// TODO (#2814): implement.
-	return nil
+	return syncInt64Provider{scope: m.Scope, registry: m.registry}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	// TODO (#2814): implement.
-	return nil
+	return syncFloat64Provider{scope: m.Scope, registry: m.registry}
 }
