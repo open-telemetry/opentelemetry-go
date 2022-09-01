@@ -41,37 +41,43 @@ type IDGenerator interface {
 }
 
 type randomIDGenerator struct {
-	sync.Mutex
-	randSource *rand.Rand
+	// pool is a pool of *rand.Rand objects. It provides a way to allow multiple
+	// goroutines to concurrently generate random IDs without having to acquire
+	// a mutex.
+	pool *sync.Pool // of *rand.Rand
 }
 
 var _ IDGenerator = &randomIDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
-	gen.Lock()
-	defer gen.Unlock()
+	r := gen.pool.Get().(*rand.Rand)
+	defer gen.pool.Put(r)
 	sid := trace.SpanID{}
-	_, _ = gen.randSource.Read(sid[:])
+	_, _ = r.Read(sid[:])
 	return sid
 }
 
 // NewIDs returns a non-zero trace ID and a non-zero span ID from a
 // randomly-chosen sequence.
 func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
-	gen.Lock()
-	defer gen.Unlock()
+	r := gen.pool.Get().(*rand.Rand)
+	defer gen.pool.Put(r)
 	tid := trace.TraceID{}
-	_, _ = gen.randSource.Read(tid[:])
+	_, _ = r.Read(tid[:])
 	sid := trace.SpanID{}
-	_, _ = gen.randSource.Read(sid[:])
+	_, _ = r.Read(sid[:])
 	return tid, sid
 }
 
 func defaultIDGenerator() IDGenerator {
-	gen := &randomIDGenerator{}
-	var rngSeed int64
-	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
-	gen.randSource = rand.New(rand.NewSource(rngSeed))
-	return gen
+	return &randomIDGenerator{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				var rngSeed int64
+				_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+				return rand.New(rand.NewSource(rngSeed))
+			},
+		},
+	}
 }
