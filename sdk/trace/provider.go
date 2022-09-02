@@ -142,9 +142,10 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		name = defaultTracerName
 	}
 	is := instrumentation.Scope{
-		Name:      name,
-		Version:   c.InstrumentationVersion(),
-		SchemaURL: c.SchemaURL(),
+		Name:       name,
+		Version:    c.InstrumentationVersion(),
+		SchemaURL:  c.SchemaURL(),
+		Attributes: c.Attributes(),
 	}
 	t, ok := p.namedTracer[is]
 	if !ok {
@@ -153,7 +154,13 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 			instrumentationScope: is,
 		}
 		p.namedTracer[is] = t
-		global.Info("Tracer created", "name", name, "version", c.InstrumentationVersion(), "schemaURL", c.SchemaURL())
+		global.Info(
+			"Tracer created",
+			"name", name,
+			"version", c.InstrumentationVersion(),
+			"schemaURL", c.SchemaURL(),
+			"attributes", c.Attributes(),
+		)
 	}
 	return t
 }
@@ -162,16 +169,16 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 func (p *TracerProvider) RegisterSpanProcessor(s SpanProcessor) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	new := spanProcessorStates{}
+	newSPS := spanProcessorStates{}
 	if old, ok := p.spanProcessors.Load().(spanProcessorStates); ok {
-		new = append(new, old...)
+		newSPS = append(newSPS, old...)
 	}
 	newSpanSync := &spanProcessorState{
 		sp:    s,
 		state: &sync.Once{},
 	}
-	new = append(new, newSpanSync)
-	p.spanProcessors.Store(new)
+	newSPS = append(newSPS, newSpanSync)
+	p.spanProcessors.Store(newSPS)
 }
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors.

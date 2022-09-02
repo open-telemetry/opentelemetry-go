@@ -12,6 +12,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support Go 1.19.
   Include compatibility testing and document support. (#3077)
+- Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
+- Add an `Attribute` field to the `Scope` type in `go.opentelemetry.io/otel/sdk/instrumentation`. (#3131)
+- Add the `WithScopeAttributes` `TracerOption` to the `go.opentelemetry.io/otel/trace` package. (#3131)
+- Add the `WithScopeAttributes` `MeterOption` to the `go.opentelemetry.io/otel/metric` package. (#3132)
+
+### Changed
+
+- Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
+- The exponential histogram mapping functions have been updated with
+  exact upper-inclusive boundary support following the [corresponding
+  specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
+- Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
+- Export scope attributes for all exporters provided by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#3131)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
