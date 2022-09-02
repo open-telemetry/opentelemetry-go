@@ -248,10 +248,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	if !ok {
 		return fmt.Errorf("failed to load span processors")
 	}
-	if len(spss) == 0 {
-		return nil
-	}
-
+	var retErr error
 	for _, sps := range spss {
 		select {
 		case <-ctx.Done():
@@ -264,10 +261,15 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 			err = sps.sp.Shutdown(ctx)
 		})
 		if err != nil {
-			return err
+			if retErr == nil {
+				retErr = err
+			} else {
+				// Poor man's list of errors
+				retErr = fmt.Errorf("%v; %v", retErr, err)
+			}
 		}
 	}
-	return nil
+	return retErr
 }
 
 // TracerProviderOption configures a TracerProvider.
