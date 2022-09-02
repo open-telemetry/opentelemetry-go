@@ -116,9 +116,12 @@ func (c *client) Shutdown(ctx context.Context) error {
 	c.msc = nil
 
 	err := ctx.Err()
-	if err == nil && c.ourConn {
-		// ctx is not expired, and we control conn; cleanly close it.
-		err = c.conn.Close()
+	if c.ourConn {
+		closeErr := c.conn.Close()
+		// A context timeout error takes precedence over this error.
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
 	}
 	c.conn = nil
 	return err
