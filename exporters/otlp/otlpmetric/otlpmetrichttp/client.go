@@ -25,6 +25,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -89,13 +90,16 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 		httpClient.Transport = transport
 	}
 
-	format := "https://%s%s"
-	if cfg.Metrics.Insecure {
-		format = "http://%s%s"
+	u := &url.URL{
+		Scheme: "https",
+		Host:   cfg.Metrics.Endpoint,
+		Path:   cfg.Metrics.URLPath,
 	}
-	rawURL := fmt.Sprintf(format, cfg.Metrics.Endpoint, cfg.Metrics.URLPath)
+	if cfg.Metrics.Insecure {
+		u.Scheme = "http"
+	}
 	// Body is set when this is cloned during upload.
-	req, err := http.NewRequest(http.MethodPost, rawURL, http.NoBody)
+	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
