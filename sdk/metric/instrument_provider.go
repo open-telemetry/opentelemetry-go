@@ -163,7 +163,7 @@ var _ syncint64.InstrumentProvider = syncInt64Provider{}
 func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+	aggs, err := p.registry.createInt64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -181,7 +181,7 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+	aggs, err := p.registry.createInt64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -199,7 +199,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[int64](p.registry, view.Instrument{
+	aggs, err := p.registry.createInt64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -224,7 +224,7 @@ var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
 func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+	aggs, err := p.registry.createFloat64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -242,7 +242,7 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+	aggs, err := p.registry.createFloat64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -260,7 +260,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := createAggregators[float64](p.registry, view.Instrument{
+	aggs, err := p.registry.createFloat64Aggregators(view.Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
