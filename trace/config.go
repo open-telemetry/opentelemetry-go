@@ -24,7 +24,8 @@ import (
 type TracerConfig struct {
 	instrumentationVersion string
 	// Schema URL of the telemetry emitted by the Tracer.
-	schemaURL string
+	schemaURL  string
+	attributes attribute.Set
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
@@ -35,6 +36,11 @@ func (t *TracerConfig) InstrumentationVersion() string {
 // SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
 func (t *TracerConfig) SchemaURL() string {
 	return t.schemaURL
+}
+
+// Attributes returns the scope attribute set of the Tracer.
+func (t *TracerConfig) Attributes() attribute.Set {
+	return t.attributes
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
@@ -311,6 +317,16 @@ func WithInstrumentationVersion(version string) TracerOption {
 func WithSchemaURL(schemaURL string) TracerOption {
 	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
 		cfg.schemaURL = schemaURL
+		return cfg
+	})
+}
+
+// WithScopeAttributes sets the attributes for the scope of a Tracer. The
+// attributes are stored as an attribute set. Duplicate values are removed, the
+// last value is used.
+func WithScopeAttributes(attr ...attribute.KeyValue) TracerOption {
+	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
+		cfg.attributes = attribute.NewSet(attr...)
 		return cfg
 	})
 }
