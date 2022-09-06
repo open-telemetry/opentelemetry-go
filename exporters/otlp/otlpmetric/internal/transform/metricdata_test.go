@@ -255,6 +255,9 @@ var (
 			Name:      "test/code/path",
 			Version:   "v0.1.0",
 			SchemaURL: semconv.SchemaURL,
+			Attributes: attribute.NewSet(
+				attribute.String("domain", "metric"),
+			),
 		},
 		Metrics: otelMetrics,
 	}}
@@ -263,6 +266,14 @@ var (
 		Scope: &cpb.InstrumentationScope{
 			Name:    "test/code/path",
 			Version: "v0.1.0",
+			Attributes: []*cpb.KeyValue{{
+				Key: "domain",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{
+						StringValue: "metric",
+					},
+				},
+			}},
 		},
 		Metrics:   pbMetrics,
 		SchemaUrl: semconv.SchemaURL,
