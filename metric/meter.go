@@ -24,15 +24,50 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
-// MeterProvider provides access to named Meter instances, for instrumenting
-// an application or library.
+// MeterProvider provides Meters that are used by instrumentation code to
+// create instruments that measure code operations.
+//
+// A MeterProvider is the collection destination of all measurements made from
+// instruments the provided Meters created, it represents a unique telemetry
+// collection pipeline. How that pipeline is defined, meaning how those
+// measurements are collected, processed, and where they are exported, depends
+// on its implementation. Instrumentation authors do not need to define this
+// implementation, rather just use the provided Meters to instrument code.
+//
+// Commonly, instrumentation code will accept a MeterProvider implementation at
+// runtime from its users or it can simply use the globally registered one (see
+// https://pkg.go.dev/go.opentelemetry.io/otel/metric/global#MeterProvider).
+//
+// Warning: methods may be added to this interface in minor releases.
 type MeterProvider interface {
-	// Meter creates an instance of a `Meter` interface. The instrumentationName
-	// must be the name of the library providing instrumentation. This name may
-	// be the same as the instrumented code only if that code provides built-in
-	// instrumentation. If the instrumentationName is empty, then a
-	// implementation defined default name will be used instead.
-	Meter(instrumentationName string, opts ...MeterOption) Meter
+	// Meter returns a unique Meter scoped to be used by instrumentation code
+	// to measure code operations. The scope and identity of that
+	// instrumentation code is uniquely defined by the name and options passed.
+	//
+	// The passed name needs to uniquely identify instrumentation code.
+	// Therefore, it is recommended that name is the Go package name of the
+	// library providing instrumentation (note: not the code being
+	// instrumented). Instrumentation libraries can have multiple versions,
+	// therefore, the WithInstrumentationVersion option should be used to
+	// distinguish these different codebases. Additionally, instrumentation
+	// libraries may sometimes use metric measurements to communicate different
+	// domains of code operations data (i.e. using different Meters to
+	// communicate user experience and back-end operations). If this is the
+	// case, the WithScopeAttributes option should be used to uniquely identify
+	// Meters that handle the different domains of code operations data.
+	//
+	// If the same name and options are passed multiple times, the same Meter
+	// will be returned (it is up to the implementation if this will be the
+	// same underlying instance of that Meter or not). It is not necessary to
+	// call this multiple times with the same name and options to get an
+	// up-to-date Meter. All implementations will ensure any MeterProvider
+	// configuration changes are propagated to all provided Meters.
+	//
+	// If name is empty, then an implementation defined default name will be
+	// used instead.
+	//
+	// This method is safe to call concurrently.
+	Meter(name string, options ...MeterOption) Meter
 }
 
 // Meter provides access to instrument instances for recording metrics.

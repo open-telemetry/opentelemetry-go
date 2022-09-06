@@ -19,7 +19,7 @@ This is the OpenTelemetry for Go documentation. OpenTelemetry is an observabilit
 
 The current status of the major functional components for OpenTelemetry Go is as follows:
 
-| Tracing | Metrics | Logging |
+| Traces  | Metrics | Logs    |
 | ------- | ------- | ------- |
 | Stable  | Alpha   | Not Yet Implemented |
 
