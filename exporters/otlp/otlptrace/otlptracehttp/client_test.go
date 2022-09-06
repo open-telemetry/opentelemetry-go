@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
 const (
@@ -347,4 +349,36 @@ func TestStopWhileExporting(t *testing.T) {
 	err = exporter.Shutdown(ctx)
 	assert.NoError(t, err)
 	<-doneCh
+}
+
+func TestPartialSuccess(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: 2,
+			ErrorMessage:  "partially successful",
+		},
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	ctx := context.Background()
+	exporter, err := otlptrace.New(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(context.Background()))
+	}()
+
+	errors := []error{}
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		errors = append(errors, err)
+	}))
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	assert.NoError(t, err)
+
+	require.Equal(t, 1, len(errors))
+	require.Contains(t, errors[0].Error(), "partially successful")
+	require.Contains(t, errors[0].Error(), "2 spans rejected")
 }

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,12 +30,14 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
@@ -385,4 +387,27 @@ func TestEmptyData(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	assert.NoError(t, exp.ExportSpans(ctx, nil))
+}
+
+func TestPartialSuccess(t *testing.T) {
+	mc := runMockCollectorWithConfig(t, &mockConfig{
+		partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: 2,
+			ErrorMessage:  "partially successful",
+		},
+	})
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	errors := []error{}
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		errors = append(errors, err)
+	}))
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	require.Equal(t, 1, len(errors))
+	require.Contains(t, errors[0].Error(), "partially successful")
+	require.Contains(t, errors[0].Error(), "2 spans rejected")
 }
