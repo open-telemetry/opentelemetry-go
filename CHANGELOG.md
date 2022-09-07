@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add an `Attribute` field to the `Scope` type in `go.opentelemetry.io/otel/sdk/instrumentation`. (#3131)
 - Add the `WithScopeAttributes` `TracerOption` to the `go.opentelemetry.io/otel/trace` package. (#3131)
 - Add the `WithScopeAttributes` `MeterOption` to the `go.opentelemetry.io/otel/metric` package. (#3132)
+- Add a `WithRequestSanitizer` option to `semconv.HTTPClientAttributesFromHTTPRequest`. (#3152)
 
 ### Changed
 
