@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	config "go.opentelemetry.io/otel/semconv/config"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-cmp/cmp"
@@ -1035,7 +1036,7 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 		header        http.Header
 		tls           tlsOption
 		contentLength int64
-		opts          []Option
+		opts          []config.Option
 
 		expected []attribute.KeyValue
 	}{
@@ -1233,8 +1234,8 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 			url: &url.URL{
 				Path: "/user/123?foo=bar",
 			},
-			opts: []Option{
-				WithRequestSanitizer(func(r *http.Request) *http.Request {
+			opts: []config.Option{
+				config.WithRequestSanitizer(func(r *http.Request) *http.Request {
 					sr := r.Clone(context.Background())
 					sr.URL.Path = "/user/123"
 					return sr

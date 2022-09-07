@@ -28,12 +28,14 @@ var defaultRequestSanitizer = func(r *http.Request) *http.Request {
 	return sr
 }
 
-type config struct {
+// Config holds the configurable parameters for semconv methods.
+type Config struct {
 	RequestSanitizer func(*http.Request) *http.Request
 }
 
-func newConfig(opts ...Option) *config {
-	c := &config{
+// New creates a new config struct with default values set.
+func New(opts ...Option) *Config {
+	c := &Config{
 		RequestSanitizer: defaultRequestSanitizer,
 	}
 	for _, opt := range opts {
@@ -45,19 +47,19 @@ func newConfig(opts ...Option) *config {
 
 // Option interface used for setting optional config properties.
 type Option interface {
-	apply(*config)
+	apply(*Config)
 }
 
-type optionFunc func(*config)
+type optionFunc func(*Config)
 
-func (o optionFunc) apply(c *config) {
+func (o optionFunc) apply(c *Config) {
 	o(c)
 }
 
 // WithRequestSanitizer specifies a custom URL sanitizer used when setting
 // attributes with data coming from the HTTP request.
 func WithRequestSanitizer(fn func(*http.Request) *http.Request) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *Config) {
 		cfg.RequestSanitizer = fn
 	})
 }

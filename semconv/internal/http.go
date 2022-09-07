@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	config "go.opentelemetry.io/otel/semconv/config"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -144,9 +145,9 @@ func (sc *SemanticConventions) EndUserAttributesFromHTTPRequest(request *http.Re
 // HTTPClientAttributesFromHTTPRequest generates attributes of the
 // http namespace as specified by the OpenTelemetry specification for
 // a span on the client side.
-func (sc *SemanticConventions) HTTPClientAttributesFromHTTPRequest(request *http.Request, opts ...Option) []attribute.KeyValue {
+func (sc *SemanticConventions) HTTPClientAttributesFromHTTPRequest(request *http.Request, opts ...config.Option) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{}
-	cfg := newConfig(opts...)
+	cfg := config.New(opts...)
 	safeRequest := cfg.RequestSanitizer(request)
 
 	attrs = append(attrs, sc.HTTPURLKey.String(safeRequest.URL.String()))
