@@ -14,6 +14,7 @@
 package internal
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/url"
@@ -1034,6 +1035,7 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 		header        http.Header
 		tls           tlsOption
 		contentLength int64
+		opts          []Option
 
 		expected []attribute.KeyValue
 	}{
@@ -1225,13 +1227,32 @@ func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
 				attribute.String("http.scheme", "http"),
 			},
 		},
+		{
+			name:   "can provide its own request sanitizer",
+			method: "",
+			url: &url.URL{
+				Path: "/user/123?foo=bar",
+			},
+			opts: []Option{
+				WithRequestSanitizer(func(r *http.Request) *http.Request {
+					sr := r.Clone(context.Background())
+					sr.URL.Path = "/user/123"
+					return sr
+				}),
+			},
+			expected: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.url", "/user/123"),
+				attribute.String("http.scheme", "http"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
 			r.ContentLength = tc.contentLength
-			got := sc.HTTPClientAttributesFromHTTPRequest(r)
+			got := sc.HTTPClientAttributesFromHTTPRequest(r, tc.opts...)
 			assert.ElementsMatch(t, tc.expected, got)
 		})
 	}

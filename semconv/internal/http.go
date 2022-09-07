@@ -144,20 +144,14 @@ func (sc *SemanticConventions) EndUserAttributesFromHTTPRequest(request *http.Re
 // HTTPClientAttributesFromHTTPRequest generates attributes of the
 // http namespace as specified by the OpenTelemetry specification for
 // a span on the client side.
-func (sc *SemanticConventions) HTTPClientAttributesFromHTTPRequest(request *http.Request) []attribute.KeyValue {
+func (sc *SemanticConventions) HTTPClientAttributesFromHTTPRequest(request *http.Request, opts ...Option) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{}
+	cfg := newConfig(opts...)
+	safeRequest := cfg.RequestSanitizer(request)
 
-	// remove any username/password info that may be in the URL
-	// before adding it to the attributes
-	userinfo := request.URL.User
-	request.URL.User = nil
+	attrs = append(attrs, sc.HTTPURLKey.String(safeRequest.URL.String()))
 
-	attrs = append(attrs, sc.HTTPURLKey.String(request.URL.String()))
-
-	// restore any username/password info that was removed
-	request.URL.User = userinfo
-
-	return append(attrs, sc.httpCommonAttributesFromHTTPRequest(request)...)
+	return append(attrs, sc.httpCommonAttributesFromHTTPRequest(safeRequest)...)
 }
 
 func (sc *SemanticConventions) httpCommonAttributesFromHTTPRequest(request *http.Request) []attribute.KeyValue {
