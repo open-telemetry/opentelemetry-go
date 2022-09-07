@@ -30,11 +30,11 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -390,24 +390,18 @@ func TestEmptyData(t *testing.T) {
 }
 
 func TestPartialSuccess(t *testing.T) {
-	mc := runMockCollectorWithConfig(t, &mockConfig{
-		partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 2,
-			ErrorMessage:  "partially successful",
-		},
-	})
+	resp := &coltracepb.ExportTracePartialSuccess{
+		RejectedSpans: 2,
+		ErrorMessage:  "invalid data format",
+	}
+	mc := runMockCollectorWithConfig(t, &mockConfig{partial: resp})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	errors := []error{}
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errors = append(errors, err)
-	}))
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-	require.NoError(t, exp.ExportSpans(ctx, roSpans))
-
-	require.Equal(t, 1, len(errors))
-	require.Contains(t, errors[0].Error(), "partially successful")
-	require.Contains(t, errors[0].Error(), "2 spans rejected")
+	var got *trace.PartialExportError
+	require.ErrorAs(t, exp.ExportSpans(ctx, roSpans), &got)
+	assert.Equal(t, resp.RejectedSpans, got.RejectedN)
+	assert.EqualError(t, got.Err, resp.ErrorMessage)
 }

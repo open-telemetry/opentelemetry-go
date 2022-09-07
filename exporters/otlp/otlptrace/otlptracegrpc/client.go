@@ -26,11 +26,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+	"go.opentelemetry.io/otel/sdk/trace"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -201,15 +200,14 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		resp, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
-		if resp != nil && resp.PartialSuccess != nil {
-			otel.Handle(otlp.PartialSuccessToError(
-				otlp.TracingPartialSuccess,
-				resp.PartialSuccess.RejectedSpans,
-				resp.PartialSuccess.ErrorMessage,
-			))
-		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
+			if resp != nil && resp.PartialSuccess != nil {
+				return &trace.PartialExportError{
+					RejectedN: resp.PartialSuccess.RejectedSpans,
+					Err:       errors.New(resp.PartialSuccess.ErrorMessage),
+				}
+			}
 			// Success.
 			return nil
 		}

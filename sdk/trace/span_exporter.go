@@ -14,7 +14,10 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // SpanExporter handles the delivery of spans to external receivers. This is
 // the final component in the trace export pipeline.
@@ -45,3 +48,14 @@ type SpanExporter interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 }
+
+type PartialExportError struct {
+	RejectedN int64
+	Err       error
+}
+
+func (e *PartialExportError) Error() string {
+	return fmt.Sprintf("%d spans not exported: %s", e.RejectedN, e.Err)
+}
+
+func (e *PartialExportError) Unwrap() error { return e.Err }
