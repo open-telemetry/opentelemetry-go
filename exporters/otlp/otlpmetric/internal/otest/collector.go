@@ -91,7 +91,7 @@ type HTTPCollector struct {
 // If endpoint is an empty string, the returned collector will be listeing on
 // the localhost interface at an OS chosen port.
 //
-// If errCh is not nil, the collector will respond to Export calls with errors
+// If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
 func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, error) {
