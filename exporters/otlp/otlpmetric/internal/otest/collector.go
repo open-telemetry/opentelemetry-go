@@ -18,11 +18,28 @@
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
+	"compress/gzip"
+	"context"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"sync"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/proto"
 )
+
+var emptyExportMetricsServiceResponse = func() []byte {
+	body := collpb.ExportMetricsServiceResponse{}
+	r, err := proto.Marshal(&body)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}()
 
 // Collector is the collection target a Client sends metric uploads to.
 type Collector interface {
@@ -55,4 +72,141 @@ func (s *Storage) dump() []*mpb.ResourceMetrics {
 	var data []*mpb.ResourceMetrics
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
+}
+
+// HTTPCollector is an OTLP HTTP server that collects all requests it receives.
+type HTTPCollector struct {
+	headersMu sync.Mutex
+	headers   http.Header
+	storage   *Storage
+
+	errCh    <-chan error
+	listener net.Listener
+	srv      *http.Server
+}
+
+// NewHTTPCollector returns a *HTTPCollector that is listening at the provided
+// endpoint.
+//
+// If endpoint is an empty string, the returned collector will be listeing on
+// the localhost interface at an OS chosen port.
+//
+// If errCh is not nil, the collector will respond to Export calls with errors
+// sent on that channel. This means that if errCh is not nil Export calls will
+// block until an error is received.
+func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, error) {
+	if endpoint == "" {
+		endpoint = "localhost:0"
+	}
+
+	c := &HTTPCollector{
+		headers: http.Header{},
+		storage: NewStorage(),
+		errCh:   errCh,
+	}
+
+	var err error
+	c.listener, err = net.Listen("tcp", endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle(oconf.DefaultMetricsPath, http.HandlerFunc(c.handler))
+	c.srv = &http.Server{Handler: mux}
+	go func() { _ = c.srv.Serve(c.listener) }()
+	return c, nil
+}
+
+// Shutdown shuts down the HTTP server closing all open connections and
+// listeners.
+func (c *HTTPCollector) Shutdown(ctx context.Context) error {
+	return c.srv.Shutdown(ctx)
+}
+
+// Addr returns the net.Addr c is listening at.
+func (c *HTTPCollector) Addr() net.Addr {
+	return c.listener.Addr()
+}
+
+// Collect returns the Storage holding all collected requests.
+func (c *HTTPCollector) Collect() *Storage {
+	return c.storage
+}
+
+// Headers returns the headers received for all requests.
+func (c *HTTPCollector) Headers() map[string][]string {
+	// Makes a copy.
+	c.headersMu.Lock()
+	defer c.headersMu.Unlock()
+	return c.headers.Clone()
+}
+
+func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
+	c.respond(w, c.record(r))
+}
+
+func (c *HTTPCollector) record(r *http.Request) error {
+	// Currently only supports protobuf.
+	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
+		return fmt.Errorf("content-type not supported: %s", v)
+	}
+
+	body, err := c.readBody(r)
+	if err != nil {
+		return err
+	}
+	pbRequest := &collpb.ExportMetricsServiceRequest{}
+	err = proto.Unmarshal(body, pbRequest)
+	if err != nil {
+		return err
+	}
+	c.storage.Add(pbRequest)
+
+	c.headersMu.Lock()
+	for k, vals := range r.Header {
+		for _, v := range vals {
+			c.headers.Add(k, v)
+		}
+	}
+	c.headersMu.Unlock()
+
+	if c.errCh != nil {
+		err = <-c.errCh
+	}
+	return err
+}
+
+func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
+	var reader io.ReadCloser
+	switch r.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(r.Body)
+		if err != nil {
+			_ = reader.Close()
+			return nil, err
+		}
+	default:
+		reader = r.Body
+	}
+
+	defer func() {
+		cErr := reader.Close()
+		if err == nil {
+			err = cErr
+		}
+	}()
+	body, err = io.ReadAll(reader)
+	return body, err
+}
+
+func (c *HTTPCollector) respond(w http.ResponseWriter, err error) {
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-protobuf")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(emptyExportMetricsServiceResponse)
 }
