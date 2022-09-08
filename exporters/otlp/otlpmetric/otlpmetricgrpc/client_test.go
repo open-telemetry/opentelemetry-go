@@ -24,8 +24,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -127,51 +128,17 @@ func TestRetryable(t *testing.T) {
 	}
 }
 
-func TestClientHonorsContextErrors(t *testing.T) {
-	ctx := context.Background()
-	var emptyConn *grpc.ClientConn
-	t.Run("Shutdown", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient(ctx, WithGRPCConn(emptyConn))
+func TestClient(t *testing.T) {
+	factory := func() (otlpmetric.Client, otest.Collector) {
+		coll, err := otest.NewGRPCCollector("", nil)
 		require.NoError(t, err)
-		return c.Shutdown
-	}))
 
-	t.Run("ForceFlush", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient(ctx, WithGRPCConn(emptyConn))
+		ctx := context.Background()
+		addr := coll.Addr().String()
+		client, err := newClient(ctx, WithEndpoint(addr), WithInsecure())
 		require.NoError(t, err)
-		return c.ForceFlush
-	}))
-
-	t.Run("UploadMetrics", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient(ctx, WithGRPCConn(emptyConn))
-		require.NoError(t, err)
-		return func(ctx context.Context) error {
-			return c.UploadMetrics(ctx, nil)
-		}
-	}))
-}
-
-func testCtxErr(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
-		t.Cleanup(cancel)
-
-		t.Run("DeadlineExceeded", func(t *testing.T) {
-			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-			t.Cleanup(innerCancel)
-			<-innerCtx.Done()
-
-			f := factory(t)
-			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
-		})
-
-		t.Run("Canceled", func(t *testing.T) {
-			innerCtx, innerCancel := context.WithCancel(ctx)
-			innerCancel()
-
-			f := factory(t)
-			assert.ErrorIs(t, f(innerCtx), context.Canceled)
-		})
+		return client, coll
 	}
+
+	t.Run("Integration", otest.RunClientTests(factory))
 }
