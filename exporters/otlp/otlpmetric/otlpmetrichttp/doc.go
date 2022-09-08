@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The metrictest package is a collection of tools used to make testing parts of
-// the SDK easier.
-
-package metrictest // import "go.opentelemetry.io/otel/sdk/metric/metrictest"
+// Package otlpmetrichttp provides an otlpmetric.Exporter that communicates
+// with an OTLP receiving endpoint using protobuf encoded metric data over
+// HTTP.
+package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
