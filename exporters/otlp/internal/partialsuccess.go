@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp // import "go.opentelemetry.io/otel/exporters/otlp"
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
 
 import "fmt"
 

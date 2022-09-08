@@ -30,7 +30,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
@@ -180,8 +180,8 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				}
 
 				if respProto.PartialSuccess != nil {
-					otel.Handle(otlp.PartialSuccessToError(
-						otlp.TracingPartialSuccess,
+					otel.Handle(internal.PartialSuccessToError(
+						internal.TracingPartialSuccess,
 						respProto.PartialSuccess.RejectedSpans,
 						respProto.PartialSuccess.ErrorMessage,
 					))
