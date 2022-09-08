@@ -18,57 +18,23 @@
 package otlpmetrichttp
 
 import (
-	"context"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 )
 
-func TestClientHonorsContextErrors(t *testing.T) {
-	t.Run("Shutdown", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient()
+func TestClient(t *testing.T) {
+	factory := func() (otlpmetric.Client, otest.Collector) {
+		coll, err := otest.NewHTTPCollector("", nil)
 		require.NoError(t, err)
-		return c.Shutdown
-	}))
 
-	t.Run("ForceFlush", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient()
+		addr := coll.Addr().String()
+		client, err := newClient(WithEndpoint(addr), WithInsecure())
 		require.NoError(t, err)
-		return c.ForceFlush
-	}))
-
-	t.Run("UploadMetrics", testCtxErr(func(t *testing.T) func(context.Context) error {
-		c, err := newClient()
-		require.NoError(t, err)
-		return func(ctx context.Context) error {
-			return c.UploadMetrics(ctx, nil)
-		}
-	}))
-}
-
-func testCtxErr(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
-		t.Cleanup(cancel)
-
-		t.Run("DeadlineExceeded", func(t *testing.T) {
-			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-			t.Cleanup(innerCancel)
-			<-innerCtx.Done()
-
-			f := factory(t)
-			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
-		})
-
-		t.Run("Canceled", func(t *testing.T) {
-			innerCtx, innerCancel := context.WithCancel(ctx)
-			innerCancel()
-
-			f := factory(t)
-			assert.ErrorIs(t, f(innerCtx), context.Canceled)
-		})
+		return client, coll
 	}
+
+	t.Run("Integration", otest.RunClientTests(factory))
 }
