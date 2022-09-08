@@ -422,7 +422,6 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 		assert.Error(t, err)
 		assert.Len(t, intAggs, 0)
 	})
-
 }
 
 func TestIsAggregatorCompatible(t *testing.T) {
