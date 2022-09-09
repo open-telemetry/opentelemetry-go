@@ -19,9 +19,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/exponent"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/logarithm"
+	"go.opentelemetry.io/otel/data/exponential/mapping"
+	"go.opentelemetry.io/otel/data/exponential/mapping/exponent"
+	"go.opentelemetry.io/otel/data/exponential/mapping/logarithm"
 )
 
 func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {

@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
+	"go.opentelemetry.io/otel/data/exponential/mapping"
+	"go.opentelemetry.io/otel/data/exponential/mapping/internal"
 )
 
 const (

@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logarithm // import "go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/logarithm"
+package logarithm // import "go.opentelemetry.io/otel/data/exponential/mapping/logarithm"
 
 import (
 	"fmt"
 	"math"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/mapping/internal"
+	"go.opentelemetry.io/otel/data/exponential/mapping"
+	"go.opentelemetry.io/otel/data/exponential/mapping/internal"
 )
 
 const (
