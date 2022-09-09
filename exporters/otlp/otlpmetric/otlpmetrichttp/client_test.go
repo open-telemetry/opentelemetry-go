@@ -20,6 +20,7 @@ package otlpmetrichttp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -48,8 +49,8 @@ func TestClient(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
-	factoryFunc := func(errCh <-chan error, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
-		coll, err := otest.NewHTTPCollector("", errCh)
+	factoryFunc := func(ePt string, errCh <-chan error, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
+		coll, err := otest.NewHTTPCollector(ePt, errCh)
 		require.NoError(t, err)
 
 		ctx := context.Background()
@@ -65,7 +66,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithHeaders", func(t *testing.T) {
 		key := http.CanonicalHeaderKey("my-custom-header")
 		headers := map[string]string{key: "custom-value"}
-		exp, coll := factoryFunc(nil, WithHeaders(headers))
+		exp, coll := factoryFunc("", nil, WithHeaders(headers))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
@@ -81,6 +82,7 @@ func TestConfig(t *testing.T) {
 		// Do not send on errCh so the Collector never responds to the client.
 		errCh := make(chan error)
 		exp, coll := factoryFunc(
+			"",
 			errCh,
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
@@ -95,7 +97,7 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
-		exp, coll := factoryFunc(nil, WithCompression(GzipCompression))
+		exp, coll := factoryFunc("", nil, WithCompression(GzipCompression))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
@@ -111,7 +113,7 @@ func TestConfig(t *testing.T) {
 		errCh <- &otest.HTTPResponseError{Status: http.StatusServiceUnavailable, Err: emptyErr, Header: header}
 		errCh <- &otest.HTTPResponseError{Status: http.StatusTooManyRequests, Err: emptyErr}
 		errCh <- nil
-		exp, coll := factoryFunc(errCh, WithRetry(RetryConfig{
+		exp, coll := factoryFunc("", errCh, WithRetry(RetryConfig{
 			Enabled:         true,
 			InitialInterval: time.Nanosecond,
 			MaxInterval:     time.Millisecond,
@@ -124,5 +126,16 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, errCh, 0, "failed HTTP responses did not occur")
+	})
+
+	t.Run("WithURLPath", func(t *testing.T) {
+		path := "/prefix/v2/metrics"
+		ePt := fmt.Sprintf("http://localhost:0%s", path)
+		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 }

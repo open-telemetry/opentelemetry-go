@@ -18,14 +18,26 @@
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	cryptorand "crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
+	mathrand "math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -103,14 +115,25 @@ type HTTPCollector struct {
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listeing on
-// the localhost interface at an OS chosen port.
+// the localhost interface at an OS chosen port, not use TLS, and listen at the
+// default OTLP metric endpoint path ("/v1/metrics"). If the endpoint contains
+// a prefix of "https" the server will generate weak self-signed TLS
+// certificates and use them to server data. If the endpoint contains a path,
+// that path will be used instead of the default OTLP metric endpoint path.
 //
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
 func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if u.Host == "" {
+		u.Host = "localhost:0"
+	}
+	if u.Path == "" {
+		u.Path = oconf.DefaultMetricsPath
 	}
 
 	c := &HTTPCollector{
@@ -119,16 +142,26 @@ func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, erro
 		errCh:   errCh,
 	}
 
-	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
+	c.listener, err = net.Listen("tcp", u.Host)
 	if err != nil {
 		return nil, err
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(oconf.DefaultMetricsPath, http.HandlerFunc(c.handler))
+	mux.Handle(u.Path, http.HandlerFunc(c.handler))
 	c.srv = &http.Server{Handler: mux}
-	go func() { _ = c.srv.Serve(c.listener) }()
+	if u.Scheme == "https" {
+		cert, err := weakCertificate()
+		if err != nil {
+			return nil, err
+		}
+		c.srv.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		go func() { _ = c.srv.ServeTLS(c.listener, "", "") }()
+	} else {
+		go func() { _ = c.srv.Serve(c.listener) }()
+	}
 	return c, nil
 }
 
@@ -252,4 +285,58 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(emptyExportMetricsServiceResponse)
+}
+
+type mathRandReader struct{}
+
+func (mathRandReader) Read(p []byte) (n int, err error) {
+	return mathrand.Read(p)
+}
+
+var randReader mathRandReader
+
+// Based on https://golang.org/src/crypto/tls/generate_cert.go,
+// simplified and weakened.
+func weakCertificate() (tls.Certificate, error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), randReader)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	notBefore := time.Now()
+	notAfter := notBefore.Add(time.Hour)
+	max := new(big.Int).Lsh(big.NewInt(1), 128)
+	sn, err := cryptorand.Int(randReader, max)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	tmpl := x509.Certificate{
+		SerialNumber:          sn,
+		Subject:               pkix.Name{Organization: []string{"otel-go"}},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.IPv6loopback, net.IPv4(127, 0, 0, 1)},
+	}
+	derBytes, err := x509.CreateCertificate(randReader, &tmpl, &tmpl, &priv.PublicKey, priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	var certBuf bytes.Buffer
+	err = pem.Encode(&certBuf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	var privBuf bytes.Buffer
+	err = pem.Encode(&privBuf, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	return tls.X509KeyPair(certBuf.Bytes(), privBuf.Bytes())
 }
