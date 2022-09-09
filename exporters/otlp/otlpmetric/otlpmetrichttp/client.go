@@ -262,8 +262,9 @@ type retryableError struct {
 // throttle delay contained in headers.
 func newResponseError(header http.Header) error {
 	var rErr retryableError
-	if s, ok := header["Retry-After"]; ok {
-		if t, err := strconv.ParseInt(s[0], 10, 64); err == nil {
+	fmt.Println(header)
+	if v := header.Get("Retry-After"); v != "" {
+		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
 			rErr.throttle = t
 		}
 	}

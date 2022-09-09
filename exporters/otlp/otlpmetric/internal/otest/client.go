@@ -203,12 +203,12 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
 
 			require.NoError(t, client.ForceFlush(ctx))
-			rm := collector.Collect().dump()
+			rm := collector.Collect().Dump()
 			// Data correctness is not important, just it was received.
 			require.Greater(t, len(rm), 0, "no data uploaded")
 
 			require.NoError(t, client.Shutdown(ctx))
-			rm = collector.Collect().dump()
+			rm = collector.Collect().Dump()
 			assert.Len(t, rm, 0, "client did not flush all data")
 		})
 
@@ -218,7 +218,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
 			require.NoError(t, client.Shutdown(ctx))
-			got := coll.Collect().dump()
+			got := coll.Collect().Dump()
 			require.Len(t, got, 1, "upload of one ResourceMetrics")
 			diff := cmp.Diff(got[0], resourceMetrics, cmp.Comparer(proto.Equal))
 			if diff != "" {

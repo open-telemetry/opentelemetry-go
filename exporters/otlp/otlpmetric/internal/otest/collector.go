@@ -20,6 +20,7 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -64,8 +65,8 @@ func (s *Storage) Add(request *collpb.ExportMetricsServiceRequest) {
 	s.data = append(s.data, request.ResourceMetrics...)
 }
 
-// dump returns all added ResourceMetrics and clears the storage.
-func (s *Storage) dump() []*mpb.ResourceMetrics {
+// Dump returns all added ResourceMetrics and clears the storage.
+func (s *Storage) Dump() []*mpb.ResourceMetrics {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 
@@ -73,6 +74,18 @@ func (s *Storage) dump() []*mpb.ResourceMetrics {
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
 }
+
+type HTTPResponseError struct {
+	Err    error
+	Status int
+	Header http.Header
+}
+
+func (e *HTTPResponseError) Error() string {
+	return fmt.Sprintf("%d: %s", e.Status, e.Err)
+}
+
+func (e *HTTPResponseError) Unwrap() error { return e.Err }
 
 // HTTPCollector is an OTLP HTTP server that collects all requests it receives.
 type HTTPCollector struct {
@@ -159,7 +172,10 @@ func (c *HTTPCollector) record(r *http.Request) error {
 	pbRequest := &collpb.ExportMetricsServiceRequest{}
 	err = proto.Unmarshal(body, pbRequest)
 	if err != nil {
-		return err
+		return &HTTPResponseError{
+			Err:    err,
+			Status: http.StatusInternalServerError,
+		}
 	}
 	c.storage.Add(pbRequest)
 
@@ -184,7 +200,10 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 		reader, err = gzip.NewReader(r.Body)
 		if err != nil {
 			_ = reader.Close()
-			return nil, err
+			return nil, &HTTPResponseError{
+				Err:    err,
+				Status: http.StatusInternalServerError,
+			}
 		}
 	default:
 		reader = r.Body
@@ -192,17 +211,40 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 
 	defer func() {
 		cErr := reader.Close()
-		if err == nil {
-			err = cErr
+		if err == nil && cErr != nil {
+			err = &HTTPResponseError{
+				Err:    cErr,
+				Status: http.StatusInternalServerError,
+			}
 		}
 	}()
 	body, err = io.ReadAll(reader)
+	if err != nil {
+		err = &HTTPResponseError{
+			Err:    err,
+			Status: http.StatusInternalServerError,
+		}
+	}
 	return body, err
 }
 
 func (c *HTTPCollector) respond(w http.ResponseWriter, err error) {
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		var e *HTTPResponseError
+		if errors.As(err, &e) {
+			for k, vals := range e.Header {
+				for _, v := range vals {
+					w.Header().Add(k, v)
+				}
+			}
+			w.WriteHeader(e.Status)
+			fmt.Fprintln(w, e.Error())
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, err.Error())
+		}
 		return
 	}
 
