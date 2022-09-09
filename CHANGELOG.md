@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
 - Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
 - Export scope attributes for all exporters provided by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#3131)
+- Ensure valid UTF-8 when truncating over-length attribute values. (#3156)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 

@@ -336,29 +336,26 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 
 // safeTruncate truncates the string and guarantees valid UTF-8 is returned.
 func safeTruncate(input string, limit int) string {
-	cnt := 0
-	for cnt <= limit {
+	if trunc, ok := safeTruncateValidUTF8(input, limit); ok {
+		return trunc
+	}
+	trunc, _ := safeTruncateValidUTF8(strings.ToValidUTF8(input, ""), limit)
+	return trunc
+}
+
+func safeTruncateValidUTF8(input string, limit int) (string, bool) {
+	for cnt := 0; cnt <= limit; {
 		r, size := utf8.DecodeRuneInString(input[cnt:])
 		if r == utf8.RuneError {
-			break
+			return input, false
 		}
 
 		if cnt+size > limit {
-			return input[:cnt]
+			return input[:cnt], true
 		}
 		cnt += size
 	}
-	return invalidTruncate(input, limit)
-}
-
-// invalidTruncate truncates the string and then removes invalid UTF-8 points.
-// this is a fallback from safeTruncate() in case the input is invalid.
-func invalidTruncate(input string, limit int) string {
-	valid := strings.ToValidUTF8(input[:limit], "")
-	if len(valid) <= limit {
-		return valid
-	}
-	return valid[:limit]
+	return input, true
 }
 
 // End ends the span. This method does nothing if the span is already ended or

@@ -141,14 +141,22 @@ func TestTruncateAttr(t *testing.T) {
 			want:  attribute.String(key, "€€€"),
 		},
 		{
-			// This tests the fallback to invalidTruncate().
+			// This tests truncation with an invalid UTF-8 input.
 			//
 			// Note that after removing the invalid rune,
 			// the string is over length and still has to
 			// be truncated on a code point boundary.
 			limit: 10,
-			attr:  attribute.String(key, "€"[0:2]+"hello€€"), // corrupted first rune, over limit
+			attr:  attribute.String(key, "€"[0:2]+"hello€€"), // corrupted first rune, then over limit
 			want:  attribute.String(key, "hello€"),
+		},
+		{
+			// This tests the fallback to invalidTruncate()
+			// where after validation the string does not require
+			// truncation.
+			limit: 6,
+			attr:  attribute.String(key, "€"[0:2]+"hello"), // corrupted first rune, then not over limit
+			want:  attribute.String(key, "hello"),
 		},
 	}
 
