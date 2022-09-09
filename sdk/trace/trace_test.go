@@ -911,8 +911,6 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 func cmpDiff(x, y interface{}) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(snapshot{}),
-		cmp.AllowUnexported(attribute.Set{}),
-		cmp.AllowUnexported(attribute.Distinct{}),
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(Event{}),
 		cmp.AllowUnexported(trace.TraceState{}))
