@@ -20,8 +20,10 @@ import (
 	"reflect"
 	"runtime"
 	rt "runtime/trace"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -294,7 +296,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 // truncateAttr returns a truncated version of attr. Only string and string
 // slice attribute values are truncated. String values are truncated to at
-// most a length of limit. Each string slice value is truncated in this fasion
+// most a length of limit. Each string slice value is truncated in this fashion
 // (the slice length itself is unaffected).
 //
 // No truncation is perfromed for a negative limit.
@@ -305,7 +307,7 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.STRING:
 		if v := attr.Value.AsString(); len(v) > limit {
-			return attr.Key.String(v[:limit])
+			return attr.Key.String(safeTruncate(v, limit))
 		}
 	case attribute.STRINGSLICE:
 		// Do no mutate the original, make a copy.
@@ -324,12 +326,39 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		v := trucated.Value.AsStringSlice()
 		for i := range v {
 			if len(v[i]) > limit {
-				v[i] = v[i][:limit]
+				v[i] = safeTruncate(v[i], limit)
 			}
 		}
 		return trucated
 	}
 	return attr
+}
+
+// safeTruncate truncates the string and guarantees valid UTF-8 is returned.
+func safeTruncate(input string, limit int) string {
+	cnt := 0
+	for cnt <= limit {
+		r, size := utf8.DecodeRuneInString(input[cnt:])
+		if r == utf8.RuneError {
+			break
+		}
+
+		if cnt+size > limit {
+			return input[:cnt]
+		}
+		cnt += size
+	}
+	return invalidTruncate(input, limit)
+}
+
+// invalidTruncate truncates the string and then removes invalid UTF-8 points.
+// this is a fallback from safeTruncate() in case the input is invalid.
+func invalidTruncate(input string, limit int) string {
+	valid := strings.ToValidUTF8(input[:limit], "")
+	if len(valid) <= limit {
+		return valid
+	}
+	return valid[:limit]
 }
 
 // End ends the span. This method does nothing if the span is already ended or
