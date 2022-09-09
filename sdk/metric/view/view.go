@@ -158,8 +158,6 @@ func MatchInstrumentName(name string) Option {
 	})
 }
 
-// TODO (#2813): Implement MatchNumberKind when NumberKind is defined.
-
 // MatchInstrumentKind with match an instrument based on the instrument's kind.
 // The default is to match all instrument kinds.
 func MatchInstrumentKind(kind InstrumentKind) Option {
