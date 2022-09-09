@@ -27,10 +27,11 @@ import (
 	"net/http"
 	"sync"
 
+	"google.golang.org/protobuf/proto"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/protobuf/proto"
 )
 
 var emptyExportMetricsServiceResponse = func() []byte {
