@@ -343,6 +343,10 @@ func safeTruncate(input string, limit int) string {
 	return trunc
 }
 
+// safeTruncateValidUTF8 returns a copy of the input string safely truncated to
+// limit. The truncation is ensured to occur at the bounds of complete UTF-8
+// characters. If invalid encoding of UTF-8 is encountered, input is returned
+// with false, otherwise, the truncated input will be returned with true.
 func safeTruncateValidUTF8(input string, limit int) (string, bool) {
 	for cnt := 0; cnt <= limit; {
 		r, size := utf8.DecodeRuneInString(input[cnt:])
