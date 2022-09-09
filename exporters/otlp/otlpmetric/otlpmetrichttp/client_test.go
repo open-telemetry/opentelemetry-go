@@ -19,9 +19,11 @@ package otlpmetrichttp
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,11 +55,13 @@ func TestConfig(t *testing.T) {
 		coll, err := otest.NewHTTPCollector(ePt, errCh)
 		require.NoError(t, err)
 
+		opts := []Option{WithEndpoint(coll.Addr().String())}
+		if !strings.HasPrefix(strings.ToLower(ePt), "https") {
+			opts = append(opts, WithInsecure())
+		}
+		opts = append(opts, o...)
+
 		ctx := context.Background()
-		opts := append([]Option{
-			WithEndpoint(coll.Addr().String()),
-			WithInsecure(),
-		}, o...)
 		exp, err := New(ctx, opts...)
 		require.NoError(t, err)
 		return exp, coll
@@ -132,6 +136,28 @@ func TestConfig(t *testing.T) {
 		path := "/prefix/v2/metrics"
 		ePt := fmt.Sprintf("http://localhost:0%s", path)
 		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithURLPath", func(t *testing.T) {
+		path := "/prefix/v2/metrics"
+		ePt := fmt.Sprintf("http://localhost:0%s", path)
+		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithTLSClientConfig", func(t *testing.T) {
+		ePt := "https://localhost:0"
+		tlsCfg := &tls.Config{InsecureSkipVerify: true}
+		exp, coll := factoryFunc(ePt, nil, WithTLSClientConfig(tlsCfg))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
