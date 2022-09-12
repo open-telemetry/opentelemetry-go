@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
 - Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
 - All exporters will be shutdown even if one reports an error (#3091)
+- Ensure valid UTF-8 when truncating over-length attribute values. (#3156)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
