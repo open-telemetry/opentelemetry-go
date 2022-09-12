@@ -26,7 +26,7 @@ import (
 	cryptorand "crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
+	"crypto/x509/pkix" // nolint:depguard  // This is for testing.
 	"encoding/pem"
 	"errors"
 	"fmt"
