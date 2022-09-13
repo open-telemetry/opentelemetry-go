@@ -46,6 +46,7 @@ type mockCollector struct {
 	injectHTTPStatus     []int
 	injectResponseHeader []map[string]string
 	injectContentType    string
+	partial              *collectortracepb.ExportTracePartialSuccess
 	delay                <-chan struct{}
 
 	clientTLSConfig *tls.Config
@@ -93,7 +94,9 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := collectortracepb.ExportTraceServiceResponse{}
+	response := collectortracepb.ExportTraceServiceResponse{
+		PartialSuccess: c.partial,
+	}
 	rawResponse, err := proto.Marshal(&response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -207,6 +210,7 @@ type mockCollectorConfig struct {
 	InjectHTTPStatus     []int
 	InjectContentType    string
 	InjectResponseHeader []map[string]string
+	Partial              *collectortracepb.ExportTracePartialSuccess
 	Delay                <-chan struct{}
 	WithTLS              bool
 	ExpectedHeaders      map[string]string
@@ -230,6 +234,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		injectHTTPStatus:     cfg.InjectHTTPStatus,
 		injectResponseHeader: cfg.InjectResponseHeader,
 		injectContentType:    cfg.InjectContentType,
+		partial:              cfg.Partial,
 		delay:                cfg.Delay,
 		expectedHeaders:      cfg.ExpectedHeaders,
 	}
