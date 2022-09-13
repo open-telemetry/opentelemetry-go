@@ -465,6 +465,7 @@ func (b Baggage) Member(key string) Member {
 		key:        key,
 		value:      v.Value,
 		properties: fromInternalProperties(v.Properties),
+		hasData:    true,
 	}
 }
 
