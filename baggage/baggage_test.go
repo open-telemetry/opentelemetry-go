@@ -620,6 +620,7 @@ func TestBaggageMembers(t *testing.T) {
 				{key: "state", value: "on", hasValue: true},
 				{key: "red"},
 			},
+			hasData: true,
 		},
 		{
 			key:   "bar",
@@ -627,6 +628,7 @@ func TestBaggageMembers(t *testing.T) {
 			properties: properties{
 				{key: "yellow"},
 			},
+			hasData: true,
 		},
 	}
 
@@ -649,7 +651,7 @@ func TestBaggageMembers(t *testing.T) {
 
 func TestBaggageMember(t *testing.T) {
 	bag := Baggage{list: baggage.List{"foo": {Value: "1"}}}
-	assert.Equal(t, Member{key: "foo", value: "1"}, bag.Member("foo"))
+	assert.Equal(t, Member{key: "foo", value: "1", hasData: true}, bag.Member("foo"))
 	assert.Equal(t, Member{}, bag.Member("bar"))
 }
 
