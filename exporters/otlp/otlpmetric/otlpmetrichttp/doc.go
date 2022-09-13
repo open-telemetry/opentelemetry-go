@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
-
-// Library represents the instrumentation library.
-// Deprecated: please use Scope instead.
-type Library = Scope
+// Package otlpmetrichttp provides an otlpmetric.Exporter that communicates
+// with an OTLP receiving endpoint using protobuf encoded metric data over
+// HTTP.
+package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"

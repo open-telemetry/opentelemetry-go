@@ -21,14 +21,19 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/view"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type readerTestSuite struct {
@@ -148,7 +153,25 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 }
 
 var testMetrics = metricdata.ResourceMetrics{
-	// TODO: test with actual data.
+	Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
+	ScopeMetrics: []metricdata.ScopeMetrics{{
+		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
+		Metrics: []metricdata.Metrics{{
+			Name:        "fake data",
+			Description: "Data used to test a reader",
+			Unit:        unit.Dimensionless,
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attribute.String("user", "alice")),
+					StartTime:  time.Now(),
+					Time:       time.Now().Add(time.Second),
+					Value:      -1,
+				}},
+			},
+		}},
+	}},
 }
 
 type testProducer struct {

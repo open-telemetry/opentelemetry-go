@@ -211,6 +211,7 @@ func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
 	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
+	one, two := attribute.Int("key", 1), attribute.Int("key", 2)
 	tests := []struct {
 		options  []TracerOption
 		expected TracerConfig
@@ -244,6 +245,24 @@ func TestTracerConfig(t *testing.T) {
 			},
 			TracerConfig{
 				schemaURL: schemaURL,
+			},
+		},
+
+		{
+			[]TracerOption{
+				WithScopeAttributes(one, two),
+			},
+			TracerConfig{
+				attributes: attribute.NewSet(two),
+			},
+		},
+		{
+			[]TracerOption{
+				WithScopeAttributes(two),
+				WithScopeAttributes(one),
+			},
+			TracerConfig{
+				attributes: attribute.NewSet(one),
 			},
 		},
 	}
