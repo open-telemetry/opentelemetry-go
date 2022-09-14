@@ -23,66 +23,69 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	expohist "go.opentelemetry.io/otel/sdk/metric/aggregator/exponential/structure"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	expohist "go.opentelemetry.io/otel/sdk/metric/metricdata/exponential/structure"
 )
 
-// expoHistValues summarizes a set of measurements as a *expohisto.Structure[N].
+// expoHistValues summarizes a set of measurements as an expoHistValues with
+// exponentially-defined buckets.
 type expoHistValues[N int64 | float64] struct {
-	config expohist.Config
+	cfg expohist.Config
 
+	values   map[attribute.Set]*expohist.Histogram[N]
 	valuesMu sync.Mutex
-	values   map[attribute.Set]*expohist.Structure[N]
 }
 
 func newExpoHistValues[N int64 | float64](maxSize int32) *expoHistValues[N] {
+	cfg := expohist.NewConfig(expohist.WithMaxSize(maxSize))
+	cfg, _ = cfg.Validate()
 	return &expoHistValues[N]{
-		maxSize: maxSize,
-		values:  map[attribute.Set]*expohist.Structure[N]{},
+		cfg:    cfg,
+		values: make(map[attribute.Set]*expohist.Histogram[N]),
 	}
 }
 
 // Aggregate records the measurement value, scoped by attr, and aggregates it
-// into an exponential histogram.
-func (h *expoHistValues[N]) Aggregate(value N, attr attribute.Set) {
-	h.valuesMu.Lock()
-	defer h.valuesMu.Unlock()
+// into a histogram.
+func (hv *expoHistValues[N]) Aggregate(value N, attr attribute.Set) {
+	hv.valuesMu.Lock()
+	defer hv.valuesMu.Unlock()
 
-	h, ok := h.values[attr]
+	h, ok := hv.values[attr]
 	if !ok {
-		agg := &expohist.Structure[N]{}
-		agg.Init(h.config)
-		s.values[attr] = agg
+		h = &expohist.Histogram[N]{}
+		h.Init(hv.cfg)
+		hv.values[attr] = h
 	}
 	h.Update(value)
 }
 
-// NewDeltaHistogram returns an Aggregator that summarizes a set of
-// measurements as an histogram. Each histogram is scoped by attributes and
+// NewDeltaExponentialHistogram returns an Aggregator that summarizes a set of
+// measurements as an exponential histogram. Each histogram is scoped by attributes and
 // the aggregation cycle the measurements were made in.
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func NewDeltaHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
-	return &deltaHistogram[N]{
-		histValues: newHistValues[N](cfg.Boundaries),
-		noMinMax:   cfg.NoMinMax,
-		start:      now(),
+func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+	return &deltaExpoHistogram[N]{
+		expoHistValues: newExpoHistValues[N](cfg.MaxSize),
+		noMinMax:       cfg.NoMinMax,
+		start:          now(),
 	}
 }
 
-// deltaHistogram summarizes a set of measurements made in a single
+// deltaExpoHistogram summarizes a set of measurements made in a single
 // aggregation cycle as an histogram with explicitly defined buckets.
-type deltaHistogram[N int64 | float64] struct {
-	*histValues[N]
+type deltaExpoHistogram[N int64 | float64] struct {
+	*expoHistValues[N]
 
 	noMinMax bool
 	start    time.Time
 }
 
-func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
-	h := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
+func (s *deltaExpoHistogram[N]) Aggregation() metricdata.Aggregation {
+	h := metricdata.ExponentialHistogram{Temporality: metricdata.DeltaTemporality}
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
@@ -91,24 +94,24 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 		return h
 	}
 
-	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
 	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h.DataPoints = make([]metricdata.ExponentialHistogramDataPoint, 0, len(s.values))
 	for a, b := range s.values {
-		hdp := metricdata.HistogramDataPoint{
-			Attributes:   a,
-			StartTime:    s.start,
-			Time:         t,
-			Count:        b.count,
-			Bounds:       bounds,
-			BucketCounts: b.counts,
-			Sum:          b.sum,
+		hdp := metricdata.ExponentialHistogramDataPoint{
+			Attributes: a,
+			StartTime:  s.start,
+			Time:       t,
+			Count:      b.Count(),
+			Sum:        float64(b.Sum()),
+			ZeroCount:  b.ZeroCount(),
+			Scale:      b.Scale(),
+			Positive:   expoBuckets(b.Positive()),
+			// b.Negative() skipped
 		}
-		if !s.noMinMax {
-			hdp.Min = &b.min
-			hdp.Max = &b.max
+		if !s.noMinMax && b.Count() != 0 {
+			min, max := float64(b.Min()), float64(b.Max())
+			hdp.Min = &min
+			hdp.Max = &max
 		}
 		h.DataPoints = append(h.DataPoints, hdp)
 
@@ -120,31 +123,45 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 	return h
 }
 
-// NewCumulativeHistogram returns an Aggregator that summarizes a set of
-// measurements as an histogram. Each histogram is scoped by attributes.
+func expoBuckets(b *expohist.Buckets) metricdata.ExponentialBuckets {
+	if b.Len() == 0 {
+		return metricdata.ExponentialBuckets{}
+	}
+	cnts := make([]uint64, b.Len())
+	for i := 0; i < len(cnts); i++ {
+		cnts[i] = b.At(uint32(i))
+	}
+	return metricdata.ExponentialBuckets{
+		Offset:       b.Offset(),
+		BucketCounts: cnts,
+	}
+}
+
+// NewExponentialCumulativeHistogram returns an Aggregator that summarizes a set of
+// measurements as an exponential histogram. Each histogram is scoped by attributes.
 //
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func NewCumulativeHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
-	return &cumulativeHistogram[N]{
-		histValues: newHistValues[N](cfg.Boundaries),
-		noMinMax:   cfg.NoMinMax,
-		start:      now(),
+func NewCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+	return &cumulativeExpoHistogram[N]{
+		expoHistValues: newExpoHistValues[N](cfg.MaxSize),
+		noMinMax:       cfg.NoMinMax,
+		start:          now(),
 	}
 }
 
-// cumulativeHistogram summarizes a set of measurements made over all
+// cumulativeExpoHistogram summarizes a set of measurements made over all
 // aggregation cycles as an histogram with explicitly defined buckets.
-type cumulativeHistogram[N int64 | float64] struct {
-	*histValues[N]
+type cumulativeExpoHistogram[N int64 | float64] struct {
+	*expoHistValues[N]
 
 	noMinMax bool
 	start    time.Time
 }
 
-func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
-	h := metricdata.Histogram{Temporality: metricdata.CumulativeTemporality}
+func (s *cumulativeExpoHistogram[N]) Aggregation() metricdata.Aggregation {
+	h := metricdata.ExponentialHistogram{Temporality: metricdata.CumulativeTemporality}
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
@@ -154,39 +171,27 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 	}
 
 	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
 	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h.DataPoints = make([]metricdata.ExponentialHistogramDataPoint, 0, len(s.values))
 	for a, b := range s.values {
-		// The HistogramDataPoint field values returned need to be copies of
-		// the buckets value as we will keep updating them.
-		//
-		// TODO (#3047): Making copies for bounds and counts incurs a large
-		// memory allocation footprint. Alternatives should be explored.
-		counts := make([]uint64, len(b.counts))
-		copy(counts, b.counts)
-
-		hdp := metricdata.HistogramDataPoint{
-			Attributes:   a,
-			StartTime:    s.start,
-			Time:         t,
-			Count:        b.count,
-			Bounds:       bounds,
-			BucketCounts: counts,
-			Sum:          b.sum,
+		hdp := metricdata.ExponentialHistogramDataPoint{
+			Attributes: a,
+			StartTime:  s.start,
+			Time:       t,
+			Count:      b.Count(),
+			Sum:        float64(b.Sum()),
+			ZeroCount:  b.ZeroCount(),
+			Scale:      b.Scale(),
+			Positive:   expoBuckets(b.Positive()),
+			// b.Negative() skipped
 		}
 		if !s.noMinMax {
-			// Similar to counts, make a copy.
-			min, max := b.min, b.max
+			min, max := float64(b.Min()), float64(b.Max())
 			hdp.Min = &min
 			hdp.Max = &max
 		}
 		h.DataPoints = append(h.DataPoints, hdp)
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
+		// TODO (#3006): This will use an unbounded amount of memory.
 	}
 	return h
 }

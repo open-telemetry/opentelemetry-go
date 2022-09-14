@@ -100,6 +100,8 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 		out.Data, err = Sum[float64](a)
 	case metricdata.Histogram:
 		out.Data, err = Histogram(a)
+	case metricdata.ExponentialHistogram:
+		out.Data, err = ExponentialHistogram(a)
 	default:
 		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
 	}
@@ -189,6 +191,51 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 		})
 	}
 	return out
+}
+
+// ExponentialHistogram returns an OTLP Metric_ExponentialHistogram generated from h. An error is
+// returned with a partial Metric_ExponentialHistogram if the temporality of h is
+// unknown.
+func ExponentialHistogram(h metricdata.ExponentialHistogram) (*mpb.Metric_ExponentialHistogram, error) {
+	t, err := Temporality(h.Temporality)
+	if err != nil {
+		return nil, err
+	}
+	return &mpb.Metric_ExponentialHistogram{
+		ExponentialHistogram: &mpb.ExponentialHistogram{
+			AggregationTemporality: t,
+			DataPoints:             ExponentialHistogramDataPoints(h.DataPoints),
+		},
+	}, nil
+}
+
+// ExponentialHistogramDataPoints returns a slice of OTLP ExponentialHistogramDataPoint generated
+// from dPts.
+func ExponentialHistogramDataPoints(dPts []metricdata.ExponentialHistogramDataPoint) []*mpb.ExponentialHistogramDataPoint {
+	out := make([]*mpb.ExponentialHistogramDataPoint, 0, len(dPts))
+	for _, dPt := range dPts {
+		out = append(out, &mpb.ExponentialHistogramDataPoint{
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
+			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			Count:             dPt.Count,
+			Sum:               &dPt.Sum,
+			Min:               dPt.Min,
+			Max:               dPt.Max,
+			ZeroCount:         dPt.ZeroCount,
+			Scale:             dPt.Scale,
+			Positive:          ExponentialHistogramBuckets(dPt.Positive),
+			// Negative: Skipped,
+		})
+	}
+	return out
+}
+
+func ExponentialHistogramBuckets(buckets metricdata.ExponentialBuckets) *mpb.ExponentialHistogramDataPoint_Buckets {
+	if len(buckets.BucketCounts) == 0 {
+		return nil
+	}
+	return &mpb.ExponentialHistogramDataPoint_Buckets{}
 }
 
 // Temporality returns an OTLP AggregationTemporality generated from t. If t

@@ -131,3 +131,57 @@ type HistogramDataPoint struct {
 	// Sum is the sum of the values recorded.
 	Sum float64
 }
+
+// ExponentialHistogram represents the exponential histogram of all measurements of values from an instrument.
+type ExponentialHistogram struct {
+	// DataPoints reprents individual aggregated measurements with unique Attributes.
+	DataPoints []ExponentialHistogramDataPoint
+	// Temporality describes if the aggregation is reported as the change from the
+	// last report time, or the cumulative changes since a fixed start time.
+	Temporality Temporality
+}
+
+func (ExponentialHistogram) privateAggregation() {}
+
+// ExponentialHistogramDataPoint is a single histogram data point in a timeseries.
+type ExponentialHistogramDataPoint struct {
+	// Attributes is the set of key value pairs that uniquely identify the
+	// timeseries.
+	Attributes attribute.Set
+	// StartTime is when the timeseries was started.
+	StartTime time.Time
+	// Time is the time when the timeseries was recorded.
+	Time time.Time
+
+	// Count is the number of updates this histogram has been calculated with.
+	Count uint64
+
+	// ZeroCount
+	ZeroCount uint64
+
+	// Scale
+	Scale int32
+
+	// Positive
+	Positive ExponentialBuckets
+
+	// Negative: skipped
+	// Note that negative buckets are not supported in the OTel API
+	// and have not been added here.
+
+	// Reviewer notes: TODO: Recommend use of `math.NaN()` values
+	// for Min/Max instead of pointers, to avoid allocations below.
+	// Keeping these *float64 for consistency.
+
+	// Min is the minimum value recorded. (optional)
+	Min *float64 `json:",omitempty"`
+	// Max is the maximum value recorded. (optional)
+	Max *float64 `json:",omitempty"`
+	// Sum is the sum of the values recorded.
+	Sum float64
+}
+
+type ExponentialBuckets struct {
+	Offset       int32
+	BucketCounts []uint64
+}
