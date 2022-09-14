@@ -133,7 +133,7 @@ var _ Aggregation = ExplicitBucketHistogram{}
 func (ExplicitBucketHistogram) private() {}
 
 // errHist is returned by misconfigured ExplicitBucketHistograms.
-var errHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
+var errHist = fmt.Errorf("%w: exponential histogram", errAgg)
 
 // Err returns an error for any misconfiguration.
 func (h ExplicitBucketHistogram) Err() error {
@@ -160,5 +160,42 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 	return ExplicitBucketHistogram{
 		Boundaries: b,
 		NoMinMax:   h.NoMinMax,
+	}
+}
+
+// ExponentialHistogram is an aggregation that summarizes a set of
+// measurements as an histogram with explicitly defined buckets.
+type ExponentialHistogram struct {
+	// MaxSize determines the maximum number of entries in the
+	// positive range (and, independently, the negative range when
+	// it is permitted by the SDK specification).  If set to zero
+	// the OTel-specified default value of 160 is used.
+	MaxSize int32
+
+	// NoMinMax indicates whether to not record the min and max of the
+	// distribution. By default, these extremes are recorded.
+	NoMinMax bool
+}
+
+var _ Aggregation = ExponentialHistogram{}
+
+func (ExponentialHistogram) private() {}
+
+// errExpoHist is returned by misconfigured ExponentialHistograms.
+var errExpoHist = fmt.Errorf("%w: exponential histogram", errAgg)
+
+// Err returns an error for any misconfiguration.
+func (h ExponentialHistogram) Err() error {
+	if h.MaxSize != 0 && (h.MaxSize < 2 || h.MaxSize > 16384) {
+		return fmt.Errorf("%w: out-of-range maximum size: %d", errExpoHist, h.MaxSize)
+	}
+	return nil
+}
+
+// Copy returns a deep copy of h.
+func (h ExponentialHistogram) Copy() Aggregation {
+	return ExponentialHistogram{
+		MaxSize:  h.MaxSize,
+		NoMinMax: h.NoMinMax,
 	}
 }
