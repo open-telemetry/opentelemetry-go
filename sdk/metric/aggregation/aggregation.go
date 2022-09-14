@@ -133,7 +133,7 @@ var _ Aggregation = ExplicitBucketHistogram{}
 func (ExplicitBucketHistogram) private() {}
 
 // errHist is returned by misconfigured ExplicitBucketHistograms.
-var errHist = fmt.Errorf("%w: exponential histogram", errAgg)
+var errHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
 
 // Err returns an error for any misconfiguration.
 func (h ExplicitBucketHistogram) Err() error {

@@ -156,13 +156,16 @@ type ExponentialHistogramDataPoint struct {
 	// Count is the number of updates this histogram has been calculated with.
 	Count uint64
 
-	// ZeroCount
+	// ZeroCount counts the number of buckets with value exactly zero.
 	ZeroCount uint64
 
-	// Scale
+	// Scale determines the exponenitial base using the formula
+	// `base = 2**(2**(-Scale))`.
 	Scale int32
 
-	// Positive
+	// Positive expresses the positive range of measurements as a
+	// slice of histogram buckets with bucket index in the range
+	// [Offset, Offset+len(BucketCounts)-1].
 	Positive ExponentialBuckets
 
 	// Negative: skipped
@@ -181,7 +184,13 @@ type ExponentialHistogramDataPoint struct {
 	Sum float64
 }
 
+// ExponentialBuckets expresses a slice of histogram bucket counts
+// with bucket index in the range [Offset, Offset+len(BucketCounts)-1].
 type ExponentialBuckets struct {
-	Offset       int32
+	// Offset is the index of the smallest observation.
+	Offset int32
+
+	// BucketCounts is a contiguous set of buckets starting with
+	// at index equal to Offset.
 	BucketCounts []uint64
 }

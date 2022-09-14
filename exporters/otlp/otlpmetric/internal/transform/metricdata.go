@@ -235,7 +235,10 @@ func ExponentialHistogramBuckets(buckets metricdata.ExponentialBuckets) *mpb.Exp
 	if len(buckets.BucketCounts) == 0 {
 		return nil
 	}
-	return &mpb.ExponentialHistogramDataPoint_Buckets{}
+	return &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       buckets.Offset,
+		BucketCounts: buckets.BucketCounts,
+	}
 }
 
 // Temporality returns an OTLP AggregationTemporality generated from t. If t
