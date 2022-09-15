@@ -587,24 +587,74 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
 	assert.Equal(t, 1, len(b3.list))
 	assert.Equal(t, 2, len(b4.list))
+}
 
-	m = Member{key: "hasData false", hasData: false}
-	b5, err := b4.SetMember(m)
+func TestBaggageSetFalseMember(t *testing.T) {
+	b0 := Baggage{}
+
+	key := "k"
+	m := Member{key: key, hasData: false}
+	b1, err := b0.SetMember(m)
+	assert.Error(t, err)
+	assert.NotContains(t, b0.list, key)
+	assert.Equal(t, baggage.Item{}, b1.list[key])
+	assert.Equal(t, 0, len(b0.list))
+	assert.Equal(t, 0, len(b1.list))
+
+	m.value = "v"
+	b2, err := b1.SetMember(m)
+	assert.Error(t, err)
+	assert.Equal(t, baggage.Item{}, b1.list[key])
+	assert.Equal(t, baggage.Item{Value: ""}, b2.list[key])
+	assert.Equal(t, 0, len(b1.list))
+	assert.Equal(t, 0, len(b2.list))
+}
+
+func TestBaggageSetFalseMembers(t *testing.T) {
+	b0 := Baggage{}
+
+	key := "k"
+	m := Member{key: key, hasData: true}
+	b1, err := b0.SetMember(m)
+	assert.NoError(t, err)
+	assert.NotContains(t, b0.list, key)
+	assert.Equal(t, baggage.Item{}, b1.list[key])
+	assert.Equal(t, 0, len(b0.list))
+	assert.Equal(t, 1, len(b1.list))
+
+	m.value = "v"
+	b2, err := b1.SetMember(m)
+	assert.NoError(t, err)
+	assert.Equal(t, baggage.Item{}, b1.list[key])
+	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
+	assert.Equal(t, 1, len(b1.list))
+	assert.Equal(t, 1, len(b2.list))
+
+	p := properties{{key: "p", hasData: false}}
+	m.properties = p
+	b3, err := b2.SetMember(m)
+	assert.NoError(t, err)
+	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, 1, len(b2.list))
+	assert.Equal(t, 1, len(b3.list))
+
+	// The returned baggage needs to be immutable and should use a copy of the
+	// properties slice.
+	p[0] = Property{key: "different", hasData: false}
+	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	// Reset for below.
+	p[0] = Property{key: "p", hasData: false}
+
+	m = Member{key: "another", hasData: false}
+	b4, err := b3.SetMember(m)
 	assert.Error(t, err)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
-	assert.Equal(t, 2, len(b4.list))
-	assert.Equal(t, 2, len(b5.list))
-
-	m2 := Member{key: key, value: "v", hasData: false}
-	b6, err := b1.SetMember(m2)
-	assert.Error(t, err)
-	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, baggage.Item{Value: ""}, b6.list[key])
-	assert.Equal(t, 1, len(b1.list))
-	assert.Equal(t, 1, len(b6.list))
+	assert.Equal(t, 1, len(b3.list))
+	assert.Equal(t, 1, len(b4.list))
 }
 
 func TestNilBaggageMembers(t *testing.T) {
