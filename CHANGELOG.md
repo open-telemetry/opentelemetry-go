@@ -8,23 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Added
-
-- Support Go 1.19.
-  Include compatibility testing and document support. (#3077)
-- Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
-- Add an `Attribute` field to the `Scope` type in `go.opentelemetry.io/otel/sdk/instrumentation`. (#3131)
-- Add the `WithScopeAttributes` `TracerOption` to the `go.opentelemetry.io/otel/trace` package. (#3131)
-- Add the `WithScopeAttributes` `MeterOption` to the `go.opentelemetry.io/otel/metric` package. (#3132)
-
 ### Changed
 
-- Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
-- The exponential histogram mapping functions have been updated with
-  exact upper-inclusive boundary support following the [corresponding
-  specification change](https://github.com/open-telemetry/opentelemetry-specification/pull/2633). (#2982)
-- Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
-- Export scope attributes for all exporters provided by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#3131)
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
   Please see the package documentation for how the new SDK is initialized and configured. (TBD)
 
@@ -56,6 +41,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `"go.opentelemetry.io/otel/sdk/metric".Accumulator` type was removed, see the `MeterProvider`in the new metric SDK. (TBD)
 - The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (TBD)
 - The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (TBD)
+
+## [1.10.0] - 2022-09-09
+
+### Added
+
+- Support Go 1.19. (#3077)
+  Include compatibility testing and document support. (#3077)
+- Support the OTLP ExportTracePartialSuccess response; these are passed to the registered error handler. (#3106)
+- Upgrade go.opentelemetry.io/proto/otlp from v0.18.0 to v0.19.0 (#3107)
+
+### Changed
+
+- Fix misidentification of OpenTelemetry `SpanKind` in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3096)
+- Attempting to start a span with a nil `context` will no longer cause a panic. (#3110)
+- All exporters will be shutdown even if one reports an error (#3091)
+- Ensure valid UTF-8 when truncating over-length attribute values. (#3156)
 
 ## [1.9.0/0.0.3] - 2022-08-01
 
@@ -1940,7 +1941,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
 [1.9.0/0.0.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.9.0
 [1.8.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.8.0
 [1.7.0/0.30.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.7.0

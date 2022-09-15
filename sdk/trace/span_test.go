@@ -134,6 +134,30 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  strSliceAttr,
 			want:  strSliceAttr,
 		},
+		{
+			// This tests the ordinary safeTruncate().
+			limit: 10,
+			attr:  attribute.String(key, "€€€€"), // 3 bytes each
+			want:  attribute.String(key, "€€€"),
+		},
+		{
+			// This tests truncation with an invalid UTF-8 input.
+			//
+			// Note that after removing the invalid rune,
+			// the string is over length and still has to
+			// be truncated on a code point boundary.
+			limit: 10,
+			attr:  attribute.String(key, "€"[0:2]+"hello€€"), // corrupted first rune, then over limit
+			want:  attribute.String(key, "hello€"),
+		},
+		{
+			// This tests the fallback to invalidTruncate()
+			// where after validation the string does not require
+			// truncation.
+			limit: 6,
+			attr:  attribute.String(key, "€"[0:2]+"hello"), // corrupted first rune, then not over limit
+			want:  attribute.String(key, "hello"),
+		},
 	}
 
 	for _, test := range tests {
