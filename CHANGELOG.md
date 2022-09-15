@@ -11,36 +11,36 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
-  Please see the package documentation for how the new SDK is initialized and configured. (TBD)
+  Please see the package documentation for how the new SDK is initialized and configured. (#3175)
 
 ### Removed
 
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been removed.
-  A new bridge compliant with the revised metric SDK will be added back in a future release. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/aggregator/histogram` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/aggregator/sum` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/aggregator` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/controller/basic` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/controller/controllertest` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/controller/time` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/export/aggregation` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/export` package is removed, see the new metric SDK. (TBD)
+  A new bridge compliant with the revised metric SDK will be added back in a future release. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregator/histogram` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregator/sum` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregator` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/controller/basic` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/controller/controllertest` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/controller/time` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/export/aggregation` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/export` package is removed, see the new metric SDK. (#3175)
 - The `go.opentelemetry.io/otel/sdk/metric/metrictest` package is removed.
-  A replacement package that supports the new metric SDK will be added back in a future release. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/number` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/processor/basic` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/processor/processortest` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/processor/reducer` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/registry` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/sdkapi` package is removed, see the new metric SDK. (TBD)
-- The `go.opentelemetry.io/otel/sdk/metric/selector/simple` package is removed, see the new metric SDK. (TBD)
-- The `"go.opentelemetry.io/otel/sdk/metric".ErrUninitializedInstrument` variable was removed. (TBD)
-- The `"go.opentelemetry.io/otel/sdk/metric".ErrBadInstrument` variable was removed. (TBD)
-- The `"go.opentelemetry.io/otel/sdk/metric".Accumulator` type was removed, see the `MeterProvider`in the new metric SDK. (TBD)
-- The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (TBD)
-- The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (TBD)
+  A replacement package that supports the new metric SDK will be added back in a future release. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/number` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/processor/basic` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/processor/processortest` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/processor/reducer` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/registry` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/sdkapi` package is removed, see the new metric SDK. (#3175)
+- The `go.opentelemetry.io/otel/sdk/metric/selector/simple` package is removed, see the new metric SDK. (#3175)
+- The `"go.opentelemetry.io/otel/sdk/metric".ErrUninitializedInstrument` variable was removed. (#3175)
+- The `"go.opentelemetry.io/otel/sdk/metric".ErrBadInstrument` variable was removed. (#3175)
+- The `"go.opentelemetry.io/otel/sdk/metric".Accumulator` type was removed, see the `MeterProvider`in the new metric SDK. (#3175)
+- The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (#3175)
+- The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (#3175)
 
 ## [1.10.0] - 2022-09-09
 
