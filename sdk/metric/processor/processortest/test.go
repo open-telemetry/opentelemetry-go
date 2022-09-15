@@ -243,7 +243,7 @@ func (o *Output) AddRecord(rec export.Record) error {
 }
 
 // AddRecordWithResource merges rec into this Output.
-func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Library, rec export.Record) error {
+func (o *Output) AddInstrumentationLibraryRecord(_ instrumentation.Scope, rec export.Record) error {
 	return o.AddRecordWithResource(rec, resource.Empty())
 }
 
@@ -340,7 +340,7 @@ func (e *Exporter) Export(_ context.Context, res *resource.Resource, ckpt export
 	e.output.Lock()
 	defer e.output.Unlock()
 	e.exportCount++
-	return ckpt.ForEach(func(library instrumentation.Library, mr export.Reader) error {
+	return ckpt.ForEach(func(library instrumentation.Scope, mr export.Reader) error {
 		return mr.ForEach(e.TemporalitySelector, func(r export.Record) error {
 			if e.InjectErr != nil {
 				if err := e.InjectErr(r); err != nil {
@@ -381,32 +381,32 @@ func (e *Exporter) Reset() {
 
 // OneInstrumentationLibraryReader returns an InstrumentationLibraryReader for
 // a single instrumentation library.
-func OneInstrumentationLibraryReader(l instrumentation.Library, r export.Reader) export.InstrumentationLibraryReader {
+func OneInstrumentationLibraryReader(l instrumentation.Scope, r export.Reader) export.InstrumentationLibraryReader {
 	return oneLibraryReader{l, r}
 }
 
 type oneLibraryReader struct {
-	library instrumentation.Library
+	library instrumentation.Scope
 	reader  export.Reader
 }
 
-func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+func (o oneLibraryReader) ForEach(readerFunc func(instrumentation.Scope, export.Reader) error) error {
 	return readerFunc(o.library, o.reader)
 }
 
 // MultiInstrumentationLibraryReader returns an InstrumentationLibraryReader
 // for a group of records that came from multiple instrumentation libraries.
-func MultiInstrumentationLibraryReader(records map[instrumentation.Library][]export.Record) export.InstrumentationLibraryReader {
+func MultiInstrumentationLibraryReader(records map[instrumentation.Scope][]export.Record) export.InstrumentationLibraryReader {
 	return instrumentationLibraryReader{records: records}
 }
 
 type instrumentationLibraryReader struct {
-	records map[instrumentation.Library][]export.Record
+	records map[instrumentation.Scope][]export.Record
 }
 
 var _ export.InstrumentationLibraryReader = instrumentationLibraryReader{}
 
-func (m instrumentationLibraryReader) ForEach(fn func(instrumentation.Library, export.Reader) error) error {
+func (m instrumentationLibraryReader) ForEach(fn func(instrumentation.Scope, export.Reader) error) error {
 	for library, records := range m.records {
 		if err := fn(library, &metricReader{records: records}); err != nil {
 			return err

@@ -48,7 +48,7 @@ func OneRecordReader() export.InstrumentationLibraryReader {
 	rec := export.NewRecord(&desc, &attrs, agg[0].Aggregation(), start, end)
 
 	return processortest.MultiInstrumentationLibraryReader(
-		map[instrumentation.Library][]export.Record{
+		map[instrumentation.Scope][]export.Record{
 			{
 				Name: "onelib",
 			}: {rec},
@@ -66,6 +66,6 @@ type FailReader struct{}
 var _ export.InstrumentationLibraryReader = FailReader{}
 
 // ForEach implements export.Reader. It always fails.
-func (FailReader) ForEach(readerFunc func(instrumentation.Library, export.Reader) error) error {
+func (FailReader) ForEach(readerFunc func(instrumentation.Scope, export.Reader) error) error {
 	return fmt.Errorf("fail")
 }

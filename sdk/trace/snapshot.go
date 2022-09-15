@@ -110,7 +110,7 @@ func (s snapshot) InstrumentationScope() instrumentation.Scope {
 
 // InstrumentationLibrary returns information about the instrumentation
 // library that created the span.
-func (s snapshot) InstrumentationLibrary() instrumentation.Library {
+func (s snapshot) InstrumentationLibrary() instrumentation.Scope {
 	return s.instrumentationScope
 }
 

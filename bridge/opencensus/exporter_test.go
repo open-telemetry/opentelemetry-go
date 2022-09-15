@@ -47,7 +47,7 @@ type fakeExporter struct {
 
 func (f *fakeExporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
 	return controllertest.ReadAll(ilr, aggregation.StatelessTemporalitySelector(),
-		func(_ instrumentation.Library, record export.Record) error {
+		func(_ instrumentation.Scope, record export.Record) error {
 			f.resource = res
 			f.records = append(f.records, record)
 			return f.err

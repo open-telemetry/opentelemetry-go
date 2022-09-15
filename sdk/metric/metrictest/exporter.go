@@ -98,7 +98,7 @@ func (e *Exporter) Collect(ctx context.Context) error {
 		return err
 	}
 
-	return e.controller.ForEach(func(l instrumentation.Library, r export.Reader) error {
+	return e.controller.ForEach(func(l instrumentation.Scope, r export.Reader) error {
 		lib := Library{
 			InstrumentationName:    l.Name,
 			InstrumentationVersion: l.Version,
