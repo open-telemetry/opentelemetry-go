@@ -105,6 +105,7 @@ All officially supported exporters for the OpenTelemetry project are contained i
 | :-----------------------------------: | :-----: | :----: |
 | [Jaeger](./exporters/jaeger/)         |         | ✓      |
 | [OTLP](./exporters/otlp/)             | ✓       | ✓      |
+| [Prometheus](./exporters/prometheus/) | ✓       |        |
 | [stdout](./exporters/stdout/)         | ✓       | ✓      |
 | [Zipkin](./exporters/zipkin/)         |         | ✓      |
 
