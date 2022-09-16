@@ -29,6 +29,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /bridge/opencensus/opencensusmetric
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /bridge/opencensus/test
     labels:
       - dependencies
@@ -66,15 +75,6 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /example/namedtracer
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /example/opencensus
     labels:
       - dependencies
       - go
