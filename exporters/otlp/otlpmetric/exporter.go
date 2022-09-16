@@ -12,121 +12,96 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.18
+// +build go1.18
+
 package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/metrictransform"
-	"go.opentelemetry.io/otel/sdk/metric/export"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-var (
-	errAlreadyStarted = errors.New("already started")
-)
+// exporter exports metrics data as OTLP.
+type exporter struct {
+	// Ensure synchronous access to the client across all functionality.
+	clientMu sync.Mutex
+	client   Client
 
-// Exporter exports metrics data in the OTLP wire format.
-type Exporter struct {
-	client              Client
-	temporalitySelector aggregation.TemporalitySelector
-
-	mu      sync.RWMutex
-	started bool
-
-	startOnce sync.Once
-	stopOnce  sync.Once
+	shutdownOnce sync.Once
 }
 
-// Export exports a batch of metrics.
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
-	rm, err := metrictransform.InstrumentationLibraryReader(ctx, e, res, ilr, 1)
-	if err != nil {
+// Export transforms and transmits metric data to an OTLP receiver.
+func (e *exporter) Export(ctx context.Context, rm metricdata.ResourceMetrics) error {
+	otlpRm, err := transform.ResourceMetrics(rm)
+	// Best effort upload of transformable metrics.
+	e.clientMu.Lock()
+	upErr := e.client.UploadMetrics(ctx, otlpRm)
+	e.clientMu.Unlock()
+	if upErr != nil {
+		if err == nil {
+			return upErr
+		}
+		// Merge the two errors.
+		return fmt.Errorf("failed to upload incomplete metrics (%s): %w", err, upErr)
+	}
+	return err
+}
+
+// ForceFlush flushes any metric data held by an exporter.
+func (e *exporter) ForceFlush(ctx context.Context) error {
+	// The Exporter does not hold data, forward the command to the client.
+	e.clientMu.Lock()
+	defer e.clientMu.Unlock()
+	return e.client.ForceFlush(ctx)
+}
+
+var errShutdown = fmt.Errorf("exporter is shutdown")
+
+// Shutdown flushes all metric data held by an exporter and releases any held
+// computational resources.
+func (e *exporter) Shutdown(ctx context.Context) error {
+	err := errShutdown
+	e.shutdownOnce.Do(func() {
+		e.clientMu.Lock()
+		client := e.client
+		e.client = shutdownClient{}
+		e.clientMu.Unlock()
+		err = client.Shutdown(ctx)
+	})
+	return err
+}
+
+// New return an Exporter that uses client to transmits the OTLP data it
+// produces. The client is assumed to be fully started and able to communicate
+// with its OTLP receiving endpoint.
+func New(client Client) metric.Exporter {
+	return &exporter{client: client}
+}
+
+type shutdownClient struct{}
+
+func (c shutdownClient) err(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if rm == nil {
-		return nil
-	}
-
-	// TODO: There is never more than one resource emitted by this
-	// call, as per the specification.  We can change the
-	// signature of UploadMetrics correspondingly. Here create a
-	// singleton list to reduce the size of the current PR:
-	return e.client.UploadMetrics(ctx, rm)
+	return errShutdown
 }
 
-// Start establishes a connection to the receiving endpoint.
-func (e *Exporter) Start(ctx context.Context) error {
-	var err = errAlreadyStarted
-	e.startOnce.Do(func() {
-		e.mu.Lock()
-		e.started = true
-		e.mu.Unlock()
-		err = e.client.Start(ctx)
-	})
-
-	return err
+func (c shutdownClient) UploadMetrics(ctx context.Context, _ *mpb.ResourceMetrics) error {
+	return c.err(ctx)
 }
 
-// Shutdown flushes all exports and closes all connections to the receiving endpoint.
-func (e *Exporter) Shutdown(ctx context.Context) error {
-	e.mu.RLock()
-	started := e.started
-	e.mu.RUnlock()
-
-	if !started {
-		return nil
-	}
-
-	var err error
-
-	e.stopOnce.Do(func() {
-		err = e.client.Stop(ctx)
-		e.mu.Lock()
-		e.started = false
-		e.mu.Unlock()
-	})
-
-	return err
+func (c shutdownClient) ForceFlush(ctx context.Context) error {
+	return c.err(ctx)
 }
 
-// TemporalityFor returns the accepted temporality for a metric measurment.
-func (e *Exporter) TemporalityFor(descriptor *sdkapi.Descriptor, kind aggregation.Kind) aggregation.Temporality {
-	return e.temporalitySelector.TemporalityFor(descriptor, kind)
-}
-
-var _ export.Exporter = (*Exporter)(nil)
-
-// New constructs a new Exporter and starts it.
-func New(ctx context.Context, client Client, opts ...Option) (*Exporter, error) {
-	exp := NewUnstarted(client, opts...)
-	if err := exp.Start(ctx); err != nil {
-		return nil, err
-	}
-	return exp, nil
-}
-
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(client Client, opts ...Option) *Exporter {
-	cfg := config{
-		// Note: the default TemporalitySelector is specified
-		// as Cumulative:
-		// https://github.com/open-telemetry/opentelemetry-specification/issues/731
-		temporalitySelector: aggregation.CumulativeTemporalitySelector(),
-	}
-
-	for _, opt := range opts {
-		cfg = opt.apply(cfg)
-	}
-
-	e := &Exporter{
-		client:              client,
-		temporalitySelector: cfg.temporalitySelector,
-	}
-
-	return e
+func (c shutdownClient) Shutdown(ctx context.Context) error {
+	return c.err(ctx)
 }

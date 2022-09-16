@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stdoutmetric contains an OpenTelemetry exporter for metric
-// telemetry to be written to an output destination as JSON.
+// Package stdoutmetric provides an exporter for OpenTelemetry metric
+// telemetry.
 //
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
+// The exporter is intended to be used for testing and debugging, it is not
+// meant for production use. Additionally, it does not provide an interchange
+// format for OpenTelemetry that is supported with any stability or
+// compatibility guarantees. If these are needed features, please use the OTLP
+// exporter instead.
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
