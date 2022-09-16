@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/schema
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
