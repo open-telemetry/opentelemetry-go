@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
   Please see the package documentation for how the new SDK is initialized and configured. (#3175)
+- Add caching to instrument creation (#3181)
 
 ### Removed
 
