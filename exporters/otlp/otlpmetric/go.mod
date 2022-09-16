@@ -1,18 +1,18 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
-go 1.17
+go 1.18
 
 require (
 	github.com/google/go-cmp v0.5.8
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.10.0
-	go.opentelemetry.io/otel/metric v0.31.0
-	go.opentelemetry.io/otel/sdk v1.10.0
-	go.opentelemetry.io/otel/sdk/metric v0.31.0
+	go.opentelemetry.io/otel/metric v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/sdk v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel/sdk/metric v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/proto/otlp v0.19.0
-	google.golang.org/grpc v1.46.2
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/grpc v1.42.0
+	google.golang.org/protobuf v1.27.1
 )
 
 require (
@@ -31,14 +31,14 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
 
+replace go.opentelemetry.io/otel/metric => ../../../metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
+
 replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/sdk => ../../../sdk
 
-replace go.opentelemetry.io/otel/metric => ../../../metric
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry
 
 replace go.opentelemetry.io/otel/trace => ../../../trace
-
-replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
-
-replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry

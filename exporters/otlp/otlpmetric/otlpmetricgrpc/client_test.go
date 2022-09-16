@@ -12,320 +12,183 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetricgrpc_test
+//go:build go1.18
+// +build go1.18
+
+package otlpmetricgrpc
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otlpmetrictest"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-var (
-	oneRecord = otlpmetrictest.OneRecordReader()
-
-	testResource = resource.Empty()
-)
-
-func TestNewExporterEndToEnd(t *testing.T) {
-	tests := []struct {
-		name           string
-		additionalOpts []otlpmetricgrpc.Option
+func TestThrottleDuration(t *testing.T) {
+	c := codes.ResourceExhausted
+	testcases := []struct {
+		status   *status.Status
+		expected time.Duration
 	}{
 		{
-			name: "StandardExporter",
+			status:   status.New(c, "NoRetryInfo"),
+			expected: 0,
 		},
 		{
-			name: "WithCompressor",
-			additionalOpts: []otlpmetricgrpc.Option{
-				otlpmetricgrpc.WithCompressor(gzip.Name),
-			},
-		},
-		{
-			name: "WithServiceConfig",
-			additionalOpts: []otlpmetricgrpc.Option{
-				otlpmetricgrpc.WithServiceConfig("{}"),
-			},
-		},
-		{
-			name: "WithDialOptions",
-			additionalOpts: []otlpmetricgrpc.Option{
-				otlpmetricgrpc.WithDialOption(grpc.WithBlock()),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			newExporterEndToEndTest(t, test.additionalOpts)
-		})
-	}
-}
-
-func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlpmetricgrpc.Option) *otlpmetric.Exporter {
-	opts := []otlpmetricgrpc.Option{
-		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithEndpoint(endpoint),
-		otlpmetricgrpc.WithReconnectionPeriod(50 * time.Millisecond),
-	}
-
-	opts = append(opts, additionalOpts...)
-	client := otlpmetricgrpc.NewClient(opts...)
-	exp, err := otlpmetric.New(ctx, client)
-	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
-	}
-	return exp
-}
-
-func newExporterEndToEndTest(t *testing.T, additionalOpts []otlpmetricgrpc.Option) {
-	mc := runMockCollector(t)
-
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	<-time.After(5 * time.Millisecond)
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
-	otlpmetrictest.RunEndToEndTest(ctx, t, exp, mc)
-}
-
-func TestExporterShutdown(t *testing.T) {
-	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.Stop()
-	}()
-
-	<-time.After(5 * time.Millisecond)
-
-	otlpmetrictest.RunExporterShutdownTest(t, func() otlpmetric.Client {
-		return otlpmetricgrpc.NewClient(
-			otlpmetricgrpc.WithInsecure(),
-			otlpmetricgrpc.WithEndpoint(mc.endpoint),
-			otlpmetricgrpc.WithReconnectionPeriod(50*time.Millisecond),
-		)
-	})
-}
-
-func TestNewExporterInvokeStartThenStopManyTimes(t *testing.T) {
-	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		if err := exp.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
-	// Invoke Start numerous times, should return errAlreadyStarted
-	for i := 0; i < 10; i++ {
-		if err := exp.Start(ctx); err == nil || !strings.Contains(err.Error(), "already started") {
-			t.Fatalf("#%d unexpected Start error: %v", i, err)
-		}
-	}
-
-	if err := exp.Shutdown(ctx); err != nil {
-		t.Fatalf("failed to Shutdown the exporter: %v", err)
-	}
-	// Invoke Shutdown numerous times
-	for i := 0; i < 10; i++ {
-		if err := exp.Shutdown(ctx); err != nil {
-			t.Fatalf(`#%d got error (%v) expected none`, i, err)
-		}
-	}
-}
-
-// This test takes a long time to run: to skip it, run tests using: -short.
-func TestNewExporterCollectorOnBadConnection(t *testing.T) {
-	if testing.Short() {
-		t.Skipf("Skipping this long running test")
-	}
-
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatalf("Failed to grab an available port: %v", err)
-	}
-	// Firstly close the "collector's" channel: optimistically this endpoint won't get reused ASAP
-	// However, our goal of closing it is to simulate an unavailable connection
-	_ = ln.Close()
-
-	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
-
-	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, endpoint)
-	_ = exp.Shutdown(ctx)
-}
-
-func TestNewExporterWithEndpoint(t *testing.T) {
-	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	_ = exp.Shutdown(ctx)
-}
-
-func TestNewExporterWithHeaders(t *testing.T) {
-	mc := runMockCollector(t)
-	defer func() {
-		_ = mc.stop()
-	}()
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
-		otlpmetricgrpc.WithHeaders(map[string]string{"header1": "value1"}))
-	require.NoError(t, exp.Export(ctx, testResource, oneRecord))
-
-	defer func() {
-		_ = exp.Shutdown(ctx)
-	}()
-
-	headers := mc.getHeaders()
-	require.Len(t, headers.Get("header1"), 1)
-	assert.Equal(t, "value1", headers.Get("header1")[0])
-}
-
-func TestNewExporterWithTimeout(t *testing.T) {
-	tts := []struct {
-		name    string
-		fn      func(exp *otlpmetric.Exporter) error
-		timeout time.Duration
-		metrics int
-		spans   int
-		code    codes.Code
-		delay   bool
-	}{
-		{
-			name: "Timeout Metrics",
-			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), testResource, oneRecord)
-			},
-			timeout: time.Millisecond * 100,
-			code:    codes.DeadlineExceeded,
-			delay:   true,
-		},
-
-		{
-			name: "No Timeout Metrics",
-			fn: func(exp *otlpmetric.Exporter) error {
-				return exp.Export(context.Background(), testResource, oneRecord)
-			},
-			timeout: time.Minute,
-			metrics: 1,
-			code:    codes.OK,
-		},
-	}
-
-	for _, tt := range tts {
-		t.Run(tt.name, func(t *testing.T) {
-			mc := runMockCollector(t)
-			if tt.delay {
-				mc.metricSvc.delay = time.Second * 10
-			}
-			defer func() {
-				_ = mc.stop()
-			}()
-
-			ctx := context.Background()
-			exp := newGRPCExporter(t, ctx, mc.endpoint, otlpmetricgrpc.WithTimeout(tt.timeout), otlpmetricgrpc.WithRetry(otlpmetricgrpc.RetryConfig{Enabled: false}))
-			defer func() {
-				_ = exp.Shutdown(ctx)
-			}()
-
-			err := tt.fn(exp)
-
-			if tt.code == codes.OK {
+			status: func() *status.Status {
+				s, err := status.New(c, "SingleRetryInfo").WithDetails(
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(15 * time.Millisecond),
+					},
+				)
 				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
+				return s
+			}(),
+			expected: 15 * time.Millisecond,
+		},
+		{
+			status: func() *status.Status {
+				s, err := status.New(c, "ErrorInfo").WithDetails(
+					&errdetails.ErrorInfo{Reason: "no throttle detail"},
+				)
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 0,
+		},
+		{
+			status: func() *status.Status {
+				s, err := status.New(c, "ErrorAndRetryInfo").WithDetails(
+					&errdetails.ErrorInfo{Reason: "with throttle detail"},
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(13 * time.Minute),
+					},
+				)
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 13 * time.Minute,
+		},
+		{
+			status: func() *status.Status {
+				s, err := status.New(c, "DoubleRetryInfo").WithDetails(
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(13 * time.Minute),
+					},
+					&errdetails.RetryInfo{
+						RetryDelay: durationpb.New(15 * time.Minute),
+					},
+				)
+				require.NoError(t, err)
+				return s
+			}(),
+			expected: 13 * time.Minute,
+		},
+	}
 
-			s := status.Convert(err)
-			require.Equal(t, tt.code, s.Code())
-
-			require.Len(t, mc.getMetrics(), tt.metrics)
+	for _, tc := range testcases {
+		t.Run(tc.status.Message(), func(t *testing.T) {
+			require.Equal(t, tc.expected, throttleDelay(tc.status))
 		})
 	}
 }
 
-func TestStartErrorInvalidAddress(t *testing.T) {
-	client := otlpmetricgrpc.NewClient(
-		otlpmetricgrpc.WithInsecure(),
-		// Validate the connection in Start (which should return the error).
-		otlpmetricgrpc.WithDialOption(
-			grpc.WithBlock(),
-			grpc.FailOnNonTempDialError(true),
-		),
-		otlpmetricgrpc.WithEndpoint("invalid"),
-		otlpmetricgrpc.WithReconnectionPeriod(time.Hour),
-	)
-	err := client.Start(context.Background())
-	assert.EqualError(t, err, `connection error: desc = "transport: error while dialing: dial tcp: address invalid: missing port in address"`)
+func TestRetryable(t *testing.T) {
+	retryableCodes := map[codes.Code]bool{
+		codes.OK:                 false,
+		codes.Canceled:           true,
+		codes.Unknown:            false,
+		codes.InvalidArgument:    false,
+		codes.DeadlineExceeded:   true,
+		codes.NotFound:           false,
+		codes.AlreadyExists:      false,
+		codes.PermissionDenied:   false,
+		codes.ResourceExhausted:  true,
+		codes.FailedPrecondition: false,
+		codes.Aborted:            true,
+		codes.OutOfRange:         true,
+		codes.Unimplemented:      false,
+		codes.Internal:           false,
+		codes.Unavailable:        true,
+		codes.DataLoss:           true,
+		codes.Unauthenticated:    false,
+	}
+
+	for c, want := range retryableCodes {
+		got, _ := retryable(status.Error(c, ""))
+		assert.Equalf(t, want, got, "evaluate(%s)", c)
+	}
 }
 
-func TestEmptyData(t *testing.T) {
-	mc := runMockCollector(t)
+func TestClient(t *testing.T) {
+	factory := func() (otlpmetric.Client, otest.Collector) {
+		coll, err := otest.NewGRPCCollector("", nil)
+		require.NoError(t, err)
 
-	defer func() {
-		_ = mc.stop()
-	}()
+		ctx := context.Background()
+		addr := coll.Addr().String()
+		client, err := newClient(ctx, WithEndpoint(addr), WithInsecure())
+		require.NoError(t, err)
+		return client, coll
+	}
 
-	<-time.After(5 * time.Millisecond)
-
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
-
-	assert.NoError(t, exp.Export(ctx, testResource, otlpmetrictest.EmptyReader()))
+	t.Run("Integration", otest.RunClientTests(factory))
 }
 
-func TestFailedMetricTransform(t *testing.T) {
-	mc := runMockCollector(t)
+func TestConfig(t *testing.T) {
+	factoryFunc := func(errCh <-chan error, o ...Option) (metric.Exporter, *otest.GRPCCollector) {
+		coll, err := otest.NewGRPCCollector("", errCh)
+		require.NoError(t, err)
 
-	defer func() {
-		_ = mc.stop()
-	}()
+		ctx := context.Background()
+		opts := append([]Option{
+			WithEndpoint(coll.Addr().String()),
+			WithInsecure(),
+		}, o...)
+		exp, err := New(ctx, opts...)
+		require.NoError(t, err)
+		return exp, coll
+	}
 
-	<-time.After(5 * time.Millisecond)
+	t.Run("WithHeaders", func(t *testing.T) {
+		key := "my-custom-header"
+		headers := map[string]string{key: "custom-value"}
+		exp, coll := factoryFunc(nil, WithHeaders(headers))
+		t.Cleanup(coll.Shutdown)
+		ctx := context.Background()
+		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
 
-	ctx := context.Background()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	defer func() {
-		assert.NoError(t, exp.Shutdown(ctx))
-	}()
+		got := coll.Headers()
+		require.Contains(t, got, key)
+		assert.Equal(t, got[key], []string{headers[key]})
+	})
 
-	assert.Error(t, exp.Export(ctx, testResource, otlpmetrictest.FailReader{}))
+	t.Run("WithTimeout", func(t *testing.T) {
+		// Do not send on errCh so the Collector never responds to the client.
+		errCh := make(chan error)
+		t.Cleanup(func() { close(errCh) })
+		exp, coll := factoryFunc(
+			errCh,
+			WithTimeout(time.Millisecond),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		t.Cleanup(coll.Shutdown)
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		err := exp.Export(ctx, metricdata.ResourceMetrics{})
+		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+	})
 }
