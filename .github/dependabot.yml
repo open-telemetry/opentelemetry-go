@@ -101,6 +101,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /example/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /example/zipkin
     labels:
       - dependencies
@@ -174,6 +183,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /exporters/otlp/otlptrace/otlptracehttp
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /exporters/prometheus
     labels:
       - dependencies
       - go

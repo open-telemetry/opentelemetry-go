@@ -1,0 +1,3 @@
+# HELP foo a sanitary counter
+# TYPE foo counter
+foo{A_B="Q",C_D="Y;Z"} 24.3
