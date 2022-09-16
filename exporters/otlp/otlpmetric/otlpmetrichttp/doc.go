@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package otlpmetrichttp provides a client that sends metrics to the collector
-using HTTP with binary protobuf payloads.
-
-This package is currently in a pre-GA phase. Backwards incompatible changes
-may be introduced in subsequent minor version releases as we work to track the
-evolving OpenTelemetry specification and user feedback.
-*/
+// Package otlpmetrichttp provides an otlpmetric.Exporter that communicates
+// with an OTLP receiving endpoint using protobuf encoded metric data over
+// HTTP.
 package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
