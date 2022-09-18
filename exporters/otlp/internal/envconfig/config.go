@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package envconfig contains common functionality for all OTLP exporters.
-package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal"
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 
 import (
 	"fmt"
