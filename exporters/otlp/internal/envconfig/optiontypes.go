@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+
+import "time"
 
 const (
 	// DefaultCollectorGRPCPort is the default gRPC port of the collector.
@@ -37,12 +39,17 @@ const (
 	GzipCompression
 )
 
-// Marshaler describes the kind of message format sent to the collector.
-type Marshaler int
-
-const (
-	// MarshalProto tells the driver to send using the protobuf binary format.
-	MarshalProto Marshaler = iota
-	// MarshalJSON tells the driver to send using json format.
-	MarshalJSON
-)
+// RetrySettings defines configuration for retrying batches in case of export failure
+// using an exponential backoff.
+type RetrySettings struct {
+	// Enabled indicates whether to not retry sending batches in case of export failure.
+	Enabled bool
+	// InitialInterval the time to wait after the first failure before retrying.
+	InitialInterval time.Duration
+	// MaxInterval is the upper bound on backoff interval. Once this value is reached the delay between
+	// consecutive retries will always be `MaxInterval`.
+	MaxInterval time.Duration
+	// MaxElapsedTime is the maximum amount of time (including retries) spent trying to send a request/batch.
+	// Once this value is reached, the data is discarded.
+	MaxElapsedTime time.Duration
+}

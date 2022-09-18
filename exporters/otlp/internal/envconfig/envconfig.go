@@ -20,10 +20,167 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// DefaultEnvOptionsReader is the default environments reader.
+var DefaultEnvOptionsReader = EnvOptionsReader{
+	GetEnv:    os.Getenv,
+	ReadFile:  os.ReadFile,
+	Namespace: "OTEL_EXPORTER_OTLP",
+}
+
+// ApplyGRPCEnvConfigs applies the env configurations for gRPC
+func ApplyGRPCEnvConfigs(cfg Config, signalType string) Config {
+	var opts []GenericOption
+	if signalType == TracesType {
+		opts = getTraceOptionsFromEnv()
+	} else if signalType == MetricsType {
+		opts = getMetricsOptionsFromEnv()
+	}
+	for _, opt := range opts {
+		cfg = opt.ApplyGRPCOption(cfg)
+	}
+	return cfg
+}
+
+// ApplyHTTPEnvConfigs applies the env configurations for HTTP
+func ApplyHTTPEnvConfigs(cfg Config, signalType string) Config {
+	var opts []GenericOption
+	if signalType == TracesType {
+		opts = getTraceOptionsFromEnv()
+	} else if signalType == MetricsType {
+		opts = getMetricsOptionsFromEnv()
+	}
+	for _, opt := range opts {
+		cfg = opt.ApplyHTTPOption(cfg)
+	}
+	return cfg
+}
+
+func getTraceOptionsFromEnv() []GenericOption {
+	opts := []GenericOption{}
+
+	DefaultEnvOptionsReader.Apply(
+		WithURL("ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Sc.Endpoint = u.Host
+				// For OTLP/HTTP endpoint URLs without a per-signal
+				// configuration, the passed endpoint is used as a base URL
+				// and the signals are sent to these paths relative to that.
+				cfg.Sc.URLPath = path.Join(u.Path, DefaultTracesPath)
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		WithURL("TRACES_ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Sc.Endpoint = u.Host
+				// For endpoint URLs for OTLP/HTTP per-signal variables, the
+				// URL MUST be used as-is without any modification. The only
+				// exception is that if an URL contains no path part, the root
+				// path / MUST be used.
+				path := u.Path
+				if path == "" {
+					path = "/"
+				}
+				cfg.Sc.URLPath = path
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		WithTLSConfig("CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		WithTLSConfig("TRACES_CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeader(h)) }),
+		WithHeaders("TRACES_HEADERS", func(h map[string]string) { opts = append(opts, WithHeader(h)) }),
+		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		WithEnvCompression("TRACES_COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+		WithDuration("TRACES_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+	)
+
+	return opts
+}
+
+func getMetricsOptionsFromEnv() []GenericOption {
+	opts := []GenericOption{}
+
+	DefaultEnvOptionsReader.Apply(
+		WithURL("ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Sc.Endpoint = u.Host
+				// For OTLP/HTTP endpoint URLs without a per-signal
+				// configuration, the passed endpoint is used as a base URL
+				// and the signals are sent to these paths relative to that.
+				cfg.Sc.URLPath = path.Join(u.Path, DefaultMetricsPath)
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		WithURL("METRICS_ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Sc.Endpoint = u.Host
+				// For endpoint URLs for OTLP/HTTP per-signal variables, the
+				// URL MUST be used as-is without any modification. The only
+				// exception is that if an URL contains no path part, the root
+				// path / MUST be used.
+				path := u.Path
+				if path == "" {
+					path = "/"
+				}
+				cfg.Sc.URLPath = path
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		WithTLSConfig("CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		WithTLSConfig("METRICS_CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeader(h)) }),
+		WithHeaders("METRICS_HEADERS", func(h map[string]string) { opts = append(opts, WithHeader(h)) }),
+		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		WithEnvCompression("METRICS_COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+		WithDuration("METRICS_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+	)
+
+	return opts
+}
+
+func withEndpointScheme(u *url.URL) GenericOption {
+	switch strings.ToLower(u.Scheme) {
+	case "http", "unix":
+		return WithInsecure()
+	default:
+		return WithSecure()
+	}
+}
+
+func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
+	return func(cfg Config) Config {
+		// For OTLP/gRPC endpoints, this is the target to which the
+		// exporter is going to send telemetry.
+		cfg.Sc.Endpoint = path.Join(u.Host, u.Path)
+		return cfg
+	}
+}
+
+// WithEnvCompression retrieves the specified config and passes it to ConfigFn as a Compression.
+func WithEnvCompression(n string, fn func(Compression)) func(e *EnvOptionsReader) {
+	return func(e *EnvOptionsReader) {
+		if v, ok := e.GetEnvValue(n); ok {
+			cp := NoCompression
+			if v == "gzip" {
+				cp = GzipCompression
+			}
+
+			fn(cp)
+		}
+	}
+}
 
 // ConfigFn is the generic function used to set a config.
 type ConfigFn func(*EnvOptionsReader)
@@ -95,7 +252,7 @@ func WithTLSConfig(n string, fn func(*tls.Config)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
 			if b, err := e.ReadFile(v); err == nil {
-				if c, err := createTLSConfig(b); err == nil {
+				if c, err := CreateTLSConfig(b); err == nil {
 					fn(c)
 				}
 			}
@@ -136,7 +293,7 @@ func stringToHeader(value string) map[string]string {
 	return headers
 }
 
-func createTLSConfig(certBytes []byte) (*tls.Config, error) {
+func CreateTLSConfig(certBytes []byte) (*tls.Config, error) {
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(certBytes); !ok {
 		return nil, errors.New("failed to append certificate to the cert pool")

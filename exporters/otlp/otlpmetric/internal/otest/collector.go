@@ -40,7 +40,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -216,7 +216,7 @@ func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, erro
 		u.Host = "localhost:0"
 	}
 	if u.Path == "" {
-		u.Path = oconf.DefaultMetricsPath
+		u.Path = envconfig.DefaultMetricsPath
 	}
 
 	c := &HTTPCollector{

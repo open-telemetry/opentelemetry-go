@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 
 import (
 	"crypto/tls"
@@ -25,7 +25,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 )
 
@@ -36,6 +35,13 @@ const (
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span batch.
 	DefaultTimeout time.Duration = 10 * time.Second
+	// DefaultMetricsPath is a default URL path for endpoint that
+	// receives metrics.
+	DefaultMetricsPath string = "/v1/metrics"
+	// TracesType
+	TracesType string = "Traces"
+	// MetricsType
+	MetricsType string = "Metrics"
 )
 
 type (
@@ -54,7 +60,7 @@ type (
 
 	Config struct {
 		// Signal specific configurations
-		Traces SignalConfig
+		Sc SignalConfig
 
 		RetryConfig retry.Config
 
@@ -66,11 +72,11 @@ type (
 	}
 )
 
-// NewHTTPConfig returns a new Config with all settings applied from opts and
+// NewHTTPTraceConfig returns a new Config with all settings applied from opts and
 // any unset setting using the default HTTP config values.
-func NewHTTPConfig(opts ...HTTPOption) Config {
+func NewHTTPTraceConfig(opts ...HTTPOption) Config {
 	cfg := Config{
-		Traces: SignalConfig{
+		Sc: SignalConfig{
 			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:     DefaultTracesPath,
 			Compression: NoCompression,
@@ -78,19 +84,19 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
-	cfg = ApplyHTTPEnvConfigs(cfg)
+	cfg = ApplyHTTPEnvConfigs(cfg, TracesType)
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
-	cfg.Traces.URLPath = internal.CleanPath(cfg.Traces.URLPath, DefaultTracesPath)
+	cfg.Sc.URLPath = CleanPath(cfg.Sc.URLPath, DefaultTracesPath)
 	return cfg
 }
 
-// NewGRPCConfig returns a new Config with all settings applied from opts and
+// NewGRPCTraceConfig returns a new Config with all settings applied from opts and
 // any unset setting using the default gRPC config values.
-func NewGRPCConfig(opts ...GRPCOption) Config {
+func NewGRPCTraceConfig(opts ...GRPCOption) Config {
 	cfg := Config{
-		Traces: SignalConfig{
+		Sc: SignalConfig{
 			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorGRPCPort),
 			URLPath:     DefaultTracesPath,
 			Compression: NoCompression,
@@ -98,7 +104,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
-	cfg = ApplyGRPCEnvConfigs(cfg)
+	cfg = ApplyGRPCEnvConfigs(cfg, TracesType)
 	for _, opt := range opts {
 		cfg = opt.ApplyGRPCOption(cfg)
 	}
@@ -107,17 +113,17 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
 	// Priroritize GRPCCredentials over Insecure (passing both is an error).
-	if cfg.Traces.GRPCCredentials != nil {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
-	} else if cfg.Traces.Insecure {
+	if cfg.Sc.GRPCCredentials != nil {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Sc.GRPCCredentials))
+	} else if cfg.Sc.Insecure {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)
-		cfg.Traces.GRPCCredentials = creds
+		cfg.Sc.GRPCCredentials = creds
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	}
-	if cfg.Traces.Compression == GzipCompression {
+	if cfg.Sc.Compression == GzipCompression {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	if len(cfg.DialOptions) != 0 {
@@ -131,6 +137,72 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
 	}
 
+	return cfg
+}
+
+// NewHTTPMetricsConfig returns a new Config with all settings applied from opts and
+// any unset setting using the default HTTP config values.
+func NewHTTPMetricsConfig(opts ...HTTPOption) Config {
+	cfg := Config{
+		Sc: SignalConfig{
+			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:     DefaultMetricsPath,
+			Compression: NoCompression,
+			Timeout:     DefaultTimeout,
+		},
+		RetryConfig: retry.DefaultConfig,
+	}
+	cfg = ApplyHTTPEnvConfigs(cfg, MetricsType)
+	for _, opt := range opts {
+		cfg = opt.ApplyHTTPOption(cfg)
+	}
+	cfg.Sc.URLPath = CleanPath(cfg.Sc.URLPath, DefaultMetricsPath)
+	return cfg
+}
+
+// NewGRPCMetricsConfig returns a new Config with all settings applied from opts and
+// any unset setting using the default gRPC config values.
+func NewGRPCMetricsConfig(opts ...GRPCOption) Config {
+	cfg := Config{
+		Sc: SignalConfig{
+			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorGRPCPort),
+			URLPath:     DefaultMetricsPath,
+			Compression: NoCompression,
+			Timeout:     DefaultTimeout,
+		},
+		RetryConfig: retry.DefaultConfig,
+	}
+	cfg = ApplyGRPCEnvConfigs(cfg, MetricsType)
+	for _, opt := range opts {
+		cfg = opt.ApplyGRPCOption(cfg)
+	}
+	if cfg.ServiceConfig != "" {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
+	}
+	// Priroritize GRPCCredentials over Insecure (passing both is an error).
+	if cfg.Sc.GRPCCredentials != nil {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Sc.GRPCCredentials))
+	} else if cfg.Sc.Insecure {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	} else {
+		// Default to using the host's root CA.
+		creds := credentials.NewTLS(nil)
+		cfg.Sc.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
+	}
+	if cfg.Sc.Compression == GzipCompression {
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+	}
+	if len(cfg.DialOptions) != 0 {
+		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
+	}
+	if cfg.ReconnectionPeriod != 0 {
+		p := grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: cfg.ReconnectionPeriod,
+		}
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
+	}
 	return cfg
 }
 
@@ -242,21 +314,21 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Endpoint = endpoint
+		cfg.Sc.Endpoint = endpoint
 		return cfg
 	})
 }
 
 func WithCompression(compression Compression) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Compression = compression
+		cfg.Sc.Compression = compression
 		return cfg
 	})
 }
 
 func WithURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.URLPath = urlPath
+		cfg.Sc.URLPath = urlPath
 		return cfg
 	})
 }
@@ -270,38 +342,38 @@ func WithRetry(rc retry.Config) GenericOption {
 
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg Config) Config {
-		cfg.Traces.TLSCfg = tlsCfg.Clone()
+		cfg.Sc.TLSCfg = tlsCfg.Clone()
 		return cfg
 	}, func(cfg Config) Config {
-		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
+		cfg.Sc.GRPCCredentials = credentials.NewTLS(tlsCfg)
 		return cfg
 	})
 }
 
 func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Insecure = true
+		cfg.Sc.Insecure = true
 		return cfg
 	})
 }
 
 func WithSecure() GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Insecure = false
+		cfg.Sc.Insecure = false
 		return cfg
 	})
 }
 
-func WithHeaders(headers map[string]string) GenericOption {
+func WithHeader(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Headers = headers
+		cfg.Sc.Headers = headers
 		return cfg
 	})
 }
 
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Timeout = duration
+		cfg.Sc.Timeout = duration
 		return cfg
 	})
 }
