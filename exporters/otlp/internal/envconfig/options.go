@@ -38,13 +38,14 @@ const (
 	// DefaultMetricsPath is a default URL path for endpoint that
 	// receives metrics.
 	DefaultMetricsPath string = "/v1/metrics"
-	// TracesType
+	// TracesType is a default type of traces.
 	TracesType string = "Traces"
-	// MetricsType
+	// MetricsType is a default type of metrics.
 	MetricsType string = "Metrics"
 )
 
 type (
+	// SignalConfig signal configurations.
 	SignalConfig struct {
 		Endpoint    string
 		Insecure    bool
@@ -58,6 +59,7 @@ type (
 		GRPCCredentials credentials.TransportCredentials
 	}
 
+	// Config configurations.
 	Config struct {
 		// Signal specific configurations
 		Sc SignalConfig
