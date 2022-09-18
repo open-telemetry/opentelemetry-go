@@ -28,9 +28,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -67,13 +67,13 @@ func NewClient(opts ...Option) otlptrace.Client {
 }
 
 func newClient(opts ...Option) *client {
-	cfg := otlpconfig.NewGRPCConfig(asGRPCOptions(opts)...)
+	cfg := envconfig.NewGRPCTraceConfig(asGRPCOptions(opts)...)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := &client{
-		endpoint:      cfg.Traces.Endpoint,
-		exportTimeout: cfg.Traces.Timeout,
+		endpoint:      cfg.Sc.Endpoint,
+		exportTimeout: cfg.Sc.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		dialOpts:      cfg.DialOptions,
 		stopCtx:       ctx,
@@ -81,8 +81,8 @@ func newClient(opts ...Option) *client {
 		conn:          cfg.GRPCConn,
 	}
 
-	if len(cfg.Traces.Headers) > 0 {
-		c.metadata = metadata.New(cfg.Traces.Headers)
+	if len(cfg.Sc.Headers) > 0 {
+		c.metadata = metadata.New(cfg.Sc.Headers)
 	}
 
 	return c

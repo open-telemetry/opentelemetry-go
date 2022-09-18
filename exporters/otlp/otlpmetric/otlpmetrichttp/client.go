@@ -29,9 +29,9 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -75,24 +75,24 @@ var ourTransport = &http.Transport{
 
 // newClient creates a new HTTP metric client.
 func newClient(opts ...Option) (otlpmetric.Client, error) {
-	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	cfg := envconfig.NewHTTPMetricsConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,
-		Timeout:   cfg.Metrics.Timeout,
+		Timeout:   cfg.Sc.Timeout,
 	}
-	if cfg.Metrics.TLSCfg != nil {
+	if cfg.Sc.TLSCfg != nil {
 		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Metrics.TLSCfg
+		transport.TLSClientConfig = cfg.Sc.TLSCfg
 		httpClient.Transport = transport
 	}
 
 	u := &url.URL{
 		Scheme: "https",
-		Host:   cfg.Metrics.Endpoint,
-		Path:   cfg.Metrics.URLPath,
+		Host:   cfg.Sc.Endpoint,
+		Path:   cfg.Sc.URLPath,
 	}
-	if cfg.Metrics.Insecure {
+	if cfg.Sc.Insecure {
 		u.Scheme = "http"
 	}
 	// Body is set when this is cloned during upload.
@@ -101,15 +101,15 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 		return nil, err
 	}
 
-	if n := len(cfg.Metrics.Headers); n > 0 {
-		for k, v := range cfg.Metrics.Headers {
+	if n := len(cfg.Sc.Headers); n > 0 {
+		for k, v := range cfg.Sc.Headers {
 			req.Header.Set(k, v)
 		}
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	return &client{
-		compression: Compression(cfg.Metrics.Compression),
+		compression: Compression(cfg.Sc.Compression),
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,

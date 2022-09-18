@@ -31,9 +31,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -66,8 +66,8 @@ var ourTransport = &http.Transport{
 
 type client struct {
 	name        string
-	cfg         otlpconfig.SignalConfig
-	generalCfg  otlpconfig.Config
+	cfg         envconfig.SignalConfig
+	generalCfg  envconfig.Config
 	requestFunc retry.RequestFunc
 	client      *http.Client
 	stopCh      chan struct{}
@@ -78,22 +78,22 @@ var _ otlptrace.Client = (*client)(nil)
 
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
-	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
+	cfg := envconfig.NewHTTPTraceConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
 		Transport: ourTransport,
-		Timeout:   cfg.Traces.Timeout,
+		Timeout:   cfg.Sc.Timeout,
 	}
-	if cfg.Traces.TLSCfg != nil {
+	if cfg.Sc.TLSCfg != nil {
 		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Traces.TLSCfg
+		transport.TLSClientConfig = cfg.Sc.TLSCfg
 		httpClient.Transport = transport
 	}
 
 	stopCh := make(chan struct{})
 	return &client{
 		name:        "traces",
-		cfg:         cfg.Traces,
+		cfg:         cfg.Sc,
 		generalCfg:  cfg,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		stopCh:      stopCh,

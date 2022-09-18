@@ -18,32 +18,32 @@ import (
 	"crypto/tls"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
 // Compression describes the compression used for payloads sent to the
 // collector.
-type Compression oconf.Compression
+type Compression envconfig.Compression
 
 const (
 	// NoCompression tells the driver to send payloads without
 	// compression.
-	NoCompression = Compression(oconf.NoCompression)
+	NoCompression = Compression(envconfig.NoCompression)
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
-	GzipCompression = Compression(oconf.GzipCompression)
+	GzipCompression = Compression(envconfig.GzipCompression)
 )
 
 // Option applies an option to the Exporter.
 type Option interface {
-	applyHTTPOption(oconf.Config) oconf.Config
+	applyHTTPOption(envconfig.Config) envconfig.Config
 }
 
-func asHTTPOptions(opts []Option) []oconf.HTTPOption {
-	converted := make([]oconf.HTTPOption, len(opts))
+func asHTTPOptions(opts []Option) []envconfig.HTTPOption {
+	converted := make([]envconfig.HTTPOption, len(opts))
 	for i, o := range opts {
-		converted[i] = oconf.NewHTTPOption(o.applyHTTPOption)
+		converted[i] = envconfig.NewHTTPOption(o.applyHTTPOption)
 	}
 	return converted
 }
@@ -53,10 +53,10 @@ func asHTTPOptions(opts []Option) []oconf.HTTPOption {
 type RetryConfig retry.Config
 
 type wrappedOption struct {
-	oconf.HTTPOption
+	envconfig.HTTPOption
 }
 
-func (w wrappedOption) applyHTTPOption(cfg oconf.Config) oconf.Config {
+func (w wrappedOption) applyHTTPOption(cfg envconfig.Config) envconfig.Config {
 	return w.ApplyHTTPOption(cfg)
 }
 
@@ -72,7 +72,7 @@ func (w wrappedOption) applyHTTPOption(cfg oconf.Config) oconf.Config {
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{oconf.WithEndpoint(endpoint)}
+	return wrappedOption{envconfig.WithEndpoint(endpoint)}
 }
 
 // WithCompression sets the compression strategy the Exporter will use to
@@ -87,7 +87,7 @@ func WithEndpoint(endpoint string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no compression strategy will be used.
 func WithCompression(compression Compression) Option {
-	return wrappedOption{oconf.WithCompression(oconf.Compression(compression))}
+	return wrappedOption{envconfig.WithCompression(envconfig.Compression(compression))}
 }
 
 // WithURLPath sets the URL path the Exporter will send requests to.
@@ -100,7 +100,7 @@ func WithCompression(compression Compression) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, "/v1/metrics" will be used.
 func WithURLPath(urlPath string) Option {
-	return wrappedOption{oconf.WithURLPath(urlPath)}
+	return wrappedOption{envconfig.WithURLPath(urlPath)}
 }
 
 // WithTLSClientConfig sets the TLS configuration the Exporter will use for
@@ -115,7 +115,7 @@ func WithURLPath(urlPath string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, the system default configuration is used.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	return wrappedOption{oconf.WithTLSClientConfig(tlsCfg)}
+	return wrappedOption{envconfig.WithTLSClientConfig(tlsCfg)}
 }
 
 // WithInsecure disables client transport security for the Exporter's HTTP
@@ -130,7 +130,7 @@ func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, client security will be used.
 func WithInsecure() Option {
-	return wrappedOption{oconf.WithInsecure()}
+	return wrappedOption{envconfig.WithInsecure()}
 }
 
 // WithHeaders will send the provided headers with each HTTP requests.
@@ -145,7 +145,7 @@ func WithInsecure() Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
-	return wrappedOption{oconf.WithHeaders(headers)}
+	return wrappedOption{envconfig.WithHeader(headers)}
 }
 
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
@@ -163,7 +163,7 @@ func WithHeaders(headers map[string]string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
-	return wrappedOption{oconf.WithTimeout(duration)}
+	return wrappedOption{envconfig.WithTimeout(duration)}
 }
 
 // WithRetry sets the retry policy for transient retryable errors that are
@@ -177,5 +177,5 @@ func WithTimeout(duration time.Duration) Option {
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
-	return wrappedOption{oconf.WithRetry(retry.Config(rc))}
+	return wrappedOption{envconfig.WithRetry(retry.Config(rc))}
 }

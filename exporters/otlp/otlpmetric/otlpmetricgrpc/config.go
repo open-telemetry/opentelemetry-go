@@ -16,6 +16,7 @@ package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"fmt"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"time"
 
 	"google.golang.org/grpc"
@@ -23,18 +24,17 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 )
 
 // Option applies a configuration option to the Exporter.
 type Option interface {
-	applyGRPCOption(oconf.Config) oconf.Config
+	applyGRPCOption(envconfig.Config) envconfig.Config
 }
 
-func asGRPCOptions(opts []Option) []oconf.GRPCOption {
-	converted := make([]oconf.GRPCOption, len(opts))
+func asGRPCOptions(opts []Option) []envconfig.GRPCOption {
+	converted := make([]envconfig.GRPCOption, len(opts))
 	for i, o := range opts {
-		converted[i] = oconf.NewGRPCOption(o.applyGRPCOption)
+		converted[i] = envconfig.NewGRPCOption(o.applyGRPCOption)
 	}
 	return converted
 }
@@ -47,10 +47,10 @@ func asGRPCOptions(opts []Option) []oconf.GRPCOption {
 type RetryConfig retry.Config
 
 type wrappedOption struct {
-	oconf.GRPCOption
+	envconfig.GRPCOption
 }
 
-func (w wrappedOption) applyGRPCOption(cfg oconf.Config) oconf.Config {
+func (w wrappedOption) applyGRPCOption(cfg envconfig.Config) envconfig.Config {
 	return w.ApplyGRPCOption(cfg)
 }
 
@@ -69,7 +69,7 @@ func (w wrappedOption) applyGRPCOption(cfg oconf.Config) oconf.Config {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
-	return wrappedOption{oconf.WithInsecure()}
+	return wrappedOption{envconfig.WithInsecure()}
 }
 
 // WithEndpoint sets the target endpoint the Exporter will connect to.
@@ -84,7 +84,7 @@ func WithInsecure() Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{oconf.WithEndpoint(endpoint)}
+	return wrappedOption{envconfig.WithEndpoint(endpoint)}
 }
 
 // WithReconnectionPeriod set the minimum amount of time between connection
@@ -92,19 +92,19 @@ func WithEndpoint(endpoint string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithReconnectionPeriod(rp time.Duration) Option {
-	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
+	return wrappedOption{envconfig.NewGRPCOption(func(cfg envconfig.Config) envconfig.Config {
 		cfg.ReconnectionPeriod = rp
 		return cfg
 	})}
 }
 
-func compressorToCompression(compressor string) oconf.Compression {
+func compressorToCompression(compressor string) envconfig.Compression {
 	if compressor == "gzip" {
-		return oconf.GzipCompression
+		return envconfig.GzipCompression
 	}
 
 	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
-	return oconf.NoCompression
+	return envconfig.NoCompression
 }
 
 // WithCompressor sets the compressor the gRPC client uses.
@@ -127,7 +127,7 @@ func compressorToCompression(compressor string) oconf.Compression {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
-	return wrappedOption{oconf.WithCompression(compressorToCompression(compressor))}
+	return wrappedOption{envconfig.WithCompression(compressorToCompression(compressor))}
 }
 
 // WithHeaders will send the provided headers with each gRPC requests.
@@ -142,7 +142,7 @@ func WithCompressor(compressor string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
-	return wrappedOption{oconf.WithHeaders(headers)}
+	return wrappedOption{envconfig.WithHeader(headers)}
 }
 
 // WithTLSCredentials sets the gRPC connection to use creds.
@@ -158,8 +158,8 @@ func WithHeaders(headers map[string]string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithTLSCredentials(creds credentials.TransportCredentials) Option {
-	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
-		cfg.Metrics.GRPCCredentials = creds
+	return wrappedOption{envconfig.NewGRPCOption(func(cfg envconfig.Config) envconfig.Config {
+		cfg.Sc.GRPCCredentials = creds
 		return cfg
 	})}
 }
@@ -168,7 +168,7 @@ func WithTLSCredentials(creds credentials.TransportCredentials) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithServiceConfig(serviceConfig string) Option {
-	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
+	return wrappedOption{envconfig.NewGRPCOption(func(cfg envconfig.Config) envconfig.Config {
 		cfg.ServiceConfig = serviceConfig
 		return cfg
 	})}
@@ -181,7 +181,7 @@ func WithServiceConfig(serviceConfig string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
-	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
+	return wrappedOption{envconfig.NewGRPCOption(func(cfg envconfig.Config) envconfig.Config {
 		cfg.DialOptions = opts
 		return cfg
 	})}
@@ -196,7 +196,7 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 // It is the callers responsibility to close the passed conn. The Exporter
 // Shutdown method will not close this connection.
 func WithGRPCConn(conn *grpc.ClientConn) Option {
-	return wrappedOption{oconf.NewGRPCOption(func(cfg oconf.Config) oconf.Config {
+	return wrappedOption{envconfig.NewGRPCOption(func(cfg envconfig.Config) envconfig.Config {
 		cfg.GRPCConn = conn
 		return cfg
 	})}
@@ -217,7 +217,7 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
-	return wrappedOption{oconf.WithTimeout(duration)}
+	return wrappedOption{envconfig.WithTimeout(duration)}
 }
 
 // WithRetry sets the retry policy for transient retryable errors that are
@@ -234,5 +234,5 @@ func WithTimeout(duration time.Duration) Option {
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(settings RetryConfig) Option {
-	return wrappedOption{oconf.WithRetry(retry.Config(settings))}
+	return wrappedOption{envconfig.WithRetry(retry.Config(settings))}
 }

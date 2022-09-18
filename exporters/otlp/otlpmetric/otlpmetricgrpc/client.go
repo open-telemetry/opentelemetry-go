@@ -24,9 +24,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -64,22 +64,22 @@ type client struct {
 
 // newClient creates a new gRPC metric client.
 func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error) {
-	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
+	cfg := envconfig.NewGRPCMetricsConfig(asGRPCOptions(options)...)
 
 	c := &client{
-		exportTimeout: cfg.Metrics.Timeout,
+		exportTimeout: cfg.Sc.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		conn:          cfg.GRPCConn,
 	}
 
-	if len(cfg.Metrics.Headers) > 0 {
-		c.metadata = metadata.New(cfg.Metrics.Headers)
+	if len(cfg.Sc.Headers) > 0 {
+		c.metadata = metadata.New(cfg.Sc.Headers)
 	}
 
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
-		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)
+		conn, err := grpc.DialContext(ctx, cfg.Sc.Endpoint, cfg.DialOptions...)
 		if err != nil {
 			return nil, err
 		}
