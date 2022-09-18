@@ -34,7 +34,7 @@ var DefaultEnvOptionsReader = EnvOptionsReader{
 	Namespace: "OTEL_EXPORTER_OTLP",
 }
 
-// ApplyGRPCEnvConfigs applies the env configurations for gRPC
+// ApplyGRPCEnvConfigs applies the env configurations for gRPC.
 func ApplyGRPCEnvConfigs(cfg Config, signalType string) Config {
 	var opts []GenericOption
 	if signalType == TracesType {
@@ -48,7 +48,7 @@ func ApplyGRPCEnvConfigs(cfg Config, signalType string) Config {
 	return cfg
 }
 
-// ApplyHTTPEnvConfigs applies the env configurations for HTTP
+// ApplyHTTPEnvConfigs applies the env configurations for HTTP.
 func ApplyHTTPEnvConfigs(cfg Config, signalType string) Config {
 	var opts []GenericOption
 	if signalType == TracesType {
@@ -293,6 +293,8 @@ func stringToHeader(value string) map[string]string {
 	return headers
 }
 
+// CreateTLSConfig creates a tls.Config from a raw certificate bytes
+// to verify a server certificate.
 func CreateTLSConfig(certBytes []byte) (*tls.Config, error) {
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(certBytes); !ok {

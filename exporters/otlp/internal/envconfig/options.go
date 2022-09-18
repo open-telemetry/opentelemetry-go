@@ -245,10 +245,12 @@ type genericOption struct {
 	fn func(Config) Config
 }
 
+// ApplyGRPCOption applies the env options for gRPC.
 func (g *genericOption) ApplyGRPCOption(cfg Config) Config {
 	return g.fn(cfg)
 }
 
+// ApplyHTTPOption applies the env options for HTTP.
 func (g *genericOption) ApplyHTTPOption(cfg Config) Config {
 	return g.fn(cfg)
 }
@@ -266,10 +268,12 @@ type splitOption struct {
 	grpcFn func(Config) Config
 }
 
+// ApplyGRPCOption applies the env options for gRPC.
 func (g *splitOption) ApplyGRPCOption(cfg Config) Config {
 	return g.grpcFn(cfg)
 }
 
+// ApplyHTTPOption applies the env options for HTTP.
 func (g *splitOption) ApplyHTTPOption(cfg Config) Config {
 	return g.httpFn(cfg)
 }
@@ -285,12 +289,15 @@ type httpOption struct {
 	fn func(Config) Config
 }
 
+// ApplyHTTPOption applies the env options for HTTP.
 func (h *httpOption) ApplyHTTPOption(cfg Config) Config {
 	return h.fn(cfg)
 }
 
 func (httpOption) private() {}
 
+// NewHTTPOption returns a new Option with all settings applied from opts and
+// any unset setting using the default HTTP option values.
 func NewHTTPOption(fn func(cfg Config) Config) HTTPOption {
 	return &httpOption{fn: fn}
 }
@@ -300,18 +307,20 @@ type grpcOption struct {
 	fn func(Config) Config
 }
 
+// ApplyGRPCOption applies the env options for gRPC.
 func (h *grpcOption) ApplyGRPCOption(cfg Config) Config {
 	return h.fn(cfg)
 }
 
 func (grpcOption) private() {}
 
+// NewGRPCOption returns a new Option with all settings applied from opts and
+// any unset setting using the default gRPC option values.
 func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 	return &grpcOption{fn: fn}
 }
 
-// Generic Options
-
+// WithEndpoint retrieves the specified config and passes it to GenericOption as a string.
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Endpoint = endpoint
@@ -319,6 +328,7 @@ func WithEndpoint(endpoint string) GenericOption {
 	})
 }
 
+// WithCompression retrieves the specified config and passes it to GenericOption as a Compression.
 func WithCompression(compression Compression) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Compression = compression
@@ -326,6 +336,7 @@ func WithCompression(compression Compression) GenericOption {
 	})
 }
 
+// WithURLPath retrieves the specified config and passes it to GenericOption as a string.
 func WithURLPath(urlPath string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.URLPath = urlPath
@@ -333,6 +344,7 @@ func WithURLPath(urlPath string) GenericOption {
 	})
 }
 
+// WithRetry retrieves the specified config and passes it to GenericOption as a retry.Config.
 func WithRetry(rc retry.Config) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.RetryConfig = rc
@@ -340,6 +352,7 @@ func WithRetry(rc retry.Config) GenericOption {
 	})
 }
 
+// WithTLSClientConfig retrieves the specified config and passes it to GenericOption as a crypto/tls.Config.
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	return newSplitOption(func(cfg Config) Config {
 		cfg.Sc.TLSCfg = tlsCfg.Clone()
@@ -350,6 +363,7 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 	})
 }
 
+// WithInsecure retrieves the specified config and passes it to GenericOption as if insecure.
 func WithInsecure() GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Insecure = true
@@ -357,6 +371,7 @@ func WithInsecure() GenericOption {
 	})
 }
 
+// WithSecure retrieves the specified config and passes it to GenericOption as if secure.
 func WithSecure() GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Insecure = false
@@ -364,6 +379,7 @@ func WithSecure() GenericOption {
 	})
 }
 
+// WithHeader retrieves the specified config and passes it to GenericOption as a map of http header.
 func WithHeader(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Headers = headers
@@ -371,6 +387,7 @@ func WithHeader(headers map[string]string) GenericOption {
 	})
 }
 
+// WithTimeout retrieves the specified config and passes it to GenericOption as a time.Duration.
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Sc.Timeout = duration
