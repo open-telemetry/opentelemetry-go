@@ -265,7 +265,7 @@ func TestEnvConfig(t *testing.T) {
 }
 
 func TestWithTLSConfig(t *testing.T) {
-	tlsCert, err := createTLSConfig([]byte(WeakCertificate))
+	tlsCert, err := CreateTLSConfig([]byte(WeakCertificate))
 	assert.NoError(t, err)
 
 	reader := EnvOptionsReader{
