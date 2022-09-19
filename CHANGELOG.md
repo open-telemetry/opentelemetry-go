@@ -44,6 +44,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (#3175)
 - The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (#3175)
 
+### Fixed
+
+- Fix attributes other than string in the Prometheus exporter. (#3190)
+
 ## [1.10.0] - 2022-09-09
 
 ### Added
@@ -227,7 +231,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
   - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT`
   - `OTEL_SPAN_LINK_COUNT_LIMIT`
   - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
-  
+
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
 - Add resource container ID detection. (#2418)
