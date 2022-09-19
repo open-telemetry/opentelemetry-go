@@ -208,10 +208,10 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 		kv := itr.Attribute()
 		key := strings.Map(sanitizeRune, string(kv.Key))
 		if _, ok := keysMap[key]; !ok {
-			keysMap[key] = []string{kv.Value.AsString()}
+			keysMap[key] = []string{kv.Value.Emit()}
 		} else {
 			// if the sanitized key is a duplicate, append to the list of keys
-			keysMap[key] = append(keysMap[key], kv.Value.AsString())
+			keysMap[key] = append(keysMap[key], kv.Value.Emit())
 		}
 	}
 
