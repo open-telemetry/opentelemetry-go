@@ -24,6 +24,7 @@ import (
 	"go.opencensus.io/metric/metricexport"
 
 	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -33,11 +34,12 @@ import (
 // OpenTelemetry base exporter.
 type exporter struct {
 	base metric.Exporter
+	res  *resource.Resource
 }
 
 // NewMetricExporter returns an OpenCensus exporter that exports to an
 // OpenTelemetry exporter.
-func NewMetricExporter(base metric.Exporter) metricexport.Exporter {
+func NewMetricExporter(base metric.Exporter, res *resource.Resource) metricexport.Exporter {
 	return &exporter{base: base}
 }
 
@@ -49,8 +51,13 @@ func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.
 		return err
 	}
 	return e.base.Export(ctx, metricdata.ResourceMetrics{
-		Resource: resource.NewSchemaless(),
+		Resource: e.res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
-			{Metrics: otelmetrics},
+			{
+				Scope: instrumentation.Scope{
+					Name: "go.opentelemetry.io/otel/bridge/opencensus",
+				},
+				Metrics: otelmetrics,
+			},
 		}})
 }
