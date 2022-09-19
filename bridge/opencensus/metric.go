@@ -12,16 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.18
+// +build go1.18
+
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
 	"context"
 
-	"go.opencensus.io/metric/metricdata"
+	ocmetricdata "go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
 
-	"go.opentelemetry.io/otel/bridge/opencensus/opencensusmetric/internal"
+	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // exporter implements the OpenCensus metric Exporter interface using an
@@ -38,10 +43,14 @@ func NewMetricExporter(base metric.Exporter) metricexport.Exporter {
 
 // ExportMetrics implements the OpenCensus metric Exporter interface by sending
 // to an OpenTelemetry exporter.
-func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*metricdata.Metric) error {
+func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.Metric) error {
 	otelmetrics, err := internal.ConvertMetrics(ocmetrics)
 	if err != nil {
 		return err
 	}
-	return e.base.Export(ctx, otelmetrics)
+	return e.base.Export(ctx, metricdata.ResourceMetrics{
+		Resource: resource.NewSchemaless(),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{Metrics: otelmetrics},
+		}})
 }

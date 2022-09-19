@@ -15,7 +15,7 @@
 //go:build go1.18
 // +build go1.18
 
-package internal // import "go.opentelemetry.io/otel/bridge/opencensus/opencensusmetric/internal"
+package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 
 import (
 	"errors"
