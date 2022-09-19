@@ -103,6 +103,34 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 9, attrs...)
 			},
 		},
+		{
+			name:         "invalid instruments are dropped",
+			expectedFile: "testdata/gauge.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				}
+				// Valid.
+				gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+				require.NoError(t, err)
+				gauge.Add(ctx, 100, attrs...)
+				gauge.Add(ctx, -25, attrs...)
+
+				// Invalid, should be dropped.
+				gauge, err = meter.SyncFloat64().UpDownCounter("invalid.gauge.name")
+				require.NoError(t, err)
+				gauge.Add(ctx, 100, attrs...)
+
+				counter, err := meter.SyncFloat64().Counter("invalid.counter.name")
+				require.NoError(t, err)
+				counter.Add(ctx, 100, attrs...)
+
+				histogram, err := meter.SyncFloat64().Histogram("invalid.hist.name")
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, attrs...)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
