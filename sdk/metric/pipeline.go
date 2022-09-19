@@ -191,6 +191,8 @@ func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
 	}
 }
 
+const missedCacheInstrumentKind = view.InstrumentKind(254)
+
 func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[int64], error) {
 	reg.cacheLock.Lock()
 	defer reg.cacheLock.Unlock()
@@ -213,7 +215,6 @@ func (reg *pipelineRegistry) createInt64Aggregators(inst view.Instrument, instUn
 		err:            err,
 		instrumentKind: inst.Kind,
 	}
-	missedCacheInstrumentKind := view.InstrumentKind(254)
 	reg.cacheFloat[key] = pipelineCacheResult[float64]{
 		aggregators:    nil,
 		err:            nil,
@@ -244,7 +245,6 @@ func (reg *pipelineRegistry) createFloat64Aggregators(inst view.Instrument, inst
 		err:            err,
 		instrumentKind: inst.Kind,
 	}
-	missedCacheInstrumentKind := view.InstrumentKind(254)
 	reg.cacheInt[key] = pipelineCacheResult[int64]{
 		aggregators:    nil,
 		err:            nil,
