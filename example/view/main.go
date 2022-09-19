@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-const meterName = "github.com/open-telemetry/opentelemetry-go/example/prometheus"
+const meterName = "github.com/open-telemetry/opentelemetry-go/example/view"
 
 func main() {
 	ctx := context.Background()
