@@ -44,10 +44,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (#3175)
 - The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (#3175)
 
-### Fixed
-
-- Fix attributes other than string in the Prometheus exporter. (#3190)
-
 ## [1.10.0] - 2022-09-09
 
 ### Added
