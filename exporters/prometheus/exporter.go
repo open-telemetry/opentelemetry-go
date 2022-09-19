@@ -90,12 +90,14 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			m, err := prometheus.NewConstHistogram(metricData.description, metricData.histogramCount, metricData.histogramSum, metricData.histogramBuckets, metricData.attributeValues...)
 			if err != nil {
 				otel.Handle(err)
+				continue
 			}
 			ch <- m
 		} else {
 			m, err := prometheus.NewConstMetric(metricData.description, metricData.valueType, metricData.value, metricData.attributeValues...)
 			if err != nil {
 				otel.Handle(err)
+				continue
 			}
 			ch <- m
 		}
