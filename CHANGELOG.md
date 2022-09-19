@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
+
 ### Changed
 
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
@@ -41,10 +43,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `"go.opentelemetry.io/otel/sdk/metric".Accumulator` type was removed, see the `MeterProvider`in the new metric SDK. (#3175)
 - The `"go.opentelemetry.io/otel/sdk/metric".NewAccumulator` function was removed, see `NewMeterProvider`in the new metric SDK. (#3175)
 - The deprecated `"go.opentelemetry.io/otel/sdk/metric".AtomicFieldOffsets` function was removed. (#3175)
-
-### Fixed
-
-- Fix attributes other than string in the Prometheus exporter. (#3190)
 
 ## [1.10.0] - 2022-09-09
 
@@ -1945,7 +1943,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.32.0
 [1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
 [1.9.0/0.0.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.9.0
 [1.8.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.8.0
