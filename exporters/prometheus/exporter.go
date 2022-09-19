@@ -43,16 +43,8 @@ type collector struct {
 	metric.Reader
 }
 
-// config is added here to allow for options expansion in the future.
-type config struct{}
-
-// Option may be used in the future to apply options to a Prometheus Exporter config.
-type Option interface {
-	apply(config) config
-}
-
 // New returns a Prometheus Exporter.
-func New(_ ...Option) Exporter {
+func New() Exporter {
 	// this assumes that the default temporality selector will always return cumulative.
 	// we only support cumulative temporality, so building our own reader enforces this.
 	reader := metric.NewManualReader()
