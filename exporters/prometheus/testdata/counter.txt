@@ -1,3 +1,3 @@
 # HELP foo a simple counter
 # TYPE foo counter
-foo{A="B",C="D"} 24.3
+foo{A="B",C="D",E="true",F="42"} 24.3

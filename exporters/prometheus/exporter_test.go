@@ -45,6 +45,8 @@ func TestPrometheusExporter(t *testing.T) {
 				attrs := []attribute.KeyValue{
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
 				}
 				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
 				require.NoError(t, err)
