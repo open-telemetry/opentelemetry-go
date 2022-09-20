@@ -134,6 +134,12 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, "Sum[float64] not equal:")
 			reasons = append(reasons, r...)
 		}
+	case metricdata.ExponentialHistogram:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
 	case metricdata.Histogram:
 		r := equalHistograms(v, b.(metricdata.Histogram), cfg)
 		if len(r) > 0 {
@@ -141,7 +147,7 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, r...)
 		}
 	default:
-		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
+		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown type %T", a))
 	}
 	return reasons
 }
@@ -280,6 +286,39 @@ func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint, cfg config) (r
 		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
 	}
 	return reasons
+}
+
+// @@@
+func equalExponentialHistograms(a, b metricdata.ExponentialHistogram, cfg config) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+	r := compareDiff(diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(a, b metricdata.ExponentialHistogramDataPoint) bool {
+			r := equalExponentialHistogramDataPoints(a, b, cfg)
+			return len(r) == 0
+		},
+	))
+	if r != "" {
+		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
+	}
+	return reasons
+}
+
+func equalExponentialHistogramDataPoints(a, b metricdata.ExponentialHistogramDataPoint, cfg config) (reasons []string) {
+	if a.Scale != b.Scale {
+		reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
+	}
+	if a.Sum != b.Sum {
+		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+	}
+	if a.Count != b.Count {
+		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+	}
+	// TODO @@@
+	return nil
 }
 
 func notEqualStr(prefix string, expected, actual interface{}) string {
