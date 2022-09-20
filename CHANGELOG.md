@@ -8,11 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [OpenCensus Bridge 0.32.0] - 2022-09-20
+
 ### Added
 
-- The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
+- The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced.
+  The new v0.32.0 metric SDK is supported in the same way the previous bridge was: OpenTelemetry metric exporters can be used to export OpenCensus data. (#3192)
 
-## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
+## [Alpha Metric SDK 0.32.0] - 2022-09-18
 
 ### Changed
 
@@ -1948,8 +1951,9 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.0...HEAD
-[0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/bridge/opencensus/v0.32.0...HEAD
+[OpenCensus Bridge 0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/bridge/opencensus/v0.32.0
+[Alpha Metric SDK 0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
 [1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
 [1.9.0/0.0.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.9.0
 [1.8.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.8.0
