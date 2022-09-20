@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/otel-collector
 
-go 1.17
+go 1.18
 
 replace (
 	go.opentelemetry.io/otel => ../..

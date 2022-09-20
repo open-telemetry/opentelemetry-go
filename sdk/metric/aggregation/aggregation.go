@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.17
-// +build go1.17
-
 // Package aggregation contains configuration types that define the
 // aggregation operation used to summarizes recorded measurements.
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
