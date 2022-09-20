@@ -370,7 +370,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
 	entries := []registryEntry{
-		registryEntry{reader: testRdrHistogram, views: []view.View{{}}},
+		{reader: testRdrHistogram, views: []view.View{{}}},
 	}
 	reg := newPipelineRegistries(entries)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
