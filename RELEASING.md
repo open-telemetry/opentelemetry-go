@@ -6,7 +6,8 @@ New versions of the [OpenTelemetry specification] mean new versions of the `semc
 The `semconv-generate` make target is used for this.
 
 1. Checkout a local copy of the [OpenTelemetry specification] to the desired release tag.
-2. Run the `make semconv-generate ...` target from this repository.
+2. Pull the latest `otel/semconvgen` image: `docker pull otel/semconvgen:latest`
+3. Run the `make semconv-generate ...` target from this repository.
 
 For example,
 
