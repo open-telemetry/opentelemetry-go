@@ -13,8 +13,6 @@
 // limitations under the License.
 
 //go:generate stringer -type=Temporality
-//go:build go1.17
-// +build go1.17
 
 package metricdata // import "go.opentelemetry.io/otel/sdk/metric/metricdata"
 
