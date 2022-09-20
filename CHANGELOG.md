@@ -10,9 +10,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Add caching to instrument creation (#3181)
+
+## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
+
+### Changed
+
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
   Please see the package documentation for how the new SDK is initialized and configured. (#3175)
-- Add caching to instrument creation (#3181)
+- Update the minimum supported go version to go1.18. Removes support for go1.17 (#3179)
 
 ### Removed
 
@@ -226,7 +232,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
   - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT`
   - `OTEL_SPAN_LINK_COUNT_LIMIT`
   - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
-  
+
   If the provided environment variables are invalid (negative), the default values would be used.
 - Rename the `gc` runtime name to `go` (#2560)
 - Add resource container ID detection. (#2418)
@@ -1942,7 +1948,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.0...HEAD
+[0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
 [1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
 [1.9.0/0.0.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.9.0
 [1.8.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.8.0
