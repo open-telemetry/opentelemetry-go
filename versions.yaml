@@ -49,10 +49,9 @@ module-sets:
     modules:
       - go.opentelemetry.io/otel/schema
   bridge:
-    version: v0.31.0
+    version: v0.32.0
     modules:
       - go.opentelemetry.io/otel/bridge/opencensus
-      - go.opentelemetry.io/otel/bridge/opencensus/opencensusmetric
       - go.opentelemetry.io/otel/bridge/opencensus/test
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
