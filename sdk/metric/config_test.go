@@ -130,5 +130,5 @@ func TestWithResource(t *testing.T) {
 func TestWithReader(t *testing.T) {
 	r := &reader{}
 	c := newConfig([]Option{WithReader(r)})
-	assert.Contains(t, c.readers, r)
+	assert.Contains(t, c.entries, registryEntry{reader: r, views: []view.View{{}}})
 }

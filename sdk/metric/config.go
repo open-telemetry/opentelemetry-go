@@ -29,7 +29,7 @@ import (
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res     *resource.Resource
-	readers map[Reader][]view.View
+	entries []registryEntry
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -38,9 +38,9 @@ type config struct {
 // single functions.
 func (c config) readerSignals() (forceFlush, shutdown func(context.Context) error) {
 	var fFuncs, sFuncs []func(context.Context) error
-	for r := range c.readers {
-		sFuncs = append(sFuncs, r.Shutdown)
-		fFuncs = append(fFuncs, r.ForceFlush)
+	for _, ent := range c.entries {
+		sFuncs = append(sFuncs, ent.reader.Shutdown)
+		fFuncs = append(fFuncs, ent.reader.ForceFlush)
 	}
 
 	return unify(fFuncs), unifyShutdown(sFuncs)
@@ -126,14 +126,14 @@ func WithResource(res *resource.Resource) Option {
 // operations; no data will be exported without a Reader.
 func WithReader(r Reader, views ...view.View) Option {
 	return optionFunc(func(cfg config) config {
-		if cfg.readers == nil {
-			cfg.readers = make(map[Reader][]view.View)
-		}
 		if len(views) == 0 {
 			views = []view.View{{}}
 		}
 
-		cfg.readers[r] = views
+		cfg.entries = append(cfg.entries, registryEntry{
+			reader: r,
+			views:  views,
+		})
 		return cfg
 	})
 }

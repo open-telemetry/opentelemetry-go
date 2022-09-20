@@ -161,27 +161,34 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 // pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
 // new Aggregators from a pipelineRegistry.
 type pipelineRegistry struct {
-	views     map[Reader][]view.View
-	pipelines map[Reader]*pipeline
+	entries []registryEntry
 }
 
-func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
-	pipelines := map[Reader]*pipeline{}
-	for rdr := range views {
-		pipe := &pipeline{}
-		rdr.register(pipe)
-		pipelines[rdr] = pipe
+type registryEntry struct {
+	reader   Reader
+	views    []view.View
+	pipeline *pipeline
+}
+
+func newPipelineRegistries(entries []registryEntry) *pipelineRegistry {
+	reg := &pipelineRegistry{
+		entries: make([]registryEntry, len(entries)),
 	}
-	return &pipelineRegistry{
-		views:     views,
-		pipelines: pipelines,
+	for i, entry := range entries {
+		entry.pipeline = &pipeline{}
+		entry.reader.register(entry.pipeline)
+		reg.entries[i] = entry
 	}
+	return reg
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
 func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
-	for _, pipe := range reg.pipelines {
-		pipe.addCallback(fn)
+	// for _, pipe := range reg.pipelines {
+	// 	pipe.addCallback(fn)
+	// }
+	for _, entry := range reg.entries {
+		entry.pipeline.addCallback(fn)
 	}
 }
 
@@ -192,8 +199,10 @@ func createAggregators[N int64 | float64](reg *pipelineRegistry, inst view.Instr
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
-	for rdr, views := range reg.views {
-		pipe := reg.pipelines[rdr]
+	for _, entry := range reg.entries {
+		rdr := entry.reader
+		views := entry.views
+		pipe := entry.pipeline
 		rdrAggs, err := createAggregatorsForReader[N](rdr, views, inst)
 		if err != nil {
 			errs.append(err)
