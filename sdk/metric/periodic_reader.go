@@ -115,6 +115,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 	r := &periodicReader{
 		timeout:  conf.timeout,
 		exporter: exporter,
+		flushCh:  make(chan chan<- error),
 		cancel:   cancel,
 
 		temporalitySelector: conf.temporalitySelector,
@@ -137,6 +138,7 @@ type periodicReader struct {
 
 	timeout  time.Duration
 	exporter Exporter
+	flushCh  chan chan<- error
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
@@ -161,19 +163,28 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			m, err := r.Collect(ctx)
-			if err == nil {
-				c, cancel := context.WithTimeout(ctx, r.timeout)
-				err = r.exporter.Export(c, m)
-				cancel()
-			}
+			err := r.export(ctx)
 			if err != nil {
 				otel.Handle(err)
 			}
+		case errCh := <-r.flushCh:
+			errCh <- r.export(ctx)
+			ticker.Reset(interval)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// export collects and exports metric data to the configured exporter.
+func (r *periodicReader) export(ctx context.Context) error {
+	m, err := r.Collect(ctx)
+	if err == nil {
+		c, cancel := context.WithTimeout(ctx, r.timeout)
+		err = r.exporter.Export(c, m)
+		cancel()
+	}
+	return err
 }
 
 // register registers p as the producer of this reader.
@@ -218,12 +229,34 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 	return ph.produce(ctx)
 }
 
-// ForceFlush flushes the Exporter.
+// ForceFlush collects pending telemetry and flushes the Exporter.
 func (r *periodicReader) ForceFlush(ctx context.Context) error {
+	// Return fast before allocating if nothing is going to be done.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	errCh := make(chan error, 1)
+	select {
+	case r.flushCh <- errCh:
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+			close(errCh)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	return r.exporter.ForceFlush(ctx)
 }
 
-// Shutdown stops the export pipeline.
+// Shutdown collects pending telemetry and then stops the export pipeline.
 func (r *periodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
