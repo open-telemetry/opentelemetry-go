@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Updated go.mods to point to valid versions of the sdk. (#3216)
 
+### Added
+
+- The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
+
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
 
 ### Changed
