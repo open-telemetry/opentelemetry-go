@@ -119,7 +119,7 @@ func TestPrometheusExporter(t *testing.T) {
 				gauge.Add(ctx, 100, attrs...)
 				gauge.Add(ctx, -25, attrs...)
 
-				// Invalid, should be dropped.
+				// Invalid, will be renamed.
 				gauge, err = meter.SyncFloat64().UpDownCounter("invalid.gauge.name", instrument.WithDescription("a gauge with an invalid name"))
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, attrs...)
