@@ -98,6 +98,7 @@ func (ts *periodicReaderTestSuite) SetupTest() {
 	}
 
 	ts.ErrReader = NewPeriodicReader(e)
+	ts.ErrReader.register(testProducer{})
 }
 
 func (ts *periodicReaderTestSuite) TearDownTest() {
@@ -172,6 +173,38 @@ func TestPeriodicReaderRun(t *testing.T) {
 	r.register(testProducer{})
 	trigger <- time.Now()
 	assert.Equal(t, assert.AnError, <-eh.Err)
+
+	// Ensure Reader is allowed clean up attempt.
+	_ = r.Shutdown(context.Background())
+}
+
+func TestPeriodicReaderForceFlushFlushesPending(t *testing.T) {
+	// Override the ticker C chan so tests are not flaky and rely on timing.
+	defer func(orig func(time.Duration) *time.Ticker) {
+		newTicker = orig
+	}(newTicker)
+	// Keep this at size zero so when triggered with a send it will hang until
+	// the select case is selected and the collection loop is started.
+	trigger := make(chan time.Time)
+	newTicker = func(d time.Duration) *time.Ticker {
+		ticker := time.NewTicker(d)
+		ticker.C = trigger
+		return ticker
+	}
+
+	var called bool
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
+			// The testProducer produces testMetrics.
+			assert.Equal(t, testMetrics, m)
+			called = true
+			return assert.AnError
+		},
+	}
+	r := NewPeriodicReader(exp)
+	r.register(testProducer{})
+	assert.Equal(t, assert.AnError, r.ForceFlush(context.Background()), "export error not returned to ForceFlush")
+	assert.True(t, called, "exporter Export method not called by ForceFlush, pending telemetry not flushed")
 
 	// Ensure Reader is allowed clean up attempt.
 	_ = r.Shutdown(context.Background())
