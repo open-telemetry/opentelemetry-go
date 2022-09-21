@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced.
   The new v0.32.0 metric SDK is supported in the same way the previous bridge was: OpenTelemetry metric exporters can be used to export OpenCensus data. (#3192)
+- The OpenCensus bridge example (`go.opentelemetry.io/otel/example/opencensus`) has been reintroduced. (#3206)
 
 ## [Alpha Metric SDK 0.32.0] - 2022-09-18
 
