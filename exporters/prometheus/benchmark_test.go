@@ -41,6 +41,7 @@ func benchmarkCollect(b *testing.B, n int) {
 		counter.Add(ctx, float64(i))
 	}
 
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := registry.Gather()
