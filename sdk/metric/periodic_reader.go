@@ -196,7 +196,7 @@ func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggre
 }
 
 // collectAndExport gather all metric data related to the periodicReader r from
-// the SDK and exportes it with r's exporter.
+// the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
 	m, err := r.Collect(ctx)
 	if err == nil {
