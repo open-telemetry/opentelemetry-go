@@ -124,7 +124,7 @@ func TestPrometheusExporter(t *testing.T) {
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, attrs...)
 
-				counter, err := meter.SyncFloat64().Counter("invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
+				counter, err := meter.SyncFloat64().Counter("0invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
 				require.NoError(t, err)
 				counter.Add(ctx, 100, attrs...)
 
