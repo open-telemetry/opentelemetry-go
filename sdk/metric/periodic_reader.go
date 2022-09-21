@@ -115,16 +115,16 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 	r := &periodicReader{
 		timeout:  conf.timeout,
 		exporter: exporter,
-		flushCh:  make(chan chan<- error),
+		flushCh:  make(chan chan error),
 		cancel:   cancel,
+		done:     make(chan struct{}),
 
 		temporalitySelector: conf.temporalitySelector,
 		aggregationSelector: conf.aggregationSelector,
 	}
 
-	r.wg.Add(1)
 	go func() {
-		defer r.wg.Done()
+		defer func() { close(r.done) }()
 		r.run(ctx, conf.interval)
 	}()
 
@@ -138,12 +138,12 @@ type periodicReader struct {
 
 	timeout  time.Duration
 	exporter Exporter
-	flushCh  chan chan<- error
+	flushCh  chan chan error
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 
-	wg           sync.WaitGroup
+	done         chan struct{}
 	cancel       context.CancelFunc
 	shutdownOnce sync.Once
 }
@@ -163,28 +163,17 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			err := r.export(ctx)
+			err := r.collectAndExport(ctx)
 			if err != nil {
 				otel.Handle(err)
 			}
 		case errCh := <-r.flushCh:
-			errCh <- r.export(ctx)
+			errCh <- r.collectAndExport(ctx)
 			ticker.Reset(interval)
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-// export collects and exports metric data to the configured exporter.
-func (r *periodicReader) export(ctx context.Context) error {
-	m, err := r.Collect(ctx)
-	if err == nil {
-		c, cancel := context.WithTimeout(ctx, r.timeout)
-		err = r.exporter.Export(c, m)
-		cancel()
-	}
-	return err
 }
 
 // register registers p as the producer of this reader.
@@ -206,38 +195,52 @@ func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggre
 	return r.aggregationSelector(kind)
 }
 
+// collectAndExport gather all metric data related to the periodicReader r from
+// the SDK and exportes it with the r's exporter.
+func (r *periodicReader) collectAndExport(ctx context.Context) error {
+	m, err := r.Collect(ctx)
+	if err == nil {
+		err = r.export(ctx, m)
+	}
+	return err
+}
+
 // Collect gathers and returns all metric data related to the Reader from
 // the SDK. The returned metric data is not exported to the configured
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
 func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	p := r.producer.Load()
-	if p == nil {
+	return r.collect(ctx, r.producer.Load())
+}
+
+// collect unwraps pHolder as a produceHolder and returns its produce results.
+func (r *periodicReader) collect(ctx context.Context, pHolder interface{}) (metricdata.ResourceMetrics, error) {
+	if pHolder == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
-	ph, ok := p.(produceHolder)
+	ph, ok := pHolder.(produceHolder)
 	if !ok {
 		// The atomic.Value is entirely in the periodicReader's control so
 		// this should never happen. In the unforeseen case that this does
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
-		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
+		err := fmt.Errorf("periodic reader: invalid producer: %T", pHolder)
 		return metricdata.ResourceMetrics{}, err
 	}
 	return ph.produce(ctx)
 }
 
+// export exports metric data m using r's exporter.
+func (r *periodicReader) export(ctx context.Context, m metricdata.ResourceMetrics) error {
+	c, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	return r.exporter.Export(c, m)
+}
+
 // ForceFlush flushes pending telemetry.
 func (r *periodicReader) ForceFlush(ctx context.Context) error {
-	// Return fast before allocating if nothing is going to be done.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
 	errCh := make(chan error, 1)
 	select {
 	case r.flushCh <- errCh:
@@ -250,6 +253,8 @@ func (r *periodicReader) ForceFlush(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+	case <-r.done:
+		return ErrReaderShutdown
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -262,18 +267,24 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 	r.shutdownOnce.Do(func() {
 		// Stop the run loop.
 		r.cancel()
-		r.wg.Wait()
-
-		// Flush pending telemetry.
-		err = r.export(ctx)
+		<-r.done
 
 		// Any future call to Collect will now return ErrReaderShutdown.
-		r.producer.Store(produceHolder{
+		ph := r.producer.Swap(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
 
+		if ph != nil { // Reader was registered.
+			// Flush pending telemetry.
+			var m metricdata.ResourceMetrics
+			m, err = r.collect(ctx, ph)
+			if err == nil {
+				err = r.export(ctx, m)
+			}
+		}
+
 		sErr := r.exporter.Shutdown(ctx)
-		if err == nil {
+		if err == nil || err == ErrReaderShutdown {
 			err = sErr
 		}
 	})
