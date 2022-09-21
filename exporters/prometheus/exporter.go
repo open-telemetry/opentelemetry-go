@@ -236,10 +236,7 @@ func sanitizeRune(r rune) rune {
 
 func sanitizeName(n string) string {
 	// This algorithm is based on strings.Map from Go 1.19.
-	const (
-		replacement = '_'
-		width       = 1
-	)
+	const replacement = '_'
 
 	valid := func(i int, r rune) bool {
 		// Taken from
@@ -250,16 +247,24 @@ func sanitizeName(n string) string {
 		return false
 	}
 
-	// This output buffer b is initialized on demand, the first time a character
-	// needs to be replaced.
+	// This output buffer b is initialized on demand, the first time a
+	// character needs to be replaced.
 	var b strings.Builder
 	for i, c := range n {
 		if valid(i, c) {
 			continue
 		}
+
+		if i == 0 && c >= '0' && c <= '9' {
+			// Prefix leading number with replacement character.
+			b.Grow(len(n) + 1)
+			b.WriteByte(byte(replacement))
+			break
+		}
 		b.Grow(len(n))
 		b.WriteString(n[:i])
-		b.WriteRune(replacement)
+		b.WriteByte(byte(replacement))
+		width := utf8.RuneLen(c)
 		n = n[i+width:]
 		break
 	}
