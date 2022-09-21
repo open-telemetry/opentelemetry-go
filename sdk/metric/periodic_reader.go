@@ -214,7 +214,7 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 	return r.collect(ctx, r.producer.Load())
 }
 
-// collect unwraps pHolder as a produceHolder and returns its produce results.
+// collect unwraps p as a produceHolder and returns its produce results.
 func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata.ResourceMetrics, error) {
 	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
