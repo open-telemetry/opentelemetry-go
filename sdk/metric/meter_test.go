@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestMeterRegistry(t *testing.T) {
@@ -469,6 +470,7 @@ func TestMetersProvideScope(t *testing.T) {
 	assert.NoError(t, err)
 
 	want := metricdata.ResourceMetrics{
+		Resource: resource.Default(),
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
 				Scope: instrumentation.Scope{

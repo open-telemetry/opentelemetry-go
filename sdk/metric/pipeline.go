@@ -165,10 +165,10 @@ type pipelineRegistry struct {
 	pipelines map[Reader]*pipeline
 }
 
-func newPipelineRegistries(views map[Reader][]view.View) *pipelineRegistry {
+func newPipelineRegistries(res *resource.Resource, views map[Reader][]view.View) *pipelineRegistry {
 	pipelines := map[Reader]*pipeline{}
 	for rdr := range views {
-		pipe := &pipeline{}
+		pipe := &pipeline{resource: res}
 		rdr.register(pipe)
 		pipelines[rdr] = pipe
 	}

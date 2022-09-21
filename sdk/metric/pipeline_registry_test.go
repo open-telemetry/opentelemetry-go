@@ -23,10 +23,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/view"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type invalidAggregation struct {
@@ -324,9 +326,9 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newPipelineRegistries(tt.views)
+			reg := newPipelineRegistries(resource.Empty(), tt.views)
 			testPipelineRegistryCreateIntAggregators(t, reg, tt.wantCount)
-			reg = newPipelineRegistries(tt.views)
+			reg = newPipelineRegistries(resource.Empty(), tt.views)
 			testPipelineRegistryCreateFloatAggregators(t, reg, tt.wantCount)
 		})
 	}
@@ -350,6 +352,19 @@ func testPipelineRegistryCreateFloatAggregators(t *testing.T, reg *pipelineRegis
 	require.Len(t, aggs, wantCount)
 }
 
+func TestPipelineRegistryResource(t *testing.T) {
+	v, err := view.New(view.MatchInstrumentName("bar"), view.WithRename("foo"))
+	require.NoError(t, err)
+	views := map[Reader][]view.View{
+		NewManualReader(): {{}, v},
+	}
+	res := resource.NewSchemaless(attribute.String("key", "val"))
+	reg := newPipelineRegistries(res, views)
+	for _, p := range reg.pipelines {
+		assert.True(t, res.Equal(p.resource), "resource not set")
+	}
+}
+
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
@@ -358,14 +373,14 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 			{},
 		},
 	}
-	reg := newPipelineRegistries(views)
+	reg := newPipelineRegistries(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
 	intAggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	reg = newPipelineRegistries(views)
+	reg = newPipelineRegistries(resource.Empty(), views)
 
 	floatAggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
 	assert.Error(t, err)
@@ -387,7 +402,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	reg := newPipelineRegistries(views)
+	reg := newPipelineRegistries(resource.Empty(), views)
 
 	intAggs, err := createAggregators[int64](reg, fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
