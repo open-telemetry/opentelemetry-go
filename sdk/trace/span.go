@@ -189,15 +189,18 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 	if !s.IsRecording() {
 		return
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.status.Code > code {
+		return
+	}
 
 	status := Status{Code: code}
 	if code == codes.Error {
 		status.Description = description
 	}
 
-	s.mu.Lock()
 	s.status = status
-	s.mu.Unlock()
 }
 
 // SetAttributes sets attributes of this span.

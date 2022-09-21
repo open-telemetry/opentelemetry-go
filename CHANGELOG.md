@@ -13,6 +13,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
 - The OpenCensus bridge example (`go.opentelemetry.io/otel/example/opencensus`) has been reintroduced. (#3206)
 
+### Changed
+
+- `span.SetStatus` has been updated to comply with the OpenTelemetry specification.
+  Calls that lower the status are now noops. (#3214)
+
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
 
 ### Changed
