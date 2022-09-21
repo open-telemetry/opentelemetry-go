@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18 && tests_fail
-// +build go1.18,tests_fail
+//go:build tests_fail
+// +build tests_fail
 
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 

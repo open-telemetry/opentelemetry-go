@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 // InstrumentKind describes the kind of instrument a Meter can create.
