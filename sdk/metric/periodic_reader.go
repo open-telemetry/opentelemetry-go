@@ -215,18 +215,18 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 }
 
 // collect unwraps pHolder as a produceHolder and returns its produce results.
-func (r *periodicReader) collect(ctx context.Context, pHolder interface{}) (metricdata.ResourceMetrics, error) {
-	if pHolder == nil {
+func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata.ResourceMetrics, error) {
+	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
 
-	ph, ok := pHolder.(produceHolder)
+	ph, ok := p.(produceHolder)
 	if !ok {
 		// The atomic.Value is entirely in the periodicReader's control so
 		// this should never happen. In the unforeseen case that this does
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
-		err := fmt.Errorf("periodic reader: invalid producer: %T", pHolder)
+		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
 		return metricdata.ResourceMetrics{}, err
 	}
 	return ph.produce(ctx)
