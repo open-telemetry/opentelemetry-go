@@ -139,11 +139,13 @@ func (eh chErrorHandler) Handle(err error) {
 	eh.Err <- err
 }
 
-func TestPeriodicReaderRun(t *testing.T) {
+func triggerTicker(t *testing.T) chan time.Time {
+	t.Helper()
+
 	// Override the ticker C chan so tests are not flaky and rely on timing.
-	defer func(orig func(time.Duration) *time.Ticker) {
-		newTicker = orig
-	}(newTicker)
+	orig := newTicker
+	t.Cleanup(func() { newTicker = orig })
+
 	// Keep this at size zero so when triggered with a send it will hang until
 	// the select case is selected and the collection loop is started.
 	trigger := make(chan time.Time)
@@ -152,6 +154,11 @@ func TestPeriodicReaderRun(t *testing.T) {
 		ticker.C = trigger
 		return ticker
 	}
+	return trigger
+}
+
+func TestPeriodicReaderRun(t *testing.T) {
+	trigger := triggerTicker(t)
 
 	// Register an error handler to validate export errors are passed to
 	// otel.Handle.
@@ -178,36 +185,41 @@ func TestPeriodicReaderRun(t *testing.T) {
 	_ = r.Shutdown(context.Background())
 }
 
-func TestPeriodicReaderForceFlushFlushesPending(t *testing.T) {
-	// Override the ticker C chan so tests are not flaky and rely on timing.
-	defer func(orig func(time.Duration) *time.Ticker) {
-		newTicker = orig
-	}(newTicker)
-	// Keep this at size zero so when triggered with a send it will hang until
-	// the select case is selected and the collection loop is started.
-	trigger := make(chan time.Time)
-	newTicker = func(d time.Duration) *time.Ticker {
-		ticker := time.NewTicker(d)
-		ticker.C = trigger
-		return ticker
+func TestPeriodicReaderFlushesPending(t *testing.T) {
+	// Override the ticker so tests are not flaky and rely on timing.
+	trigger := triggerTicker(t)
+	t.Cleanup(func() { close(trigger) })
+
+	expFunc := func(t *testing.T) (exp Exporter, called *bool) {
+		called = new(bool)
+		return &fnExporter{
+			exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
+				// The testProducer produces testMetrics.
+				assert.Equal(t, testMetrics, m)
+				*called = true
+				return assert.AnError
+			},
+		}, called
 	}
 
-	var called bool
-	exp := &fnExporter{
-		exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
-			// The testProducer produces testMetrics.
-			assert.Equal(t, testMetrics, m)
-			called = true
-			return assert.AnError
-		},
-	}
-	r := NewPeriodicReader(exp)
-	r.register(testProducer{})
-	assert.Equal(t, assert.AnError, r.ForceFlush(context.Background()), "export error not returned to ForceFlush")
-	assert.True(t, called, "exporter Export method not called by ForceFlush, pending telemetry not flushed")
+	t.Run("ForceFlush", func(t *testing.T) {
+		exp, called := expFunc(t)
+		r := NewPeriodicReader(exp)
+		r.register(testProducer{})
+		assert.Equal(t, assert.AnError, r.ForceFlush(context.Background()), "export error not returned")
+		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 
-	// Ensure Reader is allowed clean up attempt.
-	_ = r.Shutdown(context.Background())
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(context.Background())
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		exp, called := expFunc(t)
+		r := NewPeriodicReader(exp)
+		r.register(testProducer{})
+		assert.Equal(t, assert.AnError, r.Shutdown(context.Background()), "export error not returned")
+		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
+	})
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {
