@@ -229,7 +229,7 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 	return ph.produce(ctx)
 }
 
-// ForceFlush collects pending telemetry and flushes the Exporter.
+// ForceFlush flushes pending telemetry.
 func (r *periodicReader) ForceFlush(ctx context.Context) error {
 	// Return fast before allocating if nothing is going to be done.
 	select {
@@ -256,7 +256,7 @@ func (r *periodicReader) ForceFlush(ctx context.Context) error {
 	return r.exporter.ForceFlush(ctx)
 }
 
-// Shutdown collects pending telemetry and then stops the export pipeline.
+// Shutdown flushes pending telemetry and then stops the export pipeline.
 func (r *periodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
@@ -264,12 +264,18 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 		r.cancel()
 		r.wg.Wait()
 
+		// Flush pending telemetry.
+		err = r.export(ctx)
+
 		// Any future call to Collect will now return ErrReaderShutdown.
 		r.producer.Store(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
 
-		err = r.exporter.Shutdown(ctx)
+		sErr := r.exporter.Shutdown(ctx)
+		if err == nil {
+			err = sErr
+		}
 	})
 	return err
 }
