@@ -145,7 +145,7 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 	dataPoints := make([]*metricData, 0, len(histogram.DataPoints))
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
 		for i, bound := range dp.Bounds {
 			buckets[bound] = dp.BucketCounts[i]
@@ -168,7 +168,7 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,
@@ -185,7 +185,7 @@ func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricda
 	dataPoints := make([]*metricData, 0, len(gauge.DataPoints))
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,
@@ -232,4 +232,20 @@ func sanitizeRune(r rune) rune {
 		return r
 	}
 	return '_'
+}
+
+func sanitizeName(n string) string {
+	if len(n) == 0 {
+		return n
+	}
+	var sn = make([]string, len(n))
+	for i, b := range n {
+		if !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_' || b == ':' || (b >= '0' && b <= '9' && i > 0)) {
+			sn[i] = "_"
+		} else {
+			sn[i] = string(b)
+		}
+	}
+
+	return strings.Join(sn, "")
 }

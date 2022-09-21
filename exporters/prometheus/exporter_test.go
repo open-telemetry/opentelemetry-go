@@ -106,8 +106,8 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "invalid instruments are dropped",
-			expectedFile: "testdata/gauge.txt",
+			name:         "invalid instruments are renamed",
+			expectedFile: "testdata/sanitized_names.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				attrs := []attribute.KeyValue{
 					attribute.Key("A").String("B"),
@@ -120,15 +120,15 @@ func TestPrometheusExporter(t *testing.T) {
 				gauge.Add(ctx, -25, attrs...)
 
 				// Invalid, should be dropped.
-				gauge, err = meter.SyncFloat64().UpDownCounter("invalid.gauge.name")
+				gauge, err = meter.SyncFloat64().UpDownCounter("invalid.gauge.name", instrument.WithDescription("a gauge with an invalid name"))
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, attrs...)
 
-				counter, err := meter.SyncFloat64().Counter("invalid.counter.name")
+				counter, err := meter.SyncFloat64().Counter("invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
 				require.NoError(t, err)
 				counter.Add(ctx, 100, attrs...)
 
-				histogram, err := meter.SyncFloat64().Histogram("invalid.hist.name")
+				histogram, err := meter.SyncFloat64().Histogram("invalid.hist.name", instrument.WithDescription("a histogram with an invalid name"))
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, attrs...)
 			},
