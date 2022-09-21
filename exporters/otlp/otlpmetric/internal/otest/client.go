@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 
 import (
