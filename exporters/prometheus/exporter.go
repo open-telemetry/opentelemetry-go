@@ -235,17 +235,49 @@ func sanitizeRune(r rune) rune {
 }
 
 func sanitizeName(n string) string {
-	if len(n) == 0 {
+	// This algorithm is based on strings.Map from Go 1.19.
+	const (
+		replacement = '_'
+		width       = 1
+	)
+
+	valid := func(i int, r rune) bool {
+		// Taken from
+		// https://github.com/prometheus/common/blob/dfbc25bd00225c70aca0d94c3c4bb7744f28ace0/model/metric.go#L92-L102
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || r == ':' || (r >= '0' && r <= '9' && i > 0) {
+			return true
+		}
+		return false
+	}
+
+	// This output buffer b is initialized on demand, the first time a character
+	// needs to be replaced.
+	var b strings.Builder
+	for i, c := range n {
+		if valid(i, c) {
+			continue
+		}
+		b.Grow(len(n))
+		b.WriteString(n[:i])
+		b.WriteRune(replacement)
+		n = n[i+width:]
+		break
+	}
+
+	// Fast path for unchanged input.
+	if b.Cap() == 0 { // b.Grow was not called above.
 		return n
 	}
-	var sn = make([]string, len(n))
-	for i, b := range n {
-		if !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_' || b == ':' || (b >= '0' && b <= '9' && i > 0)) {
-			sn[i] = "_"
+
+	for _, c := range n {
+		// Due to inlining, it is more performant to invoke WriteByte rather then
+		// WriteRune.
+		if valid(1, c) { // We are guaranteed to not be at the start.
+			b.WriteByte(byte(c))
 		} else {
-			sn[i] = string(b)
+			b.WriteByte(byte(replacement))
 		}
 	}
 
-	return strings.Join(sn, "")
+	return b.String()
 }
