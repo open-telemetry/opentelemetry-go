@@ -25,6 +25,7 @@ import (
 	"go.opencensus.io/metric/metricproducer"
 
 	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -64,24 +65,19 @@ func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.
 }
 
 type reader struct {
-	// This reader doesn't actually matter. It is just there to satisfy the Reader interface.
-	metric.Reader
-	res     *resource.Resource
 	manager *metricproducer.Manager
 }
 
-// NewMetricExporter returns an OpenTelemetry metric.Reader that can be used as
-// a source of metrics for OpenTelemetry (pull) exporters.
-func NewMetricReader(res *resource.Resource) metric.Reader {
+// NewPrometheusBridge returns a prometheus.Bridge that can be used as
+// a source of metrics for OpenTelemetry Prometheus exporters.
+func NewPrometheusBridge() prometheus.Bridge {
 	return &reader{
-		Reader:  metric.NewManualReader(),
-		res:     res,
 		manager: metricproducer.GlobalManager(),
 	}
 }
 
 // Collect overrides the manual reader's collect method to retrieve metrics from OpenCensus.
-func (r *reader) Collect(context.Context) (metricdata.ResourceMetrics, error) {
+func (r *reader) Collect(context.Context) (metricdata.ScopeMetrics, error) {
 	producers := r.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
 	for _, ocProducer := range producers {
@@ -89,16 +85,12 @@ func (r *reader) Collect(context.Context) (metricdata.ResourceMetrics, error) {
 	}
 	otelmetrics, err := internal.ConvertMetrics(data)
 	if err != nil {
-		return metricdata.ResourceMetrics{}, err
+		return metricdata.ScopeMetrics{}, err
 	}
-	return metricdata.ResourceMetrics{
-		Resource: r.res,
-		ScopeMetrics: []metricdata.ScopeMetrics{
-			{
-				Scope: instrumentation.Scope{
-					Name: "go.opentelemetry.io/otel/bridge/opencensus",
-				},
-				Metrics: otelmetrics,
-			},
-		}}, nil
+	return metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: "go.opentelemetry.io/otel/bridge/opencensus",
+		},
+		Metrics: otelmetrics,
+	}, nil
 }

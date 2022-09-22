@@ -39,11 +39,13 @@ type Exporter struct {
 // collector is used to implement prometheus.Collector.
 type collector struct {
 	metric.Reader
+	bridges []Bridge
 }
 
 // config is added here to allow for options expansion in the future.
 type config struct {
-	reader metric.Reader
+	reader  metric.Reader
+	bridges []Bridge
 }
 
 // Option may be used in the future to apply options to a Prometheus Exporter config.
@@ -57,10 +59,16 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
-// WithReader provides a Reader from which the prometheus exporter reads metrics.
-func WithReader(r metric.Reader) Option {
+// Bridge is a source of metrics other than the OpenTelemetry SDK.
+type Bridge interface {
+	// Collect gathers and returns all metric data from the Bridge.
+	Collect(context.Context) (metricdata.ScopeMetrics, error)
+}
+
+// WithBridge provides a Bridge from which the prometheus exporter reads metrics.
+func WithBridge(b Bridge) Option {
 	return optionFunc(func(config config) config {
-		config.reader = r
+		config.bridges = append(config.bridges, b)
 		return config
 	})
 }
@@ -76,7 +84,8 @@ func New(opts ...Option) Exporter {
 	e := Exporter{
 		Reader: cfg.reader,
 		Collector: &collector{
-			Reader: cfg.reader,
+			Reader:  cfg.reader,
+			bridges: cfg.bridges,
 		},
 	}
 	return e
@@ -98,6 +107,14 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics, err := c.Reader.Collect(context.TODO())
 	if err != nil {
 		otel.Handle(err)
+	}
+	for _, bridge := range c.bridges {
+		// merge in scope-level metrics from bridges.
+		bridgeMetrics, err := bridge.Collect(context.TODO())
+		if err != nil {
+			otel.Handle(err)
+		}
+		metrics.ScopeMetrics = append(metrics.ScopeMetrics, bridgeMetrics)
 	}
 
 	// TODO(#3166): convert otel resource to target_info
