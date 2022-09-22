@@ -15,8 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `span.SetStatus` has been updated to comply with the OpenTelemetry specification.
-  Calls that lower the status are now noops. (#3214)
+- `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
 
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
 
