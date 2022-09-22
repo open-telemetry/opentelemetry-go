@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.32.1] Revised Metric SDK (Alpha) - 2022-09-22
 
+### Changed
+
+- Instead of dropping metric, the Prometheus exporter will replace any invalid character in metric names with `_`. (#3212)
+
 ### Added
 
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
@@ -27,7 +31,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The metric SDK in `go.opentelemetry.io/otel/sdk/metric` is completely refactored to comply with the OpenTelemetry specification.
   Please see the package documentation for how the new SDK is initialized and configured. (#3175)
 - Update the minimum supported go version to go1.18. Removes support for go1.17 (#3179)
-- Instead of dropping metric, the Prometheus exporter will replace any invalid character in metric names with `_`. (#3212)
 
 ### Removed
 
