@@ -52,7 +52,7 @@ type View struct {
 // the match Options passed for the View to be applied to it. Similarly, all
 // transform operation Options are applied to matched Instruments.
 func New(opts ...Option) (View, error) {
-	v := View{}
+	v := &View{}
 
 	for _, opt := range opts {
 		v = opt.apply(v)
@@ -69,12 +69,12 @@ func New(opts ...Option) (View, error) {
 		return View{}, fmt.Errorf("invalid view: view name specified for multiple instruments")
 	}
 
-	return v, nil
+	return *v, nil
 }
 
 // TransformInstrument will check if an instrument matches this view
 // and will convert it if it does.
-func (v View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
+func (v *View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
 	if !v.match(inst) {
 		return Instrument{}, false
 	}
@@ -92,7 +92,7 @@ func (v View) TransformInstrument(inst Instrument) (transformed Instrument, matc
 
 // AttributeFilter returns a function that returns only attributes specified by
 // WithFilterAttributes. If no filter was provided nil is returned.
-func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
+func (v *View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
 		return nil
 	}
@@ -102,27 +102,27 @@ func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	}
 }
 
-func (v View) matchName(name string) bool {
+func (v *View) matchName(name string) bool {
 	return v.instrumentName == nil || v.instrumentName.MatchString(name)
 }
 
-func (v View) matchScopeName(name string) bool {
+func (v *View) matchScopeName(name string) bool {
 	return v.scope.Name == "" || name == v.scope.Name
 }
 
-func (v View) matchScopeVersion(version string) bool {
+func (v *View) matchScopeVersion(version string) bool {
 	return v.scope.Version == "" || version == v.scope.Version
 }
 
-func (v View) matchScopeSchemaURL(schemaURL string) bool {
+func (v *View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
 
-func (v View) matchInstrumentKind(kind InstrumentKind) bool {
+func (v *View) matchInstrumentKind(kind InstrumentKind) bool {
 	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
 }
 
-func (v View) match(i Instrument) bool {
+func (v *View) match(i Instrument) bool {
 	return v.matchName(i.Name) &&
 		v.matchScopeName(i.Scope.Name) &&
 		v.matchScopeSchemaURL(i.Scope.SchemaURL) &&
@@ -132,12 +132,12 @@ func (v View) match(i Instrument) bool {
 
 // Option applies a configuration option value to a View.
 type Option interface {
-	apply(View) View
+	apply(*View) *View
 }
 
-type optionFunc func(View) View
+type optionFunc func(*View) *View
 
-func (f optionFunc) apply(v View) View {
+func (f optionFunc) apply(v *View) *View {
 	return f(v)
 }
 
@@ -145,7 +145,7 @@ func (f optionFunc) apply(v View) View {
 // This will accept wildcards of * for zero or more characters, and ? for
 // exactly one character. A name of "*" (default) will match all instruments.
 func MatchInstrumentName(name string) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		if strings.ContainsAny(name, "*?") {
 			v.hasWildcard = true
 		}
@@ -161,7 +161,7 @@ func MatchInstrumentName(name string) Option {
 // MatchInstrumentKind with match an instrument based on the instrument's kind.
 // The default is to match all instrument kinds.
 func MatchInstrumentKind(kind InstrumentKind) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		v.instrumentKind = kind
 		return v
 	})
@@ -171,7 +171,7 @@ func MatchInstrumentKind(kind InstrumentKind) Option {
 // instrumentation.Scope field that is non-empty (""). The default is to match all
 // instrumentation scopes.
 func MatchInstrumentationScope(scope instrumentation.Scope) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		v.scope = scope
 		return v
 	})
@@ -181,7 +181,7 @@ func MatchInstrumentationScope(scope instrumentation.Scope) Option {
 // instrument name will not be changed. Must be used with a non-wildcard
 // instrument name match. The default does not change the instrument name.
 func WithRename(name string) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		v.name = name
 		return v
 	})
@@ -190,7 +190,7 @@ func WithRename(name string) Option {
 // WithSetDescription will change the description of the instruments the view
 // matches to desc. If not used or empty the description will not be changed.
 func WithSetDescription(desc string) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		v.description = desc
 		return v
 	})
@@ -199,7 +199,7 @@ func WithSetDescription(desc string) Option {
 // WithFilterAttributes will select attributes that have a matching key.  If not used
 // or empty no filter will be applied.
 func WithFilterAttributes(keys ...attribute.Key) Option {
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		if len(keys) == 0 {
 			return v
 		}
@@ -225,10 +225,10 @@ func WithSetAggregation(a aggregation.Aggregation) Option {
 	cpA := a.Copy()
 	if err := cpA.Err(); err != nil {
 		global.Error(err, "not using aggregation with view", "aggregation", a)
-		return optionFunc(func(v View) View { return v })
+		return optionFunc(func(v *View) *View { return v })
 	}
 
-	return optionFunc(func(v View) View {
+	return optionFunc(func(v *View) *View {
 		v.agg = cpA
 		return v
 	})
