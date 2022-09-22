@@ -1,0 +1,24 @@
+# HELP bar a fun little gauge
+# TYPE bar counter
+bar{A="B",C="D"} 75
+# HELP _0invalid_counter_name a counter with an invalid name
+# TYPE _0invalid_counter_name counter
+_0invalid_counter_name{A="B",C="D"} 100
+# HELP invalid_gauge_name a gauge with an invalid name
+# TYPE invalid_gauge_name counter
+invalid_gauge_name{A="B",C="D"} 100
+# HELP invalid_hist_name a histogram with an invalid name
+# TYPE invalid_hist_name histogram
+invalid_hist_name_bucket{A="B",C="D",le="0"} 0
+invalid_hist_name_bucket{A="B",C="D",le="5"} 0
+invalid_hist_name_bucket{A="B",C="D",le="10"} 0
+invalid_hist_name_bucket{A="B",C="D",le="25"} 1
+invalid_hist_name_bucket{A="B",C="D",le="50"} 0
+invalid_hist_name_bucket{A="B",C="D",le="75"} 0
+invalid_hist_name_bucket{A="B",C="D",le="100"} 0
+invalid_hist_name_bucket{A="B",C="D",le="250"} 0
+invalid_hist_name_bucket{A="B",C="D",le="500"} 0
+invalid_hist_name_bucket{A="B",C="D",le="1000"} 0
+invalid_hist_name_bucket{A="B",C="D",le="+Inf"} 1
+invalid_hist_name_sum{A="B",C="D"} 23
+invalid_hist_name_count{A="B",C="D"} 1
