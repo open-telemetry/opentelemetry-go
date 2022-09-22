@@ -323,9 +323,9 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newPipelineRegistries(resource.Empty(), tt.views)
+			reg := newPipelineRegistries(resource.Empty(), tt.views, nil)
 			testPipelineRegistryCreateIntAggregators(t, reg, tt.wantCount)
-			reg = newPipelineRegistries(resource.Empty(), tt.views)
+			reg = newPipelineRegistries(resource.Empty(), tt.views, nil)
 			testPipelineRegistryCreateFloatAggregators(t, reg, tt.wantCount)
 		})
 	}
@@ -356,7 +356,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 		NewManualReader(): {{}, v},
 	}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	reg := newPipelineRegistries(res, views)
+	reg := newPipelineRegistries(res, views, nil)
 	for _, p := range reg.pipelines {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -370,14 +370,14 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 			{},
 		},
 	}
-	reg := newPipelineRegistries(resource.Empty(), views)
+	reg := newPipelineRegistries(resource.Empty(), views, nil)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
 	intAggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	reg = newPipelineRegistries(resource.Empty(), views)
+	reg = newPipelineRegistries(resource.Empty(), views, nil)
 
 	floatAggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
 	assert.Error(t, err)
@@ -399,7 +399,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	reg := newPipelineRegistries(resource.Empty(), views)
+	reg := newPipelineRegistries(resource.Empty(), views, nil)
 
 	intAggs, err := createAggregators[int64](reg, fooInst, unit.Dimensionless)
 	assert.NoError(t, err)

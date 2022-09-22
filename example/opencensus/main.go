@@ -22,7 +22,6 @@ import (
 
 	ocmetric "go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
-	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -30,9 +29,11 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -104,19 +105,30 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
 func monitoring(otExporter metric.Exporter) error {
-	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
-	ocExporter := opencensus.NewMetricExporter(otExporter, resource.Default())
-	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
+	ctx := context.Background()
+	log.Println("Using the OpenCensus bridge to export OpenCensus and OpenTelemetry metrics to a single OpenTelemetry exporter.")
+
+	// Register the exporter with an SDK via a periodic reader.
+	provider := metric.NewMeterProvider(
+		metric.WithResource(resource.Default()),
+		metric.WithReader(metric.NewPeriodicReader(otExporter)),
+		// Add the OpenCensus producer to the SDK. This causes metrics from
+		// OpenCensus to be included in the batch of metrics sent to our exporter.
+		metric.WithProducer(opencensus.NewProducer()),
+	)
+
+	log.Println("Emitting a 'foo' metric using OpenTelemetry APIs, which is emitted with an OpenTelemetry stdout exporter")
+	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/opencensus")
+	counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
-		return fmt.Errorf("failed to create interval reader: %w", err)
+		return fmt.Errorf("failed to add otel counter: %w", err)
 	}
-	intervalReader.ReportingInterval = 10 * time.Second
-	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdoutmetric exporter.")
-	err = intervalReader.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start interval reader: %w", err)
-	}
-	defer intervalReader.Stop()
+	counter.Add(ctx, 5, []attribute.KeyValue{
+		attribute.Key("A").String("B"),
+		attribute.Key("C").String("D"),
+	}...)
+
+	log.Println("Emitting 'test_gauge' and 'test_count' metrics using OpenCensus APIs. These are printed out using the same OpenTelemetry stdoutmetric exporter.")
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")
 	r := ocmetric.NewRegistry()
@@ -140,7 +152,7 @@ func monitoring(otExporter metric.Exporter) error {
 	if err := view.Register(countView); err != nil {
 		return fmt.Errorf("failed to register views: %w", err)
 	}
-	ctx, err := tag.New(context.Background(), tag.Insert(keyType, "view"))
+	ctx, err = tag.New(context.Background(), tag.Insert(keyType, "view"))
 	if err != nil {
 		return fmt.Errorf("failed to set tag: %w", err)
 	}

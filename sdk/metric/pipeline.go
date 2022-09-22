@@ -64,6 +64,7 @@ type pipeline struct {
 	sync.Mutex
 	aggregations map[instrumentation.Scope]map[instrumentKey]instrumentValue
 	callbacks    []func(context.Context)
+	producers    map[instrumentation.Scope]Producer
 }
 
 var errAlreadyRegistered = errors.New("instrument already registered")
@@ -149,6 +150,21 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 		}
 	}
 
+	for scope, prod := range p.producers {
+		metrics, err := prod.Produce(ctx)
+		if err != nil {
+			// TODO: should we use otel.Handle(err), and continue?
+			// This would prevent a bridge from blocking SDK metric collection.
+			return metricdata.ResourceMetrics{}, err
+		}
+		if len(metrics) > 0 {
+			sm = append(sm, metricdata.ScopeMetrics{
+				Scope:   scope,
+				Metrics: metrics,
+			})
+		}
+	}
+
 	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
@@ -162,10 +178,13 @@ type pipelineRegistry struct {
 	pipelines map[Reader]*pipeline
 }
 
-func newPipelineRegistries(res *resource.Resource, views map[Reader][]view.View) *pipelineRegistry {
+func newPipelineRegistries(res *resource.Resource, views map[Reader][]view.View, producers map[instrumentation.Scope]Producer) *pipelineRegistry {
 	pipelines := map[Reader]*pipeline{}
 	for rdr := range views {
-		pipe := &pipeline{resource: res}
+		pipe := &pipeline{
+			resource:  res,
+			producers: producers,
+		}
 		rdr.register(pipe)
 		pipelines[rdr] = pipe
 	}

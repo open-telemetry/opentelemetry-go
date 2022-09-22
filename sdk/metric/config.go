@@ -19,14 +19,16 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res     *resource.Resource
-	readers map[Reader][]view.View
+	res       *resource.Resource
+	readers   map[Reader][]view.View
+	producers map[instrumentation.Scope]Producer
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -79,7 +81,7 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
-	conf := config{res: resource.Default()}
+	conf := config{res: resource.Default(), producers: make(map[instrumentation.Scope]Producer)}
 	for _, o := range options {
 		conf = o.apply(conf)
 	}
@@ -132,5 +134,16 @@ func WithReader(r Reader, views ...view.View) Option {
 
 		cfg.readers[r] = views
 		return cfg
+	})
+}
+
+// WithProducer adds a Producer as a source of aggregated metric data for the
+// MeterProvider. When Collect is invoked from Readers, metric data from
+// Producers will be integrated into the returned batch of metrics.
+// This is commonly used as way to "bridge" external metric libraries.
+func WithProducer(p Producer) Option {
+	return optionFunc(func(conf config) config {
+		conf.producers[p.InstrumentationScope()] = p
+		return conf
 	})
 }

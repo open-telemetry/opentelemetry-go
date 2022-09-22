@@ -19,6 +19,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
 - The OpenCensus bridge example (`go.opentelemetry.io/otel/example/opencensus`) has been reintroduced. (#3206)
+- metric.NewMeterProvider (`go.opentelemetry.io/otel/sdk/metric`) now supports a WithProducer option for installing "bridges" to external metric libraries. (#3093)
+- The OpenCensus bridge (`go.opentelemetry.io/otel/example/opencensus`) can now instantiate a metric.Producer with NewProducer(). (#3093)
+
+### Deprecated
+
+- NewMetricExporter in the OpenCensus bridge (`go.opentelemetry.io/otel/example/opencensus`) is depreacted in favor of NewProducer. (#3093)
 
 ### Fixed
 
