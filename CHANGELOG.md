@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Updated go.mods to point to valid versions of the sdk. (#3216)
 - Set the `MeterProvider` resource on all exported metric data. (#3218)
 
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
