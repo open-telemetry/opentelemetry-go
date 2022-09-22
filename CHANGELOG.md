@@ -8,11 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [0.32.1] Revised Metric SDK (Alpha) - 2022-09-22
+## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
 ### Changed
 
-- Instead of dropping metric, the Prometheus exporter will replace any invalid character in metric names with `_`. (#3212)
+- The Prometheus exporter sanitizes OpenTelemetry instrument names when exporting.
+   Invalid characters are replaced with `_`. (#3212)
 
 ### Added
 
