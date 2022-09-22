@@ -263,7 +263,15 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
 	}
-
+	// the accepted value of this function should be decoded
+	// according to the W3C Baggage value specification
+	// e.g. value "%3B" should be treated as its decoded form ";"
+	decodedValue, err := url.QueryUnescape(value)
+	if err != nil {
+		return newInvalidMember(),
+			fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	m.value = decodedValue
 	return m, nil
 }
 

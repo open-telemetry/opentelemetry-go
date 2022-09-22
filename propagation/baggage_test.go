@@ -17,6 +17,7 @@ package propagation_test
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -46,8 +47,8 @@ func (m member) Member(t *testing.T) baggage.Member {
 		}
 		props = append(props, p)
 	}
-
-	bMember, err := baggage.NewMember(m.Key, m.Value, props...)
+	// when creating a new Member, NewMember only accepted encoded string as value
+	bMember, err := baggage.NewMember(m.Key, url.QueryEscape(m.Value), props...)
 	if err != nil {
 		t.Fatal(err)
 	}
