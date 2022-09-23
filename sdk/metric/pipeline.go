@@ -340,7 +340,7 @@ func (p pipelines) registerCallback(fn func(context.Context)) {
 	}
 }
 
-// resolver facilitates resolves Aggregators an instrument needs to aggregate
+// resolver facilitates resolving Aggregators an instrument needs to aggregate
 // measurements with while updating all pipelines that need to pull from those
 // aggregations.
 type resolver[N int64 | float64] struct {
