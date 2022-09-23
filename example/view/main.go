@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 package main
 
 import (
@@ -42,14 +39,13 @@ const meterName = "github.com/open-telemetry/opentelemetry-go/example/view"
 func main() {
 	ctx := context.Background()
 
-	// The exporter embeds a default OpenTelemetry Reader, allowing it to be used in WithReader
+	// The exporter embeds a default OpenTelemetry Reader, allowing it to be used in WithReader.
 	exporter := otelprom.New()
 
-	// View to customize histogram
+	// View to customize histogram buckets and rename a single histogram instrument.
 	customBucketsView, err := view.New(
 		// Match* to match instruments
 		view.MatchInstrumentName("custom_histogram"),
-		view.MatchInstrumentKind(view.SyncHistogram),
 		view.MatchInstrumentationScope(instrumentation.Scope{Name: meterName}),
 
 		// With* to modify instruments

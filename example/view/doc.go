@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main provides a code sample of using view to custom instruments.
+// Package main provides a code sample of using metric views to customize instruments.
 package main
