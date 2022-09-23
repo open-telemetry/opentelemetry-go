@@ -8,14 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
+
+## [0.32.1] Metric SDK (Alpha) - 2022-09-22
+
+### Changed
+
+- The Prometheus exporter sanitizes OpenTelemetry instrument names when exporting.
+   Invalid characters are replaced with `_`. (#3212)
+
 ### Added
 
 - The metric portion of the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) has been reintroduced. (#3192)
 - The OpenCensus bridge example (`go.opentelemetry.io/otel/example/opencensus`) has been reintroduced. (#3206)
 
-### Changed
+### Fixed
 
-- `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
+- Updated go.mods to point to valid versions of the sdk. (#3216)
+- Set the `MeterProvider` resource on all exported metric data. (#3218)
 
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
 
@@ -1953,7 +1965,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.1...HEAD
+[0.32.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.1
 [0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
 [1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
 [1.9.0/0.0.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.9.0
