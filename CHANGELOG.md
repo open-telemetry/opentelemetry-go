@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The Prometheus exporter sanitizes OpenTelemetry instrument names when exporting.
    Invalid characters are replaced with `_`. (#3212)
+- Return the Pointer for View function. (#3221)
 
 ### Added
 

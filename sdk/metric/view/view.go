@@ -48,8 +48,8 @@ type View struct {
 // Options are all applied to the View. An instrument needs to match all of
 // the match Options passed for the View to be applied to it. Similarly, all
 // transform operation Options are applied to matched Instruments.
-func New(opts ...Option) (View, error) {
-	v := &View{}
+func New(opts ...Option) (*View, error) {
+	v := View{}
 
 	for _, opt := range opts {
 		v = opt.apply(v)
@@ -59,14 +59,14 @@ func New(opts ...Option) (View, error) {
 	if v.instrumentName == nil &&
 		v.scope == emptyScope &&
 		v.instrumentKind == undefinedInstrument {
-		return View{}, fmt.Errorf("must provide at least 1 match option")
+		return &View{}, fmt.Errorf("must provide at least 1 match option")
 	}
 
 	if v.hasWildcard && v.name != "" {
-		return View{}, fmt.Errorf("invalid view: view name specified for multiple instruments")
+		return &View{}, fmt.Errorf("invalid view: view name specified for multiple instruments")
 	}
 
-	return *v, nil
+	return &v, nil
 }
 
 // TransformInstrument will check if an instrument matches this view
@@ -129,12 +129,12 @@ func (v *View) match(i Instrument) bool {
 
 // Option applies a configuration option value to a View.
 type Option interface {
-	apply(*View) *View
+	apply(View) View
 }
 
-type optionFunc func(*View) *View
+type optionFunc func(View) View
 
-func (f optionFunc) apply(v *View) *View {
+func (f optionFunc) apply(v View) View {
 	return f(v)
 }
 
@@ -142,7 +142,7 @@ func (f optionFunc) apply(v *View) *View {
 // This will accept wildcards of * for zero or more characters, and ? for
 // exactly one character. A name of "*" (default) will match all instruments.
 func MatchInstrumentName(name string) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		if strings.ContainsAny(name, "*?") {
 			v.hasWildcard = true
 		}
@@ -158,7 +158,7 @@ func MatchInstrumentName(name string) Option {
 // MatchInstrumentKind with match an instrument based on the instrument's kind.
 // The default is to match all instrument kinds.
 func MatchInstrumentKind(kind InstrumentKind) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		v.instrumentKind = kind
 		return v
 	})
@@ -168,7 +168,7 @@ func MatchInstrumentKind(kind InstrumentKind) Option {
 // instrumentation.Scope field that is non-empty (""). The default is to match all
 // instrumentation scopes.
 func MatchInstrumentationScope(scope instrumentation.Scope) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		v.scope = scope
 		return v
 	})
@@ -178,7 +178,7 @@ func MatchInstrumentationScope(scope instrumentation.Scope) Option {
 // instrument name will not be changed. Must be used with a non-wildcard
 // instrument name match. The default does not change the instrument name.
 func WithRename(name string) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		v.name = name
 		return v
 	})
@@ -187,7 +187,7 @@ func WithRename(name string) Option {
 // WithSetDescription will change the description of the instruments the view
 // matches to desc. If not used or empty the description will not be changed.
 func WithSetDescription(desc string) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		v.description = desc
 		return v
 	})
@@ -196,7 +196,7 @@ func WithSetDescription(desc string) Option {
 // WithFilterAttributes will select attributes that have a matching key.  If not used
 // or empty no filter will be applied.
 func WithFilterAttributes(keys ...attribute.Key) Option {
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		if len(keys) == 0 {
 			return v
 		}
@@ -222,10 +222,10 @@ func WithSetAggregation(a aggregation.Aggregation) Option {
 	cpA := a.Copy()
 	if err := cpA.Err(); err != nil {
 		global.Error(err, "not using aggregation with view", "aggregation", a)
-		return optionFunc(func(v *View) *View { return v })
+		return optionFunc(func(v View) View { return v })
 	}
 
-	return optionFunc(func(v *View) *View {
+	return optionFunc(func(v View) View {
 		v.agg = cpA
 		return v
 	})
