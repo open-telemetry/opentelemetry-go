@@ -314,29 +314,27 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 	}
 }
 
-// pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
-// new Aggregators from a pipelineRegistry.
-type pipelineRegistry struct {
-	pipelines []*pipeline
-}
+// pipelines is the group of pipelines connecting Readers with instrument
+// measurement.
+type pipelines []*pipeline
 
-func newPipelineRegistry(res *resource.Resource, readers map[Reader][]view.View) *pipelineRegistry {
-	pipelines := make([]*pipeline, 0, len(readers))
+func newPipelineRegistry(res *resource.Resource, readers map[Reader][]view.View) pipelines {
+	pipes := make([]*pipeline, 0, len(readers))
 	for r, v := range readers {
-		pipe := &pipeline{
+		p := &pipeline{
 			resource: res,
 			reader:   r,
 			views:    v,
 		}
-		r.register(pipe)
-		pipelines = append(pipelines, pipe)
+		r.register(p)
+		pipes = append(pipes, p)
 	}
-	return &pipelineRegistry{pipelines}
+	return pipes
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
-func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
-	for _, pipe := range reg.pipelines {
+func (p pipelines) registerCallback(fn func(context.Context)) {
+	for _, pipe := range p {
 		pipe.addCallback(fn)
 	}
 }
@@ -348,10 +346,10 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p *pipelineRegistry) *resolver[N] {
-	in := make([]*inserter[N], len(p.pipelines))
+func newResolver[N int64 | float64](p pipelines) *resolver[N] {
+	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter[N](p.pipelines[i])
+		in[i] = newInserter[N](p[i])
 	}
 	return &resolver[N]{in}
 }

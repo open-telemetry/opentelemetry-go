@@ -54,7 +54,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		res: conf.res,
 
 		meters: meterRegistry{
-			registry: registry,
+			pipes: registry,
 		},
 
 		forceFlush: flush,

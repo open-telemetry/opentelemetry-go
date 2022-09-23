@@ -42,7 +42,7 @@ type meterRegistry struct {
 
 	meters map[instrumentation.Scope]*meter
 
-	registry *pipelineRegistry
+	pipes pipelines
 }
 
 // Get returns a registered meter matching the instrumentation scope if it
@@ -56,8 +56,8 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 
 	if r.meters == nil {
 		m := &meter{
-			Scope:    s,
-			registry: r.registry,
+			Scope: s,
+			pipes: r.pipes,
 		}
 		r.meters = map[instrumentation.Scope]*meter{s: m}
 		return m
@@ -69,8 +69,8 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 	}
 
 	m = &meter{
-		Scope:    s,
-		registry: r.registry,
+		Scope: s,
+		pipes: r.pipes,
 	}
 	r.meters[s] = m
 	return m
@@ -98,7 +98,7 @@ func (r *meterRegistry) Range(f func(*meter) bool) {
 type meter struct {
 	instrumentation.Scope
 
-	registry *pipelineRegistry
+	pipes pipelines
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -106,27 +106,27 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.registry)}
+	return asyncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.pipes)}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.registry)}
+	return asyncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.pipes)}
 }
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
-	m.registry.registerCallback(f)
+	m.pipes.registerCallback(f)
 	return nil
 }
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.registry)}
+	return syncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.pipes)}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.registry)}
+	return syncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.pipes)}
 }
