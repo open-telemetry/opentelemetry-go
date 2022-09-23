@@ -61,6 +61,8 @@ func newPipeline(res *resource.Resource) *pipeline {
 type pipeline struct {
 	resource *resource.Resource
 
+	views []view.View
+
 	sync.Mutex
 	aggregations map[instrumentation.Scope]map[instrumentKey]instrumentValue
 	callbacks    []func(context.Context)
@@ -158,19 +160,17 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 // pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
 // new Aggregators from a pipelineRegistry.
 type pipelineRegistry struct {
-	views     map[Reader][]view.View
 	pipelines map[Reader]*pipeline
 }
 
-func newPipelineRegistries(res *resource.Resource, views map[Reader][]view.View) *pipelineRegistry {
-	pipelines := map[Reader]*pipeline{}
-	for rdr := range views {
-		pipe := &pipeline{resource: res}
-		rdr.register(pipe)
-		pipelines[rdr] = pipe
+func newPipelineRegistries(res *resource.Resource, readers map[Reader][]view.View) *pipelineRegistry {
+	pipelines := make(map[Reader]*pipeline, len(readers))
+	for r, v := range readers {
+		pipe := &pipeline{resource: res, views: v}
+		r.register(pipe)
+		pipelines[r] = pipe
 	}
 	return &pipelineRegistry{
-		views:     views,
 		pipelines: pipelines,
 	}
 }
@@ -189,9 +189,8 @@ func createAggregators[N int64 | float64](reg *pipelineRegistry, inst view.Instr
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
-	for rdr, views := range reg.views {
-		pipe := reg.pipelines[rdr]
-		rdrAggs, err := createAggregatorsForReader[N](rdr, views, inst)
+	for rdr, pipe := range reg.pipelines {
+		rdrAggs, err := createAggregatorsForReader[N](rdr, pipe.views, inst)
 		if err != nil {
 			errs.append(err)
 		}
