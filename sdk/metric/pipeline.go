@@ -232,7 +232,8 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 			errs.append(err)
 		}
 	}
-	// FIXME: handle when no views match. Default should be reader agg returned.
+	// TODO(#3224): handle when no views match. Default should be reader
+	// aggregation returned.
 	return aggs, errs.errorOrNil()
 }
 
