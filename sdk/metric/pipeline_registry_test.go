@@ -323,28 +323,28 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newPipelines(resource.Empty(), tt.views)
-			testPipelineRegistryResolveIntAggregators(t, reg, tt.wantCount)
-			reg = newPipelines(resource.Empty(), tt.views)
-			testPipelineRegistryResolveFloatAggregators(t, reg, tt.wantCount)
+			p := newPipelines(resource.Empty(), tt.views)
+			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
+			p = newPipelines(resource.Empty(), tt.views)
+			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 		})
 	}
 }
 
-func testPipelineRegistryResolveIntAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
+func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[int64](reg)
+	r := newResolver[int64](p)
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
 
-func testPipelineRegistryResolveFloatAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
+func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[float64](reg)
+	r := newResolver[float64](p)
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
@@ -358,8 +358,8 @@ func TestPipelineRegistryResource(t *testing.T) {
 		NewManualReader(): {{}, v},
 	}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	reg := newPipelines(res, views)
-	for _, p := range reg.pipelines {
+	pipes := newPipelines(res, views)
+	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
 }
@@ -372,17 +372,17 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 			{},
 		},
 	}
-	reg := newPipelines(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
-	ri := newResolver[int64](reg)
+	ri := newResolver[int64](p)
 	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	reg = newPipelines(resource.Empty(), views)
+	p = newPipelines(resource.Empty(), views)
 
-	rf := newResolver[float64](reg)
+	rf := newResolver[float64](p)
 	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
@@ -403,9 +403,9 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	reg := newPipelines(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), views)
 
-	ri := newResolver[int64](reg)
+	ri := newResolver[int64](p)
 	intAggs, err := ri.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 	assert.Len(t, intAggs, 1)
@@ -416,7 +416,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	assert.Len(t, intAggs, 2)
 
 	// Creating a float foo instrument should error because there is an int foo instrument.
-	rf := newResolver[float64](reg)
+	rf := newResolver[float64](p)
 	floatAggs, err := rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 1)
