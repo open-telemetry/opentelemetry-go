@@ -241,8 +241,16 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 func (i *inserter[N]) aggregator(inst view.Instrument) (internal.Aggregator[N], error) {
 	// TODO (#3011): If filtering is done by the Aggregator it should be passed
 	// here.
-	temporality := i.pipeline.reader.temporality(inst.Kind)
-	monotonic := isMonotonic(inst.Kind)
+	var (
+		temporality = i.pipeline.reader.temporality(inst.Kind)
+		monotonic   bool
+	)
+
+	switch inst.Kind {
+	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
+		monotonic = true
+	}
+
 	switch agg := inst.Aggregation.(type) {
 	case aggregation.Drop:
 		return nil, nil
@@ -260,14 +268,6 @@ func (i *inserter[N]) aggregator(inst view.Instrument) (internal.Aggregator[N], 
 		return internal.NewDeltaHistogram[N](agg), nil
 	}
 	return nil, errUnknownAggregation
-}
-
-func isMonotonic(kind view.InstrumentKind) bool {
-	switch kind {
-	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
-		return true
-	}
-	return false
 }
 
 // isAggregatorCompatible checks if the aggregation can be used by the instrument.
