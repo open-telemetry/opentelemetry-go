@@ -318,7 +318,7 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 // measurement.
 type pipelines []*pipeline
 
-func newPipelineRegistry(res *resource.Resource, readers map[Reader][]view.View) pipelines {
+func newPipelines(res *resource.Resource, readers map[Reader][]view.View) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for r, v := range readers {
 		p := &pipeline{
