@@ -30,9 +30,25 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+var (
+	errCreatingAggregators     = errors.New("could not create all aggregators")
+	errIncompatibleAggregation = errors.New("incompatible aggregation")
+	errUnknownAggregation      = errors.New("unrecognized aggregation")
+)
+
 type aggregator interface {
 	Aggregation() metricdata.Aggregation
 }
+
+// instrumentID is used to identify multiple instruments being mapped to the
+// same aggregator. e.g. using an exact match view with a name=* view. You
+// can't use a view.Instrument here because not all Aggregators are comparable.
+type instrumentID struct {
+	scope       instrumentation.Scope
+	name        string
+	description string
+}
+
 type instrumentKey struct {
 	name string
 	unit unit.Unit
@@ -43,12 +59,14 @@ type instrumentValue struct {
 	aggregator  aggregator
 }
 
-func newPipeline(res *resource.Resource) *pipeline {
+func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
 	return &pipeline{
 		resource:     res,
+		reader:       reader,
+		views:        views,
 		aggregations: make(map[instrumentation.Scope]map[instrumentKey]instrumentValue),
 	}
 }
@@ -158,6 +176,144 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}, nil
 }
 
+// inserter inserts new instruments into a pipeline.
+type inserter[N int64 | float64] struct {
+	pipeline *pipeline
+}
+
+func newInserter[N int64 | float64](p *pipeline) *inserter[N] {
+	return &inserter[N]{p}
+}
+
+// Instrument inserts instrument inst with instUnit returning the Aggregators
+// that need to be updated with measurments for that instrument.
+func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+	seen := map[instrumentID]struct{}{}
+	var aggs []internal.Aggregator[N]
+	errs := &multierror{wrapped: errCreatingAggregators}
+	for _, v := range i.pipeline.views {
+		inst, match := v.TransformInstrument(inst)
+
+		id := instrumentID{
+			scope:       inst.Scope,
+			name:        inst.Name,
+			description: inst.Description,
+		}
+
+		if _, ok := seen[id]; ok || !match {
+			continue
+		}
+
+		if inst.Aggregation == nil {
+			inst.Aggregation = i.pipeline.reader.aggregation(inst.Kind)
+		} else if _, ok := inst.Aggregation.(aggregation.Default); ok {
+			inst.Aggregation = i.pipeline.reader.aggregation(inst.Kind)
+		}
+
+		if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
+			err = fmt.Errorf("creating aggregator with instrumentKind: %d, aggregation %v: %w", inst.Kind, inst.Aggregation, err)
+			errs.append(err)
+			continue
+		}
+
+		agg, err := i.aggregator(inst)
+		if err != nil {
+			errs.append(err)
+			continue
+		}
+		if agg != nil { // Not a drop aggregation.
+			// TODO (#3011): If filtering is done at the instrument level add here.
+			// This is where the aggregator and the view are both in scope.
+			aggs = append(aggs, agg)
+		}
+		seen[id] = struct{}{}
+		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+		if err != nil {
+			errs.append(err)
+		}
+	}
+	// FIXME: handle when no views match. Default should be reader agg returned.
+	return aggs, errs.errorOrNil()
+}
+
+// aggregator returns the Aggregator for an instrument configuration. If the
+// instrument defines an unknown aggreation, an error is returned.
+func (i *inserter[N]) aggregator(inst view.Instrument) (internal.Aggregator[N], error) {
+	// TODO (#3011): If filterting is done by the Aggregator it should be
+	// passed here.
+	temporality := i.pipeline.reader.temporality(inst.Kind)
+	monotonic := isMonotonic(inst.Kind)
+	switch agg := inst.Aggregation.(type) {
+	case aggregation.Drop:
+		return nil, nil
+	case aggregation.LastValue:
+		return internal.NewLastValue[N](), nil
+	case aggregation.Sum:
+		if temporality == metricdata.CumulativeTemporality {
+			return internal.NewCumulativeSum[N](monotonic), nil
+		}
+		return internal.NewDeltaSum[N](monotonic), nil
+	case aggregation.ExplicitBucketHistogram:
+		if temporality == metricdata.CumulativeTemporality {
+			return internal.NewCumulativeHistogram[N](agg), nil
+		}
+		return internal.NewDeltaHistogram[N](agg), nil
+	}
+	return nil, errUnknownAggregation
+}
+
+func isMonotonic(kind view.InstrumentKind) bool {
+	switch kind {
+	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
+		return true
+	}
+	return false
+}
+
+// is aggregatorCompatible checks if the aggregation can be used by the instrument.
+// Current compatibility:
+//
+// | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
+// |----------------------|------|-----------|-----|-----------|-----------------------|
+// | Sync Counter         | X    |           | X   | X         | X                     |
+// | Sync UpDown Counter  | X    |           | X   |           |                       |
+// | Sync Histogram       | X    |           | X   | X         | X                     |
+// | Async Counter        | X    |           | X   |           |                       |
+// | Async UpDown Counter | X    |           | X   |           |                       |
+// | Async Gauge          | X    | X         |     |           |                       |.
+func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregation) error {
+	switch agg.(type) {
+	case aggregation.ExplicitBucketHistogram:
+		if kind == view.SyncCounter || kind == view.SyncHistogram {
+			return nil
+		}
+		// TODO: review need for aggregation check after
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+		return errIncompatibleAggregation
+	case aggregation.Sum:
+		switch kind {
+		case view.AsyncCounter, view.AsyncUpDownCounter, view.SyncCounter, view.SyncHistogram, view.SyncUpDownCounter:
+			return nil
+		default:
+			// TODO: review need for aggregation check after
+			// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+			return errIncompatibleAggregation
+		}
+	case aggregation.LastValue:
+		if kind == view.AsyncGauge {
+			return nil
+		}
+		// TODO: review need for aggregation check after
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+		return errIncompatibleAggregation
+	case aggregation.Drop:
+		return nil
+	default:
+		// This is used passed checking for default, it should be an error at this point.
+		return fmt.Errorf("%w: %v", errUnknownAggregation, agg)
+	}
+}
+
 // pipelineRegistry manages creating pipelines, and aggregators.  Meters retrieve
 // new Aggregators from a pipelineRegistry.
 type pipelineRegistry struct {
@@ -188,11 +344,15 @@ func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
 // resolver resolves Aggregators an instrument needs to aggregate measurments
 // with while updating all pipelines that need to pull from those aggregations.
 type resolver[N int64 | float64] struct {
-	reg *pipelineRegistry
+	inserters []*inserter[N]
 }
 
 func newResolver[N int64 | float64](p *pipelineRegistry) *resolver[N] {
-	return &resolver[N]{p}
+	in := make([]*inserter[N], len(p.pipelines))
+	for i := range in {
+		in[i] = newInserter[N](p.pipelines[i])
+	}
+	return &resolver[N]{in}
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
@@ -201,18 +361,12 @@ func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]i
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
-	for _, pipe := range r.reg.pipelines {
-		rdrAggs, err := createAggregatorsForReader[N](pipe.reader, pipe.views, inst)
+	for _, i := range r.inserters {
+		a, err := i.Instrument(inst, instUnit)
 		if err != nil {
 			errs.append(err)
 		}
-		for inst, agg := range rdrAggs {
-			err := pipe.addAggregator(inst.scope, inst.name, inst.description, instUnit, agg)
-			if err != nil {
-				errs.append(err)
-			}
-			aggs = append(aggs, agg)
-		}
+		aggs = append(aggs, a...)
 	}
 	return aggs, errs.errorOrNil()
 }
@@ -231,127 +385,4 @@ func (m *multierror) errorOrNil() error {
 
 func (m *multierror) append(err error) {
 	m.errors = append(m.errors, err.Error())
-}
-
-// instrumentID is used to identify multiple instruments being mapped to the same aggregator.
-// e.g. using an exact match view with a name=* view.
-// You can't use a view.Instrument here because not all Aggregators are comparable.
-type instrumentID struct {
-	scope       instrumentation.Scope
-	name        string
-	description string
-}
-
-var errCreatingAggregators = errors.New("could not create all aggregators")
-
-func createAggregatorsForReader[N int64 | float64](rdr Reader, views []view.View, inst view.Instrument) (map[instrumentID]internal.Aggregator[N], error) {
-	aggs := map[instrumentID]internal.Aggregator[N]{}
-	errs := &multierror{
-		wrapped: errCreatingAggregators,
-	}
-	for _, v := range views {
-		inst, match := v.TransformInstrument(inst)
-
-		ident := instrumentID{
-			scope:       inst.Scope,
-			name:        inst.Name,
-			description: inst.Description,
-		}
-
-		if _, ok := aggs[ident]; ok || !match {
-			continue
-		}
-
-		if inst.Aggregation == nil {
-			inst.Aggregation = rdr.aggregation(inst.Kind)
-		} else if _, ok := inst.Aggregation.(aggregation.Default); ok {
-			inst.Aggregation = rdr.aggregation(inst.Kind)
-		}
-
-		if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
-			err = fmt.Errorf("creating aggregator with instrumentKind: %d, aggregation %v: %w", inst.Kind, inst.Aggregation, err)
-			errs.append(err)
-			continue
-		}
-
-		agg := createAggregator[N](inst.Aggregation, rdr.temporality(inst.Kind), isMonotonic(inst.Kind))
-		if agg != nil {
-			// TODO (#3011): If filtering is done at the instrument level add here.
-			// This is where the aggregator and the view are both in scope.
-			aggs[ident] = agg
-		}
-	}
-	return aggs, errs.errorOrNil()
-}
-
-func isMonotonic(kind view.InstrumentKind) bool {
-	switch kind {
-	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
-		return true
-	}
-	return false
-}
-
-// createAggregator takes the config (Aggregation and Temporality) and produces a memory backed Aggregator.
-// TODO (#3011): If filterting is done by the Aggregator it should be passed here.
-func createAggregator[N int64 | float64](agg aggregation.Aggregation, temporality metricdata.Temporality, monotonic bool) internal.Aggregator[N] {
-	switch agg := agg.(type) {
-	case aggregation.Drop:
-		return nil
-	case aggregation.LastValue:
-		return internal.NewLastValue[N]()
-	case aggregation.Sum:
-		if temporality == metricdata.CumulativeTemporality {
-			return internal.NewCumulativeSum[N](monotonic)
-		}
-		return internal.NewDeltaSum[N](monotonic)
-	case aggregation.ExplicitBucketHistogram:
-		if temporality == metricdata.CumulativeTemporality {
-			return internal.NewCumulativeHistogram[N](agg)
-		}
-		return internal.NewDeltaHistogram[N](agg)
-	}
-	return nil
-}
-
-// TODO: review need for aggregation check after https://github.com/open-telemetry/opentelemetry-specification/issues/2710
-var errIncompatibleAggregation = errors.New("incompatible aggregation")
-var errUnknownAggregation = errors.New("unrecognized aggregation")
-
-// is aggregatorCompatible checks if the aggregation can be used by the instrument.
-// Current compatibility:
-//
-// | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
-// |----------------------|------|-----------|-----|-----------|-----------------------|
-// | Sync Counter         | X    |           | X   | X         | X                     |
-// | Sync UpDown Counter  | X    |           | X   |           |                       |
-// | Sync Histogram       | X    |           | X   | X         | X                     |
-// | Async Counter        | X    |           | X   |           |                       |
-// | Async UpDown Counter | X    |           | X   |           |                       |
-// | Async Gauge          | X    | X         |     |           |                       |.
-func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregation) error {
-	switch agg.(type) {
-	case aggregation.ExplicitBucketHistogram:
-		if kind == view.SyncCounter || kind == view.SyncHistogram {
-			return nil
-		}
-		return errIncompatibleAggregation
-	case aggregation.Sum:
-		switch kind {
-		case view.AsyncCounter, view.AsyncUpDownCounter, view.SyncCounter, view.SyncHistogram, view.SyncUpDownCounter:
-			return nil
-		default:
-			return errIncompatibleAggregation
-		}
-	case aggregation.LastValue:
-		if kind == view.AsyncGauge {
-			return nil
-		}
-		return errIncompatibleAggregation
-	case aggregation.Drop:
-		return nil
-	default:
-		// This is used passed checking for default, it should be an error at this point.
-		return fmt.Errorf("%w: %v", errUnknownAggregation, agg)
-	}
 }
