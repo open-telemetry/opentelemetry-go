@@ -345,22 +345,31 @@ func (p pipelines) registerCallback(fn func(context.Context)) {
 // measurements with while updating all pipelines that need to pull from those
 // aggregations.
 type resolver[N int64 | float64] struct {
+	cache     *querier[N]
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines) *resolver[N] {
+func newResolver[N int64 | float64](p pipelines, q *querier[N]) *resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter[N](p[i])
 	}
-	return &resolver[N]{in}
+	return &resolver[N]{cache: q, inserters: in}
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
 // makes a measurement.
 func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
-	var aggs []internal.Aggregator[N]
+	id := instrumentID{scope: inst.Scope, name: inst.Name, description: inst.Description}
+	resp, err := r.cache.Get(id)
+	if err == nil {
+		return resp.aggregators, resp.err
+	}
+	if !errors.Is(err, errCacheMiss) {
+		return nil, err
+	}
 
+	var aggs []internal.Aggregator[N]
 	errs := &multierror{}
 	for _, i := range r.inserters {
 		a, err := i.Instrument(inst, instUnit)
@@ -369,7 +378,13 @@ func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]i
 		}
 		aggs = append(aggs, a...)
 	}
-	return aggs, errs.errorOrNil()
+
+	err = errs.errorOrNil()
+	r.cache.Set(id, &cacheResult[N]{
+		aggregators: aggs,
+		err:         err,
+	})
+	return aggs, err
 }
 
 type multierror struct {
