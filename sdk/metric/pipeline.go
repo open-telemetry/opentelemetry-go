@@ -176,7 +176,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}, nil
 }
 
-// inserter inserts new instruments into a pipeline.
+// inserter facilitates inserting of new instruments into a pipeline.
 type inserter[N int64 | float64] struct {
 	pipeline *pipeline
 }
@@ -237,10 +237,10 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 }
 
 // aggregator returns the Aggregator for an instrument configuration. If the
-// instrument defines an unknown aggreation, an error is returned.
+// instrument defines an unknown aggregation, an error is returned.
 func (i *inserter[N]) aggregator(inst view.Instrument) (internal.Aggregator[N], error) {
-	// TODO (#3011): If filterting is done by the Aggregator it should be
-	// passed here.
+	// TODO (#3011): If filtering is done by the Aggregator it should be passed
+	// here.
 	temporality := i.pipeline.reader.temporality(inst.Kind)
 	monotonic := isMonotonic(inst.Kind)
 	switch agg := inst.Aggregation.(type) {
@@ -270,7 +270,7 @@ func isMonotonic(kind view.InstrumentKind) bool {
 	return false
 }
 
-// is aggregatorCompatible checks if the aggregation can be used by the instrument.
+// isAggregatorCompatible checks if the aggregation can be used by the instrument.
 // Current compatibility:
 //
 // | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
@@ -341,8 +341,9 @@ func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
 	}
 }
 
-// resolver resolves Aggregators an instrument needs to aggregate measurments
-// with while updating all pipelines that need to pull from those aggregations.
+// resolver facilitates resolves Aggregators an instrument needs to aggregate
+// measurements with while updating all pipelines that need to pull from those
+// aggregations.
 type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
@@ -356,7 +357,7 @@ func newResolver[N int64 | float64](p *pipelineRegistry) *resolver[N] {
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
-// makes a measurment.
+// makes a measurement.
 func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
