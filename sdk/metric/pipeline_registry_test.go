@@ -331,10 +331,11 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	}
 }
 
-func testPipelineRegistryCreateIntAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
+func testPipelineRegistryResolveIntAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	aggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
+	r := newResolver[int64](reg)
+	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -343,7 +344,8 @@ func testPipelineRegistryCreateIntAggregators(t *testing.T, reg *pipelineRegistr
 func testPipelineRegistryCreateFloatAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	aggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
+	r := newResolver[float64](reg)
+	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -373,13 +375,15 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	reg := newPipelineRegistry(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
-	intAggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
+	ri := newResolver[int64](reg)
+	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
 	reg = newPipelineRegistry(resource.Empty(), views)
 
-	floatAggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
+	rf := newResolver[float64](reg)
+	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }
@@ -401,26 +405,28 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 
 	reg := newPipelineRegistry(resource.Empty(), views)
 
-	intAggs, err := createAggregators[int64](reg, fooInst, unit.Dimensionless)
+	ri := newResolver[int64](reg)
+	intAggs, err := ri.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 	assert.Len(t, intAggs, 1)
 
 	// The Rename view should error, because it creates a foo instrument.
-	intAggs, err = createAggregators[int64](reg, barInst, unit.Dimensionless)
+	intAggs, err = ri.Aggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 2)
 
 	// Creating a float foo instrument should error because there is an int foo instrument.
-	floatAggs, err := createAggregators[float64](reg, fooInst, unit.Dimensionless)
+	rf := newResolver[float64](reg)
+	floatAggs, err := rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = view.Instrument{Name: "foo-float", Kind: view.SyncCounter}
 
-	_, err = createAggregators[float64](reg, fooInst, unit.Dimensionless)
+	_, err = rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 
-	floatAggs, err = createAggregators[float64](reg, barInst, unit.Dimensionless)
+	floatAggs, err = rf.Aggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 2)
 }

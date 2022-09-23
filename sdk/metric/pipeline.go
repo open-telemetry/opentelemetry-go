@@ -185,14 +185,23 @@ func (reg *pipelineRegistry) registerCallback(fn func(context.Context)) {
 	}
 }
 
-// createAggregators will create all backing aggregators for an instrument.
-// It will return an error if an instrument is registered more than once.
-// Note: There may be returned aggregators with an error.
-func createAggregators[N int64 | float64](reg *pipelineRegistry, inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+// resolver resolves Aggregators an instrument needs to aggregate measurments
+// with while updating all pipelines that need to pull from those aggregations.
+type resolver[N int64 | float64] struct {
+	reg *pipelineRegistry
+}
+
+func newResolver[N int64 | float64](p *pipelineRegistry) *resolver[N] {
+	return &resolver[N]{p}
+}
+
+// Aggregators returns the Aggregators instrument inst needs to update when it
+// makes a measurment.
+func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
-	for _, pipe := range reg.pipelines {
+	for _, pipe := range r.reg.pipelines {
 		rdrAggs, err := createAggregatorsForReader[N](pipe.reader, pipe.views, inst)
 		if err != nil {
 			errs.append(err)

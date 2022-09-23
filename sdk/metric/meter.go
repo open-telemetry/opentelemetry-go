@@ -106,12 +106,12 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, registry: m.registry}
+	return asyncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.registry)}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, registry: m.registry}
+	return asyncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.registry)}
 }
 
 // RegisterCallback registers the function f to be called when any of the
@@ -123,10 +123,10 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, registry: m.registry}
+	return syncInt64Provider{scope: m.Scope, resolver: newResolver[int64](m.registry)}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, registry: m.registry}
+	return syncFloat64Provider{scope: m.Scope, resolver: newResolver[float64](m.registry)}
 }
