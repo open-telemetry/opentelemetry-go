@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -142,7 +143,7 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 	dataPoints := make([]*metricData, 0, len(histogram.DataPoints))
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
 		for i, bound := range dp.Bounds {
 			buckets[bound] = dp.BucketCounts[i]
@@ -165,7 +166,7 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,
@@ -182,7 +183,7 @@ func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricda
 	dataPoints := make([]*metricData, 0, len(gauge.DataPoints))
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(m.Name, m.Description, keys, nil)
+		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,
@@ -229,4 +230,57 @@ func sanitizeRune(r rune) rune {
 		return r
 	}
 	return '_'
+}
+
+func sanitizeName(n string) string {
+	// This algorithm is based on strings.Map from Go 1.19.
+	const replacement = '_'
+
+	valid := func(i int, r rune) bool {
+		// Taken from
+		// https://github.com/prometheus/common/blob/dfbc25bd00225c70aca0d94c3c4bb7744f28ace0/model/metric.go#L92-L102
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || r == ':' || (r >= '0' && r <= '9' && i > 0) {
+			return true
+		}
+		return false
+	}
+
+	// This output buffer b is initialized on demand, the first time a
+	// character needs to be replaced.
+	var b strings.Builder
+	for i, c := range n {
+		if valid(i, c) {
+			continue
+		}
+
+		if i == 0 && c >= '0' && c <= '9' {
+			// Prefix leading number with replacement character.
+			b.Grow(len(n) + 1)
+			b.WriteByte(byte(replacement))
+			break
+		}
+		b.Grow(len(n))
+		b.WriteString(n[:i])
+		b.WriteByte(byte(replacement))
+		width := utf8.RuneLen(c)
+		n = n[i+width:]
+		break
+	}
+
+	// Fast path for unchanged input.
+	if b.Cap() == 0 { // b.Grow was not called above.
+		return n
+	}
+
+	for _, c := range n {
+		// Due to inlining, it is more performant to invoke WriteByte rather then
+		// WriteRune.
+		if valid(1, c) { // We are guaranteed to not be at the start.
+			b.WriteByte(byte(c))
+		} else {
+			b.WriteByte(byte(replacement))
+		}
+	}
+
+	return b.String()
 }
