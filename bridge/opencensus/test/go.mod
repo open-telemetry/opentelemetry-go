@@ -79,8 +79,8 @@ replace go.opentelemetry.io/otel/exporters/zipkin => ../../../exporters/zipkin
 
 replace go.opentelemetry.io/otel/internal/tools => ../../../internal/tools
 
-replace go.opentelemetry.io/otel/metric => ../../../metric
-
 replace go.opentelemetry.io/otel/schema => ../../../schema
 
-replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
+replace example.com/mod => ../opencensusmetric
+
+replace go.opentelemetry.io/otel/example/opencensus => ../../../example/opencensus
