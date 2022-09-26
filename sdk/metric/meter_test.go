@@ -51,24 +51,6 @@ func TestMeterRegistry(t *testing.T) {
 	t.Run("GetDifferentMeter", func(t *testing.T) {
 		assert.NotSamef(t, m0, m1, "returned same meters: %v", is1)
 	})
-
-	t.Run("RangeComplete", func(t *testing.T) {
-		var got []*meter
-		r.Range(func(m *meter) bool {
-			got = append(got, m)
-			return true
-		})
-		assert.ElementsMatch(t, []*meter{m0, m1}, got)
-	})
-
-	t.Run("RangeStopIteration", func(t *testing.T) {
-		var i int
-		r.Range(func(m *meter) bool {
-			i++
-			return false
-		})
-		assert.Equal(t, 1, i, "iteration not stopped after first flase return")
-	})
 }
 
 // A meter should be able to make instruments concurrently.
