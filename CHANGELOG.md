@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
+
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
 ### Changed
