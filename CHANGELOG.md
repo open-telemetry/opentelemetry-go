@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added an example of using metric views to customize instruments. (#3177)
+
 ### Changed
 
 - `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
