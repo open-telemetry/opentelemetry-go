@@ -221,11 +221,12 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 			errs.append(err)
 			continue
 		}
-		if agg != nil { // Not a drop aggregation.
-			// TODO (#3011): If filtering is done at the instrument level add here.
-			// This is where the aggregator and the view are both in scope.
-			aggs = append(aggs, agg)
+		if agg == nil { // Drop aggregator.
+			continue
 		}
+		// TODO (#3011): If filtering is done at the instrument level add here.
+		// This is where the aggregator and the view are both in scope.
+		aggs = append(aggs, agg)
 		seen[id] = struct{}{}
 		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
 		if err != nil {
