@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added an example of using metric views to customize instruments. (#3177)
+- The OpenCensus bridge can now be used with the Prometheus exporter. (#3207)
 
 ### Changed
 
