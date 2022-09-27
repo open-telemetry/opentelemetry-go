@@ -252,7 +252,14 @@ type Member struct {
 
 // NewMember returns a new Member from the passed arguments. An error is
 // returned if the created Member would be invalid according to the W3C
-// Baggage specification.
+// Baggage specification and an error will be returned if any of the input
+// parameters does not follow the specification.
+//
+// Note the character encoding of value string MUST be UTF-8[Encoding].
+// Any characters outside the baggage-octet range of characters
+// MUST be percent-encoded. e.g. value ";" is not allowed.
+// Instead, use its encoded form "%3B". After validation pass, value
+// will be decoded and stored. "%3B" will be interpreted as ";".
 func NewMember(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
@@ -263,9 +270,8 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
 	}
-	// the accepted value of this function should be decoded
-	// according to the W3C Baggage value specification
-	// e.g. value "%3B" should be treated as its decoded form ";"
+	// decode the input value so that it can be parsed
+	// and stored properly when used and propagated.
 	decodedValue, err := url.QueryUnescape(value)
 	if err != nil {
 		return newInvalidMember(),
