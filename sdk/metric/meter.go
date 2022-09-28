@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -37,7 +38,9 @@ import (
 //
 // All methods of a meterRegistry are safe to call concurrently.
 type meterRegistry struct {
-	meters cache[instrumentation.Scope, *meter]
+	sync.Mutex
+
+	meters map[instrumentation.Scope]*meter
 
 	pipes pipelines
 }
@@ -48,9 +51,29 @@ type meterRegistry struct {
 //
 // Get is safe to call concurrently.
 func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	return r.meters.Lookup(s, func() *meter {
-		return &meter{Scope: s, pipes: r.pipes}
-	})
+	r.Lock()
+	defer r.Unlock()
+
+	if r.meters == nil {
+		m := &meter{
+			Scope: s,
+			pipes: r.pipes,
+		}
+		r.meters = map[instrumentation.Scope]*meter{s: m}
+		return m
+	}
+
+	m, ok := r.meters[s]
+	if ok {
+		return m
+	}
+
+	m = &meter{
+		Scope: s,
+		pipes: r.pipes,
+	}
+	r.meters[s] = m
+	return m
 }
 
 // meter handles the creation and coordination of all metric instruments. A
