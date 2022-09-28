@@ -15,10 +15,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"errors"
 	"sync"
-
-	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
 
 // cache is a locking storage used to quickly return already computed values. A
@@ -56,49 +53,4 @@ func (c *cache[K, V]) Lookup(key K, f func() V) V {
 	val := f()
 	c.data[key] = val
 	return val
-}
-
-// resolvedAggregators is the result of resolving aggregators for an instrument.
-type resolvedAggregators[N int64 | float64] struct {
-	aggregators []internal.Aggregator[N]
-	err         error
-}
-
-type instrumentCache[N int64 | float64] struct {
-	c *cache[instrumentID, any]
-}
-
-func newInstrumentCache[N int64 | float64](c *cache[instrumentID, any]) instrumentCache[N] {
-	if c == nil {
-		c = &cache[instrumentID, any]{}
-	}
-	return instrumentCache[N]{c: c}
-}
-
-var errExists = errors.New("instrument already exists for different number type")
-
-// Lookup returns the Aggregators and error for a cached instrumentID if they
-// exist in the cache. Otherwise, f is called and its returned values are set
-// in the cache and returned.
-//
-// If an instrumentID has been stored in the cache for a different N, an error
-// is returned describing the conflict.
-//
-// Lookup is safe to call concurrently.
-func (q instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
-	vAny := q.c.Lookup(key, func() any {
-		a, err := f()
-		return &resolvedAggregators[N]{
-			aggregators: a,
-			err:         err,
-		}
-	})
-
-	switch v := vAny.(type) {
-	case *resolvedAggregators[N]:
-		aggs = v.aggregators
-	default:
-		err = errExists
-	}
-	return aggs, err
 }
