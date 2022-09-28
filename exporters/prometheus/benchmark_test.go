@@ -27,13 +27,11 @@ import (
 
 func benchmarkCollect(b *testing.B, n int) {
 	ctx := context.Background()
-	exporter := New()
+	registry := prometheus.NewRegistry() // This is the default behavior, this is used to manually gather.
+	exporter, err := New(WithRegistry(registry))
+	require.NoError(b, err)
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter("testmeter")
-
-	registry := prometheus.NewRegistry()
-	err := registry.Register(exporter.Collector)
-	require.NoError(b, err)
 
 	for i := 0; i < n; i++ {
 		counter, err := meter.SyncFloat64().Counter(fmt.Sprintf("foo_%d", i))

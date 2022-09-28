@@ -22,11 +22,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"go.opentelemetry.io/otel/attribute"
-	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -37,12 +34,15 @@ func main() {
 	// The exporter embeds a default OpenTelemetry Reader and
 	// implements prometheus.Collector, allowing it to be used as
 	// both a Reader and Collector.
-	exporter := otelprom.New()
+	exporter, err := prometheus.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
-	go serveMetrics(exporter.Collector)
+	go serveMetrics(exporter)
 
 	attrs := []attribute.KeyValue{
 		attribute.Key("A").String("B"),
@@ -77,17 +77,10 @@ func main() {
 	<-ctx.Done()
 }
 
-func serveMetrics(collector prometheus.Collector) {
-	registry := prometheus.NewRegistry()
-	err := registry.Register(collector)
-	if err != nil {
-		fmt.Printf("error registering collector: %v", err)
-		return
-	}
-
-	log.Printf("serving metrics at localhost:2222/metrics")
-	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-	err = http.ListenAndServe(":2222", nil)
+func serveMetrics(exp *prometheus.Exporter) {
+	log.Printf("serving metrics at localhost:2223/metrics")
+	http.Handle("/metrics", exp)
+	err := http.ListenAndServe(":2223", nil)
 	if err != nil {
 		fmt.Printf("error serving http: %v", err)
 		return

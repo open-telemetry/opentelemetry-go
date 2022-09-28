@@ -3,7 +3,6 @@ module go.opentelemetry.io/otel/example/prometheus
 go 1.18
 
 require (
-	github.com/prometheus/client_golang v1.13.0
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.32.1
 	go.opentelemetry.io/otel/metric v0.32.1
@@ -17,6 +16,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/prometheus/client_golang v1.13.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect

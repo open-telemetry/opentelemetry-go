@@ -40,7 +40,10 @@ func main() {
 	ctx := context.Background()
 
 	// The exporter embeds a default OpenTelemetry Reader, allowing it to be used in WithReader.
-	exporter := otelprom.New()
+	exporter, err := otelprom.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// View to customize histogram buckets and rename a single histogram instrument.
 	customBucketsView, err := view.New(

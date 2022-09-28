@@ -16,12 +16,15 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -34,38 +37,47 @@ import (
 type Exporter struct {
 	metric.Reader
 	Collector prometheus.Collector
+
+	handler http.Handler
 }
+
+var _ metric.Reader = &Exporter{}
 
 // collector is used to implement prometheus.Collector.
 type collector struct {
-	metric.Reader
-}
-
-// config is added here to allow for options expansion in the future.
-type config struct{}
-
-// Option may be used in the future to apply options to a Prometheus Exporter config.
-type Option interface {
-	apply(config) config
+	reader metric.Reader
 }
 
 // New returns a Prometheus Exporter.
-func New(_ ...Option) Exporter {
-	// this assumes that the default temporality selector will always return cumulative.
-	// we only support cumulative temporality, so building our own reader enforces this.
-	reader := metric.NewManualReader()
-	e := Exporter{
-		Reader: reader,
-		Collector: &collector{
-			Reader: reader,
-		},
+func New(opts ...Option) (*Exporter, error) {
+	cfg := newConfig(opts...)
+
+	handler := promhttp.HandlerFor(cfg.gatherer, promhttp.HandlerOpts{})
+	collector := &collector{
+		reader: cfg.reader,
 	}
-	return e
+
+	if err := cfg.registerer.Register(collector); err != nil {
+		return nil, fmt.Errorf("cannot register the collector: %w", err)
+	}
+
+	e := &Exporter{
+		Reader:    cfg.reader,
+		Collector: collector,
+
+		handler: handler,
+	}
+
+	return e, nil
+}
+
+func (e *Exporter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e.handler.ServeHTTP(w, r)
 }
 
 // Describe implements prometheus.Collector.
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	metrics, err := c.Reader.Collect(context.TODO())
+	metrics, err := c.reader.Collect(context.TODO())
 	if err != nil {
 		otel.Handle(err)
 	}
@@ -76,7 +88,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	metrics, err := c.Reader.Collect(context.TODO())
+	metrics, err := c.reader.Collect(context.TODO())
 	if err != nil {
 		otel.Handle(err)
 	}
