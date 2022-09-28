@@ -35,13 +35,13 @@ type cache[K comparable, V any] struct {
 	data map[K]V
 }
 
-// GetOrSet returns the value stored in the cache for key if it exists.
-// Otherwise, f is called and the returned value is set in the cache for key
-// and returned.
+// Lookup returns the value stored in the cache with the accociated key if it
+// exists. Otherwise, f is called and its returned value is set in the cache
+// for key and returned.
 //
-// GetOrSet is safe to call concurrently. It will hold the cache lock, so f
+// Lookup is safe to call concurrently. It will hold the cache lock, so f
 // should not block excessively.
-func (c *cache[K, V]) GetOrSet(key K, f func() V) V {
+func (c *cache[K, V]) Lookup(key K, f func() V) V {
 	c.Lock()
 	defer c.Unlock()
 
@@ -78,7 +78,7 @@ func newInstrumentRegistry[N int64 | float64](c *cache[instrumentID, any]) instr
 var errExists = errors.New("instrument already exists for different number type")
 
 func (q instrumentRegistry[N]) GetOrSet(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
-	vAny := q.c.GetOrSet(key, func() any {
+	vAny := q.c.Lookup(key, func() any {
 		a, err := f()
 		return &resolvedAggregators[N]{
 			aggregators: a,

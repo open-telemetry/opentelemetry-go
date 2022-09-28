@@ -48,7 +48,7 @@ type meterRegistry struct {
 //
 // Get is safe to call concurrently.
 func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	return r.meters.GetOrSet(s, func() *meter {
+	return r.meters.Lookup(s, func() *meter {
 		return &meter{Scope: s, pipes: r.pipes}
 	})
 }
