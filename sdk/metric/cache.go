@@ -14,9 +14,7 @@
 
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
-import (
-	"sync"
-)
+import "sync"
 
 // cache is a locking storage used to quickly return already computed values. A
 // registry type should be used with a cache for get and set operations of
