@@ -334,7 +334,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[int64](p)
+	r := newResolver(p, newInstrumentCache[int64](nil))
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
@@ -344,7 +344,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[float64](p)
+	r := newResolver(p, newInstrumentCache[float64](nil))
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
@@ -375,14 +375,14 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	p := newPipelines(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
-	ri := newResolver[int64](p)
+	ri := newResolver(p, newInstrumentCache[int64](nil))
 	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
 	p = newPipelines(resource.Empty(), views)
 
-	rf := newResolver[float64](p)
+	rf := newResolver(p, newInstrumentCache[float64](nil))
 	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
@@ -405,7 +405,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), views)
 
-	ri := newResolver[int64](p)
+	ri := newResolver(p, newInstrumentCache[int64](nil))
 	intAggs, err := ri.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 	assert.Len(t, intAggs, 1)
@@ -416,7 +416,7 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	assert.Len(t, intAggs, 2)
 
 	// Creating a float foo instrument should error because there is an int foo instrument.
-	rf := newResolver[float64](p)
+	rf := newResolver(p, newInstrumentCache[float64](nil))
 	floatAggs, err := rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 1)
