@@ -16,8 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"errors"
-	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -26,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
 
 // meterRegistry keeps a record of initialized meters for instrumentation
@@ -40,9 +37,7 @@ import (
 //
 // All methods of a meterRegistry are safe to call concurrently.
 type meterRegistry struct {
-	sync.Mutex
-
-	meters map[instrumentation.Scope]*meter
+	meters cache[instrumentation.Scope, *meter]
 
 	pipes pipelines
 }
@@ -53,77 +48,9 @@ type meterRegistry struct {
 //
 // Get is safe to call concurrently.
 func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.meters == nil {
-		m := &meter{
-			Scope: s,
-			pipes: r.pipes,
-		}
-		r.meters = map[instrumentation.Scope]*meter{s: m}
-		return m
-	}
-
-	m, ok := r.meters[s]
-	if ok {
-		return m
-	}
-
-	m = &meter{
-		Scope: s,
-		pipes: r.pipes,
-	}
-	r.meters[s] = m
-	return m
-}
-
-type cache map[instrumentID]any
-
-type cacheResult[N int64 | float64] struct {
-	aggregators []internal.Aggregator[N]
-	err         error
-}
-
-type querier[N int64 | float64] struct {
-	sync.Mutex
-
-	c cache
-}
-
-func newQuerier[N int64 | float64](c cache) *querier[N] {
-	return &querier[N]{c: c}
-}
-
-var (
-	errCacheMiss = errors.New("cache miss")
-	errExists    = errors.New("instrument already exists for different number type")
-)
-
-func (q *querier[N]) Get(key instrumentID) (r *cacheResult[N], err error) {
-	q.Lock()
-	defer q.Unlock()
-
-	vIface, ok := q.c[key]
-	if !ok {
-		err = errCacheMiss
-		return r, err
-	}
-
-	switch v := vIface.(type) {
-	case *cacheResult[N]:
-		r = v
-	default:
-		err = errExists
-	}
-	return r, err
-}
-
-func (q *querier[N]) Set(key instrumentID, val *cacheResult[N]) {
-	q.Lock()
-	defer q.Unlock()
-
-	q.c[key] = val
+	return r.meters.GetOrSet(s, func() *meter {
+		return &meter{Scope: s, pipes: r.pipes}
+	})
 }
 
 // meter handles the creation and coordination of all metric instruments. A
@@ -134,7 +61,7 @@ type meter struct {
 	instrumentation.Scope
 
 	pipes pipelines
-	cache *cache
+	cache cache[instrumentID, any]
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -142,13 +69,13 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	q := newQuerier[int64](*m.cache)
+	q := newInstrumentRegistry[int64](&m.cache)
 	return asyncInt64Provider{scope: m.Scope, resolve: newResolver(m.pipes, q)}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	q := newQuerier[float64](*m.cache)
+	q := newInstrumentRegistry[float64](&m.cache)
 	return asyncFloat64Provider{scope: m.Scope, resolve: newResolver(m.pipes, q)}
 }
 
@@ -161,12 +88,12 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	q := newQuerier[int64](*m.cache)
+	q := newInstrumentRegistry[int64](&m.cache)
 	return syncInt64Provider{scope: m.Scope, resolve: newResolver(m.pipes, q)}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	q := newQuerier[float64](*m.cache)
+	q := newInstrumentRegistry[float64](&m.cache)
 	return syncFloat64Provider{scope: m.Scope, resolve: newResolver(m.pipes, q)}
 }
