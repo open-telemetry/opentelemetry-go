@@ -418,7 +418,7 @@ func (c instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggreg
 
 	switch v := vAny.(type) {
 	case *resolvedAggregators[N]:
-		aggs = v.aggregators
+		aggs, err = v.aggregators, v.err
 	default:
 		err = errCacheNumberConflict
 	}
