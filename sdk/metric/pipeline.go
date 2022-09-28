@@ -349,12 +349,12 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, q instrumentCache[N]) *resolver[N] {
+func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) *resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter[N](p[i])
 	}
-	return &resolver[N]{cache: q, inserters: in}
+	return &resolver[N]{cache: c, inserters: in}
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
@@ -387,14 +387,14 @@ type resolvedAggregators[N int64 | float64] struct {
 }
 
 type instrumentCache[N int64 | float64] struct {
-	c *cache[instrumentID, any]
+	cache *cache[instrumentID, any]
 }
 
 func newInstrumentCache[N int64 | float64](c *cache[instrumentID, any]) instrumentCache[N] {
 	if c == nil {
 		c = &cache[instrumentID, any]{}
 	}
-	return instrumentCache[N]{c: c}
+	return instrumentCache[N]{cache: c}
 }
 
 var errExists = errors.New("instrument already exists for different number type")
@@ -407,8 +407,8 @@ var errExists = errors.New("instrument already exists for different number type"
 // is returned describing the conflict.
 //
 // Lookup is safe to call concurrently.
-func (q instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
-	vAny := q.c.Lookup(key, func() any {
+func (c instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
+	vAny := c.cache.Lookup(key, func() any {
 		a, err := f()
 		return &resolvedAggregators[N]{
 			aggregators: a,
