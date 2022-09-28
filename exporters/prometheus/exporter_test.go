@@ -18,20 +18,27 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+var now = time.Now()
 
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
 		name          string
+		opts          []Option
 		recordMetrics func(ctx context.Context, meter otelmetric.Meter)
 		expectedFile  string
 	}{
@@ -130,13 +137,50 @@ func TestPrometheusExporter(t *testing.T) {
 				histogram.Record(ctx, 23, attrs...)
 			},
 		},
+		{
+			name:         "bridged metrics",
+			expectedFile: "testdata/bridged.txt",
+			opts: []Option{
+				WithBridge(&fakeBridge{
+					metrics: metricdata.ScopeMetrics{
+						Scope: instrumentation.Scope{
+							Name: "go.opentelemetry.io/otel/exporters/prometheus",
+						},
+						Metrics: []metricdata.Metrics{
+							{
+								Name:        "foo_seconds_total",
+								Description: "a metric from a bridge",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{
+										{
+											Attributes: attribute.NewSet(),
+											StartTime:  now,
+											Time:       now,
+											Value:      123,
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				// don't record any metrics.  The bridge will do that for us
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer func(orig otel.ErrorHandler) {
+				otel.SetErrorHandler(orig)
+			}(otel.GetErrorHandler())
+			errorHandler := &fakeErrHandler{}
+			otel.SetErrorHandler(errorHandler)
 			ctx := context.Background()
 
-			exporter := New()
+			exporter := New(tc.opts...)
 			provider := metric.NewMeterProvider(metric.WithReader(exporter))
 			meter := provider.Meter("testmeter")
 
@@ -152,8 +196,27 @@ func TestPrometheusExporter(t *testing.T) {
 
 			err = testutil.GatherAndCompare(registry, file)
 			require.NoError(t, err)
+			// Check for handled errors
+			require.NoError(t, errorHandler.err)
 		})
 	}
+}
+
+type fakeBridge struct {
+	metrics metricdata.ScopeMetrics
+	err     error
+}
+
+func (f *fakeBridge) Collect(context.Context) (metricdata.ScopeMetrics, error) {
+	return f.metrics, f.err
+}
+
+type fakeErrHandler struct {
+	err error
+}
+
+func (f *fakeErrHandler) Handle(err error) {
+	f.err = err
 }
 
 func TestSantitizeName(t *testing.T) {

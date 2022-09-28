@@ -1,0 +1,3 @@
+# HELP foo_seconds_total a metric from a bridge
+# TYPE foo_seconds_total gauge
+foo_seconds_total 123
