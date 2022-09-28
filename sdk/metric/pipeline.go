@@ -34,6 +34,8 @@ var (
 	errCreatingAggregators     = errors.New("could not create all aggregators")
 	errIncompatibleAggregation = errors.New("incompatible aggregation")
 	errUnknownAggregation      = errors.New("unrecognized aggregation")
+
+	errCacheNumberConflict = errors.New("instrument already exists: conflicting number type")
 )
 
 type aggregator interface {
@@ -397,8 +399,6 @@ func newInstrumentCache[N int64 | float64](c *cache[instrumentID, any]) instrume
 	return instrumentCache[N]{cache: c}
 }
 
-var errExists = errors.New("instrument already exists for different number type")
-
 // Lookup returns the Aggregators and error for a cached instrumentID if they
 // exist in the cache. Otherwise, f is called and its returned values are set
 // in the cache and returned.
@@ -420,7 +420,7 @@ func (c instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggreg
 	case *resolvedAggregators[N]:
 		aggs = v.aggregators
 	default:
-		err = errExists
+		err = errCacheNumberConflict
 	}
 	return aggs, err
 }
