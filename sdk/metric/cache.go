@@ -64,20 +64,28 @@ type resolvedAggregators[N int64 | float64] struct {
 	err         error
 }
 
-type instrumentRegistry[N int64 | float64] struct {
+type instrumentCache[N int64 | float64] struct {
 	c *cache[instrumentID, any]
 }
 
-func newInstrumentRegistry[N int64 | float64](c *cache[instrumentID, any]) instrumentRegistry[N] {
+func newInstrumentCache[N int64 | float64](c *cache[instrumentID, any]) instrumentCache[N] {
 	if c == nil {
 		c = &cache[instrumentID, any]{}
 	}
-	return instrumentRegistry[N]{c: c}
+	return instrumentCache[N]{c: c}
 }
 
 var errExists = errors.New("instrument already exists for different number type")
 
-func (q instrumentRegistry[N]) GetOrSet(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
+// Lookup returns the Aggregators and error for a cached instrumentID if they
+// exist in the cache. Otherwise, f is called and its returned values are set
+// in the cache and returned.
+//
+// If an instrumentID has been stored in the cache for a different N, an error
+// is returned describing the conflict.
+//
+// Lookup is safe to call concurrently.
+func (q instrumentCache[N]) Lookup(key instrumentID, f func() ([]internal.Aggregator[N], error)) (aggs []internal.Aggregator[N], err error) {
 	vAny := q.c.Lookup(key, func() any {
 		a, err := f()
 		return &resolvedAggregators[N]{

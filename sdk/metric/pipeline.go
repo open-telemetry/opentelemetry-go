@@ -345,11 +345,11 @@ func (p pipelines) registerCallback(fn func(context.Context)) {
 // measurements with while updating all pipelines that need to pull from those
 // aggregations.
 type resolver[N int64 | float64] struct {
-	cache     instrumentRegistry[N]
+	cache     instrumentCache[N]
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, q instrumentRegistry[N]) *resolver[N] {
+func newResolver[N int64 | float64](p pipelines, q instrumentCache[N]) *resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter[N](p[i])
@@ -366,7 +366,7 @@ func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]i
 		description: inst.Description,
 	}
 
-	return r.cache.GetOrSet(id, func() ([]internal.Aggregator[N], error) {
+	return r.cache.Lookup(id, func() ([]internal.Aggregator[N], error) {
 		var aggs []internal.Aggregator[N]
 		errs := &multierror{}
 		for _, i := range r.inserters {
