@@ -135,9 +135,9 @@ func TestPrometheusExporter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			registry := prometheus.NewRegistry() // This is the default behavior, this is used to manually gather.
+			registry := prometheus.NewRegistry()
 
-			exporter, err := New(WithRegistry(registry))
+			exporter, err := New(WithGatherer(registry), WithRegisterer(registry))
 			require.NoError(t, err)
 			provider := metric.NewMeterProvider(metric.WithReader(exporter))
 			meter := provider.Meter("testmeter")

@@ -65,19 +65,29 @@ func TestNewConfig(t *testing.T) {
 			wantGatherer:   prometheus.DefaultGatherer,
 		},
 		{
-			name: "WithRegistry",
+			name: "WithGatherer",
 			options: []Option{
-				WithRegistry(registry),
+				WithGatherer(registry),
+			},
+			wantReaderType: metric.NewManualReader(),
+			wantRegisterer: prometheus.DefaultRegisterer,
+			wantGatherer:   registry,
+		},
+		{
+			name: "WithRegisterer",
+			options: []Option{
+				WithRegisterer(registry),
 			},
 			wantReaderType: metric.NewManualReader(),
 			wantRegisterer: registry,
-			wantGatherer:   registry,
+			wantGatherer:   prometheus.DefaultGatherer,
 		},
 		{
 			name: "Multiple Options",
 			options: []Option{
 				WithReader(metric.NewPeriodicReader(testExporter{})),
-				WithRegistry(registry),
+				WithGatherer(registry),
+				WithRegisterer(registry),
 			},
 			wantReaderType: metric.NewPeriodicReader(testExporter{}),
 			wantRegisterer: registry,
@@ -87,7 +97,8 @@ func TestNewConfig(t *testing.T) {
 			name: "nil options do nothing",
 			options: []Option{
 				WithReader(nil),
-				WithRegistry(nil),
+				WithGatherer(nil),
+				WithRegisterer(nil),
 			},
 			wantReaderType: metric.NewManualReader(),
 			wantRegisterer: prometheus.DefaultRegisterer,
