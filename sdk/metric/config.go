@@ -126,10 +126,6 @@ func WithReader(r Reader, views ...view.View) Option {
 		if cfg.readers == nil {
 			cfg.readers = make(map[Reader][]view.View)
 		}
-		if len(views) == 0 {
-			views = []view.View{{}}
-		}
-
 		cfg.readers[r] = views
 		return cfg
 	})
