@@ -16,12 +16,8 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-
-	"go.opentelemetry.io/otel/sdk/metric"
 ) // config is added here to allow for options expansion in the future.
 type config struct {
-	reader metric.Reader
-
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 }
@@ -30,10 +26,6 @@ func newConfig(opts ...Option) config {
 	cfg := config{}
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
-	}
-
-	if cfg.reader == nil {
-		cfg.reader = metric.NewManualReader()
 	}
 
 	if cfg.gatherer == nil {
@@ -55,15 +47,6 @@ type optionFunc func(config) config
 
 func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
-}
-
-// WithReader controls where the Exporter reader Collects() from.  If no reader
-// is passed a ManualReader will be used.
-func WithReader(rdr metric.Reader) Option {
-	return optionFunc(func(cfg config) config {
-		cfg.reader = rdr
-		return cfg
-	})
 }
 
 // WithRegisterer configures which prometheus Registerer the Exporter will

@@ -52,9 +52,12 @@ type collector struct {
 func New(opts ...Option) (*Exporter, error) {
 	cfg := newConfig(opts...)
 
+	// TODO (#????): Enable some way to configure the reader, but not change temporality.
+	reader := metric.NewManualReader()
+
 	handler := promhttp.HandlerFor(cfg.gatherer, promhttp.HandlerOpts{})
 	collector := &collector{
-		reader: cfg.reader,
+		reader: reader,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -62,7 +65,7 @@ func New(opts ...Option) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		Reader:    cfg.reader,
+		Reader:    reader,
 		Collector: collector,
 
 		handler: handler,
