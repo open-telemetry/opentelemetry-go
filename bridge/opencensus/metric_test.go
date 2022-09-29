@@ -270,7 +270,7 @@ func TestPrometheusMetricsExporter(t *testing.T) {
 			fakeProducer := &fakeOCProducer{metrics: tc.input}
 			metricproducer.GlobalManager().AddProducer(fakeProducer)
 			defer metricproducer.GlobalManager().DeleteProducer(fakeProducer)
-			output, err := NewPrometheusBridge().Collect(context.Background())
+			output, err := NewBridge().Collect(context.Background())
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {

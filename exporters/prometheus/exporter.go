@@ -39,13 +39,13 @@ type Exporter struct {
 // collector is used to implement prometheus.Collector.
 type collector struct {
 	metric.Reader
-	bridges []Bridge
+	bridges []metric.Bridge
 }
 
 // config is added here to allow for options expansion in the future.
 type config struct {
 	reader  metric.Reader
-	bridges []Bridge
+	bridges []metric.Bridge
 }
 
 // Option may be used in the future to apply options to a Prometheus Exporter config.
@@ -59,14 +59,8 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
-// Bridge is a source of metrics other than the OpenTelemetry SDK.
-type Bridge interface {
-	// Collect gathers and returns all metric data from the Bridge.
-	Collect(context.Context) (metricdata.ScopeMetrics, error)
-}
-
 // WithBridge provides a Bridge from which the prometheus exporter reads metrics.
-func WithBridge(b Bridge) Option {
+func WithBridge(b metric.Bridge) Option {
 	return optionFunc(func(config config) config {
 		config.bridges = append(config.bridges, b)
 		return config

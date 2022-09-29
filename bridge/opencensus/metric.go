@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
-	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -74,9 +73,9 @@ type reader struct {
 	manager *metricproducer.Manager
 }
 
-// NewPrometheusBridge returns a prometheus.Bridge that can be used as
-// a source of metrics for OpenTelemetry Prometheus exporters.
-func NewPrometheusBridge() prometheus.Bridge {
+// NewBridge returns a metric.Bridge that can be used as
+// a source of metrics for OpenTelemetry Pull exporters.
+func NewBridge() metric.Bridge {
 	return &reader{
 		manager: metricproducer.GlobalManager(),
 	}
