@@ -22,7 +22,6 @@ import (
 type config struct {
 	reader metric.Reader
 
-	registry   *prometheus.Registry
 	registerer prometheus.Registerer
 	gatherer   prometheus.Gatherer
 }
@@ -37,12 +36,11 @@ func newConfig(opts ...Option) config {
 		cfg.reader = metric.NewManualReader()
 	}
 
-	if cfg.registry != nil {
-		cfg.registerer = cfg.registry
-		cfg.gatherer = cfg.registry
-	} else {
-		cfg.registerer = prometheus.DefaultRegisterer
+	if cfg.gatherer == nil {
 		cfg.gatherer = prometheus.DefaultGatherer
+	}
+	if cfg.registerer == nil {
+		cfg.registerer = prometheus.DefaultRegisterer
 	}
 
 	return cfg
@@ -59,6 +57,8 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
+// WithReader controls where the Exporter reader Collects() from.  If no reader
+// is passed a ManualReader will be used.
 func WithReader(rdr metric.Reader) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.reader = rdr
@@ -66,9 +66,22 @@ func WithReader(rdr metric.Reader) Option {
 	})
 }
 
-func WithRegistry(reg *prometheus.Registry) Option {
+// WithRegisterer configures which prometheus Registerer the Exporter will
+// register with.  If no registerer is used the prometheus DefaultRegisterer is
+// used.
+func WithRegisterer(reg prometheus.Registerer) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.registry = reg
+		cfg.registerer = reg
+		return cfg
+	})
+}
+
+// WithRegisterer configures which prometheus Gatherer the Exporter will
+// Gather from.  If no gatherer is used the prometheus DefaultGatherer is
+// used.
+func WithGatherer(gatherer prometheus.Gatherer) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.gatherer = gatherer
 		return cfg
 	})
 }
