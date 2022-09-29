@@ -216,14 +216,17 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		if agg == nil { // Drop aggregator.
 			continue
 		}
+		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+		if err != nil {
+			errs.append(err)
+			// Do not return the aggregator to be updated if the pipeline will
+			// never produce from it.
+			continue
+		}
 		// TODO (#3011): If filtering is done at the instrument level add here.
 		// This is where the aggregator and the view are both in scope.
 		aggs = append(aggs, agg)
 		seen[id] = struct{}{}
-		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
-		if err != nil {
-			errs.append(err)
-		}
 	}
 
 	if !matched { // Apply implicit default view if no explicit matched.
@@ -232,10 +235,13 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 			errs.append(err)
 		}
 		if a != nil {
-			aggs = append(aggs, a)
 			err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, a)
 			if err != nil {
+				// Do not return the aggregator to be updated if the pipeline
+				// will never produce from it.
 				errs.append(err)
+			} else {
+				aggs = append(aggs, a)
 			}
 		}
 	}
