@@ -81,7 +81,7 @@ func NewBridge() metric.Bridge {
 	}
 }
 
-// Collect overrides the manual reader's collect method to retrieve metrics from OpenCensus.
+// Collect retrieves metrics from OpenCensus, and converts them to OpenTelemetry.
 func (r *reader) Collect(context.Context) (metricdata.ScopeMetrics, error) {
 	producers := r.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
