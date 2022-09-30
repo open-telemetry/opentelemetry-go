@@ -42,13 +42,12 @@ type aggregator interface {
 	Aggregation() metricdata.Aggregation
 }
 
-type instrumentKey struct {
-	name string
-	unit unit.Unit
-}
-
-type instrumentValue struct {
+// instrumentSync is a synchronization point between a pipeline and an
+// instrument's Aggregators.
+type instrumentSync struct {
+	name        string
 	description string
+	unit        unit.Unit
 	aggregator  aggregator
 }
 
@@ -60,7 +59,7 @@ func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipe
 		resource:     res,
 		reader:       reader,
 		views:        views,
-		aggregations: make(map[instrumentation.Scope]map[instrumentKey]instrumentValue),
+		aggregations: make(map[instrumentation.Scope][]instrumentSync),
 	}
 }
 
@@ -76,36 +75,25 @@ type pipeline struct {
 	views  []view.View
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope]map[instrumentKey]instrumentValue
+	aggregations map[instrumentation.Scope][]instrumentSync
 	callbacks    []func(context.Context)
 }
 
 var errAlreadyRegistered = errors.New("instrument already registered")
 
-// addAggregator will stores an aggregator with an instrument description.  The aggregator
-// is used when `produce()` is called.
-func (p *pipeline) addAggregator(scope instrumentation.Scope, name, description string, instUnit unit.Unit, agg aggregator) error {
+// addSync adds the instrumentSync to pipeline p with scope. This method is not
+// idempotent. Duplicate calls will result in duplicate additions, it is the
+// callers responsibility to ensure this is called with unique values.
+func (p *pipeline) addSync(scope instrumentation.Scope, sync instrumentSync) {
 	p.Lock()
 	defer p.Unlock()
 	if p.aggregations == nil {
-		p.aggregations = map[instrumentation.Scope]map[instrumentKey]instrumentValue{}
+		p.aggregations = map[instrumentation.Scope][]instrumentSync{
+			scope: {sync},
+		}
+		return
 	}
-	if p.aggregations[scope] == nil {
-		p.aggregations[scope] = map[instrumentKey]instrumentValue{}
-	}
-	inst := instrumentKey{
-		name: name,
-		unit: instUnit,
-	}
-	if _, ok := p.aggregations[scope][inst]; ok {
-		return fmt.Errorf("%w: name %s, scope: %s", errAlreadyRegistered, name, scope)
-	}
-
-	p.aggregations[scope][inst] = instrumentValue{
-		description: description,
-		aggregator:  agg,
-	}
-	return nil
+	p.aggregations[scope] = append(p.aggregations[scope], sync)
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
@@ -144,12 +132,12 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
 	for scope, instruments := range p.aggregations {
 		metrics := make([]metricdata.Metrics, 0, len(instruments))
-		for inst, instValue := range instruments {
-			data := instValue.aggregator.Aggregation()
+		for _, inst := range instruments {
+			data := inst.aggregator.Aggregation()
 			if data != nil {
 				metrics = append(metrics, metricdata.Metrics{
 					Name:        inst.name,
-					Description: instValue.description,
+					Description: inst.description,
 					Unit:        inst.unit,
 					Data:        data,
 				})
@@ -259,7 +247,12 @@ func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (inter
 		if agg == nil { // Drop aggregator.
 			return nil, nil
 		}
-		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, u, agg)
+		i.pipeline.addSync(inst.Scope, instrumentSync{
+			name:        inst.Name,
+			description: inst.Description,
+			unit:        u,
+			aggregator:  agg,
+		})
 		return agg, err
 	})
 }

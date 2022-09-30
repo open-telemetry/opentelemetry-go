@@ -15,7 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"fmt"
 	"sync/atomic"
 	"testing"
 
@@ -406,7 +405,6 @@ type logCounter struct {
 
 func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
 	atomic.AddUint32(&l.infoN, 1)
-	fmt.Println("here")
 	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
