@@ -79,8 +79,6 @@ type pipeline struct {
 	callbacks    []func(context.Context)
 }
 
-var errAlreadyRegistered = errors.New("instrument already registered")
-
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
 // idempotent. Duplicate calls will result in duplicate additions, it is the
 // callers responsibility to ensure this is called with unique values.
