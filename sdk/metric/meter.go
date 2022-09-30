@@ -83,6 +83,19 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 type meter struct {
 	instrumentation.Scope
 
+	// aggregatorCache* ensures no duplicate Aggregators are created from the
+	// same instrument within the scope of all instruments this meter owns.
+	//
+	// Duplicate creations that for the same number are identified in the
+	// viewCache. Since the conflict is "resolvable", an aggregator still needs
+	// to be returned when this occurs. Therefore, instruments of different
+	// numbers are not tracked with the same cache.
+	aggregatorCacheInt64   cache[instrumentID, aggVal[int64]]
+	aggregatorCacheFloat64 cache[instrumentID, aggVal[float64]]
+	// viewCache ensures instrument conflicts this meter is asked to create are
+	// logged to the user.
+	viewCache cache[string, instrumentID]
+
 	pipes pipelines
 }
 
@@ -91,12 +104,14 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	c := newInstrumentCache(&m.aggregatorCacheInt64, &m.viewCache)
+	return asyncInt64Provider{scope: m.Scope, resolve: newResolver(m.pipes, c)}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	c := newInstrumentCache(&m.aggregatorCacheFloat64, &m.viewCache)
+	return asyncFloat64Provider{scope: m.Scope, resolve: newResolver(m.pipes, c)}
 }
 
 // RegisterCallback registers the function f to be called when any of the
@@ -108,10 +123,12 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	c := newInstrumentCache(&m.aggregatorCacheInt64, &m.viewCache)
+	return syncInt64Provider{scope: m.Scope, resolve: newResolver(m.pipes, c)}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	c := newInstrumentCache(&m.aggregatorCacheFloat64, &m.viewCache)
+	return syncFloat64Provider{scope: m.Scope, resolve: newResolver(m.pipes, c)}
 }

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -34,19 +35,11 @@ var (
 	errCreatingAggregators     = errors.New("could not create all aggregators")
 	errIncompatibleAggregation = errors.New("incompatible aggregation")
 	errUnknownAggregation      = errors.New("unrecognized aggregation")
+	errUnknownTemporality      = errors.New("unrecognized temporality")
 )
 
 type aggregator interface {
 	Aggregation() metricdata.Aggregation
-}
-
-// instrumentID is used to identify multiple instruments being mapped to the
-// same aggregator. e.g. using an exact match view with a name=* view. You
-// can't use a view.Instrument here because not all Aggregators are comparable.
-type instrumentID struct {
-	scope       instrumentation.Scope
-	name        string
-	description string
 }
 
 type instrumentKey struct {
@@ -178,60 +171,60 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 // inserter facilitates inserting of new instruments into a pipeline.
 type inserter[N int64 | float64] struct {
+	cache    instrumentCache[N]
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline) *inserter[N] {
-	return &inserter[N]{p}
+func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter[N] {
+	return &inserter[N]{cache: c, pipeline: p}
 }
 
-// Instrument inserts instrument inst with instUnit returning the Aggregators
-// that need to be updated with measurments for that instrument.
+// Instrument inserts the instrument inst with instUnit into a pipeline. All
+// views the pipeline contains are matched against, and any matching view that
+// creates a unique Aggregator will be inserted into the pipeline and included
+// in the returned slice.
+//
+// The returned Aggregators are ensured to be deduplicated and unique. If
+// another view in another pipeline that is cached by this inserter's cache has
+// already inserted the same Aggregator for the same instrument, that
+// Aggregator instance is returned.
+//
+// If another instrument has already been inserted by this inserter, or any
+// other using the same cache, and it conflicts with the instrument being
+// inserted in this call, an Aggregator matching the arguments will still be
+// returned but an Info level log message will also be logged to the OTel
+// global logger.
+//
+// If the passed instrument would result in an incompatible Aggregator, an
+// error is returned and that Aggregator is not inserted or returned.
+//
+// If an instrument is determined to use a Drop aggregation, that instrument is
+// not inserted nor returned.
 func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
-	seen := map[instrumentID]struct{}{}
 	var aggs []internal.Aggregator[N]
 	errs := &multierror{wrapped: errCreatingAggregators}
+	// The cache will return the same Aggregator instance. Use this fact to
+	// compare pointer addresses to deduplicate Aggregators.
+	seen := make(map[internal.Aggregator[N]]struct{})
 	for _, v := range i.pipeline.views {
 		inst, match := v.TransformInstrument(inst)
-
-		id := instrumentID{
-			scope:       inst.Scope,
-			name:        inst.Name,
-			description: inst.Description,
-		}
-
-		if _, ok := seen[id]; ok || !match {
+		if !match {
 			continue
 		}
 
-		if inst.Aggregation == nil {
-			inst.Aggregation = i.pipeline.reader.aggregation(inst.Kind)
-		} else if _, ok := inst.Aggregation.(aggregation.Default); ok {
-			inst.Aggregation = i.pipeline.reader.aggregation(inst.Kind)
-		}
-
-		if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
-			err = fmt.Errorf("creating aggregator with instrumentKind: %d, aggregation %v: %w", inst.Kind, inst.Aggregation, err)
-			errs.append(err)
-			continue
-		}
-
-		agg, err := i.aggregator(inst)
+		agg, err := i.cachedAggregator(inst, instUnit)
 		if err != nil {
 			errs.append(err)
-			continue
 		}
 		if agg == nil { // Drop aggregator.
 			continue
 		}
-		// TODO (#3011): If filtering is done at the instrument level add here.
-		// This is where the aggregator and the view are both in scope.
-		aggs = append(aggs, agg)
-		seen[id] = struct{}{}
-		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
-		if err != nil {
-			errs.append(err)
+		if _, ok := seen[agg]; ok {
+			// This aggregator has already been added.
+			continue
 		}
+		seen[agg] = struct{}{}
+		aggs = append(aggs, agg)
 	}
 	// TODO(#3224): handle when no views match. Default should be reader
 	// aggregation returned.
@@ -240,34 +233,102 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 
 // aggregator returns the Aggregator for an instrument configuration. If the
 // instrument defines an unknown aggregation, an error is returned.
-func (i *inserter[N]) aggregator(inst view.Instrument) (internal.Aggregator[N], error) {
-	// TODO (#3011): If filtering is done by the Aggregator it should be passed
-	// here.
-	var (
-		temporality = i.pipeline.reader.temporality(inst.Kind)
-		monotonic   bool
-	)
-
-	switch inst.Kind {
-	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
-		monotonic = true
+func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (internal.Aggregator[N], error) {
+	switch inst.Aggregation.(type) {
+	case nil, aggregation.Default:
+		// Undefined, nil, means to use the default from the reader.
+		inst.Aggregation = i.pipeline.reader.aggregation(inst.Kind)
 	}
 
-	switch agg := inst.Aggregation.(type) {
+	if err := isAggregatorCompatible(inst.Kind, inst.Aggregation); err != nil {
+		return nil, fmt.Errorf(
+			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
+			inst.Kind, inst.Aggregation, err,
+		)
+	}
+
+	id := i.instrumentID(inst, u)
+	// If there is a conflict, the specification says the view should
+	// still be applied and a warning should be logged.
+	i.logConflict(id)
+	return i.cache.LookupAggregator(id, func() (internal.Aggregator[N], error) {
+		agg, err := i.aggregator(inst.Aggregation, id.Temporality, id.Monotonic)
+		if err != nil {
+			return nil, err
+		}
+		if agg == nil { // Drop aggregator.
+			return nil, nil
+		}
+		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, u, agg)
+		return agg, err
+	})
+}
+
+// logConflict validates if an instrument with the same name as id has already
+// been created. If that instrument conflicts with id, a warning is logged.
+func (i *inserter[N]) logConflict(id instrumentID) {
+	existing, unique := i.cache.Unique(id)
+	if unique {
+		return
+	}
+
+	global.Info(
+		"duplicate metric stream definitions",
+		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
+		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
+		"units", fmt.Sprintf("%s, %s", existing.Unit, id.Unit),
+		"numbers", fmt.Sprintf("%s, %s", existing.Number, id.Number),
+		"aggregations", fmt.Sprintf("%s, %s", existing.Aggregation, id.Aggregation),
+		"monotonics", fmt.Sprintf("%t, %t", existing.Monotonic, id.Monotonic),
+		"temporalities", fmt.Sprintf("%s, %s", existing.Temporality.String(), id.Temporality.String()),
+	)
+}
+
+func (i *inserter[N]) instrumentID(vi view.Instrument, u unit.Unit) instrumentID {
+	var zero N
+	id := instrumentID{
+		Name:        vi.Name,
+		Description: vi.Description,
+		Unit:        u,
+		Aggregation: fmt.Sprintf("%T", vi.Aggregation),
+		Temporality: i.pipeline.reader.temporality(vi.Kind),
+		Number:      fmt.Sprintf("%T", zero),
+	}
+
+	switch vi.Kind {
+	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
+		id.Monotonic = true
+	}
+
+	return id
+}
+
+// aggregator returns the Aggregator for an aggregation type. If the instrument
+// defines an unknown aggregation, an error is returned.
+func (i *inserter[N]) aggregator(agg aggregation.Aggregation, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
+	switch a := agg.(type) {
 	case aggregation.Drop:
 		return nil, nil
 	case aggregation.LastValue:
 		return internal.NewLastValue[N](), nil
 	case aggregation.Sum:
-		if temporality == metricdata.CumulativeTemporality {
+		switch temporality {
+		case metricdata.CumulativeTemporality:
 			return internal.NewCumulativeSum[N](monotonic), nil
+		case metricdata.DeltaTemporality:
+			return internal.NewDeltaSum[N](monotonic), nil
+		default:
+			return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
 		}
-		return internal.NewDeltaSum[N](monotonic), nil
 	case aggregation.ExplicitBucketHistogram:
-		if temporality == metricdata.CumulativeTemporality {
-			return internal.NewCumulativeHistogram[N](agg), nil
+		switch temporality {
+		case metricdata.CumulativeTemporality:
+			return internal.NewCumulativeHistogram[N](a), nil
+		case metricdata.DeltaTemporality:
+			return internal.NewDeltaHistogram[N](a), nil
+		default:
+			return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
 		}
-		return internal.NewDeltaHistogram[N](agg), nil
 	}
 	return nil, errUnknownAggregation
 }
@@ -348,10 +409,10 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines) *resolver[N] {
+func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) *resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter[N](p[i])
+		in[i] = newInserter[N](p[i], c)
 	}
 	return &resolver[N]{in}
 }
