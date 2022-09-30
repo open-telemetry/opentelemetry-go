@@ -19,6 +19,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade `golang.org/x/sys/unix` from `v0.0.0-20210423185535-09eb48e85fd7` to `v0.0.0-20220919091848-fb04ddd9f9c8`.
   This addresses [GO-2022-0493](https://pkg.go.dev/vuln/GO-2022-0493). (#3235)
 
+### Fixed
+
+- Return the same instrument every time a user makes the exact same instrument creation call multiple times. (#3229, #3251)
+- Return the same instrument when a view transforms a creation call to match an existing instrument. (#3240, #3251)
+- Log a warning when a conflicting instrument (e.g. description, unit, data-type) is created instead of returning an error. (#3251)
+
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
 ### Changed
