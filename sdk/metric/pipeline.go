@@ -417,7 +417,7 @@ type resolver[N int64 | float64] struct {
 func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) *resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter[N](p[i], c)
+		in[i] = newInserter(p[i], c)
 	}
 	return &resolver[N]{in}
 }
