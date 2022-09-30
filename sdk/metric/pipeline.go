@@ -219,8 +219,19 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	return aggs, errs.errorOrNil()
 }
 
-// aggregator returns the Aggregator for an instrument configuration. If the
-// instrument defines an unknown aggregation, an error is returned.
+// cachedAggregator returns the appropriate Aggregator for an instrument
+// configuration. If the exact instrument has been created within the
+// inst.Scope, that Aggregator instance will be returned. Otherwise, a new
+// computed Aggregator will be cached and returned.
+//
+// If the instrument configuration conflicts with an instrument that has
+// already been created (e.g. description, unit, data type) a warning will be
+// logged at the "Info" level with the global OTel logger. A valid new
+// Aggregator for the instrument configuration will still be returned without
+// an error.
+//
+// If the instrument defines an unknown or incompatible aggregation, an error
+// is returned.
 func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (internal.Aggregator[N], error) {
 	switch inst.Aggregation.(type) {
 	case nil, aggregation.Default:
@@ -296,8 +307,9 @@ func (i *inserter[N]) instrumentID(vi view.Instrument, u unit.Unit) instrumentID
 	return id
 }
 
-// aggregator returns the Aggregator for an aggregation type. If the instrument
-// defines an unknown aggregation, an error is returned.
+// aggregator returns a new Aggregator matching agg, temporality, and
+// monotonic. If the agg is unknown or temporality is invalid, an error is
+// returned.
 func (i *inserter[N]) aggregator(agg aggregation.Aggregation, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
 	switch a := agg.(type) {
 	case aggregation.Drop:
