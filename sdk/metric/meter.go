@@ -83,13 +83,13 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 type meter struct {
 	instrumentation.Scope
 
-	// aggregatorCache* ensures no duplicate Aggregators are created from the
+	// aggregatorCache* ensures no duplicate Aggregators are created for the
 	// same instrument within the scope of all instruments this meter owns.
 	//
-	// Duplicate creations that for the same number are identified in the
-	// viewCache. Since the conflict is "resolvable", an aggregator still needs
-	// to be returned when this occurs. Therefore, instruments of different
-	// numbers are not tracked with the same cache.
+	// Duplicate instrument creations for different number types are identified
+	// in the viewCache. Since the conflict is "resolvable", a valid aggregator
+	// still needs to be returned when this occurs. Therefore, instruments of
+	// different numbers are not tracked with the same cache.
 	aggregatorCacheInt64   cache[instrumentID, aggVal[int64]]
 	aggregatorCacheFloat64 cache[instrumentID, aggVal[float64]]
 	// viewCache ensures instrument conflicts this meter is asked to create are
