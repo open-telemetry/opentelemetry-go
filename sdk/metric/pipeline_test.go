@@ -47,9 +47,9 @@ func TestEmptyPipeline(t *testing.T) {
 	assert.Nil(t, output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	sync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
 	assert.NotPanics(t, func() {
-		pipe.addSync(instrumentation.Scope{}, sync)
+		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
 
 	require.NotPanics(t, func() {
@@ -71,9 +71,9 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	sync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
 	assert.NotPanics(t, func() {
-		pipe.addSync(instrumentation.Scope{}, sync)
+		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
 
 	require.NotPanics(t, func() {

@@ -82,16 +82,16 @@ type pipeline struct {
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
 // idempotent. Duplicate calls will result in duplicate additions, it is the
 // callers responsibility to ensure this is called with unique values.
-func (p *pipeline) addSync(scope instrumentation.Scope, sync instrumentSync) {
+func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.Lock()
 	defer p.Unlock()
 	if p.aggregations == nil {
 		p.aggregations = map[instrumentation.Scope][]instrumentSync{
-			scope: {sync},
+			scope: {iSync},
 		}
 		return
 	}
-	p.aggregations[scope] = append(p.aggregations[scope], sync)
+	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
