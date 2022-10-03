@@ -176,23 +176,25 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}, nil
 }
 
-// inserter facilitates inserting of new instruments into a pipeline.
+// inserter facilitates inserting of new instruments from a single scope into a
+// pipeline.
 type inserter[N int64 | float64] struct {
+	scope    instrumentation.Scope
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline) *inserter[N] {
-	return &inserter[N]{p}
+func newInserter[N int64 | float64](s instrumentation.Scope, p *pipeline) *inserter[N] {
+	return &inserter[N]{scope: s, pipeline: p}
 }
 
 // Instrument inserts instrument inst with instUnit returning the Aggregators
 // that need to be updated with measurments for that instrument.
-func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (i *inserter[N]) Instrument(key instProviderKey) ([]internal.Aggregator[N], error) {
 	seen := map[instrumentID]struct{}{}
 	var aggs []internal.Aggregator[N]
 	errs := &multierror{wrapped: errCreatingAggregators}
 	for _, v := range i.pipeline.views {
-		inst, match := v.TransformInstrument(inst)
+		inst, match := v.TransformInstrument(key.view(i.scope))
 
 		id := instrumentID{
 			scope:       inst.Scope,
@@ -228,7 +230,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		// This is where the aggregator and the view are both in scope.
 		aggs = append(aggs, agg)
 		seen[id] = struct{}{}
-		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, instUnit, agg)
+		err = i.pipeline.addAggregator(inst.Scope, inst.Name, inst.Description, key.Unit, agg)
 		if err != nil {
 			errs.append(err)
 		}
@@ -348,22 +350,22 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines) *resolver[N] {
+func newResolver[N int64 | float64](s instrumentation.Scope, p pipelines) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter[N](p[i])
+		in[i] = newInserter[N](s, p[i])
 	}
-	return &resolver[N]{in}
+	return resolver[N]{in}
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
 // makes a measurement.
-func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (r resolver[N]) Aggregators(key instProviderKey) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
 	for _, i := range r.inserters {
-		a, err := i.Instrument(inst, instUnit)
+		a, err := i.Instrument(key)
 		if err != nil {
 			errs.append(err)
 		}

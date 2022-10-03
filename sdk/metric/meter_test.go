@@ -43,7 +43,6 @@ func TestMeterRegistry(t *testing.T) {
 	var m0 *meter
 	t.Run("ZeroValueGetDoesNotPanic", func(t *testing.T) {
 		assert.NotPanics(t, func() { m0 = r.Get(is0) })
-		assert.Equal(t, is0, m0.Scope, "uninitialized meter returned")
 	})
 
 	m01 := r.Get(is0)
