@@ -25,6 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
+	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -495,4 +499,48 @@ func TestMetersProvideScope(t *testing.T) {
 	got, err := rdr.Collect(context.Background())
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
+var (
+	aiCounter       asyncint64.Counter
+	aiUpDownCounter asyncint64.UpDownCounter
+	aiGauge         asyncint64.Gauge
+
+	afCounter       asyncfloat64.Counter
+	afUpDownCounter asyncfloat64.UpDownCounter
+	afGauge         asyncfloat64.Gauge
+
+	siCounter       syncint64.Counter
+	siUpDownCounter syncint64.UpDownCounter
+	siHistogram     syncint64.Histogram
+
+	sfCounter       syncfloat64.Counter
+	sfUpDownCounter syncfloat64.UpDownCounter
+	sfHistogram     syncfloat64.Histogram
+)
+
+func BenchmarkInstrumentCreation(b *testing.B) {
+	provider := NewMeterProvider(WithReader(NewManualReader()))
+	meter := provider.Meter("BenchmarkInstrumentCreation")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		aiCounter, _ = meter.AsyncInt64().Counter("async.int64.counter")
+		aiUpDownCounter, _ = meter.AsyncInt64().UpDownCounter("async.int64.up.down.counter")
+		aiGauge, _ = meter.AsyncInt64().Gauge("async.int64.gauge")
+
+		afCounter, _ = meter.AsyncFloat64().Counter("async.float64.counter")
+		afUpDownCounter, _ = meter.AsyncFloat64().UpDownCounter("async.float64.up.down.counter")
+		afGauge, _ = meter.AsyncFloat64().Gauge("async.float64.gauge")
+
+		siCounter, _ = meter.SyncInt64().Counter("sync.int64.counter")
+		siUpDownCounter, _ = meter.SyncInt64().UpDownCounter("sync.int64.up.down.counter")
+		siHistogram, _ = meter.SyncInt64().Histogram("sync.int64.histogram")
+
+		sfCounter, _ = meter.SyncFloat64().Counter("sync.float64.counter")
+		sfUpDownCounter, _ = meter.SyncFloat64().UpDownCounter("sync.float64.up.down.counter")
+		sfHistogram, _ = meter.SyncFloat64().Histogram("sync.float64.histogram")
+	}
 }
