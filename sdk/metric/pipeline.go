@@ -412,17 +412,17 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) *resolver[N] {
+func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter(p[i], c)
 	}
-	return &resolver[N]{in}
+	return resolver[N]{in}
 }
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
 // makes a measurement.
-func (r *resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (r resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
