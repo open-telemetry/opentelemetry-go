@@ -159,7 +159,6 @@ func TestSetComparability(t *testing.T) {
 }
 
 func TestAsSlice(t *testing.T) {
-
 	bs1 := []bool{true, false, true}
 	kv := attribute.BoolSlice("BoolSlice", bs1)
 	bs2 := kv.Value.AsBoolSlice()
