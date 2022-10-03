@@ -194,7 +194,7 @@ func (i *inserter[N]) Instrument(key instProviderKey) ([]internal.Aggregator[N],
 	var aggs []internal.Aggregator[N]
 	errs := &multierror{wrapped: errCreatingAggregators}
 	for _, v := range i.pipeline.views {
-		inst, match := v.TransformInstrument(key.view(i.scope))
+		inst, match := v.TransformInstrument(key.viewInst(i.scope))
 
 		id := instrumentID{
 			scope:       inst.Scope,

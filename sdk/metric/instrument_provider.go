@@ -40,8 +40,8 @@ type instProviderKey struct {
 	Kind view.InstrumentKind
 }
 
-// view returns the instProviderKey as a view Instrument using scope s.
-func (k instProviderKey) view(s instrumentation.Scope) view.Instrument {
+// viewInst returns the instProviderKey as a view Instrument using scope s.
+func (k instProviderKey) viewInst(s instrumentation.Scope) view.Instrument {
 	return view.Instrument{
 		Scope:       s,
 		Name:        k.Name,
