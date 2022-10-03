@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -80,23 +81,31 @@ type aggregatorTester[N int64 | float64] struct {
 func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap, eFunc expectFunc) func(*testing.T) {
 	m := at.MeasurementN * at.GoroutineN
 	return func(t *testing.T) {
-		for i := 0; i < at.CycleN; i++ {
-			var wg sync.WaitGroup
-			wg.Add(at.GoroutineN)
-			for i := 0; i < at.GoroutineN; i++ {
-				go func() {
-					defer wg.Done()
-					for j := 0; j < at.MeasurementN; j++ {
-						for attrs, n := range incr {
-							a.Aggregate(N(n), attrs)
-						}
-					}
-				}()
-			}
-			wg.Wait()
+		t.Run("Comparable", func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				_ = map[Aggregator[N]]struct{}{a: {}}
+			})
+		})
 
-			metricdatatest.AssertAggregationsEqual(t, eFunc(m), a.Aggregation())
-		}
+		t.Run("Correctness", func(t *testing.T) {
+			for i := 0; i < at.CycleN; i++ {
+				var wg sync.WaitGroup
+				wg.Add(at.GoroutineN)
+				for i := 0; i < at.GoroutineN; i++ {
+					go func() {
+						defer wg.Done()
+						for j := 0; j < at.MeasurementN; j++ {
+							for attrs, n := range incr {
+								a.Aggregate(N(n), attrs)
+							}
+						}
+					}()
+				}
+				wg.Wait()
+
+				metricdatatest.AssertAggregationsEqual(t, eFunc(m), a.Aggregation())
+			}
+		})
 	}
 }
 
