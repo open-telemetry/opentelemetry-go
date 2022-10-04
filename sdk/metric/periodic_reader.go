@@ -114,9 +114,6 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		flushCh:  make(chan chan error),
 		cancel:   cancel,
 		done:     make(chan struct{}),
-
-		temporalitySelector: exporter.Temporality,
-		aggregationSelector: exporter.Aggregation,
 	}
 
 	go func() {
@@ -135,9 +132,6 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 	flushCh  chan chan error
-
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -183,12 +177,12 @@ func (r *periodicReader) register(p producer) {
 
 // temporality reports the Temporality for the instrument kind provided.
 func (r *periodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
-	return r.temporalitySelector(kind)
+	return r.exporter.Temporality(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
 func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
-	return r.aggregationSelector(kind)
+	return r.exporter.Aggregation(kind)
 }
 
 // collectAndExport gather all metric data related to the periodicReader r from
