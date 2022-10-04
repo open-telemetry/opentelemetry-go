@@ -333,8 +333,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						{
 							Attributes:   attribute.Set{},
 							Count:        1,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Min:          &seven,
 							Max:          &seven,
 							Sum:          7.0,
@@ -397,8 +397,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						{
 							Attributes:   attribute.Set{},
 							Count:        1,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Min:          &seven,
 							Max:          &seven,
 							Sum:          7.0,
