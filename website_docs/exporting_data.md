@@ -64,7 +64,7 @@ resources := resource.New(context.Background(),
 
 ## OTLP Exporter
 
-OpenTelemetry Protocol (OTLP) export is available in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetrics` packages.
+OpenTelemetry Protocol (OTLP) export is available in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` packages.
 
 Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/otlp)
 
