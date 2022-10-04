@@ -36,20 +36,16 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval            time.Duration
-	timeout             time.Duration
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
+	interval time.Duration
+	timeout  time.Duration
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval:            defaultInterval,
-		timeout:             defaultTimeout,
-		temporalitySelector: DefaultTemporalitySelector,
-		aggregationSelector: DefaultAggregationSelector,
+		interval: defaultInterval,
+		timeout:  defaultTimeout,
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -119,8 +115,8 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		cancel:   cancel,
 		done:     make(chan struct{}),
 
-		temporalitySelector: conf.temporalitySelector,
-		aggregationSelector: conf.aggregationSelector,
+		temporalitySelector: exporter.Temporality,
+		aggregationSelector: exporter.Aggregation,
 	}
 
 	go func() {
