@@ -23,6 +23,9 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 const (
@@ -383,6 +386,38 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, c.Metrics.Timeout, 5*time.Second)
 			},
 		},
+
+		// Temporality Selector Tests
+		{
+			name: "WithTemporalitySelector",
+			opts: []oconf.GenericOption{
+				oconf.WithTemporalitySelector(deltaSelector),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				// Function value comparisons are disallowed, test non-default
+				// behavior of a TemporalitySelector here to ensure our "catch
+				// all" was set.
+				var undefinedKind view.InstrumentKind
+				got := c.Metrics.TemporalitySelector
+				assert.Equal(t, metricdata.DeltaTemporality, got(undefinedKind))
+			},
+		},
+
+		// Aggregation Selector Tests
+		{
+			name: "WithAggregationSelector",
+			opts: []oconf.GenericOption{
+				oconf.WithAggregationSelector(dropSelector),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				// Function value comparisons are disallowed, test non-default
+				// behavior of a TemporalitySelector here to ensure our "catch
+				// all" was set.
+				var undefinedKind view.InstrumentKind
+				got := c.Metrics.AggregationSelector
+				assert.Equal(t, aggregation.Drop{}, got(undefinedKind))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -404,6 +439,14 @@ func TestConfigs(t *testing.T) {
 			tt.asserts(t, &cfg, true)
 		})
 	}
+}
+
+func dropSelector(view.InstrumentKind) aggregation.Aggregation {
+	return aggregation.Drop{}
+}
+
+func deltaSelector(view.InstrumentKind) metricdata.Temporality {
+	return metricdata.DeltaTemporality
 }
 
 func asHTTPOptions(opts []oconf.GenericOption) []oconf.HTTPOption {
