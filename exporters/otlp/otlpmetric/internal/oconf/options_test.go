@@ -411,7 +411,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
 				// Function value comparisons are disallowed, test non-default
-				// behavior of a TemporalitySelector here to ensure our "catch
+				// behavior of a AggregationSelector here to ensure our "catch
 				// all" was set.
 				var undefinedKind view.InstrumentKind
 				got := c.Metrics.AggregationSelector
