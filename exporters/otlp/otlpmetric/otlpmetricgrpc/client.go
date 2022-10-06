@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
@@ -78,8 +77,6 @@ func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error
 	}
 
 	if c.conn == nil {
-		// Add a User-Agent header when no ClientConn was provided
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithUserAgent(internal.GetUserAgentHeader()))
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
 		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)

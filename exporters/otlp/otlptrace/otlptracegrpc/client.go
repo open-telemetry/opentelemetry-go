@@ -91,8 +91,6 @@ func newClient(opts ...Option) *client {
 // Start establishes a gRPC connection to the collector.
 func (c *client) Start(ctx context.Context) error {
 	if c.conn == nil {
-		// Add a User-Agent header when no ClientConn was provided
-		c.dialOpts = append(c.dialOpts, grpc.WithUserAgent(internal.GetUserAgentHeader()))
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
 		conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
