@@ -23,8 +23,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/view"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const testDur = time.Second * 2
@@ -118,8 +120,12 @@ func (ts *periodicReaderTestSuite) TestShutdownPropagated() {
 func TestPeriodicReader(t *testing.T) {
 	suite.Run(t, &periodicReaderTestSuite{
 		readerTestSuite: &readerTestSuite{
-			Factory: func() Reader {
-				return NewPeriodicReader(new(fnExporter))
+			Factory: func(ro ...ReaderOption) Reader {
+				opts := make([]PeriodicReaderOption, len(ro))
+				for i := range ro {
+					opts[i] = ro[i]
+				}
+				return NewPeriodicReader(new(fnExporter), opts...)
 			},
 		},
 	})
@@ -180,6 +186,35 @@ func TestPeriodicReaderRun(t *testing.T) {
 	r.register(testProducer{})
 	trigger <- time.Now()
 	assert.Equal(t, assert.AnError, <-eh.Err)
+
+	// Ensure Reader is allowed clean up attempt.
+	_ = r.Shutdown(context.Background())
+}
+
+func TestPeriodicReaderRunWithBridge(t *testing.T) {
+	trigger := triggerTicker(t)
+
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
+			wantMetrics := metricdata.ResourceMetrics{
+				Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					testScopeMetrics1,
+					testScopeMetrics2,
+				},
+			}
+			// The testProducer produces testMetrics.
+			assert.Equal(t, wantMetrics, m)
+			return nil
+		},
+	}
+
+	r := NewPeriodicReader(exp,
+		WithBridge(&testBridge{}),
+	)
+	r.register(testProducer{})
+
+	trigger <- time.Now()
 
 	// Ensure Reader is allowed clean up attempt.
 	_ = r.Shutdown(context.Background())

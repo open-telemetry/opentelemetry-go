@@ -34,6 +34,8 @@ type manualReader struct {
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+
+	bridges []Bridge
 }
 
 // Compile time check the manualReader implements Reader and is comparable.
@@ -45,6 +47,7 @@ func NewManualReader(opts ...ManualReaderOption) Reader {
 	return &manualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
+		bridges:             cfg.bridges,
 	}
 }
 
@@ -103,14 +106,31 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
 		return metricdata.ResourceMetrics{}, err
 	}
+	rm, err := ph.produce(ctx)
+	if err != nil {
+		return rm, err
+	}
 
-	return ph.produce(ctx)
+	errs := &multierror{}
+	for _, bridge := range mr.bridges {
+		sm, err := bridge.Collect(ctx)
+		if err != nil {
+			errs.append(err)
+		}
+		// TODO: Check if Scopes collide.
+		if len(sm.Metrics) > 0 {
+			rm.ScopeMetrics = append(rm.ScopeMetrics, sm)
+		}
+	}
+
+	return rm, errs.errorOrNil()
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	bridges             []Bridge
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.

@@ -25,7 +25,15 @@ import (
 )
 
 func TestManualReader(t *testing.T) {
-	suite.Run(t, &readerTestSuite{Factory: func() Reader { return NewManualReader() }})
+	suite.Run(t, &readerTestSuite{
+		Factory: func(ro ...ReaderOption) Reader {
+			opts := make([]ManualReaderOption, len(ro))
+			for i := range ro {
+				opts[i] = ro[i]
+			}
+			return NewManualReader(opts...)
+		},
+	})
 }
 
 func BenchmarkManualReader(b *testing.B) {

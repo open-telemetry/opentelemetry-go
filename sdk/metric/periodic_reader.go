@@ -40,6 +40,7 @@ type periodicReaderConfig struct {
 	timeout             time.Duration
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	bridges             []Bridge
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -121,6 +122,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 
 		temporalitySelector: conf.temporalitySelector,
 		aggregationSelector: conf.aggregationSelector,
+		bridges:             conf.bridges,
 	}
 
 	go func() {
@@ -142,6 +144,7 @@ type periodicReader struct {
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	bridges             []Bridge
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -229,7 +232,25 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
 		return metricdata.ResourceMetrics{}, err
 	}
-	return ph.produce(ctx)
+
+	rm, err := ph.produce(ctx)
+	if err != nil {
+		return rm, err
+	}
+
+	errs := &multierror{}
+	for _, bridge := range r.bridges {
+		sm, err := bridge.Collect(ctx)
+		if err != nil {
+			errs.append(err)
+		}
+		// TODO: Check if Scopes collide.
+		if len(sm.Metrics) > 0 {
+			rm.ScopeMetrics = append(rm.ScopeMetrics, sm)
+		}
+	}
+
+	return rm, errs.errorOrNil()
 }
 
 // export exports metric data m using r's exporter.

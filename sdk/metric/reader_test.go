@@ -36,7 +36,7 @@ import (
 type readerTestSuite struct {
 	suite.Suite
 
-	Factory func() Reader
+	Factory func(...ReaderOption) Reader
 	Reader  Reader
 }
 
@@ -149,26 +149,65 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
+func (ts *readerTestSuite) TestStuff() {
+	reader := ts.Factory(
+		WithBridge(&testBridge{collectFunc: func(ctx context.Context) (metricdata.ScopeMetrics, error) {
+			return testScopeMetrics2, nil
+		}}),
+	)
+	reader.register(testProducer{})
+
+	m, err := reader.Collect(context.Background())
+	ts.NoError(err)
+	ts.Equal(m, metricdata.ResourceMetrics{
+		Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			testScopeMetrics1,
+			testScopeMetrics2,
+		},
+	})
+}
+
+var testScopeMetrics1 = metricdata.ScopeMetrics{
+	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
+	Metrics: []metricdata.Metrics{{
+		Name:        "fake data",
+		Description: "Data used to test a reader",
+		Unit:        unit.Dimensionless,
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[int64]{{
+				Attributes: attribute.NewSet(attribute.String("user", "alice")),
+				StartTime:  time.Now(),
+				Time:       time.Now().Add(time.Second),
+				Value:      -1,
+			}},
+		},
+	}},
+}
+var testScopeMetrics2 = metricdata.ScopeMetrics{
+	Scope: instrumentation.Scope{Name: "sdk/metric/test/bridge"},
+	Metrics: []metricdata.Metrics{{
+		Name:        "more fake data",
+		Description: "Data used to test a bridge",
+		Unit:        unit.Dimensionless,
+		Data: metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{{
+				Attributes: attribute.NewSet(attribute.String("user", "bob")),
+				StartTime:  time.Now(),
+				Time:       time.Now().Add(time.Second),
+				Value:      -1,
+			}},
+		},
+	}},
+}
+
 var testMetrics = metricdata.ResourceMetrics{
 	Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
-	ScopeMetrics: []metricdata.ScopeMetrics{{
-		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
-		Metrics: []metricdata.Metrics{{
-			Name:        "fake data",
-			Description: "Data used to test a reader",
-			Unit:        unit.Dimensionless,
-			Data: metricdata.Sum[int64]{
-				Temporality: metricdata.CumulativeTemporality,
-				IsMonotonic: true,
-				DataPoints: []metricdata.DataPoint[int64]{{
-					Attributes: attribute.NewSet(attribute.String("user", "alice")),
-					StartTime:  time.Now(),
-					Time:       time.Now().Add(time.Second),
-					Value:      -1,
-				}},
-			},
-		}},
-	}},
+	ScopeMetrics: []metricdata.ScopeMetrics{
+		testScopeMetrics1,
+	},
 }
 
 type testProducer struct {
@@ -180,6 +219,17 @@ func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, 
 		return p.produceFunc(ctx)
 	}
 	return testMetrics, nil
+}
+
+type testBridge struct {
+	collectFunc func(context.Context) (metricdata.ScopeMetrics, error)
+}
+
+func (t *testBridge) Collect(ctx context.Context) (metricdata.ScopeMetrics, error) {
+	if t.collectFunc != nil {
+		return t.collectFunc(ctx)
+	}
+	return testScopeMetrics2, nil
 }
 
 func benchReaderCollectFunc(r Reader) func(*testing.B) {

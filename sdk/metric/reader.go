@@ -211,3 +211,28 @@ func (t aggregationSelectorOption) applyPeriodic(c periodicReaderConfig) periodi
 	c.aggregationSelector = t.selector
 	return c
 }
+
+// Bridge is a source of metrics other than the OpenTelemetry SDK.
+// TODO: name is not settled per https://github.com/open-telemetry/opentelemetry-specification/pull/2838
+type Bridge interface {
+	// Collect gathers and returns all metric data from the Bridge.
+	Collect(context.Context) (metricdata.ScopeMetrics, error)
+}
+
+func WithBridge(b Bridge) ReaderOption {
+	return bridgeOption{bridge: b}
+}
+
+type bridgeOption struct {
+	bridge Bridge
+}
+
+func (o bridgeOption) applyManual(cfg manualReaderConfig) manualReaderConfig {
+	cfg.bridges = append(cfg.bridges, o.bridge)
+	return cfg
+}
+
+func (o bridgeOption) applyPeriodic(cfg periodicReaderConfig) periodicReaderConfig {
+	cfg.bridges = append(cfg.bridges, o.bridge)
+	return cfg
+}
