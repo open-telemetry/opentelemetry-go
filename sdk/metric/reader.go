@@ -219,6 +219,8 @@ type Bridge interface {
 	Collect(context.Context) (metricdata.ScopeMetrics, error)
 }
 
+// WithBridge adds a metric Bridge to a reader.  When Collecting metrics the
+// reader will Collect from each bridge and append the output to the ScopeMetrics produced.
 func WithBridge(b Bridge) ReaderOption {
 	return bridgeOption{bridge: b}
 }

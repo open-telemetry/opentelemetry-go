@@ -149,16 +149,33 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
-func (ts *readerTestSuite) TestStuff() {
+func (ts *readerTestSuite) TestReaderUsesBridge() {
 	reader := ts.Factory(
-		WithBridge(&testBridge{collectFunc: func(ctx context.Context) (metricdata.ScopeMetrics, error) {
-			return testScopeMetrics2, nil
-		}}),
+		WithBridge(testBridge{}),
 	)
 	reader.register(testProducer{})
 
 	m, err := reader.Collect(context.Background())
 	ts.NoError(err)
+	ts.Equal(m, metricdata.ResourceMetrics{
+		Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			testScopeMetrics1,
+			testScopeMetrics2,
+		},
+	})
+}
+
+func (ts *readerTestSuite) TestReaderBridgeErrors() {
+	reader := ts.Factory(
+		WithBridge(testBridge{collectFunc: func(ctx context.Context) (metricdata.ScopeMetrics, error) {
+			return testScopeMetrics2, assert.AnError
+		}}),
+	)
+	reader.register(testProducer{})
+
+	m, err := reader.Collect(context.Background())
+	ts.Error(err)
 	ts.Equal(m, metricdata.ResourceMetrics{
 		Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
 		ScopeMetrics: []metricdata.ScopeMetrics{
@@ -225,7 +242,7 @@ type testBridge struct {
 	collectFunc func(context.Context) (metricdata.ScopeMetrics, error)
 }
 
-func (t *testBridge) Collect(ctx context.Context) (metricdata.ScopeMetrics, error) {
+func (t testBridge) Collect(ctx context.Context) (metricdata.ScopeMetrics, error) {
 	if t.collectFunc != nil {
 		return t.collectFunc(ctx)
 	}
