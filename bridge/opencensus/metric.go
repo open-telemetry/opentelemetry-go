@@ -40,7 +40,7 @@ type exporter struct {
 // NewMetricExporter returns an OpenCensus exporter that exports to an
 // OpenTelemetry exporter.
 func NewMetricExporter(base metric.Exporter, res *resource.Resource) metricexport.Exporter {
-	return &exporter{base: base}
+	return &exporter{base: base, res: res}
 }
 
 // ExportMetrics implements the OpenCensus metric Exporter interface by sending

@@ -27,6 +27,8 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -74,7 +76,7 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
+				histogram, err := meter.SyncFloat64().Histogram("histogram_baz", instrument.WithDescription("a very nice histogram"))
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, attrs...)
 				histogram.Record(ctx, 7, attrs...)
@@ -139,7 +141,18 @@ func TestPrometheusExporter(t *testing.T) {
 
 			exporter, err := New(WithGatherer(registry), WithRegisterer(registry))
 			require.NoError(t, err)
-			provider := metric.NewMeterProvider(metric.WithReader(exporter))
+
+			customBucketsView, err := view.New(
+				view.MatchInstrumentName("histogram_*"),
+				view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
+					Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+				}),
+			)
+			require.NoError(t, err)
+			defaultView, err := view.New(view.MatchInstrumentName("*"))
+			require.NoError(t, err)
+
+			provider := metric.NewMeterProvider(metric.WithReader(exporter, customBucketsView, defaultView))
 			meter := provider.Meter("testmeter")
 
 			tc.recordMetrics(ctx, meter)
