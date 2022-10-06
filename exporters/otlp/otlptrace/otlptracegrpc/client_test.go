@@ -212,6 +212,7 @@ func TestNewWithHeaders(t *testing.T) {
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
 	headers := mc.getHeaders()
+	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", headers.Get("user-agent"))
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }

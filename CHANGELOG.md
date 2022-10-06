@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added an example of using metric views to customize instruments. (#3177)
+- Add User-Agent header to OTLP exporter requests (#3261)
 
 ### Changed
 

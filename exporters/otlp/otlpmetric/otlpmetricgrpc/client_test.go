@@ -169,6 +169,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, exp.Shutdown(ctx))
 
 		got := coll.Headers()
+		require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", got)
 		require.Contains(t, got, key)
 		assert.Equal(t, got[key], []string{headers[key]})
 	})
