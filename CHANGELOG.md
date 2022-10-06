@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added an example of using metric views to customize instruments. (#3177)
+- Prometheus exporter will register with a prometheus registerer on creation, there are options to control this (#3239)
 
 ### Changed
 
