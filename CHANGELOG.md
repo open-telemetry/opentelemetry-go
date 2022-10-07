@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade `golang.org/x/sys/unix` from `v0.0.0-20210423185535-09eb48e85fd7` to `v0.0.0-20220919091848-fb04ddd9f9c8`.
   This addresses [GO-2022-0493](https://pkg.go.dev/vuln/GO-2022-0493). (#3235)
 - Update histogram default bounds to match the requirements of the latest specification. (#3222)
+- Fix Http Status Code in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3265)
 
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
