@@ -115,15 +115,16 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 	r := &periodicReader{
 		timeout:  conf.timeout,
 		exporter: exporter,
+		flushCh:  make(chan chan error),
 		cancel:   cancel,
+		done:     make(chan struct{}),
 
 		temporalitySelector: conf.temporalitySelector,
 		aggregationSelector: conf.aggregationSelector,
 	}
 
-	r.wg.Add(1)
 	go func() {
-		defer r.wg.Done()
+		defer func() { close(r.done) }()
 		r.run(ctx, conf.interval)
 	}()
 
@@ -137,11 +138,12 @@ type periodicReader struct {
 
 	timeout  time.Duration
 	exporter Exporter
+	flushCh  chan chan error
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
 
-	wg           sync.WaitGroup
+	done         chan struct{}
 	cancel       context.CancelFunc
 	shutdownOnce sync.Once
 }
@@ -161,15 +163,13 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			m, err := r.Collect(ctx)
-			if err == nil {
-				c, cancel := context.WithTimeout(ctx, r.timeout)
-				err = r.exporter.Export(c, m)
-				cancel()
-			}
+			err := r.collectAndExport(ctx)
 			if err != nil {
 				otel.Handle(err)
 			}
+		case errCh := <-r.flushCh:
+			errCh <- r.collectAndExport(ctx)
+			ticker.Reset(interval)
 		case <-ctx.Done():
 			return
 		}
@@ -195,13 +195,27 @@ func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggre
 	return r.aggregationSelector(kind)
 }
 
+// collectAndExport gather all metric data related to the periodicReader r from
+// the SDK and exports it with r's exporter.
+func (r *periodicReader) collectAndExport(ctx context.Context) error {
+	m, err := r.Collect(ctx)
+	if err == nil {
+		err = r.export(ctx, m)
+	}
+	return err
+}
+
 // Collect gathers and returns all metric data related to the Reader from
 // the SDK. The returned metric data is not exported to the configured
 // exporter, it is left to the caller to handle that if desired.
 //
 // An error is returned if this is called after Shutdown.
 func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	p := r.producer.Load()
+	return r.collect(ctx, r.producer.Load())
+}
+
+// collect unwraps p as a produceHolder and returns its produce results.
+func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata.ResourceMetrics, error) {
 	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
@@ -218,25 +232,61 @@ func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetric
 	return ph.produce(ctx)
 }
 
-// ForceFlush flushes the Exporter.
+// export exports metric data m using r's exporter.
+func (r *periodicReader) export(ctx context.Context, m metricdata.ResourceMetrics) error {
+	c, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	return r.exporter.Export(c, m)
+}
+
+// ForceFlush flushes pending telemetry.
 func (r *periodicReader) ForceFlush(ctx context.Context) error {
+	errCh := make(chan error, 1)
+	select {
+	case r.flushCh <- errCh:
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+			close(errCh)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	case <-r.done:
+		return ErrReaderShutdown
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	return r.exporter.ForceFlush(ctx)
 }
 
-// Shutdown stops the export pipeline.
+// Shutdown flushes pending telemetry and then stops the export pipeline.
 func (r *periodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
 		// Stop the run loop.
 		r.cancel()
-		r.wg.Wait()
+		<-r.done
 
 		// Any future call to Collect will now return ErrReaderShutdown.
-		r.producer.Store(produceHolder{
+		ph := r.producer.Swap(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
 
-		err = r.exporter.Shutdown(ctx)
+		if ph != nil { // Reader was registered.
+			// Flush pending telemetry.
+			var m metricdata.ResourceMetrics
+			m, err = r.collect(ctx, ph)
+			if err == nil {
+				err = r.export(ctx, m)
+			}
+		}
+
+		sErr := r.exporter.Shutdown(ctx)
+		if err == nil || err == ErrReaderShutdown {
+			err = sErr
+		}
 	})
 	return err
 }
