@@ -412,3 +412,18 @@ func TestPartialSuccess(t *testing.T) {
 	require.Contains(t, errors[0].Error(), "partially successful")
 	require.Contains(t, errors[0].Error(), "2 spans rejected")
 }
+
+func TestCustomUserAgent(t *testing.T) {
+	customUserAgent := "custom-user-agent"
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
+}

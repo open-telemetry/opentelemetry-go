@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -188,5 +189,19 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+	})
+
+	t.Run("WithCustomUserAgent", func(t *testing.T) {
+		key := "user-agent"
+		customerUserAgent := "custom-user-agent"
+		exp, coll := factoryFunc(nil, WithDialOption(grpc.WithUserAgent(customerUserAgent)))
+		t.Cleanup(coll.Shutdown)
+		ctx := context.Background()
+		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		assert.Contains(t, got[key][0], customerUserAgent)
 	})
 }

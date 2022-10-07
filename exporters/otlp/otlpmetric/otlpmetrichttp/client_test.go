@@ -162,4 +162,19 @@ func TestConfig(t *testing.T) {
 		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
+
+	t.Run("WithCustomUserAgent", func(t *testing.T) {
+		key := http.CanonicalHeaderKey("user-agent")
+		headers := map[string]string{key: "custom-user-agent"}
+		exp, coll := factoryFunc("", nil, WithHeaders(headers))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, key)
+		assert.Equal(t, got[key], []string{headers[key]})
+	})
 }
