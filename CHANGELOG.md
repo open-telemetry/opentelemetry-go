@@ -21,6 +21,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update histogram default bounds to match the requirements of the latest specification. (#3222)
 - Fix Http Status Code in OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`).  (#3265)
 
+### Fixed
+
+- Use default view if instrument does not match any registered view of a reader. (#3224, #3237)
+
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
 ### Changed

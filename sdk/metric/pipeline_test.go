@@ -25,7 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -210,4 +213,62 @@ func TestPipelineConcurrency(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestDefaultViewImplicit(t *testing.T) {
+	t.Run("Int64", testDefaultViewImplicit[int64]())
+	t.Run("Float64", testDefaultViewImplicit[float64]())
+}
+
+func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
+	inst := view.Instrument{
+		Scope:       instrumentation.Scope{Name: "testing/lib"},
+		Name:        "requests",
+		Description: "count of requests received",
+		Kind:        view.SyncCounter,
+		Aggregation: aggregation.Sum{},
+	}
+	return func(t *testing.T) {
+		reader := NewManualReader()
+		v, err := view.New(view.MatchInstrumentName("foo"), view.WithRename("bar"))
+		require.NoError(t, err)
+
+		tests := []struct {
+			name string
+			pipe *pipeline
+		}{
+			{
+				name: "NoView",
+				pipe: newPipeline(nil, reader, nil),
+			},
+			{
+				name: "NoMatchingView",
+				pipe: newPipeline(nil, reader, []view.View{v}),
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				i := newInserter[N](test.pipe)
+				got, err := i.Instrument(inst, unit.Dimensionless)
+				require.NoError(t, err)
+				assert.Len(t, got, 1, "default view not applied")
+
+				out, err := test.pipe.produce(context.Background())
+				require.NoError(t, err)
+				require.Len(t, out.ScopeMetrics, 1, "Aggregator not registered with pipeline")
+				sm := out.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 1, "metrics not produced from default view")
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        inst.Name,
+					Description: inst.Description,
+					Unit:        unit.Dimensionless,
+					Data: metricdata.Sum[N]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+			})
+		}
+	}
 }
