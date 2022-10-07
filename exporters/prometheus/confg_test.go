@@ -28,48 +28,26 @@ func TestNewConfig(t *testing.T) {
 		name           string
 		options        []Option
 		wantRegisterer prometheus.Registerer
-		wantGatherer   prometheus.Gatherer
 	}{
 		{
 			name:           "Default",
 			options:        nil,
 			wantRegisterer: prometheus.DefaultRegisterer,
-			wantGatherer:   prometheus.DefaultGatherer,
 		},
 
-		{
-			name: "WithGatherer",
-			options: []Option{
-				WithGatherer(registry),
-			},
-			wantRegisterer: prometheus.DefaultRegisterer,
-			wantGatherer:   registry,
-		},
 		{
 			name: "WithRegisterer",
 			options: []Option{
 				WithRegisterer(registry),
 			},
 			wantRegisterer: registry,
-			wantGatherer:   prometheus.DefaultGatherer,
-		},
-		{
-			name: "Multiple Options",
-			options: []Option{
-				WithGatherer(registry),
-				WithRegisterer(registry),
-			},
-			wantRegisterer: registry,
-			wantGatherer:   registry,
 		},
 		{
 			name: "nil options do nothing",
 			options: []Option{
-				WithGatherer(nil),
 				WithRegisterer(nil),
 			},
 			wantRegisterer: prometheus.DefaultRegisterer,
-			wantGatherer:   prometheus.DefaultGatherer,
 		},
 	}
 	for _, tt := range testCases {
@@ -78,7 +56,6 @@ func TestNewConfig(t *testing.T) {
 
 			// If no Registry is provided you should get the DefaultRegisterer and DefaultGatherer.
 			assert.Equal(t, tt.wantRegisterer, cfg.registerer)
-			assert.Equal(t, tt.wantGatherer, cfg.gatherer)
 		})
 	}
 }

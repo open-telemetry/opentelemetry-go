@@ -16,10 +16,11 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-) // config is added here to allow for options expansion in the future.
+)
+
+// config is added here to allow for options expansion in the future.
 type config struct {
 	registerer prometheus.Registerer
-	gatherer   prometheus.Gatherer
 }
 
 func newConfig(opts ...Option) config {
@@ -28,9 +29,6 @@ func newConfig(opts ...Option) config {
 		cfg = opt.apply(cfg)
 	}
 
-	if cfg.gatherer == nil {
-		cfg.gatherer = prometheus.DefaultGatherer
-	}
 	if cfg.registerer == nil {
 		cfg.registerer = prometheus.DefaultRegisterer
 	}
@@ -55,16 +53,6 @@ func (fn optionFunc) apply(cfg config) config {
 func WithRegisterer(reg prometheus.Registerer) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.registerer = reg
-		return cfg
-	})
-}
-
-// WithRegisterer configures which prometheus Gatherer the Exporter will
-// Gather from.  If no gatherer is used the prometheus DefaultGatherer is
-// used.
-func WithGatherer(gatherer prometheus.Gatherer) Option {
-	return optionFunc(func(cfg config) config {
-		cfg.gatherer = gatherer
 		return cfg
 	})
 }

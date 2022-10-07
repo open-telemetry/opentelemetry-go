@@ -22,6 +22,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -42,7 +44,7 @@ func main() {
 	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
-	go serveMetrics(exporter)
+	go serveMetrics()
 
 	attrs := []attribute.KeyValue{
 		attribute.Key("A").String("B"),
@@ -77,9 +79,9 @@ func main() {
 	<-ctx.Done()
 }
 
-func serveMetrics(exp *prometheus.Exporter) {
+func serveMetrics() {
 	log.Printf("serving metrics at localhost:2223/metrics")
-	http.Handle("/metrics", exp)
+	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe(":2223", nil)
 	if err != nil {
 		fmt.Printf("error serving http: %v", err)

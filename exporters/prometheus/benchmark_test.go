@@ -28,7 +28,7 @@ import (
 func benchmarkCollect(b *testing.B, n int) {
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
-	exporter, err := New(WithGatherer(registry), WithRegisterer(registry))
+	exporter, err := New(WithRegisterer(registry))
 	require.NoError(b, err)
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter("testmeter")

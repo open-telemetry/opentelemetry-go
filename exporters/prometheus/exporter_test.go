@@ -139,7 +139,7 @@ func TestPrometheusExporter(t *testing.T) {
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
 
-			exporter, err := New(WithGatherer(registry), WithRegisterer(registry))
+			exporter, err := New(WithRegisterer(registry))
 			require.NoError(t, err)
 
 			customBucketsView, err := view.New(
