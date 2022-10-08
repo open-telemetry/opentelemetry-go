@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"go.opentelemetry.io/otel/internal"
+	"go.opentelemetry.io/otel/internal/attribute"
 )
 
 //go:generate stringer -type=Type
@@ -57,26 +58,6 @@ const (
 	STRINGSLICE
 )
 
-func sliceValue[T bool | int64 | float64 | string](v []T) any {
-	var zero T
-	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
-	copy(cp.Elem().Slice(0, len(v)).Interface().([]T), v)
-	return cp.Elem().Interface()
-}
-
-func asSlice[T bool | int64 | float64 | string](v any) []T {
-	rv := reflect.ValueOf(v)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
-	}
-	var zero T
-	correctLen := rv.Len()
-	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(zero))
-	cpy := reflect.New(correctType)
-	_ = reflect.Copy(cpy.Elem(), rv)
-	return cpy.Elem().Slice(0, correctLen).Interface().([]T)
-}
-
 // BoolValue creates a BOOL Value.
 func BoolValue(v bool) Value {
 	return Value{
@@ -87,7 +68,7 @@ func BoolValue(v bool) Value {
 
 // BoolSliceValue creates a BOOLSLICE Value.
 func BoolSliceValue(v []bool) Value {
-	return Value{vtype: BOOLSLICE, slice: sliceValue(v)}
+	return Value{vtype: BOOLSLICE, slice: attribute.SliceValue(v)}
 }
 
 // IntValue creates an INT64 Value.
@@ -118,7 +99,7 @@ func Int64Value(v int64) Value {
 
 // Int64SliceValue creates an INT64SLICE Value.
 func Int64SliceValue(v []int64) Value {
-	return Value{vtype: INT64SLICE, slice: sliceValue(v)}
+	return Value{vtype: INT64SLICE, slice: attribute.SliceValue(v)}
 }
 
 // Float64Value creates a FLOAT64 Value.
@@ -131,7 +112,7 @@ func Float64Value(v float64) Value {
 
 // Float64SliceValue creates a FLOAT64SLICE Value.
 func Float64SliceValue(v []float64) Value {
-	return Value{vtype: FLOAT64SLICE, slice: sliceValue(v)}
+	return Value{vtype: FLOAT64SLICE, slice: attribute.SliceValue(v)}
 }
 
 // StringValue creates a STRING Value.
@@ -144,7 +125,7 @@ func StringValue(v string) Value {
 
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
-	return Value{vtype: STRINGSLICE, slice: sliceValue(v)}
+	return Value{vtype: STRINGSLICE, slice: attribute.SliceValue(v)}
 }
 
 // Type returns a type of the Value.
@@ -161,15 +142,7 @@ func (v Value) AsBool() bool {
 // AsBoolSlice returns the []bool value. Make sure that the Value's type is
 // BOOLSLICE.
 func (v Value) AsBoolSlice() []bool {
-	rv := reflect.ValueOf(v.slice)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
-	}
-	correctLen := rv.Len()
-	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(false))
-	cpy := reflect.New(correctType)
-	_ = reflect.Copy(cpy.Elem(), rv)
-	return cpy.Elem().Slice(0, correctLen).Interface().([]bool)
+	return attribute.AsSlice[bool](v.slice)
 }
 
 // AsInt64 returns the int64 value. Make sure that the Value's type is
@@ -181,16 +154,7 @@ func (v Value) AsInt64() int64 {
 // AsInt64Slice returns the []int64 value. Make sure that the Value's type is
 // INT64SLICE.
 func (v Value) AsInt64Slice() []int64 {
-	rv := reflect.ValueOf(v.slice)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
-	}
-	correctLen := rv.Len()
-	var int64var int64
-	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(int64var))
-	cpy := reflect.New(correctType)
-	_ = reflect.Copy(cpy.Elem(), rv)
-	return cpy.Elem().Slice(0, correctLen).Interface().([]int64)
+	return attribute.AsSlice[int64](v.slice)
 }
 
 // AsFloat64 returns the float64 value. Make sure that the Value's
@@ -202,16 +166,7 @@ func (v Value) AsFloat64() float64 {
 // AsFloat64Slice returns the []float64 value. Make sure that the Value's type is
 // FLOAT64SLICE.
 func (v Value) AsFloat64Slice() []float64 {
-	rv := reflect.ValueOf(v.slice)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
-	}
-	correctLen := rv.Len()
-	var float64var float64
-	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(float64var))
-	cpy := reflect.New(correctType)
-	_ = reflect.Copy(cpy.Elem(), rv)
-	return cpy.Elem().Slice(0, correctLen).Interface().([]float64)
+	return attribute.AsSlice[float64](v.slice)
 }
 
 // AsString returns the string value. Make sure that the Value's type
@@ -223,16 +178,7 @@ func (v Value) AsString() string {
 // AsStringSlice returns the []string value. Make sure that the Value's type is
 // STRINGSLICE.
 func (v Value) AsStringSlice() []string {
-	rv := reflect.ValueOf(v.slice)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
-	}
-	correctLen := rv.Len()
-	var stringStr string
-	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(stringStr))
-	cpy := reflect.New(correctType)
-	_ = reflect.Copy(cpy.Elem(), rv)
-	return cpy.Elem().Slice(0, correctLen).Interface().([]string)
+	return attribute.AsSlice[string](v.slice)
 }
 
 type unknownValueType struct{}
