@@ -57,6 +57,26 @@ const (
 	STRINGSLICE
 )
 
+func sliceValue[T bool | int64 | float64 | string](v []T) any {
+	var zero T
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
+	copy(cp.Elem().Slice(0, len(v)).Interface().([]T), v)
+	return cp.Elem().Interface()
+}
+
+func asSlice[T bool | int64 | float64 | string](v any) []T {
+	rv := reflect.ValueOf(v)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
+	}
+	var zero T
+	correctLen := rv.Len()
+	correctType := reflect.ArrayOf(correctLen, reflect.TypeOf(zero))
+	cpy := reflect.New(correctType)
+	_ = reflect.Copy(cpy.Elem(), rv)
+	return cpy.Elem().Slice(0, correctLen).Interface().([]T)
+}
+
 // BoolValue creates a BOOL Value.
 func BoolValue(v bool) Value {
 	return Value{
@@ -67,12 +87,7 @@ func BoolValue(v bool) Value {
 
 // BoolSliceValue creates a BOOLSLICE Value.
 func BoolSliceValue(v []bool) Value {
-	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(false)))
-	copy(cp.Elem().Slice(0, len(v)).Interface().([]bool), v)
-	return Value{
-		vtype: BOOLSLICE,
-		slice: cp.Elem().Interface(),
-	}
+	return Value{vtype: BOOLSLICE, slice: sliceValue(v)}
 }
 
 // IntValue creates an INT64 Value.
@@ -80,6 +95,7 @@ func IntValue(v int) Value {
 	return Int64Value(int64(v))
 }
 
+// IntSliceValue creates an INTSLICE Value.
 func IntSliceValue(v []int) Value {
 	var int64Val int64
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(int64Val)))
@@ -102,13 +118,7 @@ func Int64Value(v int64) Value {
 
 // Int64SliceValue creates an INT64SLICE Value.
 func Int64SliceValue(v []int64) Value {
-	var int64Val int64
-	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(int64Val)))
-	copy(cp.Elem().Slice(0, len(v)).Interface().([]int64), v)
-	return Value{
-		vtype: INT64SLICE,
-		slice: cp.Elem().Interface(),
-	}
+	return Value{vtype: INT64SLICE, slice: sliceValue(v)}
 }
 
 // Float64Value creates a FLOAT64 Value.
@@ -121,13 +131,7 @@ func Float64Value(v float64) Value {
 
 // Float64SliceValue creates a FLOAT64SLICE Value.
 func Float64SliceValue(v []float64) Value {
-	var float64Val float64
-	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(float64Val)))
-	copy(cp.Elem().Slice(0, len(v)).Interface().([]float64), v)
-	return Value{
-		vtype: FLOAT64SLICE,
-		slice: cp.Elem().Interface(),
-	}
+	return Value{vtype: FLOAT64SLICE, slice: sliceValue(v)}
 }
 
 // StringValue creates a STRING Value.
@@ -140,13 +144,7 @@ func StringValue(v string) Value {
 
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
-	var stringVal string
-	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(stringVal)))
-	copy(cp.Elem().Slice(0, len(v)).Interface().([]string), v)
-	return Value{
-		vtype: STRINGSLICE,
-		slice: cp.Elem().Interface(),
-	}
+	return Value{vtype: STRINGSLICE, slice: sliceValue(v)}
 }
 
 // Type returns a type of the Value.
