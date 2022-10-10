@@ -42,8 +42,8 @@ type instrumentID struct {
 	// not used for all data types, so a zero value needs to understood in the
 	// context of Aggregation.
 	Monotonic bool
-	// Temporality is the temporality of an instruments data type. This field
-	// is not used for all data types.
+	// Temporality is the temporality of an instrument's data type. This field
+	// is not used by some data types.
 	Temporality metricdata.Temporality
 	// Number is the number type of the instrument.
 	Number string
