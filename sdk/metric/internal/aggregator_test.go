@@ -92,10 +92,10 @@ func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap, eFunc expectFun
 			for i := 0; i < at.CycleN; i++ {
 				var wg sync.WaitGroup
 				wg.Add(at.GoroutineN)
-				for i := 0; i < at.GoroutineN; i++ {
+				for j := 0; j < at.GoroutineN; j++ {
 					go func() {
 						defer wg.Done()
-						for j := 0; j < at.MeasurementN; j++ {
+						for k := 0; k < at.MeasurementN; k++ {
 							for attrs, n := range incr {
 								a.Aggregate(N(n), attrs)
 							}
