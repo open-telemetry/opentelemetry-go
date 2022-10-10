@@ -39,7 +39,7 @@ type instrumentID struct {
 	// Aggregation is the aggregation data type of the instrument.
 	Aggregation string
 	// Monotonic is the monotonicity of an instruments data type. This field is
-	// not used for all data types, so a zero value needs to understood in the
+	// not used for all data types, so a zero value needs to be understood in the
 	// context of Aggregation.
 	Monotonic bool
 	// Temporality is the temporality of an instrument's data type. This field
