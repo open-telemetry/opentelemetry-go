@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade `golang.org/x/sys/unix` from `v0.0.0-20210423185535-09eb48e85fd7` to `v0.0.0-20220919091848-fb04ddd9f9c8`.
   This addresses [GO-2022-0493](https://pkg.go.dev/vuln/GO-2022-0493). (#3235)
 
+### Fixed
+
+- Fix slice atrribute of `attribute` package to be comparable (#3108 #3252)
+
 ## [0.32.2] Metric SDK (Alpha) - 2022-10-11
 
 ### Added
