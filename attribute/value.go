@@ -210,19 +210,19 @@ func (v Value) AsInterface() interface{} {
 func (v Value) Emit() string {
 	switch v.Type() {
 	case BOOLSLICE:
-		return fmt.Sprint(*(v.slice.(*[]bool)))
+		return fmt.Sprint(v.AsBoolSlice())
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
 	case INT64SLICE:
-		return fmt.Sprint(*(v.slice.(*[]int64)))
+		return fmt.Sprint(v.AsInt64Slice())
 	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
 	case FLOAT64SLICE:
-		return fmt.Sprint(*(v.slice.(*[]float64)))
+		return fmt.Sprint(v.AsFloat64Slice())
 	case FLOAT64:
 		return fmt.Sprint(v.AsFloat64())
 	case STRINGSLICE:
-		return fmt.Sprint(*(v.slice.(*[]string)))
+		return fmt.Sprint(v.AsStringSlice())
 	case STRING:
 		return v.stringly
 	default:
