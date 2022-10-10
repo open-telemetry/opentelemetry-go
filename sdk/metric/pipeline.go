@@ -187,7 +187,11 @@ func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
 func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
-	var aggs []internal.Aggregator[N]
+	var (
+		matched bool
+		aggs    []internal.Aggregator[N]
+	)
+
 	errs := &multierror{wrapped: errCreatingAggregators}
 	// The cache will return the same Aggregator instance. Use this fact to
 	// compare pointer addresses to deduplicate Aggregators.
@@ -197,6 +201,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		if !match {
 			continue
 		}
+		matched = true
 
 		agg, err := i.cachedAggregator(inst, instUnit)
 		if err != nil {
@@ -212,8 +217,20 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		seen[agg] = struct{}{}
 		aggs = append(aggs, agg)
 	}
-	// TODO(#3224): handle when no views match. Default should be reader
-	// aggregation returned.
+
+	if matched {
+		return aggs, errs.errorOrNil()
+	}
+
+	// Apply implicit default view if no explicit matched.
+	agg, err := i.cachedAggregator(inst, instUnit)
+	if err != nil {
+		errs.append(err)
+	}
+	if agg != nil {
+		// Ensured to have not seen given matched was false.
+		aggs = append(aggs, agg)
+	}
 	return aggs, errs.errorOrNil()
 }
 
