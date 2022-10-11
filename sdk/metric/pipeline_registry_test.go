@@ -15,11 +15,15 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"sync/atomic"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -212,7 +216,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	s := instrumentation.Scope{Name: "testCreateAggregators"}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			i := newInserter[N](s, newPipeline(nil, tt.reader, tt.views))
+			c := newInstrumentCache[N](nil, nil)
+			i := newInserter(s, newPipeline(nil, tt.reader, tt.views), c)
 			got, err := i.Instrument(tt.inst)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
@@ -224,8 +229,9 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
+	c := newInstrumentCache[N](nil, nil)
 	s := instrumentation.Scope{Name: "testInvalidInstrumentShouldPanic"}
-	i := newInserter[N](s, newPipeline(nil, NewManualReader(), []view.View{{}}))
+	i := newInserter(s, newPipeline(nil, NewManualReader(), []view.View{{}}), c)
 	inst := instProviderKey{
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
@@ -336,8 +342,9 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := instProviderKey{Name: "foo", Kind: view.SyncCounter}
 
+	c := newInstrumentCache[int64](nil, nil)
 	s := instrumentation.Scope{Name: "testPipelineRegistryResolveIntAggregators"}
-	r := newResolver[int64](s, p)
+	r := newResolver(s, p, c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
 
@@ -347,8 +354,9 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := instProviderKey{Name: "foo", Kind: view.SyncCounter}
 
+	c := newInstrumentCache[float64](nil, nil)
 	s := instrumentation.Scope{Name: "testPipelineRegistryResolveFloatAggregators"}
-	r := newResolver[float64](s, p)
+	r := newResolver(s, p, c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
 
@@ -379,21 +387,41 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	p := newPipelines(resource.Empty(), views)
 	inst := instProviderKey{Name: "foo", Kind: view.AsyncGauge}
 
+	vc := cache[string, instrumentID]{}
 	s := instrumentation.Scope{Name: "TestPipelineRegistryCreateAggregatorsIncompatibleInstrument"}
-	ri := newResolver[int64](s, p)
+	ri := newResolver(s, p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
 	p = newPipelines(resource.Empty(), views)
 
-	rf := newResolver[float64](s, p)
+	rf := newResolver(s, p, newInstrumentCache[float64](nil, &vc))
 	floatAggs, err := rf.Aggregators(inst)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }
 
-func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
+type logCounter struct {
+	logr.LogSink
+
+	infoN uint32
+}
+
+func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
+	atomic.AddUint32(&l.infoN, 1)
+	l.LogSink.Info(level, msg, keysAndValues...)
+}
+
+func (l *logCounter) InfoN() int {
+	return int(atomic.SwapUint32(&l.infoN, 0))
+}
+
+func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
+	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 6})
+	l := &logCounter{LogSink: tLog.GetSink()}
+	otel.SetLogger(logr.New(l))
+
 	renameView, _ := view.New(
 		view.MatchInstrumentName("bar"),
 		view.WithRename("foo"),
@@ -410,30 +438,41 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), views)
 
+	vc := cache[string, instrumentID]{}
 	s := instrumentation.Scope{Name: "TestPipelineRegistryCreateAggregatorsDuplicateErrors"}
-	ri := newResolver[int64](s, p)
+	ri := newResolver(s, p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 1)
 
-	// The Rename view should error, because it creates a foo instrument.
+	// The Rename view should produce the same instrument without an error, the
+	// default view should also cause a new aggregator to be returned.
 	intAggs, err = ri.Aggregators(barInst)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 2)
 
-	// Creating a float foo instrument should error because there is an int foo instrument.
-	rf := newResolver[float64](s, p)
+	// Creating a float foo instrument should log a warning because there is an
+	// int foo instrument.
+	rf := newResolver(s, p, newInstrumentCache[float64](nil, &vc))
 	floatAggs, err := rf.Aggregators(fooInst)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = instProviderKey{Name: "foo-float", Kind: view.SyncCounter}
 
-	_, err = rf.Aggregators(fooInst)
+	floatAggs, err = rf.Aggregators(fooInst)
 	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
+	assert.Len(t, floatAggs, 1)
 
 	floatAggs, err = rf.Aggregators(barInst)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	// Both the rename and default view aggregators created above should now
+	// conflict. Therefore, 2 warning messages should be logged.
+	assert.Equal(t, 2, l.InfoN(), "instrument conflicts not logged")
 	assert.Len(t, floatAggs, 2)
 }
 

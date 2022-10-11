@@ -81,18 +81,28 @@ type meter struct {
 	instProviderFloat64 *instProvider[float64]
 }
 
-// Compile-time check meter implements metric.Meter.
-var _ metric.Meter = (*meter)(nil)
-
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
-	ri := newResolver[int64](s, p)
-	rf := newResolver[float64](s, p)
+	// viewCache ensures instrument conflicts, including number conflicts, this
+	// meter is asked to create are logged to the user.
+	var viewCache cache[string, instrumentID]
+
+	// Passing nil as the ac parameter to newInstrumentCache will have each
+	// create its own aggregator cache.
+	ic := newInstrumentCache[int64](nil, &viewCache)
+	fc := newInstrumentCache[float64](nil, &viewCache)
+
+	ir := newResolver(s, p, ic)
+	fr := newResolver(s, p, fc)
+
 	return &meter{
 		pipes:               p,
-		instProviderInt64:   newInstProvider(ri),
-		instProviderFloat64: newInstProvider(rf),
+		instProviderInt64:   newInstProvider(ir),
+		instProviderFloat64: newInstProvider(fr),
 	}
 }
+
+// Compile-time check meter implements metric.Meter.
+var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
