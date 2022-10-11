@@ -14,25 +14,55 @@
 
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
-import "go.opentelemetry.io/otel/sdk/metric/export"
+import (
+	"context"
+	"sync"
+	"sync/atomic"
 
-// Exporter is an OpenTelemetry metric exporter that transmits telemetry to
-// the local STDOUT.
-type Exporter struct {
-	metricExporter
-}
-
-var (
-	_ export.Exporter = &Exporter{}
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// New creates an Exporter with the passed options.
-func New(options ...Option) (*Exporter, error) {
-	cfg, err := newConfig(options...)
-	if err != nil {
-		return nil, err
+// exporter is an OpenTelemetry metric exporter.
+type exporter struct {
+	encVal atomic.Value // encoderHolder
+
+	shutdownOnce sync.Once
+}
+
+// New returns a configured metric exporter.
+//
+// If no options are passed, the default exporter returned will use a JSON
+// encoder with tab indentations that output to STDOUT.
+func New(options ...Option) (metric.Exporter, error) {
+	cfg := newConfig(options...)
+	exp := &exporter{}
+	exp.encVal.Store(*cfg.encoder)
+	return exp, nil
+}
+
+func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) error {
+	select {
+	case <-ctx.Done():
+		// Don't do anything if the context has already timed out.
+		return ctx.Err()
+	default:
+		// Context is still valid, continue.
 	}
-	return &Exporter{
-		metricExporter: metricExporter{cfg},
-	}, nil
+
+	return e.encVal.Load().(encoderHolder).Encode(data)
+}
+
+func (e *exporter) ForceFlush(ctx context.Context) error {
+	// exporter holds no state, nothing to flush.
+	return ctx.Err()
+}
+
+func (e *exporter) Shutdown(ctx context.Context) error {
+	e.shutdownOnce.Do(func() {
+		e.encVal.Store(encoderHolder{
+			encoder: shutdownEncoder{},
+		})
+	})
+	return ctx.Err()
 }

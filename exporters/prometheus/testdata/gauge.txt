@@ -1,0 +1,3 @@
+# HELP bar a fun little gauge
+# TYPE bar counter
+bar{A="B",C="D"} 75

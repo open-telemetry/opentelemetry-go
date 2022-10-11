@@ -1,5 +1,4 @@
 // Copyright The OpenTelemetry Authors
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,103 +14,49 @@
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
-	"io"
+	"encoding/json"
 	"os"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
-var (
-	defaultWriter      = os.Stdout
-	defaultPrettyPrint = false
-	defaultTimestamps  = true
-	defaultAttrEncoder = attribute.DefaultEncoder()
-)
-
-// config contains options for the STDOUT exporter.
+// config contains options for the exporter.
 type config struct {
-	// Writer is the destination.  If not set, os.Stdout is used.
-	Writer io.Writer
-
-	// PrettyPrint will encode the output into readable JSON. Default is
-	// false.
-	PrettyPrint bool
-
-	// Timestamps specifies if timestamps should be printed. Default is
-	// true.
-	Timestamps bool
-
-	// Encoder encodes the attributes.
-	Encoder attribute.Encoder
+	encoder *encoderHolder
 }
 
-// newConfig creates a validated Config configured with options.
-func newConfig(options ...Option) (config, error) {
-	cfg := config{
-		Writer:      defaultWriter,
-		PrettyPrint: defaultPrettyPrint,
-		Timestamps:  defaultTimestamps,
-		Encoder:     defaultAttrEncoder,
-	}
+// newConfig creates a validated config configured with options.
+func newConfig(options ...Option) config {
+	cfg := config{}
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
 	}
-	return cfg, nil
+
+	if cfg.encoder == nil {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "\t")
+		cfg.encoder = &encoderHolder{encoder: enc}
+	}
+
+	return cfg
 }
 
-// Option sets the value of an option for a Config.
+// Option sets exporter option values.
 type Option interface {
 	apply(config) config
 }
 
-// WithWriter sets the export stream destination.
-func WithWriter(w io.Writer) Option {
-	return writerOption{w}
+type optionFunc func(config) config
+
+func (o optionFunc) apply(c config) config {
+	return o(c)
 }
 
-type writerOption struct {
-	W io.Writer
-}
-
-func (o writerOption) apply(cfg config) config {
-	cfg.Writer = o.W
-	return cfg
-}
-
-// WithPrettyPrint sets the export stream format to use JSON.
-func WithPrettyPrint() Option {
-	return prettyPrintOption(true)
-}
-
-type prettyPrintOption bool
-
-func (o prettyPrintOption) apply(cfg config) config {
-	cfg.PrettyPrint = bool(o)
-	return cfg
-}
-
-// WithoutTimestamps sets the export stream to not include timestamps.
-func WithoutTimestamps() Option {
-	return timestampsOption(false)
-}
-
-type timestampsOption bool
-
-func (o timestampsOption) apply(cfg config) config {
-	cfg.Timestamps = bool(o)
-	return cfg
-}
-
-// WithAttributeEncoder sets the attribute encoder used in export.
-func WithAttributeEncoder(enc attribute.Encoder) Option {
-	return attrEncoderOption{enc}
-}
-
-type attrEncoderOption struct {
-	encoder attribute.Encoder
-}
-
-func (o attrEncoderOption) apply(cfg config) config {
-	cfg.Encoder = o.encoder
-	return cfg
+// WithEncoder sets the exporter to use encoder to encode all the metric
+// data-types to an output.
+func WithEncoder(encoder Encoder) Option {
+	return optionFunc(func(c config) config {
+		if encoder != nil {
+			c.encoder = &encoderHolder{encoder: encoder}
+		}
+		return c
+	})
 }

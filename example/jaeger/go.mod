@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/jaeger
 
-go 1.17
+go 1.18
 
 replace (
 	go.opentelemetry.io/otel => ../..
@@ -20,7 +20,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/stretchr/objx v0.4.0 // indirect
 	go.opentelemetry.io/otel/trace v1.10.0 // indirect
-	golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 )
 
 replace go.opentelemetry.io/otel/trace => ../../trace

@@ -21,118 +21,75 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
-	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/metric/global"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	selector "go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
-
-var (
-	lemonsKey = attribute.Key("ex.com/lemons")
-)
-
-func initMeter() error {
-	config := prometheus.Config{
-		DefaultHistogramBoundaries: []float64{1, 2, 5, 10, 20, 50},
-	}
-	c := controller.New(
-		processor.NewFactory(
-			selector.NewWithHistogramDistribution(
-				histogram.WithExplicitBoundaries(config.DefaultHistogramBoundaries),
-			),
-			aggregation.CumulativeTemporalitySelector(),
-			processor.WithMemory(true),
-		),
-	)
-	exporter, err := prometheus.New(config, c)
-	if err != nil {
-		return fmt.Errorf("failed to initialize prometheus exporter: %w", err)
-	}
-
-	global.SetMeterProvider(exporter.MeterProvider())
-
-	http.HandleFunc("/", exporter.ServeHTTP)
-	go func() {
-		_ = http.ListenAndServe(":2222", nil)
-	}()
-
-	fmt.Println("Prometheus server running on :2222")
-	return nil
-}
 
 func main() {
-	if err := initMeter(); err != nil {
+	ctx := context.Background()
+
+	// The exporter embeds a default OpenTelemetry Reader and
+	// implements prometheus.Collector, allowing it to be used as
+	// both a Reader and Collector.
+	exporter := otelprom.New()
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
+
+	// Start the prometheus HTTP server and pass the exporter Collector to it
+	go serveMetrics(exporter.Collector)
+
+	attrs := []attribute.KeyValue{
+		attribute.Key("A").String("B"),
+		attribute.Key("C").String("D"),
+	}
+
+	// This is the equivalent of prometheus.NewCounterVec
+	counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+	if err != nil {
 		log.Fatal(err)
 	}
+	counter.Add(ctx, 5, attrs...)
 
-	meter := global.Meter("ex.com/basic")
-
-	observerLock := new(sync.RWMutex)
-	observerValueToReport := new(float64)
-	observerAttrsToReport := new([]attribute.KeyValue)
-
-	gaugeObserver, err := meter.AsyncFloat64().Gauge("ex.com.one")
+	gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
-		log.Panicf("failed to initialize instrument: %v", err)
+		log.Fatal(err)
 	}
-	_ = meter.RegisterCallback([]instrument.Asynchronous{gaugeObserver}, func(ctx context.Context) {
-		(*observerLock).RLock()
-		value := *observerValueToReport
-		attrs := *observerAttrsToReport
-		(*observerLock).RUnlock()
-		gaugeObserver.Observe(ctx, value, attrs...)
-	})
+	gauge.Add(ctx, 100, attrs...)
+	gauge.Add(ctx, -25, attrs...)
 
-	hist, err := meter.SyncFloat64().Histogram("ex.com.two")
+	// This is the equivalent of prometheus.NewHistogramVec
+	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
 	if err != nil {
-		log.Panicf("failed to initialize instrument: %v", err)
+		log.Fatal(err)
 	}
-	counter, err := meter.SyncFloat64().Counter("ex.com.three")
-	if err != nil {
-		log.Panicf("failed to initialize instrument: %v", err)
-	}
+	histogram.Record(ctx, 23, attrs...)
+	histogram.Record(ctx, 7, attrs...)
+	histogram.Record(ctx, 101, attrs...)
+	histogram.Record(ctx, 105, attrs...)
 
-	commonAttrs := []attribute.KeyValue{lemonsKey.Int(10), attribute.String("A", "1"), attribute.String("B", "2"), attribute.String("C", "3")}
-	notSoCommonAttrs := []attribute.KeyValue{lemonsKey.Int(13)}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	(*observerLock).Lock()
-	*observerValueToReport = 1.0
-	*observerAttrsToReport = commonAttrs
-	(*observerLock).Unlock()
-
-	hist.Record(ctx, 2.0, commonAttrs...)
-	counter.Add(ctx, 12.0, commonAttrs...)
-
-	time.Sleep(5 * time.Second)
-
-	(*observerLock).Lock()
-	*observerValueToReport = 1.0
-	*observerAttrsToReport = notSoCommonAttrs
-	(*observerLock).Unlock()
-	hist.Record(ctx, 2.0, notSoCommonAttrs...)
-	counter.Add(ctx, 22.0, notSoCommonAttrs...)
-
-	time.Sleep(5 * time.Second)
-
-	(*observerLock).Lock()
-	*observerValueToReport = 13.0
-	*observerAttrsToReport = commonAttrs
-	(*observerLock).Unlock()
-	hist.Record(ctx, 12.0, commonAttrs...)
-	counter.Add(ctx, 13.0, commonAttrs...)
-
-	fmt.Println("Example finished updating, please visit :2222")
-
+	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()
+}
+
+func serveMetrics(collector prometheus.Collector) {
+	registry := prometheus.NewRegistry()
+	err := registry.Register(collector)
+	if err != nil {
+		fmt.Printf("error registering collector: %v", err)
+		return
+	}
+
+	log.Printf("serving metrics at localhost:2222/metrics")
+	http.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	err = http.ListenAndServe(":2222", nil)
+	if err != nil {
+		fmt.Printf("error serving http: %v", err)
+		return
+	}
 }
