@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -27,8 +26,6 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	res *resource.Resource
-
 	meters meterRegistry
 
 	forceFlush, shutdown func(context.Context) error
@@ -48,13 +45,11 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 	flush, sdown := conf.readerSignals()
 
-	registry := newPipelineRegistries(conf.res, conf.readers)
+	registry := newPipelines(conf.res, conf.readers)
 
 	return &MeterProvider{
-		res: conf.res,
-
 		meters: meterRegistry{
-			registry: registry,
+			pipes: registry,
 		},
 
 		forceFlush: flush,
