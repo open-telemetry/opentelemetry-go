@@ -211,7 +211,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := createAggregatorsForReader[N](tt.reader, tt.views, tt.inst)
+			i := newInserter[N](newPipeline(nil, tt.reader, tt.views))
+			got, err := i.Instrument(tt.inst, unit.Dimensionless)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
 			for _, agg := range got {
@@ -222,13 +223,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	reader := NewManualReader()
-	views := []view.View{{}}
+	i := newInserter[N](newPipeline(nil, NewManualReader(), []view.View{{}}))
 	inst := view.Instrument{
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
 	}
-	_, _ = createAggregatorsForReader[N](reader, views, inst)
+	_, _ = i.Instrument(inst, unit.Dimensionless)
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {
@@ -323,27 +323,29 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newPipelineRegistries(resource.Empty(), tt.views)
-			testPipelineRegistryCreateIntAggregators(t, reg, tt.wantCount)
-			reg = newPipelineRegistries(resource.Empty(), tt.views)
-			testPipelineRegistryCreateFloatAggregators(t, reg, tt.wantCount)
+			p := newPipelines(resource.Empty(), tt.views)
+			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
+			p = newPipelines(resource.Empty(), tt.views)
+			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 		})
 	}
 }
 
-func testPipelineRegistryCreateIntAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
+func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	aggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
+	r := newResolver[int64](p)
+	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
 
-func testPipelineRegistryCreateFloatAggregators(t *testing.T, reg *pipelineRegistry, wantCount int) {
+func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	aggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
+	r := newResolver[float64](p)
+	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -356,8 +358,8 @@ func TestPipelineRegistryResource(t *testing.T) {
 		NewManualReader(): {{}, v},
 	}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	reg := newPipelineRegistries(res, views)
-	for _, p := range reg.pipelines {
+	pipes := newPipelines(res, views)
+	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
 }
@@ -370,16 +372,18 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 			{},
 		},
 	}
-	reg := newPipelineRegistries(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
-	intAggs, err := createAggregators[int64](reg, inst, unit.Dimensionless)
+	ri := newResolver[int64](p)
+	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	reg = newPipelineRegistries(resource.Empty(), views)
+	p = newPipelines(resource.Empty(), views)
 
-	floatAggs, err := createAggregators[float64](reg, inst, unit.Dimensionless)
+	rf := newResolver[float64](p)
+	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }
@@ -399,28 +403,30 @@ func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	reg := newPipelineRegistries(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), views)
 
-	intAggs, err := createAggregators[int64](reg, fooInst, unit.Dimensionless)
+	ri := newResolver[int64](p)
+	intAggs, err := ri.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 	assert.Len(t, intAggs, 1)
 
 	// The Rename view should error, because it creates a foo instrument.
-	intAggs, err = createAggregators[int64](reg, barInst, unit.Dimensionless)
+	intAggs, err = ri.Aggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 2)
 
 	// Creating a float foo instrument should error because there is an int foo instrument.
-	floatAggs, err := createAggregators[float64](reg, fooInst, unit.Dimensionless)
+	rf := newResolver[float64](p)
+	floatAggs, err := rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = view.Instrument{Name: "foo-float", Kind: view.SyncCounter}
 
-	_, err = createAggregators[float64](reg, fooInst, unit.Dimensionless)
+	_, err = rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
 
-	floatAggs, err = createAggregators[float64](reg, barInst, unit.Dimensionless)
+	floatAggs, err = rf.Aggregators(barInst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 2)
 }
