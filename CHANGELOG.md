@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Use default view if instrument does not match any registered view of a reader. (#3224, #3237)
 - The OpenCensus bridge no longer sends empty batches of metrics. (#3263)
+- `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
 
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
