@@ -24,6 +24,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Use default view if instrument does not match any registered view of a reader. (#3224, #3237)
+- Return the same instrument every time a user makes the exact same instrument creation call. (#3229, #3251)
+- Return the existing instrument when a view transforms a creation call to match an existing instrument. (#3240, #3251)
+- Log a warning when a conflicting instrument (e.g. description, unit, data-type) is created instead of returning an error. (#3251)
 - The OpenCensus bridge no longer sends empty batches of metrics. (#3263)
 
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
