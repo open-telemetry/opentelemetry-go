@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv/internal"
+	internal "go.opentelemetry.io/otel/semconv/internal/v2"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -33,28 +33,25 @@ var sc = &internal.SemanticConventions{
 	EnduserIDKey:                EnduserIDKey,
 	HTTPClientIPKey:             HTTPClientIPKey,
 	HTTPFlavorKey:               HTTPFlavorKey,
-	HTTPHostKey:                 HTTPHostKey,
 	HTTPMethodKey:               HTTPMethodKey,
 	HTTPRequestContentLengthKey: HTTPRequestContentLengthKey,
 	HTTPRouteKey:                HTTPRouteKey,
 	HTTPSchemeHTTP:              HTTPSchemeHTTP,
 	HTTPSchemeHTTPS:             HTTPSchemeHTTPS,
-	HTTPServerNameKey:           HTTPServerNameKey,
 	HTTPStatusCodeKey:           HTTPStatusCodeKey,
 	HTTPTargetKey:               HTTPTargetKey,
 	HTTPURLKey:                  HTTPURLKey,
 	HTTPUserAgentKey:            HTTPUserAgentKey,
-	NetHostIPKey:                NetHostIPKey,
 	NetHostNameKey:              NetHostNameKey,
 	NetHostPortKey:              NetHostPortKey,
-	NetPeerIPKey:                NetPeerIPKey,
 	NetPeerNameKey:              NetPeerNameKey,
 	NetPeerPortKey:              NetPeerPortKey,
-	NetTransportIP:              NetTransportIP,
 	NetTransportOther:           NetTransportOther,
 	NetTransportTCP:             NetTransportTCP,
 	NetTransportUDP:             NetTransportUDP,
-	NetTransportUnix:            NetTransportUnix,
+	NetSockFamilyInet:           NetSockFamilyInet,
+	NetSockFamilyInet6:          NetSockFamilyInet6,
+	NetSockFamilyUnix:           NetSockFamilyUnix,
 }
 
 // NetAttributesFromHTTPRequest generates attributes of the net
