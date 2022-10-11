@@ -134,7 +134,7 @@ func TestPushMetricsExporter(t *testing.T) {
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 			if tc.expected != nil {
 				require.NotNil(t, fake.data)
