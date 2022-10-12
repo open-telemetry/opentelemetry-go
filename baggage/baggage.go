@@ -250,16 +250,10 @@ type Member struct {
 	hasData bool
 }
 
-// NewMember returns a new Member from the passed arguments. An error is
-// returned if the created Member would be invalid according to the W3C
-// Baggage specification and an error will be returned if any of the input
-// parameters does not follow the specification.
-//
-// Note the character encoding of value string MUST be UTF-8[Encoding].
-// Any characters outside the baggage-octet range of characters
-// MUST be percent-encoded. e.g. value ";" is not allowed.
-// Instead, use its encoded form "%3B". After validation pass, value
-// will be decoded and stored. "%3B" will be interpreted as ";".
+// NewMember returns a new Member from the passed arguments. The key will be
+// used directly while the value will be url decoded after validation. An error
+// is returned if the created Member would be invalid according to the W3C
+// Baggage specification.
 func NewMember(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
@@ -270,12 +264,9 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
 	}
-	// decode the input value so that it can be parsed
-	// and stored properly when used and propagated.
 	decodedValue, err := url.QueryUnescape(value)
 	if err != nil {
-		return newInvalidMember(),
-			fmt.Errorf("%w: %q", errInvalidValue, value)
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 	m.value = decodedValue
 	return m, nil
@@ -342,8 +333,9 @@ func parseMember(member string) (Member, error) {
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
-// validate ensures m conforms to the W3C Baggage specification, returning an
-// error otherwise.
+// validate ensures m conforms to the W3C Baggage specification.
+// A key is just an ASCII string, but a value must be URL encoded UTF-8,
+// returning an error otherwise.
 func (m Member) validate() error {
 	if !m.hasData {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)

@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade `golang.org/x/sys/unix` from `v0.0.0-20210423185535-09eb48e85fd7` to `v0.0.0-20220919091848-fb04ddd9f9c8`.
   This addresses [GO-2022-0493](https://pkg.go.dev/vuln/GO-2022-0493). (#3235)
 
+### Fixed
+
+- Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3144)
+
 ## [0.32.2] Metric SDK (Alpha) - 2022-10-11
 
 ### Added
@@ -54,7 +58,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Updated go.mods to point to valid versions of the sdk. (#3216)
 - Set the `MeterProvider` resource on all exported metric data. (#3218)
-- Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3144)
 
 ## [0.32.0] Revised Metric SDK (Alpha) - 2022-09-18
 
