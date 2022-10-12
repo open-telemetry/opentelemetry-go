@@ -117,6 +117,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			AggregationSelector: metric.DefaultAggregationSelector,
 		},
 		RetryConfig: retry.DefaultConfig,
+		DialOptions: []grpc.DialOption{grpc.WithUserAgent(internal.GetUserAgentHeader())},
 	}
 	cfg = ApplyGRPCEnvConfigs(cfg)
 	for _, opt := range opts {

@@ -23,8 +23,31 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// instrumentID are the identifying properties of an instrument.
+type instrumentID struct {
+	// Name is the name of the instrument.
+	Name string
+	// Description is the description of the instrument.
+	Description string
+	// Unit is the unit of the instrument.
+	Unit unit.Unit
+	// Aggregation is the aggregation data type of the instrument.
+	Aggregation string
+	// Monotonic is the monotonicity of an instruments data type. This field is
+	// not used for all data types, so a zero value needs to be understood in the
+	// context of Aggregation.
+	Monotonic bool
+	// Temporality is the temporality of an instrument's data type. This field
+	// is not used by some data types.
+	Temporality metricdata.Temporality
+	// Number is the number type of the instrument.
+	Number string
+}
 
 type instrumentImpl[N int64 | float64] struct {
 	instrument.Asynchronous

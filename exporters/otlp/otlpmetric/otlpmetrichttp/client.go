@@ -29,6 +29,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
@@ -106,6 +107,8 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Set("User-Agent", internal.GetUserAgentHeader())
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
 		for k, v := range cfg.Metrics.Headers {
