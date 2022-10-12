@@ -31,28 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func TestMeterRegistry(t *testing.T) {
-	is0 := instrumentation.Scope{Name: "zero"}
-	is1 := instrumentation.Scope{Name: "one"}
-
-	r := meterRegistry{}
-	var m0 *meter
-	t.Run("ZeroValueGetDoesNotPanic", func(t *testing.T) {
-		assert.NotPanics(t, func() { m0 = r.Get(is0) })
-		assert.Equal(t, is0, m0.Scope, "uninitialized meter returned")
-	})
-
-	m01 := r.Get(is0)
-	t.Run("GetSameMeter", func(t *testing.T) {
-		assert.Samef(t, m0, m01, "returned different meters: %v", is0)
-	})
-
-	m1 := r.Get(is1)
-	t.Run("GetDifferentMeter", func(t *testing.T) {
-		assert.NotSamef(t, m0, m1, "returned same meters: %v", is1)
-	})
-}
-
 // A meter should be able to make instruments concurrently.
 func TestMeterInstrumentConcurrency(t *testing.T) {
 	wg := &sync.WaitGroup{}
