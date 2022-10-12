@@ -410,14 +410,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates); ok {
-		if len(sps) == 0 {
-			return
-		}
-		snap := s.snapshot()
-		for _, sp := range sps {
-			sp.sp.OnEnd(snap)
-		}
+	sps := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+	if len(sps) == 0 {
+		return
+	}
+	snap := s.snapshot()
+	for _, sp := range sps {
+		sp.sp.OnEnd(snap)
 	}
 }
 
