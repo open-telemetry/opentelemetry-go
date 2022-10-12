@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.11.0/0.32.3] 2022-10-12
+
 ### Added
 
 - Add default User-Agent header to OTLP exporter requests (`go.opentelemetry.io/otel/exporters/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlptrace/otlptracehttp`). (#3261)
@@ -1991,7 +1993,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.2...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.11.0...HEAD
+[1.11.0/0.32.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.0
 [0.32.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.2
 [0.32.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.1
 [0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
