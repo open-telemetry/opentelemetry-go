@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix slice atrribute of `attribute` package to be comparable (#3108 #3252)
+- Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
 
 ## [0.32.2] Metric SDK (Alpha) - 2022-10-11
 
