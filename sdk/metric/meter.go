@@ -16,7 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -26,49 +25,6 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
-
-// meterRegistry keeps a record of initialized meters for instrumentation
-// scopes. A meter is unique to an instrumentation scope and if multiple
-// requests for that meter are made a meterRegistry ensure the same instance
-// is used.
-//
-// The zero meterRegistry is empty and ready for use.
-//
-// A meterRegistry must not be copied after first use.
-//
-// All methods of a meterRegistry are safe to call concurrently.
-type meterRegistry struct {
-	sync.Mutex
-
-	meters map[instrumentation.Scope]*meter
-
-	pipes pipelines
-}
-
-// Get returns a registered meter matching the instrumentation scope if it
-// exists in the meterRegistry. Otherwise, a new meter configured for the
-// instrumentation scope is registered and then returned.
-//
-// Get is safe to call concurrently.
-func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.meters == nil {
-		m := newMeter(s, r.pipes)
-		r.meters = map[instrumentation.Scope]*meter{s: m}
-		return m
-	}
-
-	m, ok := r.meters[s]
-	if ok {
-		return m
-	}
-
-	m = newMeter(s, r.pipes)
-	r.meters[s] = m
-	return m
-}
 
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
