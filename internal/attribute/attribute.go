@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+Package attribute provide several helper functions for some commonly used
+logic of processing attributes.
+*/
 package attribute // import "go.opentelemetry.io/otel/internal/attribute"
 
 import (
 	"reflect"
 )
 
+// SliceValue convert a slice into an array with same elements as slice.
 func SliceValue[T bool | int64 | float64 | string](v []T) any {
 	var zero T
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
@@ -25,6 +30,7 @@ func SliceValue[T bool | int64 | float64 | string](v []T) any {
 	return cp.Elem().Interface()
 }
 
+// AsSlice convert an array into a slice into with same elements as array.
 func AsSlice[T bool | int64 | float64 | string](v any) []T {
 	rv := reflect.ValueOf(v)
 	if rv.Type().Kind() != reflect.Array {
