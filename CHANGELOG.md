@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
+
 ## [1.11.0/0.32.3] 2022-10-12
 
 ### Added
@@ -39,7 +43,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Return the existing instrument when a view transforms a creation call to match an existing instrument. (#3240, #3251)
 - Log a warning when a conflicting instrument (e.g. description, unit, data-type) is created instead of returning an error. (#3251)
 - The OpenCensus bridge no longer sends empty batches of metrics. (#3263)
-- `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
 
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
