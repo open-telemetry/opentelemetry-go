@@ -2,6 +2,8 @@ module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 
 go 1.18
 
+retract v0.32.2 // Contains unresolvable dependencies.
+
 require (
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/otel v1.11.0
