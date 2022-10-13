@@ -1,7 +1,7 @@
 ---
 title: Go
 description: >-
-  <img width="35" src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Golang_SDK.svg" alt="Go"></img>
+  <img width="35" src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Golang_SDK.svg"></img>
   A language-specific implementation of OpenTelemetry in Go.
 aliases: [/golang, /golang/metrics, /golang/tracing]
 cascade:
@@ -13,17 +13,14 @@ spelling: cSpell:ignore godoc
 weight: 16
 ---
 
-This is the OpenTelemetry for Go documentation. OpenTelemetry is an observability framework -- an API, SDK, and tools that are designed to aid in the generation and collection of application telemetry data such as metrics, logs, and traces. This documentation is designed to help you understand how to get started using OpenTelemetry for Go.
+<!--
+You can see & update the `lang_instrumentation_index_head` shortcode in
+/layouts/shortcodes/lang_instrumentation_index_head.md
 
-## Status and Releases
-
-The current status of the major functional components for OpenTelemetry Go is as follows:
-
-| Traces  | Metrics | Logs    |
-| ------- | ------- | ------- |
-| Stable  | Alpha   | Not Yet Implemented |
-
-{{% latest_release "go" /%}}
+The data (name, status) is located at
+/data/instrumentation.yaml
+-->
+{{% lang_instrumentation_index_head "go" /%}}
 
 ## Further Reading
 
