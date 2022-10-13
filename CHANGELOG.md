@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3144)
+- Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3226)
 
 ## [1.11.0/0.32.3] 2022-10-12
 
