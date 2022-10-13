@@ -26,6 +26,9 @@ import (
 var now = time.Now
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
+//
+// Aggregators need to be comparable so they can be de-duplicated by the SDK when
+// it creates them for multiple views.
 type Aggregator[N int64 | float64] interface {
 	// Aggregate records the measurement, scoped by attr, and aggregates it
 	// into an aggregation.

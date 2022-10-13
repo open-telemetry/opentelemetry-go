@@ -8,22 +8,46 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
+
+### Fixed
+
+- Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
+
+## [1.11.0/0.32.3] 2022-10-12
+
 ### Added
 
-- Added an example of using metric views to customize instruments. (#3177)
+- Add default User-Agent header to OTLP exporter requests (`go.opentelemetry.io/otel/exporters/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlptrace/otlptracehttp`). (#3261)
 
 ### Changed
 
 - `span.SetStatus` has been updated such that calls that lower the status are now no-ops. (#3214)
-- Flush pending measurements with the `PeriodicReader` in the `go.opentelemetry.io/otel/sdk/metric` when `ForceFlush` or `Shutdown` are called. (#3220)
 - Upgrade `golang.org/x/sys/unix` from `v0.0.0-20210423185535-09eb48e85fd7` to `v0.0.0-20220919091848-fb04ddd9f9c8`.
   This addresses [GO-2022-0493](https://pkg.go.dev/vuln/GO-2022-0493). (#3235)
+
+## [0.32.2] Metric SDK (Alpha) - 2022-10-11
+
+### Added
+
+- Added an example of using metric views to customize instruments. (#3177)
+- Add default User-Agent header to OTLP exporter requests (`go.opentelemetry.io/otel/exporters/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlpmetric/otlpmetrichttp`). (#3261)
+
+### Changed
+
+- Flush pending measurements with the `PeriodicReader` in the `go.opentelemetry.io/otel/sdk/metric` when `ForceFlush` or `Shutdown` are called. (#3220)
 - Update histogram default bounds to match the requirements of the latest specification. (#3222)
 - Encode the HTTP status code in the OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`) as an integer.  (#3265)
 
 ### Fixed
 
 - Use default view if instrument does not match any registered view of a reader. (#3224, #3237)
+- Return the same instrument every time a user makes the exact same instrument creation call. (#3229, #3251)
+- Return the existing instrument when a view transforms a creation call to match an existing instrument. (#3240, #3251)
+- Log a warning when a conflicting instrument (e.g. description, unit, data-type) is created instead of returning an error. (#3251)
+- The OpenCensus bridge no longer sends empty batches of metrics. (#3263)
 
 ## [0.32.1] Metric SDK (Alpha) - 2022-09-22
 
@@ -1978,7 +2002,9 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/sdk/metric/v0.32.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.11.0...HEAD
+[1.11.0/0.32.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.0
+[0.32.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.2
 [0.32.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.1
 [0.32.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.0
 [1.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.10.0
