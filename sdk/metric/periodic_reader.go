@@ -156,11 +156,15 @@ var _ = map[Reader]struct{}{&periodicReader{}: {}}
 
 // newTicker allows testing override.
 var newTicker = time.NewTicker
+var newTickerLock = sync.Mutex{}
 
 // run continuously collects and exports metric data at the specified
 // interval. This will run until ctx is canceled or times out.
 func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
+	newTickerLock.Lock()
 	ticker := newTicker(interval)
+	newTickerLock.Unlock()
+
 	defer ticker.Stop()
 
 	for {

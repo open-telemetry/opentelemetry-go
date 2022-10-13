@@ -149,8 +149,14 @@ func triggerTicker(t *testing.T) chan time.Time {
 	t.Helper()
 
 	// Override the ticker C chan so tests are not flaky and rely on timing.
+	newTickerLock.Lock()
+	defer newTickerLock.Unlock()
 	orig := newTicker
-	t.Cleanup(func() { newTicker = orig })
+	t.Cleanup(func() {
+		newTickerLock.Lock()
+		newTicker = orig
+		newTickerLock.Unlock()
+	})
 
 	// Keep this at size zero so when triggered with a send it will hang until
 	// the select case is selected and the collection loop is started.
