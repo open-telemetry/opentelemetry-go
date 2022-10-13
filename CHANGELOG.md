@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Added an example of using metric views to customize instruments. (#3177)
+- Added the ability to bridge external metric sources into readers via `go.opentelemetry.io/otel/sdk/metric.WithBridge()` option. (#3262)
 
 ### Changed
 
