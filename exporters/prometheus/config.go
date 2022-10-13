@@ -18,11 +18,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// config is added here to allow for options expansion in the future.
+// config contains options for the exporter.
 type config struct {
 	registerer prometheus.Registerer
 }
 
+// newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
 	cfg := config{}
 	for _, opt := range opts {
@@ -36,7 +37,7 @@ func newConfig(opts ...Option) config {
 	return cfg
 }
 
-// Option may be used in the future to apply options to a Prometheus Exporter config.
+// Option sets exporter option values.
 type Option interface {
 	apply(config) config
 }

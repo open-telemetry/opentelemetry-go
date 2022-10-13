@@ -54,7 +54,6 @@ func TestNewConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
 
-			// If no Registry is provided you should get the DefaultRegisterer and DefaultGatherer.
 			assert.Equal(t, tt.wantRegisterer, cfg.registerer)
 		})
 	}
