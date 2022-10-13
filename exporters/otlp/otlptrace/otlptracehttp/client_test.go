@@ -42,6 +42,10 @@ var (
 		"Otel-Go-Key-1": "somevalue",
 		"Otel-Go-Key-2": "someothervalue",
 	}
+
+	customUserAgentHeader = map[string]string{
+		"user-agent": "custome-user-agent",
+	}
 )
 
 func TestEndToEnd(t *testing.T) {
@@ -140,6 +144,15 @@ func TestEndToEnd(t *testing.T) {
 			},
 			mcCfg: mockCollectorConfig{
 				ExpectedHeaders: testHeaders,
+			},
+		},
+		{
+			name: "with custom user agent",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHeaders(customUserAgentHeader),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: customUserAgentHeader,
 			},
 		},
 	}

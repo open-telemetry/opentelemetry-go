@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -49,8 +50,10 @@ func TestEmptyPipeline(t *testing.T) {
 	assert.Nil(t, output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	err = pipe.addAggregator(instrumentation.Scope{}, "name", "desc", unit.Dimensionless, testSumAggregator{})
-	assert.NoError(t, err)
+	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	assert.NotPanics(t, func() {
+		pipe.addSync(instrumentation.Scope{}, iSync)
+	})
 
 	require.NotPanics(t, func() {
 		pipe.addCallback(func(ctx context.Context) {})
@@ -71,8 +74,10 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	err = pipe.addAggregator(instrumentation.Scope{}, "name", "desc", unit.Dimensionless, testSumAggregator{})
-	assert.NoError(t, err)
+	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	assert.NotPanics(t, func() {
+		pipe.addSync(instrumentation.Scope{}, iSync)
+	})
 
 	require.NotPanics(t, func() {
 		pipe.addCallback(func(ctx context.Context) {})
@@ -83,99 +88,6 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	require.Len(t, output.ScopeMetrics, 1)
 	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
-}
-
-func TestPipelineDuplicateRegistration(t *testing.T) {
-	type instrumentID struct {
-		scope       instrumentation.Scope
-		name        string
-		description string
-		unit        unit.Unit
-	}
-	testCases := []struct {
-		name           string
-		secondInst     instrumentID
-		want           error
-		wantScopeLen   int
-		wantMetricsLen int
-	}{
-		{
-			name: "exact should error",
-			secondInst: instrumentID{
-				scope:       instrumentation.Scope{},
-				name:        "name",
-				description: "desc",
-				unit:        unit.Dimensionless,
-			},
-			want:           errAlreadyRegistered,
-			wantScopeLen:   1,
-			wantMetricsLen: 1,
-		},
-		{
-			name: "description should not be identifying",
-			secondInst: instrumentID{
-				scope:       instrumentation.Scope{},
-				name:        "name",
-				description: "other desc",
-				unit:        unit.Dimensionless,
-			},
-			want:           errAlreadyRegistered,
-			wantScopeLen:   1,
-			wantMetricsLen: 1,
-		},
-		{
-			name: "scope should be identifying",
-			secondInst: instrumentID{
-				scope: instrumentation.Scope{
-					Name: "newScope",
-				},
-				name:        "name",
-				description: "desc",
-				unit:        unit.Dimensionless,
-			},
-			wantScopeLen:   2,
-			wantMetricsLen: 1,
-		},
-		{
-			name: "name should be identifying",
-			secondInst: instrumentID{
-				scope:       instrumentation.Scope{},
-				name:        "newName",
-				description: "desc",
-				unit:        unit.Dimensionless,
-			},
-			wantScopeLen:   1,
-			wantMetricsLen: 2,
-		},
-		{
-			name: "unit should be identifying",
-			secondInst: instrumentID{
-				scope:       instrumentation.Scope{},
-				name:        "name",
-				description: "desc",
-				unit:        unit.Bytes,
-			},
-			wantScopeLen:   1,
-			wantMetricsLen: 2,
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			pipe := newPipeline(nil, nil, nil)
-			err := pipe.addAggregator(instrumentation.Scope{}, "name", "desc", unit.Dimensionless, testSumAggregator{})
-			require.NoError(t, err)
-
-			err = pipe.addAggregator(tt.secondInst.scope, tt.secondInst.name, tt.secondInst.description, tt.secondInst.unit, testSumAggregator{})
-			assert.ErrorIs(t, err, tt.want)
-
-			if tt.wantScopeLen > 0 {
-				output, err := pipe.produce(context.Background())
-				assert.NoError(t, err)
-				require.Len(t, output.ScopeMetrics, tt.wantScopeLen)
-				require.Len(t, output.ScopeMetrics[0].Metrics, tt.wantMetricsLen)
-			}
-		})
-	}
 }
 
 func TestPipelineUsesResource(t *testing.T) {
@@ -201,10 +113,12 @@ func TestPipelineConcurrency(t *testing.T) {
 		}()
 
 		wg.Add(1)
-		go func() {
+		go func(n int) {
 			defer wg.Done()
-			_ = pipe.addAggregator(instrumentation.Scope{}, "name", "desc", unit.Dimensionless, testSumAggregator{})
-		}()
+			name := fmt.Sprintf("name %d", n)
+			sync := instrumentSync{name, "desc", unit.Dimensionless, testSumAggregator{}}
+			pipe.addSync(instrumentation.Scope{}, sync)
+		}(i)
 
 		wg.Add(1)
 		go func() {
@@ -249,7 +163,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				i := newInserter[N](test.pipe)
+				c := newInstrumentCache[N](nil, nil)
+				i := newInserter(test.pipe, c)
 				got, err := i.Instrument(inst, unit.Dimensionless)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
