@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Flush pending measurements with the `PeriodicReader` in the `go.opentelemetry.io/otel/sdk/metric` when `ForceFlush` or `Shutdown` are called. (#3220)
 - Update histogram default bounds to match the requirements of the latest specification. (#3222)
+- Encode the HTTP status code in the OpenTracing bridge (`go.opentelemetry.io/otel/bridge/opentracing`) as an integer.  (#3265)
 
 ### Fixed
 
