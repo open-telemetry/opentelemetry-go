@@ -236,3 +236,15 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 		assert.Equal(t, metricdata.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}
 }
+
+type notComparable [0]func()
+
+type noCompareReader struct {
+	notComparable
+	Reader
+}
+
+func TestReadersNotRequiredToBeComparable(t *testing.T) {
+	r := noCompareReader{Reader: NewManualReader()}
+	assert.NotPanics(t, func() { _ = NewMeterProvider(WithReader(r)) })
+}
