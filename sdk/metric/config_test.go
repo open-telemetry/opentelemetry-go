@@ -127,5 +127,7 @@ func TestWithResource(t *testing.T) {
 func TestWithReader(t *testing.T) {
 	r := &reader{}
 	c := newConfig([]Option{WithReader(r)})
-	assert.Contains(t, c.readers, r)
+	require.Len(t, c.viewers, 1)
+	assert.Same(t, r, c.viewers[0].reader)
+	assert.Len(t, c.viewers[0].views, 0)
 }

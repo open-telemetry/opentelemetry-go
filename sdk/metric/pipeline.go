@@ -57,14 +57,13 @@ type viewer struct {
 	views  []view.View
 }
 
-func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipeline {
+func newPipeline(res *resource.Resource, v viewer) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
 	return &pipeline{
 		resource:     res,
-		reader:       reader,
-		views:        views,
+		viewer:       v,
 		aggregations: make(map[instrumentation.Scope][]instrumentSync),
 	}
 }
@@ -75,10 +74,9 @@ func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipe
 // As instruments are created the instrument should be checked if it exists in the
 // views of a the Reader, and if so each aggregator should be added to the pipeline.
 type pipeline struct {
-	resource *resource.Resource
+	viewer
 
-	reader Reader
-	views  []view.View
+	resource *resource.Resource
 
 	sync.Mutex
 	aggregations map[instrumentation.Scope][]instrumentSync
@@ -407,15 +405,11 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 // measurement.
 type pipelines []*pipeline
 
-func newPipelines(res *resource.Resource, readers map[Reader][]view.View) pipelines {
-	pipes := make([]*pipeline, 0, len(readers))
-	for r, v := range readers {
-		p := &pipeline{
-			resource: res,
-			reader:   r,
-			views:    v,
-		}
-		r.register(p)
+func newPipelines(res *resource.Resource, viewers []viewer) pipelines {
+	pipes := make([]*pipeline, 0, len(viewers))
+	for _, v := range viewers {
+		p := newPipeline(res, v)
+		v.reader.register(p)
 		pipes = append(pipes, p)
 	}
 	return pipes

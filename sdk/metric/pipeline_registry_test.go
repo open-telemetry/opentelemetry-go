@@ -73,142 +73,175 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 
 	testcases := []struct {
 		name     string
-		reader   Reader
-		views    []view.View
+		viewer   viewer
 		inst     view.Instrument
 		wantKind internal.Aggregator[N] //Aggregators should match len and types
 		wantLen  int
 		wantErr  error
 	}{
 		{
-			name:   "drop should return 0 aggregators",
-			reader: NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
-			views:  []view.View{{}},
-			inst:   instruments[view.SyncCounter],
+			name: "drop should return 0 aggregators",
+			viewer: viewer{
+				reader: NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
+				views:  []view.View{{}},
+			},
+			inst: instruments[view.SyncCounter],
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.SyncUpDownCounter],
 			wantKind: internal.NewDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.SyncHistogram],
 			wantKind: internal.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.AsyncCounter],
 			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.AsyncUpDownCounter],
 			wantKind: internal.NewDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.AsyncGauge],
 			wantKind: internal.NewLastValue[N](),
 			wantLen:  1,
 		},
 		{
-			name:     "default agg should use reader",
-			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []view.View{defaultAggView},
+			name: "default agg should use reader",
+			viewer: viewer{
+				reader: NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+				views:  []view.View{defaultAggView},
+			},
 			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.SyncUpDownCounter],
 			wantKind: internal.NewCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.SyncHistogram],
 			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.AsyncCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.AsyncUpDownCounter],
 			wantKind: internal.NewCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.AsyncGauge],
 			wantKind: internal.NewLastValue[N](),
 			wantLen:  1,
 		},
 		{
-			name:     "reader should set default agg",
-			reader:   NewManualReader(),
-			views:    []view.View{{}},
+			name: "reader should set default agg",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}},
+			},
 			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
-			name:     "view should overwrite reader",
-			reader:   NewManualReader(),
-			views:    []view.View{changeAggView},
+			name: "view should overwrite reader",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{changeAggView},
+			},
 			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
-			name:     "multiple views should create multiple aggregators",
-			reader:   NewManualReader(),
-			views:    []view.View{{}, renameView},
+			name: "multiple views should create multiple aggregators",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{{}, renameView},
+			},
 			inst:     instruments[view.SyncCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  2,
 		},
 		{
-			name:    "reader with invalid aggregation should error",
-			reader:  NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:   []view.View{{}},
+			name: "reader with invalid aggregation should error",
+			viewer: viewer{
+				reader: NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
+				views:  []view.View{{}},
+			},
 			inst:    instruments[view.SyncCounter],
 			wantErr: errCreatingAggregators,
 		},
 		{
-			name:    "view with invalid aggregation should error",
-			reader:  NewManualReader(),
-			views:   []view.View{invalidAggView},
+			name: "view with invalid aggregation should error",
+			viewer: viewer{
+				reader: NewManualReader(),
+				views:  []view.View{invalidAggView},
+			},
 			inst:    instruments[view.SyncCounter],
 			wantErr: errCreatingAggregators,
 		},
@@ -216,7 +249,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			c := newInstrumentCache[N](nil, nil)
-			i := newInserter(newPipeline(nil, tt.reader, tt.views), c)
+			i := newInserter(newPipeline(nil, tt.viewer), c)
 			got, err := i.Instrument(tt.inst, unit.Dimensionless)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
@@ -229,7 +262,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	c := newInstrumentCache[N](nil, nil)
-	i := newInserter(newPipeline(nil, NewManualReader(), []view.View{{}}), c)
+	v := viewer{reader: NewManualReader()}
+	i := newInserter(newPipeline(nil, v), c)
 	inst := view.Instrument{
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
@@ -257,59 +291,51 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		views     map[Reader][]view.View
+		views     []viewer
 		inst      view.Instrument
 		wantCount int
 	}{
 		{
-			name: "No views have no aggregators",
+			name: "No Reader implies no aggregators",
 			inst: view.Instrument{Name: "foo"},
 		},
 		{
-			name: "1 reader 1 view gets 1 aggregator",
+			name: "1 reader default view gets 1 aggregator",
 			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-			},
+			views: []viewer{{
+				reader: testRdr,
+			}},
 			wantCount: 1,
 		},
 		{
 			name: "1 reader 2 views gets 2 aggregator",
 			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
-				},
-			},
+			views: []viewer{{
+				reader: testRdr,
+				views:  []view.View{{}, renameView},
+			}},
 			wantCount: 2,
 		},
 		{
-			name: "2 readers 1 view each gets 2 aggregators",
+			name: "2 readers default view each gets 2 aggregators",
 			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-				testRdrHistogram: {
-					{},
-				},
+			views: []viewer{
+				{reader: testRdr},
+				{reader: testRdrHistogram},
 			},
 			wantCount: 2,
 		},
 		{
 			name: "2 reader 2 views each gets 4 aggregators",
 			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
+			views: []viewer{
+				{
+					reader: testRdr,
+					views:  []view.View{{}, renameView},
 				},
-				testRdrHistogram: {
-					{},
-					renameView,
+				{
+					reader: testRdrHistogram,
+					views:  []view.View{{}, renameView},
 				},
 			},
 			wantCount: 4,
@@ -317,12 +343,10 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		{
 			name: "An instrument is duplicated in two views share the same aggregator",
 			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					{},
-				},
-			},
+			views: []viewer{{
+				reader: testRdr,
+				views:  []view.View{{}, {}},
+			}},
 			wantCount: 1,
 		},
 	}
@@ -362,11 +386,11 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 func TestPipelineRegistryResource(t *testing.T) {
 	v, err := view.New(view.MatchInstrumentName("bar"), view.WithRename("foo"))
 	require.NoError(t, err)
-	views := map[Reader][]view.View{
-		NewManualReader(): {{}, v},
-	}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	pipes := newPipelines(res, views)
+	pipes := newPipelines(res, []viewer{{
+		reader: NewManualReader(),
+		views:  []view.View{{}, v},
+	}})
 	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -375,11 +399,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
-	views := map[Reader][]view.View{
-		testRdrHistogram: {
-			{},
-		},
-	}
+	views := []viewer{{reader: testRdrHistogram}}
 	p := newPipelines(resource.Empty(), views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
@@ -421,12 +441,10 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 		view.MatchInstrumentName("bar"),
 		view.WithRename("foo"),
 	)
-	views := map[Reader][]view.View{
-		NewManualReader(): {
-			{},
-			renameView,
-		},
-	}
+	views := []viewer{{
+		reader: NewManualReader(),
+		views:  []view.View{{}, renameView},
+	}}
 
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}

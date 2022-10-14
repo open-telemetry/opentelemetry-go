@@ -67,7 +67,7 @@ func TestEmptyPipeline(t *testing.T) {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, viewer{})
 
 	output, err := pipe.produce(context.Background())
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil)
+	pipe := newPipeline(res, viewer{})
 
 	output, err := pipe.produce(context.Background())
 	assert.NoError(t, err)
@@ -100,7 +100,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrency(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, viewer{})
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
@@ -153,11 +153,11 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil),
+				pipe: newPipeline(nil, viewer{reader: reader}),
 			},
 			{
 				name: "NoMatchingView",
-				pipe: newPipeline(nil, reader, []view.View{v}),
+				pipe: newPipeline(nil, viewer{reader: reader, views: []view.View{v}}),
 			},
 		}
 
