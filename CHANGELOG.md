@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
+- Prometheus exporter will now cumulatively sum histogram buckets. (#3281)
 
 ## [1.11.0/0.32.3] 2022-10-12
 
