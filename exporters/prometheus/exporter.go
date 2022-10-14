@@ -145,8 +145,11 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 		keys, values := getAttrs(dp.Attributes)
 		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
+
+		cumulativeCount := uint64(0)
 		for i, bound := range dp.Bounds {
-			buckets[bound] = dp.BucketCounts[i]
+			cumulativeCount += dp.BucketCounts[i]
+			buckets[bound] = cumulativeCount
 		}
 		md := &metricData{
 			name:             m.Name,
