@@ -237,10 +237,10 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 	}
 }
 
-type notComparable [0]func()
+type notComparable [0]func() // nolint:unused  // non-comparable type itself is used.
 
 type noCompareReader struct {
-	notComparable
+	notComparable // nolint:unused  // non-comparable type itself is used.
 	Reader
 }
 
