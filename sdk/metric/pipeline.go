@@ -51,6 +51,12 @@ type instrumentSync struct {
 	aggregator  aggregator
 }
 
+// viewer is a reader with the applicable views it will use when reading.
+type viewer struct {
+	reader Reader
+	views  []view.View
+}
+
 func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipeline {
 	if res == nil {
 		res = resource.Empty()
