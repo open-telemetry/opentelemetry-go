@@ -137,8 +137,10 @@ func TestPrometheusExporter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
+			registry := prometheus.NewRegistry()
 
-			exporter := New()
+			exporter, err := New(WithRegisterer(registry))
+			require.NoError(t, err)
 
 			customBucketsView, err := view.New(
 				view.MatchInstrumentName("histogram_*"),
@@ -152,10 +154,6 @@ func TestPrometheusExporter(t *testing.T) {
 
 			provider := metric.NewMeterProvider(metric.WithReader(exporter, customBucketsView, defaultView))
 			meter := provider.Meter("testmeter")
-
-			registry := prometheus.NewRegistry()
-			err = registry.Register(exporter.Collector)
-			require.NoError(t, err)
 
 			tc.recordMetrics(ctx, meter)
 

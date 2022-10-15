@@ -8,14 +8,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Prometheus exporter will register with a prometheus registerer on creation, there are options to control this. (#3239)
+
 ### Changed
 
 - `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
+- The `"go.opentelemetry.io/otel/exporters/prometheus".New` now also returns an error indicating the failure to register the exporter with Prometheus. (#3239)
 
 ### Fixed
 
 - Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3226)
 - Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
+- Prometheus exporter will now cumulatively sum histogram buckets. (#3281)
 
 
 ## [1.11.0/0.32.3] 2022-10-12
