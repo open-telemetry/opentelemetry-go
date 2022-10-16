@@ -5,7 +5,7 @@ go 1.18
 replace go.opentelemetry.io/otel => ../
 
 require (
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/otel v1.11.0
 )
