@@ -195,6 +195,14 @@ dependabot-check: | $(DBOTCONF)
 dependabot-generate: | $(DBOTCONF)
 	@$(DBOTCONF) generate > $(DEPENDABOT_CONFIG)
 
+.PHONY: upgrade-dependencies
+upgrade-dependencies: $(ALL_GO_MOD_DIRS:%=upgrade-dependencies/%)
+upgrade-dependencies/%: DIR=$*
+upgrade-dependencies/%:
+	@echo "$(GO) get -u -t $(DIR)/..." \
+		&& cd $(DIR) \
+		&& $(GO) get -u -t ./...
+
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
 	@if ! git diff --quiet; then \
