@@ -1,0 +1,6 @@
+# HELP foo a simple counter
+# TYPE foo counter
+foo{A="B",C="D",E="true",F="42"} 24.3
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{A="B",C="D",service_name="prometheus_test",telemetry_sdk_language="go",telemetry_sdk_name="opentelemetry",telemetry_sdk_version="1.11.0"} 1

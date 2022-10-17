@@ -20,7 +20,8 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	registerer prometheus.Registerer
+	registerer        prometheus.Registerer
+	disableTargetInfo bool
 }
 
 // newConfig creates a validated config configured with options.
@@ -54,6 +55,16 @@ func (fn optionFunc) apply(cfg config) config {
 func WithRegisterer(reg prometheus.Registerer) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.registerer = reg
+		return cfg
+	})
+}
+
+// WithoutTargetInfo configures the Exporter to not export the resource target_info metric.
+// If not specified, the Exporter will create a target_info metric containing
+// the metrics' resource.Resource attributes.
+func WithoutTargetInfo() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.disableTargetInfo = true
 		return cfg
 	})
 }

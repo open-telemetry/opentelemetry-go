@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Prometheus exporter will register with a prometheus registerer on creation, there are options to control this. (#3239)
+- Prometheus exporter will convert metrics `Resource` into a `target_info` metric. (#3285)
 
 ### Changed
 

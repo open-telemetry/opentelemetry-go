@@ -28,6 +28,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+const (
+	targetInfoMetricName  = "target_info"
+	targetInfoDescription = "Target metadata"
 )
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
@@ -40,7 +46,9 @@ var _ metric.Reader = &Exporter{}
 
 // collector is used to implement prometheus.Collector.
 type collector struct {
-	reader metric.Reader
+	reader            metric.Reader
+	disableTargetInfo bool
+	targetInfo        *metricData
 }
 
 // New returns a Prometheus Exporter.
@@ -53,7 +61,8 @@ func New(opts ...Option) (*Exporter, error) {
 	reader := metric.NewManualReader()
 
 	collector := &collector{
-		reader: reader,
+		reader:            reader,
+		disableTargetInfo: cfg.disableTargetInfo,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -81,11 +90,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics, err := c.reader.Collect(context.TODO())
 	if err != nil {
 		otel.Handle(err)
+		if err == metric.ErrReaderNotRegistered {
+			return
+		}
 	}
 
-	// TODO(#3166): convert otel resource to target_info
-	// see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#resource-attributes-1
-	for _, metricData := range getMetricData(metrics) {
+	for _, metricData := range c.getMetricData(metrics) {
 		if metricData.valueType == prometheus.UntypedValue {
 			m, err := prometheus.NewConstHistogram(metricData.description, metricData.histogramCount, metricData.histogramSum, metricData.histogramBuckets, metricData.attributeValues...)
 			if err != nil {
@@ -118,8 +128,18 @@ type metricData struct {
 	histogramBuckets map[float64]uint64
 }
 
-func getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
+func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
 	allMetrics := make([]*metricData, 0)
+
+	if !c.disableTargetInfo {
+		if c.targetInfo == nil {
+			// Resource should be immutable, we don't need to compute again
+			c.targetInfo = createInfoMetricData(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+		}
+
+		allMetrics = append(allMetrics, c.targetInfo)
+	}
+
 	for _, scopeMetrics := range metrics.ScopeMetrics {
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
@@ -228,6 +248,19 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 		values = append(values, strings.Join(vals, ";"))
 	}
 	return keys, values
+}
+
+func createInfoMetricData(name, description string, res *resource.Resource) *metricData {
+	keys, values := getAttrs(*res.Set())
+
+	desc := prometheus.NewDesc(name, description, keys, nil)
+	return &metricData{
+		name:            name,
+		description:     desc,
+		attributeValues: values,
+		valueType:       prometheus.GaugeValue,
+		value:           float64(1),
+	}
 }
 
 func sanitizeRune(r rune) rune {
