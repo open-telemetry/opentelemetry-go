@@ -32,7 +32,7 @@ func newValueMap[N int64 | float64]() *valueMap[N] {
 	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
-func (s *valueMap[N]) set(value N, attr attribute.Set) {
+func (s *valueMap[N]) set(value N, attr attribute.Set) { // nolint: unused  // This is indeed used.
 	s.Lock()
 	s.values[attr] = value
 	s.Unlock()
