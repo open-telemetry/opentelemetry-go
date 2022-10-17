@@ -32,6 +32,12 @@ func newValueMap[N int64 | float64]() *valueMap[N] {
 	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
+func (s *valueMap[N]) set(value N, attr attribute.Set) {
+	s.Lock()
+	s.values[attr] = value
+	s.Unlock()
+}
+
 func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Lock()
 	s.values[attr] += value
@@ -49,6 +55,10 @@ func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return newDeltaSum[N](monotonic)
+}
+
+func newDeltaSum[N int64 | float64](monotonic bool) *deltaSum[N] {
 	return &deltaSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -106,6 +116,10 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return newCumulativeSum[N](monotonic)
+}
+
+func newCumulativeSum[N int64 | float64](monotonic bool) *cumulativeSum[N] {
 	return &cumulativeSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -150,4 +164,42 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 		// overload the system.
 	}
 	return out
+}
+
+// NewPrecomputedSum returns an Aggregator that summarizes a set of
+// measurements as their pre-computed arithmetic sum. Each sum is scoped by
+// attributes and the aggregation cycle the measurements were made in.
+//
+// The monotonic value is used to communicate the produced Aggregation is
+// monotonic or not. The returned Aggregator does not make any guarantees this
+// value is accurate. It is up to the caller to ensure it.
+//
+// The temporality value is used to communicate the produced Aggregation
+// temporality. The returned Aggregator does not make any guarantees this value
+// is accurate. It is up to the caller to ensure it.
+func NewPrecomputedSum[N int64 | float64](monotonic bool, temporality metricdata.Temporality) Aggregator[N] {
+	var s settableSum[N]
+	switch temporality {
+	case metricdata.DeltaTemporality:
+		s = newDeltaSum[N](monotonic)
+	default:
+		s = newCumulativeSum[N](monotonic)
+	}
+	return &precomputedSum[N]{settableSum: s}
+}
+
+type settableSum[N int64 | float64] interface {
+	set(value N, attr attribute.Set)
+	Aggregation() metricdata.Aggregation
+}
+
+// precomputedSum summarizes a set of measurements recorded over all
+// aggregation cycles directly as an arithmetic sum.
+type precomputedSum[N int64 | float64] struct {
+	settableSum[N]
+}
+
+// Aggregate records value directly as a sum for attr.
+func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.set(value, attr)
 }
