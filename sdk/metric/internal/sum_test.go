@@ -54,6 +54,24 @@ func testSum[N int64 | float64](t *testing.T) {
 		eFunc = cumuExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
+
+	t.Run("PreComputed", func(t *testing.T) {
+		incr, mono, temp := monoIncr, true, metricdata.DeltaTemporality
+		eFunc := preExpecter[N](incr, mono, temp)
+		t.Run("Monotonic/Delta", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+
+		temp = metricdata.CumulativeTemporality
+		eFunc = preExpecter[N](incr, mono, temp)
+		t.Run("Monotonic/Cumulative", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+
+		incr, mono, temp = nonMonoIncr, false, metricdata.DeltaTemporality
+		eFunc = preExpecter[N](incr, mono, temp)
+		t.Run("NonMonotonic/Delta", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+
+		temp = metricdata.CumulativeTemporality
+		eFunc = preExpecter[N](incr, mono, temp)
+		t.Run("NonMonotonic/Cumulative", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+	})
 }
 
 func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
@@ -61,7 +79,7 @@ func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 	return func(m int) metricdata.Aggregation {
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*m)))
 		}
 		return sum
 	}
@@ -74,7 +92,18 @@ func cumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 		cycle++
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*cycle*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*cycle*m)))
+		}
+		return sum
+	}
+}
+
+func preExpecter[N int64 | float64](incr setMap, mono bool, temp metricdata.Temporality) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: temp, IsMonotonic: mono}
+	return func(int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v)))
 		}
 		return sum
 	}
