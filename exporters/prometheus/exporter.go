@@ -68,14 +68,13 @@ func New(opts ...Option) (*Exporter, error) {
 }
 
 // Describe implements prometheus.Collector.
+//
+// Opentelemetry SDK doesn't have information on which will exist when the collector
+// is registered. By returning nothing we are an "unckeched" collector in prometheus,
+// and assume responsibility for consistency of the metrics produced.
+//
+// See https://pkg.go.dev/github.com/prometheus/client_golang@v1.13.0/prometheus#hdr-Custom_Collectors_and_constant_Metrics
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	metrics, err := c.reader.Collect(context.TODO())
-	if err != nil {
-		otel.Handle(err)
-	}
-	for _, metricData := range getMetricData(metrics) {
-		ch <- metricData.description
-	}
 }
 
 // Collect implements prometheus.Collector.
