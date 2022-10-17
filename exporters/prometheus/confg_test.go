@@ -19,28 +19,50 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+
 	testCases := []struct {
-		name           string
-		options        []Option
-		wantRegisterer prometheus.Registerer
+		name            string
+		options         []Option
+		wantRegisterer  prometheus.Registerer
+		wantAggregation metric.AggregationSelector
 	}{
 		{
 			name:           "Default",
 			options:        nil,
 			wantRegisterer: prometheus.DefaultRegisterer,
 		},
-
 		{
 			name: "WithRegisterer",
 			options: []Option{
 				WithRegisterer(registry),
 			},
 			wantRegisterer: registry,
+		},
+		{
+			name: "WithAggregationSelector",
+			options: []Option{
+				WithAggregationSelector(aggregationSelector),
+			},
+			wantRegisterer:  prometheus.DefaultRegisterer,
+			wantAggregation: aggregationSelector,
+		},
+		{
+			name: "With Multiple Options",
+			options: []Option{
+				WithRegisterer(registry),
+				WithAggregationSelector(aggregationSelector),
+			},
+			wantRegisterer:  registry,
+			wantAggregation: aggregationSelector,
 		},
 		{
 			name: "nil options do nothing",
@@ -55,6 +77,36 @@ func TestNewConfig(t *testing.T) {
 			cfg := newConfig(tt.options...)
 
 			assert.Equal(t, tt.wantRegisterer, cfg.registerer)
+		})
+	}
+}
+
+func TestConfigManualReaderOptions(t *testing.T) {
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+
+	testCases := []struct {
+		name       string
+		config     config
+		wantOption []metric.ManualReaderOption
+	}{
+		{
+			name:       "Default",
+			config:     config{},
+			wantOption: []metric.ManualReaderOption{},
+		},
+
+		{
+			name:   "WithAggregationSelector",
+			config: config{aggregation: aggregationSelector},
+			wantOption: []metric.ManualReaderOption{
+				metric.WithAggregationSelector(aggregationSelector),
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := tt.config.manualReaderOptions()
+			assert.Len(t, opts, len(tt.wantOption))
 		})
 	}
 }

@@ -16,11 +16,13 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // config contains options for the exporter.
 type config struct {
-	registerer prometheus.Registerer
+	registerer  prometheus.Registerer
+	aggregation metric.AggregationSelector
 }
 
 // newConfig creates a validated config configured with options.
@@ -35,6 +37,14 @@ func newConfig(opts ...Option) config {
 	}
 
 	return cfg
+}
+
+func (cfg config) manualReaderOptions() []metric.ManualReaderOption {
+	opts := []metric.ManualReaderOption{}
+	if cfg.aggregation != nil {
+		opts = append(opts, metric.WithAggregationSelector(cfg.aggregation))
+	}
+	return opts
 }
 
 // Option sets exporter option values.
@@ -54,6 +64,13 @@ func (fn optionFunc) apply(cfg config) config {
 func WithRegisterer(reg prometheus.Registerer) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.registerer = reg
+		return cfg
+	})
+}
+
+func WithAggregationSelector(agg metric.AggregationSelector) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.aggregation = agg
 		return cfg
 	})
 }
