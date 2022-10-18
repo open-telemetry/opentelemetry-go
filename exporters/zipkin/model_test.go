@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -409,7 +410,7 @@ func TestModelConversion(t *testing.T) {
 				"attr1":            "42",
 				"attr2":            "bar",
 				"attr3":            "[0,1,2]",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -452,7 +453,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -495,7 +496,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -538,7 +539,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -587,7 +588,7 @@ func TestModelConversion(t *testing.T) {
 				"net.peer.ip":      "1.2.3.4",
 				"net.peer.port":    "9876",
 				"peer.hostname":    "test-peer-hostname",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -630,7 +631,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -673,7 +674,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -707,7 +708,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -823,7 +824,7 @@ func TestTagsTransformation(t *testing.T) {
 			want: map[string]string{
 				"error":            statusMessage,
 				"key":              keyValue,
-				"otel.status_code": codes.Error.String(),
+				"otel.status_code": strings.ToUpper(codes.Error.String()),
 			},
 		},
 		{
