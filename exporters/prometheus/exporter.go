@@ -54,6 +54,10 @@ type collector struct {
 	createTargetInfoOnce sync.Once
 }
 
+// prometheus counters MUST have a _total suffix:
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.14.0/specification/metrics/data-model.md#sums-1
+const counterSuffix = "_total"
+
 // New returns a Prometheus Exporter.
 func New(opts ...Option) (*Exporter, error) {
 	cfg := newConfig(opts...)
@@ -197,8 +201,12 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 	}
 	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
+		name := sanitizeName(m.Name)
+		if sum.IsMonotonic {
+			name += counterSuffix
+		}
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,

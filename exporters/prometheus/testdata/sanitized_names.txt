@@ -1,9 +1,9 @@
 # HELP bar a fun little gauge
 # TYPE bar gauge
 bar{A="B",C="D"} 75
-# HELP _0invalid_counter_name a counter with an invalid name
-# TYPE _0invalid_counter_name counter
-_0invalid_counter_name{A="B",C="D"} 100
+# HELP _0invalid_counter_name_total a counter with an invalid name
+# TYPE _0invalid_counter_name_total counter
+_0invalid_counter_name_total{A="B",C="D"} 100
 # HELP invalid_gauge_name a gauge with an invalid name
 # TYPE invalid_gauge_name gauge
 invalid_gauge_name{A="B",C="D"} 100
