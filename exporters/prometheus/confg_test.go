@@ -56,8 +56,7 @@ func TestNewConfig(t *testing.T) {
 				WithAggregationSelector(aggregationSelector),
 			},
 			wantConfig: config{
-				registerer:  prometheus.DefaultRegisterer,
-				aggregation: aggregationSelector,
+				registerer: prometheus.DefaultRegisterer,
 			},
 		},
 		{
@@ -68,8 +67,7 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				registerer:  registry,
-				aggregation: aggregationSelector,
+				registerer: registry,
 			},
 		},
 		{
@@ -95,6 +93,9 @@ func TestNewConfig(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
+
+			// tested by TestConfigManualReaderOptions
+			cfg.aggregation = nil
 
 			assert.Equal(t, tt.wantConfig, cfg)
 		})
