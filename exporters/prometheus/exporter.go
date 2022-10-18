@@ -105,7 +105,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	for _, metricData := range c.getMetricData(metrics, c.withoutUnits) {
+	for _, metricData := range c.getMetricData(metrics) {
 		if metricData.valueType == prometheus.UntypedValue {
 			m, err := prometheus.NewConstHistogram(metricData.description, metricData.histogramCount, metricData.histogramSum, metricData.histogramBuckets, metricData.attributeValues...)
 			if err != nil {
@@ -138,7 +138,7 @@ type metricData struct {
 	histogramBuckets map[float64]uint64
 }
 
-func (c *collector) getMetricData(metrics metricdata.ResourceMetrics, withoutUnits bool) []*metricData {
+func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
 	allMetrics := make([]*metricData, 0)
 
 	c.createTargetInfoOnce.Do(func() {
