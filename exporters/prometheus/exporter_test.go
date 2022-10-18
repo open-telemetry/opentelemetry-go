@@ -221,6 +221,44 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 9, attrs...)
 			},
 		},
+		{
+			name:         "without scope_info",
+			options:      []Option{WithoutScopeInfo()},
+			expectedFile: "testdata/without_scope_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				}
+				gauge, err := meter.SyncInt64().UpDownCounter(
+					"bar",
+					instrument.WithDescription("a fun little gauge"),
+					instrument.WithUnit(unit.Dimensionless),
+				)
+				require.NoError(t, err)
+				gauge.Add(ctx, 2, attrs...)
+				gauge.Add(ctx, -1, attrs...)
+			},
+		},
+		{
+			name:         "without scope_info and target_info",
+			options:      []Option{WithoutScopeInfo(), WithoutTargetInfo()},
+			expectedFile: "testdata/without_scope_and_target_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				}
+				counter, err := meter.SyncInt64().Counter(
+					"bar",
+					instrument.WithDescription("a fun little counter"),
+					instrument.WithUnit(unit.Bytes),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 2, attrs...)
+				counter.Add(ctx, 1, attrs...)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -263,7 +301,10 @@ func TestPrometheusExporter(t *testing.T) {
 				metric.WithReader(exporter),
 				metric.WithView(customBucketsView, defaultView),
 			)
-			meter := provider.Meter("testmeter")
+			meter := provider.Meter(
+				"testmeter",
+				otelmetric.WithInstrumentationVersion("v0.1.0"),
+			)
 
 			tc.recordMetrics(ctx, meter)
 
@@ -306,3 +347,35 @@ func TestSantitizeName(t *testing.T) {
 		require.Equalf(t, test.want, sanitizeName(test.input), "input: %q", test.input)
 	}
 }
+
+// func TestMetricWithSameName(t *testing.T) {
+// 	exporter, err := New()
+// 	assert.NoError(t, err)
+
+// 	provider := metric.NewMeterProvider(
+// 		metric.WithReader(exporter),
+// 	)
+
+// 	httpCounter, err := provider.Meter("http").
+// 		SyncInt64().Counter(
+// 		"error_count",
+// 		instrument.WithUnit(unit.Dimensionless))
+// 	assert.NoError(t, err)
+// 	httpCounter.Add(context.TODO(), 1, attribute.String("type", "bar1"))
+// 	httpCounter.Add(context.TODO(), 2, attribute.String("type", "bar2"))
+
+// 	// sqlCounter, err := provider.Meter("sql").
+// 	// 	SyncInt64().UpDownCounter(
+// 	// 	"error_count",
+// 	// 	instrument.WithUnit(unit.Dimensionless))
+// 	// assert.NoError(t, err)
+// 	// sqlCounter.Add(context.TODO(), 1)
+
+// 	t.Logf("serving metrics at localhost:2223/metrics")
+// 	http.Handle("/metrics", promhttp.Handler())
+// 	err = http.ListenAndServe(":2223", nil)
+// 	if err != nil {
+// 		t.Fatalf("error serving http: %v", err)
+// 		return
+// 	}
+// }

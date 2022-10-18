@@ -26,6 +26,7 @@ type config struct {
 	disableTargetInfo bool
 	withoutUnits      bool
 	aggregation       metric.AggregationSelector
+	disableScopeInfo  bool
 }
 
 // newConfig creates a validated config configured with options.
@@ -102,6 +103,16 @@ func WithoutTargetInfo() Option {
 func WithoutUnits() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutUnits = true
+		return cfg
+	})
+}
+
+// WithoutScopeInfo configures the Exporter to not export the otel_scope_info metric.
+// If not specified, the Exporter will create a otel_scope_info metric containing
+// the metrics' Instrumentation Scope, and also add labels about Instrumentation Scope to all metric points.
+func WithoutScopeInfo() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.disableScopeInfo = true
 		return cfg
 	})
 }
