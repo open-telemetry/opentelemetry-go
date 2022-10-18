@@ -24,6 +24,7 @@ import (
 type config struct {
 	registerer        prometheus.Registerer
 	disableTargetInfo bool
+	withoutUnits      bool
 	aggregation       metric.AggregationSelector
 }
 
@@ -86,6 +87,21 @@ func WithAggregationSelector(agg metric.AggregationSelector) Option {
 func WithoutTargetInfo() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.disableTargetInfo = true
+		return cfg
+	})
+}
+
+// WithoutUnits disables exporter's addition of unit suffixes to metric names,
+// and will also prevent unit comments from being added in OpenMetrics once
+// unit comments are supported.
+//
+// By default, metric names include a unit suffix to follow Prometheus naming
+// conventions. For example, the counter metric request.duration, with unit
+// milliseconds would become request_duration_milliseconds_total.
+// With this option set, the name would instead be request_duration_total.
+func WithoutUnits() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.withoutUnits = true
 		return cfg
 	})
 }
