@@ -16,6 +16,7 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -68,6 +69,9 @@ func WithRegisterer(reg prometheus.Registerer) Option {
 	})
 }
 
+// WithAggregationSelector configure the Aggregation Selector the exporter will
+// use. If no AggregationSelector is provided the DefaultAggregationSelector is
+// used.
 func WithAggregationSelector(agg metric.AggregationSelector) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.aggregation = agg

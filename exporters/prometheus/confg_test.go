@@ -19,6 +19,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/view"
@@ -85,28 +86,26 @@ func TestConfigManualReaderOptions(t *testing.T) {
 	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
 
 	testCases := []struct {
-		name       string
-		config     config
-		wantOption []metric.ManualReaderOption
+		name            string
+		config          config
+		wantOptionCount int
 	}{
 		{
-			name:       "Default",
-			config:     config{},
-			wantOption: []metric.ManualReaderOption{},
+			name:            "Default",
+			config:          config{},
+			wantOptionCount: 0,
 		},
 
 		{
-			name:   "WithAggregationSelector",
-			config: config{aggregation: aggregationSelector},
-			wantOption: []metric.ManualReaderOption{
-				metric.WithAggregationSelector(aggregationSelector),
-			},
+			name:            "WithAggregationSelector",
+			config:          config{aggregation: aggregationSelector},
+			wantOptionCount: 1,
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := tt.config.manualReaderOptions()
-			assert.Len(t, opts, len(tt.wantOption))
+			assert.Len(t, opts, tt.wantOptionCount)
 		})
 	}
 }
