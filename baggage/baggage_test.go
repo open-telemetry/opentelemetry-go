@@ -768,6 +768,23 @@ func TestNewMember(t *testing.T) {
 	}
 	assert.Equal(t, expected, m)
 
+	// wrong value with wrong decoding
+	val = "%zzzzz"
+	_, err = NewMember(key, val, p)
+	assert.ErrorIs(t, err, errInvalidValue)
+
+	// value should be decoded
+	val = "%3B"
+	m, err = NewMember(key, val, p)
+	expected = Member{
+		key:        key,
+		value:      ";",
+		properties: properties{{key: "foo", hasData: true}},
+		hasData:    true,
+	}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, m)
+
 	// Ensure new member is immutable.
 	p.key = "bar"
 	assert.Equal(t, expected, m)
@@ -782,6 +799,17 @@ func TestPropertiesValidate(t *testing.T) {
 
 	p = append(p, Property{key: "bar", hasData: true})
 	assert.NoError(t, p.validate())
+}
+
+func TestMemberString(t *testing.T) {
+	// normal key value pair
+	member, _ := NewMember("key", "value")
+	memberStr := member.String()
+	assert.Equal(t, memberStr, "key=value")
+	// encoded key
+	member, _ = NewMember("key", "%3B")
+	memberStr = member.String()
+	assert.Equal(t, memberStr, "key=%3B")
 }
 
 var benchBaggage Baggage
