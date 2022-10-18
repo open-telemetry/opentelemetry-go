@@ -22,7 +22,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
 - Prometheus exporter will now cumulatively sum histogram buckets. (#3281)
 - Export the sum of each histogram datapoint uniquely with the `go.opentelemetry.io/otel/exporters/otlpmetric` exporters. (#3284, #3293)
-- Getting-started guide will now have the right list of import packages in main.go to run through the example successfully. (#3354)
 
 ## [1.11.0/0.32.3] 2022-10-12
 
