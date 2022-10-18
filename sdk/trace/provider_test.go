@@ -28,41 +28,45 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type basicSpanProcesor struct {
-	running             bool
+type basicSpanProcessor struct {
+	flushed             bool
+	closed              bool
 	injectShutdownError error
 }
 
-func (t *basicSpanProcesor) Shutdown(context.Context) error {
-	t.running = false
+func (t *basicSpanProcessor) Shutdown(context.Context) error {
+	t.closed = true
 	return t.injectShutdownError
 }
 
-func (t *basicSpanProcesor) OnStart(context.Context, ReadWriteSpan) {}
-func (t *basicSpanProcesor) OnEnd(ReadOnlySpan)                     {}
-func (t *basicSpanProcesor) ForceFlush(context.Context) error {
+func (t *basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (t *basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
+func (t *basicSpanProcessor) ForceFlush(context.Context) error {
+	t.flushed = true
 	return nil
+}
+
+func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	assert.NoError(t, stp.ForceFlush(context.Background()))
+	assert.NoError(t, stp.Shutdown(context.Background()))
 }
 
 func TestShutdownTraceProvider(t *testing.T) {
 	stp := NewTracerProvider()
-	sp := &basicSpanProcesor{}
+	sp := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp)
 
-	sp.running = true
-
-	_ = stp.Shutdown(context.Background())
-
-	if sp.running {
-		t.Errorf("Error shutdown basicSpanProcesor\n")
-	}
+	assert.NoError(t, stp.ForceFlush(context.Background()))
+	assert.True(t, sp.flushed, "error ForceFlush basicSpanProcessor")
+	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
 }
 
 func TestFailedProcessorShutdown(t *testing.T) {
 	stp := NewTracerProvider()
 	spErr := errors.New("basic span processor shutdown failure")
-	sp := &basicSpanProcesor{
-		running:             true,
+	sp := &basicSpanProcessor{
 		injectShutdownError: spErr,
 	}
 	stp.RegisterSpanProcessor(sp)
@@ -72,12 +76,31 @@ func TestFailedProcessorShutdown(t *testing.T) {
 	assert.Equal(t, err, spErr)
 }
 
+func TestFailedProcessorsShutdown(t *testing.T) {
+	stp := NewTracerProvider()
+	spErr1 := errors.New("basic span processor shutdown failure1")
+	spErr2 := errors.New("basic span processor shutdown failure2")
+	sp1 := &basicSpanProcessor{
+		injectShutdownError: spErr1,
+	}
+	sp2 := &basicSpanProcessor{
+		injectShutdownError: spErr2,
+	}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	err := stp.Shutdown(context.Background())
+	assert.Error(t, err)
+	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
+	assert.True(t, sp1.closed)
+	assert.True(t, sp2.closed)
+}
+
 func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 	handler.Reset()
 	stp := NewTracerProvider()
 	spErr := errors.New("basic span processor shutdown failure")
-	sp := &basicSpanProcesor{
-		running:             true,
+	sp := &basicSpanProcessor{
 		injectShutdownError: spErr,
 	}
 	stp.RegisterSpanProcessor(sp)

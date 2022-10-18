@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -103,4 +104,83 @@ func TestValue(t *testing.T) {
 			t.Errorf("+got, -want: %s", diff)
 		}
 	}
+}
+
+func TestSetComparability(t *testing.T) {
+	pairs := [][2]attribute.KeyValue{
+		{
+			attribute.Bool("Bool", true),
+			attribute.Bool("Bool", true),
+		},
+		{
+			attribute.BoolSlice("BoolSlice", []bool{true, false, true}),
+			attribute.BoolSlice("BoolSlice", []bool{true, false, true}),
+		},
+		{
+			attribute.Int("Int", 34),
+			attribute.Int("Int", 34),
+		},
+		{
+			attribute.IntSlice("IntSlice", []int{312, 1, -2}),
+			attribute.IntSlice("IntSlice", []int{312, 1, -2}),
+		},
+		{
+			attribute.Int64("Int64", 98),
+			attribute.Int64("Int64", 98),
+		},
+		{
+			attribute.Int64Slice("Int64Slice", []int64{12, 1298, -219, 2}),
+			attribute.Int64Slice("Int64Slice", []int64{12, 1298, -219, 2}),
+		},
+		{
+			attribute.Float64("Float64", 19.09),
+			attribute.Float64("Float64", 19.09),
+		},
+		{
+			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 3}),
+			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 3}),
+		},
+		{
+			attribute.String("String", "string value"),
+			attribute.String("String", "string value"),
+		},
+		{
+			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+	}
+
+	for _, p := range pairs {
+		s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
+		m := map[attribute.Set]struct{}{s0: {}}
+		_, ok := m[s1]
+		assert.Truef(t, ok, "%s not comparable", p[0].Value.Type())
+	}
+}
+
+func TestAsSlice(t *testing.T) {
+	bs1 := []bool{true, false, true}
+	kv := attribute.BoolSlice("BoolSlice", bs1)
+	bs2 := kv.Value.AsBoolSlice()
+	assert.Equal(t, bs1, bs2)
+
+	i64s1 := []int64{12, 1298, -219, 2}
+	kv = attribute.Int64Slice("Int64Slice", i64s1)
+	i64s2 := kv.Value.AsInt64Slice()
+	assert.Equal(t, i64s1, i64s2)
+
+	is1 := []int{12, 1298, -219, 2}
+	kv = attribute.IntSlice("IntSlice", is1)
+	i64s2 = kv.Value.AsInt64Slice()
+	assert.Equal(t, i64s1, i64s2)
+
+	fs1 := []float64{12398.1, -37.1713873737, 3}
+	kv = attribute.Float64Slice("Float64Slice", fs1)
+	fs2 := kv.Value.AsFloat64Slice()
+	assert.Equal(t, fs1, fs2)
+
+	ss1 := []string{"one", "two", "three"}
+	kv = attribute.StringSlice("StringSlice", ss1)
+	ss2 := kv.Value.AsStringSlice()
+	assert.Equal(t, ss1, ss2)
 }

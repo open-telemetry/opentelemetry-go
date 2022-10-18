@@ -16,96 +16,111 @@ package stdoutmetric_test
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"encoding/json"
+	"os"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-)
-
-const (
-	instrumentationName    = "github.com/instrumentron"
-	instrumentationVersion = "v0.1.0"
+	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
 var (
-	loopCounter syncint64.Counter
-	paramValue  syncint64.Histogram
+	// Sat Jan 01 2000 00:00:00 GMT+0000.
+	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
-	nameKey = attribute.Key("function.name")
+	res = resource.NewSchemaless(
+		semconv.ServiceNameKey.String("stdoutmetric-example"),
+	)
+
+	mockData = metricdata.ResourceMetrics{
+		Resource: res,
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{Name: "example", Version: "v0.0.1"},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "requests",
+						Description: "Number of requests received",
+						Unit:        unit.Dimensionless,
+						Data: metricdata.Sum[int64]{
+							IsMonotonic: true,
+							Temporality: metricdata.DeltaTemporality,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("server", "central")),
+									StartTime:  now,
+									Time:       now.Add(1 * time.Second),
+									Value:      5,
+								},
+							},
+						},
+					},
+					{
+						Name:        "latency",
+						Description: "Time spend processing received requests",
+						Unit:        unit.Milliseconds,
+						Data: metricdata.Histogram{
+							Temporality: metricdata.DeltaTemporality,
+							DataPoints: []metricdata.HistogramDataPoint{
+								{
+									Attributes:   attribute.NewSet(attribute.String("server", "central")),
+									StartTime:    now,
+									Time:         now.Add(1 * time.Second),
+									Count:        10,
+									Bounds:       []float64{1, 5, 10},
+									BucketCounts: []uint64{1, 3, 6, 0},
+									Sum:          57,
+								},
+							},
+						},
+					},
+					{
+						Name:        "temperature",
+						Description: "CPU global temperature",
+						Unit:        unit.Unit("cel(1 K)"),
+						Data: metricdata.Gauge[float64]{
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("server", "central")),
+									Time:       now.Add(1 * time.Second),
+									Value:      32.4,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 )
 
-func add(ctx context.Context, x, y int64) int64 {
-	nameKV := nameKey.String("add")
-
-	loopCounter.Add(ctx, 1, nameKV)
-	paramValue.Record(ctx, x, nameKV)
-	paramValue.Record(ctx, y, nameKV)
-
-	return x + y
-}
-
-func multiply(ctx context.Context, x, y int64) int64 {
-	nameKV := nameKey.String("multiply")
-
-	loopCounter.Add(ctx, 1, nameKV)
-	paramValue.Record(ctx, x, nameKV)
-	paramValue.Record(ctx, y, nameKV)
-
-	return x * y
-}
-
-func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
-	exporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
-	if err != nil {
-		return nil, fmt.Errorf("creating stdoutmetric exporter: %w", err)
-	}
-
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithInexpensiveDistribution(),
-			exporter,
-		),
-		controller.WithExporter(exporter),
-	)
-	if err = pusher.Start(ctx); err != nil {
-		log.Fatalf("starting push controller: %v", err)
-	}
-
-	global.SetMeterProvider(pusher)
-	meter := global.Meter(instrumentationName, metric.WithInstrumentationVersion(instrumentationVersion))
-
-	loopCounter, err = meter.SyncInt64().Counter("function.loops")
-	if err != nil {
-		log.Fatalf("creating instrument: %v", err)
-	}
-	paramValue, err = meter.SyncInt64().Histogram("function.param")
-	if err != nil {
-		log.Fatalf("creating instrument: %v", err)
-	}
-
-	return pusher.Stop, nil
-}
-
 func Example() {
-	ctx := context.Background()
-
-	// TODO: Registers a meter Provider globally.
-	shutdown, err := InstallExportPipeline(ctx)
+	// Print with a JSON encoder that indents with two spaces.
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	defer func() {
-		if err := shutdown(ctx); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+	// Register the exporter with an SDK via a periodic reader.
+	sdk := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(metric.NewPeriodicReader(exp)),
+	)
+
+	ctx := context.Background()
+	// This is where the sdk would be used to create a Meter and from that
+	// instruments that would make measurments of your code. To simulate that
+	// behavior, call export directly with mocked data.
+	_ = exp.Export(ctx, mockData)
+
+	// Ensure the periodic reader is cleaned up by shutting down the sdk.
+	_ = sdk.Shutdown(ctx)
 }

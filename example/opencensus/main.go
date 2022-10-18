@@ -20,7 +20,7 @@ import (
 	"log"
 	"time"
 
-	"go.opencensus.io/metric"
+	ocmetric "go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/metric/metricproducer"
@@ -33,7 +33,8 @@ import (
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -57,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Errorf("error creating trace exporter: %w", err))
 	}
-	metricsExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+	metricsExporter, err := stdoutmetric.New()
 	if err != nil {
 		log.Fatal(fmt.Errorf("error creating metric exporter: %w", err))
 	}
@@ -102,9 +103,9 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
-func monitoring(otExporter export.Exporter) error {
+func monitoring(otExporter metric.Exporter) error {
 	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
-	ocExporter := opencensus.NewMetricExporter(otExporter)
+	ocExporter := opencensus.NewMetricExporter(otExporter, resource.Default())
 	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
 	if err != nil {
 		return fmt.Errorf("failed to create interval reader: %w", err)
@@ -118,12 +119,12 @@ func monitoring(otExporter export.Exporter) error {
 	defer intervalReader.Stop()
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")
-	r := metric.NewRegistry()
+	r := ocmetric.NewRegistry()
 	metricproducer.GlobalManager().AddProducer(r)
 	gauge, err := r.AddInt64Gauge(
 		"test_gauge",
-		metric.WithDescription("A gauge for testing"),
-		metric.WithConstLabel(map[metricdata.LabelKey]metricdata.LabelValue{
+		ocmetric.WithDescription("A gauge for testing"),
+		ocmetric.WithConstLabel(map[metricdata.LabelKey]metricdata.LabelValue{
 			{Key: keyType.Name()}: metricdata.NewLabelValue("gauge"),
 		}),
 	)

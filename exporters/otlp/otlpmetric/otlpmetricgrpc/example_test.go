@@ -16,188 +16,27 @@ package otlpmetricgrpc_test
 
 import (
 	"context"
-	"log"
-	"time"
 
-	"google.golang.org/grpc/credentials"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-func Example_insecure() {
+func Example() {
 	ctx := context.Background()
-	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
-	exp, err := otlpmetric.New(ctx, client)
+	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create the collector exporter: %v", err)
+		panic(err)
 	}
+
+	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(exp)))
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			panic(err)
 		}
 	}()
+	global.SetMeterProvider(meterProvider)
 
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
-	)
-
-	global.SetMeterProvider(pusher)
-
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controller: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-
-	// Recorder metric example
-
-	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
-	if err != nil {
-		log.Fatalf("Failed to create the instrument: %v", err)
-	}
-
-	for i := 0; i < 10; i++ {
-		log.Printf("Doing really hard work (%d / 10)\n", i+1)
-		counter.Add(ctx, 1.0)
-	}
-}
-
-func Example_withTLS() {
-	// Please take at look at https://pkg.go.dev/google.golang.org/grpc/credentials#TransportCredentials
-	// for ways on how to initialize gRPC TransportCredentials.
-	creds, err := credentials.NewClientTLSFromFile("my-cert.pem", "")
-	if err != nil {
-		log.Fatalf("failed to create gRPC client TLS credentials: %v", err)
-	}
-
-	ctx := context.Background()
-	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithTLSCredentials(creds))
-	exp, err := otlpmetric.New(ctx, client)
-	if err != nil {
-		log.Fatalf("failed to create the collector exporter: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
-	)
-
-	global.SetMeterProvider(pusher)
-
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controller: %v", err)
-	}
-
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-
-	// Recorder metric example
-	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
-	if err != nil {
-		log.Fatalf("Failed to create the instrument: %v", err)
-	}
-
-	for i := 0; i < 10; i++ {
-		log.Printf("Doing really hard work (%d / 10)\n", i+1)
-		counter.Add(ctx, 1.0)
-	}
-}
-
-func Example_withDifferentSignalCollectors() {
-	client := otlpmetricgrpc.NewClient(
-		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithEndpoint("localhost:30080"),
-	)
-	ctx := context.Background()
-	exp, err := otlpmetric.New(ctx, client)
-	if err != nil {
-		log.Fatalf("failed to create the collector exporter: %v", err)
-	}
-
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exp,
-		),
-		controller.WithExporter(exp),
-		controller.WithCollectPeriod(2*time.Second),
-	)
-
-	global.SetMeterProvider(pusher)
-
-	if err := pusher.Start(ctx); err != nil {
-		log.Fatalf("could not start metric controller: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	meter := global.Meter("go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc_test")
-
-	// Recorder metric example
-	counter, err := meter.SyncFloat64().Counter("an_important_metric", instrument.WithDescription("Measures the cumulative epicness of the app"))
-	if err != nil {
-		log.Fatalf("Failed to create the instrument: %v", err)
-	}
-
-	for i := 0; i < 10; i++ {
-		log.Printf("Doing really hard work (%d / 10)\n", i+1)
-		counter.Add(ctx, 1.0)
-	}
-
-	log.Printf("Done!")
+	// From here, the meterProvider can be used by instrumentation to collect
+	// telemetry.
 }
