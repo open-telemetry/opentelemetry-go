@@ -170,6 +170,10 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 }
 
 func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Metrics) []*metricData {
+	valueType := prometheus.CounterValue
+	if !sum.IsMonotonic {
+		valueType = prometheus.GaugeValue
+	}
 	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
@@ -178,7 +182,7 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 			name:            m.Name,
 			description:     desc,
 			attributeValues: values,
-			valueType:       prometheus.CounterValue,
+			valueType:       valueType,
 			value:           float64(dp.Value),
 		}
 		dataPoints = append(dataPoints, md)
