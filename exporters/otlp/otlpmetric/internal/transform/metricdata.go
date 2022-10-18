@@ -173,12 +173,13 @@ func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
 func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramDataPoint {
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
+		sum := dPt.Sum
 		out = append(out, &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
 			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
 			Count:             dPt.Count,
-			Sum:               &dPt.Sum,
+			Sum:               &sum,
 			BucketCounts:      dPt.BucketCounts,
 			ExplicitBounds:    dPt.Bounds,
 			Min:               dPt.Min,
