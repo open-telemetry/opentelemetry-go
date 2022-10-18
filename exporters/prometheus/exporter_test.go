@@ -227,6 +227,8 @@ func TestPrometheusExporter(t *testing.T) {
 				res, err = resource.New(ctx,
 					// always specify service.name because the default depends on the running OS
 					resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+					resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
 					resource.WithAttributes(tc.customResouceAttrs...),
 				)
 				require.NoError(t, err)
