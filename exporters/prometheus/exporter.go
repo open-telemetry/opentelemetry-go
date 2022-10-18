@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -46,9 +47,11 @@ var _ metric.Reader = &Exporter{}
 
 // collector is used to implement prometheus.Collector.
 type collector struct {
-	reader            metric.Reader
-	disableTargetInfo bool
-	targetInfo        *metricData
+	reader metric.Reader
+
+	disableTargetInfo    bool
+	targetInfo           *metricData
+	createTargetInfoOnce sync.Once
 }
 
 // New returns a Prometheus Exporter.
@@ -131,12 +134,12 @@ type metricData struct {
 func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
 	allMetrics := make([]*metricData, 0)
 
-	if !c.disableTargetInfo {
-		if c.targetInfo == nil {
-			// Resource should be immutable, we don't need to compute again
-			c.targetInfo = createInfoMetricData(targetInfoMetricName, targetInfoDescription, metrics.Resource)
-		}
+	c.createTargetInfoOnce.Do(func() {
+		// Resource should be immutable, we don't need to compute again
+		c.targetInfo = c.createInfoMetricData(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+	})
 
+	if c.targetInfo != nil {
 		allMetrics = append(allMetrics, c.targetInfo)
 	}
 
@@ -250,7 +253,11 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	return keys, values
 }
 
-func createInfoMetricData(name, description string, res *resource.Resource) *metricData {
+func (c *collector) createInfoMetricData(name, description string, res *resource.Resource) *metricData {
+	if c.disableTargetInfo {
+		return nil
+	}
+
 	keys, values := getAttrs(*res.Set())
 
 	desc := prometheus.NewDesc(name, description, keys, nil)

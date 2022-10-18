@@ -25,15 +25,16 @@ func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	testCases := []struct {
-		name                  string
-		options               []Option
-		wantRegisterer        prometheus.Registerer
-		wantDisableTargetInfo bool
+		name       string
+		options    []Option
+		wantConfig config
 	}{
 		{
-			name:           "Default",
-			options:        nil,
-			wantRegisterer: prometheus.DefaultRegisterer,
+			name:    "Default",
+			options: nil,
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+			},
 		},
 
 		{
@@ -41,30 +42,35 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithRegisterer(registry),
 			},
-			wantRegisterer: registry,
+			wantConfig: config{
+				registerer: registry,
+			},
 		},
 		{
 			name: "nil options do nothing",
 			options: []Option{
 				WithRegisterer(nil),
 			},
-			wantRegisterer: prometheus.DefaultRegisterer,
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+			},
 		},
 		{
 			name: "without target_info metric",
 			options: []Option{
 				WithoutTargetInfo(),
 			},
-			wantRegisterer:        prometheus.DefaultRegisterer,
-			wantDisableTargetInfo: true,
+			wantConfig: config{
+				registerer:        prometheus.DefaultRegisterer,
+				disableTargetInfo: true,
+			},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
 
-			assert.Equal(t, tt.wantRegisterer, cfg.registerer)
-			assert.Equal(t, tt.wantDisableTargetInfo, cfg.disableTargetInfo)
+			assert.Equal(t, tt.wantConfig, cfg)
 		})
 	}
 }
