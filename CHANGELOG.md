@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Prometheus exporter will register with a prometheus registerer on creation, there are options to control this. (#3239)
-- Added an option to change the AggregationSelector for prometheus. (#????)
+- Added the `WithAggregationSelector` option to the `go.opentelemetry.io/otel/exporters/prometheus` package to change the `AggregationSelector` used. (#3341)
 
 ### Changed
 
