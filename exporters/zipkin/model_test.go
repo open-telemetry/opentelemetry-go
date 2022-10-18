@@ -46,7 +46,85 @@ func TestModelConversion(t *testing.T) {
 	)
 
 	inputBatch := tracetest.SpanStubs{
-		// typical span data
+		// typical span data with UNSET status
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
+				attribute.IntSlice("attr3", []int{0, 1, 2}),
+			},
+			Events: []tracesdk.Event{
+				{
+					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Name: "ev1",
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
+					},
+				},
+				{
+					Time:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Name:       "ev2",
+					Attributes: nil,
+				},
+			},
+			Status: tracesdk.Status{
+				Code:        codes.Unset,
+				Description: "",
+			},
+			Resource: res,
+		},
+		// typical span data with OK status
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
+				attribute.IntSlice("attr3", []int{0, 1, 2}),
+			},
+			Events: []tracesdk.Event{
+				{
+					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Name: "ev1",
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
+					},
+				},
+				{
+					Time:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Name:       "ev2",
+					Attributes: nil,
+				},
+			},
+			Status: tracesdk.Status{
+				Code:        codes.Ok,
+				Description: "",
+			},
+			Resource: res,
+		},
+		// typical span data with ERROR status
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
@@ -374,7 +452,92 @@ func TestModelConversion(t *testing.T) {
 	}.Snapshots()
 
 	expectedOutputBatch := []zkmodel.SpanModel{
-		// model for typical span data
+		// model for typical span data with UNSET status
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xfffefdfcfbfaf9f8),
+				ParentID: zkmodelIDPtr(0x3f3e3d3c3b3a3938),
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
+			RemoteEndpoint: nil,
+			Annotations: []zkmodel.Annotation{
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Value:     `ev1: {"eventattr1":123}`,
+				},
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Value:     "ev2",
+				},
+			},
+			Tags: map[string]string{
+				"attr1":           "42",
+				"attr2":           "bar",
+				"attr3":           "[0,1,2]",
+				"service.name":    "model-test",
+				"service.version": "0.1.0",
+				"resource-attr1":  "42",
+				"resource-attr2":  "[0,1,2]",
+			},
+		},
+		// model for typical span data with OK status
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xfffefdfcfbfaf9f8),
+				ParentID: zkmodelIDPtr(0x3f3e3d3c3b3a3938),
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
+			RemoteEndpoint: nil,
+			Annotations: []zkmodel.Annotation{
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Value:     `ev1: {"eventattr1":123}`,
+				},
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Value:     "ev2",
+				},
+			},
+			Tags: map[string]string{
+				"attr1":            "42",
+				"attr2":            "bar",
+				"attr3":            "[0,1,2]",
+				"otel.status_code": "OK",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
+			},
+		},
+		// model for typical span data with ERROR status
 		{
 			SpanContext: zkmodel.SpanContext{
 				TraceID: zkmodel.TraceID{
@@ -810,7 +973,40 @@ func TestTagsTransformation(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "statusCode",
+			name: "statusCode UNSET",
+			data: tracetest.SpanStub{
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+				},
+				Status: tracesdk.Status{
+					Code:        codes.Unset,
+					Description: "",
+				},
+			},
+			want: map[string]string{
+				"key": keyValue,
+			},
+		},
+		{
+			name: "statusCode OK",
+			data: tracetest.SpanStub{
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Bool("ok", true),
+				},
+				Status: tracesdk.Status{
+					Code:        codes.Ok,
+					Description: "",
+				},
+			},
+			want: map[string]string{
+				"key":              keyValue,
+				"ok":               "true",
+				"otel.status_code": strings.ToUpper(codes.Ok.String()),
+			},
+		},
+		{
+			name: "statusCode ERROR",
 			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
