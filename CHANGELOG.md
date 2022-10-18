@@ -16,6 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
 - The `"go.opentelemetry.io/otel/exporters/prometheus".New` now also returns an error indicating the failure to register the exporter with Prometheus. (#3239)
+- The prometheus exporter will no longer try to enumerate the metrics it will send to prometheus on startup.
+   This fixes the `reader is not registered` warning currently emitted on startup. (#3291 #3342)
 
 ### Fixed
 
