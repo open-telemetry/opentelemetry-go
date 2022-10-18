@@ -19,10 +19,15 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
+
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
 
 	testCases := []struct {
 		name       string
@@ -36,7 +41,6 @@ func TestNewConfig(t *testing.T) {
 				registerer: prometheus.DefaultRegisterer,
 			},
 		},
-
 		{
 			name: "WithRegisterer",
 			options: []Option{
@@ -44,6 +48,28 @@ func TestNewConfig(t *testing.T) {
 			},
 			wantConfig: config{
 				registerer: registry,
+			},
+		},
+		{
+			name: "WithAggregationSelector",
+			options: []Option{
+				WithAggregationSelector(aggregationSelector),
+			},
+			wantConfig: config{
+				registerer:  prometheus.DefaultRegisterer,
+				aggregation: aggregationSelector,
+			},
+		},
+		{
+			name: "With Multiple Options",
+			options: []Option{
+				WithRegisterer(registry),
+				WithAggregationSelector(aggregationSelector),
+			},
+
+			wantConfig: config{
+				registerer:  registry,
+				aggregation: aggregationSelector,
 			},
 		},
 		{
@@ -71,6 +97,34 @@ func TestNewConfig(t *testing.T) {
 			cfg := newConfig(tt.options...)
 
 			assert.Equal(t, tt.wantConfig, cfg)
+		})
+	}
+}
+
+func TestConfigManualReaderOptions(t *testing.T) {
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+
+	testCases := []struct {
+		name            string
+		config          config
+		wantOptionCount int
+	}{
+		{
+			name:            "Default",
+			config:          config{},
+			wantOptionCount: 0,
+		},
+
+		{
+			name:            "WithAggregationSelector",
+			config:          config{aggregation: aggregationSelector},
+			wantOptionCount: 1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := tt.config.manualReaderOptions()
+			assert.Len(t, opts, tt.wantOptionCount)
 		})
 	}
 }
