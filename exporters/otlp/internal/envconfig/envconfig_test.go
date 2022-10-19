@@ -17,6 +17,7 @@ package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/en
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net/url"
 	"testing"
 	"time"
@@ -387,7 +388,7 @@ func TestWithClientCert(t *testing.T) {
 	)
 	assert.Equal(t, cert, option.TestTLS.Certificates[0])
 
-	reader.ReadFile = func(s string) ([]byte, error) { return []byte{}, nil }
+	reader.ReadFile = func(s string) ([]byte, error) { return nil, errors.New("oops") }
 	option.TestTLS = nil
 	reader.Apply(
 		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
