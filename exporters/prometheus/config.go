@@ -22,8 +22,10 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	registerer  prometheus.Registerer
-	aggregation metric.AggregationSelector
+	registerer        prometheus.Registerer
+	disableTargetInfo bool
+	withoutUnits      bool
+	aggregation       metric.AggregationSelector
 }
 
 // newConfig creates a validated config configured with options.
@@ -75,6 +77,31 @@ func WithRegisterer(reg prometheus.Registerer) Option {
 func WithAggregationSelector(agg metric.AggregationSelector) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.aggregation = agg
+		return cfg
+	})
+}
+
+// WithoutTargetInfo configures the Exporter to not export the resource target_info metric.
+// If not specified, the Exporter will create a target_info metric containing
+// the metrics' resource.Resource attributes.
+func WithoutTargetInfo() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.disableTargetInfo = true
+		return cfg
+	})
+}
+
+// WithoutUnits disables exporter's addition of unit suffixes to metric names,
+// and will also prevent unit comments from being added in OpenMetrics once
+// unit comments are supported.
+//
+// By default, metric names include a unit suffix to follow Prometheus naming
+// conventions. For example, the counter metric request.duration, with unit
+// milliseconds would become request_duration_milliseconds_total.
+// With this option set, the name would instead be request_duration_total.
+func WithoutUnits() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.withoutUnits = true
 		return cfg
 	})
 }
