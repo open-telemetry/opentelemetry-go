@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -108,7 +107,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewPrecomputedSum[N](true, metricdata.DeltaTemporality),
+			wantKind: internal.NewPrecomputedDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -116,7 +115,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewPrecomputedSum[N](false, metricdata.DeltaTemporality),
+			wantKind: internal.NewPrecomputedDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -156,7 +155,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewPrecomputedSum[N](true, metricdata.CumulativeTemporality),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -164,7 +163,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewPrecomputedSum[N](false, metricdata.CumulativeTemporality),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{

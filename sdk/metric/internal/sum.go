@@ -166,7 +166,7 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	return out
 }
 
-// NewPrecomputedSum returns an Aggregator that summarizes a set of
+// NewPrecomputedDeltaSum returns an Aggregator that summarizes a set of
 // measurements as their pre-computed arithmetic sum. Each sum is scoped by
 // attributes and the aggregation cycle the measurements were made in.
 //
@@ -174,18 +174,24 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 // monotonic or not. The returned Aggregator does not make any guarantees this
 // value is accurate. It is up to the caller to ensure it.
 //
-// The temporality value is used to communicate the produced Aggregation
-// temporality. The returned Aggregator does not make any guarantees this value
-// is accurate. It is up to the caller to ensure it.
-func NewPrecomputedSum[N int64 | float64](monotonic bool, temporality metricdata.Temporality) Aggregator[N] {
-	var s settableSum[N]
-	switch temporality {
-	case metricdata.DeltaTemporality:
-		s = newDeltaSum[N](monotonic)
-	default:
-		s = newCumulativeSum[N](monotonic)
-	}
-	return &precomputedSum[N]{settableSum: s}
+// The output Aggregation will report recorded values as delta temporality. It
+// is up to the caller to ensure this is accurate.
+func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return &precomputedSum[N]{settableSum: newDeltaSum[N](monotonic)}
+}
+
+// NewPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
+// measurements as their pre-computed arithmetic sum. Each sum is scoped by
+// attributes and the aggregation cycle the measurements were made in.
+//
+// The monotonic value is used to communicate the produced Aggregation is
+// monotonic or not. The returned Aggregator does not make any guarantees this
+// value is accurate. It is up to the caller to ensure it.
+//
+// The output Aggregation will report recorded values as cumulative
+// temporality. It is up to the caller to ensure this is accurate.
+func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return &precomputedSum[N]{settableSum: newCumulativeSum[N](monotonic)}
 }
 
 type settableSum[N int64 | float64] interface {

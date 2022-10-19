@@ -55,22 +55,24 @@ func testSum[N int64 | float64](t *testing.T) {
 		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
 
-	t.Run("PreComputed", func(t *testing.T) {
+	t.Run("PreComputedDelta", func(t *testing.T) {
 		incr, mono, temp := monoIncr, true, metricdata.DeltaTemporality
 		eFunc := preExpecter[N](incr, mono, temp)
-		t.Run("Monotonic/Delta", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+		t.Run("Monotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
 
-		temp = metricdata.CumulativeTemporality
+		incr, mono = nonMonoIncr, false
 		eFunc = preExpecter[N](incr, mono, temp)
-		t.Run("Monotonic/Cumulative", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+	})
 
-		incr, mono, temp = nonMonoIncr, false, metricdata.DeltaTemporality
-		eFunc = preExpecter[N](incr, mono, temp)
-		t.Run("NonMonotonic/Delta", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+	t.Run("PreComputedCumulative", func(t *testing.T) {
+		incr, mono, temp := monoIncr, true, metricdata.CumulativeTemporality
+		eFunc := preExpecter[N](incr, mono, temp)
+		t.Run("Monotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
 
-		temp = metricdata.CumulativeTemporality
+		incr, mono = nonMonoIncr, false
 		eFunc = preExpecter[N](incr, mono, temp)
-		t.Run("NonMonotonic/Cumulative", tester.Run(NewPrecomputedSum[N](mono, temp), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
 	})
 }
 

@@ -337,7 +337,14 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind view.Instrume
 			// Asynchronous counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
-			return internal.NewPrecomputedSum[N](monotonic, temporality), nil
+			switch temporality {
+			case metricdata.CumulativeTemporality:
+				return internal.NewPrecomputedCumulativeSum[N](monotonic), nil
+			case metricdata.DeltaTemporality:
+				return internal.NewPrecomputedDeltaSum[N](monotonic), nil
+			default:
+				return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
+			}
 		}
 
 		switch temporality {
