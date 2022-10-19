@@ -27,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -50,6 +51,7 @@ type collector struct {
 	reader metric.Reader
 
 	disableTargetInfo    bool
+	withoutUnits         bool
 	targetInfo           *metricData
 	createTargetInfoOnce sync.Once
 }
@@ -70,6 +72,7 @@ func New(opts ...Option) (*Exporter, error) {
 	collector := &collector{
 		reader:            reader,
 		disableTargetInfo: cfg.disableTargetInfo,
+		withoutUnits:      cfg.withoutUnits,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -151,15 +154,15 @@ func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricD
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
 			case metricdata.Histogram:
-				allMetrics = append(allMetrics, getHistogramMetricData(v, m)...)
+				allMetrics = append(allMetrics, getHistogramMetricData(v, m, c.getName(m))...)
 			case metricdata.Sum[int64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m)...)
+				allMetrics = append(allMetrics, getSumMetricData(v, m, c.getName(m))...)
 			case metricdata.Sum[float64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m)...)
+				allMetrics = append(allMetrics, getSumMetricData(v, m, c.getName(m))...)
 			case metricdata.Gauge[int64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m)...)
+				allMetrics = append(allMetrics, getGaugeMetricData(v, m, c.getName(m))...)
 			case metricdata.Gauge[float64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m)...)
+				allMetrics = append(allMetrics, getGaugeMetricData(v, m, c.getName(m))...)
 			}
 		}
 	}
@@ -167,12 +170,12 @@ func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricD
 	return allMetrics
 }
 
-func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics) []*metricData {
+func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics, name string) []*metricData {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	dataPoints := make([]*metricData, 0, len(histogram.DataPoints))
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
 
 		cumulativeCount := uint64(0)
@@ -194,15 +197,15 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 	return dataPoints
 }
 
-func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Metrics) []*metricData {
+func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Metrics, name string) []*metricData {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
 	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
-		name := sanitizeName(m.Name)
 		if sum.IsMonotonic {
+			// Add _total suffix for counters
 			name += counterSuffix
 		}
 		keys, values := getAttrs(dp.Attributes)
@@ -219,11 +222,11 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 	return dataPoints
 }
 
-func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricdata.Metrics) []*metricData {
+func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricdata.Metrics, name string) []*metricData {
 	dataPoints := make([]*metricData, 0, len(gauge.DataPoints))
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		md := &metricData{
 			name:            m.Name,
 			description:     desc,
@@ -287,6 +290,24 @@ func sanitizeRune(r rune) rune {
 		return r
 	}
 	return '_'
+}
+
+var unitSuffixes = map[unit.Unit]string{
+	unit.Dimensionless: "_ratio",
+	unit.Bytes:         "_bytes",
+	unit.Milliseconds:  "_milliseconds",
+}
+
+// getName returns the sanitized name, including unit suffix.
+func (c *collector) getName(m metricdata.Metrics) string {
+	name := sanitizeName(m.Name)
+	if c.withoutUnits {
+		return name
+	}
+	if suffix, ok := unitSuffixes[m.Unit]; ok {
+		name += suffix
+	}
+	return name
 }
 
 func sanitizeName(n string) string {

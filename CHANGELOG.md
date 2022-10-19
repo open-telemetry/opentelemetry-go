@@ -38,6 +38,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    Instead the exporter is defined as an "unchecked" collector for Prometheus.
    This fixes the `reader is not registered` warning currently emitted on startup. (#3291 #3342)
 - The `go.opentelemetry.io/otel/exporters/prometheus` exporter now correctly adds `_total` suffixes to counter metrics. (#3360)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter now adds a unit suffix to metric names.
+   This can be disabled using the `WithoutUnits()` option added to that package. (#3352)
 
 ## [1.11.0/0.32.3] 2022-10-12
 
