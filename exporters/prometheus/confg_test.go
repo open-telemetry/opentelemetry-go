@@ -89,11 +89,20 @@ func TestNewConfig(t *testing.T) {
 				disableTargetInfo: true,
 			},
 		},
+		{
+			name: "unit suffixes disabled",
+			options: []Option{
+				WithoutUnits(),
+			},
+			wantConfig: config{
+				registerer:   prometheus.DefaultRegisterer,
+				withoutUnits: true,
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
-
 			// tested by TestConfigManualReaderOptions
 			cfg.aggregation = nil
 
