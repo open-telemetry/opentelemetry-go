@@ -48,6 +48,13 @@ func Info(msg string, keysAndValues ...interface{}) {
 	globalLogger.V(1).Info(msg, keysAndValues...)
 }
 
+// Warn prints messages about potential issues with the API or SDK.
+func Warn(msg string, keysAndValues ...interface{}) {
+	globalLoggerLock.RLock()
+	defer globalLoggerLock.RUnlock()
+	globalLogger.V(0).Info(msg, keysAndValues...)
+}
+
 // Error prints messages about exceptional states of the API or SDK.
 func Error(err error, msg string, keysAndValues ...interface{}) {
 	globalLoggerLock.RLock()

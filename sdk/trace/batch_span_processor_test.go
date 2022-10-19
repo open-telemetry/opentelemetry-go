@@ -19,7 +19,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
+	"go.opentelemetry.io/otel"
 	"os"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -47,6 +51,16 @@ type testBatchExporter struct {
 	droppedCount  int
 	idx           int
 	err           error
+}
+
+type logCounter struct {
+	logr.LogSink
+	logs []string
+}
+
+func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
+	l.logs = append(l.logs, fmt.Sprint(msg, keysAndValues))
+	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
@@ -350,6 +364,12 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace
 	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
+func createAndRegisterBatchSPNonBlocking(option testOption, te *testBatchExporter) sdktrace.SpanProcessor {
+	// Blocking span processor should be preferred to avoid flaky test
+	// To test dropped spans warn logging the blocking span processor bypasses drop logic
+	return sdktrace.NewBatchSpanProcessor(te, option.o...)
+}
+
 func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
@@ -472,6 +492,38 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		t.Errorf("Batches %v\n", te.sizes)
 	}
 	assert.NoError(t, err)
+}
+
+func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
+	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 0})
+	l := &logCounter{LogSink: tLog.GetSink()}
+	otel.SetLogger(logr.New(l))
+	global.SetLogger(logr.New(l))
+
+	te := testBatchExporter{}
+	tp := basicTracerProvider(t)
+	option := testOption{
+		name: "default BatchSpanProcessorOptions",
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxQueueSize(0),
+			sdktrace.WithMaxExportBatchSize(10),
+		},
+		genNumSpans: 100,
+	}
+	ssp := createAndRegisterBatchSPNonBlocking(option, &te)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+
+	// Force flush any held span batches
+	generateSpan(t, tr, option)
+	ssp.ForceFlush(context.Background())
+
+	assert.Equal(t, len(l.logs), 1, "expected log message")
+	droppedLogs := l.logs[0]
+	assert.Regexp(t, regexp.MustCompile(`dropped spans\[total_dropped \d+ known_dropped \d+\]`), droppedLogs)
 }
 
 func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {

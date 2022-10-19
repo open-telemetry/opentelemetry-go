@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Prometheus exporter will register with a prometheus registerer on creation, there are options to control this. (#3239)
+- Batch span processor will now keep track of known dropped span count and log a warning during batch export on newly dropped spans. (#3289)
 
 ### Changed
 
