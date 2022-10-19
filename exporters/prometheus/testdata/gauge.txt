@@ -1,3 +1,6 @@
 # HELP bar a fun little gauge
 # TYPE bar gauge
 bar{A="B",C="D"} 75
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{service_name="prometheus_test",telemetry_sdk_language="go",telemetry_sdk_name="opentelemetry",telemetry_sdk_version="latest"} 1

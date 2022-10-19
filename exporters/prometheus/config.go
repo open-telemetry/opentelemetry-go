@@ -22,8 +22,9 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	registerer  prometheus.Registerer
-	aggregation metric.AggregationSelector
+	registerer        prometheus.Registerer
+	disableTargetInfo bool
+	aggregation       metric.AggregationSelector
 }
 
 // newConfig creates a validated config configured with options.
@@ -75,6 +76,16 @@ func WithRegisterer(reg prometheus.Registerer) Option {
 func WithAggregationSelector(agg metric.AggregationSelector) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.aggregation = agg
+		return cfg
+	})
+}
+
+// WithoutTargetInfo configures the Exporter to not export the resource target_info metric.
+// If not specified, the Exporter will create a target_info metric containing
+// the metrics' resource.Resource attributes.
+func WithoutTargetInfo() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.disableTargetInfo = true
 		return cfg
 	})
 }
