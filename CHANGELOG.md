@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Decode urlencoded values from the `OTEL_RESOURCE_ATTRIBUTES` environment variable. (#2963)
 - `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
 - The `"go.opentelemetry.io/otel/exporters/prometheus".New` now also returns an error indicating the failure to register the exporter with Prometheus. (#3239)
 - The prometheus exporter will no longer try to enumerate the metrics it will send to prometheus on startup.
@@ -27,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
 - Prometheus exporter will now cumulatively sum histogram buckets. (#3281)
 - Export the sum of each histogram datapoint uniquely with the `go.opentelemetry.io/otel/exporters/otlpmetric` exporters. (#3284, #3293)
+- UpDownCounters are now correctly output as prometheus gauges in the `go.opentelemetry.io/otel/exporters/prometheus` exporter. (#3358)
 
 ## [1.11.0/0.32.3] 2022-10-12
 

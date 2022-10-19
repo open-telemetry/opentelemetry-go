@@ -1,5 +1,5 @@
 # HELP bar a fun little gauge
-# TYPE bar counter
+# TYPE bar gauge
 bar{A="B",C="D"} 75
 # HELP target_info Target metadata
 # TYPE target_info gauge
