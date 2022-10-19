@@ -59,6 +59,16 @@ func WithString(n string, fn func(string)) func(e *EnvOptionsReader) {
 	}
 }
 
+// WithBool retrieves the specified config and passes it to ConfigFn as a boolean.
+func WithBool(n string, fn func(bool)) func(e *EnvOptionsReader) {
+	return func(e *EnvOptionsReader) {
+		if v, ok := e.GetEnvValue(n); ok {
+			b := strings.ToLower(v) == "true"
+			fn(b)
+		}
+	}
+}
+
 // WithDuration retrieves the specified config and passes it to ConfigFn as a duration.
 func WithDuration(n string, fn func(time.Duration)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
@@ -90,16 +100,39 @@ func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
 	}
 }
 
-// WithTLSConfig retrieves the specified config and passes it to ConfigFn as a crypto/tls.Config.
-func WithTLSConfig(n string, fn func(*tls.Config)) func(e *EnvOptionsReader) {
+// WithCertPool retrieves the specified config and passes it to ConfigFn as a crypto/x509.CertPool
+// constructed from reading the certificate at the given path.
+func WithCertPool(n string, fn func(*x509.CertPool)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
 			if b, err := e.ReadFile(v); err == nil {
-				if c, err := createTLSConfig(b); err == nil {
+				if c, err := createCertPool(b); err == nil {
 					fn(c)
 				}
 			}
 		}
+	}
+}
+
+// WithCertPool retrieves the specified configs and passes it to ConfigFn as a crypto/tls.Certificate
+// constructed from reading the key pair at the given paths. Both files must exist.
+func WithClientCert(nc, nk string, fn func(tls.Certificate)) func(e *EnvOptionsReader) {
+	return func(e *EnvOptionsReader) {
+		vc, okc := e.GetEnvValue(nc)
+		vk, okk := e.GetEnvValue(nk)
+		if !okc || !okk {
+			return
+		}
+		cert, errc := e.ReadFile(vc)
+		key, errk := e.ReadFile(vk)
+		if errc != nil && errk != nil {
+			return
+		}
+		crt, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			return
+		}
+		fn(crt)
 	}
 }
 
@@ -136,13 +169,10 @@ func stringToHeader(value string) map[string]string {
 	return headers
 }
 
-func createTLSConfig(certBytes []byte) (*tls.Config, error) {
+func createCertPool(certBytes []byte) (*x509.CertPool, error) {
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(certBytes); !ok {
 		return nil, errors.New("failed to append certificate to the cert pool")
 	}
-
-	return &tls.Config{
-		RootCAs: cp,
-	}, nil
+	return cp, nil
 }
