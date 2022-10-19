@@ -107,7 +107,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewDeltaSum[N](true),
+			wantKind: internal.NewPrecomputedDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -115,7 +115,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewDeltaSum[N](false),
+			wantKind: internal.NewPrecomputedDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -155,7 +155,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -163,7 +163,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](false),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
