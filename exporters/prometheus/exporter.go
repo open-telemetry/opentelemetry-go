@@ -50,7 +50,7 @@ func New(opts ...Option) (*Exporter, error) {
 	// this assumes that the default temporality selector will always return cumulative.
 	// we only support cumulative temporality, so building our own reader enforces this.
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
-	reader := metric.NewManualReader()
+	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
 
 	collector := &collector{
 		reader: reader,
@@ -69,13 +69,11 @@ func New(opts ...Option) (*Exporter, error) {
 
 // Describe implements prometheus.Collector.
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	metrics, err := c.reader.Collect(context.TODO())
-	if err != nil {
-		otel.Handle(err)
-	}
-	for _, metricData := range getMetricData(metrics) {
-		ch <- metricData.description
-	}
+	// The Opentelemetry SDK doesn't have information on which will exist when the collector
+	// is registered. By returning nothing we are an "unchecked" collector in Prometheus,
+	// and assume responsibility for consistency of the metrics produced.
+	//
+	// See https://pkg.go.dev/github.com/prometheus/client_golang@v1.13.0/prometheus#hdr-Custom_Collectors_and_constant_Metrics
 }
 
 // Collect implements prometheus.Collector.
