@@ -52,7 +52,7 @@ type collector struct {
 
 	disableTargetInfo    bool
 	withoutUnits         bool
-	targetInfo           *metricData
+	targetInfo           prometheus.Metric
 	createTargetInfoOnce sync.Once
 }
 
@@ -105,74 +105,39 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	for _, metricData := range c.getMetricData(metrics) {
-		if metricData.valueType == prometheus.UntypedValue {
-			m, err := prometheus.NewConstHistogram(metricData.description, metricData.histogramCount, metricData.histogramSum, metricData.histogramBuckets, metricData.attributeValues...)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			ch <- m
-		} else {
-			m, err := prometheus.NewConstMetric(metricData.description, metricData.valueType, metricData.value, metricData.attributeValues...)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			ch <- m
-		}
-	}
-}
-
-// metricData holds the metadata as well as values for individual data points.
-type metricData struct {
-	// name should include the unit as a suffix (before _total on counters)
-	// see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#metric-metadata-1
-	name             string
-	description      *prometheus.Desc
-	attributeValues  []string
-	valueType        prometheus.ValueType
-	value            float64
-	histogramCount   uint64
-	histogramSum     float64
-	histogramBuckets map[float64]uint64
-}
-
-func (c *collector) getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
-	allMetrics := make([]*metricData, 0)
-
 	c.createTargetInfoOnce.Do(func() {
 		// Resource should be immutable, we don't need to compute again
-		c.targetInfo = c.createInfoMetricData(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+		targetInfo, err := c.createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+		if err != nil {
+			// If the target info metric is invalid, disable sending it.
+			otel.Handle(err)
+			c.disableTargetInfo = true
+		}
+		c.targetInfo = targetInfo
 	})
-
-	if c.targetInfo != nil {
-		allMetrics = append(allMetrics, c.targetInfo)
+	if !c.disableTargetInfo {
+		ch <- c.targetInfo
 	}
-
 	for _, scopeMetrics := range metrics.ScopeMetrics {
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
 			case metricdata.Histogram:
-				allMetrics = append(allMetrics, getHistogramMetricData(v, m, c.getName(m))...)
+				addHistogramMetric(ch, v, m, c.getName(m))
 			case metricdata.Sum[int64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m, c.getName(m))...)
+				addSumMetric(ch, v, m, c.getName(m))
 			case metricdata.Sum[float64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m, c.getName(m))...)
+				addSumMetric(ch, v, m, c.getName(m))
 			case metricdata.Gauge[int64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m, c.getName(m))...)
+				addGaugeMetric(ch, v, m, c.getName(m))
 			case metricdata.Gauge[float64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m, c.getName(m))...)
+				addGaugeMetric(ch, v, m, c.getName(m))
 			}
 		}
 	}
-
-	return allMetrics
 }
 
-func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics, name string) []*metricData {
+func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, name string) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
-	dataPoints := make([]*metricData, 0, len(histogram.DataPoints))
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
@@ -183,26 +148,20 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		md := &metricData{
-			name:             m.Name,
-			description:      desc,
-			attributeValues:  values,
-			valueType:        prometheus.UntypedValue,
-			histogramCount:   dp.Count,
-			histogramSum:     dp.Sum,
-			histogramBuckets: buckets,
+		m, err := prometheus.NewConstHistogram(desc, dp.Count, dp.Sum, buckets, values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
-func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Metrics, name string) []*metricData {
+func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, name string) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
-	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
 	for _, dp := range sum.DataPoints {
 		if sum.IsMonotonic {
 			// Add _total suffix for counters
@@ -210,33 +169,26 @@ func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Met
 		}
 		keys, values := getAttrs(dp.Attributes)
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		md := &metricData{
-			name:            m.Name,
-			description:     desc,
-			attributeValues: values,
-			valueType:       valueType,
-			value:           float64(dp.Value),
+		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
-func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricdata.Metrics, name string) []*metricData {
-	dataPoints := make([]*metricData, 0, len(gauge.DataPoints))
+func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, name string) {
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		md := &metricData{
-			name:            m.Name,
-			description:     desc,
-			attributeValues: values,
-			valueType:       prometheus.GaugeValue,
-			value:           float64(dp.Value),
+		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
 // getAttrs parses the attribute.Set to two lists of matching Prometheus-style
@@ -268,21 +220,10 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	return keys, values
 }
 
-func (c *collector) createInfoMetricData(name, description string, res *resource.Resource) *metricData {
-	if c.disableTargetInfo {
-		return nil
-	}
-
+func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
 	keys, values := getAttrs(*res.Set())
-
 	desc := prometheus.NewDesc(name, description, keys, nil)
-	return &metricData{
-		name:            name,
-		description:     desc,
-		attributeValues: values,
-		valueType:       prometheus.GaugeValue,
-		value:           float64(1),
-	}
+	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
 func sanitizeRune(r rune) rune {
