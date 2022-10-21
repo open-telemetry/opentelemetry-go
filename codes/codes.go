@@ -34,7 +34,7 @@ const (
 	// Ok indicates operation has been validated by an Application developers
 	// or Operator to have completed successfully, or contain no error.
 	//
-	// NOTE: The Ok code in in OTLP is 1.
+	// NOTE: The Ok code in OTLP is 1.
 	// The value of this enum is only relevant to the internals
 	// of the Go SDK.
 	Ok Code = 2
