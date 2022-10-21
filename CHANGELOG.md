@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Remove comparable requirement for `Reader`s. (#3290)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter fixes duplicated `_total` suffixes. (#3369)
 
 ## [1.11.1/0.33.0] 2022-10-19
 
