@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -26,8 +27,15 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+const (
+	targetInfoMetricName  = "target_info"
+	targetInfoDescription = "Target metadata"
 )
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
@@ -41,7 +49,16 @@ var _ metric.Reader = &Exporter{}
 // collector is used to implement prometheus.Collector.
 type collector struct {
 	reader metric.Reader
+
+	disableTargetInfo    bool
+	withoutUnits         bool
+	targetInfo           prometheus.Metric
+	createTargetInfoOnce sync.Once
 }
+
+// prometheus counters MUST have a _total suffix:
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.14.0/specification/metrics/data-model.md#sums-1
+const counterSuffix = "_total"
 
 // New returns a Prometheus Exporter.
 func New(opts ...Option) (*Exporter, error) {
@@ -50,10 +67,12 @@ func New(opts ...Option) (*Exporter, error) {
 	// this assumes that the default temporality selector will always return cumulative.
 	// we only support cumulative temporality, so building our own reader enforces this.
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
-	reader := metric.NewManualReader()
+	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
 
 	collector := &collector{
-		reader: reader,
+		reader:            reader,
+		disableTargetInfo: cfg.disableTargetInfo,
+		withoutUnits:      cfg.withoutUnits,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -69,13 +88,11 @@ func New(opts ...Option) (*Exporter, error) {
 
 // Describe implements prometheus.Collector.
 func (c *collector) Describe(ch chan<- *prometheus.Desc) {
-	metrics, err := c.reader.Collect(context.TODO())
-	if err != nil {
-		otel.Handle(err)
-	}
-	for _, metricData := range getMetricData(metrics) {
-		ch <- metricData.description
-	}
+	// The Opentelemetry SDK doesn't have information on which will exist when the collector
+	// is registered. By returning nothing we are an "unchecked" collector in Prometheus,
+	// and assume responsibility for consistency of the metrics produced.
+	//
+	// See https://pkg.go.dev/github.com/prometheus/client_golang@v1.13.0/prometheus#hdr-Custom_Collectors_and_constant_Metrics
 }
 
 // Collect implements prometheus.Collector.
@@ -83,71 +100,47 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics, err := c.reader.Collect(context.TODO())
 	if err != nil {
 		otel.Handle(err)
-	}
-
-	// TODO(#3166): convert otel resource to target_info
-	// see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#resource-attributes-1
-	for _, metricData := range getMetricData(metrics) {
-		if metricData.valueType == prometheus.UntypedValue {
-			m, err := prometheus.NewConstHistogram(metricData.description, metricData.histogramCount, metricData.histogramSum, metricData.histogramBuckets, metricData.attributeValues...)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			ch <- m
-		} else {
-			m, err := prometheus.NewConstMetric(metricData.description, metricData.valueType, metricData.value, metricData.attributeValues...)
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
-			ch <- m
+		if err == metric.ErrReaderNotRegistered {
+			return
 		}
 	}
-}
 
-// metricData holds the metadata as well as values for individual data points.
-type metricData struct {
-	// name should include the unit as a suffix (before _total on counters)
-	// see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#metric-metadata-1
-	name             string
-	description      *prometheus.Desc
-	attributeValues  []string
-	valueType        prometheus.ValueType
-	value            float64
-	histogramCount   uint64
-	histogramSum     float64
-	histogramBuckets map[float64]uint64
-}
-
-func getMetricData(metrics metricdata.ResourceMetrics) []*metricData {
-	allMetrics := make([]*metricData, 0)
+	c.createTargetInfoOnce.Do(func() {
+		// Resource should be immutable, we don't need to compute again
+		targetInfo, err := c.createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+		if err != nil {
+			// If the target info metric is invalid, disable sending it.
+			otel.Handle(err)
+			c.disableTargetInfo = true
+		}
+		c.targetInfo = targetInfo
+	})
+	if !c.disableTargetInfo {
+		ch <- c.targetInfo
+	}
 	for _, scopeMetrics := range metrics.ScopeMetrics {
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
 			case metricdata.Histogram:
-				allMetrics = append(allMetrics, getHistogramMetricData(v, m)...)
+				addHistogramMetric(ch, v, m, c.getName(m))
 			case metricdata.Sum[int64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m)...)
+				addSumMetric(ch, v, m, c.getName(m))
 			case metricdata.Sum[float64]:
-				allMetrics = append(allMetrics, getSumMetricData(v, m)...)
+				addSumMetric(ch, v, m, c.getName(m))
 			case metricdata.Gauge[int64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m)...)
+				addGaugeMetric(ch, v, m, c.getName(m))
 			case metricdata.Gauge[float64]:
-				allMetrics = append(allMetrics, getGaugeMetricData(v, m)...)
+				addGaugeMetric(ch, v, m, c.getName(m))
 			}
 		}
 	}
-
-	return allMetrics
 }
 
-func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics) []*metricData {
+func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, name string) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
-	dataPoints := make([]*metricData, 0, len(histogram.DataPoints))
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
 
 		cumulativeCount := uint64(0)
@@ -155,52 +148,47 @@ func getHistogramMetricData(histogram metricdata.Histogram, m metricdata.Metrics
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		md := &metricData{
-			name:             m.Name,
-			description:      desc,
-			attributeValues:  values,
-			valueType:        prometheus.UntypedValue,
-			histogramCount:   dp.Count,
-			histogramSum:     dp.Sum,
-			histogramBuckets: buckets,
+		m, err := prometheus.NewConstHistogram(desc, dp.Count, dp.Sum, buckets, values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
-func getSumMetricData[N int64 | float64](sum metricdata.Sum[N], m metricdata.Metrics) []*metricData {
-	dataPoints := make([]*metricData, 0, len(sum.DataPoints))
+func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, name string) {
+	valueType := prometheus.CounterValue
+	if !sum.IsMonotonic {
+		valueType = prometheus.GaugeValue
+	}
+	if sum.IsMonotonic {
+		// Add _total suffix for counters
+		name += counterSuffix
+	}
 	for _, dp := range sum.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
-		md := &metricData{
-			name:            m.Name,
-			description:     desc,
-			attributeValues: values,
-			valueType:       prometheus.CounterValue,
-			value:           float64(dp.Value),
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
-func getGaugeMetricData[N int64 | float64](gauge metricdata.Gauge[N], m metricdata.Metrics) []*metricData {
-	dataPoints := make([]*metricData, 0, len(gauge.DataPoints))
+func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, name string) {
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
-		desc := prometheus.NewDesc(sanitizeName(m.Name), m.Description, keys, nil)
-		md := &metricData{
-			name:            m.Name,
-			description:     desc,
-			attributeValues: values,
-			valueType:       prometheus.GaugeValue,
-			value:           float64(dp.Value),
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
 		}
-		dataPoints = append(dataPoints, md)
+		ch <- m
 	}
-	return dataPoints
 }
 
 // getAttrs parses the attribute.Set to two lists of matching Prometheus-style
@@ -232,11 +220,35 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	return keys, values
 }
 
+func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
+	keys, values := getAttrs(*res.Set())
+	desc := prometheus.NewDesc(name, description, keys, nil)
+	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
+}
+
 func sanitizeRune(r rune) rune {
 	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ':' || r == '_' {
 		return r
 	}
 	return '_'
+}
+
+var unitSuffixes = map[unit.Unit]string{
+	unit.Dimensionless: "_ratio",
+	unit.Bytes:         "_bytes",
+	unit.Milliseconds:  "_milliseconds",
+}
+
+// getName returns the sanitized name, including unit suffix.
+func (c *collector) getName(m metricdata.Metrics) string {
+	name := sanitizeName(m.Name)
+	if c.withoutUnits {
+		return name
+	}
+	if suffix, ok := unitSuffixes[m.Unit]; ok {
+		name += suffix
+	}
+	return name
 }
 
 func sanitizeName(n string) string {

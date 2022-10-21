@@ -266,7 +266,7 @@ func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (inter
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
 	return i.cache.LookupAggregator(id, func() (internal.Aggregator[N], error) {
-		agg, err := i.aggregator(inst.Aggregation, id.Temporality, id.Monotonic)
+		agg, err := i.aggregator(inst.Aggregation, inst.Kind, id.Temporality, id.Monotonic)
 		if err != nil {
 			return nil, err
 		}
@@ -322,16 +322,31 @@ func (i *inserter[N]) instrumentID(vi view.Instrument, u unit.Unit) instrumentID
 	return id
 }
 
-// aggregator returns a new Aggregator matching agg, temporality, and
+// aggregator returns a new Aggregator matching agg, kind, temporality, and
 // monotonic. If the agg is unknown or temporality is invalid, an error is
 // returned.
-func (i *inserter[N]) aggregator(agg aggregation.Aggregation, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
+func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind view.InstrumentKind, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
 	switch a := agg.(type) {
 	case aggregation.Drop:
 		return nil, nil
 	case aggregation.LastValue:
 		return internal.NewLastValue[N](), nil
 	case aggregation.Sum:
+		switch kind {
+		case view.AsyncCounter, view.AsyncUpDownCounter:
+			// Asynchronous counters and up-down-counters are defined to record
+			// the absolute value of the count:
+			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
+			switch temporality {
+			case metricdata.CumulativeTemporality:
+				return internal.NewPrecomputedCumulativeSum[N](monotonic), nil
+			case metricdata.DeltaTemporality:
+				return internal.NewPrecomputedDeltaSum[N](monotonic), nil
+			default:
+				return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
+			}
+		}
+
 		switch temporality {
 		case metricdata.CumulativeTemporality:
 			return internal.NewCumulativeSum[N](monotonic), nil

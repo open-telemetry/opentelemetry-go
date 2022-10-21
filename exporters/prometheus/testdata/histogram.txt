@@ -1,15 +1,18 @@
-# HELP histogram_baz a very nice histogram
-# TYPE histogram_baz histogram
-histogram_baz_bucket{A="B",C="D",le="0"} 0
-histogram_baz_bucket{A="B",C="D",le="5"} 0
-histogram_baz_bucket{A="B",C="D",le="10"} 1
-histogram_baz_bucket{A="B",C="D",le="25"} 2
-histogram_baz_bucket{A="B",C="D",le="50"} 2
-histogram_baz_bucket{A="B",C="D",le="75"} 2
-histogram_baz_bucket{A="B",C="D",le="100"} 2
-histogram_baz_bucket{A="B",C="D",le="250"} 4
-histogram_baz_bucket{A="B",C="D",le="500"} 4
-histogram_baz_bucket{A="B",C="D",le="1000"} 4
-histogram_baz_bucket{A="B",C="D",le="+Inf"} 4
-histogram_baz_sum{A="B",C="D"} 236
-histogram_baz_count{A="B",C="D"} 4
+# HELP histogram_baz_bytes a very nice histogram
+# TYPE histogram_baz_bytes histogram
+histogram_baz_bytes_bucket{A="B",C="D",le="0"} 0
+histogram_baz_bytes_bucket{A="B",C="D",le="5"} 0
+histogram_baz_bytes_bucket{A="B",C="D",le="10"} 1
+histogram_baz_bytes_bucket{A="B",C="D",le="25"} 2
+histogram_baz_bytes_bucket{A="B",C="D",le="50"} 2
+histogram_baz_bytes_bucket{A="B",C="D",le="75"} 2
+histogram_baz_bytes_bucket{A="B",C="D",le="100"} 2
+histogram_baz_bytes_bucket{A="B",C="D",le="250"} 4
+histogram_baz_bytes_bucket{A="B",C="D",le="500"} 4
+histogram_baz_bytes_bucket{A="B",C="D",le="1000"} 4
+histogram_baz_bytes_bucket{A="B",C="D",le="+Inf"} 4
+histogram_baz_bytes_sum{A="B",C="D"} 236
+histogram_baz_bytes_count{A="B",C="D"} 4
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{service_name="prometheus_test",telemetry_sdk_language="go",telemetry_sdk_name="opentelemetry",telemetry_sdk_version="latest"} 1
