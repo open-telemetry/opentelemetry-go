@@ -412,6 +412,7 @@ func TestConvertMetrics(t *testing.T) {
 					Description: "a testing sum",
 					Unit:        unit.Dimensionless,
 					Data: metricdata.Sum[float64]{
+						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints:  []metricdata.DataPoint[float64]{},
 					},
