@@ -312,6 +312,7 @@ func TestConvertMetrics(t *testing.T) {
 					Description: "an int testing sum",
 					Unit:        unit.Milliseconds,
 					Data: metricdata.Sum[int64]{
+						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
@@ -342,6 +343,7 @@ func TestConvertMetrics(t *testing.T) {
 					Description: "a float testing sum",
 					Unit:        unit.Milliseconds,
 					Data: metricdata.Sum[float64]{
+						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints: []metricdata.DataPoint[float64]{
 							{
