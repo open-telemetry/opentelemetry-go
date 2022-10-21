@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Batch span processor will now keep track of known dropped span count and log a warning during batch export on newly dropped spans. (#3289)
+
 ### Fixed
 
 - The `go.opentelemetry.io/otel/exporters/prometheus` exporter fixes duplicated `_total` suffixes. (#3369)
@@ -21,7 +23,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    A non-default registerer can be used by passing the `WithRegisterer` option. (#3239)
 - Added the `WithAggregationSelector` option to the `go.opentelemetry.io/otel/exporters/prometheus` package to change the default `AggregationSelector` used. (#3341)
 - The Prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus` converts the `Resource` associated with metric exports into a `target_info` metric. (#3285)
-- Batch span processor will now keep track of known dropped span count and log a warning during batch export on newly dropped spans. (#3289)
 
 ### Changed
 
