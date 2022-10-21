@@ -62,6 +62,14 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
+
+				attrs2 := []attribute.KeyValue{
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter.Add(ctx, 5, attrs2...)
 			},
 		},
 		{
