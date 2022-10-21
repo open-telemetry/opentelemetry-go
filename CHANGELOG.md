@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `WithView` `MeterProviderOption` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
+- The `WithView` `Option` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
    This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
 
 ### Changed
