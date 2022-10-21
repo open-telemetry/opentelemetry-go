@@ -19,42 +19,122 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+
 	testCases := []struct {
-		name           string
-		options        []Option
-		wantRegisterer prometheus.Registerer
+		name       string
+		options    []Option
+		wantConfig config
 	}{
 		{
-			name:           "Default",
-			options:        nil,
-			wantRegisterer: prometheus.DefaultRegisterer,
+			name:    "Default",
+			options: nil,
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+			},
 		},
-
 		{
 			name: "WithRegisterer",
 			options: []Option{
 				WithRegisterer(registry),
 			},
-			wantRegisterer: registry,
+			wantConfig: config{
+				registerer: registry,
+			},
+		},
+		{
+			name: "WithAggregationSelector",
+			options: []Option{
+				WithAggregationSelector(aggregationSelector),
+			},
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+			},
+		},
+		{
+			name: "With Multiple Options",
+			options: []Option{
+				WithRegisterer(registry),
+				WithAggregationSelector(aggregationSelector),
+			},
+
+			wantConfig: config{
+				registerer: registry,
+			},
 		},
 		{
 			name: "nil options do nothing",
 			options: []Option{
 				WithRegisterer(nil),
 			},
-			wantRegisterer: prometheus.DefaultRegisterer,
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+			},
+		},
+		{
+			name: "without target_info metric",
+			options: []Option{
+				WithoutTargetInfo(),
+			},
+			wantConfig: config{
+				registerer:        prometheus.DefaultRegisterer,
+				disableTargetInfo: true,
+			},
+		},
+		{
+			name: "unit suffixes disabled",
+			options: []Option{
+				WithoutUnits(),
+			},
+			wantConfig: config{
+				registerer:   prometheus.DefaultRegisterer,
+				withoutUnits: true,
+			},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
+			// tested by TestConfigManualReaderOptions
+			cfg.aggregation = nil
 
-			assert.Equal(t, tt.wantRegisterer, cfg.registerer)
+			assert.Equal(t, tt.wantConfig, cfg)
+		})
+	}
+}
+
+func TestConfigManualReaderOptions(t *testing.T) {
+	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+
+	testCases := []struct {
+		name            string
+		config          config
+		wantOptionCount int
+	}{
+		{
+			name:            "Default",
+			config:          config{},
+			wantOptionCount: 0,
+		},
+
+		{
+			name:            "WithAggregationSelector",
+			config:          config{aggregation: aggregationSelector},
+			wantOptionCount: 1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := tt.config.manualReaderOptions()
+			assert.Len(t, opts, tt.wantOptionCount)
 		})
 	}
 }
