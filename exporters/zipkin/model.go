@@ -210,7 +210,7 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	}
 
 	if data.Status().Code != codes.Unset {
-		// zipkin expect to receive upper case STATUS values
+		// Zipkin expect to receive uppercase status values
 		// rather than default capitalized ones.
 		m["otel.status_code"] = strings.ToUpper(data.Status().Code.String())
 	}
