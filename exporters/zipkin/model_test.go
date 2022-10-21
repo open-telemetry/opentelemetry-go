@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -1002,7 +1001,7 @@ func TestTagsTransformation(t *testing.T) {
 			want: map[string]string{
 				"key":              keyValue,
 				"ok":               "true",
-				"otel.status_code": strings.ToUpper(codes.Ok.String()),
+				"otel.status_code": "OK",
 			},
 		},
 		{
@@ -1020,7 +1019,7 @@ func TestTagsTransformation(t *testing.T) {
 			want: map[string]string{
 				"error":            statusMessage,
 				"key":              keyValue,
-				"otel.status_code": strings.ToUpper(codes.Error.String()),
+				"otel.status_code": "ERROR",
 			},
 		},
 		{
