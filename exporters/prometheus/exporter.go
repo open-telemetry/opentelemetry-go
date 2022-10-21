@@ -162,11 +162,11 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
+	if sum.IsMonotonic {
+		// Add _total suffix for counters
+		name += counterSuffix
+	}
 	for _, dp := range sum.DataPoints {
-		if sum.IsMonotonic {
-			// Add _total suffix for counters
-			name += counterSuffix
-		}
 		keys, values := getAttrs(dp.Attributes)
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
