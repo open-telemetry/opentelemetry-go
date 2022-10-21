@@ -8,9 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `WithView` `MeterProviderOption` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
+   This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
+
+### Changed
+
+- The `"go.opentelemetry.io/otel/sdk/metric".WithReader` option no longer accepts views to associate with the `Reader`.
+   Instead, views are now registered directly with the `MeterProvider` via the new `WithView` option.
+   The views registered with the `MeterProvider` apply to all `Reader`s. (#3387)
+
 ### Fixed
 
 - The `go.opentelemetry.io/otel/exporters/prometheus` exporter fixes duplicated `_total` suffixes. (#3369)
+- Remove comparable requirement for `Reader`s. (#3387)
 
 ## [1.11.1/0.33.0] 2022-10-19
 
