@@ -17,4 +17,6 @@
 // registered with a MeterProvider in the go.opentelemetry.io/otel/sdk/metric
 // package. See the WithReader option in that package for more information on
 // how this registration takes place.
+//
+// Deprecated: Use View in go.opentelemetry.io/otel/sdk/metric instead.
 package view // import "go.opentelemetry.io/otel/sdk/metric/view"
