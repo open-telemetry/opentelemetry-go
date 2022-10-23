@@ -24,9 +24,67 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// InstrumentKind describes the kind of instrument a Meter can create.
+type InstrumentKind uint8
+
+// These are all the instrument kinds supported by the SDK.
+const (
+	// instrumentKindUndefined is an undefined instrument kind, it should not
+	// be used any initialized type.
+	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck
+	// InstrumentKindSyncCounter is an instrument kind that records increasing
+	// values synchronously in application code.
+	InstrumentKindSyncCounter
+	// InstrumentKindSyncUpDownCounter is an instrument kind that records
+	// increasing and decreasing values synchronously in application code.
+	InstrumentKindSyncUpDownCounter
+	// InstrumentKindSyncHistogram is an instrument kind that records a
+	// distribution of values synchronously in application code.
+	InstrumentKindSyncHistogram
+	// InstrumentKindAsyncCounter is an instrument kind that records increasing
+	// values in an asynchronous callback.
+	InstrumentKindAsyncCounter
+	// InstrumentKindAsyncUpDownCounter is an instrument kind that records
+	// increasing and decreasing values in an asynchronous callback.
+	InstrumentKindAsyncUpDownCounter
+	// InstrumentKindAsyncGauge is an instrument kind that records current
+	// values in an asynchronous callback.
+	InstrumentKindAsyncGauge
+)
+
+// InstrumentProperties are the properies an instrument is created with.
+type InstrumentProperties struct {
+	// Name is the human-readable identifier of the instrument.
+	Name string
+	// Description describes the metrics an instrument records.
+	Description string
+	// Kind is the kind of instrument.
+	Kind InstrumentKind
+	// Unit is the unit of measurment recorded by the instrument.
+	Unit unit.Unit
+	// Scope identifies the instrumentation that created the instrument.
+	Scope instrumentation.Scope
+}
+
+type nonComparable [0]func()
+
+// InstrumentStream defines the stream of data an instrument produces.
+type InstrumentStream struct {
+	InstrumentProperties
+
+	// Aggregation the stream uses for an instrument.
+	Aggregation aggregation.Aggregation
+	// AttributeFilter applied to all attributes recorded for an instrument.
+	AttributeFilter attribute.Filter
+
+	nonComparable
+}
 
 // instrumentID are the identifying properties of an instrument.
 type instrumentID struct {
