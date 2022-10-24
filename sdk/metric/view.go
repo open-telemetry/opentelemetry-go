@@ -18,57 +18,81 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
-// View returns true and the InstrumentStream to use for matching
+// View returns true and the exact InstrumentStream to use for matching
 // InstrumentProperties. Otherwise, if the view does not match, false is
 // returned.
 type View func(InstrumentProperties) (InstrumentStream, bool)
 
-// NewView returns a View composed for the stream and all passed MatchFuncs.
-// The returned View will only return stream if all match functions match the
-// instrument properties they are passed.
-func NewView(stream InstrumentStream, match ...MatchFunc) View {
-	return func(p InstrumentProperties) (InstrumentStream, bool) {
-		// Logically "AND" all matches.
-		for _, m := range match {
-			if !m(p) {
-				return InstrumentStream{}, false
-			}
+// NewView returns a View that applies the InstrumentStream mask for all
+// instruments that match criteria. The returned View will only apply mask if
+// all non-zero-value fields of criteria match the corresponding
+// InstrumentProperties passed to the view. If no criteria are provided, all
+// field of criteria are their zero-values, a view that matches no instruments
+// is returned.
+//
+// The Name field of criteria supports wildcard pattern matching. The wildcard
+// "*" is recognised as matching zero or more characters, and "?" is recognised
+// as matching exactly one character. For example, a pattern of "*" will match
+// all instrument names.
+//
+// The InstrumentStream mask only applies updates for non-zero-value fields. By
+// default, the InstrumentProperties the View matches against will be use for
+// the returned InstrumentStream and no Aggregation or AttributeFilter are set.
+// If mask has a non-zero-value value for any of the Aggregation or
+// AttributeFilter fields, or any of the InstrumentProperties fields, that
+// value is used instead of the default. If you need to zero out an
+// InstrumentStream field returned from a View, create a View directly.
+func NewView(criteria InstrumentProperties, mask InstrumentStream) View {
+	if criteria == zeroInstrumentProperties {
+		return func(InstrumentProperties) (InstrumentStream, bool) {
+			return InstrumentStream{}, false
 		}
-		return stream, true
 	}
-}
 
-// MatchFunc returns true for properties that match a condition, false
-// otherwise.
-type MatchFunc func(InstrumentProperties) bool
+	var matchFunc func(InstrumentProperties) bool
+	if strings.ContainsAny(criteria.Name, "*?") {
+		pattern := regexp.QuoteMeta(criteria.Name)
+		pattern = "^" + pattern + "$"
+		pattern = strings.ReplaceAll(pattern, "\\?", ".")
+		pattern = strings.ReplaceAll(pattern, "\\*", ".*")
+		re := regexp.MustCompile(pattern)
+		matchFunc = func(p InstrumentProperties) bool {
+			return re.MatchString(p.Name) &&
+				criteria.matchesDescription(p) &&
+				criteria.matchesKind(p) &&
+				criteria.matchesUnit(p) &&
+				criteria.matchesScope(p)
+		}
+	} else {
+		matchFunc = criteria.matches
+	}
 
-// MatchName returns a MatchFunc that matches the exact name of an instrument.
-func MatchName(name string) MatchFunc {
-	return func(p InstrumentProperties) bool { return p.Name == name }
-}
+	var agg aggregation.Aggregation
+	if mask.Aggregation != nil {
+		agg = mask.Aggregation.Copy()
+		if err := agg.Err(); err != nil {
+			global.Error(
+				err, "not using aggregation with view",
+				"aggregation", agg,
+				"view", criteria,
+			)
+			agg = nil
+		}
+	}
 
-// MatchNameWildcard returns a MatchFunc that matches instrument names using
-// the wildcard pattern. The wildcard pattern recognizes "*" as matching zero
-// or more characters, and "?" as matching exactly one character. A pattern of
-// just "*" will match all instruments.
-func MatchNameWildcard(pattern string) MatchFunc {
-	pattern = regexp.QuoteMeta(pattern)
-	pattern = "^" + pattern + "$"
-	pattern = strings.ReplaceAll(pattern, "\\?", ".")
-	pattern = strings.ReplaceAll(pattern, "\\*", ".*")
-	re := regexp.MustCompile(pattern)
-	return func(p InstrumentProperties) bool { return re.MatchString(p.Name) }
-}
-
-// MatchKind returns a MatchFunc that matches the exact kind of instruments.
-func MatchKind(kind InstrumentKind) MatchFunc {
-	return func(p InstrumentProperties) bool { return p.Kind == kind }
-}
-
-// MatchScope returns a MatchFunc that matches the exact scope of instruments.
-func MatchScope(scope instrumentation.Scope) MatchFunc {
-	return func(p InstrumentProperties) bool { return p.Scope == scope }
+	return func(p InstrumentProperties) (InstrumentStream, bool) {
+		if matchFunc(p) {
+			stream := InstrumentStream{
+				InstrumentProperties: p.mask(mask.InstrumentProperties),
+				Aggregation:          agg,
+				AttributeFilter:      mask.AttributeFilter,
+			}
+			return stream, true
+		}
+		return InstrumentStream{}, false
+	}
 }
