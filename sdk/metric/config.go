@@ -19,14 +19,13 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res     *resource.Resource
-	readers map[Reader][]view.View
+	readers map[Reader][]View
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -121,10 +120,10 @@ func WithResource(res *resource.Resource) Option {
 //
 // By default, if this option is not used, the MeterProvider will perform no
 // operations; no data will be exported without a Reader.
-func WithReader(r Reader, views ...view.View) Option {
+func WithReader(r Reader, views ...View) Option {
 	return optionFunc(func(cfg config) config {
 		if cfg.readers == nil {
-			cfg.readers = make(map[Reader][]view.View)
+			cfg.readers = make(map[Reader][]View)
 		}
 		cfg.readers[r] = views
 		return cfg

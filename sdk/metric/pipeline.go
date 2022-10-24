@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -51,7 +50,7 @@ type instrumentSync struct {
 	aggregator  aggregator
 }
 
-func newPipeline(res *resource.Resource, reader Reader, views []view.View) *pipeline {
+func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
@@ -72,7 +71,7 @@ type pipeline struct {
 	resource *resource.Resource
 
 	reader Reader
-	views  []view.View
+	views  []View
 
 	sync.Mutex
 	aggregations map[instrumentation.Scope][]instrumentSync
@@ -186,7 +185,7 @@ func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (i *inserter[N]) Instrument(inst InstrumentProperties) ([]internal.Aggregator[N], error) {
 	var (
 		matched bool
 		aggs    []internal.Aggregator[N]
@@ -197,13 +196,13 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	// compare pointer addresses to deduplicate Aggregators.
 	seen := make(map[internal.Aggregator[N]]struct{})
 	for _, v := range i.pipeline.views {
-		inst, match := v.TransformInstrument(inst)
+		inst, match := v(inst)
 		if !match {
 			continue
 		}
 		matched = true
 
-		agg, err := i.cachedAggregator(inst, instUnit)
+		agg, err := i.cachedAggregator(inst)
 		if err != nil {
 			errs.append(err)
 		}
@@ -223,7 +222,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	}
 
 	// Apply implicit default view if no explicit matched.
-	agg, err := i.cachedAggregator(inst, instUnit)
+	agg, err := i.cachedAggregator(InstrumentStream{InstrumentProperties: inst})
 	if err != nil {
 		errs.append(err)
 	}
@@ -247,7 +246,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (internal.Aggregator[N], error) {
+func (i *inserter[N]) cachedAggregator(inst InstrumentStream) (internal.Aggregator[N], error) {
 	switch inst.Aggregation.(type) {
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
@@ -261,7 +260,7 @@ func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (inter
 		)
 	}
 
-	id := i.instrumentID(inst, u)
+	id := i.instrumentID(inst)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
@@ -276,7 +275,7 @@ func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (inter
 		i.pipeline.addSync(inst.Scope, instrumentSync{
 			name:        inst.Name,
 			description: inst.Description,
-			unit:        u,
+			unit:        inst.Unit,
 			aggregator:  agg,
 		})
 		return agg, err
@@ -303,19 +302,19 @@ func (i *inserter[N]) logConflict(id instrumentID) {
 	)
 }
 
-func (i *inserter[N]) instrumentID(vi view.Instrument, u unit.Unit) instrumentID {
+func (i *inserter[N]) instrumentID(vi InstrumentStream) instrumentID {
 	var zero N
 	id := instrumentID{
 		Name:        vi.Name,
 		Description: vi.Description,
-		Unit:        u,
+		Unit:        vi.Unit,
 		Aggregation: fmt.Sprintf("%T", vi.Aggregation),
 		Temporality: i.pipeline.reader.temporality(vi.Kind),
 		Number:      fmt.Sprintf("%T", zero),
 	}
 
 	switch vi.Kind {
-	case view.AsyncCounter, view.SyncCounter, view.SyncHistogram:
+	case InstrumentKindAsyncCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram:
 		id.Monotonic = true
 	}
 
@@ -325,7 +324,7 @@ func (i *inserter[N]) instrumentID(vi view.Instrument, u unit.Unit) instrumentID
 // aggregator returns a new Aggregator matching agg, kind, temporality, and
 // monotonic. If the agg is unknown or temporality is invalid, an error is
 // returned.
-func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind view.InstrumentKind, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
+func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKind, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
 	switch a := agg.(type) {
 	case aggregation.Drop:
 		return nil, nil
@@ -333,7 +332,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind view.Instrume
 		return internal.NewLastValue[N](), nil
 	case aggregation.Sum:
 		switch kind {
-		case view.AsyncCounter, view.AsyncUpDownCounter:
+		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
 			// Asynchronous counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
@@ -379,10 +378,10 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind view.Instrume
 // | Async Counter        | X    |           | X   |           |                       |
 // | Async UpDown Counter | X    |           | X   |           |                       |
 // | Async Gauge          | X    | X         |     |           |                       |.
-func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregation) error {
+func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.ExplicitBucketHistogram:
-		if kind == view.SyncCounter || kind == view.SyncHistogram {
+		if kind == InstrumentKindSyncCounter || kind == InstrumentKindSyncHistogram {
 			return nil
 		}
 		// TODO: review need for aggregation check after
@@ -390,7 +389,7 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 		return errIncompatibleAggregation
 	case aggregation.Sum:
 		switch kind {
-		case view.AsyncCounter, view.AsyncUpDownCounter, view.SyncCounter, view.SyncHistogram, view.SyncUpDownCounter:
+		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram, InstrumentKindSyncUpDownCounter:
 			return nil
 		default:
 			// TODO: review need for aggregation check after
@@ -398,7 +397,7 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 			return errIncompatibleAggregation
 		}
 	case aggregation.LastValue:
-		if kind == view.AsyncGauge {
+		if kind == InstrumentKindAsyncGauge {
 			return nil
 		}
 		// TODO: review need for aggregation check after
@@ -416,7 +415,7 @@ func isAggregatorCompatible(kind view.InstrumentKind, agg aggregation.Aggregatio
 // measurement.
 type pipelines []*pipeline
 
-func newPipelines(res *resource.Resource, readers map[Reader][]view.View) pipelines {
+func newPipelines(res *resource.Resource, readers map[Reader][]View) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for r, v := range readers {
 		p := &pipeline{
@@ -454,12 +453,12 @@ func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
 // makes a measurement.
-func (r resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (r resolver[N]) Aggregators(inst InstrumentProperties) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
 	for _, i := range r.inserters {
-		a, err := i.Instrument(inst, instUnit)
+		a, err := i.Instrument(inst)
 		if err != nil {
 			errs.append(err)
 		}

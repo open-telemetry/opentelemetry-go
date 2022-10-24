@@ -30,6 +30,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+var (
+	zeroUnit                 unit.Unit
+	zeroInstrumentKind       InstrumentKind
+	zeroInstrumentProperties InstrumentProperties
+)
+
 // InstrumentKind describes the kind of instrument a Meter can create.
 type InstrumentKind uint8
 
@@ -70,6 +76,61 @@ type InstrumentProperties struct {
 	Unit unit.Unit
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
+}
+
+func (p InstrumentProperties) mask(m InstrumentProperties) InstrumentProperties {
+	if m.Name != "" {
+		p.Name = m.Name
+	}
+	if m.Description != "" {
+		p.Description = m.Description
+	}
+	if m.Kind != zeroInstrumentKind {
+		p.Kind = m.Kind
+	}
+	if m.Unit != zeroUnit {
+		p.Kind = m.Kind
+	}
+	if m.Scope.Name != "" {
+		p.Scope.Name = m.Scope.Name
+	}
+	if m.Scope.Version != "" {
+		p.Scope.Version = m.Scope.Version
+	}
+	if m.Scope.SchemaURL != "" {
+		p.Scope.SchemaURL = m.Scope.SchemaURL
+	}
+	return p
+}
+
+func (p InstrumentProperties) matches(o InstrumentProperties) bool {
+	return p.matchesName(o) &&
+		p.matchesDescription(o) &&
+		p.matchesKind(o) &&
+		p.matchesUnit(o) &&
+		p.matchesScope(o)
+}
+
+func (p InstrumentProperties) matchesName(o InstrumentProperties) bool {
+	return p.Name == "" || p.Name == o.Name
+}
+
+func (p InstrumentProperties) matchesDescription(o InstrumentProperties) bool {
+	return p.Description == "" || p.Description == o.Description
+}
+
+func (p InstrumentProperties) matchesKind(o InstrumentProperties) bool {
+	return p.Kind == zeroInstrumentKind || p.Kind == o.Kind
+}
+
+func (p InstrumentProperties) matchesUnit(o InstrumentProperties) bool {
+	return p.Unit == zeroUnit || p.Unit == o.Unit
+}
+
+func (p InstrumentProperties) matchesScope(o InstrumentProperties) bool {
+	return (p.Scope.Name == "" || p.Scope.Name == o.Scope.Name) &&
+		(p.Scope.Version == "" || p.Scope.Version == o.Scope.Version) &&
+		(p.Scope.SchemaURL == "" || p.Scope.SchemaURL == o.Scope.SchemaURL)
 }
 
 type nonComparable [0]func()

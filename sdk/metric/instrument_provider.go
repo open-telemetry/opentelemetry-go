@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 type asyncInt64Provider struct {
@@ -37,12 +36,13 @@ var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
 func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -56,12 +56,13 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncUpDownCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncUpDownCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -74,12 +75,13 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncGauge,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncGauge,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -99,12 +101,13 @@ var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
 func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -117,12 +120,13 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncUpDownCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncUpDownCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -135,12 +139,13 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.AsyncGauge,
-	}, cfg.Unit())
+		Kind:        InstrumentKindAsyncGauge,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -160,12 +165,13 @@ var _ syncint64.InstrumentProvider = syncInt64Provider{}
 func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -178,12 +184,13 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncUpDownCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncUpDownCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -196,12 +203,13 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncHistogram,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncHistogram,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -221,12 +229,13 @@ var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
 func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -239,12 +248,13 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncUpDownCounter,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncUpDownCounter,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}
@@ -257,12 +267,13 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(view.Instrument{
+	aggs, err := p.resolve.Aggregators(InstrumentProperties{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
-		Kind:        view.SyncHistogram,
-	}, cfg.Unit())
+		Kind:        InstrumentKindSyncHistogram,
+		Unit:        cfg.Unit(),
+	})
 	if len(aggs) == 0 && err != nil {
 		err = fmt.Errorf("instrument does not match any view: %w", err)
 	}

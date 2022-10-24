@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 const testDur = time.Second * 2
@@ -259,9 +258,8 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var undefinedInstrument view.InstrumentKind
 			rdr := NewPeriodicReader(new(fnExporter), tt.options...)
-			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
+			assert.Equal(t, tt.wantTemporality, rdr.temporality(instrumentKindUndefined))
 		})
 	}
 }
