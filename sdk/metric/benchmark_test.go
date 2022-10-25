@@ -102,7 +102,7 @@ func BenchmarkCounterAddManyFilteredAttrs(b *testing.B) {
 	}
 }
 
-func BenchmarkCounterCollectOneAttrNoReuse(b *testing.B) {
+func BenchmarkCounterCollectOneAttr(b *testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr))
