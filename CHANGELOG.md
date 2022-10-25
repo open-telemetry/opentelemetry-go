@@ -8,7 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- Batch span processor will now keep track of known dropped span count and log a warning during batch export on newly dropped spans. (#3289)
+### Added
+
+- The `go.opentelemetry.io/sdk/trace/batch_span_processor` will now keep track of known dropped span count and log during batch export on newly dropped spans. (#3289)
 
 ### Fixed
 

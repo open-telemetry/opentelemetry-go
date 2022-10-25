@@ -271,7 +271,8 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		dropped := atomic.LoadUint32(&bsp.dropped)
 		knownDropped := atomic.SwapUint32(&bsp.knownDropped, dropped)
 		if dropped > knownDropped {
-			global.Warn("dropped spans", "total_dropped", dropped, "known_dropped", knownDropped)
+			droppedThisBatch := dropped - knownDropped
+			global.Info("dropped spans", "total", dropped, "this_batch", droppedThisBatch)
 		}
 
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
