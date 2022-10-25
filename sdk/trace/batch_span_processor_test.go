@@ -494,7 +494,7 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 }
 
 func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
-	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 0})
+	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 1})
 	l := &logCounter{LogSink: tLog.GetSink()}
 	otel.SetLogger(logr.New(l))
 	global.SetLogger(logr.New(l))
@@ -520,9 +520,9 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	generateSpan(t, tr, option)
 	ssp.ForceFlush(context.Background())
 
-	assert.Equal(t, len(l.logs), 1, "expected log message")
-	droppedLogs := l.logs[0]
-	assert.Regexp(t, regexp.MustCompile(`dropped spans\[total_dropped \d+ known_dropped \d+\]`), droppedLogs)
+	assert.Equal(t, len(l.logs), 3, "expected log message")
+	droppedLogs := l.logs[2]
+	assert.Regexp(t, regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`), droppedLogs)
 }
 
 func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
