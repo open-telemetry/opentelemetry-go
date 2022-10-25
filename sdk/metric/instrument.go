@@ -135,8 +135,8 @@ func (p InstrumentProperties) matchesScope(o InstrumentProperties) bool {
 
 type nonComparable [0]func()
 
-// InstrumentStream defines the stream of data an instrument produces.
-type InstrumentStream struct {
+// DataStream defines the stream of data an instrument produces.
+type DataStream struct {
 	InstrumentProperties
 
 	// Aggregation the stream uses for an instrument.
