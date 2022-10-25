@@ -15,6 +15,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -739,4 +740,84 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 	require.True(t, match, "view did not match exact criteria")
 	assert.Nil(t, got.Aggregation, "erroring aggregation used")
 	assert.Equal(t, 1, l.ErrorN())
+}
+
+func ExampleNewView() {
+	// Rename the "latency" instrument from the v0.34.0 version of the "http"
+	// instrumentation library as "request.latency".
+	v := NewView(InstrumentProperties{
+		Name: "latency",
+		Scope: instrumentation.Scope{
+			Name:    "http",
+			Version: "v0.34.0",
+		},
+	}, DataStream{
+		InstrumentProperties: InstrumentProperties{Name: "request.latency"},
+	})
+
+	stream, _ := v(InstrumentProperties{
+		Name:        "latency",
+		Description: "request latency",
+		Unit:        unit.Milliseconds,
+		Kind:        InstrumentKindSyncCounter,
+		Scope: instrumentation.Scope{
+			Name:      "http",
+			Version:   "v0.34.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.0.0",
+		},
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Println("description:", stream.Description)
+	fmt.Println("unit:", stream.Unit)
+	fmt.Println("kind:", stream.Kind)
+	fmt.Println("scope:", stream.Scope)
+	// Output:
+	// name: request.latency
+	// description: request latency
+	// unit: ms
+	// kind: 1
+	// scope: {http v0.34.0 https://opentelemetry.io/schemas/1.0.0}
+}
+
+func ExampleNewView_drop() {
+	// Set the drop aggregator for all instrumentation from the "db" library.
+	v := NewView(
+		InstrumentProperties{Scope: instrumentation.Scope{Name: "db"}},
+		DataStream{Aggregation: aggregation.Drop{}},
+	)
+
+	stream, _ := v(InstrumentProperties{
+		Name:  "queries",
+		Kind:  InstrumentKindSyncCounter,
+		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Println("scope:", stream.Scope)
+	fmt.Printf("aggregation: %#v", stream.Aggregation)
+	// Output:
+	// name: queries
+	// scope: {db v0.4.0 }
+	// aggregation: aggregation.Drop{}
+}
+
+func ExampleNewView_wildcard() {
+	// Set unit to milliseconds for any instrument with a name suffix of ".ms".
+	v := NewView(
+		InstrumentProperties{Name: "*.ms"},
+		DataStream{
+			InstrumentProperties: InstrumentProperties{
+				Unit: unit.Milliseconds,
+			},
+		},
+	)
+
+	stream, _ := v(InstrumentProperties{
+		Name: "computation.time.ms",
+		Unit: unit.Dimensionless,
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Println("unit:", stream.Unit)
+	// Output:
+	// name: computation.time.ms
+	// unit: ms
 }
