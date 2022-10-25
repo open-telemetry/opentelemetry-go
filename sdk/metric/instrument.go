@@ -89,7 +89,7 @@ func (p InstrumentProperties) mask(m InstrumentProperties) InstrumentProperties 
 		p.Kind = m.Kind
 	}
 	if m.Unit != zeroUnit {
-		p.Kind = m.Kind
+		p.Unit = m.Unit
 	}
 	if m.Scope.Name != "" {
 		p.Scope.Name = m.Scope.Name
