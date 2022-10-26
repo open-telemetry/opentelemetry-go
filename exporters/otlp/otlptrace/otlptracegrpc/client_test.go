@@ -212,6 +212,7 @@ func TestNewWithHeaders(t *testing.T) {
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
 	headers := mc.getHeaders()
+	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", headers.Get("user-agent"))
 	require.Len(t, headers.Get("header1"), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
@@ -410,4 +411,19 @@ func TestPartialSuccess(t *testing.T) {
 	require.Equal(t, 1, len(errors))
 	require.Contains(t, errors[0].Error(), "partially successful")
 	require.Contains(t, errors[0].Error(), "2 spans rejected")
+}
+
+func TestCustomUserAgent(t *testing.T) {
+	customUserAgent := "custom-user-agent"
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
 }

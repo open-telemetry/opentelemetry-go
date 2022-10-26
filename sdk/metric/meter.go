@@ -16,7 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -27,55 +26,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-// meterRegistry keeps a record of initialized meters for instrumentation
-// scopes. A meter is unique to an instrumentation scope and if multiple
-// requests for that meter are made a meterRegistry ensure the same instance
-// is used.
-//
-// The zero meterRegistry is empty and ready for use.
-//
-// A meterRegistry must not be copied after first use.
-//
-// All methods of a meterRegistry are safe to call concurrently.
-type meterRegistry struct {
-	sync.Mutex
-
-	meters map[instrumentation.Scope]*meter
-
-	pipes pipelines
-}
-
-// Get returns a registered meter matching the instrumentation scope if it
-// exists in the meterRegistry. Otherwise, a new meter configured for the
-// instrumentation scope is registered and then returned.
-//
-// Get is safe to call concurrently.
-func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.meters == nil {
-		m := &meter{
-			Scope: s,
-			pipes: r.pipes,
-		}
-		r.meters = map[instrumentation.Scope]*meter{s: m}
-		return m
-	}
-
-	m, ok := r.meters[s]
-	if ok {
-		return m
-	}
-
-	m = &meter{
-		Scope: s,
-		pipes: r.pipes,
-	}
-	r.meters[s] = m
-	return m
-}
-
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
 // produced by an instrumentation scope will use metric instruments from a
@@ -83,7 +33,32 @@ func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
 type meter struct {
 	instrumentation.Scope
 
+	// *Resolvers are used by the provided instrument providers to resolve new
+	// instruments aggregators and maintain a cache across instruments this
+	// meter owns.
+	int64Resolver   resolver[int64]
+	float64Resolver resolver[float64]
+
 	pipes pipelines
+}
+
+func newMeter(s instrumentation.Scope, p pipelines) *meter {
+	// viewCache ensures instrument conflicts, including number conflicts, this
+	// meter is asked to create are logged to the user.
+	var viewCache cache[string, instrumentID]
+
+	// Passing nil as the ac parameter to newInstrumentCache will have each
+	// create its own aggregator cache.
+	ic := newInstrumentCache[int64](nil, &viewCache)
+	fc := newInstrumentCache[float64](nil, &viewCache)
+
+	return &meter{
+		Scope: s,
+		pipes: p,
+
+		int64Resolver:   newResolver(p, ic),
+		float64Resolver: newResolver(p, fc),
+	}
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -91,12 +66,12 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	return asyncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	return asyncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
 }
 
 // RegisterCallback registers the function f to be called when any of the
@@ -108,10 +83,10 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	return syncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	return syncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
 }
