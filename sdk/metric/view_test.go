@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -821,4 +822,39 @@ func ExampleNewView_wildcard() {
 	// Output:
 	// name: computation.time.ms
 	// unit: ms
+}
+
+func ExampleView() {
+	re := regexp.MustCompile(`[._](ms|byte)$`)
+	var view View = func(i Instrument) (Stream, bool) {
+		// Any instrument that does not have a unit suffix defined, but has a
+		// dimensional unit defined, update the name with a unit suffix.
+		if re.MatchString(i.Name) {
+			return Stream{Instrument: i}, false
+		}
+		switch i.Unit {
+		case unit.Milliseconds:
+			i.Name += ".ms"
+		case unit.Bytes:
+			i.Name += ".byte"
+		default:
+			return Stream{Instrument: i}, false
+		}
+		return Stream{Instrument: i}, true
+	}
+
+	stream, _ := view(Instrument{
+		Name: "computation.time.ms",
+		Unit: unit.Milliseconds,
+	})
+	fmt.Println("name:", stream.Name)
+
+	stream, _ = view(Instrument{
+		Name: "heap.size",
+		Unit: unit.Bytes,
+	})
+	fmt.Println("name:", stream.Name)
+	// Output:
+	// name: computation.time.ms
+	// name: heap.size.byte
 }
