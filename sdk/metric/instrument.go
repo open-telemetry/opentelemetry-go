@@ -37,7 +37,7 @@ var (
 )
 
 // InstrumentKind is the identifier of a group of instruments that all
-// perfroming the same function.
+// performing the same function.
 type InstrumentKind uint8
 
 const (
@@ -68,7 +68,7 @@ const (
 
 type nonComparable [0]func()
 
-// Instrument describes properies an instrument is created with.
+// Instrument describes properties an instrument is created with.
 type Instrument struct {
 	// Name is the human-readable identifier of the instrument.
 	Name string
@@ -76,7 +76,7 @@ type Instrument struct {
 	Description string
 	// Kind defines the functional group of the instrument.
 	Kind InstrumentKind
-	// Unit is the unit of measurment recorded by the instrument.
+	// Unit is the unit of measurement recorded by the instrument.
 	Unit unit.Unit
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
