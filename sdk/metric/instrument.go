@@ -147,8 +147,8 @@ func (p Instrument) matchesScope(o Instrument) bool {
 		(p.Scope.SchemaURL == "" || p.Scope.SchemaURL == o.Scope.SchemaURL)
 }
 
-// DataStream defines the stream of data an instrument produces.
-type DataStream struct {
+// Stream defines the stream of data an instrument produces.
+type Stream struct {
 	Instrument
 
 	// Temporality defines the calculation window for the data aggregation.

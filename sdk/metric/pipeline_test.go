@@ -146,7 +146,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		instCp.Name = "bar"
 		v := NewView(
 			Instrument{Name: "foo"},
-			DataStream{Instrument: Instrument{Name: "bar"}},
+			Stream{Instrument: Instrument{Name: "bar"}},
 		)
 
 		tests := []struct {

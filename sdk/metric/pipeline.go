@@ -222,7 +222,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 	}
 
 	// Apply implicit default view if no explicit matched.
-	agg, err := i.cachedAggregator(DataStream{Instrument: inst})
+	agg, err := i.cachedAggregator(Stream{Instrument: inst})
 	if err != nil {
 		errs.append(err)
 	}
@@ -246,7 +246,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(inst DataStream) (internal.Aggregator[N], error) {
+func (i *inserter[N]) cachedAggregator(inst Stream) (internal.Aggregator[N], error) {
 	switch inst.Aggregation.(type) {
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
@@ -302,7 +302,7 @@ func (i *inserter[N]) logConflict(id instrumentID) {
 	)
 }
 
-func (i *inserter[N]) instrumentID(vi DataStream) instrumentID {
+func (i *inserter[N]) instrumentID(vi Stream) instrumentID {
 	var zero N
 	id := instrumentID{
 		Name:        vi.Name,

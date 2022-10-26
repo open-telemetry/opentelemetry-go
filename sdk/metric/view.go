@@ -24,31 +24,30 @@ import (
 
 // View is an override to the default behavior of the SDK. It defines how data
 // should be collected for certain instruments. It returns true and the exact
-// DataStream to use for matching Instruments. Otherwise, if the view does not
+// Stream to use for matching Instruments. Otherwise, if the view does not
 // match, false is returned.
-type View func(Instrument) (DataStream, bool)
+type View func(Instrument) (Stream, bool)
 
-// NewView returns a View that applies the DataStream mask for all instruments
-// that match criteria. The returned View will only apply mask if all
-// non-zero-value fields of criteria match the corresponding Instrument passed
-// to the view. If no criteria are provided, all field of criteria are their
-// zero-values, a view that matches no instruments is returned.
+// NewView returns a View that applies the Stream mask for all instruments that
+// match criteria. The returned View will only apply mask if all non-zero-value
+// fields of criteria match the corresponding Instrument passed to the view. If
+// no criteria are provided, all field of criteria are their zero-values, a
+// view that matches no instruments is returned.
 //
 // The Name field of criteria supports wildcard pattern matching. The wildcard
 // "*" is recognised as matching zero or more characters, and "?" is recognised
 // as matching exactly one character. For example, a pattern of "*" will match
 // all instrument names.
 //
-// The DataStream mask only applies updates for non-zero-value fields. By
-// default, the Instrument the View matches against will be use for the
-// returned DataStream and no Aggregation or AttributeFilter are set. If mask
-// has a non-zero-value value for any of the Aggregation or AttributeFilter
-// fields, or any of the Instrument fields, that value is used instead of the
-// default. If you need to zero out an DataStream field returned from a View,
-// create a View directly.
-func NewView(criteria Instrument, mask DataStream) View {
+// The Stream mask only applies updates for non-zero-value fields. By default,
+// the Instrument the View matches against will be use for the returned Stream
+// and no Aggregation or AttributeFilter are set. If mask has a non-zero-value
+// value for any of the Aggregation or AttributeFilter fields, or any of the
+// Instrument fields, that value is used instead of the default. If you need to
+// zero out an Stream field returned from a View, create a View directly.
+func NewView(criteria Instrument, mask Stream) View {
 	if criteria.empty() {
-		return func(Instrument) (DataStream, bool) { return DataStream{}, false }
+		return func(Instrument) (Stream, bool) { return Stream{}, false }
 	}
 
 	var matchFunc func(Instrument) bool
@@ -82,15 +81,15 @@ func NewView(criteria Instrument, mask DataStream) View {
 		}
 	}
 
-	return func(p Instrument) (DataStream, bool) {
+	return func(p Instrument) (Stream, bool) {
 		if matchFunc(p) {
-			stream := DataStream{
+			stream := Stream{
 				Instrument:      p.mask(mask.Instrument),
 				Aggregation:     agg,
 				AttributeFilter: mask.AttributeFilter,
 			}
 			return stream, true
 		}
-		return DataStream{}, false
+		return Stream{}, false
 	}
 }

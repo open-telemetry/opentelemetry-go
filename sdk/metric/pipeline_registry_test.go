@@ -44,19 +44,19 @@ func (invalidAggregation) Err() error {
 func testCreateAggregators[N int64 | float64](t *testing.T) {
 	changeAggView := NewView(
 		Instrument{Name: "foo"},
-		DataStream{Aggregation: aggregation.ExplicitBucketHistogram{}},
+		Stream{Aggregation: aggregation.ExplicitBucketHistogram{}},
 	)
 	renameView := NewView(
 		Instrument{Name: "foo"},
-		DataStream{Instrument: Instrument{Name: "bar"}},
+		Stream{Instrument: Instrument{Name: "bar"}},
 	)
 	defaultAggView := NewView(
 		Instrument{Name: "foo"},
-		DataStream{Aggregation: aggregation.Default{}},
+		Stream{Aggregation: aggregation.Default{}},
 	)
 	invalidAggView := NewView(
 		Instrument{Name: "foo"},
-		DataStream{Aggregation: invalidAggregation{}},
+		Stream{Aggregation: invalidAggregation{}},
 	)
 
 	instruments := []Instrument{
@@ -240,11 +240,11 @@ func TestCreateAggregators(t *testing.T) {
 func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	defaultView := NewView(
 		Instrument{Name: "*"},
-		DataStream{},
+		Stream{},
 	)
 	renameView := NewView(
 		Instrument{Name: "foo"},
-		DataStream{Instrument: Instrument{Name: "bar"}},
+		Stream{Instrument: Instrument{Name: "bar"}},
 	)
 	testRdr := NewManualReader()
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
@@ -338,10 +338,10 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 func TestPipelineRegistryResource(t *testing.T) {
 	views := map[Reader][]View{
 		NewManualReader(): {
-			NewView(Instrument{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, Stream{}),
 			NewView(
 				Instrument{Name: "foo"},
-				DataStream{Instrument: Instrument{Name: "bar"}},
+				Stream{Instrument: Instrument{Name: "bar"}},
 			),
 		},
 	}
@@ -357,7 +357,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	views := map[Reader][]View{
 		testRdrHistogram: {
-			NewView(Instrument{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, Stream{}),
 		},
 	}
 	p := newPipelines(resource.Empty(), views)
@@ -409,10 +409,10 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	views := map[Reader][]View{
 		NewManualReader(): {
-			NewView(Instrument{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, Stream{}),
 			NewView(
 				Instrument{Name: "bar"},
-				DataStream{Instrument: Instrument{Name: "foo"}},
+				Stream{Instrument: Instrument{Name: "foo"}},
 			),
 		},
 	}

@@ -517,7 +517,7 @@ func TestNewViewMatch(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		v := NewView(test.criteria, DataStream{})
+		v := NewView(test.criteria, Stream{})
 		t.Run(test.name, func(t *testing.T) {
 			for _, instrument := range test.matches {
 				_, matches := v(instrument)
@@ -536,100 +536,100 @@ func TestNewViewReplace(t *testing.T) {
 	alt := "alternative value"
 	tests := []struct {
 		name string
-		mask DataStream
-		want func(Instrument) DataStream
+		mask Stream
+		want func(Instrument) Stream
 	}{
 		{
 			name: "Nothing",
-			want: func(ip Instrument) DataStream {
-				return DataStream{Instrument: ip}
+			want: func(ip Instrument) Stream {
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Name",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{Name: alt},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Name = alt
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Description",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Description: alt,
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Description = alt
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Kind",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Kind: InstrumentKindAsyncUpDownCounter,
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Kind = InstrumentKindAsyncUpDownCounter
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Unit",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Unit: unit.Dimensionless,
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Unit = unit.Dimensionless
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeName",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Scope: instrumentation.Scope{Name: alt},
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Scope.Name = alt
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeVersion",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Scope: instrumentation.Scope{Version: alt},
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Scope.Version = alt
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeSchemaURL",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Scope: instrumentation.Scope{SchemaURL: alt},
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Scope.SchemaURL = alt
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Scope",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Scope: instrumentation.Scope{
 						Name:      "Alt Scope Name",
@@ -638,20 +638,20 @@ func TestNewViewReplace(t *testing.T) {
 					},
 				},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Scope.Name = "Alt Scope Name"
 				ip.Scope.Version = "1.1.1"
 				ip.Scope.SchemaURL = "https://go.dev"
-				return DataStream{Instrument: ip}
+				return Stream{Instrument: ip}
 			},
 		},
 		{
 			name: "Aggregation",
-			mask: DataStream{
+			mask: Stream{
 				Aggregation: aggregation.LastValue{},
 			},
-			want: func(ip Instrument) DataStream {
-				return DataStream{
+			want: func(ip Instrument) Stream {
+				return Stream{
 					Instrument:  ip,
 					Aggregation: aggregation.LastValue{},
 				}
@@ -659,7 +659,7 @@ func TestNewViewReplace(t *testing.T) {
 		},
 		{
 			name: "Complete",
-			mask: DataStream{
+			mask: Stream{
 				Instrument: Instrument{
 					Name:        alt,
 					Description: alt,
@@ -673,7 +673,7 @@ func TestNewViewReplace(t *testing.T) {
 				},
 				Aggregation: aggregation.LastValue{},
 			},
-			want: func(ip Instrument) DataStream {
+			want: func(ip Instrument) Stream {
 				ip.Name = alt
 				ip.Description = alt
 				ip.Kind = InstrumentKindAsyncUpDownCounter
@@ -681,7 +681,7 @@ func TestNewViewReplace(t *testing.T) {
 				ip.Scope.Name = alt
 				ip.Scope.Version = alt
 				ip.Scope.SchemaURL = alt
-				return DataStream{
+				return Stream{
 					Instrument:  ip,
 					Aggregation: aggregation.LastValue{},
 				}
@@ -705,7 +705,7 @@ func TestNewViewReplace(t *testing.T) {
 		filter := func(kv attribute.KeyValue) bool {
 			return kv == allowed
 		}
-		mask := DataStream{AttributeFilter: filter}
+		mask := Stream{AttributeFilter: filter}
 		got, match := NewView(completeIP, mask)(completeIP)
 		require.True(t, match, "view did not match exact criteria")
 		require.NotNil(t, got.AttributeFilter, "AttributeFilter not set")
@@ -735,7 +735,7 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 	otel.SetLogger(logr.New(l))
 
 	agg := badAgg{err: assert.AnError}
-	mask := DataStream{Aggregation: agg}
+	mask := Stream{Aggregation: agg}
 	got, match := NewView(completeIP, mask)(completeIP)
 	require.True(t, match, "view did not match exact criteria")
 	assert.Nil(t, got.Aggregation, "erroring aggregation used")
@@ -751,7 +751,7 @@ func ExampleNewView() {
 			Name:    "http",
 			Version: "v0.34.0",
 		},
-	}, DataStream{
+	}, Stream{
 		Instrument: Instrument{Name: "request.latency"},
 	})
 
@@ -783,7 +783,7 @@ func ExampleNewView_drop() {
 	// Set the drop aggregator for all instrumentation from the "db" library.
 	v := NewView(
 		Instrument{Scope: instrumentation.Scope{Name: "db"}},
-		DataStream{Aggregation: aggregation.Drop{}},
+		Stream{Aggregation: aggregation.Drop{}},
 	)
 
 	stream, _ := v(Instrument{
@@ -804,7 +804,7 @@ func ExampleNewView_wildcard() {
 	// Set unit to milliseconds for any instrument with a name suffix of ".ms".
 	v := NewView(
 		Instrument{Name: "*.ms"},
-		DataStream{
+		Stream{
 			Instrument: Instrument{
 				Unit: unit.Milliseconds,
 			},
