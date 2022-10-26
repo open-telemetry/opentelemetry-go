@@ -35,7 +35,7 @@ type View func(Instrument) (Stream, bool)
 // view that matches no instruments is returned.
 //
 // The Name field of criteria supports wildcard pattern matching. The wildcard
-// "*" is recognised as matching zero or more characters, and "?" is recognised
+// "*" is recognized as matching zero or more characters, and "?" is recognized
 // as matching exactly one character. For example, a pattern of "*" will match
 // all instrument names.
 //
