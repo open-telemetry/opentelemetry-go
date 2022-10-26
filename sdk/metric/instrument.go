@@ -66,7 +66,7 @@ const (
 	InstrumentKindAsyncGauge
 )
 
-type nonComparable [0]func()
+type nonComparable [0]func() // nolint: unused  // This is indeed used.
 
 // Instrument describes properties an instrument is created with.
 type Instrument struct {
@@ -81,7 +81,8 @@ type Instrument struct {
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
 
-	nonComparable
+	// Ensure forward compatibility if non-comparable fields need to be added.
+	nonComparable // nolint: unused
 }
 
 // mask returns a copy of p with all non-zero-value fields of m replacing the
@@ -174,8 +175,6 @@ type Stream struct {
 	Aggregation aggregation.Aggregation
 	// AttributeFilter applied to all attributes recorded for an instrument.
 	AttributeFilter attribute.Filter
-
-	nonComparable
 }
 
 // instrumentID are the identifying properties of an instrument.
