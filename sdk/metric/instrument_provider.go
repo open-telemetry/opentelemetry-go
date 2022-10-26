@@ -36,7 +36,7 @@ var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
 func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -56,7 +56,7 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -75,7 +75,7 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -101,7 +101,7 @@ var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
 func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -120,7 +120,7 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -139,7 +139,7 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -165,7 +165,7 @@ var _ syncint64.InstrumentProvider = syncInt64Provider{}
 func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -184,7 +184,7 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -203,7 +203,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -229,7 +229,7 @@ var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
 func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -248,7 +248,7 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),
@@ -267,7 +267,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
 	cfg := instrument.NewConfig(opts...)
 
-	aggs, err := p.resolve.Aggregators(InstrumentProperties{
+	aggs, err := p.resolve.Aggregators(Instrument{
 		Scope:       p.scope,
 		Name:        name,
 		Description: cfg.Description(),

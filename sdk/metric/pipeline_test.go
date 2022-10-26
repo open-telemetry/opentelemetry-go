@@ -133,7 +133,7 @@ func TestDefaultViewImplicit(t *testing.T) {
 }
 
 func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
-	inst := InstrumentProperties{
+	inst := Instrument{
 		Scope:       instrumentation.Scope{Name: "testing/lib"},
 		Name:        "requests",
 		Description: "count of requests received",
@@ -145,8 +145,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		instCp := inst
 		instCp.Name = "bar"
 		v := NewView(
-			InstrumentProperties{Name: "foo"},
-			DataStream{InstrumentProperties: InstrumentProperties{Name: "bar"}},
+			Instrument{Name: "foo"},
+			DataStream{Instrument: Instrument{Name: "bar"}},
 		)
 
 		tests := []struct {

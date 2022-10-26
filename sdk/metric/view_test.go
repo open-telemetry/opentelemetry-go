@@ -31,7 +31,7 @@ import (
 
 var (
 	schemaURL  = "https://opentelemetry.io/schemas/1.0.0"
-	completeIP = InstrumentProperties{
+	completeIP = Instrument{
 		Name:        "foo",
 		Description: "foo desc",
 		Kind:        InstrumentKindSyncCounter,
@@ -47,19 +47,19 @@ var (
 func TestNewViewMatch(t *testing.T) {
 	tests := []struct {
 		name       string
-		criteria   InstrumentProperties
-		matches    []InstrumentProperties
-		notMatches []InstrumentProperties
+		criteria   Instrument
+		matches    []Instrument
+		notMatches []Instrument
 	}{
 		{
 			name:       "Empty",
-			notMatches: []InstrumentProperties{{}, {Name: "foo"}, completeIP},
+			notMatches: []Instrument{{}, {Name: "foo"}, completeIP},
 		},
 		{
 			name:     "Name/Exact",
-			criteria: InstrumentProperties{Name: "foo"},
-			matches:  []InstrumentProperties{{Name: "foo"}, completeIP},
-			notMatches: []InstrumentProperties{
+			criteria: Instrument{Name: "foo"},
+			matches:  []Instrument{{Name: "foo"}, completeIP},
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "foobar"},
@@ -69,8 +69,8 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/*",
-			criteria: InstrumentProperties{Name: "*"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "*"},
+			matches: []Instrument{
 				{},
 				{Name: "foo"},
 				{Name: "foobar"},
@@ -81,13 +81,13 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Front?",
-			criteria: InstrumentProperties{Name: "?oo"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "?oo"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "1oo"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "foobar"},
@@ -97,13 +97,13 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Back?",
-			criteria: InstrumentProperties{Name: "fo?"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "fo?"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "fo1"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "foobar"},
@@ -113,14 +113,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Front*",
-			criteria: InstrumentProperties{Name: "*foo"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "*foo"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "123foo"},
 				{Name: "barfoo"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "foobar"},
@@ -129,14 +129,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Back*",
-			criteria: InstrumentProperties{Name: "foo*"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "foo*"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "foo1"},
 				{Name: "foobar"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "barfoo"},
@@ -145,8 +145,8 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/FrontBack*",
-			criteria: InstrumentProperties{Name: "*foo*"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "*foo*"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "foo1"},
 				{Name: "1foo"},
@@ -155,22 +155,22 @@ func TestNewViewMatch(t *testing.T) {
 				{Name: "barfoobaz"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 			},
 		},
 		{
 			name:     "Name/Wildcard/Front**",
-			criteria: InstrumentProperties{Name: "**foo"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "**foo"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "123foo"},
 				{Name: "barfoo"},
 				{Name: "afoo"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "foobar"},
@@ -179,15 +179,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Back**",
-			criteria: InstrumentProperties{Name: "foo**"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "foo**"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "foo1"},
 				{Name: "fooa"},
 				{Name: "foobar"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "barfoo"},
@@ -196,15 +196,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Front*?",
-			criteria: InstrumentProperties{Name: "*?oo"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "*?oo"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "123foo"},
 				{Name: "barfoo"},
 				{Name: "afoo"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "fo"},
 				{Name: "bar"},
@@ -214,15 +214,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Back*?",
-			criteria: InstrumentProperties{Name: "fo*?"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "fo*?"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "foo1"},
 				{Name: "fooa"},
 				{Name: "foobar"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "barfoo"},
@@ -231,15 +231,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Front?*",
-			criteria: InstrumentProperties{Name: "?*oo"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "?*oo"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "123foo"},
 				{Name: "barfoo"},
 				{Name: "afoo"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "oo"},
 				{Name: "fo"},
@@ -250,15 +250,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Back?*",
-			criteria: InstrumentProperties{Name: "fo?*"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "fo?*"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "foo1"},
 				{Name: "fooa"},
 				{Name: "foobar"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "fo"},
 				{Name: "bar"},
@@ -268,15 +268,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Middle*",
-			criteria: InstrumentProperties{Name: "f*o"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "f*o"},
+			matches: []Instrument{
 				{Name: "fo"},
 				{Name: "foo"},
 				{Name: "fooo"},
 				{Name: "fo12baro"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "bar"},
 				{Name: "barfoo"},
@@ -285,13 +285,13 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/Middle?",
-			criteria: InstrumentProperties{Name: "f?o"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "f?o"},
+			matches: []Instrument{
 				{Name: "foo"},
 				{Name: "f1o"},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "fo"},
 				{Name: "fooo"},
@@ -301,12 +301,12 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Name/Wildcard/MetaCharacters",
-			criteria: InstrumentProperties{Name: "*.+()|[]{}^$-_?"},
-			matches: []InstrumentProperties{
+			criteria: Instrument{Name: "*.+()|[]{}^$-_?"},
+			matches: []Instrument{
 				{Name: "aa.+()|[]{}^$-_b"},
 				{Name: ".+()|[]{}^$-_b"},
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Name: "foo"},
 				{Name: ".+()|[]{}^$-_"},
@@ -314,9 +314,9 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Description",
-			criteria: InstrumentProperties{Description: "foo desc"},
-			matches:  []InstrumentProperties{{Description: "foo desc"}, completeIP},
-			notMatches: []InstrumentProperties{
+			criteria: Instrument{Description: "foo desc"},
+			matches:  []Instrument{{Description: "foo desc"}, completeIP},
+			notMatches: []Instrument{
 				{},
 				{Description: "foo"},
 				{Description: "desc"},
@@ -324,9 +324,9 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Kind",
-			criteria: InstrumentProperties{Kind: InstrumentKindSyncCounter},
-			matches:  []InstrumentProperties{{Kind: InstrumentKindSyncCounter}, completeIP},
-			notMatches: []InstrumentProperties{
+			criteria: Instrument{Kind: InstrumentKindSyncCounter},
+			matches:  []Instrument{{Kind: InstrumentKindSyncCounter}, completeIP},
+			notMatches: []Instrument{
 				{},
 				{Kind: InstrumentKindSyncUpDownCounter},
 				{Kind: InstrumentKindSyncHistogram},
@@ -337,9 +337,9 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Unit",
-			criteria: InstrumentProperties{Unit: unit.Bytes},
-			matches:  []InstrumentProperties{{Unit: unit.Bytes}, completeIP},
-			notMatches: []InstrumentProperties{
+			criteria: Instrument{Unit: unit.Bytes},
+			matches:  []Instrument{{Unit: unit.Bytes}, completeIP},
+			notMatches: []Instrument{
 				{},
 				{Unit: unit.Dimensionless},
 				{Unit: unit.Unit("K")},
@@ -347,14 +347,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name: "ScopeName",
-			criteria: InstrumentProperties{
+			criteria: Instrument{
 				Scope: instrumentation.Scope{Name: "TestNewViewMatch"},
 			},
-			matches: []InstrumentProperties{
+			matches: []Instrument{
 				{Scope: instrumentation.Scope{Name: "TestNewViewMatch"}},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Scope: instrumentation.Scope{Name: "PrefixTestNewViewMatch"}},
 				{Scope: instrumentation.Scope{Name: "TestNewViewMatchSuffix"}},
@@ -363,14 +363,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name: "ScopeVersion",
-			criteria: InstrumentProperties{
+			criteria: Instrument{
 				Scope: instrumentation.Scope{Version: "v0.1.0"},
 			},
-			matches: []InstrumentProperties{
+			matches: []Instrument{
 				{Scope: instrumentation.Scope{Version: "v0.1.0"}},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Scope: instrumentation.Scope{Version: "v0.1.0-RC1"}},
 				{Scope: instrumentation.Scope{Version: "v0.1.1"}},
@@ -378,14 +378,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name: "ScopeSchemaURL",
-			criteria: InstrumentProperties{
+			criteria: Instrument{
 				Scope: instrumentation.Scope{SchemaURL: schemaURL},
 			},
-			matches: []InstrumentProperties{
+			matches: []Instrument{
 				{Scope: instrumentation.Scope{SchemaURL: schemaURL}},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{Scope: instrumentation.Scope{SchemaURL: schemaURL + "/path"}},
 				{Scope: instrumentation.Scope{SchemaURL: "https://go.dev"}},
@@ -393,14 +393,14 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name: "Scope",
-			criteria: InstrumentProperties{
+			criteria: Instrument{
 				Scope: instrumentation.Scope{
 					Name:      "TestNewViewMatch",
 					Version:   "v0.1.0",
 					SchemaURL: schemaURL,
 				},
 			},
-			matches: []InstrumentProperties{
+			matches: []Instrument{
 				{
 					Scope: instrumentation.Scope{
 						Name:      "TestNewViewMatch",
@@ -410,7 +410,7 @@ func TestNewViewMatch(t *testing.T) {
 				},
 				completeIP,
 			},
-			notMatches: []InstrumentProperties{
+			notMatches: []Instrument{
 				{},
 				{
 					Scope: instrumentation.Scope{
@@ -431,8 +431,8 @@ func TestNewViewMatch(t *testing.T) {
 		{
 			name:     "Complete",
 			criteria: completeIP,
-			matches:  []InstrumentProperties{completeIP},
-			notMatches: []InstrumentProperties{
+			matches:  []Instrument{completeIP},
+			notMatches: []Instrument{
 				{},
 				{Name: "foo"},
 				{
@@ -537,100 +537,100 @@ func TestNewViewReplace(t *testing.T) {
 	tests := []struct {
 		name string
 		mask DataStream
-		want func(InstrumentProperties) DataStream
+		want func(Instrument) DataStream
 	}{
 		{
 			name: "Nothing",
-			want: func(ip InstrumentProperties) DataStream {
-				return DataStream{InstrumentProperties: ip}
+			want: func(ip Instrument) DataStream {
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "Name",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{Name: alt},
+				Instrument: Instrument{Name: alt},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Name = alt
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "Description",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Description: alt,
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Description = alt
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "Kind",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Kind: InstrumentKindAsyncUpDownCounter,
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Kind = InstrumentKindAsyncUpDownCounter
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "Unit",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Unit: unit.Dimensionless,
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Unit = unit.Dimensionless
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeName",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Scope: instrumentation.Scope{Name: alt},
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Scope.Name = alt
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeVersion",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Scope: instrumentation.Scope{Version: alt},
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Scope.Version = alt
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "ScopeSchemaURL",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Scope: instrumentation.Scope{SchemaURL: alt},
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Scope.SchemaURL = alt
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
 			name: "Scope",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Scope: instrumentation.Scope{
 						Name:      "Alt Scope Name",
 						Version:   "1.1.1",
@@ -638,11 +638,11 @@ func TestNewViewReplace(t *testing.T) {
 					},
 				},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Scope.Name = "Alt Scope Name"
 				ip.Scope.Version = "1.1.1"
 				ip.Scope.SchemaURL = "https://go.dev"
-				return DataStream{InstrumentProperties: ip}
+				return DataStream{Instrument: ip}
 			},
 		},
 		{
@@ -650,17 +650,17 @@ func TestNewViewReplace(t *testing.T) {
 			mask: DataStream{
 				Aggregation: aggregation.LastValue{},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				return DataStream{
-					InstrumentProperties: ip,
-					Aggregation:          aggregation.LastValue{},
+					Instrument:  ip,
+					Aggregation: aggregation.LastValue{},
 				}
 			},
 		},
 		{
 			name: "Complete",
 			mask: DataStream{
-				InstrumentProperties: InstrumentProperties{
+				Instrument: Instrument{
 					Name:        alt,
 					Description: alt,
 					Kind:        InstrumentKindAsyncUpDownCounter,
@@ -673,7 +673,7 @@ func TestNewViewReplace(t *testing.T) {
 				},
 				Aggregation: aggregation.LastValue{},
 			},
-			want: func(ip InstrumentProperties) DataStream {
+			want: func(ip Instrument) DataStream {
 				ip.Name = alt
 				ip.Description = alt
 				ip.Kind = InstrumentKindAsyncUpDownCounter
@@ -682,8 +682,8 @@ func TestNewViewReplace(t *testing.T) {
 				ip.Scope.Version = alt
 				ip.Scope.SchemaURL = alt
 				return DataStream{
-					InstrumentProperties: ip,
-					Aggregation:          aggregation.LastValue{},
+					Instrument:  ip,
+					Aggregation: aggregation.LastValue{},
 				}
 			},
 		},
@@ -745,17 +745,17 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 func ExampleNewView() {
 	// Rename the "latency" instrument from the v0.34.0 version of the "http"
 	// instrumentation library as "request.latency".
-	v := NewView(InstrumentProperties{
+	v := NewView(Instrument{
 		Name: "latency",
 		Scope: instrumentation.Scope{
 			Name:    "http",
 			Version: "v0.34.0",
 		},
 	}, DataStream{
-		InstrumentProperties: InstrumentProperties{Name: "request.latency"},
+		Instrument: Instrument{Name: "request.latency"},
 	})
 
-	stream, _ := v(InstrumentProperties{
+	stream, _ := v(Instrument{
 		Name:        "latency",
 		Description: "request latency",
 		Unit:        unit.Milliseconds,
@@ -782,11 +782,11 @@ func ExampleNewView() {
 func ExampleNewView_drop() {
 	// Set the drop aggregator for all instrumentation from the "db" library.
 	v := NewView(
-		InstrumentProperties{Scope: instrumentation.Scope{Name: "db"}},
+		Instrument{Scope: instrumentation.Scope{Name: "db"}},
 		DataStream{Aggregation: aggregation.Drop{}},
 	)
 
-	stream, _ := v(InstrumentProperties{
+	stream, _ := v(Instrument{
 		Name:  "queries",
 		Kind:  InstrumentKindSyncCounter,
 		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
@@ -803,15 +803,15 @@ func ExampleNewView_drop() {
 func ExampleNewView_wildcard() {
 	// Set unit to milliseconds for any instrument with a name suffix of ".ms".
 	v := NewView(
-		InstrumentProperties{Name: "*.ms"},
+		Instrument{Name: "*.ms"},
 		DataStream{
-			InstrumentProperties: InstrumentProperties{
+			Instrument: Instrument{
 				Unit: unit.Milliseconds,
 			},
 		},
 	)
 
-	stream, _ := v(InstrumentProperties{
+	stream, _ := v(Instrument{
 		Name: "computation.time.ms",
 		Unit: unit.Dimensionless,
 	})

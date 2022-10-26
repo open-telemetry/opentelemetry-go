@@ -43,23 +43,23 @@ func (invalidAggregation) Err() error {
 
 func testCreateAggregators[N int64 | float64](t *testing.T) {
 	changeAggView := NewView(
-		InstrumentProperties{Name: "foo"},
+		Instrument{Name: "foo"},
 		DataStream{Aggregation: aggregation.ExplicitBucketHistogram{}},
 	)
 	renameView := NewView(
-		InstrumentProperties{Name: "foo"},
-		DataStream{InstrumentProperties: InstrumentProperties{Name: "bar"}},
+		Instrument{Name: "foo"},
+		DataStream{Instrument: Instrument{Name: "bar"}},
 	)
 	defaultAggView := NewView(
-		InstrumentProperties{Name: "foo"},
+		Instrument{Name: "foo"},
 		DataStream{Aggregation: aggregation.Default{}},
 	)
 	invalidAggView := NewView(
-		InstrumentProperties{Name: "foo"},
+		Instrument{Name: "foo"},
 		DataStream{Aggregation: invalidAggregation{}},
 	)
 
-	instruments := []InstrumentProperties{
+	instruments := []Instrument{
 		{Name: "foo", Kind: instrumentKindUndefined}, //Unknown kind
 		{Name: "foo", Kind: InstrumentKindSyncCounter},
 		{Name: "foo", Kind: InstrumentKindSyncUpDownCounter},
@@ -73,7 +73,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		name     string
 		reader   Reader
 		views    []View
-		inst     InstrumentProperties
+		inst     Instrument
 		wantKind internal.Aggregator[N] //Aggregators should match len and types
 		wantLen  int
 		wantErr  error
@@ -220,7 +220,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	c := newInstrumentCache[N](nil, nil)
 	i := newInserter(newPipeline(nil, NewManualReader(), nil), c)
-	inst := InstrumentProperties{
+	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
 	}
@@ -239,12 +239,12 @@ func TestCreateAggregators(t *testing.T) {
 
 func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	defaultView := NewView(
-		InstrumentProperties{Name: "*"},
+		Instrument{Name: "*"},
 		DataStream{},
 	)
 	renameView := NewView(
-		InstrumentProperties{Name: "foo"},
-		DataStream{InstrumentProperties: InstrumentProperties{Name: "bar"}},
+		Instrument{Name: "foo"},
+		DataStream{Instrument: Instrument{Name: "bar"}},
 	)
 	testRdr := NewManualReader()
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
@@ -252,16 +252,16 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	testCases := []struct {
 		name      string
 		views     map[Reader][]View
-		inst      InstrumentProperties
+		inst      Instrument
 		wantCount int
 	}{
 		{
 			name: "No views have no aggregators",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 		},
 		{
 			name: "1 reader 1 view gets 1 aggregator",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 			views: map[Reader][]View{
 				testRdr: {defaultView},
 			},
@@ -269,7 +269,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		},
 		{
 			name: "1 reader 2 views gets 2 aggregator",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 			views: map[Reader][]View{
 				testRdr: {defaultView, renameView},
 			},
@@ -277,7 +277,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		},
 		{
 			name: "2 readers 1 view each gets 2 aggregators",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 			views: map[Reader][]View{
 				testRdr:          {defaultView},
 				testRdrHistogram: {defaultView},
@@ -286,7 +286,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		},
 		{
 			name: "2 reader 2 views each gets 4 aggregators",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 			views: map[Reader][]View{
 				testRdr:          {defaultView, renameView},
 				testRdrHistogram: {defaultView, renameView},
@@ -295,7 +295,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 		},
 		{
 			name: "An instrument is duplicated in two views share the same aggregator",
-			inst: InstrumentProperties{Name: "foo"},
+			inst: Instrument{Name: "foo"},
 			views: map[Reader][]View{
 				testRdr: {defaultView, defaultView},
 			},
@@ -314,7 +314,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 }
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
-	inst := InstrumentProperties{Name: "foo", Kind: InstrumentKindSyncCounter}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
 
 	c := newInstrumentCache[int64](nil, nil)
 	r := newResolver(p, c)
@@ -325,7 +325,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 }
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
-	inst := InstrumentProperties{Name: "foo", Kind: InstrumentKindSyncCounter}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
 
 	c := newInstrumentCache[float64](nil, nil)
 	r := newResolver(p, c)
@@ -338,10 +338,10 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 func TestPipelineRegistryResource(t *testing.T) {
 	views := map[Reader][]View{
 		NewManualReader(): {
-			NewView(InstrumentProperties{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, DataStream{}),
 			NewView(
-				InstrumentProperties{Name: "foo"},
-				DataStream{InstrumentProperties: InstrumentProperties{Name: "bar"}},
+				Instrument{Name: "foo"},
+				DataStream{Instrument: Instrument{Name: "bar"}},
 			),
 		},
 	}
@@ -357,11 +357,11 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	views := map[Reader][]View{
 		testRdrHistogram: {
-			NewView(InstrumentProperties{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, DataStream{}),
 		},
 	}
 	p := newPipelines(resource.Empty(), views)
-	inst := InstrumentProperties{Name: "foo", Kind: InstrumentKindAsyncGauge}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindAsyncGauge}
 
 	vc := cache[string, instrumentID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
@@ -409,16 +409,16 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	views := map[Reader][]View{
 		NewManualReader(): {
-			NewView(InstrumentProperties{Name: "*"}, DataStream{}),
+			NewView(Instrument{Name: "*"}, DataStream{}),
 			NewView(
-				InstrumentProperties{Name: "bar"},
-				DataStream{InstrumentProperties: InstrumentProperties{Name: "foo"}},
+				Instrument{Name: "bar"},
+				DataStream{Instrument: Instrument{Name: "foo"}},
 			),
 		},
 	}
 
-	fooInst := InstrumentProperties{Name: "foo", Kind: InstrumentKindSyncCounter}
-	barInst := InstrumentProperties{Name: "bar", Kind: InstrumentKindSyncCounter}
+	fooInst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
+	barInst := Instrument{Name: "bar", Kind: InstrumentKindSyncCounter}
 
 	p := newPipelines(resource.Empty(), views)
 
@@ -444,7 +444,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
-	fooInst = InstrumentProperties{Name: "foo-float", Kind: InstrumentKindSyncCounter}
+	fooInst = Instrument{Name: "foo-float", Kind: InstrumentKindSyncCounter}
 
 	floatAggs, err = rf.Aggregators(fooInst)
 	assert.NoError(t, err)

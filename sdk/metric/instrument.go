@@ -31,54 +31,60 @@ import (
 )
 
 var (
-	zeroUnit                 unit.Unit
-	zeroInstrumentKind       InstrumentKind
-	zeroInstrumentProperties InstrumentProperties
+	zeroUnit           unit.Unit
+	zeroInstrumentKind InstrumentKind
+	zeroScope          instrumentation.Scope
 )
 
-// InstrumentKind describes the kind of instrument a Meter can create.
+// InstrumentKind is the identifier of a group of instruments that all
+// perfroming the same function.
 type InstrumentKind uint8
 
-// These are all the instrument kinds supported by the SDK.
 const (
 	// instrumentKindUndefined is an undefined instrument kind, it should not
-	// be used any initialized type.
+	// be used by any initialized type.
 	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck
-	// InstrumentKindSyncCounter is an instrument kind that records increasing
-	// values synchronously in application code.
+	// InstrumentKindSyncCounter identifies a group of instruments that record
+	// increasing values synchronously with the code path they are measuring.
 	InstrumentKindSyncCounter
-	// InstrumentKindSyncUpDownCounter is an instrument kind that records
-	// increasing and decreasing values synchronously in application code.
+	// InstrumentKindSyncUpDownCounter identifies a group of instruments that
+	// record increasing and decreasing values synchronously with the code path
+	// they are measuring.
 	InstrumentKindSyncUpDownCounter
-	// InstrumentKindSyncHistogram is an instrument kind that records a
-	// distribution of values synchronously in application code.
+	// InstrumentKindSyncHistogram identifies a group of instruments that
+	// record a distribution of values synchronously with the code path they
+	// are measuring.
 	InstrumentKindSyncHistogram
-	// InstrumentKindAsyncCounter is an instrument kind that records increasing
-	// values in an asynchronous callback.
+	// InstrumentKindAsyncCounter identifies a group of instruments that record
+	// increasing values in an asynchronous callback.
 	InstrumentKindAsyncCounter
-	// InstrumentKindAsyncUpDownCounter is an instrument kind that records
-	// increasing and decreasing values in an asynchronous callback.
+	// InstrumentKindAsyncUpDownCounter identifies a group of instruments that
+	// record increasing and decreasing values in an asynchronous callback.
 	InstrumentKindAsyncUpDownCounter
-	// InstrumentKindAsyncGauge is an instrument kind that records current
-	// values in an asynchronous callback.
+	// InstrumentKindAsyncGauge identifies a group of instruments that record
+	// current values in an asynchronous callback.
 	InstrumentKindAsyncGauge
 )
 
-// InstrumentProperties are the properies an instrument is created with.
-type InstrumentProperties struct {
+type nonComparable [0]func()
+
+// Instrument describes properies an instrument is created with.
+type Instrument struct {
 	// Name is the human-readable identifier of the instrument.
 	Name string
-	// Description describes the metrics an instrument records.
+	// Description describes the purpose of the instrument.
 	Description string
-	// Kind is the kind of instrument.
+	// Kind defines the functional group of the instrument.
 	Kind InstrumentKind
 	// Unit is the unit of measurment recorded by the instrument.
 	Unit unit.Unit
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
+
+	nonComparable
 }
 
-func (p InstrumentProperties) mask(m InstrumentProperties) InstrumentProperties {
+func (p Instrument) mask(m Instrument) Instrument {
 	if m.Name != "" {
 		p.Name = m.Name
 	}
@@ -103,7 +109,15 @@ func (p InstrumentProperties) mask(m InstrumentProperties) InstrumentProperties 
 	return p
 }
 
-func (p InstrumentProperties) matches(o InstrumentProperties) bool {
+func (p Instrument) empty() bool {
+	return p.Name == "" &&
+		p.Description == "" &&
+		p.Kind == zeroInstrumentKind &&
+		p.Unit == zeroUnit &&
+		p.Scope == zeroScope
+}
+
+func (p Instrument) matches(o Instrument) bool {
 	return p.matchesName(o) &&
 		p.matchesDescription(o) &&
 		p.matchesKind(o) &&
@@ -111,33 +125,31 @@ func (p InstrumentProperties) matches(o InstrumentProperties) bool {
 		p.matchesScope(o)
 }
 
-func (p InstrumentProperties) matchesName(o InstrumentProperties) bool {
+func (p Instrument) matchesName(o Instrument) bool {
 	return p.Name == "" || p.Name == o.Name
 }
 
-func (p InstrumentProperties) matchesDescription(o InstrumentProperties) bool {
+func (p Instrument) matchesDescription(o Instrument) bool {
 	return p.Description == "" || p.Description == o.Description
 }
 
-func (p InstrumentProperties) matchesKind(o InstrumentProperties) bool {
+func (p Instrument) matchesKind(o Instrument) bool {
 	return p.Kind == zeroInstrumentKind || p.Kind == o.Kind
 }
 
-func (p InstrumentProperties) matchesUnit(o InstrumentProperties) bool {
+func (p Instrument) matchesUnit(o Instrument) bool {
 	return p.Unit == zeroUnit || p.Unit == o.Unit
 }
 
-func (p InstrumentProperties) matchesScope(o InstrumentProperties) bool {
+func (p Instrument) matchesScope(o Instrument) bool {
 	return (p.Scope.Name == "" || p.Scope.Name == o.Scope.Name) &&
 		(p.Scope.Version == "" || p.Scope.Version == o.Scope.Version) &&
 		(p.Scope.SchemaURL == "" || p.Scope.SchemaURL == o.Scope.SchemaURL)
 }
 
-type nonComparable [0]func()
-
 // DataStream defines the stream of data an instrument produces.
 type DataStream struct {
-	InstrumentProperties
+	Instrument
 
 	// Aggregation the stream uses for an instrument.
 	Aggregation aggregation.Aggregation

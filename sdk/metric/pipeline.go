@@ -185,7 +185,7 @@ func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst InstrumentProperties) ([]internal.Aggregator[N], error) {
+func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], error) {
 	var (
 		matched bool
 		aggs    []internal.Aggregator[N]
@@ -222,7 +222,7 @@ func (i *inserter[N]) Instrument(inst InstrumentProperties) ([]internal.Aggregat
 	}
 
 	// Apply implicit default view if no explicit matched.
-	agg, err := i.cachedAggregator(DataStream{InstrumentProperties: inst})
+	agg, err := i.cachedAggregator(DataStream{Instrument: inst})
 	if err != nil {
 		errs.append(err)
 	}
@@ -453,7 +453,7 @@ func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[
 
 // Aggregators returns the Aggregators instrument inst needs to update when it
 // makes a measurement.
-func (r resolver[N]) Aggregators(inst InstrumentProperties) ([]internal.Aggregator[N], error) {
+func (r resolver[N]) Aggregators(inst Instrument) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
