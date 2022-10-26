@@ -309,8 +309,13 @@ func (i *inserter[N]) instrumentID(vi DataStream) instrumentID {
 		Description: vi.Description,
 		Unit:        vi.Unit,
 		Aggregation: fmt.Sprintf("%T", vi.Aggregation),
-		Temporality: i.pipeline.reader.temporality(vi.Kind),
+		Temporality: vi.Temporality,
 		Number:      fmt.Sprintf("%T", zero),
+	}
+
+	var undefinedTemp metricdata.Temporality
+	if id.Temporality == undefinedTemp {
+		id.Temporality = i.pipeline.reader.temporality(vi.Kind)
 	}
 
 	switch vi.Kind {

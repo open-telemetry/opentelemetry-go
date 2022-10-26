@@ -151,6 +151,8 @@ func (p Instrument) matchesScope(o Instrument) bool {
 type DataStream struct {
 	Instrument
 
+	// Temporality defines the calculation window for the data aggregation.
+	Temporality metricdata.Temporality
 	// Aggregation the stream uses for an instrument.
 	Aggregation aggregation.Aggregation
 	// AttributeFilter applied to all attributes recorded for an instrument.
