@@ -177,7 +177,66 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 // The output Aggregation will report recorded values as delta temporality. It
 // is up to the caller to ensure this is accurate.
 func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
-	return &precomputedSum[N]{settableSum: newDeltaSum[N](monotonic)}
+	return &precomputedDeltaSum[N]{
+		recorded:  make(map[attribute.Set]N),
+		reported:  make(map[attribute.Set]N),
+		monotonic: monotonic,
+		start:     now(),
+	}
+}
+
+// precomputedDeltaSum summarizes a set of measurements recorded over all
+// aggregation cycles as the delta arithmetic sum.
+type precomputedDeltaSum[N int64 | float64] struct {
+	sync.Mutex
+	recorded map[attribute.Set]N
+	reported map[attribute.Set]N
+
+	monotonic bool
+	start     time.Time
+}
+
+// Aggregate records value as a cumulative sum for attr.
+func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.Lock()
+	s.recorded[attr] = value
+	s.Unlock()
+}
+
+func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	if len(s.recorded) == 0 {
+		return out
+	}
+
+	t := now()
+	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.recorded))
+	for attr, recorded := range s.recorded {
+		value := recorded - s.reported[attr]
+		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
+			Attributes: attr,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      value,
+		})
+		if value != 0 {
+			s.reported[attr] = recorded
+		}
+		// TODO (#3006): This will use an unbounded amount of memory if there
+		// are unbounded number of attribute sets being aggregated. Attribute
+		// sets that become "stale" need to be forgotten so this will not
+		// overload the system.
+	}
+	// The delta collection cycle resets.
+	s.start = t
+	return out
 }
 
 // NewPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
@@ -191,21 +250,16 @@ func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 // The output Aggregation will report recorded values as cumulative
 // temporality. It is up to the caller to ensure this is accurate.
 func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
-	return &precomputedSum[N]{settableSum: newCumulativeSum[N](monotonic)}
-}
-
-type settableSum[N int64 | float64] interface {
-	set(value N, attr attribute.Set)
-	Aggregation() metricdata.Aggregation
+	return &precomputedSum[N]{newCumulativeSum[N](monotonic)}
 }
 
 // precomputedSum summarizes a set of measurements recorded over all
-// aggregation cycles directly as an arithmetic sum.
+// aggregation cycles directly as the cumulative arithmetic sum.
 type precomputedSum[N int64 | float64] struct {
-	settableSum[N]
+	*cumulativeSum[N]
 }
 
-// Aggregate records value directly as a sum for attr.
+// Aggregate records value as a cumulative sum for attr.
 func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
 	s.set(value, attr)
 }
