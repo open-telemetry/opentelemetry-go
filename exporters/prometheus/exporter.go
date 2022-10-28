@@ -275,12 +275,12 @@ func sanitizeName(n string) string {
 		if i == 0 && c >= '0' && c <= '9' {
 			// Prefix leading number with replacement character.
 			b.Grow(len(n) + 1)
-			b.WriteByte(byte(replacement))
+			_ = b.WriteByte(byte(replacement))
 			break
 		}
 		b.Grow(len(n))
-		b.WriteString(n[:i])
-		b.WriteByte(byte(replacement))
+		_, _ = b.WriteString(n[:i])
+		_ = b.WriteByte(byte(replacement))
 		width := utf8.RuneLen(c)
 		n = n[i+width:]
 		break
@@ -295,9 +295,9 @@ func sanitizeName(n string) string {
 		// Due to inlining, it is more performant to invoke WriteByte rather then
 		// WriteRune.
 		if valid(1, c) { // We are guaranteed to not be at the start.
-			b.WriteByte(byte(c))
+			_ = b.WriteByte(byte(c))
 		} else {
-			b.WriteByte(byte(replacement))
+			_ = b.WriteByte(byte(replacement))
 		}
 	}
 

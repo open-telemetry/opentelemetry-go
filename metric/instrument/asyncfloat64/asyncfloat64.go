@@ -35,8 +35,8 @@ type InstrumentProvider interface {
 
 // Counter is an instrument that records increasing values.
 type Counter interface {
-	// Observe records the state of the instrument to be x. The value of x is
-	// assumed to be the exact Counter value to record.
+	// Observe records the state of the instrument to be x. Implementations
+	// will assume x to be the cumulative sum of the count.
 	//
 	// It is only valid to call this within a callback. If called outside of the
 	// registered callback it should have no effect on the instrument, and an
@@ -48,8 +48,8 @@ type Counter interface {
 
 // UpDownCounter is an instrument that records increasing or decreasing values.
 type UpDownCounter interface {
-	// Observe records the state of the instrument to be x. The value of x is
-	// assumed to be the exact UpDownCounter value to record.
+	// Observe records the state of the instrument to be x. Implementations
+	// will assume x to be the cumulative sum of the count.
 	//
 	// It is only valid to call this within a callback. If called outside of the
 	// registered callback it should have no effect on the instrument, and an
