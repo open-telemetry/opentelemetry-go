@@ -270,7 +270,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "exporter-test",
 				"service.version":  "0.1.0",
@@ -300,7 +300,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "403, forbidden",
 				"service.name":     "exporter-test",
 				"service.version":  "0.1.0",
