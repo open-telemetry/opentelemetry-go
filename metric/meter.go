@@ -18,10 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
@@ -40,12 +36,12 @@ type Meter interface {
 	// AsyncInt64 is the namespace for the Asynchronous Integer instruments.
 	//
 	// To Observe data with instruments it must be registered in a callback.
-	AsyncInt64() asyncint64.InstrumentProvider
+	AsyncInt64() instrument.AsyncInstrumentProvider[int64]
 
 	// AsyncFloat64 is the namespace for the Asynchronous Float instruments
 	//
 	// To Observe data with instruments it must be registered in a callback.
-	AsyncFloat64() asyncfloat64.InstrumentProvider
+	AsyncFloat64() instrument.AsyncInstrumentProvider[float64]
 
 	// RegisterCallback captures the function that will be called during Collect.
 	//
@@ -54,7 +50,7 @@ type Meter interface {
 	RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error
 
 	// SyncInt64 is the namespace for the Synchronous Integer instruments
-	SyncInt64() syncint64.InstrumentProvider
+	SyncInt64() instrument.SyncInstrumentProvider[int64]
 	// SyncFloat64 is the namespace for the Synchronous Float instruments
-	SyncFloat64() syncfloat64.InstrumentProvider
+	SyncFloat64() instrument.SyncInstrumentProvider[float64]
 }

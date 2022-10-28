@@ -19,10 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 type testMeterProvider struct {
@@ -47,7 +43,7 @@ type testMeter struct {
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
 //
 // To Observe data with instruments it must be registered in a callback.
-func (m *testMeter) AsyncInt64() asyncint64.InstrumentProvider {
+func (m *testMeter) AsyncInt64() instrument.AsyncInstrumentProvider[int64] {
 	m.aiCount++
 	return &testAIInstrumentProvider{}
 }
@@ -55,7 +51,7 @@ func (m *testMeter) AsyncInt64() asyncint64.InstrumentProvider {
 // AsyncFloat64 is the namespace for the Asynchronous Float instruments
 //
 // To Observe data with instruments it must be registered in a callback.
-func (m *testMeter) AsyncFloat64() asyncfloat64.InstrumentProvider {
+func (m *testMeter) AsyncFloat64() instrument.AsyncInstrumentProvider[float64] {
 	m.afCount++
 	return &testAFInstrumentProvider{}
 }
@@ -70,13 +66,13 @@ func (m *testMeter) RegisterCallback(insts []instrument.Asynchronous, function f
 }
 
 // SyncInt64 is the namespace for the Synchronous Integer instruments.
-func (m *testMeter) SyncInt64() syncint64.InstrumentProvider {
+func (m *testMeter) SyncInt64() instrument.SyncInstrumentProvider[int64] {
 	m.siCount++
 	return &testSIInstrumentProvider{}
 }
 
 // SyncFloat64 is the namespace for the Synchronous Float instruments.
-func (m *testMeter) SyncFloat64() syncfloat64.InstrumentProvider {
+func (m *testMeter) SyncFloat64() instrument.SyncInstrumentProvider[float64] {
 	m.sfCount++
 	return &testSFInstrumentProvider{}
 }
@@ -92,67 +88,67 @@ func (m *testMeter) collect() {
 type testAFInstrumentProvider struct{}
 
 // Counter creates an instrument for recording increasing values.
-func (ip testAFInstrumentProvider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
+func (ip testAFInstrumentProvider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip testAFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+func (ip testAFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 // Gauge creates an instrument for recording the current value.
-func (ip testAFInstrumentProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
+func (ip testAFInstrumentProvider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 type testAIInstrumentProvider struct{}
 
 // Counter creates an instrument for recording increasing values.
-func (ip testAIInstrumentProvider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
+func (ip testAIInstrumentProvider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip testAIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+func (ip testAIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }
 
 // Gauge creates an instrument for recording the current value.
-func (ip testAIInstrumentProvider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
+func (ip testAIInstrumentProvider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }
 
 type testSFInstrumentProvider struct{}
 
 // Counter creates an instrument for recording increasing values.
-func (ip testSFInstrumentProvider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
+func (ip testSFInstrumentProvider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip testSFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+func (ip testSFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 // Histogram creates an instrument for recording a distribution of values.
-func (ip testSFInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
+func (ip testSFInstrumentProvider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[float64], error) {
 	return &testCountingFloatInstrument{}, nil
 }
 
 type testSIInstrumentProvider struct{}
 
 // Counter creates an instrument for recording increasing values.
-func (ip testSIInstrumentProvider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
+func (ip testSIInstrumentProvider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip testSIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (ip testSIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }
 
 // Histogram creates an instrument for recording a distribution of values.
-func (ip testSIInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
+func (ip testSIInstrumentProvider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[int64], error) {
 	return &testCountingIntInstrument{}, nil
 }

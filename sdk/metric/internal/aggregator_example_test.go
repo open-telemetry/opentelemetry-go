@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -31,14 +30,14 @@ type meter struct {
 	aggregations []metricdata.Aggregation
 }
 
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
+func (m *meter) SyncInt64() instrument.SyncInstrumentProvider[int64] {
 	// The same would be done for all the other instrument providers.
 	return (*syncInt64Provider)(m)
 }
 
 type syncInt64Provider meter
 
-func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Counter, error) {
+func (p *syncInt64Provider) Counter(string, ...instrument.Option) (instrument.SyncCounter[int64], error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new counter. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader
@@ -55,7 +54,7 @@ func (p *syncInt64Provider) Counter(string, ...instrument.Option) (syncint64.Cou
 	return count, nil
 }
 
-func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Option) (instrument.SyncUpDownCounter[int64], error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new up-down counter. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader
@@ -73,7 +72,7 @@ func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Option) (syncint
 	return upDownCount, nil
 }
 
-func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (syncint64.Histogram, error) {
+func (p *syncInt64Provider) Histogram(string, ...instrument.Option) (instrument.SyncHistogram[int64], error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new histogram. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader

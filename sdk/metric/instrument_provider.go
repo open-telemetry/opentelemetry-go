@@ -18,10 +18,6 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
@@ -31,10 +27,10 @@ type asyncInt64Provider struct {
 	resolve *resolver[int64]
 }
 
-var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
+var _ instrument.AsyncInstrumentProvider[int64] = asyncInt64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
+func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -53,7 +49,7 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -71,7 +67,7 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 }
 
 // Gauge creates an instrument for recording the current value.
-func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
+func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -93,10 +89,10 @@ type asyncFloat64Provider struct {
 	resolve *resolver[float64]
 }
 
-var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
+var _ instrument.AsyncInstrumentProvider[float64] = asyncFloat64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
+func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -114,7 +110,7 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -132,7 +128,7 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 }
 
 // Gauge creates an instrument for recording the current value.
-func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
+func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -154,10 +150,10 @@ type syncInt64Provider struct {
 	resolve *resolver[int64]
 }
 
-var _ syncint64.InstrumentProvider = syncInt64Provider{}
+var _ instrument.SyncInstrumentProvider[int64] = syncInt64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
+func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -175,7 +171,7 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -193,7 +189,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 }
 
 // Histogram creates an instrument for recording the current value.
-func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
+func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[int64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -215,10 +211,10 @@ type syncFloat64Provider struct {
 	resolve *resolver[float64]
 }
 
-var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
+var _ instrument.SyncInstrumentProvider[float64] = syncFloat64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
+func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -236,7 +232,7 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{
@@ -254,7 +250,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 }
 
 // Histogram creates an instrument for recording the current value.
-func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
+func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[float64], error) {
 	cfg := instrument.NewConfig(opts...)
 
 	aggs, err := p.resolve.Aggregators(view.Instrument{

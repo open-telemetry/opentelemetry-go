@@ -22,10 +22,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 // meterProvider is a placeholder for a configured SDK MeterProvider.
@@ -146,7 +142,7 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
 //
 // To Observe data with instruments it must be registered in a callback.
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
+func (m *meter) AsyncInt64() instrument.AsyncInstrumentProvider[int64] {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.AsyncInt64()
 	}
@@ -156,7 +152,7 @@ func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
 // AsyncFloat64 is the namespace for the Asynchronous Float instruments.
 //
 // To Observe data with instruments it must be registered in a callback.
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
+func (m *meter) AsyncFloat64() instrument.AsyncInstrumentProvider[float64] {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.AsyncFloat64()
 	}
@@ -202,7 +198,7 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 }
 
 // SyncInt64 is the namespace for the Synchronous Integer instruments.
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
+func (m *meter) SyncInt64() instrument.SyncInstrumentProvider[int64] {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.SyncInt64()
 	}
@@ -210,7 +206,7 @@ func (m *meter) SyncInt64() syncint64.InstrumentProvider {
 }
 
 // SyncFloat64 is the namespace for the Synchronous Float instruments.
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
+func (m *meter) SyncFloat64() instrument.SyncInstrumentProvider[float64] {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.SyncFloat64()
 	}
@@ -233,7 +229,7 @@ func (c *delegatedCallback) setDelegate(m metric.Meter) {
 type afInstProvider meter
 
 // Counter creates an instrument for recording increasing values.
-func (ip *afInstProvider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
+func (ip *afInstProvider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &afCounter{name: name, opts: opts}
@@ -242,7 +238,7 @@ func (ip *afInstProvider) Counter(name string, opts ...instrument.Option) (async
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip *afInstProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+func (ip *afInstProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &afUpDownCounter{name: name, opts: opts}
@@ -251,7 +247,7 @@ func (ip *afInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 }
 
 // Gauge creates an instrument for recording the current value.
-func (ip *afInstProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
+func (ip *afInstProvider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &afGauge{name: name, opts: opts}
@@ -262,7 +258,7 @@ func (ip *afInstProvider) Gauge(name string, opts ...instrument.Option) (asyncfl
 type aiInstProvider meter
 
 // Counter creates an instrument for recording increasing values.
-func (ip *aiInstProvider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
+func (ip *aiInstProvider) Counter(name string, opts ...instrument.Option) (instrument.AsyncCounter[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &aiCounter{name: name, opts: opts}
@@ -271,7 +267,7 @@ func (ip *aiInstProvider) Counter(name string, opts ...instrument.Option) (async
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip *aiInstProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
+func (ip *aiInstProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.AsyncUpDownCounter[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &aiUpDownCounter{name: name, opts: opts}
@@ -280,7 +276,7 @@ func (ip *aiInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 }
 
 // Gauge creates an instrument for recording the current value.
-func (ip *aiInstProvider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
+func (ip *aiInstProvider) Gauge(name string, opts ...instrument.Option) (instrument.AsyncGauge[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &aiGauge{name: name, opts: opts}
@@ -291,7 +287,7 @@ func (ip *aiInstProvider) Gauge(name string, opts ...instrument.Option) (asyncin
 type sfInstProvider meter
 
 // Counter creates an instrument for recording increasing values.
-func (ip *sfInstProvider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
+func (ip *sfInstProvider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &sfCounter{name: name, opts: opts}
@@ -300,7 +296,7 @@ func (ip *sfInstProvider) Counter(name string, opts ...instrument.Option) (syncf
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip *sfInstProvider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+func (ip *sfInstProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &sfUpDownCounter{name: name, opts: opts}
@@ -309,7 +305,7 @@ func (ip *sfInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 }
 
 // Histogram creates an instrument for recording a distribution of values.
-func (ip *sfInstProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
+func (ip *sfInstProvider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[float64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &sfHistogram{name: name, opts: opts}
@@ -320,7 +316,7 @@ func (ip *sfInstProvider) Histogram(name string, opts ...instrument.Option) (syn
 type siInstProvider meter
 
 // Counter creates an instrument for recording increasing values.
-func (ip *siInstProvider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
+func (ip *siInstProvider) Counter(name string, opts ...instrument.Option) (instrument.SyncCounter[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &siCounter{name: name, opts: opts}
@@ -329,7 +325,7 @@ func (ip *siInstProvider) Counter(name string, opts ...instrument.Option) (synci
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (ip *siInstProvider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (ip *siInstProvider) UpDownCounter(name string, opts ...instrument.Option) (instrument.SyncUpDownCounter[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &siUpDownCounter{name: name, opts: opts}
@@ -338,7 +334,7 @@ func (ip *siInstProvider) UpDownCounter(name string, opts ...instrument.Option) 
 }
 
 // Histogram creates an instrument for recording a distribution of values.
-func (ip *siInstProvider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
+func (ip *siInstProvider) Histogram(name string, opts ...instrument.Option) (instrument.SyncHistogram[int64], error) {
 	ip.mtx.Lock()
 	defer ip.mtx.Unlock()
 	ctr := &siHistogram{name: name, opts: opts}

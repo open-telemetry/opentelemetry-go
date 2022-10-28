@@ -25,8 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 )
 
 func TestMeterProviderRace(t *testing.T) {
@@ -86,7 +84,7 @@ func TestMeterRace(t *testing.T) {
 	close(finish)
 }
 
-func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {
+func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.SyncCounter[float64], instrument.AsyncCounter[float64]) {
 	afcounter, err := m.AsyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.AsyncFloat64().UpDownCounter("test_Async_UpDownCounter")

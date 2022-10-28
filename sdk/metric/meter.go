@@ -19,10 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -65,12 +61,12 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
+func (m *meter) AsyncInt64() instrument.AsyncInstrumentProvider[int64] {
 	return asyncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
+func (m *meter) AsyncFloat64() instrument.AsyncInstrumentProvider[float64] {
 	return asyncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
 }
 
@@ -82,11 +78,11 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 }
 
 // SyncInt64 returns the synchronous integer instrument provider.
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
+func (m *meter) SyncInt64() instrument.SyncInstrumentProvider[int64] {
 	return syncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
+func (m *meter) SyncFloat64() instrument.SyncInstrumentProvider[float64] {
 	return syncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
 }
