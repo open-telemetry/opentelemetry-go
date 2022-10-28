@@ -15,8 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
@@ -43,13 +41,7 @@ func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asy
 		Description: cfg.Description(),
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
@@ -62,12 +54,7 @@ func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option
 		Description: cfg.Description(),
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 // Gauge creates an instrument for recording the current value.
@@ -80,12 +67,7 @@ func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (async
 		Description: cfg.Description(),
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 type asyncFloat64Provider struct {
@@ -105,12 +87,7 @@ func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (a
 		Description: cfg.Description(),
 		Kind:        view.AsyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
@@ -123,12 +100,7 @@ func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Opti
 		Description: cfg.Description(),
 		Kind:        view.AsyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
 
 // Gauge creates an instrument for recording the current value.
@@ -141,12 +113,7 @@ func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asy
 		Description: cfg.Description(),
 		Kind:        view.AsyncGauge,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
 
 type syncInt64Provider struct {
@@ -166,12 +133,7 @@ func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (sync
 		Description: cfg.Description(),
 		Kind:        view.SyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
@@ -184,12 +146,7 @@ func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option)
 		Description: cfg.Description(),
 		Kind:        view.SyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 // Histogram creates an instrument for recording the current value.
@@ -202,12 +159,7 @@ func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (sy
 		Description: cfg.Description(),
 		Kind:        view.SyncHistogram,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[int64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[int64]{aggregators: aggs}, err
 }
 
 type syncFloat64Provider struct {
@@ -227,12 +179,7 @@ func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (sy
 		Description: cfg.Description(),
 		Kind:        view.SyncCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
@@ -245,12 +192,7 @@ func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Optio
 		Description: cfg.Description(),
 		Kind:        view.SyncUpDownCounter,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
 
 // Histogram creates an instrument for recording the current value.
@@ -263,10 +205,5 @@ func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (
 		Description: cfg.Description(),
 		Kind:        view.SyncHistogram,
 	}, cfg.Unit())
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
-	return &instrumentImpl[float64]{
-		aggregators: aggs,
-	}, err
+	return &instrumentImpl[float64]{aggregators: aggs}, err
 }
