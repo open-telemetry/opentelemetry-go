@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -77,7 +78,23 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
-	m.pipes.registerCallback(f)
+	for _, inst := range insts {
+		switch t := inst.(type) {
+		case *instrumentImpl[int64]:
+			if len(t.aggregators) > 0 {
+				m.pipes.registerCallback(f)
+				return nil
+			}
+		case *instrumentImpl[float64]:
+			if len(t.aggregators) > 0 {
+				m.pipes.registerCallback(f)
+				return nil
+			}
+		default:
+			return errors.New("invalid asynchronous instrument")
+		}
+	}
+	// Only instrument using drop aggregation passed.
 	return nil
 }
 
