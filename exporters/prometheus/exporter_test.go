@@ -260,7 +260,8 @@ func TestPrometheusExporter(t *testing.T) {
 
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
-				metric.WithReader(exporter, customBucketsView, defaultView),
+				metric.WithReader(exporter),
+				metric.WithView(customBucketsView, defaultView),
 			)
 			meter := provider.Meter("testmeter")
 
