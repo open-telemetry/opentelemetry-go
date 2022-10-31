@@ -519,17 +519,3 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	assert.False(t, called, "callback called for all drop instruments")
 	assert.Len(t, data.ScopeMetrics, 0, "metrics exported for drop instruments")
 }
-
-func TestRegisterCallbackErrorForNonSDKInstrument(t *testing.T) {
-	type alien struct{ instrument.Asynchronous }
-
-	r := NewManualReader()
-	mp := NewMeterProvider(WithReader(r))
-	m := mp.Meter("TestRegisterCallbackErrorForNonSDKInstrument")
-
-	err := m.RegisterCallback([]instrument.Asynchronous{&alien{}}, func(context.Context) {
-		panic("should not be registered")
-	})
-	assert.Error(t, err)
-	assert.NotPanics(t, func() { _, _ = r.Collect(context.Background()) })
-}
