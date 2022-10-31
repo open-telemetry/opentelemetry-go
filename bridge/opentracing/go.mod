@@ -6,7 +6,7 @@ replace go.opentelemetry.io/otel => ../..
 
 require (
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/trace v1.11.1
 )

@@ -7,7 +7,7 @@ replace go.opentelemetry.io/otel => ../
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/trace v1.11.1
 	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
