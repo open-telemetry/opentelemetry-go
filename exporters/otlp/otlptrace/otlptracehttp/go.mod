@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 go 1.18
 
 require (
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.11.1
