@@ -19,16 +19,21 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-func BenchmarkCounterAddNoAttrs(b *testing.B) {
+func benchCounter(views ...view.View) (context.Context, Reader, syncint64.Counter) {
 	ctx := context.Background()
 	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
-	b.ReportAllocs()
-
+	provider := NewMeterProvider(WithReader(rdr, views...))
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
+	return ctx, rdr, cntr
+}
+
+func BenchmarkCounterAddNoAttrs(b *testing.B) {
+	ctx, _, cntr := benchCounter()
+	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1)
@@ -36,12 +41,8 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.String("K", "V"))
@@ -49,12 +50,8 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.String("", "V"), attribute.String("K", "V"))
@@ -62,12 +59,8 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 }
 
 func BenchmarkCounterAddManyAttrs(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", i))
@@ -75,12 +68,8 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddManyInvalidAttrs(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("", i), attribute.Int("K", i))
@@ -90,12 +79,8 @@ func BenchmarkCounterAddManyInvalidAttrs(b *testing.B) {
 func BenchmarkCounterAddManyFilteredAttrs(b *testing.B) {
 	vw, _ := view.New(view.WithFilterAttributes(attribute.Key("K")))
 
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr, vw))
+	ctx, _, cntr := benchCounter(vw)
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("L", i), attribute.Int("K", i))
@@ -103,12 +88,8 @@ func BenchmarkCounterAddManyFilteredAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, rdr, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
@@ -118,35 +99,13 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 }
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
+	ctx, rdr, cntr := benchCounter()
 	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
 		_, _ = rdr.Collect(ctx)
-	}
-}
-
-func BenchmarkCounterCollectTenAttrsTenTimes(b *testing.B) {
-	ctx := context.Background()
-	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr))
-	b.ReportAllocs()
-
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
-
-	for i := 0; i < b.N; i++ {
-		for k := 0; k < 10; k++ {
-			for j := 0; j < 10; j++ {
-				cntr.Add(ctx, 1, attribute.Int("K", j))
-			}
-			_, _ = rdr.Collect(ctx)
-		}
 	}
 }
