@@ -58,7 +58,7 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 	}
 }
 
-func BenchmarkCounterAddManyAttrs(b *testing.B) {
+func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
 
@@ -67,7 +67,7 @@ func BenchmarkCounterAddManyAttrs(b *testing.B) {
 	}
 }
 
-func BenchmarkCounterAddManyInvalidAttrs(b *testing.B) {
+func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter()
 	b.ReportAllocs()
 
@@ -76,7 +76,7 @@ func BenchmarkCounterAddManyInvalidAttrs(b *testing.B) {
 	}
 }
 
-func BenchmarkCounterAddManyFilteredAttrs(b *testing.B) {
+func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	vw, _ := view.New(view.WithFilterAttributes(attribute.Key("K")))
 
 	ctx, _, cntr := benchCounter(vw)
