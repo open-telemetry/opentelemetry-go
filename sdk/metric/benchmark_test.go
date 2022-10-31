@@ -23,17 +23,18 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-func benchCounter(views ...view.View) (context.Context, Reader, syncint64.Counter) {
+func benchCounter(b *testing.B, views ...view.View) (context.Context, Reader, syncint64.Counter) {
 	ctx := context.Background()
 	rdr := NewManualReader()
-	provider := NewMeterProvider(WithReader(rdr, views...))
+	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
 	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
+	b.ResetTimer()
+	b.ReportAllocs()
 	return ctx, rdr, cntr
 }
 
 func BenchmarkCounterAddNoAttrs(b *testing.B) {
-	ctx, _, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1)
@@ -41,8 +42,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
-	ctx, _, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.String("K", "V"))
@@ -50,8 +50,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
-	ctx, _, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.String("", "V"), attribute.String("K", "V"))
@@ -59,8 +58,7 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 }
 
 func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
-	ctx, _, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", i))
@@ -68,8 +66,7 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
-	ctx, _, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("", i), attribute.Int("K", i))
@@ -79,8 +76,7 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	vw, _ := view.New(view.WithFilterAttributes(attribute.Key("K")))
 
-	ctx, _, cntr := benchCounter(vw)
-	b.ReportAllocs()
+	ctx, _, cntr := benchCounter(b, vw)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("L", i), attribute.Int("K", i))
@@ -88,8 +84,7 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
-	ctx, rdr, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
@@ -99,8 +94,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 }
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
-	ctx, rdr, cntr := benchCounter()
-	b.ReportAllocs()
+	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
