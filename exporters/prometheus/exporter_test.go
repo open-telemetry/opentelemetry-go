@@ -26,14 +26,22 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
-		name          string
-		recordMetrics func(ctx context.Context, meter otelmetric.Meter)
-		expectedFile  string
+		name               string
+		emptyResource      bool
+		customResouceAttrs []attribute.KeyValue
+		recordMetrics      func(ctx context.Context, meter otelmetric.Meter)
+		options            []Option
+		expectedFile       string
 	}{
 		{
 			name:         "counter",
@@ -45,11 +53,23 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				counter, err := meter.SyncFloat64().Counter(
+					"foo",
+					instrument.WithDescription("a simple counter"),
+					instrument.WithUnit(unit.Milliseconds),
+				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
+
+				attrs2 := []attribute.KeyValue{
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter.Add(ctx, 5, attrs2...)
 			},
 		},
 		{
@@ -60,10 +80,14 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+				gauge, err := meter.SyncFloat64().UpDownCounter(
+					"bar",
+					instrument.WithDescription("a fun little gauge"),
+					instrument.WithUnit(unit.Dimensionless),
+				)
 				require.NoError(t, err)
-				gauge.Add(ctx, 100, attrs...)
-				gauge.Add(ctx, -25, attrs...)
+				gauge.Add(ctx, 1.0, attrs...)
+				gauge.Add(ctx, -.25, attrs...)
 			},
 		},
 		{
@@ -74,7 +98,11 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
+				histogram, err := meter.SyncFloat64().Histogram(
+					"histogram_baz",
+					instrument.WithDescription("a very nice histogram"),
+					instrument.WithUnit(unit.Bytes),
+				)
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, attrs...)
 				histogram.Record(ctx, 7, attrs...)
@@ -85,6 +113,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
+			options:      []Option{WithoutUnits()},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				attrs := []attribute.KeyValue{
 					// exact match, value should be overwritten
@@ -95,7 +124,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C.D").String("Y"),
 					attribute.Key("C/D").String("Z"),
 				}
-				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a sanitary counter"))
+				counter, err := meter.SyncFloat64().Counter(
+					"foo",
+					instrument.WithDescription("a sanitary counter"),
+					// This unit is not added to
+					instrument.WithUnit(unit.Bytes),
+				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
@@ -130,19 +164,105 @@ func TestPrometheusExporter(t *testing.T) {
 				histogram.Record(ctx, 23, attrs...)
 			},
 		},
+		{
+			name:          "empty resource",
+			emptyResource: true,
+			expectedFile:  "testdata/empty_resource.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, attrs...)
+				counter.Add(ctx, 10.3, attrs...)
+				counter.Add(ctx, 9, attrs...)
+			},
+		},
+		{
+			name: "custom resource",
+			customResouceAttrs: []attribute.KeyValue{
+				attribute.Key("A").String("B"),
+				attribute.Key("C").String("D"),
+			},
+			expectedFile: "testdata/custom_resource.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, attrs...)
+				counter.Add(ctx, 10.3, attrs...)
+				counter.Add(ctx, 9, attrs...)
+			},
+		},
+		{
+			name:         "without target_info",
+			options:      []Option{WithoutTargetInfo()},
+			expectedFile: "testdata/without_target_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, attrs...)
+				counter.Add(ctx, 10.3, attrs...)
+				counter.Add(ctx, 9, attrs...)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-
-			exporter := New()
-			provider := metric.NewMeterProvider(metric.WithReader(exporter))
-			meter := provider.Meter("testmeter")
-
 			registry := prometheus.NewRegistry()
-			err := registry.Register(exporter.Collector)
+			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
 			require.NoError(t, err)
+
+			customBucketsView, err := view.New(
+				view.MatchInstrumentName("histogram_*"),
+				view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
+					Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+				}),
+			)
+			require.NoError(t, err)
+			defaultView, err := view.New(view.MatchInstrumentName("*"))
+			require.NoError(t, err)
+
+			var res *resource.Resource
+
+			if tc.emptyResource {
+				res = resource.Empty()
+			} else {
+				res, err = resource.New(ctx,
+					// always specify service.name because the default depends on the running OS
+					resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+					resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+					resource.WithAttributes(tc.customResouceAttrs...),
+				)
+				require.NoError(t, err)
+
+				res, err = resource.Merge(resource.Default(), res)
+				require.NoError(t, err)
+			}
+
+			provider := metric.NewMeterProvider(
+				metric.WithResource(res),
+				metric.WithReader(exporter, customBucketsView, defaultView),
+			)
+			meter := provider.Meter("testmeter")
 
 			tc.recordMetrics(ctx, meter)
 

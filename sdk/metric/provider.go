@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -27,9 +26,8 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	res *resource.Resource
-
-	meters meterRegistry
+	pipes  pipelines
+	meters cache[instrumentation.Scope, *meter]
 
 	forceFlush, shutdown func(context.Context) error
 }
@@ -45,18 +43,9 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // Readers, will perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
-
 	flush, sdown := conf.readerSignals()
-
-	registry := newPipelines(conf.res, conf.readers)
-
 	return &MeterProvider{
-		res: conf.res,
-
-		meters: meterRegistry{
-			pipes: registry,
-		},
-
+		pipes:      newPipelines(conf.res, conf.readers),
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
@@ -77,10 +66,13 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
 	c := metric.NewMeterConfig(options...)
-	return mp.meters.Get(instrumentation.Scope{
+	s := instrumentation.Scope{
 		Name:      name,
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
+	}
+	return mp.meters.Lookup(s, func() *meter {
+		return newMeter(s, mp.pipes)
 	})
 }
 

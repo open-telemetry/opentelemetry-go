@@ -1,0 +1,6 @@
+# HELP foo_total a simple counter
+# TYPE foo_total counter
+foo_total{A="B",C="D",E="true",F="42"} 24.3
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info 1
