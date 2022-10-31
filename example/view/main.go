@@ -66,7 +66,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	provider := metric.NewMeterProvider(metric.WithReader(exporter, customBucketsView, defaultView))
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithView(customBucketsView, defaultView),
+	)
 	meter := provider.Meter(meterName)
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it

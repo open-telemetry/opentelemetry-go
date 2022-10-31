@@ -257,7 +257,8 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		views     map[Reader][]view.View
+		readers   []Reader
+		views     []view.View
 		inst      view.Instrument
 		wantCount int
 	}{
@@ -266,72 +267,46 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 			inst: view.Instrument{Name: "foo"},
 		},
 		{
-			name: "1 reader 1 view gets 1 aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-			},
+			name:      "1 reader 1 view gets 1 aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}},
 			wantCount: 1,
 		},
 		{
-			name: "1 reader 2 views gets 2 aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
-				},
-			},
+			name:      "1 reader 2 views gets 2 aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}, renameView},
 			wantCount: 2,
 		},
 		{
-			name: "2 readers 1 view each gets 2 aggregators",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-				testRdrHistogram: {
-					{},
-				},
-			},
+			name:      "2 readers 1 view each gets 2 aggregators",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr, testRdrHistogram},
+			views:     []view.View{{}},
 			wantCount: 2,
 		},
 		{
-			name: "2 reader 2 views each gets 4 aggregators",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
-				},
-				testRdrHistogram: {
-					{},
-					renameView,
-				},
-			},
+			name:      "2 reader 2 views each gets 4 aggregators",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr, testRdrHistogram},
+			views:     []view.View{{}, renameView},
 			wantCount: 4,
 		},
 		{
-			name: "An instrument is duplicated in two views share the same aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					{},
-				},
-			},
+			name:      "An instrument is duplicated in two views share the same aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}, {}},
 			wantCount: 1,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newPipelines(resource.Empty(), tt.views)
+			p := newPipelines(resource.Empty(), tt.readers, tt.views)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
-			p = newPipelines(resource.Empty(), tt.views)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 		})
 	}
@@ -362,11 +337,10 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 func TestPipelineRegistryResource(t *testing.T) {
 	v, err := view.New(view.MatchInstrumentName("bar"), view.WithRename("foo"))
 	require.NoError(t, err)
-	views := map[Reader][]view.View{
-		NewManualReader(): {{}, v},
-	}
+	readers := []Reader{NewManualReader()}
+	views := []view.View{{}, v}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	pipes := newPipelines(res, views)
+	pipes := newPipelines(res, readers, views)
 	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -375,12 +349,9 @@ func TestPipelineRegistryResource(t *testing.T) {
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
-	views := map[Reader][]view.View{
-		testRdrHistogram: {
-			{},
-		},
-	}
-	p := newPipelines(resource.Empty(), views)
+	readers := []Reader{testRdrHistogram}
+	views := []view.View{{}}
+	p := newPipelines(resource.Empty(), readers, views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
 	vc := cache[string, instrumentID]{}
@@ -388,8 +359,6 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
-
-	p = newPipelines(resource.Empty(), views)
 
 	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
 	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
@@ -421,17 +390,13 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 		view.MatchInstrumentName("bar"),
 		view.WithRename("foo"),
 	)
-	views := map[Reader][]view.View{
-		NewManualReader(): {
-			{},
-			renameView,
-		},
-	}
+	readers := []Reader{NewManualReader()}
+	views := []view.View{{}, renameView}
 
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	p := newPipelines(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), readers, views)
 
 	vc := cache[string, instrumentID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
