@@ -810,7 +810,10 @@ func TestAttributeFilter(t *testing.T) {
 			)
 			require.NoError(t, err)
 			rdr := NewManualReader()
-			mtr := NewMeterProvider(WithReader(rdr, v)).Meter("TestAttributeFilter")
+			mtr := NewMeterProvider(
+				WithReader(rdr),
+				WithView(v),
+			).Meter("TestAttributeFilter")
 
 			err = tt.register(t, mtr)
 			require.NoError(t, err)
