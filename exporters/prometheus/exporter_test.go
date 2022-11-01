@@ -249,7 +249,8 @@ func TestPrometheusExporter(t *testing.T) {
 
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
-				metric.WithReader(exporter, metric.NewView(
+				metric.WithReader(exporter),
+				metric.WithView(metric.NewView(
 					metric.Instrument{Name: "histogram_*"},
 					metric.Stream{
 						Aggregation: aggregation.ExplicitBucketHistogram{

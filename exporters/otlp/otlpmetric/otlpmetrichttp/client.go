@@ -34,6 +34,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -55,6 +57,9 @@ type client struct {
 	compression Compression
 	requestFunc retry.RequestFunc
 	httpClient  *http.Client
+
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -116,7 +121,20 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
+
+		temporalitySelector: cfg.Metrics.TemporalitySelector,
+		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}, nil
+}
+
+// Temporality returns the Temporality to use for an instrument kind.
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return c.temporalitySelector(k)
+}
+
+// Aggregation returns the Aggregation to use for an instrument kind.
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return c.aggregationSelector(k)
 }
 
 // ForceFlush does nothing, the client holds no state.

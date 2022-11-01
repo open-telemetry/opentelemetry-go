@@ -126,5 +126,14 @@ func TestWithResource(t *testing.T) {
 func TestWithReader(t *testing.T) {
 	r := &reader{}
 	c := newConfig([]Option{WithReader(r)})
-	assert.Contains(t, c.readers, r)
+	require.Len(t, c.readers, 1)
+	assert.Same(t, r, c.readers[0])
+}
+
+func TestWithView(t *testing.T) {
+	c := newConfig([]Option{WithView(
+		func(Instrument) (Stream, bool) { return Stream{}, false },
+		func(Instrument) (Stream, bool) { return Stream{}, true },
+	)})
+	assert.Len(t, c.views, 2)
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -53,12 +54,28 @@ func TestWithInterval(t *testing.T) {
 }
 
 type fnExporter struct {
-	exportFunc   func(context.Context, metricdata.ResourceMetrics) error
-	flushFunc    func(context.Context) error
-	shutdownFunc func(context.Context) error
+	temporalityFunc TemporalitySelector
+	aggregationFunc AggregationSelector
+	exportFunc      func(context.Context, metricdata.ResourceMetrics) error
+	flushFunc       func(context.Context) error
+	shutdownFunc    func(context.Context) error
 }
 
 var _ Exporter = (*fnExporter)(nil)
+
+func (e *fnExporter) Temporality(k InstrumentKind) metricdata.Temporality {
+	if e.temporalityFunc != nil {
+		return e.temporalityFunc(k)
+	}
+	return DefaultTemporalitySelector(k)
+}
+
+func (e *fnExporter) Aggregation(k InstrumentKind) aggregation.Aggregation {
+	if e.aggregationFunc != nil {
+		return e.aggregationFunc(k)
+	}
+	return DefaultAggregationSelector(k)
+}
 
 func (e *fnExporter) Export(ctx context.Context, m metricdata.ResourceMetrics) error {
 	if e.exportFunc != nil {
@@ -229,37 +246,33 @@ func BenchmarkPeriodicReader(b *testing.B) {
 
 func TestPeriodiclReaderTemporality(t *testing.T) {
 	tests := []struct {
-		name    string
-		options []PeriodicReaderOption
+		name     string
+		exporter *fnExporter
 		// Currently only testing constant temporality. This should be expanded
 		// if we put more advanced selection in the SDK
 		wantTemporality metricdata.Temporality
 	}{
 		{
 			name:            "default",
+			exporter:        new(fnExporter),
 			wantTemporality: metricdata.CumulativeTemporality,
 		},
 		{
-			name: "delta",
-			options: []PeriodicReaderOption{
-				WithTemporalitySelector(deltaTemporalitySelector),
-			},
+			name:            "delta",
+			exporter:        &fnExporter{temporalityFunc: deltaTemporalitySelector},
 			wantTemporality: metricdata.DeltaTemporality,
 		},
 		{
-			name: "repeats overwrite",
-			options: []PeriodicReaderOption{
-				WithTemporalitySelector(deltaTemporalitySelector),
-				WithTemporalitySelector(cumulativeTemporalitySelector),
-			},
+			name:            "cumulative",
+			exporter:        &fnExporter{temporalityFunc: cumulativeTemporalitySelector},
 			wantTemporality: metricdata.CumulativeTemporality,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewPeriodicReader(new(fnExporter), tt.options...)
-			assert.Equal(t, tt.wantTemporality, rdr.temporality(instrumentKindUndefined))
+			rdr := NewPeriodicReader(tt.exporter)
+			assert.Equal(t, tt.wantTemporality.String(), rdr.temporality(instrumentKindUndefined).String())
 		})
 	}
 }

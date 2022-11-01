@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 
@@ -209,7 +210,9 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	}
 
 	if data.Status().Code != codes.Unset {
-		m["otel.status_code"] = data.Status().Code.String()
+		// Zipkin expect to receive uppercase status values
+		// rather than default capitalized ones.
+		m["otel.status_code"] = strings.ToUpper(data.Status().Code.String())
 	}
 
 	if data.Status().Code == codes.Error {

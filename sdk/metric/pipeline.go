@@ -420,13 +420,13 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 // measurement.
 type pipelines []*pipeline
 
-func newPipelines(res *resource.Resource, readers map[Reader][]View) pipelines {
+func newPipelines(res *resource.Resource, readers []Reader, views []View) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
-	for r, v := range readers {
+	for _, r := range readers {
 		p := &pipeline{
 			resource: res,
 			reader:   r,
-			views:    v,
+			views:    views,
 		}
 		r.register(p)
 		pipes = append(pipes, p)
