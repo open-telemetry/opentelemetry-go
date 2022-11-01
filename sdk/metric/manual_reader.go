@@ -129,3 +129,53 @@ func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 type ManualReaderOption interface {
 	applyManual(manualReaderConfig) manualReaderConfig
 }
+
+// WithTemporalitySelector sets the TemporalitySelector a reader will use to
+// determine the Temporality of an instrument based on its kind. If this
+// option is not used, the reader will use the DefaultTemporalitySelector.
+func WithTemporalitySelector(selector TemporalitySelector) ManualReaderOption {
+	return temporalitySelectorOption{selector: selector}
+}
+
+type temporalitySelectorOption struct {
+	selector func(instrument view.InstrumentKind) metricdata.Temporality
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualReaderConfig {
+	mrc.temporalitySelector = t.selector
+	return mrc
+}
+
+// WithAggregationSelector sets the AggregationSelector a reader will use to
+// determine the aggregation to use for an instrument based on its kind. If
+// this option is not used, the reader will use the DefaultAggregationSelector
+// or the aggregation explicitly passed for a view matching an instrument.
+func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
+	// Deep copy and validate before using.
+	wrapped := func(ik view.InstrumentKind) aggregation.Aggregation {
+		a := selector(ik)
+		cpA := a.Copy()
+		if err := cpA.Err(); err != nil {
+			cpA = DefaultAggregationSelector(ik)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", a,
+				"replacement", cpA,
+			)
+		}
+		return cpA
+	}
+
+	return aggregationSelectorOption{selector: wrapped}
+}
+
+type aggregationSelectorOption struct {
+	selector AggregationSelector
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.aggregationSelector = t.selector
+	return c
+}

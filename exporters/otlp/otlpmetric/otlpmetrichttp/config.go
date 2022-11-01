@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // Compression describes the compression used for payloads sent to the
@@ -178,4 +179,21 @@ func WithTimeout(duration time.Duration) Option {
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
 	return wrappedOption{oconf.WithRetry(retry.Config(rc))}
+}
+
+// WithTemporalitySelector sets the TemporalitySelector the client will use to
+// determine the Temporality of an instrument based on its kind. If this option
+// is not used, the client will use the DefaultTemporalitySelector from the
+// go.opentelemetry.io/otel/sdk/metric package.
+func WithTemporalitySelector(selector metric.TemporalitySelector) Option {
+	return wrappedOption{oconf.WithTemporalitySelector(selector)}
+}
+
+// WithAggregationSelector sets the AggregationSelector the client will use to
+// determine the aggregation to use for an instrument based on its kind. If
+// this option is not used, the reader will use the DefaultAggregationSelector
+// from the go.opentelemetry.io/otel/sdk/metric package, or the aggregation
+// explicitly passed for a view matching an instrument.
+func WithAggregationSelector(selector metric.AggregationSelector) Option {
+	return wrappedOption{oconf.WithAggregationSelector(selector)}
 }
