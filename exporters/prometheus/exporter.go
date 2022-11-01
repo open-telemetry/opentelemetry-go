@@ -166,11 +166,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, ks, vs [2]string, name string) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
-		if ks[0] != "" {
-			keys = append(keys, ks[:]...)
-			values = append(values, vs[:]...)
-		}
+		keys, values := getAttrs(dp.Attributes, ks, vs)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
@@ -199,11 +195,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 		name += counterSuffix
 	}
 	for _, dp := range sum.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
-		if ks[0] != "" {
-			keys = append(keys, ks[:]...)
-			values = append(values, vs[:]...)
-		}
+		keys, values := getAttrs(dp.Attributes, ks, vs)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
@@ -217,11 +209,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 
 func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string) {
 	for _, dp := range gauge.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
-		if ks[0] != "" {
-			keys = append(keys, ks[:]...)
-			values = append(values, vs[:]...)
-		}
+		keys, values := getAttrs(dp.Attributes, ks, vs)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
@@ -236,7 +224,7 @@ func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metric
 // getAttrs parses the attribute.Set to two lists of matching Prometheus-style
 // keys and values. It sanitizes invalid characters and handles duplicate keys
 // (due to sanitization) by sorting and concatenating the values following the spec.
-func getAttrs(attrs attribute.Set) ([]string, []string) {
+func getAttrs(attrs attribute.Set, ks, vs [2]string) ([]string, []string) {
 	keysMap := make(map[string][]string)
 	itr := attrs.Iter()
 	for itr.Next() {
@@ -259,11 +247,16 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 		})
 		values = append(values, strings.Join(vals, ";"))
 	}
+
+	if ks[0] != "" {
+		keys = append(keys, ks[:]...)
+		values = append(values, vs[:]...)
+	}
 	return keys, values
 }
 
 func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
-	keys, values := getAttrs(*res.Set())
+	keys, values := getAttrs(*res.Set(), [2]string{}, [2]string{})
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
