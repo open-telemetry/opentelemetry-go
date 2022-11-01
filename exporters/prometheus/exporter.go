@@ -262,7 +262,6 @@ func (c *collector) createInfoMetric(name, description string, res *resource.Res
 }
 
 func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, error) {
-
 	keys := scopeInfoKeys[:]
 	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), scope.Name, scope.Version)
