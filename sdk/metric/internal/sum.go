@@ -76,16 +76,16 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
+	}
+
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
 	}
 
 	t := now()
@@ -137,16 +137,16 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
+	}
+
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: s.monotonic,
 	}
 
 	t := now()
@@ -204,16 +204,16 @@ func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
 }
 
 func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.recorded) == 0 {
-		return out
+		return nil
+	}
+
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
 	}
 
 	t := now()
