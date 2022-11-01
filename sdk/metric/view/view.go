@@ -71,7 +71,7 @@ func New(opts ...Option) (View, error) {
 
 // TransformInstrument will check if an instrument matches this view
 // and will convert it if it does.
-func (v *View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
+func (v View) TransformInstrument(inst Instrument) (transformed Instrument, match bool) {
 	if !v.match(inst) {
 		return Instrument{}, false
 	}
@@ -89,7 +89,7 @@ func (v *View) TransformInstrument(inst Instrument) (transformed Instrument, mat
 
 // AttributeFilter returns a function that returns only attributes specified by
 // WithFilterAttributes. If no filter was provided nil is returned.
-func (v *View) AttributeFilter() func(attribute.Set) attribute.Set {
+func (v View) AttributeFilter() func(attribute.Set) attribute.Set {
 	if v.filter == nil {
 		return nil
 	}
@@ -99,27 +99,27 @@ func (v *View) AttributeFilter() func(attribute.Set) attribute.Set {
 	}
 }
 
-func (v *View) matchName(name string) bool {
+func (v View) matchName(name string) bool {
 	return v.instrumentName == nil || v.instrumentName.MatchString(name)
 }
 
-func (v *View) matchScopeName(name string) bool {
+func (v View) matchScopeName(name string) bool {
 	return v.scope.Name == "" || name == v.scope.Name
 }
 
-func (v *View) matchScopeVersion(version string) bool {
+func (v View) matchScopeVersion(version string) bool {
 	return v.scope.Version == "" || version == v.scope.Version
 }
 
-func (v *View) matchScopeSchemaURL(schemaURL string) bool {
+func (v View) matchScopeSchemaURL(schemaURL string) bool {
 	return v.scope.SchemaURL == "" || schemaURL == v.scope.SchemaURL
 }
 
-func (v *View) matchInstrumentKind(kind InstrumentKind) bool {
+func (v View) matchInstrumentKind(kind InstrumentKind) bool {
 	return v.instrumentKind == undefinedInstrument || kind == v.instrumentKind
 }
 
-func (v *View) match(i Instrument) bool {
+func (v View) match(i Instrument) bool {
 	return v.matchName(i.Name) &&
 		v.matchScopeName(i.Scope.Name) &&
 		v.matchScopeSchemaURL(i.Scope.SchemaURL) &&
