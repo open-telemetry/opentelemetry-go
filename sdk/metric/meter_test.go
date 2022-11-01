@@ -492,15 +492,18 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 1.0, attribute.Int("version", 1))
-					ctr.Observe(ctx, 2.0, attribute.Int("version", 2))
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afcounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 2.0}, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -515,15 +518,18 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 1.0, attribute.Int("version", 1))
-					ctr.Observe(ctx, 2.0, attribute.Int("version", 2))
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afupdowncounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 2.0}, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -538,36 +544,42 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 1.0, attribute.Int("version", 1))
-					ctr.Observe(ctx, 2.0, attribute.Int("version", 2))
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afgauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 2.0},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0,
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncFloat64Counter",
+			name: "AsyncInt64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.AsyncInt64().Counter("aicounter")
 				if err != nil {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 10, attribute.Int("version", 1))
-					ctr.Observe(ctx, 20, attribute.Int("version", 2))
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aicounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 20}, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20, // TODO: This should be 30.  It is a bug in the sum aggregator
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -575,22 +587,25 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64UpDownCounter",
+			name: "AsyncInt64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.AsyncInt64().UpDownCounter("aiupdowncounter")
 				if err != nil {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 10, attribute.Int("version", 1))
-					ctr.Observe(ctx, 20, attribute.Int("version", 2))
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aiupdowncounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 20}, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20, // TODO: This should be 30.  It is a bug in the sum aggregator
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -605,36 +620,42 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
-					ctr.Observe(ctx, 10, attribute.Int("version", 1))
-					ctr.Observe(ctx, 20, attribute.Int("version", 2))
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aigauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 20},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20,
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "SyncFloatCounter",
+			name: "SyncFloat64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncFloat64().Counter("sfcounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, attribute.Int("version", 1))
-				ctr.Add(context.Background(), 2.0, attribute.Int("version", 2))
+				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sfcounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 3.0},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      3.0,
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -642,22 +663,25 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncFloatUpDownCounter",
+			name: "SyncFloat64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncFloat64().UpDownCounter("sfupdowncounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, attribute.Int("version", 1))
-				ctr.Add(context.Background(), 2.0, attribute.Int("version", 2))
+				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sfupdowncounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 3.0},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      3.0,
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -665,15 +689,15 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncFloatHistogram",
+			name: "SyncFloat64Histogram",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncFloat64().Histogram("sfhistogram")
 				if err != nil {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1.0, attribute.Int("version", 1))
-				ctr.Record(context.Background(), 2.0, attribute.Int("version", 2))
+				ctr.Record(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Record(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -681,6 +705,7 @@ func TestAttributeFilter(t *testing.T) {
 				Data: metricdata.Histogram{
 					DataPoints: []metricdata.HistogramDataPoint{
 						{
+							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
@@ -694,22 +719,25 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncIntCounter",
+			name: "SyncInt64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncInt64().Counter("sicounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, attribute.Int("version", 1))
-				ctr.Add(context.Background(), 20, attribute.Int("version", 2))
+				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sicounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 30},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      30,
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -717,22 +745,25 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncIntUpDownCounter",
+			name: "SyncInt64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncInt64().UpDownCounter("siupdowncounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, attribute.Int("version", 1))
-				ctr.Add(context.Background(), 20, attribute.Int("version", 2))
+				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "siupdowncounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Value: 30},
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      30,
+						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -740,15 +771,15 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "SyncIntHistogram",
+			name: "SyncInt64Histogram",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.SyncInt64().Histogram("sihistogram")
 				if err != nil {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1, attribute.Int("version", 1))
-				ctr.Record(context.Background(), 2, attribute.Int("version", 2))
+				ctr.Record(context.Background(), 1, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Record(context.Background(), 2, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -756,6 +787,7 @@ func TestAttributeFilter(t *testing.T) {
 				Data: metricdata.Histogram{
 					DataPoints: []metricdata.HistogramDataPoint{
 						{
+							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
