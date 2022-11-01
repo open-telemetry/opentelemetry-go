@@ -121,7 +121,12 @@ type ExplicitBucketHistogram struct {
 	// (500.0, 1000.0], (1000.0, +∞)
 	Boundaries []float64
 	// NoMinMax indicates whether to not record the min and max of the
-	// distribution. By default, these extremes are recorded.
+	// distribution. By default, these extrema are recorded.
+	//
+	// Recording these extrema for cumulative data is expected to have little
+	// value, they will represent the entire life of the instrument instead of
+	// just the current collection cycle. It is recommended to set this to true
+	// for that type of data to avoid computing the low-value extrema.
 	NoMinMax bool
 }
 

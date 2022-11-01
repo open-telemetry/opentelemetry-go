@@ -111,7 +111,7 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	var seven float64 = 7.0
+	seven := 7.0
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)

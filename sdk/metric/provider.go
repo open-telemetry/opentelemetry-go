@@ -45,7 +45,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
 	return &MeterProvider{
-		pipes:      newPipelines(conf.res, conf.readers),
+		pipes:      newPipelines(conf.res, conf.readers, conf.views),
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
