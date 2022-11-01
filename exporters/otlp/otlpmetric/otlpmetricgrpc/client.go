@@ -28,6 +28,9 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -53,6 +56,9 @@ type client struct {
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
 
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
+
 	// ourConn keeps track of where conn was created: true if created here in
 	// NewClient, or false if passed with an option. This is important on
 	// Shutdown as the conn should only be closed if we created it. Otherwise,
@@ -70,6 +76,9 @@ func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		conn:          cfg.GRPCConn,
+
+		temporalitySelector: cfg.Metrics.TemporalitySelector,
+		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}
 
 	if len(cfg.Metrics.Headers) > 0 {
@@ -92,6 +101,16 @@ func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error
 	c.msc = colmetricpb.NewMetricsServiceClient(c.conn)
 
 	return c, nil
+}
+
+// Temporality returns the Temporality to use for an instrument kind.
+func (c *client) Temporality(k view.InstrumentKind) metricdata.Temporality {
+	return c.temporalitySelector(k)
+}
+
+// Aggregation returns the Aggregation to use for an instrument kind.
+func (c *client) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+	return c.aggregationSelector(k)
 }
 
 // ForceFlush does nothing, the client holds no state.
