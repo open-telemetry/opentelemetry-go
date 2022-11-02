@@ -363,6 +363,7 @@ func TestMultiScopes(t *testing.T) {
 	)
 	require.NoError(t, err)
 	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
 
 	provider := metric.NewMeterProvider(
 		metric.WithReader(exporter),
@@ -391,5 +392,4 @@ func TestMultiScopes(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
-
 }
