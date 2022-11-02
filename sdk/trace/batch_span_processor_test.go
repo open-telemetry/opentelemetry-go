@@ -19,6 +19,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/go-logr/stdr"
+	"log"
 	"os"
 	"regexp"
 	"sync"
@@ -497,7 +499,6 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 1})
 	l := &logCounter{LogSink: tLog.GetSink()}
 	otel.SetLogger(logr.New(l))
-	global.SetLogger(logr.New(l))
 
 	te := testBatchExporter{}
 	tp := basicTracerProvider(t)
@@ -519,10 +520,19 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	// Force flush any held span batches
 	generateSpan(t, tr, option)
 	ssp.ForceFlush(context.Background())
+	reportedDropCount := 0
+	logMatch := regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`)
+	for _, v := range l.logs {
+		match := logMatch.MatchString(v)
+		if match {
+			reportedDropCount++
+		}
+	}
+	assert.GreaterOrEqual(t, reportedDropCount, 1)
 
-	assert.Equal(t, len(l.logs), 3, "expected log message")
-	droppedLogs := l.logs[2]
-	assert.Regexp(t, regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`), droppedLogs)
+	// have to reset the logger or other tests will fail during make test-race
+	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
+	otel.SetLogger(logger)
 }
 
 func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {

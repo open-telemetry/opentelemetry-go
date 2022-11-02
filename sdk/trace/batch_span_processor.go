@@ -75,9 +75,9 @@ type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
-	queue        chan ReadOnlySpan
-	dropped      uint32
-	knownDropped uint32
+	queue           chan ReadOnlySpan
+	dropped         uint32
+	reportedDropped uint32
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -269,9 +269,9 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		global.Debug("exporting spans", "count", len(bsp.batch))
 
 		dropped := atomic.LoadUint32(&bsp.dropped)
-		knownDropped := atomic.SwapUint32(&bsp.knownDropped, dropped)
-		if dropped > knownDropped {
-			droppedThisBatch := dropped - knownDropped
+		reportedDropped := atomic.SwapUint32(&bsp.reportedDropped, dropped)
+		if dropped > reportedDropped {
+			droppedThisBatch := dropped - reportedDropped
 			global.Info("dropped spans", "total", dropped, "this_batch", droppedThisBatch)
 		}
 

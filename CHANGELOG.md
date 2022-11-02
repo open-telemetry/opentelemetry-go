@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `go.opentelemetry.io/sdk/trace/batch_span_processor` will now keep track of known dropped span count and log during batch export on newly dropped spans. (#3289)
+- The `BatchSpanProcessor` from `go.opentelemetry.io/otel/sdk/trace` logs the spans dropped in a batch every export with verbosity `1`. (#3289)
 
 ### Fixed
 
