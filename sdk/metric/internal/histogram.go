@@ -137,13 +137,14 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
-	h := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
-
+	t := now()
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h := metricdata.Histogram{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+	}
 	for a, b := range s.values {
 		hdp := metricdata.HistogramDataPoint{
 			Attributes:   a,
@@ -199,13 +200,14 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
-	h := metricdata.Histogram{Temporality: metricdata.CumulativeTemporality}
-
+	t := now()
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h := metricdata.Histogram{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+	}
 	for a, b := range s.values {
 		// The HistogramDataPoint field values returned need to be copies of
 		// the buckets value as we will keep updating them.

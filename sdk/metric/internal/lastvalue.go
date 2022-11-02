@@ -56,9 +56,9 @@ func (s *lastValue[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
-	gauge := metricdata.Gauge[N]{}
-
-	gauge.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	gauge := metricdata.Gauge[N]{
+		DataPoints: make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for a, v := range s.values {
 		gauge.DataPoints = append(gauge.DataPoints, metricdata.DataPoint[N]{
 			Attributes: a,

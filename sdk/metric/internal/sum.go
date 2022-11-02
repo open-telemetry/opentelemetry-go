@@ -83,13 +83,12 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
+	t := now()
 	out := metricdata.Sum[N]{
 		Temporality: metricdata.DeltaTemporality,
 		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
 	}
-
-	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -144,13 +143,12 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
+	t := now()
 	out := metricdata.Sum[N]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
 	}
-
-	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -211,13 +209,12 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 		return nil
 	}
 
+	t := now()
 	out := metricdata.Sum[N]{
 		Temporality: metricdata.DeltaTemporality,
 		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.recorded)),
 	}
-
-	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.recorded))
 	for attr, recorded := range s.recorded {
 		value := recorded - s.reported[attr]
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
