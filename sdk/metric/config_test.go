@@ -127,5 +127,21 @@ func TestWithResource(t *testing.T) {
 func TestWithReader(t *testing.T) {
 	r := &reader{}
 	c := newConfig([]Option{WithReader(r)})
-	assert.Contains(t, c.readers, r)
+	require.Len(t, c.readers, 1)
+	assert.Same(t, r, c.readers[0])
+}
+
+func TestWithView(t *testing.T) {
+	var views []view.View
+
+	v, err := view.New(view.MatchInstrumentKind(view.AsyncCounter), view.WithRename("a"))
+	require.NoError(t, err)
+	views = append(views, v)
+
+	v, err = view.New(view.MatchInstrumentKind(view.SyncCounter), view.WithRename("b"))
+	require.NoError(t, err)
+	views = append(views, v)
+
+	c := newConfig([]Option{WithView(views...)})
+	assert.Equal(t, views, c.views)
 }

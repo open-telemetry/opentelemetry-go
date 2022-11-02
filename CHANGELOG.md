@@ -11,10 +11,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `BatchSpanProcessor` from `go.opentelemetry.io/otel/sdk/trace` logs the spans dropped in a batch every export with verbosity `1`. (#3289)
+- The `WithView` `Option` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
+   This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
+- Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.
+  This can be disabled using the `WithoutScopeInfo()` option added to that package.(#3273, #3357)
+
+### Changed
+
+- The `"go.opentelemetry.io/otel/sdk/metric".WithReader` option no longer accepts views to associate with the `Reader`.
+   Instead, views are now registered directly with the `MeterProvider` via the new `WithView` option.
+   The views registered with the `MeterProvider` apply to all `Reader`s. (#3387)
+- The `Temporality(view.InstrumentKind) metricdata.Temporality` and `Aggregation(view.InstrumentKind) aggregation.Aggregation` methods are added to the `"go.opentelemetry.io/otel/sdk/metric".Exporter` interface. (#3260)
+- The `Temporality(view.InstrumentKind) metricdata.Temporality` and `Aggregation(view.InstrumentKind) aggregation.Aggregation` methods are added to the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric".Client` interface. (#3260)
+- The `WithTemporalitySelector` and `WithAggregationSelector` `ReaderOption`s have been changed to `ManualReaderOption`s in the `go.opentelemetry.io/otel/sdk/metric` package. (#3260)
+- The periodic reader in the `go.opentelemetry.io/otel/sdk/metric` package now uses the temporality and aggregation selectors from its configured exporter instead of accepting them as options. (#3260)
 
 ### Fixed
 
 - The `go.opentelemetry.io/otel/exporters/prometheus` exporter fixes duplicated `_total` suffixes. (#3369)
+- Remove comparable requirement for `Reader`s. (#3387)
+- Cumulative metrics from the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) are defined as monotonic sums, instead of non-monotonic. (#3389)
+- Asynchronous counters (`Counter` and `UpDownCounter`) from the metric SDK now produce delta sums when configured with delta temporality. (#3398)
+- Exported `Status` codes in the `go.opentelemetry.io/otel/exporters/zipkin` exporter are now exported as all upper case values. (#3340)
 
 ## [1.11.1/0.33.0] 2022-10-19
 
