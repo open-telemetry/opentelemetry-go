@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `WithView` `Option` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
    This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
+- Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.
+  This can be disabled using the `WithoutScopeInfo()` option added to that package.(#3273, #3357)
 
 ### Changed
 
