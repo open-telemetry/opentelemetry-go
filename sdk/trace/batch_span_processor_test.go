@@ -19,7 +19,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/go-logr/stdr"
 	"log"
 	"os"
 	"regexp"
@@ -30,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -365,12 +365,6 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace
 	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
-func createAndRegisterBatchSPNonBlocking(option testOption, te *testBatchExporter) sdktrace.SpanProcessor {
-	// Blocking span processor should be preferred to avoid flaky test
-	// To test dropped spans warn logging the blocking span processor bypasses drop logic
-	return sdktrace.NewBatchSpanProcessor(te, option.o...)
-}
-
 func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
@@ -510,15 +504,15 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 		},
 		genNumSpans: 100,
 	}
-	ssp := createAndRegisterBatchSPNonBlocking(option, &te)
+	ssp := sdktrace.NewBatchSpanProcessor(&te, option.o...)
 	if ssp == nil {
 		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
 
-	// Force flush any held span batches
 	generateSpan(t, tr, option)
+	// Force flush any held span batches
 	ssp.ForceFlush(context.Background())
 	reportedDropCount := 0
 	logMatch := regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`)
@@ -530,7 +524,7 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	}
 	assert.GreaterOrEqual(t, reportedDropCount, 1)
 
-	// have to reset the logger or other tests will fail during make test-race
+	// Reset the global logger so other tests are not impacted
 	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
 	otel.SetLogger(logger)
 }
