@@ -15,11 +15,15 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"sync/atomic"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -103,7 +107,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewDeltaSum[N](true),
+			wantKind: internal.NewPrecomputedDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -111,7 +115,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []view.View{defaultAggView},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewDeltaSum[N](false),
+			wantKind: internal.NewPrecomputedDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -151,7 +155,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -159,7 +163,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []view.View{{}},
 			inst:     instruments[view.AsyncUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](false),
+			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -211,7 +215,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			i := newInserter[N](newPipeline(nil, tt.reader, tt.views))
+			c := newInstrumentCache[N](nil, nil)
+			i := newInserter(newPipeline(nil, tt.reader, tt.views), c)
 			got, err := i.Instrument(tt.inst, unit.Dimensionless)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
@@ -223,7 +228,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	i := newInserter[N](newPipeline(nil, NewManualReader(), []view.View{{}}))
+	c := newInstrumentCache[N](nil, nil)
+	i := newInserter(newPipeline(nil, NewManualReader(), []view.View{{}}), c)
 	inst := view.Instrument{
 		Name: "foo",
 		Kind: view.InstrumentKind(255),
@@ -251,7 +257,8 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		views     map[Reader][]view.View
+		readers   []Reader
+		views     []view.View
 		inst      view.Instrument
 		wantCount int
 	}{
@@ -260,72 +267,46 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 			inst: view.Instrument{Name: "foo"},
 		},
 		{
-			name: "1 reader 1 view gets 1 aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-			},
+			name:      "1 reader 1 view gets 1 aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}},
 			wantCount: 1,
 		},
 		{
-			name: "1 reader 2 views gets 2 aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
-				},
-			},
+			name:      "1 reader 2 views gets 2 aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}, renameView},
 			wantCount: 2,
 		},
 		{
-			name: "2 readers 1 view each gets 2 aggregators",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-				},
-				testRdrHistogram: {
-					{},
-				},
-			},
+			name:      "2 readers 1 view each gets 2 aggregators",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr, testRdrHistogram},
+			views:     []view.View{{}},
 			wantCount: 2,
 		},
 		{
-			name: "2 reader 2 views each gets 4 aggregators",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					renameView,
-				},
-				testRdrHistogram: {
-					{},
-					renameView,
-				},
-			},
+			name:      "2 reader 2 views each gets 4 aggregators",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr, testRdrHistogram},
+			views:     []view.View{{}, renameView},
 			wantCount: 4,
 		},
 		{
-			name: "An instrument is duplicated in two views share the same aggregator",
-			inst: view.Instrument{Name: "foo"},
-			views: map[Reader][]view.View{
-				testRdr: {
-					{},
-					{},
-				},
-			},
+			name:      "An instrument is duplicated in two views share the same aggregator",
+			inst:      view.Instrument{Name: "foo"},
+			readers:   []Reader{testRdr},
+			views:     []view.View{{}, {}},
 			wantCount: 1,
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newPipelines(resource.Empty(), tt.views)
+			p := newPipelines(resource.Empty(), tt.readers, tt.views)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
-			p = newPipelines(resource.Empty(), tt.views)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 		})
 	}
@@ -334,7 +315,8 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[int64](p)
+	c := newInstrumentCache[int64](nil, nil)
+	r := newResolver(p, c)
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
@@ -344,7 +326,8 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 
-	r := newResolver[float64](p)
+	c := newInstrumentCache[float64](nil, nil)
+	r := newResolver(p, c)
 	aggs, err := r.Aggregators(inst, unit.Dimensionless)
 	assert.NoError(t, err)
 
@@ -354,11 +337,10 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 func TestPipelineRegistryResource(t *testing.T) {
 	v, err := view.New(view.MatchInstrumentName("bar"), view.WithRename("foo"))
 	require.NoError(t, err)
-	views := map[Reader][]view.View{
-		NewManualReader(): {{}, v},
-	}
+	readers := []Reader{NewManualReader()}
+	views := []view.View{{}, v}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	pipes := newPipelines(res, views)
+	pipes := newPipelines(res, readers, views)
 	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -367,67 +349,89 @@ func TestPipelineRegistryResource(t *testing.T) {
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik view.InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
-	views := map[Reader][]view.View{
-		testRdrHistogram: {
-			{},
-		},
-	}
-	p := newPipelines(resource.Empty(), views)
+	readers := []Reader{testRdrHistogram}
+	views := []view.View{{}}
+	p := newPipelines(resource.Empty(), readers, views)
 	inst := view.Instrument{Name: "foo", Kind: view.AsyncGauge}
 
-	ri := newResolver[int64](p)
+	vc := cache[string, instrumentID]{}
+	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	p = newPipelines(resource.Empty(), views)
-
-	rf := newResolver[float64](p)
+	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
 	floatAggs, err := rf.Aggregators(inst, unit.Dimensionless)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }
 
-func TestPipelineRegistryCreateAggregatorsDuplicateErrors(t *testing.T) {
+type logCounter struct {
+	logr.LogSink
+
+	infoN uint32
+}
+
+func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
+	atomic.AddUint32(&l.infoN, 1)
+	l.LogSink.Info(level, msg, keysAndValues...)
+}
+
+func (l *logCounter) InfoN() int {
+	return int(atomic.SwapUint32(&l.infoN, 0))
+}
+
+func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
+	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 6})
+	l := &logCounter{LogSink: tLog.GetSink()}
+	otel.SetLogger(logr.New(l))
+
 	renameView, _ := view.New(
 		view.MatchInstrumentName("bar"),
 		view.WithRename("foo"),
 	)
-	views := map[Reader][]view.View{
-		NewManualReader(): {
-			{},
-			renameView,
-		},
-	}
+	readers := []Reader{NewManualReader()}
+	views := []view.View{{}, renameView}
 
 	fooInst := view.Instrument{Name: "foo", Kind: view.SyncCounter}
 	barInst := view.Instrument{Name: "bar", Kind: view.SyncCounter}
 
-	p := newPipelines(resource.Empty(), views)
+	p := newPipelines(resource.Empty(), readers, views)
 
-	ri := newResolver[int64](p)
+	vc := cache[string, instrumentID]{}
+	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 1)
 
-	// The Rename view should error, because it creates a foo instrument.
+	// The Rename view should produce the same instrument without an error, the
+	// default view should also cause a new aggregator to be returned.
 	intAggs, err = ri.Aggregators(barInst, unit.Dimensionless)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 2)
 
-	// Creating a float foo instrument should error because there is an int foo instrument.
-	rf := newResolver[float64](p)
+	// Creating a float foo instrument should log a warning because there is an
+	// int foo instrument.
+	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
 	floatAggs, err := rf.Aggregators(fooInst, unit.Dimensionless)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = view.Instrument{Name: "foo-float", Kind: view.SyncCounter}
 
-	_, err = rf.Aggregators(fooInst, unit.Dimensionless)
+	floatAggs, err = rf.Aggregators(fooInst, unit.Dimensionless)
 	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
+	assert.Len(t, floatAggs, 1)
 
 	floatAggs, err = rf.Aggregators(barInst, unit.Dimensionless)
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	// Both the rename and default view aggregators created above should now
+	// conflict. Therefore, 2 warning messages should be logged.
+	assert.Equal(t, 2, l.InfoN(), "instrument conflicts not logged")
 	assert.Len(t, floatAggs, 2)
 }
 

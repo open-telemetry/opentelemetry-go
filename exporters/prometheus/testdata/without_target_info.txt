@@ -1,0 +1,6 @@
+# HELP foo_total a simple counter
+# TYPE foo_total counter
+foo_total{A="B",C="D",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 24.3
+# HELP otel_scope_info Instrumentation Scope metadata
+# TYPE otel_scope_info gauge
+otel_scope_info{otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1

@@ -54,6 +54,26 @@ func testSum[N int64 | float64](t *testing.T) {
 		eFunc = cumuExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
+
+	t.Run("PreComputedDelta", func(t *testing.T) {
+		incr, mono := monoIncr, true
+		eFunc := preDeltaExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+
+		incr, mono = nonMonoIncr, false
+		eFunc = preDeltaExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+	})
+
+	t.Run("PreComputedCumulative", func(t *testing.T) {
+		incr, mono := monoIncr, true
+		eFunc := preCumuExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+
+		incr, mono = nonMonoIncr, false
+		eFunc = preCumuExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+	})
 }
 
 func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
@@ -61,7 +81,7 @@ func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 	return func(m int) metricdata.Aggregation {
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*m)))
 		}
 		return sum
 	}
@@ -74,7 +94,32 @@ func cumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 		cycle++
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*cycle*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*cycle*m)))
+		}
+		return sum
+	}
+}
+
+func preDeltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality, IsMonotonic: mono}
+	last := make(map[attribute.Set]N)
+	return func(int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			l := last[a]
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v)-l))
+			last[a] = N(v)
+		}
+		return sum
+	}
+}
+
+func preCumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: metricdata.CumulativeTemporality, IsMonotonic: mono}
+	return func(int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v)))
 		}
 		return sum
 	}

@@ -17,7 +17,9 @@ package opentracing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -424,6 +427,38 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 			assert.NotNil(t, span)
 
 			assert.Equal(t, tc.expectWarnings, warningMessages)
+		})
+	}
+}
+
+func Test_otTagToOTelAttr(t *testing.T) {
+	key := attribute.Key("test")
+	testCases := []struct {
+		value    interface{}
+		expected attribute.KeyValue
+	}{
+		{
+			value:    int8(12),
+			expected: key.Int64(int64(12)),
+		},
+		{
+			value:    uint8(12),
+			expected: key.Int64(int64(12)),
+		},
+		{
+			value:    int16(12),
+			expected: key.Int64(int64(12)),
+		},
+		{
+			value:    uint16(12),
+			expected: key.Int64(int64(12)),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s %v", reflect.TypeOf(tc.value), tc.value), func(t *testing.T) {
+			att := otTagToOTelAttr(string(key), tc.value)
+			assert.Equal(t, tc.expected, att)
 		})
 	}
 }

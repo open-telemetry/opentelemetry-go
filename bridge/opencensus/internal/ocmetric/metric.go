@@ -92,7 +92,7 @@ func convertGauge[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*oc
 func convertSum[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Sum[N], error) {
 	points, err := convertNumberDataPoints[N](labelKeys, ts)
 	// OpenCensus sums are always Cumulative
-	return metricdata.Sum[N]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, err
+	return metricdata.Sum[N]{DataPoints: points, Temporality: metricdata.CumulativeTemporality, IsMonotonic: true}, err
 }
 
 // convertNumberDataPoints converts OpenCensus TimeSeries to OpenTelemetry DataPoints.
