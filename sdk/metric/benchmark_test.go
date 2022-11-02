@@ -20,10 +20,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
-func benchCounter(b *testing.B, views ...view.View) (context.Context, Reader, syncint64.Counter) {
+func benchCounter(b *testing.B, views ...View) (context.Context, Reader, syncint64.Counter) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
@@ -74,9 +73,12 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
-	vw, _ := view.New(view.WithFilterAttributes(attribute.Key("K")))
-
-	ctx, _, cntr := benchCounter(b, vw)
+	ctx, _, cntr := benchCounter(b, NewView(
+		Instrument{Name: "hello"},
+		Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
+			return kv.Key == "K"
+		}},
+	))
 
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("L", i), attribute.Int("K", i))
