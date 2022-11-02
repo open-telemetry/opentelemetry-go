@@ -21,6 +21,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -348,34 +349,47 @@ func TestSantitizeName(t *testing.T) {
 	}
 }
 
-// func TestMetricWithSameName(t *testing.T) {
-// 	exporter, err := New()
-// 	assert.NoError(t, err)
+func TestMultiScopes(t *testing.T) {
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
 
-// 	provider := metric.NewMeterProvider(
-// 		metric.WithReader(exporter),
-// 	)
+	res, err := resource.New(ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
 
-// 	httpCounter, err := provider.Meter("http").
-// 		SyncInt64().Counter(
-// 		"error_count",
-// 		instrument.WithUnit(unit.Dimensionless))
-// 	assert.NoError(t, err)
-// 	httpCounter.Add(context.TODO(), 1, attribute.String("type", "bar1"))
-// 	httpCounter.Add(context.TODO(), 2, attribute.String("type", "bar2"))
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
 
-// 	// sqlCounter, err := provider.Meter("sql").
-// 	// 	SyncInt64().UpDownCounter(
-// 	// 	"error_count",
-// 	// 	instrument.WithUnit(unit.Dimensionless))
-// 	// assert.NoError(t, err)
-// 	// sqlCounter.Add(context.TODO(), 1)
+	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		SyncInt64().Counter(
+		"foo",
+		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithDescription("meter foo counter"))
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, attribute.String("type", "foo"))
 
-// 	t.Logf("serving metrics at localhost:2223/metrics")
-// 	http.Handle("/metrics", promhttp.Handler())
-// 	err = http.ListenAndServe(":2223", nil)
-// 	if err != nil {
-// 		t.Fatalf("error serving http: %v", err)
-// 		return
-// 	}
-// }
+	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		SyncInt64().Counter(
+		"bar",
+		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithDescription("meter bar counter"))
+	assert.NoError(t, err)
+	barCounter.Add(ctx, 200, attribute.String("type", "bar"))
+
+	file, err := os.Open("testdata/multi_scopes.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+
+}
