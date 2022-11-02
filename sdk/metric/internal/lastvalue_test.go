@@ -17,6 +17,7 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -52,20 +53,21 @@ func testLastValueReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
 	a := NewLastValue[N]()
-	expect := metricdata.Gauge[N]{}
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
-	expect.DataPoints = []metricdata.DataPoint[N]{{
-		Attributes: alice,
-		Time:       now(),
-		Value:      1,
-	}}
+	expect := metricdata.Gauge[N]{
+		DataPoints: []metricdata.DataPoint[N]{{
+			Attributes: alice,
+			Time:       now(),
+			Value:      1,
+		}},
+	}
 	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	// Aggregating another set should not affect the original (alice).
 	a.Aggregate(1, bob)
@@ -80,6 +82,11 @@ func testLastValueReset[N int64 | float64](t *testing.T) {
 func TestLastValueReset(t *testing.T) {
 	t.Run("Int64", testLastValueReset[int64])
 	t.Run("Float64", testLastValueReset[float64])
+}
+
+func TestEmptyLastValueNilAggregation(t *testing.T) {
+	assert.Nil(t, NewLastValue[int64]().Aggregation())
+	assert.Nil(t, NewLastValue[float64]().Aggregation())
 }
 
 func BenchmarkLastValue(b *testing.B) {
