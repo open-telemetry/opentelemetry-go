@@ -16,6 +16,7 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,9 +25,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/metric/unit"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
@@ -168,7 +171,10 @@ var (
 // otlpmetric.Client implementation that is connected to also returned
 // Collector implementation. The Client is ready to upload metric data to the
 // Collector which is ready to store that data.
-type ClientFactory func() (otlpmetric.Client, Collector)
+//
+// If resultCh is not nil, the returned Collector needs to use the responses
+// from that channel to send back to the client for every export request.
+type ClientFactory func(resultCh <-chan ExportResult) (otlpmetric.Client, Collector)
 
 // RunClientTests runs a suite of Client integration tests. For example:
 //
@@ -177,17 +183,17 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Run("ClientHonorsContextErrors", func(t *testing.T) {
 			t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
-				c, _ := f()
+				c, _ := f(nil)
 				return c.Shutdown
 			}))
 
 			t.Run("ForceFlush", testCtxErrs(func() func(context.Context) error {
-				c, _ := f()
+				c, _ := f(nil)
 				return c.ForceFlush
 			}))
 
 			t.Run("UploadMetrics", testCtxErrs(func() func(context.Context) error {
-				c, _ := f()
+				c, _ := f(nil)
 				return func(ctx context.Context) error {
 					return c.UploadMetrics(ctx, nil)
 				}
@@ -196,7 +202,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 
 		t.Run("ForceFlushFlushes", func(t *testing.T) {
 			ctx := context.Background()
-			client, collector := f()
+			client, collector := f(nil)
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
 
 			require.NoError(t, client.ForceFlush(ctx))
@@ -211,7 +217,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 
 		t.Run("UploadMetrics", func(t *testing.T) {
 			ctx := context.Background()
-			client, coll := f()
+			client, coll := f(nil)
 
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
 			require.NoError(t, client.Shutdown(ctx))
@@ -221,6 +227,51 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			if diff != "" {
 				t.Fatalf("unexpected ResourceMetrics:\n%s", diff)
 			}
+		})
+
+		t.Run("PartialSuccess", func(t *testing.T) {
+			const n, msg = 2, "bad data"
+			rCh := make(chan ExportResult, 3)
+			rCh <- ExportResult{
+				Response: &collpb.ExportMetricsServiceResponse{
+					PartialSuccess: &collpb.ExportMetricsPartialSuccess{
+						RejectedDataPoints: n,
+						ErrorMessage:       msg,
+					},
+				},
+			}
+			rCh <- ExportResult{
+				Response: &collpb.ExportMetricsServiceResponse{
+					PartialSuccess: &collpb.ExportMetricsPartialSuccess{
+						// Should not be logged.
+						RejectedDataPoints: 0,
+						ErrorMessage:       "",
+					},
+				},
+			}
+			rCh <- ExportResult{
+				Response: &collpb.ExportMetricsServiceResponse{},
+			}
+
+			ctx := context.Background()
+			client, _ := f(rCh)
+
+			defer func(orig otel.ErrorHandler) {
+				otel.SetErrorHandler(orig)
+			}(otel.GetErrorHandler())
+
+			errs := []error{}
+			eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+			otel.SetErrorHandler(eh)
+
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			require.NoError(t, client.Shutdown(ctx))
+
+			require.Equal(t, 1, len(errs))
+			want := fmt.Sprintf("%s (%d metric data points rejected)", msg, n)
+			assert.ErrorContains(t, errs[0], want)
 		})
 	}
 }
