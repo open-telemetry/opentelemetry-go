@@ -502,7 +502,7 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+							Value:      2.0, // TODO (#3439): This should be 3.0.
 						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -528,7 +528,7 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO: This should be 3.0.  It is a bug in the sum aggregator
+							Value:      2.0, // TODO (#3439): This should be 3.0.
 						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -578,7 +578,7 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO: This should be 30.  It is a bug in the sum aggregator
+							Value:      20, // TODO (#3439): This should be 30.
 						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -604,7 +604,7 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO: This should be 30.  It is a bug in the sum aggregator
+							Value:      20, // TODO (#3439): This should be 30.
 						},
 					},
 					Temporality: metricdata.CumulativeTemporality,
