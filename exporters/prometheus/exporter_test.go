@@ -21,6 +21,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -62,6 +63,14 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
+
+				attrs2 := []attribute.KeyValue{
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter.Add(ctx, 5, attrs2...)
 			},
 		},
 		{
@@ -213,6 +222,44 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 9, attrs...)
 			},
 		},
+		{
+			name:         "without scope_info",
+			options:      []Option{WithoutScopeInfo()},
+			expectedFile: "testdata/without_scope_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				}
+				gauge, err := meter.SyncInt64().UpDownCounter(
+					"bar",
+					instrument.WithDescription("a fun little gauge"),
+					instrument.WithUnit(unit.Dimensionless),
+				)
+				require.NoError(t, err)
+				gauge.Add(ctx, 2, attrs...)
+				gauge.Add(ctx, -1, attrs...)
+			},
+		},
+		{
+			name:         "without scope_info and target_info",
+			options:      []Option{WithoutScopeInfo(), WithoutTargetInfo()},
+			expectedFile: "testdata/without_scope_and_target_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				}
+				counter, err := meter.SyncInt64().Counter(
+					"bar",
+					instrument.WithDescription("a fun little counter"),
+					instrument.WithUnit(unit.Bytes),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 2, attrs...)
+				counter.Add(ctx, 1, attrs...)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -252,9 +299,13 @@ func TestPrometheusExporter(t *testing.T) {
 
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
-				metric.WithReader(exporter, customBucketsView, defaultView),
+				metric.WithReader(exporter),
+				metric.WithView(customBucketsView, defaultView),
 			)
-			meter := provider.Meter("testmeter")
+			meter := provider.Meter(
+				"testmeter",
+				otelmetric.WithInstrumentationVersion("v0.1.0"),
+			)
 
 			tc.recordMetrics(ctx, meter)
 
@@ -296,4 +347,49 @@ func TestSantitizeName(t *testing.T) {
 	for _, test := range tests {
 		require.Equalf(t, test.want, sanitizeName(test.input), "input: %q", test.input)
 	}
+}
+
+func TestMultiScopes(t *testing.T) {
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		SyncInt64().Counter(
+		"foo",
+		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithDescription("meter foo counter"))
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, attribute.String("type", "foo"))
+
+	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		SyncInt64().Counter(
+		"bar",
+		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithDescription("meter bar counter"))
+	assert.NoError(t, err)
+	barCounter.Add(ctx, 200, attribute.String("type", "bar"))
+
+	file, err := os.Open("testdata/multi_scopes.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
 }
