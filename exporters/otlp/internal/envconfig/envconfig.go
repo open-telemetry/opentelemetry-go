@@ -100,8 +100,7 @@ func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
 	}
 }
 
-// WithCertPool retrieves the specified config and passes it to ConfigFn as a crypto/x509.CertPool
-// constructed from reading the certificate at the given path.
+// WithCertPool returns a ConfigFn that reads the environment variable n as a filepath to a TLS certificate pool. If it exists, it is parsed as a crypto/x509.CertPool and it is passed to fn.
 func WithCertPool(n string, fn func(*x509.CertPool)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
