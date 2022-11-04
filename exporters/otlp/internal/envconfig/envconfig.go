@@ -59,7 +59,7 @@ func WithString(n string, fn func(string)) func(e *EnvOptionsReader) {
 	}
 }
 
-// WithBool retrieves the specified config and passes it to ConfigFn as a boolean.
+// WithBool returns a ConfigFn that reads the environment variable n and if it exists passes its parsed bool value to fn.
 func WithBool(n string, fn func(bool)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
