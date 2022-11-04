@@ -114,8 +114,7 @@ func WithCertPool(n string, fn func(*x509.CertPool)) func(e *EnvOptionsReader) {
 	}
 }
 
-// WithCertPool retrieves the specified configs and passes it to ConfigFn as a crypto/tls.Certificate
-// constructed from reading the key pair at the given paths. Both files must exist.
+// WithClientCert returns a ConfigFn that reads the environment variable nc and nk as filepaths to a client certificate and key pair. If they exists, they are parsed as a crypto/tls.Certificate and it is passed to fn.
 func WithClientCert(nc, nk string, fn func(tls.Certificate)) ConfigFn {
 	return func(e *EnvOptionsReader) {
 		vc, okc := e.GetEnvValue(nc)
