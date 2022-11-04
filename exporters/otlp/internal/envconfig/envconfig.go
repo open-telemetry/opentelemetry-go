@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 // ConfigFn is the generic function used to set a config.
@@ -73,9 +75,11 @@ func WithBool(n string, fn func(bool)) ConfigFn {
 func WithDuration(n string, fn func(time.Duration)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			if d, err := strconv.Atoi(v); err == nil {
-				fn(time.Duration(d) * time.Millisecond)
+			d, err := strconv.Atoi(v)
+			if err != nil {
+				global.Error(err, "parse duration", "input", v)
 			}
+			fn(time.Duration(d) * time.Millisecond)
 		}
 	}
 }
@@ -93,9 +97,11 @@ func WithHeaders(n string, fn func(map[string]string)) func(e *EnvOptionsReader)
 func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			if u, err := url.Parse(v); err == nil {
-				fn(u)
+			u, err := url.Parse(v)
+			if err != nil {
+				global.Error(err, "parse url", "input", v)
 			}
+			fn(u)
 		}
 	}
 }
@@ -104,11 +110,17 @@ func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
 func WithCertPool(n string, fn func(*x509.CertPool)) ConfigFn {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			if b, err := e.ReadFile(v); err == nil {
-				if c, err := createCertPool(b); err == nil {
-					fn(c)
-				}
+			b, err := e.ReadFile(v)
+			if err != nil {
+				global.Error(err, "read tls ca cert file", "file", v)
+				return
 			}
+			c, err := createCertPool(b)
+			if err != nil {
+				global.Error(err, "create tls cert pool")
+				return
+			}
+			fn(c)
 		}
 	}
 }
@@ -121,13 +133,19 @@ func WithClientCert(nc, nk string, fn func(tls.Certificate)) ConfigFn {
 		if !okc || !okk {
 			return
 		}
-		cert, errc := e.ReadFile(vc)
-		key, errk := e.ReadFile(vk)
-		if errc != nil && errk != nil {
+		cert, err := e.ReadFile(vc)
+		if err != nil {
+			global.Error(err, "read tls client cert", "file", vc)
+			return
+		}
+		key, err := e.ReadFile(vk)
+		if err != nil {
+			global.Error(err, "read tls client key", "file", vk)
 			return
 		}
 		crt, err := tls.X509KeyPair(cert, key)
 		if err != nil {
+			global.Error(err, "create tls client key pair")
 			return
 		}
 		fn(crt)
@@ -148,15 +166,18 @@ func stringToHeader(value string) map[string]string {
 	for _, header := range headersPairs {
 		nameValue := strings.SplitN(header, "=", 2)
 		if len(nameValue) < 2 {
+			global.Error(errors.New("missing '="), "parse headers", "input", nameValue)
 			continue
 		}
 		name, err := url.QueryUnescape(nameValue[0])
 		if err != nil {
+			global.Error(err, "escape header key", "key", nameValue[0])
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)
 		value, err := url.QueryUnescape(nameValue[1])
 		if err != nil {
+			global.Error(err, "escape header value", "value", nameValue[1])
 			continue
 		}
 		trimmedValue := strings.TrimSpace(value)
