@@ -33,6 +33,8 @@ func (cfg Config) Unit() unit.Unit {
 }
 
 // Option is an interface for applying metric instrument options.
+//
+// Warning: methods may be added to this interface in minor releases.
 type Option interface {
 	applyInstrument(Config) Config
 }
