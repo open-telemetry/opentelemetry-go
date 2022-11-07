@@ -10,9 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Prometheus exporter will register with a prometheus registerer on creation, there are options to control this. (#3239)
-- Added the `WithAggregationSelector` option to the `go.opentelemetry.io/otel/exporters/prometheus` package to change the `AggregationSelector` used. (#3341)
-- Prometheus exporter will convert metrics `Resource` into a `target_info` metric. (#3285)
+- The `WithView` `Option` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
+   This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
+- Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.
+  This can be disabled using the `WithoutScopeInfo()` option added to that package.(#3273, #3357)
 - OTLP exporters now recognize: (#3363)
   - `OTEL_EXPORTER_OTLP_INSECURE`
   - `OTEL_EXPORTER_OTLP_TRACES_INSECURE`
@@ -26,19 +27,55 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Decode urlencoded values from the `OTEL_RESOURCE_ATTRIBUTES` environment variable. (#2963)
-- `sdktrace.TraceProvider.Shutdown` and `sdktrace.TraceProvider.ForceFlush` to not return error when no processor register. (#3268)
-- The `"go.opentelemetry.io/otel/exporters/prometheus".New` now also returns an error indicating the failure to register the exporter with Prometheus. (#3239)
-- The prometheus exporter will no longer try to enumerate the metrics it will send to prometheus on startup.
-   This fixes the `reader is not registered` warning currently emitted on startup. (#3291 #3342)
+- The `"go.opentelemetry.io/otel/sdk/metric".WithReader` option no longer accepts views to associate with the `Reader`.
+   Instead, views are now registered directly with the `MeterProvider` via the new `WithView` option.
+   The views registered with the `MeterProvider` apply to all `Reader`s. (#3387)
+- The `Temporality(view.InstrumentKind) metricdata.Temporality` and `Aggregation(view.InstrumentKind) aggregation.Aggregation` methods are added to the `"go.opentelemetry.io/otel/sdk/metric".Exporter` interface. (#3260)
+- The `Temporality(view.InstrumentKind) metricdata.Temporality` and `Aggregation(view.InstrumentKind) aggregation.Aggregation` methods are added to the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric".Client` interface. (#3260)
+- The `WithTemporalitySelector` and `WithAggregationSelector` `ReaderOption`s have been changed to `ManualReaderOption`s in the `go.opentelemetry.io/otel/sdk/metric` package. (#3260)
+- The periodic reader in the `go.opentelemetry.io/otel/sdk/metric` package now uses the temporality and aggregation selectors from its configured exporter instead of accepting them as options. (#3260)
 
 ### Fixed
 
-- Fix function `baggage.NewMember` to decode the `value` parameter instead of directly use it according to the W3C specification. (#3226)
-- Slice attributes of `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
-- Prometheus exporter will now cumulatively sum histogram buckets. (#3281)
-- Export the sum of each histogram datapoint uniquely with the `go.opentelemetry.io/otel/exporters/otlpmetric` exporters. (#3284, #3293)
-- UpDownCounters are now correctly output as prometheus gauges in the `go.opentelemetry.io/otel/exporters/prometheus` exporter. (#3358)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter fixes duplicated `_total` suffixes. (#3369)
+- Remove comparable requirement for `Reader`s. (#3387)
+- Cumulative metrics from the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) are defined as monotonic sums, instead of non-monotonic. (#3389)
+- Asynchronous counters (`Counter` and `UpDownCounter`) from the metric SDK now produce delta sums when configured with delta temporality. (#3398)
+- Exported `Status` codes in the `go.opentelemetry.io/otel/exporters/zipkin` exporter are now exported as all upper case values. (#3340)
+- Do not report empty partial-success responses in the `go.opentelemetry.io/otel/exporters/otlp` exporters. (#3438, #3432)
+
+## [1.11.1/0.33.0] 2022-10-19
+
+### Added
+
+- The Prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus` registers with a Prometheus registerer on creation.
+   By default, it will register with the default Prometheus registerer.
+   A non-default registerer can be used by passing the `WithRegisterer` option. (#3239)
+- Added the `WithAggregationSelector` option to the `go.opentelemetry.io/otel/exporters/prometheus` package to change the default `AggregationSelector` used. (#3341)
+- The Prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus` converts the `Resource` associated with metric exports into a `target_info` metric. (#3285)
+
+### Changed
+
+- The `"go.opentelemetry.io/otel/exporters/prometheus".New` function is updated to return an error.
+   It will return an error if the exporter fails to register with Prometheus. (#3239)
+
+### Fixed
+
+- The URL-encoded values from the `OTEL_RESOURCE_ATTRIBUTES` environment variable are decoded. (#2963)
+- The `baggage.NewMember` function decodes the `value` parameter instead of directly using it.
+   This fixes the implementation to be compliant with the W3C specification. (#3226)
+- Slice attributes of the `attribute` package are now comparable based on their value, not instance. (#3108 #3252)
+- The `Shutdown` and `ForceFlush` methods of the `"go.opentelemetry.io/otel/sdk/trace".TraceProvider` no longer return an error when no processor is registered. (#3268)
+- The Prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus` cumulatively sums histogram buckets. (#3281)
+- The sum of each histogram data point is now uniquely exported by the `go.opentelemetry.io/otel/exporters/otlpmetric` exporters. (#3284, #3293)
+- Recorded values for asynchronous counters (`Counter` and `UpDownCounter`) are interpreted as exact, not incremental, sum values by the metric SDK. (#3350, #3278)
+- `UpDownCounters` are now correctly output as Prometheus gauges in the `go.opentelemetry.io/otel/exporters/prometheus` exporter. (#3358)
+- The Prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus` no longer describes the metrics it will send to Prometheus on startup.
+   Instead the exporter is defined as an "unchecked" collector for Prometheus.
+   This fixes the `reader is not registered` warning currently emitted on startup. (#3291 #3342)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter now correctly adds `_total` suffixes to counter metrics. (#3360)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter now adds a unit suffix to metric names.
+   This can be disabled using the `WithoutUnits()` option added to that package. (#3352)
 
 ## [1.11.0/0.32.3] 2022-10-12
 
@@ -2026,7 +2063,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.11.1...HEAD
+[1.11.1/0.33.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.1
 [1.11.0/0.32.3]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.0
 [0.32.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.2
 [0.32.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk/metric/v0.32.1
