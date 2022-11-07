@@ -78,6 +78,7 @@ func WithDuration(n string, fn func(time.Duration)) func(e *EnvOptionsReader) {
 			d, err := strconv.Atoi(v)
 			if err != nil {
 				global.Error(err, "parse duration", "input", v)
+				return
 			}
 			fn(time.Duration(d) * time.Millisecond)
 		}
@@ -100,6 +101,7 @@ func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
 			u, err := url.Parse(v)
 			if err != nil {
 				global.Error(err, "parse url", "input", v)
+				return
 			}
 			fn(u)
 		}
