@@ -16,6 +16,7 @@ package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net/url"
 	"os"
 	"path"
@@ -53,6 +54,7 @@ func ApplyHTTPEnvConfigs(cfg Config) Config {
 func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
 
+	tlsConf := &tls.Config{}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
 			opts = append(opts, withEndpointScheme(u))
@@ -81,8 +83,13 @@ func getOptionsFromEnv() []GenericOption {
 				return cfg
 			}, withEndpointForGRPC(u)))
 		}),
-		envconfig.WithTLSConfig("CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
-		envconfig.WithTLSConfig("METRICS_CERTIFICATE", func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		envconfig.WithCertPool("CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
+		envconfig.WithCertPool("METRICS_CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
+		envconfig.WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} }),
+		envconfig.WithClientCert("METRICS_CLIENT_CERTIFICATE", "METRICS_CLIENT_KEY", func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} }),
+		envconfig.WithBool("INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithBool("METRICS_INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("METRICS_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
@@ -123,5 +130,21 @@ func withEndpointScheme(u *url.URL) GenericOption {
 		return WithInsecure()
 	default:
 		return WithSecure()
+	}
+}
+
+// revive:disable-next-line:flag-parameter
+func withInsecure(b bool) GenericOption {
+	if b {
+		return WithInsecure()
+	}
+	return WithSecure()
+}
+
+func withTLSConfig(c *tls.Config, fn func(*tls.Config)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
+		if c.RootCAs != nil || len(c.Certificates) > 0 {
+			fn(c)
+		}
 	}
 }
