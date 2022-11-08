@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -203,7 +204,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		}
 		matched = true
 
-		agg, err := i.cachedAggregator(inst, instUnit)
+		agg, err := i.cachedAggregator(inst, instUnit, v.AttributeFilter())
 		if err != nil {
 			errs.append(err)
 		}
@@ -223,7 +224,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	}
 
 	// Apply implicit default view if no explicit matched.
-	agg, err := i.cachedAggregator(inst, instUnit)
+	agg, err := i.cachedAggregator(inst, instUnit, nil)
 	if err != nil {
 		errs.append(err)
 	}
@@ -247,7 +248,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (internal.Aggregator[N], error) {
+func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit, filter func(attribute.Set) attribute.Set) (internal.Aggregator[N], error) {
 	switch inst.Aggregation.(type) {
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
@@ -273,6 +274,10 @@ func (i *inserter[N]) cachedAggregator(inst view.Instrument, u unit.Unit) (inter
 		if agg == nil { // Drop aggregator.
 			return nil, nil
 		}
+		if filter != nil {
+			agg = internal.NewFilter(agg, filter)
+		}
+
 		i.pipeline.addSync(inst.Scope, instrumentSync{
 			name:        inst.Name,
 			description: inst.Description,
