@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -272,6 +273,13 @@ func (i *inserter[N]) cachedAggregator(inst Stream) (internal.Aggregator[N], err
 		if agg == nil { // Drop aggregator.
 			return nil, nil
 		}
+		if inst.AttributeFilter != nil {
+			agg = internal.NewFilter(agg, func(s attribute.Set) attribute.Set {
+				s, _ = s.Filter(inst.AttributeFilter)
+				return s
+			})
+		}
+
 		i.pipeline.addSync(inst.Scope, instrumentSync{
 			name:        inst.Name,
 			description: inst.Description,
