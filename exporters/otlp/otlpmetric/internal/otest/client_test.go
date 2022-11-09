@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -28,6 +30,7 @@ import (
 )
 
 type client struct {
+	rCh     <-chan ExportResult
 	storage *Storage
 }
 
@@ -47,6 +50,17 @@ func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) err
 	c.storage.Add(&cpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*mpb.ResourceMetrics{rm},
 	})
+	if c.rCh != nil {
+		r := <-c.rCh
+		if r.Response != nil && r.Response.GetPartialSuccess() != nil {
+			msg := r.Response.GetPartialSuccess().GetErrorMessage()
+			n := r.Response.GetPartialSuccess().GetRejectedDataPoints()
+			if msg != "" || n > 0 {
+				otel.Handle(internal.MetricPartialSuccessError(n, msg))
+			}
+		}
+		return r.Err
+	}
 	return ctx.Err()
 }
 
@@ -54,8 +68,8 @@ func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 func (c *client) Shutdown(ctx context.Context) error   { return ctx.Err() }
 
 func TestClientTests(t *testing.T) {
-	factory := func() (otlpmetric.Client, Collector) {
-		c := &client{storage: NewStorage()}
+	factory := func(rCh <-chan ExportResult) (otlpmetric.Client, Collector) {
+		c := &client{rCh: rCh, storage: NewStorage()}
 		return c, c
 	}
 

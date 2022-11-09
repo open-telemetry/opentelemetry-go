@@ -29,6 +29,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
@@ -190,6 +191,29 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		switch resp.StatusCode {
 		case http.StatusOK:
 			// Success, do not retry.
+
+			// Read the partial success message, if any.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
+				return err
+			}
+
+			if respData.Len() != 0 {
+				var respProto colmetricpb.ExportMetricsServiceResponse
+				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+					return err
+				}
+
+				if respProto.PartialSuccess != nil {
+					msg := respProto.PartialSuccess.GetErrorMessage()
+					n := respProto.PartialSuccess.GetRejectedDataPoints()
+					if n != 0 || msg != "" {
+						err := internal.MetricPartialSuccessError(n, msg)
+						otel.Handle(err)
+					}
+				}
+			}
+			return nil
 		case http.StatusTooManyRequests,
 			http.StatusServiceUnavailable:
 			// Retry-able failure.
