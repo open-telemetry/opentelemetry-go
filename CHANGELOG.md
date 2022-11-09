@@ -14,6 +14,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
 - Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.
   This can be disabled using the `WithoutScopeInfo()` option added to that package.(#3273, #3357)
+- OTLP exporters now recognize: (#3363)
+  - `OTEL_EXPORTER_OTLP_INSECURE`
+  - `OTEL_EXPORTER_OTLP_TRACES_INSECURE`
+  - `OTEL_EXPORTER_OTLP_METRICS_INSECURE`
+  - `OTEL_EXPORTER_OTLP_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE`
 
 ### Changed
 
