@@ -66,11 +66,13 @@ func (p *instProvider[N]) LookupObservable(kind view.InstrumentKind, name string
 		return nil, nil
 	}
 
+	errs := &multierror{}
 	for _, cBack := range cfg.Callbacks() {
-		p.pipes.registerCallback(cBack)
+		_, err := p.pipes.registerCallback(cBack)
+		errs.append(err)
 	}
 
-	return inst, nil
+	return inst, errs.errorOrNil()
 }
 
 func (p *instProvider[N]) lookup(inst view.Instrument, u unit.Unit) (*instrumentImpl[N], error) {
