@@ -119,6 +119,6 @@ func (m *testMeter) RegisterCallback(f metric.Callback, instrument metric.Observ
 func (m *testMeter) collect() {
 	ctx := context.Background()
 	for _, f := range m.callbacks {
-		f(ctx)
+		_ = f(ctx)
 	}
 }

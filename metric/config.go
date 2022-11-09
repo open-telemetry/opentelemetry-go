@@ -111,7 +111,7 @@ func (o descriptionOption) applyInstrument(cfg InstrumentConfig) InstrumentConfi
 }
 
 func (o descriptionOption) applyObservable(cfg ObservableConfig) ObservableConfig {
-	cfg.InstrumentConfig.description = string(o)
+	cfg.description = string(o)
 	return cfg
 }
 
@@ -128,13 +128,13 @@ func (o unitOption) applyInstrument(cfg InstrumentConfig) InstrumentConfig {
 }
 
 func (o unitOption) applyObservable(cfg ObservableConfig) ObservableConfig {
-	cfg.InstrumentConfig.unit = unit.Unit(o)
+	cfg.unit = unit.Unit(o)
 	return cfg
 }
 
 // WithUnit sets the instrument unit.
 func WithUnit(u unit.Unit) InstrumentOption {
-	return WithUnit(u)
+	return unitOption(u)
 }
 
 // ObservableConfig contains options for Observable instruments.
@@ -176,5 +176,5 @@ func (o callbackOption) applyObservable(cfg ObservableConfig) ObservableConfig {
 
 // WithCallback adds callback to be called for an Observable instrument.
 func WithCallback(callback Callback) ObservableOption {
-	return WithCallback(callback)
+	return callbackOption(callback)
 }
