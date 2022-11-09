@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument" //nolint:staticcheck  // Known deprecation.
 )
 
 // InstrumentProvider provides access to individual instruments.
@@ -31,13 +31,13 @@ import (
 // Deprecated: use the go.opentelemetry.io/otel/metric.Meter methods instead.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Option) (Counter, error)
+	Counter(name string, opts ...instrument.Option) (Counter, error) //nolint:staticcheck  // Known deprecation.
 
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error) //nolint:staticcheck  // Known deprecation.
 
 	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.Option) (Gauge, error)
+	Gauge(name string, opts ...instrument.Option) (Gauge, error) //nolint:staticcheck  // Known deprecation.
 }
 
 // Counter is an instrument that records increasing values.
@@ -55,7 +55,7 @@ type Counter interface {
 	// error will be reported via the error handler.
 	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
 
-	instrument.Asynchronous
+	instrument.Asynchronous //nolint:staticcheck  // Known deprecation.
 }
 
 // UpDownCounter is an instrument that records increasing or decreasing values.
@@ -73,7 +73,7 @@ type UpDownCounter interface {
 	// error will be reported via the error handler.
 	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
 
-	instrument.Asynchronous
+	instrument.Asynchronous //nolint:staticcheck  // Known deprecation.
 }
 
 // Gauge is an instrument that records independent readings.
@@ -90,5 +90,5 @@ type Gauge interface {
 	// error will be reported via the error handler.
 	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
 
-	instrument.Asynchronous
+	instrument.Asynchronous //nolint:staticcheck  // Known deprecation.
 }

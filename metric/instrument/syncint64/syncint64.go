@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument" //nolint:staticcheck  // Known deprecation.
 )
 
 // InstrumentProvider provides access to individual instruments.
@@ -31,11 +31,11 @@ import (
 // Deprecated: use the go.opentelemetry.io/otel/metric.Meter methods instead.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Option) (Counter, error)
+	Counter(name string, opts ...instrument.Option) (Counter, error) //nolint:staticcheck  // Known deprecation.
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error) //nolint:staticcheck  // Known deprecation.
 	// Histogram creates an instrument for recording a distribution of values.
-	Histogram(name string, opts ...instrument.Option) (Histogram, error)
+	Histogram(name string, opts ...instrument.Option) (Histogram, error) //nolint:staticcheck  // Known deprecation.
 }
 
 // Counter is an instrument that records increasing values.
@@ -47,7 +47,7 @@ type Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	instrument.Synchronous
+	instrument.Synchronous //nolint:staticcheck  // Known deprecation.
 }
 
 // UpDownCounter is an instrument that records increasing or decreasing values.
@@ -59,7 +59,7 @@ type UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	instrument.Synchronous
+	instrument.Synchronous //nolint:staticcheck  // Known deprecation.
 }
 
 // Histogram is an instrument that records a distribution of values.
@@ -71,5 +71,5 @@ type Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	instrument.Synchronous
+	instrument.Synchronous //nolint:staticcheck  // Known deprecation.
 }
