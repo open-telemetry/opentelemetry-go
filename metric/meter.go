@@ -14,51 +14,38 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-)
-
-// MeterProvider provides access to named Meter instances, for instrumenting
-// an application or library.
-//
-// Warning: methods may be added to this interface in minor releases.
-type MeterProvider interface {
-	// Meter creates an instance of a `Meter` interface. The instrumentationName
-	// must be the name of the library providing instrumentation. This name may
-	// be the same as the instrumented code only if that code provides built-in
-	// instrumentation. If the instrumentationName is empty, then a
-	// implementation defined default name will be used instead.
-	Meter(instrumentationName string, opts ...MeterOption) Meter
-}
-
-// Meter provides access to instrument instances for recording metrics.
+// Meter creates instrument instances for an instrumentation library.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Meter interface {
-	// AsyncInt64 is the namespace for the Asynchronous Integer instruments.
-	//
-	// To Observe data with instruments it must be registered in a callback.
-	AsyncInt64() asyncint64.InstrumentProvider
+	Float64Counter(name string, opts ...InstrumentOption) (Float64Counter, error)
+	Float64UpDownCounter(name string, opts ...InstrumentOption) (Float64UpDownCounter, error)
+	Float64Histogram(name string, opts ...InstrumentOption) (Float64Histogram, error)
+	Float64ObservableCounter(name string, opts ...ObservableOption) (Float64ObservableCounter, error)
+	Float64ObservableUpDownCounter(name string, opts ...ObservableOption) (Float64ObservableUpDownCounter, error)
+	Float64ObservableGauge(name string, opts ...ObservableOption) (Float64ObservableGauge, error)
 
-	// AsyncFloat64 is the namespace for the Asynchronous Float instruments
-	//
-	// To Observe data with instruments it must be registered in a callback.
-	AsyncFloat64() asyncfloat64.InstrumentProvider
+	Int64Counter(name string, opts ...InstrumentOption) (Int64Counter, error)
+	Int64UpDownCounter(name string, opts ...InstrumentOption) (Int64UpDownCounter, error)
+	Int64Histogram(name string, opts ...InstrumentOption) (Int64Histogram, error)
+	Int64ObservableCounter(name string, opts ...ObservableOption) (Int64ObservableCounter, error)
+	Int64ObservableUpDownCounter(name string, opts ...ObservableOption) (Int64ObservableUpDownCounter, error)
+	Int64ObservableGauge(name string, opts ...ObservableOption) (Int64ObservableGauge, error)
 
-	// RegisterCallback captures the function that will be called during Collect.
+	// RegisterCallback registers f to be called when instrument is collected.
+	// The callback can also be registered for additional Observable
+	// instruments that it will updated when executed.
 	//
-	// It is only valid to call Observe within the scope of the passed function,
-	// and only on the instruments that were registered with this call.
-	RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error
+	// When the Unregister method of the returned Unregisterer is called f is
+	// unregistered from the Meter for instrument(s). Calling Unregister after
+	// the first time will have no effect.
+	RegisterCallback(f Callback, instrument Observable, additional ...Observable) (Unregisterer, error)
+}
 
-	// SyncInt64 is the namespace for the Synchronous Integer instruments
-	SyncInt64() syncint64.InstrumentProvider
-	// SyncFloat64 is the namespace for the Synchronous Float instruments
-	SyncFloat64() syncfloat64.InstrumentProvider
+// Unregisterer undoes the process of registering.
+//
+// The behavior of Unregister after the first call is undefined. Specific
+// implementations may document their own behavior.
+type Unregisterer interface {
+	Unregister() error
 }

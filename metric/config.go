@@ -14,6 +14,10 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
+import (
+	"go.opentelemetry.io/otel/metric/unit"
+)
+
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
 	instrumentationVersion string
@@ -66,4 +70,111 @@ func WithSchemaURL(schemaURL string) MeterOption {
 		config.schemaURL = schemaURL
 		return config
 	})
+}
+
+// InstrumentConfig contains options for all instruments.
+type InstrumentConfig struct {
+	description string
+	unit        unit.Unit
+}
+
+// NewInstrumentConfig returns a new InstrumentConfig with all opts applied.
+func NewInstrumentConfig(opts ...InstrumentOption) InstrumentConfig {
+	var config InstrumentConfig
+	for _, o := range opts {
+		config = o.applyInstrument(config)
+	}
+	return config
+}
+
+// Description returns the InstrumentConfig description.
+func (c InstrumentConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the InstrumentConfig unit.
+func (c InstrumentConfig) Unit() unit.Unit {
+	return c.unit
+}
+
+// InstrumentOption applies options to all instrument configuration.
+type InstrumentOption interface {
+	ObservableOption
+	applyInstrument(InstrumentConfig) InstrumentConfig
+}
+
+type descriptionOption string
+
+func (o descriptionOption) applyInstrument(cfg InstrumentConfig) InstrumentConfig {
+	cfg.description = string(o)
+	return cfg
+}
+
+func (o descriptionOption) applyObservable(cfg ObservableConfig) ObservableConfig {
+	cfg.InstrumentConfig.description = string(o)
+	return cfg
+}
+
+// WithDescription sets the instrument description.
+func WithDescription(desc string) InstrumentOption {
+	return descriptionOption(desc)
+}
+
+type unitOption unit.Unit
+
+func (o unitOption) applyInstrument(cfg InstrumentConfig) InstrumentConfig {
+	cfg.unit = unit.Unit(o)
+	return cfg
+}
+
+func (o unitOption) applyObservable(cfg ObservableConfig) ObservableConfig {
+	cfg.InstrumentConfig.unit = unit.Unit(o)
+	return cfg
+}
+
+// WithUnit sets the instrument unit.
+func WithUnit(u unit.Unit) InstrumentOption {
+	return WithUnit(u)
+}
+
+// ObservableConfig contains options for Observable instruments.
+type ObservableConfig struct {
+	InstrumentConfig
+
+	callbacks []Callback
+}
+
+// NewObservableConfig returns a new ObservableConfig with all opts applied.
+func NewObservableConfig(opts ...ObservableOption) ObservableConfig {
+	var config ObservableConfig
+	for _, o := range opts {
+		config = o.applyObservable(config)
+	}
+	return config
+}
+
+// Callbacks returns the ObservableConfig callbacks.
+func (c ObservableConfig) Callbacks() []Callback {
+	return c.callbacks
+}
+
+// ObservableOption applies options to Observable instruments.
+type ObservableOption interface {
+	applyObservable(ObservableConfig) ObservableConfig
+}
+
+type callbackOption Callback
+
+func (o callbackOption) applyInstrument(cfg InstrumentConfig) InstrumentConfig {
+	return cfg
+}
+
+func (o callbackOption) applyObservable(cfg ObservableConfig) ObservableConfig {
+	cfg.callbacks = append(cfg.callbacks, (Callback)(o))
+	return cfg
+}
+
+// WithCallback adds callback to be called for an Observable instrument.
+func WithCallback(callback Callback) ObservableOption {
+	return WithCallback(callback)
 }
