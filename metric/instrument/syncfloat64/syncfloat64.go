@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package syncfloat64 provides asynchronous float64 instrument types.
+//
+// Deprecated: Use go.opentelemetry.io/otel/metric instead.
 package syncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 
 import (
@@ -24,6 +27,8 @@ import (
 // InstrumentProvider provides access to individual instruments.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use the go.opentelemetry.io/otel/metric.Meter methods instead.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
 	Counter(name string, opts ...instrument.Option) (Counter, error)
@@ -36,6 +41,8 @@ type InstrumentProvider interface {
 // Counter is an instrument that records increasing values.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Float64Counter instead.
 type Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -46,6 +53,8 @@ type Counter interface {
 // UpDownCounter is an instrument that records increasing or decreasing values.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Float64UpDownCounter instead.
 type UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -56,6 +65,8 @@ type UpDownCounter interface {
 // Histogram is an instrument that records a distribution of values.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Float64Histogram instead.
 type Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package asyncfloat64 provides asynchronous float64 instrument types.
+//
+// Deprecated: Use go.opentelemetry.io/otel/metric instead.
 package asyncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 
 import (
@@ -24,6 +27,8 @@ import (
 // InstrumentProvider provides access to individual instruments.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use the go.opentelemetry.io/otel/metric.Meter methods instead.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
 	Counter(name string, opts ...instrument.Option) (Counter, error)
@@ -38,6 +43,9 @@ type InstrumentProvider interface {
 // Counter is an instrument that records increasing values.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Float64ObservableCounter
+// instead.
 type Counter interface {
 	// Observe records the state of the instrument to be x. Implementations
 	// will assume x to be the cumulative sum of the count.
@@ -53,6 +61,9 @@ type Counter interface {
 // UpDownCounter is an instrument that records increasing or decreasing values.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use
+// go.opentelemetry.io/otel/metric.Float64ObservableUpDownCounter instead.
 type UpDownCounter interface {
 	// Observe records the state of the instrument to be x. Implementations
 	// will assume x to be the cumulative sum of the count.
@@ -68,6 +79,9 @@ type UpDownCounter interface {
 // Gauge is an instrument that records independent readings.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Float64ObservableGauge
+// instead.
 type Gauge interface {
 	// Observe records the state of the instrument to be x.
 	//

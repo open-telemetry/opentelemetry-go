@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package instrument provides OpenTelemetry metric API instrument types.
+//
+// Deprecated: Use go.opentelemetry.io/otel/metric instead.
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import "go.opentelemetry.io/otel/metric/unit"
 
 // Config contains options for metric instrument descriptors.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.InstrumentConfig instead.
 type Config struct {
 	description string
 	unit        unit.Unit
@@ -33,11 +38,15 @@ func (cfg Config) Unit() unit.Unit {
 }
 
 // Option is an interface for applying metric instrument options.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.InstrumentOption instead.
 type Option interface {
 	applyInstrument(Config) Config
 }
 
 // NewConfig creates a new Config and applies all the given options.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.NewInstrumentConfig instead.
 func NewConfig(opts ...Option) Config {
 	var config Config
 	for _, o := range opts {
@@ -53,6 +62,8 @@ func (fn optionFunc) applyInstrument(cfg Config) Config {
 }
 
 // WithDescription applies provided description.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.WithDescription instead.
 func WithDescription(desc string) Option {
 	return optionFunc(func(cfg Config) Config {
 		cfg.description = desc
@@ -61,6 +72,8 @@ func WithDescription(desc string) Option {
 }
 
 // WithUnit applies provided unit.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.WithUnit instead.
 func WithUnit(u unit.Unit) Option {
 	return optionFunc(func(cfg Config) Config {
 		cfg.unit = u

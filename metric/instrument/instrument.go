@@ -18,6 +18,8 @@ package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 // If an instrument is observed outside of it's callback it should be an error.
 //
 // This interface is used as a grouping mechanism.
+//
+// Deprecated: use go.opentelemetry.io/otel/metric.Observable instead.
 type Asynchronous interface {
 	asynchronous()
 }
@@ -25,6 +27,8 @@ type Asynchronous interface {
 // Synchronous instruments are updated in line with application code.
 //
 // This interface is used as a grouping mechanism.
+//
+// Deprecated: this interface will be removed in the next release.
 type Synchronous interface {
 	synchronous()
 }
