@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
@@ -136,10 +135,8 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 }
 
 type testCountingFloatInstrument struct {
+	metric.Observable
 	count int
-
-	instrument.Asynchronous
-	instrument.Synchronous
 }
 
 func (i *testCountingFloatInstrument) Observe(context.Context, float64, ...attribute.KeyValue) {
@@ -153,10 +150,8 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attrib
 }
 
 type testCountingIntInstrument struct {
+	metric.Observable
 	count int
-
-	instrument.Asynchronous
-	instrument.Synchronous
 }
 
 func (i *testCountingIntInstrument) Observe(context.Context, int64, ...attribute.KeyValue) {

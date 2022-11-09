@@ -15,17 +15,11 @@
 package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
-	"context"
 	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 // meterProvider is a placeholder for a configured SDK MeterProvider.
@@ -143,205 +137,230 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	m.callbacks = nil
 }
 
-// AsyncInt64 is the namespace for the Asynchronous Integer instruments.
-//
-// To Observe data with instruments it must be registered in a callback.
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
+func (m *meter) Float64Counter(name string, opts ...metric.InstrumentOption) (metric.Float64Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
-		return del.AsyncInt64()
-	}
-	return (*aiInstProvider)(m)
-}
-
-// AsyncFloat64 is the namespace for the Asynchronous Float instruments.
-//
-// To Observe data with instruments it must be registered in a callback.
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	if del, ok := m.delegate.Load().(metric.Meter); ok {
-		return del.AsyncFloat64()
-	}
-	return (*afInstProvider)(m)
-}
-
-// RegisterCallback captures the function that will be called during Collect.
-//
-// It is only valid to call Observe within the scope of the passed function,
-// and only on the instruments that were registered with this call.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	if del, ok := m.delegate.Load().(metric.Meter); ok {
-		insts = unwrapInstruments(insts)
-		return del.RegisterCallback(insts, function)
+		return del.Float64Counter(name, opts...)
 	}
 
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	m.callbacks = append(m.callbacks, delegatedCallback{
-		instruments: insts,
-		function:    function,
-	})
+	ctr := &sfCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
 
+func (m *meter) Float64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Float64UpDownCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64UpDownCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &sfUpDownCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Float64Histogram(name string, opts ...metric.InstrumentOption) (metric.Float64Histogram, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64Histogram(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	hist := &sfHistogram{name: name, opts: opts}
+	m.instruments = append(m.instruments, hist)
+	return hist, nil
+}
+
+func (m *meter) Float64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64ObservableCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &afCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Float64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableUpDownCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64ObservableUpDownCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &afUpDownCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Float64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Float64ObservableGauge, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64ObservableGauge(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	g := &afGauge{name: name, opts: opts}
+	m.instruments = append(m.instruments, g)
+	return g, nil
+}
+
+func (m *meter) Int64Counter(name string, opts ...metric.InstrumentOption) (metric.Int64Counter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64Counter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &siCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Int64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Int64UpDownCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64UpDownCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &siUpDownCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Int64Histogram(name string, opts ...metric.InstrumentOption) (metric.Int64Histogram, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64Histogram(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	hist := &siHistogram{name: name, opts: opts}
+	m.instruments = append(m.instruments, hist)
+	return hist, nil
+}
+
+func (m *meter) Int64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64ObservableCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &aiCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Int64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableUpDownCounter, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64ObservableUpDownCounter(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	ctr := &aiUpDownCounter{name: name, opts: opts}
+	m.instruments = append(m.instruments, ctr)
+	return ctr, nil
+}
+
+func (m *meter) Int64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Int64ObservableGauge, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64ObservableGauge(name, opts...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	g := &aiGauge{name: name, opts: opts}
+	m.instruments = append(m.instruments, g)
+	return g, nil
+}
+
+func (m *meter) RegisterCallback(f metric.Callback, instrument metric.Observable, additional ...metric.Observable) (metric.Unregisterer, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.RegisterCallback(f, unwrapInst(instrument), unwrapInsts(additional)...)
+	}
+
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	cback := newDelegatedCallback(f, instrument, additional...)
+	m.callbacks = append(m.callbacks, cback)
+
+	return &cback, nil
+}
+
+type unregisterer []func() error
+
+func (u unregisterer) Unregister() error {
+	for _, f := range u {
+		if err := f(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 type wrapped interface {
-	unwrap() instrument.Asynchronous
+	unwrap() metric.Observable
 }
 
-func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Asynchronous {
-	out := make([]instrument.Asynchronous, 0, len(instruments))
-
-	for _, inst := range instruments {
-		if in, ok := inst.(wrapped); ok {
-			out = append(out, in.unwrap())
-		} else {
-			out = append(out, inst)
-		}
+func unwrapInsts(instruments []metric.Observable) []metric.Observable {
+	for i := range instruments {
+		instruments[i] = unwrapInst(instruments[i])
 	}
-
-	return out
+	return instruments
 }
 
-// SyncInt64 is the namespace for the Synchronous Integer instruments.
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	if del, ok := m.delegate.Load().(metric.Meter); ok {
-		return del.SyncInt64()
+func unwrapInst(inst metric.Observable) metric.Observable {
+	if in, ok := inst.(wrapped); ok {
+		return in.unwrap()
 	}
-	return (*siInstProvider)(m)
-}
-
-// SyncFloat64 is the namespace for the Synchronous Float instruments.
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	if del, ok := m.delegate.Load().(metric.Meter); ok {
-		return del.SyncFloat64()
-	}
-	return (*sfInstProvider)(m)
+	return inst
 }
 
 type delegatedCallback struct {
-	instruments []instrument.Asynchronous
-	function    func(context.Context)
+	instrument metric.Observable
+	additional []metric.Observable
+	f          metric.Callback
+
+	unregistered uint32
+	unregister   atomic.Value // func() error
+}
+
+func newDelegatedCallback(f metric.Callback, instrument metric.Observable, additional ...metric.Observable) delegatedCallback {
+	cback := delegatedCallback{f: f, instrument: instrument, additional: additional}
+	cback.unregister.Store(func() error {
+		atomic.StoreUint32(&cback.unregistered, 1)
+		return nil
+	})
+	return cback
 }
 
 func (c *delegatedCallback) setDelegate(m metric.Meter) {
-	insts := unwrapInstruments(c.instruments)
-	err := m.RegisterCallback(insts, c.function)
+	u, err := m.RegisterCallback(c.f, unwrapInst(c.instrument), unwrapInsts(c.additional)...)
 	if err != nil {
 		otel.Handle(err)
+		return
+	}
+	if u != nil {
+		c.unregister.Store(u.Unregister)
+	}
+
+	if unregistered := atomic.LoadUint32(&c.unregistered); unregistered > 0 {
+		err := u.Unregister()
+		if err != nil {
+			otel.Handle(err)
+		}
+		return
 	}
 }
 
-type afInstProvider meter
-
-// Counter creates an instrument for recording increasing values.
-func (ip *afInstProvider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &afCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip *afInstProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &afUpDownCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// Gauge creates an instrument for recording the current value.
-func (ip *afInstProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &afGauge{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-type aiInstProvider meter
-
-// Counter creates an instrument for recording increasing values.
-func (ip *aiInstProvider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &aiCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip *aiInstProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &aiUpDownCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// Gauge creates an instrument for recording the current value.
-func (ip *aiInstProvider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &aiGauge{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-type sfInstProvider meter
-
-// Counter creates an instrument for recording increasing values.
-func (ip *sfInstProvider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &sfCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip *sfInstProvider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &sfUpDownCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// Histogram creates an instrument for recording a distribution of values.
-func (ip *sfInstProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &sfHistogram{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-type siInstProvider meter
-
-// Counter creates an instrument for recording increasing values.
-func (ip *siInstProvider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &siCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip *siInstProvider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &siUpDownCounter{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
-}
-
-// Histogram creates an instrument for recording a distribution of values.
-func (ip *siInstProvider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
-	ip.mtx.Lock()
-	defer ip.mtx.Unlock()
-	ctr := &siHistogram{name: name, opts: opts}
-	ip.instruments = append(ip.instruments, ctr)
-	return ctr, nil
+func (c *delegatedCallback) Unregister() error {
+	f := c.unregister.Load().(func() error)
+	return f()
 }

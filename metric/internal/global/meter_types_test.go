@@ -18,11 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 type testMeterProvider struct {
@@ -36,49 +31,88 @@ func (p *testMeterProvider) Meter(name string, opts ...metric.MeterOption) metri
 }
 
 type testMeter struct {
-	afCount int
-	aiCount int
-	sfCount int
-	siCount int
+	afCounter       int
+	afUpDownCounter int
+	afGauge         int
 
-	callbacks []func(context.Context)
+	aiCounter       int
+	aiUpDownCounter int
+	aiGauge         int
+
+	sfCounter       int
+	sfUpDownCounter int
+	sfHistogram     int
+
+	siCounter       int
+	siUpDownCounter int
+	siHistogram     int
+
+	callbacks []metric.Callback
 }
 
-// AsyncInt64 is the namespace for the Asynchronous Integer instruments.
-//
-// To Observe data with instruments it must be registered in a callback.
-func (m *testMeter) AsyncInt64() asyncint64.InstrumentProvider {
-	m.aiCount++
-	return &testAIInstrumentProvider{}
+func (m *testMeter) Float64Counter(name string, opts ...metric.InstrumentOption) (metric.Float64Counter, error) {
+	m.sfCounter++
+	return &testCountingFloatInstrument{}, nil
 }
 
-// AsyncFloat64 is the namespace for the Asynchronous Float instruments
-//
-// To Observe data with instruments it must be registered in a callback.
-func (m *testMeter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	m.afCount++
-	return &testAFInstrumentProvider{}
+func (m *testMeter) Float64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Float64UpDownCounter, error) {
+	m.sfUpDownCounter++
+	return &testCountingFloatInstrument{}, nil
 }
 
-// RegisterCallback captures the function that will be called during Collect.
-//
-// It is only valid to call Observe within the scope of the passed function,
-// and only on the instruments that were registered with this call.
-func (m *testMeter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	m.callbacks = append(m.callbacks, function)
-	return nil
+func (m *testMeter) Float64Histogram(name string, opts ...metric.InstrumentOption) (metric.Float64Histogram, error) {
+	m.sfHistogram++
+	return &testCountingFloatInstrument{}, nil
 }
 
-// SyncInt64 is the namespace for the Synchronous Integer instruments.
-func (m *testMeter) SyncInt64() syncint64.InstrumentProvider {
-	m.siCount++
-	return &testSIInstrumentProvider{}
+func (m *testMeter) Float64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableCounter, error) {
+	m.afCounter++
+	return &testCountingFloatInstrument{}, nil
 }
 
-// SyncFloat64 is the namespace for the Synchronous Float instruments.
-func (m *testMeter) SyncFloat64() syncfloat64.InstrumentProvider {
-	m.sfCount++
-	return &testSFInstrumentProvider{}
+func (m *testMeter) Float64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableUpDownCounter, error) {
+	m.afUpDownCounter++
+	return &testCountingFloatInstrument{}, nil
+}
+
+func (m *testMeter) Float64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Float64ObservableGauge, error) {
+	m.afGauge++
+	return &testCountingFloatInstrument{}, nil
+}
+
+func (m *testMeter) Int64Counter(name string, opts ...metric.InstrumentOption) (metric.Int64Counter, error) {
+	m.siCounter++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Int64UpDownCounter, error) {
+	m.siUpDownCounter++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64Histogram(name string, opts ...metric.InstrumentOption) (metric.Int64Histogram, error) {
+	m.siHistogram++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableCounter, error) {
+	m.aiCounter++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableUpDownCounter, error) {
+	m.aiUpDownCounter++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Int64ObservableGauge, error) {
+	m.aiGauge++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) RegisterCallback(f metric.Callback, instrument metric.Observable, additional ...metric.Observable) (metric.Unregisterer, error) {
+	m.callbacks = append(m.callbacks, f)
+	return unregisterer{}, nil
 }
 
 // This enables async collection.
@@ -87,72 +121,4 @@ func (m *testMeter) collect() {
 	for _, f := range m.callbacks {
 		f(ctx)
 	}
-}
-
-type testAFInstrumentProvider struct{}
-
-// Counter creates an instrument for recording increasing values.
-func (ip testAFInstrumentProvider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip testAFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-// Gauge creates an instrument for recording the current value.
-func (ip testAFInstrumentProvider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-type testAIInstrumentProvider struct{}
-
-// Counter creates an instrument for recording increasing values.
-func (ip testAIInstrumentProvider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
-	return &testCountingIntInstrument{}, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip testAIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
-	return &testCountingIntInstrument{}, nil
-}
-
-// Gauge creates an instrument for recording the current value.
-func (ip testAIInstrumentProvider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
-	return &testCountingIntInstrument{}, nil
-}
-
-type testSFInstrumentProvider struct{}
-
-// Counter creates an instrument for recording increasing values.
-func (ip testSFInstrumentProvider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip testSFInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-// Histogram creates an instrument for recording a distribution of values.
-func (ip testSFInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
-	return &testCountingFloatInstrument{}, nil
-}
-
-type testSIInstrumentProvider struct{}
-
-// Counter creates an instrument for recording increasing values.
-func (ip testSIInstrumentProvider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
-	return &testCountingIntInstrument{}, nil
-}
-
-// UpDownCounter creates an instrument for recording changes of a value.
-func (ip testSIInstrumentProvider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
-	return &testCountingIntInstrument{}, nil
-}
-
-// Histogram creates an instrument for recording a distribution of values.
-func (ip testSIInstrumentProvider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
-	return &testCountingIntInstrument{}, nil
 }
