@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -54,10 +53,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.SyncFloat64().Counter(
+				counter, err := meter.Float64Counter(
 					"foo",
-					instrument.WithDescription("a simple counter"),
-					instrument.WithUnit(unit.Milliseconds),
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit(unit.Milliseconds),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
@@ -81,10 +80,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				gauge, err := meter.SyncFloat64().UpDownCounter(
+				gauge, err := meter.Float64UpDownCounter(
 					"bar",
-					instrument.WithDescription("a fun little gauge"),
-					instrument.WithUnit(unit.Dimensionless),
+					otelmetric.WithDescription("a fun little gauge"),
+					otelmetric.WithUnit(unit.Dimensionless),
 				)
 				require.NoError(t, err)
 				gauge.Add(ctx, 1.0, attrs...)
@@ -99,10 +98,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				histogram, err := meter.SyncFloat64().Histogram(
+				histogram, err := meter.Float64Histogram(
 					"histogram_baz",
-					instrument.WithDescription("a very nice histogram"),
-					instrument.WithUnit(unit.Bytes),
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit(unit.Bytes),
 				)
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, attrs...)
@@ -125,11 +124,11 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C.D").String("Y"),
 					attribute.Key("C/D").String("Z"),
 				}
-				counter, err := meter.SyncFloat64().Counter(
+				counter, err := meter.Float64Counter(
 					"foo",
-					instrument.WithDescription("a sanitary counter"),
+					otelmetric.WithDescription("a sanitary counter"),
 					// This unit is not added to
-					instrument.WithUnit(unit.Bytes),
+					otelmetric.WithUnit(unit.Bytes),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
@@ -146,21 +145,21 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C").String("D"),
 				}
 				// Valid.
-				gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+				gauge, err := meter.Float64UpDownCounter("bar", otelmetric.WithDescription("a fun little gauge"))
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, attrs...)
 				gauge.Add(ctx, -25, attrs...)
 
 				// Invalid, will be renamed.
-				gauge, err = meter.SyncFloat64().UpDownCounter("invalid.gauge.name", instrument.WithDescription("a gauge with an invalid name"))
+				gauge, err = meter.Float64UpDownCounter("invalid.gauge.name", otelmetric.WithDescription("a gauge with an invalid name"))
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, attrs...)
 
-				counter, err := meter.SyncFloat64().Counter("0invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
+				counter, err := meter.Float64Counter("0invalid.counter.name", otelmetric.WithDescription("a counter with an invalid name"))
 				require.NoError(t, err)
 				counter.Add(ctx, 100, attrs...)
 
-				histogram, err := meter.SyncFloat64().Histogram("invalid.hist.name", instrument.WithDescription("a histogram with an invalid name"))
+				histogram, err := meter.Float64Histogram("invalid.hist.name", otelmetric.WithDescription("a histogram with an invalid name"))
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, attrs...)
 			},
@@ -176,7 +175,7 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
@@ -197,7 +196,7 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
@@ -215,7 +214,7 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
@@ -231,10 +230,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				gauge, err := meter.SyncInt64().UpDownCounter(
+				gauge, err := meter.Int64UpDownCounter(
 					"bar",
-					instrument.WithDescription("a fun little gauge"),
-					instrument.WithUnit(unit.Dimensionless),
+					otelmetric.WithDescription("a fun little gauge"),
+					otelmetric.WithUnit(unit.Dimensionless),
 				)
 				require.NoError(t, err)
 				gauge.Add(ctx, 2, attrs...)
@@ -250,10 +249,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				counter, err := meter.SyncInt64().Counter(
+				counter, err := meter.Int64Counter(
 					"bar",
-					instrument.WithDescription("a fun little counter"),
-					instrument.WithUnit(unit.Bytes),
+					otelmetric.WithDescription("a fun little counter"),
+					otelmetric.WithUnit(unit.Bytes),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 2, attrs...)
@@ -371,18 +370,18 @@ func TestMultiScopes(t *testing.T) {
 	)
 
 	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
-		SyncInt64().Counter(
-		"foo",
-		instrument.WithUnit(unit.Milliseconds),
-		instrument.WithDescription("meter foo counter"))
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit(unit.Milliseconds),
+			otelmetric.WithDescription("meter foo counter"))
 	assert.NoError(t, err)
 	fooCounter.Add(ctx, 100, attribute.String("type", "foo"))
 
 	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
-		SyncInt64().Counter(
-		"bar",
-		instrument.WithUnit(unit.Milliseconds),
-		instrument.WithDescription("meter bar counter"))
+		Int64Counter(
+			"bar",
+			otelmetric.WithUnit(unit.Milliseconds),
+			otelmetric.WithDescription("meter bar counter"))
 	assert.NoError(t, err)
 	barCounter.Add(ctx, 200, attribute.String("type", "bar"))
 
