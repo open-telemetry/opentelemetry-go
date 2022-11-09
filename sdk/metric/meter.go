@@ -15,15 +15,9 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // meter handles the creation and coordination of all metric instruments. A
@@ -31,15 +25,10 @@ import (
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	instrumentation.Scope
-
-	// *Resolvers are used by the provided instrument providers to resolve new
-	// instruments aggregators and maintain a cache across instruments this
-	// meter owns.
-	int64Resolver   resolver[int64]
-	float64Resolver resolver[float64]
-
 	pipes pipelines
+
+	instProviderInt64   *instProvider[int64]
+	instProviderFloat64 *instProvider[float64]
 }
 
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
@@ -53,40 +42,65 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	fc := newInstrumentCache[float64](nil, &viewCache)
 
 	return &meter{
-		Scope: s,
-		pipes: p,
-
-		int64Resolver:   newResolver(p, ic),
-		float64Resolver: newResolver(p, fc),
+		pipes:               p,
+		instProviderInt64:   newInstProvider(s, p, ic),
+		instProviderFloat64: newInstProvider(s, p, fc),
 	}
 }
 
 // Compile-time check meter implements metric.Meter.
 var _ metric.Meter = (*meter)(nil)
 
-// AsyncInt64 returns the asynchronous integer instrument provider.
-func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
+func (m *meter) Float64Counter(name string, opts ...metric.InstrumentOption) (metric.Float64Counter, error) {
+	return m.instProviderFloat64.Lookup(view.SyncCounter, name, opts)
 }
 
-// AsyncFloat64 returns the asynchronous floating-point instrument provider.
-func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
+func (m *meter) Float64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Float64UpDownCounter, error) {
+	return m.instProviderFloat64.Lookup(view.SyncUpDownCounter, name, opts)
+}
+
+func (m *meter) Float64Histogram(name string, opts ...metric.InstrumentOption) (metric.Float64Histogram, error) {
+	return m.instProviderFloat64.Lookup(view.SyncHistogram, name, opts)
+}
+
+func (m *meter) Float64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableCounter, error) {
+	return m.instProviderFloat64.LookupObservable(view.AsyncCounter, name, opts)
+}
+
+func (m *meter) Float64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Float64ObservableUpDownCounter, error) {
+	return m.instProviderFloat64.LookupObservable(view.AsyncUpDownCounter, name, opts)
+}
+
+func (m *meter) Float64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Float64ObservableGauge, error) {
+	return m.instProviderFloat64.LookupObservable(view.AsyncGauge, name, opts)
+}
+
+func (m *meter) Int64Counter(name string, opts ...metric.InstrumentOption) (metric.Int64Counter, error) {
+	return m.instProviderInt64.Lookup(view.SyncCounter, name, opts)
+}
+
+func (m *meter) Int64UpDownCounter(name string, opts ...metric.InstrumentOption) (metric.Int64UpDownCounter, error) {
+	return m.instProviderInt64.Lookup(view.SyncUpDownCounter, name, opts)
+}
+
+func (m *meter) Int64Histogram(name string, opts ...metric.InstrumentOption) (metric.Int64Histogram, error) {
+	return m.instProviderInt64.Lookup(view.SyncHistogram, name, opts)
+}
+
+func (m *meter) Int64ObservableCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableCounter, error) {
+	return m.instProviderInt64.LookupObservable(view.AsyncCounter, name, opts)
+}
+
+func (m *meter) Int64ObservableUpDownCounter(name string, opts ...metric.ObservableOption) (metric.Int64ObservableUpDownCounter, error) {
+	return m.instProviderInt64.LookupObservable(view.AsyncUpDownCounter, name, opts)
+}
+
+func (m *meter) Int64ObservableGauge(name string, opts ...metric.ObservableOption) (metric.Int64ObservableGauge, error) {
+	return m.instProviderInt64.LookupObservable(view.AsyncGauge, name, opts)
 }
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
-	m.pipes.registerCallback(f)
-	return nil
-}
-
-// SyncInt64 returns the synchronous integer instrument provider.
-func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
-}
-
-// SyncFloat64 returns the synchronous floating-point instrument provider.
-func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
+func (m *meter) RegisterCallback(f metric.Callback, instrument metric.Observable, additional ...metric.Observable) (metric.Unregisterer, error) {
+	return m.pipes.registerCallback(f)
 }

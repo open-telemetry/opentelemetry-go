@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -77,7 +78,7 @@ type pipeline struct {
 
 	sync.Mutex
 	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    []func(context.Context)
+	callbacks    []metric.Callback
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -96,10 +97,19 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(callback func(context.Context)) {
+func (p *pipeline) addCallback(callback metric.Callback) func() error {
+	if callback == nil {
+		return func() error { return nil }
+	}
+
 	p.Lock()
-	defer p.Unlock()
 	p.callbacks = append(p.callbacks, callback)
+	p.Unlock()
+
+	return func() error {
+		// FIXME: Unregister the callback.
+		return nil
+	}
 }
 
 // callbackKey is a context key type used to identify context that came from the SDK.
@@ -121,8 +131,12 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 	for _, callback := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		callback(ctx)
-		if err := ctx.Err(); err != nil {
+		err := callback(ctx)
+		if err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+		err = ctx.Err()
+		if err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err
 		}
@@ -436,10 +450,23 @@ func newPipelines(res *resource.Resource, readers []Reader, views []view.View) p
 }
 
 // TODO (#3053) Only register callbacks if any instrument matches in a view.
-func (p pipelines) registerCallback(fn func(context.Context)) {
+func (p pipelines) registerCallback(fn metric.Callback) (metric.Unregisterer, error) {
+	var u unregisterer
 	for _, pipe := range p {
-		pipe.addCallback(fn)
+		u = append(u, pipe.addCallback(fn))
 	}
+	return u, nil
+}
+
+type unregisterer []func() error
+
+func (u unregisterer) Unregister() error {
+	for _, f := range u {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // resolver facilitates resolving Aggregators an instrument needs to aggregate

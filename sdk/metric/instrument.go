@@ -18,11 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -50,24 +46,23 @@ type instrumentID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Asynchronous
-	instrument.Synchronous
+	metric.Observable
 
 	aggregators []internal.Aggregator[N]
 }
 
-var _ asyncfloat64.Counter = &instrumentImpl[float64]{}
-var _ asyncfloat64.UpDownCounter = &instrumentImpl[float64]{}
-var _ asyncfloat64.Gauge = &instrumentImpl[float64]{}
-var _ asyncint64.Counter = &instrumentImpl[int64]{}
-var _ asyncint64.UpDownCounter = &instrumentImpl[int64]{}
-var _ asyncint64.Gauge = &instrumentImpl[int64]{}
-var _ syncfloat64.Counter = &instrumentImpl[float64]{}
-var _ syncfloat64.UpDownCounter = &instrumentImpl[float64]{}
-var _ syncfloat64.Histogram = &instrumentImpl[float64]{}
-var _ syncint64.Counter = &instrumentImpl[int64]{}
-var _ syncint64.UpDownCounter = &instrumentImpl[int64]{}
-var _ syncint64.Histogram = &instrumentImpl[int64]{}
+var _ metric.Float64ObservableCounter = &instrumentImpl[float64]{}
+var _ metric.Float64ObservableUpDownCounter = &instrumentImpl[float64]{}
+var _ metric.Float64ObservableGauge = &instrumentImpl[float64]{}
+var _ metric.Int64ObservableCounter = &instrumentImpl[int64]{}
+var _ metric.Int64ObservableUpDownCounter = &instrumentImpl[int64]{}
+var _ metric.Int64ObservableGauge = &instrumentImpl[int64]{}
+var _ metric.Float64Counter = &instrumentImpl[float64]{}
+var _ metric.Float64UpDownCounter = &instrumentImpl[float64]{}
+var _ metric.Float64Histogram = &instrumentImpl[float64]{}
+var _ metric.Int64Counter = &instrumentImpl[int64]{}
+var _ metric.Int64UpDownCounter = &instrumentImpl[int64]{}
+var _ metric.Int64Histogram = &instrumentImpl[int64]{}
 
 func (i *instrumentImpl[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	// Only record a value if this is being called from the MetricProvider.
