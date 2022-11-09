@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
@@ -31,9 +29,10 @@ func ExampleMeter_synchronous() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := metric.NewNoopMeterProvider()
 
-	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").SyncInt64().Histogram(
+	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
-		instrument.WithUnit(unit.Milliseconds))
+		metric.WithUnit(unit.Milliseconds),
+	)
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -52,26 +51,21 @@ func ExampleMeter_asynchronous_single() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
-	memoryUsage, err := meter.AsyncInt64().Gauge(
+	var memoryUsage metric.Int64ObservableGauge
+	memoryUsage, err := meter.Int64ObservableGauge(
 		"MemoryUsage",
-		instrument.WithUnit(unit.Bytes),
-	)
-	if err != nil {
-		fmt.Println("Failed to register instrument")
-		panic(err)
-	}
-
-	err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
-		func(ctx context.Context) {
-			// instrument.WithCallbackFunc(func(ctx context.Context) {
-			//Do Work to get the real memoryUsage
+		metric.WithUnit(unit.Bytes),
+		metric.WithCallback(func(ctx context.Context) error {
+			// Do Work to get the real memoryUsage.
 			// mem := GatherMemory(ctx)
 			mem := 75000
 
 			memoryUsage.Observe(ctx, int64(mem))
-		})
+			return nil
+		}),
+	)
 	if err != nil {
-		fmt.Println("Failed to register callback")
+		fmt.Println("Failed to register instrument")
 		panic(err)
 	}
 }
@@ -81,28 +75,26 @@ func ExampleMeter_asynchronous_multiple() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
-	// This is just a sample of memory stats to record from the Memstats
-	heapAlloc, _ := meter.AsyncInt64().UpDownCounter("heapAllocs")
-	gcCount, _ := meter.AsyncInt64().Counter("gcCount")
-	gcPause, _ := meter.SyncFloat64().Histogram("gcPause")
+	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
+	gcCount, _ := meter.Int64ObservableCounter("gcCount")
+	gcPause, _ := meter.Float64Histogram("gcPause")
 
-	err := meter.RegisterCallback([]instrument.Asynchronous{
-		heapAlloc,
-		gcCount,
-	},
-		func(ctx context.Context) {
+	_, err := meter.RegisterCallback(
+		func(ctx context.Context) error {
 			memStats := &runtime.MemStats{}
-			// This call does work
 			runtime.ReadMemStats(memStats)
 
 			heapAlloc.Observe(ctx, int64(memStats.HeapAlloc))
 			gcCount.Observe(ctx, int64(memStats.NumGC))
 
-			// This function synchronously records the pauses
+			// Synchronously records the GC pauses.
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
-		},
-	)
 
+			return nil
+		},
+		heapAlloc,
+		gcCount,
+	)
 	if err != nil {
 		fmt.Println("Failed to register callback")
 		panic(err)
@@ -110,4 +102,4 @@ func ExampleMeter_asynchronous_multiple() {
 }
 
 // This is just an example, see the the contrib runtime instrumentation for real implementation.
-func computeGCPauses(ctx context.Context, recorder syncfloat64.Histogram, pauseBuff []uint64) {}
+func computeGCPauses(ctx context.Context, recorder metric.Float64Histogram, pauseBuff []uint64) {}
