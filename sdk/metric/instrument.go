@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -76,6 +77,16 @@ type Instrument struct {
 
 	// Ensure forward compatibility if non-comparable fields need to be added.
 	nonComparable // nolint: unused
+}
+
+// Stream describes the stream of data an instrument produces.
+type Stream struct {
+	Instrument
+
+	// Aggregation the stream uses for an instrument.
+	Aggregation aggregation.Aggregation
+	// AttributeFilter applied to all attributes recorded for an instrument.
+	AttributeFilter attribute.Filter
 }
 
 // instrumentID are the identifying properties of an instrument.
