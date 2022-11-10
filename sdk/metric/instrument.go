@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -57,6 +58,25 @@ const (
 	// current values in an asynchronous callback.
 	InstrumentKindAsyncGauge
 )
+
+type nonComparable [0]func() // nolint: unused  // This is indeed used.
+
+// Instrument describes properties an instrument is created with.
+type Instrument struct {
+	// Name is the human-readable identifier of the instrument.
+	Name string
+	// Description describes the purpose of the instrument.
+	Description string
+	// Kind defines the functional group of the instrument.
+	Kind InstrumentKind
+	// Unit is the unit of measurement recorded by the instrument.
+	Unit unit.Unit
+	// Scope identifies the instrumentation that created the instrument.
+	Scope instrumentation.Scope
+
+	// Ensure forward compatibility if non-comparable fields need to be added.
+	nonComparable // nolint: unused
+}
 
 // instrumentID are the identifying properties of an instrument.
 type instrumentID struct {
