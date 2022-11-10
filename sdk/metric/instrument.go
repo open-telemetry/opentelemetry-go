@@ -30,6 +30,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+var (
+	zeroUnit           unit.Unit
+	zeroInstrumentKind InstrumentKind
+	zeroScope          instrumentation.Scope
+)
+
 // InstrumentKind is the identifier of a group of instruments that all
 // performing the same function.
 type InstrumentKind uint8
@@ -77,6 +83,86 @@ type Instrument struct {
 
 	// Ensure forward compatibility if non-comparable fields need to be added.
 	nonComparable // nolint: unused
+}
+
+// mask returns a copy of p with all non-zero-value fields of m replacing the
+// fields of the returned copy.
+func (p Instrument) mask(m Instrument) Instrument {
+	if m.Name != "" {
+		p.Name = m.Name
+	}
+	if m.Description != "" {
+		p.Description = m.Description
+	}
+	if m.Kind != zeroInstrumentKind {
+		p.Kind = m.Kind
+	}
+	if m.Unit != zeroUnit {
+		p.Unit = m.Unit
+	}
+	if m.Scope.Name != "" {
+		p.Scope.Name = m.Scope.Name
+	}
+	if m.Scope.Version != "" {
+		p.Scope.Version = m.Scope.Version
+	}
+	if m.Scope.SchemaURL != "" {
+		p.Scope.SchemaURL = m.Scope.SchemaURL
+	}
+	return p
+}
+
+// empty returns if all fields of p are their zero-value.
+func (p Instrument) empty() bool {
+	return p.Name == "" &&
+		p.Description == "" &&
+		p.Kind == zeroInstrumentKind &&
+		p.Unit == zeroUnit &&
+		p.Scope == zeroScope
+}
+
+// matches returns if all the non-zero-value fields of o match the
+// corresponding fields of p.
+//
+// If o is empty true is returned.
+func (p Instrument) matches(o Instrument) bool {
+	return p.matchesName(o) &&
+		p.matchesDescription(o) &&
+		p.matchesKind(o) &&
+		p.matchesUnit(o) &&
+		p.matchesScope(o)
+}
+
+// matchesName returns true if the Name field of o is a non-zero-value and
+// equals the Name field of p, otherwise false.
+func (p Instrument) matchesName(o Instrument) bool {
+	return p.Name == "" || p.Name == o.Name
+}
+
+// matchesDescription returns true if the Description field of o is a
+// non-zero-value and equals the Description field of p, otherwise false.
+func (p Instrument) matchesDescription(o Instrument) bool {
+	return p.Description == "" || p.Description == o.Description
+}
+
+// matchesKind returns true if the Kind field of o is a non-zero-value and
+// equals the Kind field of p, otherwise false.
+func (p Instrument) matchesKind(o Instrument) bool {
+	return p.Kind == zeroInstrumentKind || p.Kind == o.Kind
+}
+
+// matchesUnit returns true if the Unit field of o is a non-zero-value and
+// equals the Unit field of p, otherwise false.
+func (p Instrument) matchesUnit(o Instrument) bool {
+	return p.Unit == zeroUnit || p.Unit == o.Unit
+}
+
+// matchesScope returns true if the Scope field of o is a non-zero-value and
+// equals the Scope field of p, otherwise false.
+func (p Instrument) matchesScope(o Instrument) bool {
+	return (p.Scope.Name == "" || p.Scope.Name == o.Scope.Name) &&
+		(p.Scope.Version == "" || p.Scope.Version == o.Scope.Version) &&
+		(p.Scope.SchemaURL == "" || p.Scope.SchemaURL == o.Scope.SchemaURL)
 }
 
 // Stream describes the stream of data an instrument produces.
