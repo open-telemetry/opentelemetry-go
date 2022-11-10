@@ -460,8 +460,8 @@ func newResolver[N int64 | float64](s instrumentation.Scope, p pipelines, c inst
 	return resolver[N]{in}
 }
 
-// Aggregators returns the Aggregators an instrument defined by key needs to
-// update when it makes a measurement.
+// Aggregators returns the Aggregators that must be updated by
+// the instrument defined by key
 func (r resolver[N]) Aggregators(key instProviderKey) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
