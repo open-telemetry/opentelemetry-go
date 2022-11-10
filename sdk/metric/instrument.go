@@ -28,6 +28,36 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// InstrumentKind is the identifier of a group of instruments that all
+// performing the same function.
+type InstrumentKind uint8
+
+const (
+	// instrumentKindUndefined is an undefined instrument kind, it should not
+	// be used by any initialized type.
+	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck,unused
+	// InstrumentKindSyncCounter identifies a group of instruments that record
+	// increasing values synchronously with the code path they are measuring.
+	InstrumentKindSyncCounter
+	// InstrumentKindSyncUpDownCounter identifies a group of instruments that
+	// record increasing and decreasing values synchronously with the code path
+	// they are measuring.
+	InstrumentKindSyncUpDownCounter
+	// InstrumentKindSyncHistogram identifies a group of instruments that
+	// record a distribution of values synchronously with the code path they
+	// are measuring.
+	InstrumentKindSyncHistogram
+	// InstrumentKindAsyncCounter identifies a group of instruments that record
+	// increasing values in an asynchronous callback.
+	InstrumentKindAsyncCounter
+	// InstrumentKindAsyncUpDownCounter identifies a group of instruments that
+	// record increasing and decreasing values in an asynchronous callback.
+	InstrumentKindAsyncUpDownCounter
+	// InstrumentKindAsyncGauge identifies a group of instruments that record
+	// current values in an asynchronous callback.
+	InstrumentKindAsyncGauge
+)
+
 // instrumentID are the identifying properties of an instrument.
 type instrumentID struct {
 	// Name is the name of the instrument.
