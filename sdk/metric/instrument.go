@@ -121,7 +121,7 @@ func (p Instrument) empty() bool {
 		p.Scope == zeroScope
 }
 
-// matches returns if all the non-zero-value fields of o match the
+// matches returns whether all the non-zero-value fields of o match the
 // corresponding fields of p.
 //
 // If o is empty true is returned.

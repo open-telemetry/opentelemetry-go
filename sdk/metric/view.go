@@ -54,8 +54,8 @@ func NewView(criteria Instrument, mask Stream) View {
 	if strings.ContainsAny(criteria.Name, "*?") {
 		pattern := regexp.QuoteMeta(criteria.Name)
 		pattern = "^" + pattern + "$"
-		pattern = strings.ReplaceAll(pattern, "\\?", ".")
-		pattern = strings.ReplaceAll(pattern, "\\*", ".*")
+		pattern = strings.ReplaceAll(pattern, `\?`, ".")
+		pattern = strings.ReplaceAll(pattern, `\*`, ".*")
 		re := regexp.MustCompile(pattern)
 		matchFunc = func(p Instrument) bool {
 			return re.MatchString(p.Name) &&
