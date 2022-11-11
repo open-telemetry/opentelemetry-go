@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/metric/view"
@@ -478,6 +479,49 @@ func TestMetersProvideScope(t *testing.T) {
 	got, err := rdr.Collect(context.Background())
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestRegisterCallbackDropAggregations(t *testing.T) {
+	aggFn := func(view.InstrumentKind) aggregation.Aggregation {
+		return aggregation.Drop{}
+	}
+	r := NewManualReader(WithAggregationSelector(aggFn))
+	mp := NewMeterProvider(WithReader(r))
+	m := mp.Meter("testRegisterCallbackDropAggregations")
+
+	int64Counter, err := m.AsyncInt64().Counter("int64.counter")
+	require.NoError(t, err)
+
+	int64UpDownCounter, err := m.AsyncInt64().UpDownCounter("int64.up_down_counter")
+	require.NoError(t, err)
+
+	int64Gauge, err := m.AsyncInt64().Gauge("int64.gauge")
+	require.NoError(t, err)
+
+	floag64Counter, err := m.AsyncFloat64().Counter("floag64.counter")
+	require.NoError(t, err)
+
+	floag64UpDownCounter, err := m.AsyncFloat64().UpDownCounter("floag64.up_down_counter")
+	require.NoError(t, err)
+
+	floag64Gauge, err := m.AsyncFloat64().Gauge("floag64.gauge")
+	require.NoError(t, err)
+
+	var called bool
+	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{
+		int64Counter,
+		int64UpDownCounter,
+		int64Gauge,
+		floag64Counter,
+		floag64UpDownCounter,
+		floag64Gauge,
+	}, func(context.Context) { called = true }))
+
+	data, err := r.Collect(context.Background())
+	require.NoError(t, err)
+
+	assert.False(t, called, "callback called for all drop instruments")
+	assert.Len(t, data.ScopeMetrics, 0, "metrics exported for drop instruments")
 }
 
 func TestAttributeFilter(t *testing.T) {
