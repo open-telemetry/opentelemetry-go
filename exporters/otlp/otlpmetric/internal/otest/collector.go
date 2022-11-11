@@ -50,6 +50,11 @@ type Collector interface {
 	Collect() *Storage
 }
 
+type ExportResult struct {
+	Response *collpb.ExportMetricsServiceResponse
+	Err      error
+}
+
 // Storage stores uploaded OTLP metric data in their proto form.
 type Storage struct {
 	dataMu sync.Mutex
@@ -86,7 +91,7 @@ type GRPCCollector struct {
 	headers   metadata.MD
 	storage   *Storage
 
-	errCh    <-chan error
+	resultCh <-chan ExportResult
 	listener net.Listener
 	srv      *grpc.Server
 }
@@ -100,14 +105,14 @@ type GRPCCollector struct {
 // If errCh is not nil, the collector will respond to Export calls with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func NewGRPCCollector(endpoint string, errCh <-chan error) (*GRPCCollector, error) {
+func NewGRPCCollector(endpoint string, resultCh <-chan ExportResult) (*GRPCCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
 
 	c := &GRPCCollector{
-		storage: NewStorage(),
-		errCh:   errCh,
+		storage:  NewStorage(),
+		resultCh: resultCh,
 	}
 
 	var err error
@@ -155,11 +160,14 @@ func (c *GRPCCollector) Export(ctx context.Context, req *collpb.ExportMetricsSer
 		c.headersMu.Unlock()
 	}
 
-	var err error
-	if c.errCh != nil {
-		err = <-c.errCh
+	if c.resultCh != nil {
+		r := <-c.resultCh
+		if r.Response == nil {
+			return &collpb.ExportMetricsServiceResponse{}, r.Err
+		}
+		return r.Response, r.Err
 	}
-	return &collpb.ExportMetricsServiceResponse{}, err
+	return &collpb.ExportMetricsServiceResponse{}, nil
 }
 
 var emptyExportMetricsServiceResponse = func() []byte {
@@ -189,7 +197,7 @@ type HTTPCollector struct {
 	headers   http.Header
 	storage   *Storage
 
-	errCh    <-chan error
+	resultCh <-chan ExportResult
 	listener net.Listener
 	srv      *http.Server
 }
@@ -207,7 +215,7 @@ type HTTPCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, error) {
+func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -220,9 +228,9 @@ func NewHTTPCollector(endpoint string, errCh <-chan error) (*HTTPCollector, erro
 	}
 
 	c := &HTTPCollector{
-		headers: http.Header{},
-		storage: NewStorage(),
-		errCh:   errCh,
+		headers:  http.Header{},
+		storage:  NewStorage(),
+		resultCh: resultCh,
 	}
 
 	c.listener, err = net.Listen("tcp", u.Host)
@@ -276,22 +284,25 @@ func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.respond(w, c.record(r))
 }
 
-func (c *HTTPCollector) record(r *http.Request) error {
+func (c *HTTPCollector) record(r *http.Request) ExportResult {
 	// Currently only supports protobuf.
 	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
-		return fmt.Errorf("content-type not supported: %s", v)
+		err := fmt.Errorf("content-type not supported: %s", v)
+		return ExportResult{Err: err}
 	}
 
 	body, err := c.readBody(r)
 	if err != nil {
-		return err
+		return ExportResult{Err: err}
 	}
 	pbRequest := &collpb.ExportMetricsServiceRequest{}
 	err = proto.Unmarshal(body, pbRequest)
 	if err != nil {
-		return &HTTPResponseError{
-			Err:    err,
-			Status: http.StatusInternalServerError,
+		return ExportResult{
+			Err: &HTTPResponseError{
+				Err:    err,
+				Status: http.StatusInternalServerError,
+			},
 		}
 	}
 	c.storage.Add(pbRequest)
@@ -304,10 +315,10 @@ func (c *HTTPCollector) record(r *http.Request) error {
 	}
 	c.headersMu.Unlock()
 
-	if c.errCh != nil {
-		err = <-c.errCh
+	if c.resultCh != nil {
+		return <-c.resultCh
 	}
-	return err
+	return ExportResult{Err: err}
 }
 
 func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
@@ -345,12 +356,12 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 	return body, err
 }
 
-func (c *HTTPCollector) respond(w http.ResponseWriter, err error) {
-	if err != nil {
+func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
+	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		var e *HTTPResponseError
-		if errors.As(err, &e) {
+		if errors.As(resp.Err, &e) {
 			for k, vals := range e.Header {
 				for _, v := range vals {
 					w.Header().Add(k, v)
@@ -360,14 +371,22 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, err error) {
 			fmt.Fprintln(w, e.Error())
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintln(w, err.Error())
+			fmt.Fprintln(w, resp.Err.Error())
 		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(emptyExportMetricsServiceResponse)
+	if resp.Response == nil {
+		_, _ = w.Write(emptyExportMetricsServiceResponse)
+	} else {
+		r, err := proto.Marshal(resp.Response)
+		if err != nil {
+			panic(err)
+		}
+		_, _ = w.Write(r)
+	}
 }
 
 type mathRandReader struct{}
