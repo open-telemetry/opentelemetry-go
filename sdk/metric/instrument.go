@@ -85,84 +85,84 @@ type Instrument struct {
 	nonComparable // nolint: unused
 }
 
-// mask returns a copy of p with all non-zero-value fields of m replacing the
-// fields of the returned copy.
-func (p Instrument) mask(m Instrument) Instrument {
+// mask returns a copy of base with all non-zero-value fields of m replacing
+// the fields of the returned copy.
+func (base Instrument) mask(m Instrument) Instrument {
+	cp := base
 	if m.Name != "" {
-		p.Name = m.Name
+		cp.Name = m.Name
 	}
 	if m.Description != "" {
-		p.Description = m.Description
+		cp.Description = m.Description
 	}
 	if m.Kind != zeroInstrumentKind {
-		p.Kind = m.Kind
+		cp.Kind = m.Kind
 	}
 	if m.Unit != zeroUnit {
-		p.Unit = m.Unit
+		cp.Unit = m.Unit
 	}
 	if m.Scope.Name != "" {
-		p.Scope.Name = m.Scope.Name
+		cp.Scope.Name = m.Scope.Name
 	}
 	if m.Scope.Version != "" {
-		p.Scope.Version = m.Scope.Version
+		cp.Scope.Version = m.Scope.Version
 	}
 	if m.Scope.SchemaURL != "" {
-		p.Scope.SchemaURL = m.Scope.SchemaURL
+		cp.Scope.SchemaURL = m.Scope.SchemaURL
 	}
-	return p
+	return cp
 }
 
-// empty returns if all fields of p are their zero-value.
-func (p Instrument) empty() bool {
-	return p.Name == "" &&
-		p.Description == "" &&
-		p.Kind == zeroInstrumentKind &&
-		p.Unit == zeroUnit &&
-		p.Scope == zeroScope
+// empty returns if all fields of i are their zero-value.
+func (i Instrument) empty() bool {
+	return i.Name == "" &&
+		i.Description == "" &&
+		i.Kind == zeroInstrumentKind &&
+		i.Unit == zeroUnit &&
+		i.Scope == zeroScope
 }
 
-// matches returns whether all the non-zero-value fields of o match the
-// corresponding fields of p.
-//
-// If o is empty true is returned.
-func (p Instrument) matches(o Instrument) bool {
-	return p.matchesName(o) &&
-		p.matchesDescription(o) &&
-		p.matchesKind(o) &&
-		p.matchesUnit(o) &&
-		p.matchesScope(o)
+// matches returns whether all the non-zero-value fields of i match the
+// corresponding fields of other. If i is empty it will match all other, and
+// true will always be returned.
+func (i Instrument) matches(other Instrument) bool {
+	return i.matchesName(other) &&
+		i.matchesDescription(other) &&
+		i.matchesKind(other) &&
+		i.matchesUnit(other) &&
+		i.matchesScope(other)
 }
 
-// matchesName returns true if the Name field of o is a non-zero-value and
-// equals the Name field of p, otherwise false.
-func (p Instrument) matchesName(o Instrument) bool {
-	return p.Name == "" || p.Name == o.Name
+// matchesName returns true if the Name of i is "" or it equals the Name of
+// other, otherwise false.
+func (i Instrument) matchesName(other Instrument) bool {
+	return i.Name == "" || i.Name == other.Name
 }
 
-// matchesDescription returns true if the Description field of o is a
-// non-zero-value and equals the Description field of p, otherwise false.
-func (p Instrument) matchesDescription(o Instrument) bool {
-	return p.Description == "" || p.Description == o.Description
+// matchesDescription returns true if the Description of i is "" or it equals
+// the Description of other, otherwise false.
+func (i Instrument) matchesDescription(other Instrument) bool {
+	return i.Description == "" || i.Description == other.Description
 }
 
-// matchesKind returns true if the Kind field of o is a non-zero-value and
-// equals the Kind field of p, otherwise false.
-func (p Instrument) matchesKind(o Instrument) bool {
-	return p.Kind == zeroInstrumentKind || p.Kind == o.Kind
+// matchesKind returns true if the Kind of i is its zero-value or it equals the
+// Kind of other, otherwise false.
+func (i Instrument) matchesKind(other Instrument) bool {
+	return i.Kind == zeroInstrumentKind || i.Kind == other.Kind
 }
 
-// matchesUnit returns true if the Unit field of o is a non-zero-value and
-// equals the Unit field of p, otherwise false.
-func (p Instrument) matchesUnit(o Instrument) bool {
-	return p.Unit == zeroUnit || p.Unit == o.Unit
+// matchesUnit returns true if the Unit of i is its zero-value or it equals the
+// Unit of other, otherwise false.
+func (i Instrument) matchesUnit(other Instrument) bool {
+	return i.Unit == zeroUnit || i.Unit == other.Unit
 }
 
-// matchesScope returns true if the Scope field of o is a non-zero-value and
-// equals the Scope field of p, otherwise false.
-func (p Instrument) matchesScope(o Instrument) bool {
-	return (p.Scope.Name == "" || p.Scope.Name == o.Scope.Name) &&
-		(p.Scope.Version == "" || p.Scope.Version == o.Scope.Version) &&
-		(p.Scope.SchemaURL == "" || p.Scope.SchemaURL == o.Scope.SchemaURL)
+// matchesScope returns true if the Scope of i is its zero-value or it equals
+// the Scope of other, otherwise false.
+func (i Instrument) matchesScope(other Instrument) bool {
+	return (i.Scope.Name == "" || i.Scope.Name == other.Scope.Name) &&
+		(i.Scope.Version == "" || i.Scope.Version == other.Scope.Version) &&
+		(i.Scope.SchemaURL == "" || i.Scope.SchemaURL == other.Scope.SchemaURL)
 }
 
 // Stream describes the stream of data an instrument produces.

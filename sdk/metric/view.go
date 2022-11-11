@@ -57,12 +57,12 @@ func NewView(criteria Instrument, mask Stream) View {
 		pattern = strings.ReplaceAll(pattern, `\?`, ".")
 		pattern = strings.ReplaceAll(pattern, `\*`, ".*")
 		re := regexp.MustCompile(pattern)
-		matchFunc = func(p Instrument) bool {
-			return re.MatchString(p.Name) &&
-				criteria.matchesDescription(p) &&
-				criteria.matchesKind(p) &&
-				criteria.matchesUnit(p) &&
-				criteria.matchesScope(p)
+		matchFunc = func(i Instrument) bool {
+			return re.MatchString(i.Name) &&
+				criteria.matchesDescription(i) &&
+				criteria.matchesKind(i) &&
+				criteria.matchesUnit(i) &&
+				criteria.matchesScope(i)
 		}
 	} else {
 		matchFunc = criteria.matches
@@ -81,10 +81,10 @@ func NewView(criteria Instrument, mask Stream) View {
 		}
 	}
 
-	return func(p Instrument) (Stream, bool) {
-		if matchFunc(p) {
+	return func(i Instrument) (Stream, bool) {
+		if matchFunc(i) {
 			stream := Stream{
-				Instrument:      p.mask(mask.Instrument),
+				Instrument:      i.mask(mask.Instrument),
 				Aggregation:     agg,
 				AttributeFilter: mask.AttributeFilter,
 			}
