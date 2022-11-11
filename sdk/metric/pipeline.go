@@ -438,7 +438,6 @@ func newPipelines(res *resource.Resource, readers []Reader, views []view.View) p
 	return pipes
 }
 
-// TODO (#3053) Only register callbacks if any instrument matches in a view.
 func (p pipelines) registerCallback(fn func(context.Context)) {
 	for _, pipe := range p {
 		pipe.addCallback(fn)

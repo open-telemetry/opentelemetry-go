@@ -73,6 +73,31 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
+	for _, inst := range insts {
+		// Only register if at least one instrument has a non-drop aggregation.
+		// Otherwise, calling f during collection will be wasted computation.
+		switch t := inst.(type) {
+		case *instrumentImpl[int64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		case *instrumentImpl[float64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		default:
+			// Instrument external to the SDK. For example, an instrument from
+			// the "go.opentelemetry.io/otel/metric/internal/global" package.
+			//
+			// Fail gracefully here, assume a valid instrument.
+			return m.registerCallback(f)
+		}
+	}
+	// All insts use drop aggregation.
+	return nil
+}
+
+func (m *meter) registerCallback(f func(context.Context)) error {
 	m.pipes.registerCallback(f)
 	return nil
 }

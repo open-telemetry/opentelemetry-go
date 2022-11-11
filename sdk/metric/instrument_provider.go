@@ -15,8 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
@@ -70,9 +68,6 @@ func (p *instProvider[N]) lookup(kind view.InstrumentKind, name string, opts []i
 	}
 
 	aggs, err := p.resolve.Aggregators(key)
-	if len(aggs) == 0 && err != nil {
-		err = fmt.Errorf("instrument does not match any view: %w", err)
-	}
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
