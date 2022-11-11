@@ -15,6 +15,8 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -468,4 +470,108 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 	require.True(t, match, "view did not match exact criteria")
 	assert.Nil(t, got.Aggregation, "erroring aggregation used")
 	assert.Equal(t, 1, l.ErrorN())
+}
+
+func ExampleNewView() {
+	// Rename the "latency" instrument from the v0.34.0 version of the "http"
+	// instrumentation library as "request.latency".
+	v := NewView(Instrument{
+		Name: "latency",
+		Scope: instrumentation.Scope{
+			Name:    "http",
+			Version: "v0.34.0",
+		},
+	}, Stream{Name: "request.latency"})
+
+	stream, _ := v(Instrument{
+		Name:        "latency",
+		Description: "request latency",
+		Unit:        unit.Milliseconds,
+		Kind:        InstrumentKindSyncCounter,
+		Scope: instrumentation.Scope{
+			Name:      "http",
+			Version:   "v0.34.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.0.0",
+		},
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Println("description:", stream.Description)
+	fmt.Println("unit:", stream.Unit)
+	// Output:
+	// name: request.latency
+	// description: request latency
+	// unit: ms
+}
+
+func ExampleNewView_drop() {
+	// Set the drop aggregator for all instrumentation from the "db" library.
+	v := NewView(
+		Instrument{Scope: instrumentation.Scope{Name: "db"}},
+		Stream{Aggregation: aggregation.Drop{}},
+	)
+
+	stream, _ := v(Instrument{
+		Name:  "queries",
+		Kind:  InstrumentKindSyncCounter,
+		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Printf("aggregation: %#v", stream.Aggregation)
+	// Output:
+	// name: queries
+	// aggregation: aggregation.Drop{}
+}
+
+func ExampleNewView_wildcard() {
+	// Set unit to milliseconds for any instrument with a name suffix of ".ms".
+	v := NewView(
+		Instrument{Name: "*.ms"},
+		Stream{Unit: unit.Milliseconds},
+	)
+
+	stream, _ := v(Instrument{
+		Name: "computation.time.ms",
+		Unit: unit.Dimensionless,
+	})
+	fmt.Println("name:", stream.Name)
+	fmt.Println("unit:", stream.Unit)
+	// Output:
+	// name: computation.time.ms
+	// unit: ms
+}
+
+func ExampleView() {
+	re := regexp.MustCompile(`[._](ms|byte)$`)
+	var view View = func(i Instrument) (Stream, bool) {
+		s := Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+		// Any instrument that does not have a unit suffix defined, but has a
+		// dimensional unit defined, update the name with a unit suffix.
+		if re.MatchString(i.Name) {
+			return s, false
+		}
+		switch i.Unit {
+		case unit.Milliseconds:
+			s.Name += ".ms"
+		case unit.Bytes:
+			s.Name += ".byte"
+		default:
+			return s, false
+		}
+		return s, true
+	}
+
+	stream, _ := view(Instrument{
+		Name: "computation.time.ms",
+		Unit: unit.Milliseconds,
+	})
+	fmt.Println("name:", stream.Name)
+
+	stream, _ = view(Instrument{
+		Name: "heap.size",
+		Unit: unit.Bytes,
+	})
+	fmt.Println("name:", stream.Name)
+	// Output:
+	// name: computation.time.ms
+	// name: heap.size.byte
 }
