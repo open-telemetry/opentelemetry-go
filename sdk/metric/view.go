@@ -50,9 +50,9 @@ type View func(Instrument) (Stream, bool)
 // The Stream mask only applies updates for non-zero-value fields. By default,
 // the Instrument the View matches against will be use for the Name,
 // Description, and Unit of the returned Stream and no Aggregation or
-// AttributeFilter are set. All non-zero-value value fields of mask are used
-// instead of the default. If you need to zero out an Stream field returned
-// from a View, create a View directly.
+// AttributeFilter are set. All non-zero-value fields of mask are used instead
+// of the default. If you need to zero out an Stream field returned from a
+// View, create a View directly.
 func NewView(criteria Instrument, mask Stream) View {
 	if criteria.empty() {
 		return emptyView
