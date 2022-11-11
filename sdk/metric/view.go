@@ -52,6 +52,8 @@ func NewView(criteria Instrument, mask Stream) View {
 
 	var matchFunc func(Instrument) bool
 	if strings.ContainsAny(criteria.Name, "*?") {
+		// Handle branching here in NewView instead of criteria.matches so
+		// criteria.matches remains inlinable for the simple case.
 		pattern := regexp.QuoteMeta(criteria.Name)
 		pattern = "^" + pattern + "$"
 		pattern = strings.ReplaceAll(pattern, `\?`, ".")
