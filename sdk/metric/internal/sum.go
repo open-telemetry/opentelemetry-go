@@ -76,20 +76,19 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
 	}
 
 	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -137,20 +136,19 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
 	}
 
 	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -204,20 +202,19 @@ func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
 }
 
 func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.recorded) == 0 {
-		return out
+		return nil
 	}
 
 	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.recorded))
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.recorded)),
+	}
 	for attr, recorded := range s.recorded {
 		value := recorded - s.reported[attr]
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{

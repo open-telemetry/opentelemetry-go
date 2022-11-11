@@ -167,6 +167,9 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
+				for _, a := range got {
+					a.Aggregate(1, *attribute.EmptySet())
+				}
 
 				out, err := test.pipe.produce(context.Background())
 				require.NoError(t, err)
@@ -180,6 +183,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 					Data: metricdata.Sum[N]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[N]{{Value: N(1)}},
 					},
 				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 			})
