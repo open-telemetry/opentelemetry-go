@@ -15,11 +15,18 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+)
+
+var (
+	errMultiInst = errors.New("name replacement for multiple instruments")
+
+	emptyView = func(Instrument) (Stream, bool) { return Stream{}, false }
 )
 
 // View is an override to the default behavior of the SDK. It defines how data
@@ -47,11 +54,20 @@ type View func(Instrument) (Stream, bool)
 // zero out an Stream field returned from a View, create a View directly.
 func NewView(criteria Instrument, mask Stream) View {
 	if criteria.empty() {
-		return func(Instrument) (Stream, bool) { return Stream{}, false }
+		return emptyView
 	}
 
 	var matchFunc func(Instrument) bool
 	if strings.ContainsAny(criteria.Name, "*?") {
+		if mask.Name != "" {
+			global.Error(
+				errMultiInst, "dropping view",
+				"criteria", criteria,
+				"mask", mask,
+			)
+			return emptyView
+		}
+
 		// Handle branching here in NewView instead of criteria.matches so
 		// criteria.matches remains inlinable for the simple case.
 		pattern := regexp.QuoteMeta(criteria.Name)
@@ -76,8 +92,8 @@ func NewView(criteria Instrument, mask Stream) View {
 		if err := agg.Err(); err != nil {
 			global.Error(
 				err, "not using aggregation with view",
-				"aggregation", agg,
-				"view", criteria,
+				"criteria", criteria,
+				"mask", mask,
 			)
 			agg = nil
 		}
