@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/metric/view"
@@ -135,12 +134,12 @@ func TestDefaultViewImplicit(t *testing.T) {
 }
 
 func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
-	inst := view.Instrument{
-		Scope:       instrumentation.Scope{Name: "testing/lib"},
+	scope := instrumentation.Scope{Name: "testing/lib"}
+	inst := instProviderKey{
 		Name:        "requests",
 		Description: "count of requests received",
 		Kind:        view.SyncCounter,
-		Aggregation: aggregation.Sum{},
+		Unit:        unit.Dimensionless,
 	}
 	return func(t *testing.T) {
 		reader := NewManualReader()
@@ -164,8 +163,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
 				c := newInstrumentCache[N](nil, nil)
-				i := newInserter(test.pipe, c)
-				got, err := i.Instrument(inst, unit.Dimensionless)
+				i := newInserter(scope, test.pipe, c)
+				got, err := i.Instrument(inst)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 
