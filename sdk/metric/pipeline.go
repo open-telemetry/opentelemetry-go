@@ -156,14 +156,16 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}, nil
 }
 
-// inserter facilitates inserting of new instruments into a pipeline.
+// inserter facilitates inserting of new instruments from a single scope into a
+// pipeline.
 type inserter[N int64 | float64] struct {
+	scope    instrumentation.Scope
 	cache    instrumentCache[N]
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter[N] {
-	return &inserter[N]{cache: c, pipeline: p}
+func newInserter[N int64 | float64](s instrumentation.Scope, p *pipeline, c instrumentCache[N]) *inserter[N] {
+	return &inserter[N]{scope: s, cache: c, pipeline: p}
 }
 
 // Instrument inserts the instrument inst with instUnit into a pipeline. All
@@ -187,7 +189,7 @@ func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+func (i *inserter[N]) Instrument(key instProviderKey) ([]internal.Aggregator[N], error) {
 	var (
 		matched bool
 		aggs    []internal.Aggregator[N]
@@ -197,6 +199,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	// The cache will return the same Aggregator instance. Use this fact to
 	// compare pointer addresses to deduplicate Aggregators.
 	seen := make(map[internal.Aggregator[N]]struct{})
+	inst := key.viewInst(i.scope)
 	for _, v := range i.pipeline.views {
 		inst, match := v.TransformInstrument(inst)
 		if !match {
@@ -204,7 +207,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 		}
 		matched = true
 
-		agg, err := i.cachedAggregator(inst, instUnit, v.AttributeFilter())
+		agg, err := i.cachedAggregator(inst, key.Unit, v.AttributeFilter())
 		if err != nil {
 			errs.append(err)
 		}
@@ -224,7 +227,7 @@ func (i *inserter[N]) Instrument(inst view.Instrument, instUnit unit.Unit) ([]in
 	}
 
 	// Apply implicit default view if no explicit matched.
-	agg, err := i.cachedAggregator(inst, instUnit, nil)
+	agg, err := i.cachedAggregator(inst, key.Unit, nil)
 	if err != nil {
 		errs.append(err)
 	}
@@ -448,22 +451,22 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[N] {
+func newResolver[N int64 | float64](s instrumentation.Scope, p pipelines, c instrumentCache[N]) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter(p[i], c)
+		in[i] = newInserter(s, p[i], c)
 	}
 	return resolver[N]{in}
 }
 
-// Aggregators returns the Aggregators instrument inst needs to update when it
-// makes a measurement.
-func (r resolver[N]) Aggregators(inst view.Instrument, instUnit unit.Unit) ([]internal.Aggregator[N], error) {
+// Aggregators returns the Aggregators that must be updated by the instrument
+// defined by key.
+func (r resolver[N]) Aggregators(key instProviderKey) ([]internal.Aggregator[N], error) {
 	var aggs []internal.Aggregator[N]
 
 	errs := &multierror{}
 	for _, i := range r.inserters {
-		a, err := i.Instrument(inst, instUnit)
+		a, err := i.Instrument(key)
 		if err != nil {
 			errs.append(err)
 		}

@@ -130,8 +130,8 @@ func TestRetryable(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	factory := func() (otlpmetric.Client, otest.Collector) {
-		coll, err := otest.NewGRPCCollector("", nil)
+	factory := func(rCh <-chan otest.ExportResult) (otlpmetric.Client, otest.Collector) {
+		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 
 		ctx := context.Background()
@@ -145,8 +145,8 @@ func TestClient(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
-	factoryFunc := func(errCh <-chan error, o ...Option) (metric.Exporter, *otest.GRPCCollector) {
-		coll, err := otest.NewGRPCCollector("", errCh)
+	factoryFunc := func(rCh <-chan otest.ExportResult, o ...Option) (metric.Exporter, *otest.GRPCCollector) {
+		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 
 		ctx := context.Background()
@@ -176,11 +176,11 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithTimeout", func(t *testing.T) {
-		// Do not send on errCh so the Collector never responds to the client.
-		errCh := make(chan error)
-		t.Cleanup(func() { close(errCh) })
+		// Do not send on rCh so the Collector never responds to the client.
+		rCh := make(chan otest.ExportResult)
+		t.Cleanup(func() { close(rCh) })
 		exp, coll := factoryFunc(
-			errCh,
+			rCh,
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
 		)
