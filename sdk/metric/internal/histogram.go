@@ -130,20 +130,21 @@ type deltaHistogram[N int64 | float64] struct {
 }
 
 func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
-	h := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
-
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
 	if len(s.values) == 0 {
-		return h
+		return nil
 	}
 
+	t := now()
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h := metricdata.Histogram{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+	}
 	for a, b := range s.values {
 		hdp := metricdata.HistogramDataPoint{
 			Attributes:   a,
@@ -192,20 +193,21 @@ type cumulativeHistogram[N int64 | float64] struct {
 }
 
 func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
-	h := metricdata.Histogram{Temporality: metricdata.CumulativeTemporality}
-
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
 	if len(s.values) == 0 {
-		return h
+		return nil
 	}
 
+	t := now()
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	t := now()
-	h.DataPoints = make([]metricdata.HistogramDataPoint, 0, len(s.values))
+	h := metricdata.Histogram{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+	}
 	for a, b := range s.values {
 		// The HistogramDataPoint field values returned need to be copies of
 		// the buckets value as we will keep updating them.
