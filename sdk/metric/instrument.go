@@ -85,34 +85,6 @@ type Instrument struct {
 	nonComparable // nolint: unused
 }
 
-// mask returns a copy of base with all non-zero-value fields of m replacing
-// the fields of the returned copy.
-func (base Instrument) mask(m Instrument) Instrument {
-	cp := base
-	if m.Name != "" {
-		cp.Name = m.Name
-	}
-	if m.Description != "" {
-		cp.Description = m.Description
-	}
-	if m.Kind != zeroInstrumentKind {
-		cp.Kind = m.Kind
-	}
-	if m.Unit != zeroUnit {
-		cp.Unit = m.Unit
-	}
-	if m.Scope.Name != "" {
-		cp.Scope.Name = m.Scope.Name
-	}
-	if m.Scope.Version != "" {
-		cp.Scope.Version = m.Scope.Version
-	}
-	if m.Scope.SchemaURL != "" {
-		cp.Scope.SchemaURL = m.Scope.SchemaURL
-	}
-	return cp
-}
-
 // empty returns if all fields of i are their zero-value.
 func (i Instrument) empty() bool {
 	return i.Name == "" &&
@@ -167,8 +139,12 @@ func (i Instrument) matchesScope(other Instrument) bool {
 
 // Stream describes the stream of data an instrument produces.
 type Stream struct {
-	Instrument
-
+	// Name is the human-readable identifier of the stream.
+	Name string
+	// Description describes the purpose of the data.
+	Description string
+	// Unit is the unit of measurement recorded.
+	Unit unit.Unit
 	// Aggregation the stream uses for an instrument.
 	Aggregation aggregation.Aggregation
 	// AttributeFilter applied to all attributes recorded for an instrument.

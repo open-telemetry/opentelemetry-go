@@ -350,88 +350,55 @@ func TestNewViewReplace(t *testing.T) {
 	}{
 		{
 			name: "Nothing",
-			want: func(ip Instrument) Stream {
-				return Stream{Instrument: ip}
+			want: func(i Instrument) Stream {
+				return Stream{
+					Name:        i.Name,
+					Description: i.Description,
+					Unit:        i.Unit,
+				}
 			},
 		},
 		{
 			name: "Name",
-			mask: Stream{Instrument: Instrument{Name: alt}},
-			want: func(ip Instrument) Stream {
-				ip.Name = alt
-				return Stream{Instrument: ip}
+			mask: Stream{Name: alt},
+			want: func(i Instrument) Stream {
+				return Stream{
+					Name:        alt,
+					Description: i.Description,
+					Unit:        i.Unit,
+				}
 			},
 		},
 		{
 			name: "Description",
-			mask: Stream{Instrument: Instrument{Description: alt}},
-			want: func(ip Instrument) Stream {
-				ip.Description = alt
-				return Stream{Instrument: ip}
-			},
-		},
-		{
-			name: "Kind",
-			mask: Stream{Instrument: Instrument{
-				Kind: InstrumentKindAsyncUpDownCounter,
-			}},
-			want: func(ip Instrument) Stream {
-				ip.Kind = InstrumentKindAsyncUpDownCounter
-				return Stream{Instrument: ip}
+			mask: Stream{Description: alt},
+			want: func(i Instrument) Stream {
+				return Stream{
+					Name:        i.Name,
+					Description: alt,
+					Unit:        i.Unit,
+				}
 			},
 		},
 		{
 			name: "Unit",
-			mask: Stream{Instrument: Instrument{Unit: unit.Dimensionless}},
-			want: func(ip Instrument) Stream {
-				ip.Unit = unit.Dimensionless
-				return Stream{Instrument: ip}
-			},
-		},
-		{
-			name: "ScopeName",
-			mask: Stream{Instrument: Instrument{Scope: scope(alt, "", "")}},
-			want: func(ip Instrument) Stream {
-				ip.Scope.Name = alt
-				return Stream{Instrument: ip}
-			},
-		},
-		{
-			name: "ScopeVersion",
-			mask: Stream{Instrument: Instrument{Scope: scope("", alt, "")}},
-			want: func(ip Instrument) Stream {
-				ip.Scope.Version = alt
-				return Stream{Instrument: ip}
-			},
-		},
-		{
-			name: "ScopeSchemaURL",
-			mask: Stream{Instrument: Instrument{Scope: scope("", "", alt)}},
-			want: func(ip Instrument) Stream {
-				ip.Scope.SchemaURL = alt
-				return Stream{Instrument: ip}
-			},
-		},
-		{
-			name: "Scope",
-			mask: Stream{Instrument: Instrument{
-				Scope: scope("Alt Scope Name", "1.1.1", "https://go.dev"),
-			}},
-			want: func(ip Instrument) Stream {
-				ip.Scope.Name = "Alt Scope Name"
-				ip.Scope.Version = "1.1.1"
-				ip.Scope.SchemaURL = "https://go.dev"
-				return Stream{Instrument: ip}
+			mask: Stream{Unit: unit.Dimensionless},
+			want: func(i Instrument) Stream {
+				return Stream{
+					Name:        i.Name,
+					Description: i.Description,
+					Unit:        unit.Dimensionless,
+				}
 			},
 		},
 		{
 			name: "Aggregation",
-			mask: Stream{
-				Aggregation: aggregation.LastValue{},
-			},
-			want: func(ip Instrument) Stream {
+			mask: Stream{Aggregation: aggregation.LastValue{}},
+			want: func(i Instrument) Stream {
 				return Stream{
-					Instrument:  ip,
+					Name:        i.Name,
+					Description: i.Description,
+					Unit:        i.Unit,
 					Aggregation: aggregation.LastValue{},
 				}
 			},
@@ -439,25 +406,16 @@ func TestNewViewReplace(t *testing.T) {
 		{
 			name: "Complete",
 			mask: Stream{
-				Instrument: Instrument{
-					Name:        alt,
-					Description: alt,
-					Kind:        InstrumentKindAsyncUpDownCounter,
-					Unit:        unit.Dimensionless,
-					Scope:       scope(alt, alt, alt),
-				},
+				Name:        alt,
+				Description: alt,
+				Unit:        unit.Dimensionless,
 				Aggregation: aggregation.LastValue{},
 			},
-			want: func(ip Instrument) Stream {
-				ip.Name = alt
-				ip.Description = alt
-				ip.Kind = InstrumentKindAsyncUpDownCounter
-				ip.Unit = unit.Dimensionless
-				ip.Scope.Name = alt
-				ip.Scope.Version = alt
-				ip.Scope.SchemaURL = alt
+			want: func(i Instrument) Stream {
 				return Stream{
-					Instrument:  ip,
+					Name:        alt,
+					Description: alt,
+					Unit:        unit.Dimensionless,
 					Aggregation: aggregation.LastValue{},
 				}
 			},

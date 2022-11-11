@@ -48,11 +48,11 @@ type View func(Instrument) (Stream, bool)
 // all instrument names.
 //
 // The Stream mask only applies updates for non-zero-value fields. By default,
-// the Instrument the View matches against will be use for the returned Stream
-// and no Aggregation or AttributeFilter are set. If mask has a non-zero-value
-// value for any of the Aggregation or AttributeFilter fields, or any of the
-// Instrument fields, that value is used instead of the default. If you need to
-// zero out an Stream field returned from a View, create a View directly.
+// the Instrument the View matches against will be use for the Name,
+// Description, and Unit of the returned Stream and no Aggregation or
+// AttributeFilter are set. All non-zero-value value fields of mask are used
+// instead of the default. If you need to zero out an Stream field returned
+// from a View, create a View directly.
 func NewView(criteria Instrument, mask Stream) View {
 	if criteria.empty() {
 		return emptyView
@@ -102,13 +102,23 @@ func NewView(criteria Instrument, mask Stream) View {
 
 	return func(i Instrument) (Stream, bool) {
 		if matchFunc(i) {
-			stream := Stream{
-				Instrument:      i.mask(mask.Instrument),
+			return Stream{
+				Name:            nonZero(mask.Name, i.Name),
+				Description:     nonZero(mask.Description, i.Description),
+				Unit:            nonZero(mask.Unit, i.Unit),
 				Aggregation:     agg,
 				AttributeFilter: mask.AttributeFilter,
-			}
-			return stream, true
+			}, true
 		}
 		return Stream{}, false
 	}
+}
+
+// nonZero returns v if it is non-zero-valued, otherwise alt.
+func nonZero[T comparable](v, alt T) T {
+	var zero T
+	if v != zero {
+		return v
+	}
+	return alt
 }
