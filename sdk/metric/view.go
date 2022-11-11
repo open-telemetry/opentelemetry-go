@@ -39,7 +39,8 @@ type View func(Instrument) (Stream, bool)
 // match criteria. The returned View will only apply mask if all non-zero-value
 // fields of criteria match the corresponding Instrument passed to the view. If
 // no criteria are provided, all field of criteria are their zero-values, a
-// view that matches no instruments is returned.
+// view that matches no instruments is returned. If you need to match a
+// zero-value field, create a View directly.
 //
 // The Name field of criteria supports wildcard pattern matching. The wildcard
 // "*" is recognized as matching zero or more characters, and "?" is recognized
