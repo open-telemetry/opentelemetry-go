@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 const testDur = time.Second * 2
@@ -64,14 +63,14 @@ type fnExporter struct {
 
 var _ Exporter = (*fnExporter)(nil)
 
-func (e *fnExporter) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (e *fnExporter) Temporality(k InstrumentKind) metricdata.Temporality {
 	if e.temporalityFunc != nil {
 		return e.temporalityFunc(k)
 	}
 	return DefaultTemporalitySelector(k)
 }
 
-func (e *fnExporter) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (e *fnExporter) Aggregation(k InstrumentKind) aggregation.Aggregation {
 	if e.aggregationFunc != nil {
 		return e.aggregationFunc(k)
 	}
@@ -272,7 +271,7 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var undefinedInstrument view.InstrumentKind
+			var undefinedInstrument InstrumentKind
 			rdr := NewPeriodicReader(tt.exporter)
 			assert.Equal(t, tt.wantTemporality.String(), rdr.temporality(undefinedInstrument).String())
 		})

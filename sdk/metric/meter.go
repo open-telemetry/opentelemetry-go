@@ -47,13 +47,10 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	ic := newInstrumentCache[int64](nil, &viewCache)
 	fc := newInstrumentCache[float64](nil, &viewCache)
 
-	ir := newResolver(s, p, ic)
-	fr := newResolver(s, p, fc)
-
 	return &meter{
 		pipes:               p,
-		instProviderInt64:   newInstProvider(ir),
-		instProviderFloat64: newInstProvider(fr),
+		instProviderInt64:   newInstProvider(s, p, ic),
+		instProviderFloat64: newInstProvider(s, p, fc),
 	}
 }
 

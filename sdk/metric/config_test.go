@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -39,12 +38,12 @@ type reader struct {
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationFunc(kind)
 }
 
 func (r *reader) register(p producer) { r.producer = p }
-func (r *reader) temporality(kind view.InstrumentKind) metricdata.Temporality {
+func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
 func (r *reader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
@@ -132,16 +131,15 @@ func TestWithReader(t *testing.T) {
 }
 
 func TestWithView(t *testing.T) {
-	var views []view.View
-
-	v, err := view.New(view.MatchInstrumentKind(view.AsyncCounter), view.WithRename("a"))
-	require.NoError(t, err)
-	views = append(views, v)
-
-	v, err = view.New(view.MatchInstrumentKind(view.SyncCounter), view.WithRename("b"))
-	require.NoError(t, err)
-	views = append(views, v)
-
-	c := newConfig([]Option{WithView(views...)})
-	assert.Equal(t, views, c.views)
+	c := newConfig([]Option{WithView(
+		NewView(
+			Instrument{Kind: InstrumentKindAsyncCounter},
+			Stream{Name: "a"},
+		),
+		NewView(
+			Instrument{Kind: InstrumentKindSyncCounter},
+			Stream{Name: "b"},
+		),
+	)})
+	assert.Len(t, c.views, 2)
 }

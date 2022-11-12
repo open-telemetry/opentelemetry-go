@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // errDuplicateRegister is logged by a Reader when an attempt to registered it
@@ -55,10 +54,10 @@ type Reader interface {
 	register(producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
-	temporality(view.InstrumentKind) metricdata.Temporality
+	temporality(InstrumentKind) metricdata.Temporality
 
 	// aggregation returns what Aggregation to use for an instrument kind.
-	aggregation(view.InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
+	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK. An error is returned if this is called after Shutdown.
@@ -108,18 +107,18 @@ func (p shutdownProducer) produce(context.Context) (metricdata.ResourceMetrics, 
 }
 
 // TemporalitySelector selects the temporality to use based on the InstrumentKind.
-type TemporalitySelector func(view.InstrumentKind) metricdata.Temporality
+type TemporalitySelector func(InstrumentKind) metricdata.Temporality
 
 // DefaultTemporalitySelector is the default TemporalitySelector used if
 // WithTemporalitySelector is not provided. CumulativeTemporality will be used
 // for all instrument kinds if this TemporalitySelector is used.
-func DefaultTemporalitySelector(view.InstrumentKind) metricdata.Temporality {
+func DefaultTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
 
 // AggregationSelector selects the aggregation and the parameters to use for
 // that aggregation based on the InstrumentKind.
-type AggregationSelector func(view.InstrumentKind) aggregation.Aggregation
+type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 
 // DefaultAggregationSelector returns the default aggregation and parameters
 // that will be used to summarize measurement made from an instrument of
@@ -127,13 +126,13 @@ type AggregationSelector func(view.InstrumentKind) aggregation.Aggregation
 // mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
 // Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
-func DefaultAggregationSelector(ik view.InstrumentKind) aggregation.Aggregation {
+func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	switch ik {
-	case view.SyncCounter, view.SyncUpDownCounter, view.AsyncCounter, view.AsyncUpDownCounter:
+	case InstrumentKindSyncCounter, InstrumentKindSyncUpDownCounter, InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
 		return aggregation.Sum{}
-	case view.AsyncGauge:
+	case InstrumentKindAsyncGauge:
 		return aggregation.LastValue{}
-	case view.SyncHistogram:
+	case InstrumentKindSyncHistogram:
 		return aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 			NoMinMax:   false,

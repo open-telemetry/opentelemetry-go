@@ -20,54 +20,30 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
-
-// instProviderKey uniquely describes an instrument creation request received
-// by an instrument provider.
-type instProviderKey struct {
-	// Name is the name of the instrument.
-	Name string
-	// Description is the description of the instrument.
-	Description string
-	// Unit is the unit of the instrument.
-	Unit unit.Unit
-	// Kind is the instrument Kind provided.
-	Kind view.InstrumentKind
-}
-
-// viewInst returns the instProviderKey as a view Instrument using scope s.
-func (k instProviderKey) viewInst(s instrumentation.Scope) view.Instrument {
-	return view.Instrument{
-		Scope:       s,
-		Name:        k.Name,
-		Description: k.Description,
-		Kind:        k.Kind,
-	}
-}
 
 // instProvider provides all OpenTelemetry instruments.
 type instProvider[N int64 | float64] struct {
+	scope   instrumentation.Scope
 	resolve resolver[N]
 }
 
-func newInstProvider[N int64 | float64](r resolver[N]) *instProvider[N] {
-	return &instProvider[N]{resolve: r}
+func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c instrumentCache[N]) *instProvider[N] {
+	return &instProvider[N]{scope: s, resolve: newResolver(p, c)}
 }
 
 // lookup returns the resolved instrumentImpl.
-func (p *instProvider[N]) lookup(kind view.InstrumentKind, name string, opts []instrument.Option) (*instrumentImpl[N], error) {
+func (p *instProvider[N]) lookup(kind InstrumentKind, name string, opts []instrument.Option) (*instrumentImpl[N], error) {
 	cfg := instrument.NewConfig(opts...)
-	key := instProviderKey{
+	i := Instrument{
 		Name:        name,
 		Description: cfg.Description(),
 		Unit:        cfg.Unit(),
 		Kind:        kind,
+		Scope:       p.scope,
 	}
-
-	aggs, err := p.resolve.Aggregators(key)
+	aggs, err := p.resolve.Aggregators(i)
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
@@ -79,17 +55,17 @@ var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
 
 // Counter creates an instrument for recording increasing values.
 func (p asyncInt64Provider) Counter(name string, opts ...instrument.Option) (asyncint64.Counter, error) {
-	return p.lookup(view.AsyncCounter, name, opts)
+	return p.lookup(InstrumentKindAsyncCounter, name, opts)
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncint64.UpDownCounter, error) {
-	return p.lookup(view.AsyncUpDownCounter, name, opts)
+	return p.lookup(InstrumentKindAsyncUpDownCounter, name, opts)
 }
 
 // Gauge creates an instrument for recording the current value.
 func (p asyncInt64Provider) Gauge(name string, opts ...instrument.Option) (asyncint64.Gauge, error) {
-	return p.lookup(view.AsyncGauge, name, opts)
+	return p.lookup(InstrumentKindAsyncGauge, name, opts)
 }
 
 type asyncFloat64Provider struct {
@@ -100,17 +76,17 @@ var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
 
 // Counter creates an instrument for recording increasing values.
 func (p asyncFloat64Provider) Counter(name string, opts ...instrument.Option) (asyncfloat64.Counter, error) {
-	return p.lookup(view.AsyncCounter, name, opts)
+	return p.lookup(InstrumentKindAsyncCounter, name, opts)
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
-	return p.lookup(view.AsyncUpDownCounter, name, opts)
+	return p.lookup(InstrumentKindAsyncUpDownCounter, name, opts)
 }
 
 // Gauge creates an instrument for recording the current value.
 func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.Option) (asyncfloat64.Gauge, error) {
-	return p.lookup(view.AsyncGauge, name, opts)
+	return p.lookup(InstrumentKindAsyncGauge, name, opts)
 }
 
 type syncInt64Provider struct {
@@ -121,17 +97,17 @@ var _ syncint64.InstrumentProvider = syncInt64Provider{}
 
 // Counter creates an instrument for recording increasing values.
 func (p syncInt64Provider) Counter(name string, opts ...instrument.Option) (syncint64.Counter, error) {
-	return p.lookup(view.SyncCounter, name, opts)
+	return p.lookup(InstrumentKindSyncCounter, name, opts)
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncint64.UpDownCounter, error) {
-	return p.lookup(view.SyncUpDownCounter, name, opts)
+	return p.lookup(InstrumentKindSyncUpDownCounter, name, opts)
 }
 
 // Histogram creates an instrument for recording the current value.
 func (p syncInt64Provider) Histogram(name string, opts ...instrument.Option) (syncint64.Histogram, error) {
-	return p.lookup(view.SyncHistogram, name, opts)
+	return p.lookup(InstrumentKindSyncHistogram, name, opts)
 }
 
 type syncFloat64Provider struct {
@@ -142,15 +118,15 @@ var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
 
 // Counter creates an instrument for recording increasing values.
 func (p syncFloat64Provider) Counter(name string, opts ...instrument.Option) (syncfloat64.Counter, error) {
-	return p.lookup(view.SyncCounter, name, opts)
+	return p.lookup(InstrumentKindSyncCounter, name, opts)
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
 func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.Option) (syncfloat64.UpDownCounter, error) {
-	return p.lookup(view.SyncUpDownCounter, name, opts)
+	return p.lookup(InstrumentKindSyncUpDownCounter, name, opts)
 }
 
 // Histogram creates an instrument for recording the current value.
 func (p syncFloat64Provider) Histogram(name string, opts ...instrument.Option) (syncfloat64.Histogram, error) {
-	return p.lookup(view.SyncHistogram, name, opts)
+	return p.lookup(InstrumentKindSyncHistogram, name, opts)
 }

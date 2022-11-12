@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // manualReader is a a simple Reader that allows an application to
@@ -59,12 +58,12 @@ func (mr *manualReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (mr *manualReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
+func (mr *manualReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (mr *manualReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (mr *manualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
 }
 
@@ -138,7 +137,7 @@ func WithTemporalitySelector(selector TemporalitySelector) ManualReaderOption {
 }
 
 type temporalitySelectorOption struct {
-	selector func(instrument view.InstrumentKind) metricdata.Temporality
+	selector func(instrument InstrumentKind) metricdata.Temporality
 }
 
 // applyManual returns a manualReaderConfig with option applied.
@@ -153,7 +152,7 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	// Deep copy and validate before using.
-	wrapped := func(ik view.InstrumentKind) aggregation.Aggregation {
+	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
 		a := selector(ik)
 		cpA := a.Copy()
 		if err := cpA.Err(); err != nil {
