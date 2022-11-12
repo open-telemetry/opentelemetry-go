@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 const meterName = "github.com/open-telemetry/opentelemetry-go/example/view"
@@ -44,31 +43,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// View to customize histogram buckets and rename a single histogram instrument.
-	customBucketsView, err := view.New(
-		// Match* to match instruments
-		view.MatchInstrumentName("custom_histogram"),
-		view.MatchInstrumentationScope(instrumentation.Scope{Name: meterName}),
-
-		// With* to modify instruments
-		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
-			Boundaries: []float64{64, 128, 256, 512, 1024, 2048, 4096},
-		}),
-		view.WithRename("bar"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Default view to keep all instruments
-	defaultView, err := view.New(view.MatchInstrumentName("*"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	provider := metric.NewMeterProvider(
 		metric.WithReader(exporter),
-		metric.WithView(customBucketsView, defaultView),
+		// View to customize histogram buckets and rename a single histogram instrument.
+		metric.WithView(metric.NewView(
+			metric.Instrument{
+				Name:  "custom_histogram",
+				Scope: instrumentation.Scope{Name: meterName},
+			},
+			metric.Stream{
+				Name: "bar",
+				Aggregation: aggregation.ExplicitBucketHistogram{
+					Boundaries: []float64{64, 128, 256, 512, 1024, 2048, 4096},
+				},
+			},
+		)),
 	)
 	meter := provider.Meter(meterName)
 
