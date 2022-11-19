@@ -473,9 +473,9 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 }
 
 func ExampleNewView() {
-	// Rename the "latency" instrument from the v0.34.0 version of the "http"
-	// instrumentation library as "request.latency".
-	v := NewView(Instrument{
+	// Create a view that renames the "latency" instrument from the v0.34.0
+	// version of the "http" instrumentation library as "request.latency".
+	view := NewView(Instrument{
 		Name: "latency",
 		Scope: instrumentation.Scope{
 			Name:    "http",
@@ -483,7 +483,11 @@ func ExampleNewView() {
 		},
 	}, Stream{Name: "request.latency"})
 
-	stream, _ := v(Instrument{
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option. Below is an example of how the view
+	// function in the SDK for certain instruments.
+
+	stream, _ := view(Instrument{
 		Name:        "latency",
 		Description: "request latency",
 		Unit:        unit.Milliseconds,
@@ -504,13 +508,19 @@ func ExampleNewView() {
 }
 
 func ExampleNewView_drop() {
-	// Set the drop aggregator for all instrumentation from the "db" library.
-	v := NewView(
+	// Create a view that sets the drop aggregator for all instrumentation from
+	// the "db" library, effectively turning-off all instrumentation from that
+	// library.
+	view := NewView(
 		Instrument{Scope: instrumentation.Scope{Name: "db"}},
 		Stream{Aggregation: aggregation.Drop{}},
 	)
 
-	stream, _ := v(Instrument{
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option. Below is an example of how the view
+	// function in the SDK for certain instruments.
+
+	stream, _ := view(Instrument{
 		Name:  "queries",
 		Kind:  InstrumentKindSyncCounter,
 		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
@@ -523,13 +533,18 @@ func ExampleNewView_drop() {
 }
 
 func ExampleNewView_wildcard() {
-	// Set unit to milliseconds for any instrument with a name suffix of ".ms".
-	v := NewView(
+	// Create a view that sets unit to milliseconds for any instrument with a
+	// name suffix of ".ms".
+	view := NewView(
 		Instrument{Name: "*.ms"},
 		Stream{Unit: unit.Milliseconds},
 	)
 
-	stream, _ := v(Instrument{
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option. Below is an example of how the view
+	// function in the SDK for certain instruments.
+
+	stream, _ := view(Instrument{
 		Name: "computation.time.ms",
 		Unit: unit.Dimensionless,
 	})
@@ -541,6 +556,14 @@ func ExampleNewView_wildcard() {
 }
 
 func ExampleView() {
+	// The NewView function provides convenient creation of common Views
+	// construction. However, it is limited in what it can create.
+	//
+	// When NewView is not able to provide the functionally needed, a custom
+	// View can be constructed directly. Here a custom View is constructed that
+	// uses Go's regular expression matching to ensure all data stream names
+	// have a suffix of the units it uses.
+
 	re := regexp.MustCompile(`[._](ms|byte)$`)
 	var view View = func(i Instrument) (Stream, bool) {
 		s := Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
@@ -559,6 +582,10 @@ func ExampleView() {
 		}
 		return s, true
 	}
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option. Below is an example of how the view
+	// function in the SDK for certain instruments.
 
 	stream, _ := view(Instrument{
 		Name: "computation.time.ms",
