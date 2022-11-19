@@ -31,6 +31,8 @@ import (
 // reported by Instruments.
 //
 // An empty View will match all instruments, and do no transformations.
+//
+// Deprecated: Use View in go.opentelemetry.io/otel/sdk/metric instead.
 type View struct {
 	instrumentName *regexp.Regexp
 	hasWildcard    bool
@@ -48,6 +50,8 @@ type View struct {
 // Options are all applied to the View. An instrument needs to match all of
 // the match Options passed for the View to be applied to it. Similarly, all
 // transform operation Options are applied to matched Instruments.
+//
+// Deprecated: Use NewView in go.opentelemetry.io/otel/sdk/metric instead.
 func New(opts ...Option) (View, error) {
 	v := View{}
 
