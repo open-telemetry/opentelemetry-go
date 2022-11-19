@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // Default periodic reader timing.
@@ -176,12 +175,12 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
+func (r *periodicReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.exporter.Temporality(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.exporter.Aggregation(kind)
 }
 

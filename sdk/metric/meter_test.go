@@ -33,7 +33,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -482,7 +481,7 @@ func TestMetersProvideScope(t *testing.T) {
 }
 
 func TestRegisterCallbackDropAggregations(t *testing.T) {
-	aggFn := func(view.InstrumentKind) aggregation.Aggregation {
+	aggFn := func(InstrumentKind) aggregation.Aggregation {
 		return aggregation.Drop{}
 	}
 	r := NewManualReader(WithAggregationSelector(aggFn))
@@ -852,19 +851,17 @@ func TestAttributeFilter(t *testing.T) {
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			v, err := view.New(
-				view.MatchInstrumentName("*"),
-				view.WithFilterAttributes(attribute.Key("foo")),
-			)
-			require.NoError(t, err)
 			rdr := NewManualReader()
 			mtr := NewMeterProvider(
 				WithReader(rdr),
-				WithView(v),
+				WithView(NewView(
+					Instrument{Name: "*"},
+					Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
+						return kv.Key == attribute.Key("foo")
+					}},
+				)),
 			).Meter("TestAttributeFilter")
-
-			err = tt.register(t, mtr)
-			require.NoError(t, err)
+			require.NoError(t, tt.register(t, mtr))
 
 			m, err := rdr.Collect(context.Background())
 			assert.NoError(t, err)

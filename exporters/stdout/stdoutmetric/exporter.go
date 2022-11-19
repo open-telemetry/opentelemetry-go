@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // exporter is an OpenTelemetry metric exporter.
@@ -49,11 +48,11 @@ func New(options ...Option) (metric.Exporter, error) {
 	return exp, nil
 }
 
-func (e *exporter) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return e.temporalitySelector(k)
 }
 
-func (e *exporter) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return e.aggregationSelector(k)
 }
 
