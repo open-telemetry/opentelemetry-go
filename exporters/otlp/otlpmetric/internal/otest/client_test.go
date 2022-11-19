@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	cpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -34,11 +33,11 @@ type client struct {
 	storage *Storage
 }
 
-func (c *client) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return metric.DefaultTemporalitySelector(k)
 }
 
-func (c *client) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return metric.DefaultAggregationSelector(k)
 }
 

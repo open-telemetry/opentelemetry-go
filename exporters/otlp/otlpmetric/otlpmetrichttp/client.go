@@ -37,7 +37,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -130,12 +129,12 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return c.temporalitySelector(k)
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return c.aggregationSelector(k)
 }
 

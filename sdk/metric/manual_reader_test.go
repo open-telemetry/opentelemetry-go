@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestManualReader(t *testing.T) {
@@ -32,8 +31,8 @@ func BenchmarkManualReader(b *testing.B) {
 	b.Run("Collect", benchReaderCollectFunc(NewManualReader()))
 }
 
-var deltaTemporalitySelector = func(view.InstrumentKind) metricdata.Temporality { return metricdata.DeltaTemporality }
-var cumulativeTemporalitySelector = func(view.InstrumentKind) metricdata.Temporality { return metricdata.CumulativeTemporality }
+var deltaTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.DeltaTemporality }
+var cumulativeTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.CumulativeTemporality }
 
 func TestManualReaderTemporality(t *testing.T) {
 	tests := []struct {
@@ -66,7 +65,7 @@ func TestManualReaderTemporality(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var undefinedInstrument view.InstrumentKind
+			var undefinedInstrument InstrumentKind
 			rdr := NewManualReader(tt.options...)
 			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
 		})

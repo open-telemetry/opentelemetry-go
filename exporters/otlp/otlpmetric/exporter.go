@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
@@ -37,14 +36,14 @@ type exporter struct {
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
-func (e *exporter) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
 	return e.client.Temporality(k)
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (e *exporter) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
 	return e.client.Aggregation(k)
@@ -113,11 +112,11 @@ func (c shutdownClient) err(ctx context.Context) error {
 	return errShutdown
 }
 
-func (c shutdownClient) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (c shutdownClient) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return c.temporalitySelector(k)
 }
 
-func (c shutdownClient) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (c shutdownClient) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return c.aggregationSelector(k)
 }
 

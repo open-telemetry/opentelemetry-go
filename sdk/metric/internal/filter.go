@@ -24,7 +24,7 @@ import (
 // filter is an aggregator that applies attribute filter when Aggregating. filters
 // do not have any backing memory, and must be constructed with a backing Aggregator.
 type filter[N int64 | float64] struct {
-	filter     func(attribute.Set) attribute.Set
+	filter     attribute.Filter
 	aggregator Aggregator[N]
 
 	sync.Mutex
@@ -32,7 +32,7 @@ type filter[N int64 | float64] struct {
 }
 
 // NewFilter wraps an Aggregator with an attribute filtering function.
-func NewFilter[N int64 | float64](agg Aggregator[N], fn func(attribute.Set) attribute.Set) Aggregator[N] {
+func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggregator[N] {
 	if fn == nil {
 		return agg
 	}
@@ -51,7 +51,7 @@ func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
 	if !ok {
-		fAttr = f.filter(attr)
+		fAttr, _ = attr.Filter(f.filter)
 		f.seen[attr] = fAttr
 	}
 	f.aggregator.Aggregate(measurement, fAttr)
