@@ -35,11 +35,11 @@ func (p *WrapperTracerProvider) Tracer(name string, opts ...trace.TracerOption) 
 	return p.getWrappedTracer(name, opts...)
 }
 
-// Deprecated: Use NewTracerProvider(...) instead.
-//
 // NewWrappedTracerProvider creates a new trace provider that creates a single
 // instance of WrapperTracer that wraps OpenTelemetry tracer, and always returns
 // it unmodified from Tracer().
+//
+// Deprecated: Use NewTracerProvider(...) instead.
 func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *WrapperTracerProvider {
 	wTracer := NewWrapperTracer(bridge, tracer)
 	return &WrapperTracerProvider{
