@@ -16,23 +16,24 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // WrapperTracerProvider is an OpenTelemetry TracerProvider that wraps an
-// OpenTracing Tracer.
+// OpenTracing Tracer, created by the deprecated NewWrappedTracerProvider.
+//
+// Deprecated: Use the TracerProvider from NewTracerProvider(...) instead.
 type WrapperTracerProvider struct {
-	getWrappedTracer func(name string, opts ...trace.TracerOption) *WrapperTracer
+	wTracer *WrapperTracer
 }
 
 var _ trace.TracerProvider = (*WrapperTracerProvider)(nil)
 
-// Tracer creates a WrapperTracer associated with the WrapperTracerProvider.
-func (p *WrapperTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
-	return p.getWrappedTracer(name, opts...)
+// Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
+func (p *WrapperTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+	return p.wTracer
 }
 
 // NewWrappedTracerProvider creates a new trace provider that creates a single
@@ -41,46 +42,8 @@ func (p *WrapperTracerProvider) Tracer(name string, opts ...trace.TracerOption) 
 //
 // Deprecated: Use NewTracerProvider(...) instead.
 func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *WrapperTracerProvider {
-	wTracer := NewWrapperTracer(bridge, tracer)
 	return &WrapperTracerProvider{
-		getWrappedTracer: func(_ string, _ ...trace.TracerOption) *WrapperTracer {
-			return wTracer
-		},
-	}
-}
-
-type wrappedTracerKey struct {
-	name    string
-	version string
-}
-
-// NewTracerProvider returns a new TracerProvider that creates new instances of
-// WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
-func NewTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
-	var (
-		mtx     sync.Mutex
-		tracers = make(map[wrappedTracerKey]*WrapperTracer)
-	)
-
-	return &WrapperTracerProvider{
-		getWrappedTracer: func(name string, opts ...trace.TracerOption) *WrapperTracer {
-			mtx.Lock()
-			defer mtx.Unlock()
-
-			c := trace.NewTracerConfig(opts...)
-			key := wrappedTracerKey{
-				name:    name,
-				version: c.InstrumentationVersion(),
-			}
-
-			if t, ok := tracers[key]; ok {
-				return t
-			}
-
-			wrapper := NewWrapperTracer(bridge, provider.Tracer(name, opts...))
-			tracers[key] = wrapper
-			return wrapper
-		},
+		wTracer: NewWrapperTracer(bridge, tracer),
 	}
 }
 
