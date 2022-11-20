@@ -188,15 +188,14 @@ func (a *App) Run(ctx context.Context) error {
 	for {
 		// Each execution of the run loop, we should get a new "root" span and context.
 		newCtx, span := otel.Tracer(name).Start(ctx, "Run")
+		defer span.End()
 
 		n, err := a.Poll(newCtx)
 		if err != nil {
-			span.End()
 			return err
 		}
 
 		a.Write(newCtx, n)
-		span.End()
 	}
 }
 ```
