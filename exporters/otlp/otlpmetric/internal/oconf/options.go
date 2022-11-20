@@ -27,6 +27,9 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 const (
@@ -57,6 +60,9 @@ type (
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
+
+		TemporalitySelector metric.TemporalitySelector
+		AggregationSelector metric.AggregationSelector
 	}
 
 	Config struct {
@@ -82,6 +88,9 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+
+			TemporalitySelector: metric.DefaultTemporalitySelector,
+			AggregationSelector: metric.DefaultAggregationSelector,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
@@ -102,6 +111,9 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+
+			TemporalitySelector: metric.DefaultTemporalitySelector,
+			AggregationSelector: metric.DefaultAggregationSelector,
 		},
 		RetryConfig: retry.DefaultConfig,
 		DialOptions: []grpc.DialOption{grpc.WithUserAgent(internal.GetUserAgentHeader())},
@@ -310,6 +322,35 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Timeout = duration
+		return cfg
+	})
+}
+
+func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.TemporalitySelector = selector
+		return cfg
+	})
+}
+
+func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
+	// Deep copy and validate before using.
+	wrapped := func(ik metric.InstrumentKind) aggregation.Aggregation {
+		a := selector(ik)
+		cpA := a.Copy()
+		if err := cpA.Err(); err != nil {
+			cpA = metric.DefaultAggregationSelector(ik)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", a,
+				"replacement", cpA,
+			)
+		}
+		return cpA
+	}
+
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.AggregationSelector = wrapped
 		return cfg
 	})
 }

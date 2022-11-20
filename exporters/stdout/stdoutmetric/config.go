@@ -16,11 +16,17 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 import (
 	"encoding/json"
 	"os"
+
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 // config contains options for the exporter.
 type config struct {
-	encoder *encoderHolder
+	encoder             *encoderHolder
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
 }
 
 // newConfig creates a validated config configured with options.
@@ -34,6 +40,14 @@ func newConfig(options ...Option) config {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "\t")
 		cfg.encoder = &encoderHolder{encoder: enc}
+	}
+
+	if cfg.temporalitySelector == nil {
+		cfg.temporalitySelector = metric.DefaultTemporalitySelector
+	}
+
+	if cfg.aggregationSelector == nil {
+		cfg.aggregationSelector = metric.DefaultAggregationSelector
 	}
 
 	return cfg
@@ -59,4 +73,55 @@ func WithEncoder(encoder Encoder) Option {
 		}
 		return c
 	})
+}
+
+// WithTemporalitySelector sets the TemporalitySelector the exporter will use
+// to determine the Temporality of an instrument based on its kind. If this
+// option is not used, the exporter will use the DefaultTemporalitySelector
+// from the go.opentelemetry.io/otel/sdk/metric package.
+func WithTemporalitySelector(selector metric.TemporalitySelector) Option {
+	return temporalitySelectorOption{selector: selector}
+}
+
+type temporalitySelectorOption struct {
+	selector metric.TemporalitySelector
+}
+
+func (t temporalitySelectorOption) apply(c config) config {
+	c.temporalitySelector = t.selector
+	return c
+}
+
+// WithAggregationSelector sets the AggregationSelector the exporter will use
+// to determine the aggregation to use for an instrument based on its kind. If
+// this option is not used, the exporter will use the
+// DefaultAggregationSelector from the go.opentelemetry.io/otel/sdk/metric
+// package or the aggregation explicitly passed for a view matching an
+// instrument.
+func WithAggregationSelector(selector metric.AggregationSelector) Option {
+	// Deep copy and validate before using.
+	wrapped := func(ik metric.InstrumentKind) aggregation.Aggregation {
+		a := selector(ik)
+		cpA := a.Copy()
+		if err := cpA.Err(); err != nil {
+			cpA = metric.DefaultAggregationSelector(ik)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", a,
+				"replacement", cpA,
+			)
+		}
+		return cpA
+	}
+
+	return aggregationSelectorOption{selector: wrapped}
+}
+
+type aggregationSelectorOption struct {
+	selector metric.AggregationSelector
+}
+
+func (t aggregationSelectorOption) apply(c config) config {
+	c.aggregationSelector = t.selector
+	return c
 }

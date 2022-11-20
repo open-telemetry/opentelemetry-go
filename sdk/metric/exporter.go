@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -28,6 +29,12 @@ var ErrExporterShutdown = fmt.Errorf("exporter is shutdown")
 // Exporter handles the delivery of metric data to external receivers. This is
 // the final component in the metric push pipeline.
 type Exporter interface {
+	// Temporality returns the Temporality to use for an instrument kind.
+	Temporality(InstrumentKind) metricdata.Temporality
+
+	// Aggregation returns the Aggregation to use for an instrument kind.
+	Aggregation(InstrumentKind) aggregation.Aggregation
+
 	// Export serializes and transmits metric data to a receiver.
 	//
 	// This is called synchronously, there is no concurrency safety

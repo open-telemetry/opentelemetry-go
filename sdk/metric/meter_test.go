@@ -25,33 +25,16 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
+	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
-
-func TestMeterRegistry(t *testing.T) {
-	is0 := instrumentation.Scope{Name: "zero"}
-	is1 := instrumentation.Scope{Name: "one"}
-
-	r := meterRegistry{}
-	var m0 *meter
-	t.Run("ZeroValueGetDoesNotPanic", func(t *testing.T) {
-		assert.NotPanics(t, func() { m0 = r.Get(is0) })
-		assert.Equal(t, is0, m0.Scope, "uninitialized meter returned")
-	})
-
-	m01 := r.Get(is0)
-	t.Run("GetSameMeter", func(t *testing.T) {
-		assert.Samef(t, m0, m01, "returned different meters: %v", is0)
-	})
-
-	m1 := r.Get(is1)
-	t.Run("GetDifferentMeter", func(t *testing.T) {
-		assert.NotSamef(t, m0, m1, "returned same meters: %v", is1)
-	})
-}
 
 // A meter should be able to make instruments concurrently.
 func TestMeterInstrumentConcurrency(t *testing.T) {
@@ -132,7 +115,7 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	var seven float64 = 7.0
+	seven := 7.0
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -495,4 +478,442 @@ func TestMetersProvideScope(t *testing.T) {
 	got, err := rdr.Collect(context.Background())
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestRegisterCallbackDropAggregations(t *testing.T) {
+	aggFn := func(InstrumentKind) aggregation.Aggregation {
+		return aggregation.Drop{}
+	}
+	r := NewManualReader(WithAggregationSelector(aggFn))
+	mp := NewMeterProvider(WithReader(r))
+	m := mp.Meter("testRegisterCallbackDropAggregations")
+
+	int64Counter, err := m.AsyncInt64().Counter("int64.counter")
+	require.NoError(t, err)
+
+	int64UpDownCounter, err := m.AsyncInt64().UpDownCounter("int64.up_down_counter")
+	require.NoError(t, err)
+
+	int64Gauge, err := m.AsyncInt64().Gauge("int64.gauge")
+	require.NoError(t, err)
+
+	floag64Counter, err := m.AsyncFloat64().Counter("floag64.counter")
+	require.NoError(t, err)
+
+	floag64UpDownCounter, err := m.AsyncFloat64().UpDownCounter("floag64.up_down_counter")
+	require.NoError(t, err)
+
+	floag64Gauge, err := m.AsyncFloat64().Gauge("floag64.gauge")
+	require.NoError(t, err)
+
+	var called bool
+	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{
+		int64Counter,
+		int64UpDownCounter,
+		int64Gauge,
+		floag64Counter,
+		floag64UpDownCounter,
+		floag64Gauge,
+	}, func(context.Context) { called = true }))
+
+	data, err := r.Collect(context.Background())
+	require.NoError(t, err)
+
+	assert.False(t, called, "callback called for all drop instruments")
+	assert.Len(t, data.ScopeMetrics, 0, "metrics exported for drop instruments")
+}
+
+func TestAttributeFilter(t *testing.T) {
+	one := 1.0
+	two := 2.0
+	testcases := []struct {
+		name       string
+		register   func(t *testing.T, mtr metric.Meter) error
+		wantMetric metricdata.Metrics
+	}{
+		{
+			name: "AsyncFloat64Counter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncFloat64().Counter("afcounter")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "afcounter",
+				Data: metricdata.Sum[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0, // TODO (#3439): This should be 3.0.
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		},
+		{
+			name: "AsyncFloat64UpDownCounter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncFloat64().UpDownCounter("afupdowncounter")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "afupdowncounter",
+				Data: metricdata.Sum[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0, // TODO (#3439): This should be 3.0.
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+				},
+			},
+		},
+		{
+			name: "AsyncFloat64Gauge",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncFloat64().Gauge("afgauge")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "afgauge",
+				Data: metricdata.Gauge[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      2.0,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "AsyncInt64Counter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncInt64().Counter("aicounter")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "aicounter",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20, // TODO (#3439): This should be 30.
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		},
+		{
+			name: "AsyncInt64UpDownCounter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncInt64().UpDownCounter("aiupdowncounter")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "aiupdowncounter",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20, // TODO (#3439): This should be 30.
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+				},
+			},
+		},
+		{
+			name: "AsyncInt64Gauge",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.AsyncInt64().Gauge("aigauge")
+				if err != nil {
+					return err
+				}
+				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				})
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "aigauge",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      20,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Counter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncFloat64().Counter("sfcounter")
+				if err != nil {
+					return err
+				}
+
+				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "sfcounter",
+				Data: metricdata.Sum[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      3.0,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCounter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncFloat64().UpDownCounter("sfupdowncounter")
+				if err != nil {
+					return err
+				}
+
+				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "sfupdowncounter",
+				Data: metricdata.Sum[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      3.0,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncFloat64().Histogram("sfhistogram")
+				if err != nil {
+					return err
+				}
+
+				ctr.Record(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Record(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "sfhistogram",
+				Data: metricdata.Histogram{
+					DataPoints: []metricdata.HistogramDataPoint{
+						{
+							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Count:        2,
+							Min:          &one,
+							Max:          &two,
+							Sum:          3.0,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+		},
+		{
+			name: "SyncInt64Counter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncInt64().Counter("sicounter")
+				if err != nil {
+					return err
+				}
+
+				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "sicounter",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      30,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		},
+		{
+			name: "SyncInt64UpDownCounter",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncInt64().UpDownCounter("siupdowncounter")
+				if err != nil {
+					return err
+				}
+
+				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "siupdowncounter",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      30,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+				},
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			register: func(t *testing.T, mtr metric.Meter) error {
+				ctr, err := mtr.SyncInt64().Histogram("sihistogram")
+				if err != nil {
+					return err
+				}
+
+				ctr.Record(context.Background(), 1, attribute.String("foo", "bar"), attribute.Int("version", 1))
+				ctr.Record(context.Background(), 2, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				return nil
+			},
+			wantMetric: metricdata.Metrics{
+				Name: "sihistogram",
+				Data: metricdata.Histogram{
+					DataPoints: []metricdata.HistogramDataPoint{
+						{
+							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Count:        2,
+							Min:          &one,
+							Max:          &two,
+							Sum:          3.0,
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewManualReader()
+			mtr := NewMeterProvider(
+				WithReader(rdr),
+				WithView(NewView(
+					Instrument{Name: "*"},
+					Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
+						return kv.Key == attribute.Key("foo")
+					}},
+				)),
+			).Meter("TestAttributeFilter")
+			require.NoError(t, tt.register(t, mtr))
+
+			m, err := rdr.Collect(context.Background())
+			assert.NoError(t, err)
+
+			require.Len(t, m.ScopeMetrics, 1)
+			require.Len(t, m.ScopeMetrics[0].Metrics, 1)
+
+			metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+var (
+	aiCounter       asyncint64.Counter
+	aiUpDownCounter asyncint64.UpDownCounter
+	aiGauge         asyncint64.Gauge
+
+	afCounter       asyncfloat64.Counter
+	afUpDownCounter asyncfloat64.UpDownCounter
+	afGauge         asyncfloat64.Gauge
+
+	siCounter       syncint64.Counter
+	siUpDownCounter syncint64.UpDownCounter
+	siHistogram     syncint64.Histogram
+
+	sfCounter       syncfloat64.Counter
+	sfUpDownCounter syncfloat64.UpDownCounter
+	sfHistogram     syncfloat64.Histogram
+)
+
+func BenchmarkInstrumentCreation(b *testing.B) {
+	provider := NewMeterProvider(WithReader(NewManualReader()))
+	meter := provider.Meter("BenchmarkInstrumentCreation")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		aiCounter, _ = meter.AsyncInt64().Counter("async.int64.counter")
+		aiUpDownCounter, _ = meter.AsyncInt64().UpDownCounter("async.int64.up.down.counter")
+		aiGauge, _ = meter.AsyncInt64().Gauge("async.int64.gauge")
+
+		afCounter, _ = meter.AsyncFloat64().Counter("async.float64.counter")
+		afUpDownCounter, _ = meter.AsyncFloat64().UpDownCounter("async.float64.up.down.counter")
+		afGauge, _ = meter.AsyncFloat64().Gauge("async.float64.gauge")
+
+		siCounter, _ = meter.SyncInt64().Counter("sync.int64.counter")
+		siUpDownCounter, _ = meter.SyncInt64().UpDownCounter("sync.int64.up.down.counter")
+		siHistogram, _ = meter.SyncInt64().Histogram("sync.int64.histogram")
+
+		sfCounter, _ = meter.SyncFloat64().Counter("sync.float64.counter")
+		sfUpDownCounter, _ = meter.SyncFloat64().UpDownCounter("sync.float64.up.down.counter")
+		sfHistogram, _ = meter.SyncFloat64().Histogram("sync.float64.histogram")
+	}
 }

@@ -29,11 +29,14 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -55,6 +58,9 @@ type client struct {
 	compression Compression
 	requestFunc retry.RequestFunc
 	httpClient  *http.Client
+
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -116,7 +122,20 @@ func newClient(opts ...Option) (otlpmetric.Client, error) {
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
+
+		temporalitySelector: cfg.Metrics.TemporalitySelector,
+		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}, nil
+}
+
+// Temporality returns the Temporality to use for an instrument kind.
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return c.temporalitySelector(k)
+}
+
+// Aggregation returns the Aggregation to use for an instrument kind.
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return c.aggregationSelector(k)
 }
 
 // ForceFlush does nothing, the client holds no state.
@@ -171,6 +190,29 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		switch resp.StatusCode {
 		case http.StatusOK:
 			// Success, do not retry.
+
+			// Read the partial success message, if any.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
+				return err
+			}
+
+			if respData.Len() != 0 {
+				var respProto colmetricpb.ExportMetricsServiceResponse
+				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+					return err
+				}
+
+				if respProto.PartialSuccess != nil {
+					msg := respProto.PartialSuccess.GetErrorMessage()
+					n := respProto.PartialSuccess.GetRejectedDataPoints()
+					if n != 0 || msg != "" {
+						err := internal.MetricPartialSuccessError(n, msg)
+						otel.Handle(err)
+					}
+				}
+			}
+			return nil
 		case http.StatusTooManyRequests,
 			http.StatusServiceUnavailable:
 			// Retry-able failure.

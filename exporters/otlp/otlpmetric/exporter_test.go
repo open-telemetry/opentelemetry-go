@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -29,6 +31,14 @@ type client struct {
 	// n is incremented by all Client methods. If these methods are called
 	// concurrently this should fail tests run with the race detector.
 	n int
+}
+
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return metric.DefaultTemporalitySelector(k)
+}
+
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return metric.DefaultAggregationSelector(k)
 }
 
 func (c *client) UploadMetrics(context.Context, *mpb.ResourceMetrics) error {

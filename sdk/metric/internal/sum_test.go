@@ -17,6 +17,8 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -54,6 +56,26 @@ func testSum[N int64 | float64](t *testing.T) {
 		eFunc = cumuExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
+
+	t.Run("PreComputedDelta", func(t *testing.T) {
+		incr, mono := monoIncr, true
+		eFunc := preDeltaExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+
+		incr, mono = nonMonoIncr, false
+		eFunc = preDeltaExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+	})
+
+	t.Run("PreComputedCumulative", func(t *testing.T) {
+		incr, mono := monoIncr, true
+		eFunc := preCumuExpecter[N](incr, mono)
+		t.Run("Monotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+
+		incr, mono = nonMonoIncr, false
+		eFunc = preCumuExpecter[N](incr, mono)
+		t.Run("NonMonotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+	})
 }
 
 func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
@@ -61,7 +83,7 @@ func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 	return func(m int) metricdata.Aggregation {
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*m)))
 		}
 		return sum
 	}
@@ -74,7 +96,32 @@ func cumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 		cycle++
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point[N](a, N(v*cycle*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v*cycle*m)))
+		}
+		return sum
+	}
+}
+
+func preDeltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality, IsMonotonic: mono}
+	last := make(map[attribute.Set]N)
+	return func(int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			l := last[a]
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v)-l))
+			last[a] = N(v)
+		}
+		return sum
+	}
+}
+
+func preCumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+	sum := metricdata.Sum[N]{Temporality: metricdata.CumulativeTemporality, IsMonotonic: mono}
+	return func(int) metricdata.Aggregation {
+		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
+		for a, v := range incr {
+			sum.DataPoints = append(sum.DataPoints, point(a, N(v)))
 		}
 		return sum
 	}
@@ -93,17 +140,17 @@ func point[N int64 | float64](a attribute.Set, v N) metricdata.DataPoint[N] {
 func testDeltaSumReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	expect := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
 	a := NewDeltaSum[N](false)
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
+	expect := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.DataPoint[N]{point[N](alice, 1)}
 	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	// Aggregating another set should not affect the original (alice).
 	a.Aggregate(1, bob)
@@ -114,6 +161,25 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 func TestDeltaSumReset(t *testing.T) {
 	t.Run("Int64", testDeltaSumReset[int64])
 	t.Run("Float64", testDeltaSumReset[float64])
+}
+
+func TestEmptySumNilAggregation(t *testing.T) {
+	assert.Nil(t, NewCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, NewCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, NewCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, NewCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, NewDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, NewDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, NewDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, NewDeltaSum[float64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[float64](false).Aggregation())
 }
 
 func BenchmarkSum(b *testing.B) {

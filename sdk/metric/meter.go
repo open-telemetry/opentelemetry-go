@@ -16,7 +16,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -27,63 +26,32 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-// meterRegistry keeps a record of initialized meters for instrumentation
-// scopes. A meter is unique to an instrumentation scope and if multiple
-// requests for that meter are made a meterRegistry ensure the same instance
-// is used.
-//
-// The zero meterRegistry is empty and ready for use.
-//
-// A meterRegistry must not be copied after first use.
-//
-// All methods of a meterRegistry are safe to call concurrently.
-type meterRegistry struct {
-	sync.Mutex
-
-	meters map[instrumentation.Scope]*meter
-
-	pipes pipelines
-}
-
-// Get returns a registered meter matching the instrumentation scope if it
-// exists in the meterRegistry. Otherwise, a new meter configured for the
-// instrumentation scope is registered and then returned.
-//
-// Get is safe to call concurrently.
-func (r *meterRegistry) Get(s instrumentation.Scope) *meter {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.meters == nil {
-		m := &meter{
-			Scope: s,
-			pipes: r.pipes,
-		}
-		r.meters = map[instrumentation.Scope]*meter{s: m}
-		return m
-	}
-
-	m, ok := r.meters[s]
-	if ok {
-		return m
-	}
-
-	m = &meter{
-		Scope: s,
-		pipes: r.pipes,
-	}
-	r.meters[s] = m
-	return m
-}
-
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	instrumentation.Scope
-
 	pipes pipelines
+
+	instProviderInt64   *instProvider[int64]
+	instProviderFloat64 *instProvider[float64]
+}
+
+func newMeter(s instrumentation.Scope, p pipelines) *meter {
+	// viewCache ensures instrument conflicts, including number conflicts, this
+	// meter is asked to create are logged to the user.
+	var viewCache cache[string, instrumentID]
+
+	// Passing nil as the ac parameter to newInstrumentCache will have each
+	// create its own aggregator cache.
+	ic := newInstrumentCache[int64](nil, &viewCache)
+	fc := newInstrumentCache[float64](nil, &viewCache)
+
+	return &meter{
+		pipes:               p,
+		instProviderInt64:   newInstProvider(s, p, ic),
+		instProviderFloat64: newInstProvider(s, p, fc),
+	}
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -91,27 +59,52 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	return asyncInt64Provider{m.instProviderInt64}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	return asyncFloat64Provider{m.instProviderFloat64}
 }
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
+	for _, inst := range insts {
+		// Only register if at least one instrument has a non-drop aggregation.
+		// Otherwise, calling f during collection will be wasted computation.
+		switch t := inst.(type) {
+		case *instrumentImpl[int64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		case *instrumentImpl[float64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		default:
+			// Instrument external to the SDK. For example, an instrument from
+			// the "go.opentelemetry.io/otel/metric/internal/global" package.
+			//
+			// Fail gracefully here, assume a valid instrument.
+			return m.registerCallback(f)
+		}
+	}
+	// All insts use drop aggregation.
+	return nil
+}
+
+func (m *meter) registerCallback(f func(context.Context)) error {
 	m.pipes.registerCallback(f)
 	return nil
 }
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolve: newResolver[int64](m.pipes)}
+	return syncInt64Provider{m.instProviderInt64}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolve: newResolver[float64](m.pipes)}
+	return syncFloat64Provider{m.instProviderFloat64}
 }

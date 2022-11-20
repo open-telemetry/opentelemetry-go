@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res     *resource.Resource
-	readers map[Reader][]view.View
+	readers []Reader
+	views   []View
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -35,7 +35,7 @@ type config struct {
 // single functions.
 func (c config) readerSignals() (forceFlush, shutdown func(context.Context) error) {
 	var fFuncs, sFuncs []func(context.Context) error
-	for r := range c.readers {
+	for _, r := range c.readers {
 		sFuncs = append(sFuncs, r.Shutdown)
 		fFuncs = append(fFuncs, r.ForceFlush)
 	}
@@ -112,21 +112,30 @@ func WithResource(res *resource.Resource) Option {
 	})
 }
 
-// WithReader associates a Reader with a MeterProvider. Any passed view config
-// will be used to associate a view with the Reader. If no views are passed
-// the default view will be use for the Reader.
-//
-// Passing this option multiple times for the same Reader will overwrite. The
-// last option passed will be the one used for that Reader.
+// WithReader associates Reader r with a MeterProvider.
 //
 // By default, if this option is not used, the MeterProvider will perform no
 // operations; no data will be exported without a Reader.
-func WithReader(r Reader, views ...view.View) Option {
+func WithReader(r Reader) Option {
 	return optionFunc(func(cfg config) config {
-		if cfg.readers == nil {
-			cfg.readers = make(map[Reader][]view.View)
+		if r == nil {
+			return cfg
 		}
-		cfg.readers[r] = views
+		cfg.readers = append(cfg.readers, r)
+		return cfg
+	})
+}
+
+// WithView associates views a MeterProvider.
+//
+// Views are appended to existing ones in a MeterProvider if this option is
+// used multiple times.
+//
+// By default, if this option is not used, the MeterProvider will use the
+// default view.
+func WithView(views ...View) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.views = append(cfg.views, views...)
 		return cfg
 	})
 }

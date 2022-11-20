@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -205,16 +204,16 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 }
 
 func TestDefaultAggregationSelector(t *testing.T) {
-	var undefinedInstrument view.InstrumentKind
+	var undefinedInstrument InstrumentKind
 	assert.Panics(t, func() { DefaultAggregationSelector(undefinedInstrument) })
 
-	iKinds := []view.InstrumentKind{
-		view.SyncCounter,
-		view.SyncUpDownCounter,
-		view.SyncHistogram,
-		view.AsyncCounter,
-		view.AsyncUpDownCounter,
-		view.AsyncGauge,
+	iKinds := []InstrumentKind{
+		InstrumentKindSyncCounter,
+		InstrumentKindSyncUpDownCounter,
+		InstrumentKindSyncHistogram,
+		InstrumentKindAsyncCounter,
+		InstrumentKindAsyncUpDownCounter,
+		InstrumentKindAsyncGauge,
 	}
 
 	for _, ik := range iKinds {
@@ -223,16 +222,28 @@ func TestDefaultAggregationSelector(t *testing.T) {
 }
 
 func TestDefaultTemporalitySelector(t *testing.T) {
-	var undefinedInstrument view.InstrumentKind
-	for _, ik := range []view.InstrumentKind{
+	var undefinedInstrument InstrumentKind
+	for _, ik := range []InstrumentKind{
 		undefinedInstrument,
-		view.SyncCounter,
-		view.SyncUpDownCounter,
-		view.SyncHistogram,
-		view.AsyncCounter,
-		view.AsyncUpDownCounter,
-		view.AsyncGauge,
+		InstrumentKindSyncCounter,
+		InstrumentKindSyncUpDownCounter,
+		InstrumentKindSyncHistogram,
+		InstrumentKindAsyncCounter,
+		InstrumentKindAsyncUpDownCounter,
+		InstrumentKindAsyncGauge,
 	} {
 		assert.Equal(t, metricdata.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}
+}
+
+type notComparable [0]func() // nolint:unused  // non-comparable type itself is used.
+
+type noCompareReader struct {
+	notComparable // nolint:unused  // non-comparable type itself is used.
+	Reader
+}
+
+func TestReadersNotRequiredToBeComparable(t *testing.T) {
+	r := noCompareReader{Reader: NewManualReader()}
+	assert.NotPanics(t, func() { _ = NewMeterProvider(WithReader(r)) })
 }

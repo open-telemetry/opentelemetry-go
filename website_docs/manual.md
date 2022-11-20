@@ -119,7 +119,7 @@ span := trace.SpanFromContext(ctx)
 // Do something with the current span, optionally calling `span.End()` if you want it to end
 ```
 
-This can helpful if you'd like to add information to the current span at a point in time.
+This can be helpful if you'd like to add information to the current span at a point in time.
 
 ### Create nested spans
 

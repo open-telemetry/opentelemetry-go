@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -28,6 +29,9 @@ type exporter struct {
 	encVal atomic.Value // encoderHolder
 
 	shutdownOnce sync.Once
+
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
 }
 
 // New returns a configured metric exporter.
@@ -36,9 +40,20 @@ type exporter struct {
 // encoder with tab indentations that output to STDOUT.
 func New(options ...Option) (metric.Exporter, error) {
 	cfg := newConfig(options...)
-	exp := &exporter{}
+	exp := &exporter{
+		temporalitySelector: cfg.temporalitySelector,
+		aggregationSelector: cfg.aggregationSelector,
+	}
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
+}
+
+func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return e.temporalitySelector(k)
+}
+
+func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return e.aggregationSelector(k)
 }
 
 func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) error {

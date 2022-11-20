@@ -25,6 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -96,4 +98,34 @@ func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, exp.Shutdown(ctx))
 	assert.EqualError(t, exp.Export(ctx, data), "exporter shutdown")
+}
+
+func deltaSelector(metric.InstrumentKind) metricdata.Temporality {
+	return metricdata.DeltaTemporality
+}
+
+func TestTemporalitySelector(t *testing.T) {
+	exp, err := stdoutmetric.New(
+		testEncoderOption(),
+		stdoutmetric.WithTemporalitySelector(deltaSelector),
+	)
+	require.NoError(t, err)
+
+	var unknownKind metric.InstrumentKind
+	assert.Equal(t, metricdata.DeltaTemporality, exp.Temporality(unknownKind))
+}
+
+func dropSelector(metric.InstrumentKind) aggregation.Aggregation {
+	return aggregation.Drop{}
+}
+
+func TestAggregationSelector(t *testing.T) {
+	exp, err := stdoutmetric.New(
+		testEncoderOption(),
+		stdoutmetric.WithAggregationSelector(dropSelector),
+	)
+	require.NoError(t, err)
+
+	var unknownKind metric.InstrumentKind
+	assert.Equal(t, aggregation.Drop{}, exp.Aggregation(unknownKind))
 }

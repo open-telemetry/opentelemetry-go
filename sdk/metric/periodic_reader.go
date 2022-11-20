@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // Default periodic reader timing.
@@ -36,20 +35,16 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval            time.Duration
-	timeout             time.Duration
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
+	interval time.Duration
+	timeout  time.Duration
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval:            defaultInterval,
-		timeout:             defaultTimeout,
-		temporalitySelector: DefaultTemporalitySelector,
-		aggregationSelector: DefaultAggregationSelector,
+		interval: defaultInterval,
+		timeout:  defaultTimeout,
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -118,9 +113,6 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		flushCh:  make(chan chan error),
 		cancel:   cancel,
 		done:     make(chan struct{}),
-
-		temporalitySelector: conf.temporalitySelector,
-		aggregationSelector: conf.aggregationSelector,
 	}
 
 	go func() {
@@ -139,9 +131,6 @@ type periodicReader struct {
 	timeout  time.Duration
 	exporter Exporter
 	flushCh  chan chan error
-
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -186,13 +175,13 @@ func (r *periodicReader) register(p producer) {
 }
 
 // temporality reports the Temporality for the instrument kind provided.
-func (r *periodicReader) temporality(kind view.InstrumentKind) metricdata.Temporality {
-	return r.temporalitySelector(kind)
+func (r *periodicReader) temporality(kind InstrumentKind) metricdata.Temporality {
+	return r.exporter.Temporality(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *periodicReader) aggregation(kind view.InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
-	return r.aggregationSelector(kind)
+func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+	return r.exporter.Aggregation(kind)
 }
 
 // collectAndExport gather all metric data related to the periodicReader r from

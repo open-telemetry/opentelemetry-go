@@ -49,16 +49,16 @@ func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
 }
 
 func (s *lastValue[N]) Aggregation() metricdata.Aggregation {
-	gauge := metricdata.Gauge[N]{}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return gauge
+		return nil
 	}
 
-	gauge.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	gauge := metricdata.Gauge[N]{
+		DataPoints: make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for a, v := range s.values {
 		gauge.DataPoints = append(gauge.DataPoints, metricdata.DataPoint[N]{
 			Attributes: a,

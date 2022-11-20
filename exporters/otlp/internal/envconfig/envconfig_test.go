@@ -16,6 +16,8 @@ package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/en
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"net/url"
 	"testing"
 	"time"
@@ -23,22 +25,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const WeakKey = `
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIEbrSPmnlSOXvVzxCyv+VR3a0HDeUTvOcqrdssZ2k4gFoAoGCCqGSM49
+AwEHoUQDQgAEDMTfv75J315C3K9faptS9iythKOMEeV/Eep73nWX531YAkmmwBSB
+2dXRD/brsgLnfG57WEpxZuY7dPRbxu33BA==
+-----END EC PRIVATE KEY-----
+`
+
 const WeakCertificate = `
 -----BEGIN CERTIFICATE-----
-MIIBhzCCASygAwIBAgIRANHpHgAWeTnLZpTSxCKs0ggwCgYIKoZIzj0EAwIwEjEQ
-MA4GA1UEChMHb3RlbC1nbzAeFw0yMTA0MDExMzU5MDNaFw0yMTA0MDExNDU5MDNa
-MBIxEDAOBgNVBAoTB290ZWwtZ28wWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS9
-nWSkmPCxShxnp43F+PrOtbGV7sNfkbQ/kxzi9Ego0ZJdiXxkmv/C05QFddCW7Y0Z
-sJCLHGogQsYnWJBXUZOVo2MwYTAOBgNVHQ8BAf8EBAMCB4AwEwYDVR0lBAwwCgYI
-KwYBBQUHAwEwDAYDVR0TAQH/BAIwADAsBgNVHREEJTAjgglsb2NhbGhvc3SHEAAA
-AAAAAAAAAAAAAAAAAAGHBH8AAAEwCgYIKoZIzj0EAwIDSQAwRgIhANwZVVKvfvQ/
-1HXsTvgH+xTQswOwSSKYJ1cVHQhqK7ZbAiEAus8NxpTRnp5DiTMuyVmhVNPB+bVH
-Lhnm4N/QDk5rek0=
+MIIBjjCCATWgAwIBAgIUKQSMC66MUw+kPp954ZYOcyKAQDswCgYIKoZIzj0EAwIw
+EjEQMA4GA1UECgwHb3RlbC1nbzAeFw0yMjEwMTkwMDA5MTlaFw0yMzEwMTkwMDA5
+MTlaMBIxEDAOBgNVBAoMB290ZWwtZ28wWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC
+AAQMxN+/vknfXkLcr19qm1L2LK2Eo4wR5X8R6nvedZfnfVgCSabAFIHZ1dEP9uuy
+Aud8bntYSnFm5jt09FvG7fcEo2kwZzAdBgNVHQ4EFgQUicGuhnTTkYLZwofXMNLK
+SHFeCWgwHwYDVR0jBBgwFoAUicGuhnTTkYLZwofXMNLKSHFeCWgwDwYDVR0TAQH/
+BAUwAwEB/zAUBgNVHREEDTALgglsb2NhbGhvc3QwCgYIKoZIzj0EAwIDRwAwRAIg
+Lfma8FnnxeSOi6223AsFfYwsNZ2RderNsQrS0PjEHb0CIBkrWacqARUAu7uT4cGu
+jVcIxYQqhId5L8p/mAv2PWZS
 -----END CERTIFICATE-----
 `
 
 type testOption struct {
 	TestString   string
+	TestBool     bool
 	TestDuration time.Duration
 	TestHeaders  map[string]string
 	TestURL      *url.URL
@@ -133,6 +144,56 @@ func TestEnvConfig(t *testing.T) {
 				}),
 			},
 			expectedOptions: []testOption{},
+		},
+		{
+			name: "with a bool config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "true"
+					} else if n == "WORLD" {
+						return "false"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithBool("HELLO", func(b bool) {
+					options = append(options, testOption{TestBool: b})
+				}),
+				WithBool("WORLD", func(b bool) {
+					options = append(options, testOption{TestBool: b})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestBool: true,
+				},
+				{
+					TestBool: false,
+				},
+			},
+		},
+		{
+			name: "with an invalid bool config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "world"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithBool("HELLO", func(b bool) {
+					options = append(options, testOption{TestBool: b})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestBool: false,
+				},
+			},
 		},
 		{
 			name: "with a duration config",
@@ -265,7 +326,7 @@ func TestEnvConfig(t *testing.T) {
 }
 
 func TestWithTLSConfig(t *testing.T) {
-	tlsCert, err := createTLSConfig([]byte(WeakCertificate))
+	pool, err := createCertPool([]byte(WeakCertificate))
 	assert.NoError(t, err)
 
 	reader := EnvOptionsReader{
@@ -285,12 +346,65 @@ func TestWithTLSConfig(t *testing.T) {
 
 	var option testOption
 	reader.Apply(
-		WithTLSConfig("CERTIFICATE", func(v *tls.Config) {
-			option = testOption{TestTLS: v}
-		}))
+		WithCertPool("CERTIFICATE", func(cp *x509.CertPool) {
+			option = testOption{TestTLS: &tls.Config{RootCAs: cp}}
+		}),
+	)
 
 	// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-	assert.Equal(t, tlsCert.RootCAs.Subjects(), option.TestTLS.RootCAs.Subjects())
+	assert.Equal(t, pool.Subjects(), option.TestTLS.RootCAs.Subjects())
+}
+
+func TestWithClientCert(t *testing.T) {
+	cert, err := tls.X509KeyPair([]byte(WeakCertificate), []byte(WeakKey))
+	assert.NoError(t, err)
+
+	reader := EnvOptionsReader{
+		GetEnv: func(n string) string {
+			switch n {
+			case "CLIENT_CERTIFICATE":
+				return "/path/tls.crt"
+			case "CLIENT_KEY":
+				return "/path/tls.key"
+			}
+			return ""
+		},
+		ReadFile: func(n string) ([]byte, error) {
+			switch n {
+			case "/path/tls.crt":
+				return []byte(WeakCertificate), nil
+			case "/path/tls.key":
+				return []byte(WeakKey), nil
+			}
+			return []byte{}, nil
+		},
+	}
+
+	var option testOption
+	reader.Apply(
+		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+		}),
+	)
+	assert.Equal(t, cert, option.TestTLS.Certificates[0])
+
+	reader.ReadFile = func(s string) ([]byte, error) { return nil, errors.New("oops") }
+	option.TestTLS = nil
+	reader.Apply(
+		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+		}),
+	)
+	assert.Nil(t, option.TestTLS)
+
+	reader.GetEnv = func(s string) string { return "" }
+	option.TestTLS = nil
+	reader.Apply(
+		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+		}),
+	)
+	assert.Nil(t, option.TestTLS)
 }
 
 func TestStringToHeader(t *testing.T) {

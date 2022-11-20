@@ -32,6 +32,12 @@ func newValueMap[N int64 | float64]() *valueMap[N] {
 	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
+func (s *valueMap[N]) set(value N, attr attribute.Set) { // nolint: unused  // This is indeed used.
+	s.Lock()
+	s.values[attr] = value
+	s.Unlock()
+}
+
 func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Lock()
 	s.values[attr] += value
@@ -49,6 +55,10 @@ func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return newDeltaSum[N](monotonic)
+}
+
+func newDeltaSum[N int64 | float64](monotonic bool) *deltaSum[N] {
 	return &deltaSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -66,20 +76,19 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
 	}
 
 	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -106,6 +115,10 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
 func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return newCumulativeSum[N](monotonic)
+}
+
+func newCumulativeSum[N int64 | float64](monotonic bool) *cumulativeSum[N] {
 	return &cumulativeSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -123,20 +136,19 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: s.monotonic,
-	}
-
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
-		return out
+		return nil
 	}
 
 	t := now()
-	out.DataPoints = make([]metricdata.DataPoint[N], 0, len(s.values))
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
 	for attr, value := range s.values {
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
@@ -150,4 +162,101 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 		// overload the system.
 	}
 	return out
+}
+
+// NewPrecomputedDeltaSum returns an Aggregator that summarizes a set of
+// measurements as their pre-computed arithmetic sum. Each sum is scoped by
+// attributes and the aggregation cycle the measurements were made in.
+//
+// The monotonic value is used to communicate the produced Aggregation is
+// monotonic or not. The returned Aggregator does not make any guarantees this
+// value is accurate. It is up to the caller to ensure it.
+//
+// The output Aggregation will report recorded values as delta temporality. It
+// is up to the caller to ensure this is accurate.
+func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return &precomputedDeltaSum[N]{
+		recorded:  make(map[attribute.Set]N),
+		reported:  make(map[attribute.Set]N),
+		monotonic: monotonic,
+		start:     now(),
+	}
+}
+
+// precomputedDeltaSum summarizes a set of measurements recorded over all
+// aggregation cycles as the delta arithmetic sum.
+type precomputedDeltaSum[N int64 | float64] struct {
+	sync.Mutex
+	recorded map[attribute.Set]N
+	reported map[attribute.Set]N
+
+	monotonic bool
+	start     time.Time
+}
+
+// Aggregate records value as a cumulative sum for attr.
+func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.Lock()
+	s.recorded[attr] = value
+	s.Unlock()
+}
+
+func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
+	s.Lock()
+	defer s.Unlock()
+
+	if len(s.recorded) == 0 {
+		return nil
+	}
+
+	t := now()
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.recorded)),
+	}
+	for attr, recorded := range s.recorded {
+		value := recorded - s.reported[attr]
+		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
+			Attributes: attr,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      value,
+		})
+		if value != 0 {
+			s.reported[attr] = recorded
+		}
+		// TODO (#3006): This will use an unbounded amount of memory if there
+		// are unbounded number of attribute sets being aggregated. Attribute
+		// sets that become "stale" need to be forgotten so this will not
+		// overload the system.
+	}
+	// The delta collection cycle resets.
+	s.start = t
+	return out
+}
+
+// NewPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
+// measurements as their pre-computed arithmetic sum. Each sum is scoped by
+// attributes and the aggregation cycle the measurements were made in.
+//
+// The monotonic value is used to communicate the produced Aggregation is
+// monotonic or not. The returned Aggregator does not make any guarantees this
+// value is accurate. It is up to the caller to ensure it.
+//
+// The output Aggregation will report recorded values as cumulative
+// temporality. It is up to the caller to ensure this is accurate.
+func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+	return &precomputedSum[N]{newCumulativeSum[N](monotonic)}
+}
+
+// precomputedSum summarizes a set of measurements recorded over all
+// aggregation cycles directly as the cumulative arithmetic sum.
+type precomputedSum[N int64 | float64] struct {
+	*cumulativeSum[N]
+}
+
+// Aggregate records value as a cumulative sum for attr.
+func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.set(value, attr)
 }

@@ -313,26 +313,13 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 			return attr.Key.String(safeTruncate(v, limit))
 		}
 	case attribute.STRINGSLICE:
-		// Do no mutate the original, make a copy.
-		trucated := attr.Key.StringSlice(attr.Value.AsStringSlice())
-		// Do not do this.
-		//
-		//   v := trucated.Value.AsStringSlice()
-		//   cp := make([]string, len(v))
-		//   /* Copy and truncate values to cp ... */
-		//   trucated.Value = attribute.StringSliceValue(cp)
-		//
-		// Copying the []string and then assigning it back as a new value with
-		// attribute.StringSliceValue will copy the data twice. Instead, we
-		// already made a copy above that only this function owns, update the
-		// underlying slice data of our copy.
-		v := trucated.Value.AsStringSlice()
+		v := attr.Value.AsStringSlice()
 		for i := range v {
 			if len(v[i]) > limit {
 				v[i] = safeTruncate(v[i], limit)
 			}
 		}
-		return trucated
+		return attr.Key.StringSlice(v)
 	}
 	return attr
 }
@@ -423,14 +410,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if sps, ok := s.tracer.provider.spanProcessors.Load().(spanProcessorStates); ok {
-		if len(sps) == 0 {
-			return
-		}
-		snap := s.snapshot()
-		for _, sp := range sps {
-			sp.sp.OnEnd(snap)
-		}
+	sps := s.tracer.provider.spanProcessors.Load().(spanProcessorStates)
+	if len(sps) == 0 {
+		return
+	}
+	snap := s.snapshot()
+	for _, sp := range sps {
+		sp.sp.OnEnd(snap)
 	}
 }
 

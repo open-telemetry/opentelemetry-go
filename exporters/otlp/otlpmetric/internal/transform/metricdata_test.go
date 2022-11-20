@@ -51,17 +51,28 @@ var (
 		Value: &cpb.AnyValue_StringValue{StringValue: "bob"},
 	}}
 
-	min, max, sum = 2.0, 4.0, 90.0
-	otelHDP       = []metricdata.HistogramDataPoint{{
+	minA, maxA, sumA = 2.0, 4.0, 90.0
+	minB, maxB, sumB = 4.0, 150.0, 234.0
+	otelHDP          = []metricdata.HistogramDataPoint{{
 		Attributes:   alice,
 		StartTime:    start,
 		Time:         end,
 		Count:        30,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 30, 0},
-		Min:          &min,
-		Max:          &max,
-		Sum:          sum,
+		Min:          &minA,
+		Max:          &maxA,
+		Sum:          sumA,
+	}, {
+		Attributes:   bob,
+		StartTime:    start,
+		Time:         end,
+		Count:        3,
+		Bounds:       []float64{1, 5},
+		BucketCounts: []uint64{0, 1, 2},
+		Min:          &minB,
+		Max:          &maxB,
+		Sum:          sumB,
 	}}
 
 	pbHDP = []*mpb.HistogramDataPoint{{
@@ -69,11 +80,21 @@ var (
 		StartTimeUnixNano: uint64(start.UnixNano()),
 		TimeUnixNano:      uint64(end.UnixNano()),
 		Count:             30,
-		Sum:               &sum,
+		Sum:               &sumA,
 		ExplicitBounds:    []float64{1, 5},
 		BucketCounts:      []uint64{0, 30, 0},
-		Min:               &min,
-		Max:               &max,
+		Min:               &minA,
+		Max:               &maxA,
+	}, {
+		Attributes:        []*cpb.KeyValue{pbBob},
+		StartTimeUnixNano: uint64(start.UnixNano()),
+		TimeUnixNano:      uint64(end.UnixNano()),
+		Count:             3,
+		Sum:               &sumB,
+		ExplicitBounds:    []float64{1, 5},
+		BucketCounts:      []uint64{0, 1, 2},
+		Min:               &minB,
+		Max:               &maxB,
 	}}
 
 	otelHist = metricdata.Histogram{
