@@ -54,7 +54,7 @@ type wrappedTracerKey struct {
 	version string
 }
 
-// NewTracerProvider creates a new trace provider that creates new instances of
+// NewTracerProvider returns a new TracerProvider that creates new instances of
 // WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer().
 func NewTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *WrapperTracerProvider {
 	var (
