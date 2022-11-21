@@ -18,7 +18,7 @@ jobs:
       - name: Get changed files
         id: changes
         run: |
-          echo "::set-output name=md::$(git diff --name-only --diff-filter=ACMRTUXB origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }} | grep .md$ | xargs)"
+          echo "md=$(git diff --name-only --diff-filter=ACMRTUXB origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }} | grep .md$ | xargs)" >> $GITHUB_OUTPUT
 
   lint:
     name: lint markdown files
