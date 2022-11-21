@@ -55,8 +55,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Removed
 
-- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.Client` interface is removed. (#????)
-- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.New` function is removed. Use the `otlpmetric[http|grpc].New` directly. (#????)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.Client` interface is removed. (#3486)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.New` function is removed. Use the `otlpmetric[http|grpc].New` directly. (#3486)
 
 ## [1.11.1/0.33.0] 2022-10-19
 

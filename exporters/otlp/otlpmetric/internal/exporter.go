@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
+
 import (
 	"context"
 	"fmt"
