@@ -484,7 +484,7 @@ func ExampleNewView() {
 	}, Stream{Name: "request.latency"})
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view
+	// SDK using the WithView option. Below is an example of how the view will
 	// function in the SDK for certain instruments.
 
 	stream, _ := view(Instrument{
@@ -517,7 +517,7 @@ func ExampleNewView_drop() {
 	)
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view
+	// SDK using the WithView option. Below is an example of how the view will
 	// function in the SDK for certain instruments.
 
 	stream, _ := view(Instrument{
@@ -584,7 +584,7 @@ func ExampleView() {
 	}
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view
+	// SDK using the WithView option. Below is an example of how the view will
 	// function in the SDK for certain instruments.
 
 	stream, _ := view(Instrument{
