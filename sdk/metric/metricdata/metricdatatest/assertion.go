@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -127,5 +128,48 @@ func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregati
 		t.Error(r)
 		return false
 	}
+	return true
+}
+
+// AssertHasAttributes asserts that all Datapoints or HistogramDataPoints have all passed attrs.
+func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute.KeyValue) bool {
+	t.Helper()
+
+	reasons := []string{"unknown datatype"}
+
+	switch e := interface{}(actual).(type) {
+	case metricdata.DataPoint[int64]:
+		reasons = hasAttributesDataPoints(e, attrs...)
+	case metricdata.DataPoint[float64]:
+		reasons = hasAttributesDataPoints(e, attrs...)
+	case metricdata.Gauge[int64]:
+		reasons = hasAttributesGauge(e, attrs...)
+	case metricdata.Gauge[float64]:
+		reasons = hasAttributesGauge(e, attrs...)
+	case metricdata.Sum[int64]:
+		reasons = hasAttributesSum(e, attrs...)
+	case metricdata.Sum[float64]:
+		reasons = hasAttributesSum(e, attrs...)
+	case metricdata.HistogramDataPoint:
+		reasons = hasAttributesHistogramDataPoints(e, attrs...)
+	case metricdata.Histogram:
+		reasons = hasAttributesHistogram(e, attrs...)
+	case metricdata.Metrics:
+		reasons = hasAttributesMetrics(e, attrs...)
+	case metricdata.ScopeMetrics:
+		reasons = hasAttributesScopeMetrics(e, attrs...)
+	case metricdata.ResourceMetrics:
+		reasons = hasAttributesResourceMetrics(e, attrs...)
+	default:
+		// We control all types passed to this, panic to signal developers
+		// early they changed things in an incompatible way.
+		panic(fmt.Sprintf("unknown types: %T", actual))
+	}
+
+	if len(reasons) > 0 {
+		t.Error(reasons)
+		return false
+	}
+
 	return true
 }
