@@ -63,7 +63,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/sdk/metric/view` package is deprecated.
   Use `Instrument`, `InstrumentKind`, `View`, and `NewView` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3476)
 
-
 ## [1.11.1/0.33.0] 2022-10-19
 
 ### Added
