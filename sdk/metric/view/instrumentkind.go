@@ -15,6 +15,9 @@
 package view // import "go.opentelemetry.io/otel/sdk/metric/view"
 
 // InstrumentKind describes the kind of instrument a Meter can create.
+//
+// Deprecated: Use InstrumentKind in go.opentelemetry.io/otel/sdk/metric
+// instead.
 type InstrumentKind uint8
 
 // These are all the instrument kinds supported by the SDK.
@@ -24,20 +27,38 @@ const (
 	undefinedInstrument InstrumentKind = iota
 	// SyncCounter is an instrument kind that records increasing values
 	// synchronously in application code.
+	//
+	// Deprecated: Use InstrumentKindSyncCounter in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	SyncCounter
 	// SyncUpDownCounter is an instrument kind that records increasing and
 	// decreasing values synchronously in application code.
+	//
+	// Deprecated: Use InstrumentKindSyncUpDownCounter in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	SyncUpDownCounter
 	// SyncHistogram is an instrument kind that records a distribution of
 	// values synchronously in application code.
+	//
+	// Deprecated: Use InstrumentKindSyncHistogram in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	SyncHistogram
 	// AsyncCounter is an instrument kind that records increasing values in an
 	// asynchronous callback.
+	//
+	// Deprecated: Use InstrumentKindAsyncCounter in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	AsyncCounter
 	// AsyncUpDownCounter is an instrument kind that records increasing and
 	// decreasing values in an asynchronous callback.
+	//
+	// Deprecated: Use InstrumentKindAsyncUpDownCounter in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	AsyncUpDownCounter
 	// AsyncGauge is an instrument kind that records current values in an
 	// asynchronous callback.
+	//
+	// Deprecated: Use InstrumentKindAsyncGauge in
+	// go.opentelemetry.io/otel/sdk/metric instead.
 	AsyncGauge
 )

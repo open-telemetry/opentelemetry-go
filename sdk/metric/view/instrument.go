@@ -20,6 +20,8 @@ import (
 )
 
 // Instrument uniquely identifies an instrument within a meter.
+//
+// Deprecated: Use Instrument in go.opentelemetry.io/otel/sdk/metric instead.
 type Instrument struct {
 	Scope instrumentation.Scope
 
