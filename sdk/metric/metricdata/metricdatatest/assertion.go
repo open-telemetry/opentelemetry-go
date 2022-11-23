@@ -135,7 +135,7 @@ func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregati
 func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute.KeyValue) bool {
 	t.Helper()
 
-	reasons := []string{"unknown datatype"}
+	var reasons []string
 
 	switch e := interface{}(actual).(type) {
 	case metricdata.DataPoint[int64]:
