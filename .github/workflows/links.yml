@@ -16,7 +16,7 @@ jobs:
 
     - name: Link Checker
       id: lychee
-      uses: lycheeverse/lychee-action@v1.5.2
+      uses: lycheeverse/lychee-action@v1.5.4
 
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
