@@ -190,7 +190,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
-	if sum.IsMonotonic {
+	if sum.IsMonotonic && !strings.HasSuffix(name, counterSuffix) {
 		// Add _total suffix for counters
 		name += counterSuffix
 	}
