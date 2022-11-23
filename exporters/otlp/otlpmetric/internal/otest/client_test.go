@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -67,7 +67,7 @@ func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 func (c *client) Shutdown(ctx context.Context) error   { return ctx.Err() }
 
 func TestClientTests(t *testing.T) {
-	factory := func(rCh <-chan ExportResult) (otlpmetric.Client, Collector) {
+	factory := func(rCh <-chan ExportResult) (ominternal.Client, Collector) {
 		c := &client{rCh: rCh, storage: NewStorage()}
 		return c, c
 	}

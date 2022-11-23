@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -130,7 +130,7 @@ func TestRetryable(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan otest.ExportResult) (otlpmetric.Client, otest.Collector) {
+	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
 		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 

@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -49,7 +49,7 @@ func New(_ context.Context, opts ...Option) (metric.Exporter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return otlpmetric.New(c), nil
+	return ominternal.New(c), nil
 }
 
 type client struct {
@@ -81,7 +81,7 @@ var ourTransport = &http.Transport{
 }
 
 // newClient creates a new HTTP metric client.
-func newClient(opts ...Option) (otlpmetric.Client, error) {
+func newClient(opts ...Option) (ominternal.Client, error) {
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
