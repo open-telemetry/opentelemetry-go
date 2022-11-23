@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -49,7 +49,7 @@ func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return otlpmetric.New(c), nil
+	return ominternal.New(c), nil
 }
 
 type client struct {
@@ -70,7 +70,7 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error) {
+func newClient(ctx context.Context, options ...Option) (ominternal.Client, error) {
 	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
 
 	c := &client{
