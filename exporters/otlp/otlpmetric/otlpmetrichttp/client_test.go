@@ -27,14 +27,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan otest.ExportResult) (otlpmetric.Client, otest.Collector) {
+	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
 		coll, err := otest.NewHTTPCollector("", rCh)
 		require.NoError(t, err)
 
