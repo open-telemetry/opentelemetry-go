@@ -76,7 +76,11 @@ func (c *HTTPConv) ClientResponse(resp http.Response) []attribute.KeyValue {
 // by a client.
 func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	n := 3 // URL, peer name, proto, and method.
-	peer, p := firstHostPort(req.URL.Host, req.Header.Get("Host"))
+	var h string
+	if req.URL != nil {
+		h = req.URL.Host
+	}
+	peer, p := firstHostPort(h, req.Header.Get("Host"))
 	port := requiredHTTPPort(req.TLS != nil, p)
 	if port > 0 {
 		n++
@@ -97,12 +101,16 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	attrs = append(attrs, c.method(req.Method))
 	attrs = append(attrs, c.proto(req.Proto))
 
-	// Remove any username/password info that may be in the URL.
-	userinfo := req.URL.User
-	req.URL.User = nil
-	attrs = append(attrs, c.HTTPURLKey.String(req.URL.String()))
-	// Restore any username/password info that was removed.
-	req.URL.User = userinfo
+	var u string
+	if req.URL != nil {
+		// Remove any username/password info that may be in the URL.
+		userinfo := req.URL.User
+		req.URL.User = nil
+		u = req.URL.String()
+		// Restore any username/password info that was removed.
+		req.URL.User = userinfo
+	}
+	attrs = append(attrs, c.HTTPURLKey.String(u))
 
 	attrs = append(attrs, c.NetConv.PeerName(peer))
 	if port > 0 {

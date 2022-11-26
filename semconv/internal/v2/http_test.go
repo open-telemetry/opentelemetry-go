@@ -65,6 +65,58 @@ func TestHTTPClientResponse(t *testing.T) {
 	}, got)
 }
 
+func TestHTTPClientRequest(t *testing.T) {
+	const (
+		user  = "alice"
+		n     = 128
+		agent = "Go-http-client/1.1"
+	)
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   "127.0.0.1:8080",
+			Path:   "/resource",
+		},
+		Proto:      "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+		Header: http.Header{
+			"User-Agent": []string{agent},
+		},
+		ContentLength: n,
+	}
+	req.SetBasicAuth(user, "pswrd")
+
+	assert.Equal(
+		t,
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("http.flavor", "1.0"),
+			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
+			attribute.String("net.peer.name", "127.0.0.1"),
+			attribute.Int("net.peer.port", 8080),
+			attribute.String("http.user_agent", agent),
+			attribute.Int("http.request_content_length", n),
+			attribute.String("enduser.id", user),
+		},
+		hc.ClientRequest(req),
+	)
+}
+
+func TestHTTPClientRequestRequired(t *testing.T) {
+	req := new(http.Request)
+	var got []attribute.KeyValue
+	assert.NotPanics(t, func() { got = hc.ClientRequest(req) })
+	want := []attribute.KeyValue{
+		attribute.String("http.method", "GET"),
+		attribute.String("http.flavor", ""),
+		attribute.String("http.url", ""),
+		attribute.String("net.peer.name", ""),
+	}
+	assert.Equal(t, want, got)
+}
+
 func srvAttr(method, scheme, target, proto, host string, opt ...attribute.KeyValue) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		attribute.String("http.method", method),
