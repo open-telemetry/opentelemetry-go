@@ -176,6 +176,65 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	assert.ElementsMatch(t, want, got)
 }
 
+func TestMethod(t *testing.T) {
+	assert.Equal(t, attribute.String("http.method", "POST"), hc.method("POST"))
+	assert.Equal(t, attribute.String("http.method", "GET"), hc.method(""))
+	assert.Equal(t, attribute.String("http.method", "garbage"), hc.method("garbage"))
+}
+
+func TestScheme(t *testing.T) {
+	assert.Equal(t, attribute.String("http.scheme", "http"), hc.scheme(false))
+	assert.Equal(t, attribute.String("http.scheme", "https"), hc.scheme(true))
+}
+
+func TestProto(t *testing.T) {
+	tests := map[string]string{
+		"HTTP/1.0": "1.0",
+		"HTTP/1.1": "1.1",
+		"HTTP/2":   "2.0",
+		"HTTP/3":   "3.0",
+		"SPDY":     "SPDY",
+		"QUIC":     "QUIC",
+		"other":    "other",
+	}
+
+	for proto, want := range tests {
+		assert.Equal(t, attribute.String("http.flavor", want), hc.proto(proto))
+	}
+}
+
+func TestServerClientIP(t *testing.T) {
+	tests := []struct {
+		xForwardedFor string
+		want          string
+	}{
+		{"", ""},
+		{"127.0.0.1", "127.0.0.1"},
+		{"127.0.0.1,127.0.0.5", "127.0.0.1"},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.want, serverClientIP(test.xForwardedFor))
+	}
+}
+
+func TestRequiredHTTPPort(t *testing.T) {
+	tests := []struct {
+		https bool
+		port  int
+		want  int
+	}{
+		{true, 443, -1},
+		{true, 80, 80},
+		{true, 8081, 8081},
+		{false, 443, 443},
+		{false, 80, -1},
+		{false, 8080, 8080},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.want, requiredHTTPPort(test.https, test.port))
+	}
+}
+
 /*
 func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 	expected := []attribute.KeyValue{
