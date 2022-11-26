@@ -117,35 +117,6 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func srvAttr(method, scheme, target, proto, host string, opt ...attribute.KeyValue) []attribute.KeyValue {
-	attrs := []attribute.KeyValue{
-		attribute.String("http.method", method),
-		attribute.String("http.target", target),
-		attribute.String("http.scheme", scheme),
-		attribute.String("http.flavor", proto),
-		attribute.String("net.host.name", host),
-	}
-
-	seen := map[attribute.Key]int{
-		attribute.Key("http.method"):   0,
-		attribute.Key("http.target"):   1,
-		attribute.Key("http.scheme"):   2,
-		attribute.Key("http.flavor"):   3,
-		attribute.Key("net.host.name"): 4,
-	}
-	for _, o := range opt {
-		idx, ok := seen[o.Key]
-		if ok {
-			attrs[idx] = o
-			continue
-		}
-		attrs = append(attrs, o)
-		seen[o.Key] = len(attrs) - 1
-	}
-
-	return attrs
-}
-
 func TestHTTPServerRequest(t *testing.T) {
 	got := make(chan *http.Request, 1)
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -175,14 +146,19 @@ func TestHTTPServerRequest(t *testing.T) {
 	req.Header.Add("X-Forwarded-For", clientIP)
 
 	assert.ElementsMatch(t,
-		srvAttr("GET", "http", "/", "1.1", srvURL.Hostname(),
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("http.target", "/"),
+			attribute.String("http.scheme", "http"),
+			attribute.String("http.flavor", "1.1"),
+			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
 			attribute.String("net.sock.peer.addr", peer),
 			attribute.Int("net.sock.peer.port", peerPort),
 			attribute.String("http.user_agent", "Go-http-client/1.1"),
 			attribute.String("enduser.id", user),
 			attribute.String("http.client_ip", clientIP),
-		),
+		},
 		hc.ServerRequest(req))
 }
 
@@ -190,67 +166,17 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	req := new(http.Request)
 	var got []attribute.KeyValue
 	assert.NotPanics(t, func() { got = hc.ServerRequest(req) })
-	assert.ElementsMatch(t, srvAttr("GET", "http", "", "", ""), got)
+	want := []attribute.KeyValue{
+		attribute.String("http.method", "GET"),
+		attribute.String("http.target", ""),
+		attribute.String("http.scheme", "http"),
+		attribute.String("http.flavor", ""),
+		attribute.String("net.host.name", ""),
+	}
+	assert.ElementsMatch(t, want, got)
 }
 
 /*
-func testRequest(method, requestURI, proto, remoteAddr, host string, u *url.URL, header http.Header, tlsopt tlsOption) *http.Request {
-	major, minor := protoToInts(proto)
-	var tlsConn *tls.ConnectionState
-	switch tlsopt {
-	case noTLS:
-	case withTLS:
-		tlsConn = &tls.ConnectionState{}
-	}
-	return &http.Request{
-		Method:     method,
-		URL:        u,
-		Proto:      proto,
-		ProtoMajor: major,
-		ProtoMinor: minor,
-		Header:     header,
-		Host:       host,
-		RemoteAddr: remoteAddr,
-		RequestURI: requestURI,
-		TLS:        tlsConn,
-	}
-}
-
-func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...interface{}) {
-	if !assert.ElementsMatchf(t, expected, got, format, args...) {
-		t.Log("expected:", kvStr(expected))
-		t.Log("got:", kvStr(got))
-	}
-}
-
-func protoToInts(proto string) (int, int) {
-	switch proto {
-	case "HTTP/1.0":
-		return 1, 0
-	case "HTTP/1.1":
-		return 1, 1
-	case "HTTP/2.0":
-		return 2, 0
-	}
-	// invalid proto
-	return 13, 42
-}
-
-func kvStr(kvs []attribute.KeyValue) string {
-	sb := strings.Builder{}
-	_, _ = sb.WriteRune('[')
-	for idx, attr := range kvs {
-		if idx > 0 {
-			_, _ = sb.WriteString(", ")
-		}
-		_, _ = sb.WriteString((string)(attr.Key))
-		_, _ = sb.WriteString(": ")
-		_, _ = sb.WriteString(attr.Value.Emit())
-	}
-	_, _ = sb.WriteRune(']')
-	return sb.String()
-}
-
 func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 	expected := []attribute.KeyValue{
 		attribute.Int("http.status_code", 404),
