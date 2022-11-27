@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type tlsOption int
@@ -199,7 +200,8 @@ func TestProto(t *testing.T) {
 	}
 
 	for proto, want := range tests {
-		assert.Equal(t, attribute.String("http.flavor", want), hc.proto(proto))
+		expect := attribute.String("http.flavor", want)
+		assert.Equal(t, expect, hc.proto(proto), proto)
 	}
 }
 
@@ -213,7 +215,8 @@ func TestServerClientIP(t *testing.T) {
 		{"127.0.0.1,127.0.0.5", "127.0.0.1"},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.want, serverClientIP(test.xForwardedFor))
+		got := serverClientIP(test.xForwardedFor)
+		assert.Equal(t, test.want, got, test.xForwardedFor)
 	}
 }
 
@@ -231,580 +234,240 @@ func TestRequiredHTTPPort(t *testing.T) {
 		{false, 8080, 8080},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.want, requiredHTTPPort(test.https, test.port))
+		got := requiredHTTPPort(test.https, test.port)
+		assert.Equal(t, test.want, got, test.https, test.port)
 	}
 }
 
-/*
-func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
-	expected := []attribute.KeyValue{
-		attribute.Int("http.status_code", 404),
+func TestFirstHostPort(t *testing.T) {
+	host, port := "127.0.0.1", 8080
+	hostport := "127.0.0.1:8080"
+	sources := [][]string{
+		{hostport},
+		{"", hostport},
+		{"", "", hostport},
+		{"", "", hostport, ""},
+		{"", "", hostport, "127.0.0.3:80"},
 	}
-	got := hc.HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
-	assertElementsMatch(t, expected, got, "with valid HTTP status code")
-	assert.ElementsMatch(t, expected, got)
-	expected = []attribute.KeyValue{
-		attribute.Int("http.status_code", 499),
-	}
-	got = hc.HTTPAttributesFromHTTPStatusCode(499)
-	assertElementsMatch(t, expected, got, "with invalid HTTP status code")
-}
 
-func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
-	for code := 0; code < 1000; code++ {
-		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
-		got, msg := SpanStatusFromHTTPStatusCode(code)
-		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
-
-		_, valid := validateHTTPStatusCode(code)
-		if !valid {
-			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
-		} else {
-			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
-		}
+	for _, src := range sources {
+		h, p := firstHostPort(src...)
+		assert.Equal(t, host, h, src)
+		assert.Equal(t, port, p, src)
 	}
 }
 
-func TestSpanStatusFromHTTPStatusCodeAndSpanKind(t *testing.T) {
-	for code := 0; code < 1000; code++ {
-		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
-		got, msg := SpanStatusFromHTTPStatusCodeAndSpanKind(code, trace.SpanKindClient)
-		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
-
-		_, valid := validateHTTPStatusCode(code)
-		if !valid {
-			assert.NotEmpty(t, msg, "message should be set if error cannot be inferred from code")
-		} else {
-			assert.Empty(t, msg, "message should not be set if error can be inferred from code")
-		}
-	}
-	code, _ := SpanStatusFromHTTPStatusCodeAndSpanKind(400, trace.SpanKindServer)
-	assert.Equalf(t, codes.Unset, code, "message should be set if error cannot be inferred from code")
-}
-
-func getExpectedCodeForHTTPCode(code int, spanKind trace.SpanKind) codes.Code {
-	if http.StatusText(code) == "" {
-		return codes.Error
-	}
-	switch code {
-	case
-		http.StatusUnauthorized,
-		http.StatusForbidden,
-		http.StatusNotFound,
-		http.StatusTooManyRequests,
-		http.StatusNotImplemented,
-		http.StatusServiceUnavailable,
-		http.StatusGatewayTimeout:
-		return codes.Error
-	}
-	category := code / 100
-	if category > 0 && category < 4 {
-		return codes.Unset
-	}
-	if spanKind == trace.SpanKindServer && category == 4 {
-		return codes.Unset
-	}
-	return codes.Error
-}
-
-func TestHTTPClientAttributesFromHTTPRequest(t *testing.T) {
-	testCases := []struct {
-		name string
-
-		method        string
-		requestURI    string
-		proto         string
-		remoteAddr    string
-		host          string
-		url           *url.URL
-		header        http.Header
-		tls           tlsOption
-		contentLength int64
-
-		expected []attribute.KeyValue
+func TestSplitHostPort(t *testing.T) {
+	tests := []struct {
+		hostport string
+		host     string
+		port     int
 	}{
-		{
-			name:       "stripped",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    noTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "http"),
-				attribute.String("http.flavor", "1.0"),
-			},
-		},
-		{
-			name:       "with tls",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-			},
-		},
-		{
-			name:       "with host",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with host fallback",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "https://example.com/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with user agent",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent": []string{"foodownloader"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.host", "example.com"),
-				attribute.String("http.user_agent", "foodownloader"),
-			},
-		},
-		{
-			name:       "with http 1.1",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.1",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent": []string{"foodownloader"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.1"),
-				attribute.String("http.host", "example.com"),
-				attribute.String("http.user_agent", "foodownloader"),
-			},
-		},
-		{
-			name:       "with http 2",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/2.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent": []string{"foodownloader"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "2"),
-				attribute.String("http.host", "example.com"),
-				attribute.String("http.user_agent", "foodownloader"),
-			},
-		},
-		{
-			name:   "with content length",
-			method: "GET",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			contentLength: 100,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "http"),
-				attribute.Int64("http.request_content_length", 100),
-			},
-		},
-		{
-			name:   "with empty method (fallback to GET)",
-			method: "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "http"),
-			},
-		},
-		{
-			name:   "authentication information is stripped",
-			method: "",
-			url: &url.URL{
-				Path: "/user/123",
-				User: url.UserPassword("foo", "bar"),
-			},
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.url", "/user/123"),
-				attribute.String("http.scheme", "http"),
-			},
-		},
+		{"", "", -1},
+		{":8080", "", 8080},
+		{"127.0.0.1", "", -1},
+		{"127.0.0.1:", "127.0.0.1", -1},
+		{"127.0.0.1:port", "127.0.0.1", -1},
+		{"127.0.0.1:8080", "127.0.0.1", 8080},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
-			r.ContentLength = tc.contentLength
-			got := hc.HTTPClientAttributesFromHTTPRequest(r)
-			assert.ElementsMatch(t, tc.expected, got)
-		})
+	for _, test := range tests {
+		h, p := splitHostPort(test.hostport)
+		assert.Equal(t, test.host, h, test.hostport)
+		assert.Equal(t, test.port, p, test.hostport)
 	}
 }
 
-func TestHTTPServerMetricAttributesFromHTTPRequest(t *testing.T) {
-	type testcase struct {
-		name          string
-		serverName    string
-		method        string
-		requestURI    string
-		proto         string
-		remoteAddr    string
-		host          string
-		url           *url.URL
-		header        http.Header
-		tls           tlsOption
-		contentLength int64
-		expected      []attribute.KeyValue
+func TestRequestHeader(t *testing.T) {
+	ips := []string{"127.0.0.5", "127.0.0.9"}
+	user := []string{"alice"}
+	h := http.Header{"ips": ips, "user": user}
+
+	got := hc.RequestHeader(h)
+	assert.Equal(t, 2, cap(got), "slice capacity")
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.StringSlice("http.request.header.ips", ips),
+		attribute.StringSlice("http.request.header.user", user),
+	}, got)
+}
+
+func TestReponseHeader(t *testing.T) {
+	ips := []string{"127.0.0.5", "127.0.0.9"}
+	user := []string{"alice"}
+	h := http.Header{"ips": ips, "user": user}
+
+	got := hc.ResponseHeader(h)
+	assert.Equal(t, 2, cap(got), "slice capacity")
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.StringSlice("http.response.header.ips", ips),
+		attribute.StringSlice("http.response.header.user", user),
+	}, got)
+}
+
+func TestClientStatus(t *testing.T) {
+	tests := []struct {
+		code int
+		stat codes.Code
+		msg  bool
+	}{
+		{0, codes.Error, true},
+		{http.StatusContinue, codes.Unset, false},
+		{http.StatusSwitchingProtocols, codes.Unset, false},
+		{http.StatusProcessing, codes.Unset, false},
+		{http.StatusEarlyHints, codes.Unset, false},
+		{http.StatusOK, codes.Unset, false},
+		{http.StatusCreated, codes.Unset, false},
+		{http.StatusAccepted, codes.Unset, false},
+		{http.StatusNonAuthoritativeInfo, codes.Unset, false},
+		{http.StatusNoContent, codes.Unset, false},
+		{http.StatusResetContent, codes.Unset, false},
+		{http.StatusPartialContent, codes.Unset, false},
+		{http.StatusMultiStatus, codes.Unset, false},
+		{http.StatusAlreadyReported, codes.Unset, false},
+		{http.StatusIMUsed, codes.Unset, false},
+		{http.StatusMultipleChoices, codes.Unset, false},
+		{http.StatusMovedPermanently, codes.Unset, false},
+		{http.StatusFound, codes.Unset, false},
+		{http.StatusSeeOther, codes.Unset, false},
+		{http.StatusNotModified, codes.Unset, false},
+		{http.StatusUseProxy, codes.Unset, false},
+		{306, codes.Error, true},
+		{http.StatusTemporaryRedirect, codes.Unset, false},
+		{http.StatusPermanentRedirect, codes.Unset, false},
+		{http.StatusBadRequest, codes.Error, false},
+		{http.StatusUnauthorized, codes.Error, false},
+		{http.StatusPaymentRequired, codes.Error, false},
+		{http.StatusForbidden, codes.Error, false},
+		{http.StatusNotFound, codes.Error, false},
+		{http.StatusMethodNotAllowed, codes.Error, false},
+		{http.StatusNotAcceptable, codes.Error, false},
+		{http.StatusProxyAuthRequired, codes.Error, false},
+		{http.StatusRequestTimeout, codes.Error, false},
+		{http.StatusConflict, codes.Error, false},
+		{http.StatusGone, codes.Error, false},
+		{http.StatusLengthRequired, codes.Error, false},
+		{http.StatusPreconditionFailed, codes.Error, false},
+		{http.StatusRequestEntityTooLarge, codes.Error, false},
+		{http.StatusRequestURITooLong, codes.Error, false},
+		{http.StatusUnsupportedMediaType, codes.Error, false},
+		{http.StatusRequestedRangeNotSatisfiable, codes.Error, false},
+		{http.StatusExpectationFailed, codes.Error, false},
+		{http.StatusTeapot, codes.Error, false},
+		{http.StatusMisdirectedRequest, codes.Error, false},
+		{http.StatusUnprocessableEntity, codes.Error, false},
+		{http.StatusLocked, codes.Error, false},
+		{http.StatusFailedDependency, codes.Error, false},
+		{http.StatusTooEarly, codes.Error, false},
+		{http.StatusUpgradeRequired, codes.Error, false},
+		{http.StatusPreconditionRequired, codes.Error, false},
+		{http.StatusTooManyRequests, codes.Error, false},
+		{http.StatusRequestHeaderFieldsTooLarge, codes.Error, false},
+		{http.StatusUnavailableForLegalReasons, codes.Error, false},
+		{http.StatusInternalServerError, codes.Error, false},
+		{http.StatusNotImplemented, codes.Error, false},
+		{http.StatusBadGateway, codes.Error, false},
+		{http.StatusServiceUnavailable, codes.Error, false},
+		{http.StatusGatewayTimeout, codes.Error, false},
+		{http.StatusHTTPVersionNotSupported, codes.Error, false},
+		{http.StatusVariantAlsoNegotiates, codes.Error, false},
+		{http.StatusInsufficientStorage, codes.Error, false},
+		{http.StatusLoopDetected, codes.Error, false},
+		{http.StatusNotExtended, codes.Error, false},
+		{http.StatusNetworkAuthenticationRequired, codes.Error, false},
+		{600, codes.Error, true},
 	}
-	testcases := []testcase{
-		{
-			name:       "stripped",
-			serverName: "",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    noTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "http"),
-				attribute.String("http.flavor", "1.0"),
-			},
-		},
-		{
-			name:       "with server name",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    noTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "http"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-			},
-		},
-		{
-			name:       "with tls",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-			},
-		},
-		{
-			name:       "with route",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-			},
-		},
-		{
-			name:       "with host",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with host fallback",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "",
-			url: &url.URL{
-				Host: "example.com",
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with user agent",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent": []string{"foodownloader"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with proxy info",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent":      []string{"foodownloader"},
-				"X-Forwarded-For": []string{"203.0.113.195, 70.41.3.18, 150.172.238.178"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with http 1.1",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.1",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent":      []string{"foodownloader"},
-				"X-Forwarded-For": []string{"1.2.3.4"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "1.1"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-		{
-			name:       "with http 2",
-			serverName: "my-server-name",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/2.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: http.Header{
-				"User-Agent":      []string{"foodownloader"},
-				"X-Forwarded-For": []string{"1.2.3.4"},
-			},
-			tls: withTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "https"),
-				attribute.String("http.flavor", "2"),
-				attribute.String("http.server_name", "my-server-name"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-	}
-	for idx, tc := range testcases {
-		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
-		r.ContentLength = tc.contentLength
-		got := hc.HTTPServerMetricAttributesFromHTTPRequest(tc.serverName, r)
-		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
+
+	for _, test := range tests {
+		c, msg := hc.ClientStatus(test.code)
+		assert.Equal(t, test.stat, c)
+		if test.msg && msg == "" {
+			t.Errorf("expected non-empty message for %d", test.code)
+		} else if !test.msg && msg != "" {
+			t.Errorf("expected empty message for %d, got: %s", test.code, msg)
+		}
 	}
 }
 
-func TestHttpBasicAttributesFromHTTPRequest(t *testing.T) {
-	type testcase struct {
-		name          string
-		method        string
-		requestURI    string
-		proto         string
-		remoteAddr    string
-		host          string
-		url           *url.URL
-		header        http.Header
-		tls           tlsOption
-		contentLength int64
-		expected      []attribute.KeyValue
+func TestServerStatus(t *testing.T) {
+	tests := []struct {
+		code int
+		stat codes.Code
+		msg  bool
+	}{
+		{0, codes.Error, true},
+		{http.StatusContinue, codes.Unset, false},
+		{http.StatusSwitchingProtocols, codes.Unset, false},
+		{http.StatusProcessing, codes.Unset, false},
+		{http.StatusEarlyHints, codes.Unset, false},
+		{http.StatusOK, codes.Unset, false},
+		{http.StatusCreated, codes.Unset, false},
+		{http.StatusAccepted, codes.Unset, false},
+		{http.StatusNonAuthoritativeInfo, codes.Unset, false},
+		{http.StatusNoContent, codes.Unset, false},
+		{http.StatusResetContent, codes.Unset, false},
+		{http.StatusPartialContent, codes.Unset, false},
+		{http.StatusMultiStatus, codes.Unset, false},
+		{http.StatusAlreadyReported, codes.Unset, false},
+		{http.StatusIMUsed, codes.Unset, false},
+		{http.StatusMultipleChoices, codes.Unset, false},
+		{http.StatusMovedPermanently, codes.Unset, false},
+		{http.StatusFound, codes.Unset, false},
+		{http.StatusSeeOther, codes.Unset, false},
+		{http.StatusNotModified, codes.Unset, false},
+		{http.StatusUseProxy, codes.Unset, false},
+		{306, codes.Error, true},
+		{http.StatusTemporaryRedirect, codes.Unset, false},
+		{http.StatusPermanentRedirect, codes.Unset, false},
+		{http.StatusBadRequest, codes.Unset, false},
+		{http.StatusUnauthorized, codes.Unset, false},
+		{http.StatusPaymentRequired, codes.Unset, false},
+		{http.StatusForbidden, codes.Unset, false},
+		{http.StatusNotFound, codes.Unset, false},
+		{http.StatusMethodNotAllowed, codes.Unset, false},
+		{http.StatusNotAcceptable, codes.Unset, false},
+		{http.StatusProxyAuthRequired, codes.Unset, false},
+		{http.StatusRequestTimeout, codes.Unset, false},
+		{http.StatusConflict, codes.Unset, false},
+		{http.StatusGone, codes.Unset, false},
+		{http.StatusLengthRequired, codes.Unset, false},
+		{http.StatusPreconditionFailed, codes.Unset, false},
+		{http.StatusRequestEntityTooLarge, codes.Unset, false},
+		{http.StatusRequestURITooLong, codes.Unset, false},
+		{http.StatusUnsupportedMediaType, codes.Unset, false},
+		{http.StatusRequestedRangeNotSatisfiable, codes.Unset, false},
+		{http.StatusExpectationFailed, codes.Unset, false},
+		{http.StatusTeapot, codes.Unset, false},
+		{http.StatusMisdirectedRequest, codes.Unset, false},
+		{http.StatusUnprocessableEntity, codes.Unset, false},
+		{http.StatusLocked, codes.Unset, false},
+		{http.StatusFailedDependency, codes.Unset, false},
+		{http.StatusTooEarly, codes.Unset, false},
+		{http.StatusUpgradeRequired, codes.Unset, false},
+		{http.StatusPreconditionRequired, codes.Unset, false},
+		{http.StatusTooManyRequests, codes.Unset, false},
+		{http.StatusRequestHeaderFieldsTooLarge, codes.Unset, false},
+		{http.StatusUnavailableForLegalReasons, codes.Unset, false},
+		{http.StatusInternalServerError, codes.Error, false},
+		{http.StatusNotImplemented, codes.Error, false},
+		{http.StatusBadGateway, codes.Error, false},
+		{http.StatusServiceUnavailable, codes.Error, false},
+		{http.StatusGatewayTimeout, codes.Error, false},
+		{http.StatusHTTPVersionNotSupported, codes.Error, false},
+		{http.StatusVariantAlsoNegotiates, codes.Error, false},
+		{http.StatusInsufficientStorage, codes.Error, false},
+		{http.StatusLoopDetected, codes.Error, false},
+		{http.StatusNotExtended, codes.Error, false},
+		{http.StatusNetworkAuthenticationRequired, codes.Error, false},
+		{600, codes.Error, true},
 	}
-	testcases := []testcase{
-		{
-			name:       "stripped",
-			method:     "GET",
-			requestURI: "/user/123",
-			proto:      "HTTP/1.0",
-			remoteAddr: "",
-			host:       "example.com",
-			url: &url.URL{
-				Path: "/user/123",
-			},
-			header: nil,
-			tls:    noTLS,
-			expected: []attribute.KeyValue{
-				attribute.String("http.method", "GET"),
-				attribute.String("http.scheme", "http"),
-				attribute.String("http.flavor", "1.0"),
-				attribute.String("http.host", "example.com"),
-			},
-		},
-	}
-	for idx, tc := range testcases {
-		r := testRequest(tc.method, tc.requestURI, tc.proto, tc.remoteAddr, tc.host, tc.url, tc.header, tc.tls)
-		r.ContentLength = tc.contentLength
-		got := hc.httpBasicAttributesFromHTTPRequest(r)
-		assertElementsMatch(t, tc.expected, got, "testcase %d - %s", idx, tc.name)
+
+	for _, test := range tests {
+		c, msg := hc.ServerStatus(test.code)
+		assert.Equal(t, test.stat, c)
+		if test.msg && msg == "" {
+			t.Errorf("expected non-empty message for %d", test.code)
+		} else if !test.msg && msg != "" {
+			t.Errorf("expected empty message for %d, got: %s", test.code, msg)
+		}
 	}
 }
-*/
