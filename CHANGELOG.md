@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Instrument` and `InstrumentKind` type are added to `go.opentelemetry.io/otel/sdk/metric`.
   These additions are replacements for the `Instrument` and `InstrumentKind` types from `go.opentelemetry.io/otel/sdk/metric/view`. (#3459)
 - The `Stream` type is added to `go.opentelemetry.io/otel/sdk/metric` to define a metric data stream a view will produce. (#3459)
-- The `AssertHasAttributes` allows instrument authors to test that datapoints returned have appropiate attributes. (#3487)
+- The `AssertHasAttributes` allows instrument authors to test that datapoints returned have appropriate attributes. (#3487)
 
 ### Changed
 
