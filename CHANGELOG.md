@@ -29,6 +29,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Instrument` and `InstrumentKind` type are added to `go.opentelemetry.io/otel/sdk/metric`.
   These additions are replacements for the `Instrument` and `InstrumentKind` types from `go.opentelemetry.io/otel/sdk/metric/view`. (#3459)
 - The `Stream` type is added to `go.opentelemetry.io/otel/sdk/metric` to define a metric data stream a view will produce. (#3459)
+- Add the `go.opentelemetry.io/otel/semconv/v1.13.0` package.
+  The package contains semantic conventions from the `v1.13.0` version of the OpenTelemetry specification. (#3499)
+  - The `EndUserAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientRequest` and `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPAttributesFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientResponse` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPClientAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerMetricAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `NetAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `Transport` in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` and `ClientRequest` or `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCodeAndSpanKind` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `ClientStatus` and `ServerStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
 
 ### Changed
 
