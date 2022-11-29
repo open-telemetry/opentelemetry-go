@@ -45,14 +45,16 @@ type HTTPConv struct {
 	HTTPUserAgentKey             attribute.Key
 }
 
-// ClientResponse returns OpenTelemetry attributes for an HTTP response
-// received by a client from a server. This does not add all OpenTelemetry
-// required attributes for an HTTP event, it assumes HTTPClientRequest was used
-// to create the span with a complete set of attributes. If a complete set of
-// attributes can be generated using the request contained in resp. For
-// example:
+// ClientResponse returns attributes for an HTTP response received by a client
+// from a server. The following attributes are returned if the related values
+// are defined in resp: "http.status.code", "http.response_content_length".
 //
-//	append(ClientResponse(resp), HTTPClientRequest(resp.Request)...)
+// This does not add all OpenTelemetry required attributes for an HTTP event,
+// it assumes ClientRequest was used to create the span with a complete set of
+// attributes. If a complete set of attributes can be generated using the
+// request contained in resp. For example:
+//
+//	append(ClientResponse(resp), ClientRequest(resp.Request)...)
 func (c *HTTPConv) ClientResponse(resp http.Response) []attribute.KeyValue {
 	var n int
 	if resp.StatusCode > 0 {
@@ -72,8 +74,11 @@ func (c *HTTPConv) ClientResponse(resp http.Response) []attribute.KeyValue {
 	return attrs
 }
 
-// ClientRequest returns OpenTelemetry attributes for an HTTP request made
-// by a client.
+// ClientRequest returns attributes for an HTTP request made by a client. The
+// following attributes are always returned: "http.url", "http.flavor",
+// "http.method", "net.peer.name". The following attributes are returned if the
+// related values are defined in req: "net.peer.port", "http.user_agent",
+// "http.request_content_length", "enduser.id".
 func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	n := 3 // URL, peer name, proto, and method.
 	var h string
@@ -132,6 +137,12 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	return attrs
 }
 
+// ServerRequest returns attributes for an HTTP request received by a server.
+// The following attributes are always returned: "http.method", "http.scheme",
+// "http.flavor", "http.target", "net.host.name". The following attributes are
+// returned if they related values are defined in req: "net.host.port",
+// "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
+// "http.client_ip".
 func (c *HTTPConv) ServerRequest(req *http.Request) []attribute.KeyValue {
 	n := 5 // Method, scheme, target, proto, and host name.
 	host, p := splitHostPort(req.Host)

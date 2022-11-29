@@ -59,7 +59,8 @@ var (
 )
 
 // ClientResponse returns attributes for an HTTP response received by a client
-// from a server.
+// from a server. It will return the following attributes if the related values
+// are defined in resp: "http.status.code", "http.response_content_length".
 //
 // This does not add all OpenTelemetry required attributes for an HTTP event,
 // it assumes ClientRequest was used to create the span with a complete set of
@@ -71,7 +72,11 @@ func ClientResponse(resp http.Response) []attribute.KeyValue {
 	return hc.ClientResponse(resp)
 }
 
-// ClientRequest returns attributes for an HTTP request made by a client.
+// ClientRequest returns attributes for an HTTP request made by a client. The
+// following attributes are always returned: "http.url", "http.flavor",
+// "http.method", "net.peer.name". The following attributes are returned if the
+// related values are defined in req: "net.peer.port", "http.user_agent",
+// "http.request_content_length", "enduser.id".
 func ClientRequest(req *http.Request) []attribute.KeyValue {
 	return hc.ClientRequest(req)
 }
@@ -83,6 +88,11 @@ func ClientStatus(code int) (codes.Code, string) {
 }
 
 // ServerRequest returns attributes for an HTTP request received by a server.
+// The following attributes are always returned: "http.method", "http.scheme",
+// "http.flavor", "http.target", "net.host.name". The following attributes are
+// returned if they related values are defined in req: "net.host.port",
+// "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
+// "http.client_ip".
 func ServerRequest(req *http.Request) []attribute.KeyValue {
 	return hc.ServerRequest(req)
 }
