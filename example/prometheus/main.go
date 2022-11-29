@@ -68,10 +68,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+	err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
 		gauge.Observe(ctx, n, attrs...)
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
 	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
