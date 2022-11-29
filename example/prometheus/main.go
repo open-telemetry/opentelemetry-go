@@ -58,12 +58,12 @@ func main() {
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+	upDownCounter, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun up-down counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	gauge.Add(ctx, 100, attrs...)
-	gauge.Add(ctx, -25, attrs...)
+	upDownCounter.Add(ctx, 100, attrs...)
+	upDownCounter.Add(ctx, -25, attrs...)
 
 	// This is the equivalent of prometheus.NewHistogramVec
 	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
