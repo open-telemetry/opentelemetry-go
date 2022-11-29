@@ -19,6 +19,8 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"testing"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // These tests are used to develop the failure messages of this package's
@@ -56,4 +58,21 @@ func TestFailAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, gaugeInt64A, gaugeInt64B)
 	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64B)
 	AssertAggregationsEqual(t, histogramA, histogramB)
+}
+
+func TestFailAssertAttribute(t *testing.T) {
+	AssertHasAttributes(t, dataPointInt64A, attribute.Bool("A", false))
+	AssertHasAttributes(t, dataPointFloat64A, attribute.Bool("B", true))
+	AssertHasAttributes(t, gaugeInt64A, attribute.Bool("A", false))
+	AssertHasAttributes(t, gaugeFloat64A, attribute.Bool("B", true))
+	AssertHasAttributes(t, sumInt64A, attribute.Bool("A", false))
+	AssertHasAttributes(t, sumFloat64A, attribute.Bool("B", true))
+	AssertHasAttributes(t, histogramDataPointA, attribute.Bool("A", false))
+	AssertHasAttributes(t, histogramDataPointA, attribute.Bool("B", true))
+	AssertHasAttributes(t, histogramA, attribute.Bool("A", false))
+	AssertHasAttributes(t, histogramA, attribute.Bool("B", true))
+	AssertHasAttributes(t, metricsA, attribute.Bool("A", false))
+	AssertHasAttributes(t, metricsA, attribute.Bool("B", true))
+	AssertHasAttributes(t, resourceMetricsA, attribute.Bool("A", false))
+	AssertHasAttributes(t, resourceMetricsA, attribute.Bool("B", true))
 }
