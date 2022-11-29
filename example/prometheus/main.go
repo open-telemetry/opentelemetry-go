@@ -32,6 +32,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -64,15 +68,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cBack := func() func(context.Context) {
-		min, max := -10., 100.
-		rand.Seed(time.Now().UnixNano())
-		return func(ctx context.Context) {
-			n := min + rand.Float64()*(max-min)
-			gauge.Observe(ctx, n, attrs...)
-		}
-	}
-	meter.RegisterCallback([]instrument.Asynchronous{gauge}, cBack())
+	meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+		n := -10. + rand.Float64()*(90.) // [-10, 100)
+		gauge.Observe(ctx, n, attrs...)
+	})
 
 	// This is the equivalent of prometheus.NewHistogramVec
 	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
