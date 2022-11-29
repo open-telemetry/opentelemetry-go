@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -58,12 +60,19 @@ func main() {
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	upDownCounter, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun up-down counter"))
+	gauge, err := meter.AsyncFloat64().Gauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	upDownCounter.Add(ctx, 100, attrs...)
-	upDownCounter.Add(ctx, -25, attrs...)
+	cBack := func() func(context.Context) {
+		min, max := -10., 100.
+		rand.Seed(time.Now().UnixNano())
+		return func(ctx context.Context) {
+			n := min + rand.Float64()*(max-min)
+			gauge.Observe(ctx, n, attrs...)
+		}
+	}
+	meter.RegisterCallback([]instrument.Asynchronous{gauge}, cBack())
 
 	// This is the equivalent of prometheus.NewHistogramVec
 	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
