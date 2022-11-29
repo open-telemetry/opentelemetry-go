@@ -84,7 +84,7 @@ func ClientRequest(req *http.Request) []attribute.KeyValue {
 // ClientStatus returns a span status code and message for an HTTP status code
 // value received by a client.
 func ClientStatus(code int) (codes.Code, string) {
-	return internal.SpanStatusFromHTTPStatusCode()
+	return hc.ClientStatus(code)
 }
 
 // ServerRequest returns attributes for an HTTP request received by a server.

@@ -219,7 +219,7 @@ func (c *HTTPConv) method(method string) attribute.KeyValue {
 	return c.HTTPMethodKey.String(method)
 }
 
-func (c *HTTPConv) scheme(https bool) attribute.KeyValue {
+func (c *HTTPConv) scheme(https bool) attribute.KeyValue { // nolint:revive
 	if https {
 		return c.HTTPSchemeHTTPS
 	}
@@ -248,7 +248,7 @@ func serverClientIP(xForwardedFor string) string {
 	return xForwardedFor
 }
 
-func requiredHTTPPort(https bool, port int) int {
+func requiredHTTPPort(https bool, port int) int { // nolint:revive
 	if https {
 		if port > 0 && port != 443 {
 			return port

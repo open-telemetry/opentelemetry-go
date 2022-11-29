@@ -27,13 +27,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-type tlsOption int
-
-const (
-	noTLS tlsOption = iota
-	withTLS
-)
-
 var hc = &HTTPConv{
 	NetConv: nc,
 
