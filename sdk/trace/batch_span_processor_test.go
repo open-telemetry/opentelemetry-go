@@ -489,40 +489,69 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// This Exporter will never return
+type blockingExporter struct {
+	block chan struct{}
+	close sync.Once
+}
+
+func (e *blockingExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	<-e.block
+	return nil
+}
+func (e *blockingExporter) Shutdown(ctx context.Context) error {
+	e.close.Do(func() {
+		close(e.block)
+	})
+	return nil
+}
+func (e *blockingExporter) unblock() {
+	select {
+	case e.block <- struct{}{}:
+	default:
+	}
+}
+
 func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 1})
 	l := &logCounter{LogSink: tLog.GetSink()}
 	otel.SetLogger(logr.New(l))
 
-	te := testBatchExporter{}
+	te := &blockingExporter{block: make(chan struct{})}
 	tp := basicTracerProvider(t)
 	option := testOption{
 		name: "default BatchSpanProcessorOptions",
 		o: []sdktrace.BatchSpanProcessorOption{
 			sdktrace.WithMaxQueueSize(0),
-			sdktrace.WithMaxExportBatchSize(10),
+			sdktrace.WithMaxExportBatchSize(1),
 		},
 		genNumSpans: 100,
 	}
-	ssp := sdktrace.NewBatchSpanProcessor(&te, option.o...)
+	ssp := sdktrace.NewBatchSpanProcessor(te, option.o...)
 	if ssp == nil {
 		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
 	}
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
 
-	generateSpan(t, tr, option)
-	// Force flush any held span batches
-	ssp.ForceFlush(context.Background())
-	reportedDropCount := 0
 	logMatch := regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`)
-	for _, v := range l.logs {
-		match := logMatch.MatchString(v)
-		if match {
-			reportedDropCount++
+	assert.Eventually(t, func() bool {
+		generateSpan(t, tr, option)
+		te.unblock()
+		reportedDropCount := 0
+
+		for _, v := range l.logs {
+			match := logMatch.MatchString(v)
+			if match {
+				reportedDropCount++
+			}
 		}
-	}
-	assert.GreaterOrEqual(t, reportedDropCount, 1)
+
+		return reportedDropCount >= 1
+	}, time.Second, time.Millisecond)
+	te.Shutdown(context.Background())
+
+	ssp.Shutdown(context.Background())
 
 	// Reset the global logger so other tests are not impacted
 	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
