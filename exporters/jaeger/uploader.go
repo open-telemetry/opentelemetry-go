@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 	"io"
 	"log"
 	"net/http"
@@ -112,8 +114,18 @@ func WithAgentPort(port string) AgentEndpointOption {
 	})
 }
 
+var emptyLogger = logr.Logger{}
+
 // WithLogger sets a logger to be used by agent client.
 func WithLogger(logger *log.Logger) AgentEndpointOption {
+	return agentEndpointOptionFunc(func(o agentEndpointConfig) agentEndpointConfig {
+		o.Logger = stdr.New(logger)
+		return o
+	})
+}
+
+// WithLogr sets a logr.Logger to be used by agent client.
+func WithLogr(logger logr.Logger) AgentEndpointOption {
 	return agentEndpointOptionFunc(func(o agentEndpointConfig) agentEndpointConfig {
 		o.Logger = logger
 		return o

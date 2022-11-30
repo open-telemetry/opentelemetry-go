@@ -17,8 +17,8 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"time"
@@ -58,7 +58,7 @@ type agentClientUDPParams struct {
 	Host                     string
 	Port                     string
 	MaxPacketSize            int
-	Logger                   *log.Logger
+	Logger                   logr.Logger
 	AttemptReconnecting      bool
 	AttemptReconnectInterval time.Duration
 }

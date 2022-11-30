@@ -16,7 +16,7 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
 import (
 	"fmt"
-	"log"
+	"github.com/go-logr/logr"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -32,7 +32,7 @@ type reconnectingUDPConn struct {
 	hostPort    string
 	resolveFunc resolveFunc
 	dialFunc    dialFunc
-	logger      *log.Logger
+	logger      logr.Logger
 
 	connMtx   sync.RWMutex
 	conn      *net.UDPConn
@@ -45,7 +45,7 @@ type dialFunc func(network string, laddr, raddr *net.UDPAddr) (*net.UDPConn, err
 
 // newReconnectingUDPConn returns a new udpConn that resolves hostPort every resolveTimeout, if the resolved address is
 // different than the current conn then the new address is dialed and the conn is swapped.
-func newReconnectingUDPConn(hostPort string, bufferBytes int, resolveTimeout time.Duration, resolveFunc resolveFunc, dialFunc dialFunc, logger *log.Logger) (*reconnectingUDPConn, error) {
+func newReconnectingUDPConn(hostPort string, bufferBytes int, resolveTimeout time.Duration, resolveFunc resolveFunc, dialFunc dialFunc, logger logr.Logger) (*reconnectingUDPConn, error) {
 	conn := &reconnectingUDPConn{
 		hostPort:    hostPort,
 		resolveFunc: resolveFunc,
@@ -65,8 +65,8 @@ func newReconnectingUDPConn(hostPort string, bufferBytes int, resolveTimeout tim
 }
 
 func (c *reconnectingUDPConn) logf(format string, args ...interface{}) {
-	if c.logger != nil {
-		c.logger.Printf(format, args...)
+	if c.logger != emptyLogger {
+		c.logger.Info(format, args...)
 	}
 }
 

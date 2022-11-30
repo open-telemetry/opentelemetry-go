@@ -177,7 +177,7 @@ func TestNewResolvedUDPConn(t *testing.T) {
 		Return(clientConn, nil).
 		Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Hour, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Hour, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -212,7 +212,7 @@ func TestResolvedUDPConnWrites(t *testing.T) {
 		Return(clientConn, nil).
 		Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Hour, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Hour, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -249,7 +249,7 @@ func TestResolvedUDPConnEventuallyDials(t *testing.T) {
 		On("DialUDP", "udp", (*net.UDPAddr)(nil), mockUDPAddr).
 		Return(clientConn, nil).Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -300,7 +300,7 @@ func TestResolvedUDPConnNoSwapIfFail(t *testing.T) {
 		On("DialUDP", "udp", (*net.UDPAddr)(nil), mockUDPAddr).
 		Return(clientConn, nil).Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -341,7 +341,7 @@ func TestResolvedUDPConnWriteRetry(t *testing.T) {
 		On("DialUDP", "udp", (*net.UDPAddr)(nil), mockUDPAddr).
 		Return(clientConn, nil).Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -371,7 +371,7 @@ func TestResolvedUDPConnWriteRetryFails(t *testing.T) {
 
 	dialer := mockDialer{}
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -428,7 +428,7 @@ func TestResolvedUDPConnChanges(t *testing.T) {
 		On("DialUDP", "udp", (*net.UDPAddr)(nil), mockUDPAddr2).
 		Return(clientConn2, nil).Once()
 
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, time.Millisecond*10, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 
@@ -481,7 +481,7 @@ func TestResolvedUDPConnLoopWithoutChanges(t *testing.T) {
 		Once()
 
 	resolveTimeout := 500 * time.Millisecond
-	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, resolveTimeout, resolver.ResolveUDPAddr, dialer.DialUDP, nil)
+	conn, err := newReconnectingUDPConn(hostPort, udpPacketMaxLength, resolveTimeout, resolver.ResolveUDPAddr, dialer.DialUDP, emptyLogger)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
 	assert.Equal(t, mockUDPAddr, conn.destAddr)

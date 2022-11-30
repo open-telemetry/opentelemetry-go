@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 	"io"
 	"log"
 	"net/http"
@@ -36,20 +38,21 @@ const (
 type Exporter struct {
 	url    string
 	client *http.Client
-	logger *log.Logger
+	logger logr.Logger
 
 	stoppedMu sync.RWMutex
 	stopped   bool
 }
 
 var (
-	_ sdktrace.SpanExporter = &Exporter{}
+	_           sdktrace.SpanExporter = &Exporter{}
+	emptyLogger                       = logr.Logger{}
 )
 
 // Options contains configuration for the exporter.
 type config struct {
 	client *http.Client
-	logger *log.Logger
+	logger logr.Logger
 }
 
 // Option defines a function that configures the exporter.
@@ -65,6 +68,14 @@ func (fn optionFunc) apply(cfg config) config {
 
 // WithLogger configures the exporter to use the passed logger.
 func WithLogger(logger *log.Logger) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.logger = stdr.New(logger)
+		return cfg
+	})
+}
+
+// WithLogr configures the exporter to use the passed logr.Logger.
+func WithLogr(logger logr.Logger) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.logger = logger
 		return cfg
@@ -170,8 +181,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 }
 
 func (e *Exporter) logf(format string, args ...interface{}) {
-	if e.logger != nil {
-		e.logger.Printf(format, args...)
+	if e.logger != emptyLogger {
+		e.logger.Info(format, args)
 	}
 }
 
