@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 
 import (
 	"context"
@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
@@ -34,11 +33,11 @@ type client struct {
 	n int
 }
 
-func (c *client) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return metric.DefaultTemporalitySelector(k)
 }
 
-func (c *client) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return metric.DefaultAggregationSelector(k)
 }
 

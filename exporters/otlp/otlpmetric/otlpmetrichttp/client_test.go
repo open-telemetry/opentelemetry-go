@@ -27,15 +27,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestClient(t *testing.T) {
-	factory := func() (otlpmetric.Client, otest.Collector) {
-		coll, err := otest.NewHTTPCollector("", nil)
+	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
+		coll, err := otest.NewHTTPCollector("", rCh)
 		require.NoError(t, err)
 
 		addr := coll.Addr().String()
@@ -48,8 +48,8 @@ func TestClient(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
-	factoryFunc := func(ePt string, errCh <-chan error, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
-		coll, err := otest.NewHTTPCollector(ePt, errCh)
+	factoryFunc := func(ePt string, rCh <-chan otest.ExportResult, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
+		coll, err := otest.NewHTTPCollector(ePt, rCh)
 		require.NoError(t, err)
 
 		opts := []Option{WithEndpoint(coll.Addr().String())}
@@ -81,18 +81,18 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithTimeout", func(t *testing.T) {
-		// Do not send on errCh so the Collector never responds to the client.
-		errCh := make(chan error)
+		// Do not send on rCh so the Collector never responds to the client.
+		rCh := make(chan otest.ExportResult)
 		exp, coll := factoryFunc(
 			"",
-			errCh,
+			rCh,
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
 		)
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
-		t.Cleanup(func() { close(errCh) })
+		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
@@ -109,13 +109,20 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
-		errCh := make(chan error, 3)
+		rCh := make(chan otest.ExportResult, 3)
 		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
 		// Both retryable errors.
-		errCh <- &otest.HTTPResponseError{Status: http.StatusServiceUnavailable, Err: emptyErr, Header: header}
-		errCh <- &otest.HTTPResponseError{Status: http.StatusTooManyRequests, Err: emptyErr}
-		errCh <- nil
-		exp, coll := factoryFunc("", errCh, WithRetry(RetryConfig{
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    emptyErr,
+			Header: header,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusTooManyRequests,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{}
+		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled:         true,
 			InitialInterval: time.Nanosecond,
 			MaxInterval:     time.Millisecond,
@@ -124,10 +131,10 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
-		t.Cleanup(func() { close(errCh) })
+		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}), "failed retry")
-		assert.Len(t, errCh, 0, "failed HTTP responses did not occur")
+		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {

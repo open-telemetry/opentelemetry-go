@@ -314,3 +314,78 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	r = equalAggregations(histogramA, histogramC, config{ignoreTimestamp: true})
 	assert.Equalf(t, len(r), 0, "%v == %v", histogramA, histogramC)
 }
+
+func TestAssertAttributes(t *testing.T) {
+	AssertHasAttributes(t, dataPointInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, dataPointFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, gaugeInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, gaugeFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, sumInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, sumFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramDataPointA, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramA, attribute.Bool("A", true))
+	AssertHasAttributes(t, metricsA, attribute.Bool("A", true))
+	AssertHasAttributes(t, scopeMetricsA, attribute.Bool("A", true))
+	AssertHasAttributes(t, resourceMetricsA, attribute.Bool("A", true))
+
+	r := hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "gaugeInt64A has A=True")
+	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "gaugeFloat64A has A=True")
+	r = hasAttributesAggregation(sumInt64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "sumInt64A has A=True")
+	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "sumFloat64A has A=True")
+	r = hasAttributesAggregation(histogramA, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "histogramA has A=True")
+
+	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "gaugeInt64A does not have A=False")
+	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "gaugeFloat64A does not have A=False")
+	r = hasAttributesAggregation(sumInt64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "sumInt64A does not have A=False")
+	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "sumFloat64A does not have A=False")
+	r = hasAttributesAggregation(histogramA, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "histogramA does not have A=False")
+
+	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "gaugeInt64A does not have Attribute B")
+	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "gaugeFloat64A does not have Attribute B")
+	r = hasAttributesAggregation(sumInt64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "sumInt64A does not have Attribute B")
+	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "sumFloat64A does not have Attribute B")
+	r = hasAttributesAggregation(histogramA, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "histogramA does not have Attribute B")
+}
+
+func TestAssertAttributesFail(t *testing.T) {
+	fakeT := &testing.T{}
+	assert.False(t, AssertHasAttributes(fakeT, dataPointInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, dataPointFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, gaugeInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, gaugeFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, sumInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, sumFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointA, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointA, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramA, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramA, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, metricsA, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, metricsA, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, resourceMetricsA, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, resourceMetricsA, attribute.Bool("B", true)))
+
+	sum := metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints: []metricdata.DataPoint[int64]{
+			dataPointInt64A,
+			dataPointInt64B,
+		},
+	}
+	assert.False(t, AssertHasAttributes(fakeT, sum, attribute.Bool("A", true)))
+}

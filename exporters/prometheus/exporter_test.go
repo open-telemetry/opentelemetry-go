@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
@@ -269,18 +268,7 @@ func TestPrometheusExporter(t *testing.T) {
 			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
 			require.NoError(t, err)
 
-			customBucketsView, err := view.New(
-				view.MatchInstrumentName("histogram_*"),
-				view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
-					Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-				}),
-			)
-			require.NoError(t, err)
-			defaultView, err := view.New(view.MatchInstrumentName("*"))
-			require.NoError(t, err)
-
 			var res *resource.Resource
-
 			if tc.emptyResource {
 				res = resource.Empty()
 			} else {
@@ -300,7 +288,12 @@ func TestPrometheusExporter(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
 				metric.WithReader(exporter),
-				metric.WithView(customBucketsView, defaultView),
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: "histogram_*"},
+					metric.Stream{Aggregation: aggregation.ExplicitBucketHistogram{
+						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+					}},
+				)),
 			)
 			meter := provider.Meter(
 				"testmeter",

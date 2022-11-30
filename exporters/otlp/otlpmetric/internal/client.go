@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 // Client handles the transmission of OTLP data to an OTLP receiving endpoint.
 type Client interface {
 	// Temporality returns the Temporality to use for an instrument kind.
-	Temporality(view.InstrumentKind) metricdata.Temporality
+	Temporality(metric.InstrumentKind) metricdata.Temporality
 
 	// Aggregation returns the Aggregation to use for an instrument kind.
-	Aggregation(view.InstrumentKind) aggregation.Aggregation
+	Aggregation(metric.InstrumentKind) aggregation.Aggregation
 
 	// UploadMetrics transmits metric data to an OTLP receiver.
 	//

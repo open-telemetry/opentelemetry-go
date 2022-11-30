@@ -358,3 +358,116 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 
 	return msg.String()
 }
+
+func missingAttrStr(name string) string {
+	return fmt.Sprintf("missing attribute %s", name)
+}
+
+func hasAttributesDataPoints[T int64 | float64](dp metricdata.DataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesGauge[T int64 | float64](gauge metricdata.Gauge[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range gauge.DataPoints {
+		reas := hasAttributesDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("gauge datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSum[T int64 | float64](sum metricdata.Sum[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range sum.DataPoints {
+		reas := hasAttributesDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("sum datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesHistogramDataPoints(dp metricdata.HistogramDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesHistogram(histogram metricdata.Histogram, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range histogram.DataPoints {
+		reas := hasAttributesHistogramDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("histogram datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.KeyValue) (reasons []string) {
+	switch agg := agg.(type) {
+	case metricdata.Gauge[int64]:
+		reasons = hasAttributesGauge(agg, attrs...)
+	case metricdata.Gauge[float64]:
+		reasons = hasAttributesGauge(agg, attrs...)
+	case metricdata.Sum[int64]:
+		reasons = hasAttributesSum(agg, attrs...)
+	case metricdata.Sum[float64]:
+		reasons = hasAttributesSum(agg, attrs...)
+	case metricdata.Histogram:
+		reasons = hasAttributesHistogram(agg, attrs...)
+	default:
+		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
+	}
+	return reasons
+}
+
+func hasAttributesMetrics(metrics metricdata.Metrics, attrs ...attribute.KeyValue) (reasons []string) {
+	reas := hasAttributesAggregation(metrics.Data, attrs...)
+	if len(reas) > 0 {
+		reasons = append(reasons, fmt.Sprintf("Metric %s:\n", metrics.Name))
+		reasons = append(reasons, reas...)
+	}
+	return reasons
+}
+
+func hasAttributesScopeMetrics(sm metricdata.ScopeMetrics, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, metrics := range sm.Metrics {
+		reas := hasAttributesMetrics(metrics, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("ScopeMetrics %s Metrics %d:\n", sm.Scope.Name, n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+func hasAttributesResourceMetrics(rm metricdata.ResourceMetrics, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, sm := range rm.ScopeMetrics {
+		reas := hasAttributesScopeMetrics(sm, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics %d:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}

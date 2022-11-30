@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 // ErrExporterShutdown is returned if Export or Shutdown are called after an
@@ -31,10 +30,10 @@ var ErrExporterShutdown = fmt.Errorf("exporter is shutdown")
 // the final component in the metric push pipeline.
 type Exporter interface {
 	// Temporality returns the Temporality to use for an instrument kind.
-	Temporality(view.InstrumentKind) metricdata.Temporality
+	Temporality(InstrumentKind) metricdata.Temporality
 
 	// Aggregation returns the Aggregation to use for an instrument kind.
-	Aggregation(view.InstrumentKind) aggregation.Aggregation
+	Aggregation(InstrumentKind) aggregation.Aggregation
 
 	// Export serializes and transmits metric data to a receiver.
 	//

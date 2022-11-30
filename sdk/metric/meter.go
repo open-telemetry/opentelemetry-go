@@ -31,15 +31,10 @@ import (
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	instrumentation.Scope
-
-	// *Resolvers are used by the provided instrument providers to resolve new
-	// instruments aggregators and maintain a cache across instruments this
-	// meter owns.
-	int64Resolver   resolver[int64]
-	float64Resolver resolver[float64]
-
 	pipes pipelines
+
+	instProviderInt64   *instProvider[int64]
+	instProviderFloat64 *instProvider[float64]
 }
 
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
@@ -53,11 +48,9 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	fc := newInstrumentCache[float64](nil, &viewCache)
 
 	return &meter{
-		Scope: s,
-		pipes: p,
-
-		int64Resolver:   newResolver(p, ic),
-		float64Resolver: newResolver(p, fc),
+		pipes:               p,
+		instProviderInt64:   newInstProvider(s, p, ic),
+		instProviderFloat64: newInstProvider(s, p, fc),
 	}
 }
 
@@ -66,27 +59,52 @@ var _ metric.Meter = (*meter)(nil)
 
 // AsyncInt64 returns the asynchronous integer instrument provider.
 func (m *meter) AsyncInt64() asyncint64.InstrumentProvider {
-	return asyncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
+	return asyncInt64Provider{m.instProviderInt64}
 }
 
 // AsyncFloat64 returns the asynchronous floating-point instrument provider.
 func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return asyncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
+	return asyncFloat64Provider{m.instProviderFloat64}
 }
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
 func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
+	for _, inst := range insts {
+		// Only register if at least one instrument has a non-drop aggregation.
+		// Otherwise, calling f during collection will be wasted computation.
+		switch t := inst.(type) {
+		case *instrumentImpl[int64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		case *instrumentImpl[float64]:
+			if len(t.aggregators) > 0 {
+				return m.registerCallback(f)
+			}
+		default:
+			// Instrument external to the SDK. For example, an instrument from
+			// the "go.opentelemetry.io/otel/metric/internal/global" package.
+			//
+			// Fail gracefully here, assume a valid instrument.
+			return m.registerCallback(f)
+		}
+	}
+	// All insts use drop aggregation.
+	return nil
+}
+
+func (m *meter) registerCallback(f func(context.Context)) error {
 	m.pipes.registerCallback(f)
 	return nil
 }
 
 // SyncInt64 returns the synchronous integer instrument provider.
 func (m *meter) SyncInt64() syncint64.InstrumentProvider {
-	return syncInt64Provider{scope: m.Scope, resolve: &m.int64Resolver}
+	return syncInt64Provider{m.instProviderInt64}
 }
 
 // SyncFloat64 returns the synchronous floating-point instrument provider.
 func (m *meter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return syncFloat64Provider{scope: m.Scope, resolve: &m.float64Resolver}
+	return syncFloat64Provider{m.instProviderFloat64}
 }

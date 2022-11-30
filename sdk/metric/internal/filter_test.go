@@ -64,11 +64,8 @@ func testNewFilter[N int64 | float64](t *testing.T, agg Aggregator[N]) {
 	assert.Equal(t, agg, filt.aggregator)
 }
 
-func testAttributeFilter(input attribute.Set) attribute.Set {
-	out, _ := input.Filter(func(kv attribute.KeyValue) bool {
-		return kv.Key == "power-level"
-	})
-	return out
+var testAttributeFilter = func(kv attribute.KeyValue) bool {
+	return kv.Key == "power-level"
 }
 
 func TestNewFilter(t *testing.T) {

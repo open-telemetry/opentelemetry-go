@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -130,5 +131,52 @@ func TestKeyValueValid(t *testing.T) {
 		if got, want := test.kv.Valid(), test.valid; got != want {
 			t.Error(test.desc)
 		}
+	}
+}
+
+func TestIncorrectCast(t *testing.T) {
+	testCases := []struct {
+		name string
+		val  attribute.Value
+	}{
+		{
+			name: "Float64",
+			val:  attribute.Float64Value(1.0),
+		},
+		{
+			name: "Int64",
+			val:  attribute.Int64Value(2),
+		},
+		{
+			name: "String",
+			val:  attribute.BoolValue(true),
+		},
+		{
+			name: "Float64Slice",
+			val:  attribute.Float64SliceValue([]float64{1.0}),
+		},
+		{
+			name: "Int64Slice",
+			val:  attribute.Int64SliceValue([]int64{2}),
+		},
+		{
+			name: "StringSlice",
+			val:  attribute.BoolSliceValue([]bool{true}),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				tt.val.AsBool()
+				tt.val.AsBoolSlice()
+				tt.val.AsFloat64()
+				tt.val.AsFloat64Slice()
+				tt.val.AsInt64()
+				tt.val.AsInt64Slice()
+				tt.val.AsInterface()
+				tt.val.AsString()
+				tt.val.AsStringSlice()
+			})
+		})
 	}
 }

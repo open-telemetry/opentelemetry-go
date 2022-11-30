@@ -20,14 +20,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 )
 
 func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
-	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+	aggregationSelector := func(metric.InstrumentKind) aggregation.Aggregation { return nil }
 
 	testCases := []struct {
 		name       string
@@ -112,7 +112,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestConfigManualReaderOptions(t *testing.T) {
-	aggregationSelector := func(view.InstrumentKind) aggregation.Aggregation { return nil }
+	aggregationSelector := func(metric.InstrumentKind) aggregation.Aggregation { return nil }
 
 	testCases := []struct {
 		name            string

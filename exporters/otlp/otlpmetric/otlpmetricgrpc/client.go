@@ -24,13 +24,14 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -48,7 +49,7 @@ func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return otlpmetric.New(c), nil
+	return ominternal.New(c), nil
 }
 
 type client struct {
@@ -69,7 +70,7 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error) {
+func newClient(ctx context.Context, options ...Option) (ominternal.Client, error) {
 	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
 
 	c := &client{
@@ -104,12 +105,12 @@ func newClient(ctx context.Context, options ...Option) (otlpmetric.Client, error
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k view.InstrumentKind) metricdata.Temporality {
+func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return c.temporalitySelector(k)
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k view.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	return c.aggregationSelector(k)
 }
 
@@ -163,9 +164,17 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	defer cancel()
 
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
-		_, err := c.msc.Export(iCtx, &colmetricpb.ExportMetricsServiceRequest{
+		resp, err := c.msc.Export(iCtx, &colmetricpb.ExportMetricsServiceRequest{
 			ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 		})
+		if resp != nil && resp.PartialSuccess != nil {
+			msg := resp.PartialSuccess.GetErrorMessage()
+			n := resp.PartialSuccess.GetRejectedDataPoints()
+			if n != 0 || msg != "" {
+				err := internal.MetricPartialSuccessError(n, msg)
+				otel.Handle(err)
+			}
+		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.

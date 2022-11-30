@@ -17,6 +17,8 @@ package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -138,17 +140,17 @@ func point[N int64 | float64](a attribute.Set, v N) metricdata.DataPoint[N] {
 func testDeltaSumReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	expect := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
 	a := NewDeltaSum[N](false)
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
+	expect := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.DataPoint[N]{point[N](alice, 1)}
 	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	// Aggregating another set should not affect the original (alice).
 	a.Aggregate(1, bob)
@@ -159,6 +161,25 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 func TestDeltaSumReset(t *testing.T) {
 	t.Run("Int64", testDeltaSumReset[int64])
 	t.Run("Float64", testDeltaSumReset[float64])
+}
+
+func TestEmptySumNilAggregation(t *testing.T) {
+	assert.Nil(t, NewCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, NewCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, NewCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, NewCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, NewDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, NewDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, NewDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, NewDeltaSum[float64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, NewPrecomputedDeltaSum[float64](false).Aggregation())
 }
 
 func BenchmarkSum(b *testing.B) {

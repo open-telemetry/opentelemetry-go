@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -27,7 +26,7 @@ import (
 type config struct {
 	res     *resource.Resource
 	readers []Reader
-	views   []view.View
+	views   []View
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -134,7 +133,7 @@ func WithReader(r Reader) Option {
 //
 // By default, if this option is not used, the MeterProvider will use the
 // default view.
-func WithView(views ...view.View) Option {
+func WithView(views ...View) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.views = append(cfg.views, views...)
 		return cfg

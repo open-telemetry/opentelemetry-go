@@ -26,10 +26,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -135,18 +133,14 @@ func TestDefaultViewImplicit(t *testing.T) {
 }
 
 func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
-	inst := view.Instrument{
-		Scope:       instrumentation.Scope{Name: "testing/lib"},
+	inst := Instrument{
 		Name:        "requests",
 		Description: "count of requests received",
-		Kind:        view.SyncCounter,
-		Aggregation: aggregation.Sum{},
+		Kind:        InstrumentKindSyncCounter,
+		Unit:        unit.Dimensionless,
 	}
 	return func(t *testing.T) {
 		reader := NewManualReader()
-		v, err := view.New(view.MatchInstrumentName("foo"), view.WithRename("bar"))
-		require.NoError(t, err)
-
 		tests := []struct {
 			name string
 			pipe *pipeline
@@ -157,7 +151,9 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			},
 			{
 				name: "NoMatchingView",
-				pipe: newPipeline(nil, reader, []view.View{v}),
+				pipe: newPipeline(nil, reader, []View{
+					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
+				}),
 			},
 		}
 
@@ -165,9 +161,12 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				c := newInstrumentCache[N](nil, nil)
 				i := newInserter(test.pipe, c)
-				got, err := i.Instrument(inst, unit.Dimensionless)
+				got, err := i.Instrument(inst)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
+				for _, a := range got {
+					a.Aggregate(1, *attribute.EmptySet())
+				}
 
 				out, err := test.pipe.produce(context.Background())
 				require.NoError(t, err)
@@ -181,6 +180,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 					Data: metricdata.Sum[N]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[N]{{Value: N(1)}},
 					},
 				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 			})

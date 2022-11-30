@@ -169,22 +169,29 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 func TestDeltaHistogramReset(t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	expect := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
 	a := NewDeltaHistogram[int64](histConf)
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
+	expect := metricdata.Histogram{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint{hPoint(alice, 1, 1)}
 	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+	assert.Nil(t, a.Aggregation())
 
 	// Aggregating another set should not affect the original (alice).
 	a.Aggregate(1, bob)
 	expect.DataPoints = []metricdata.HistogramDataPoint{hPoint(bob, 1, 1)}
 	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
+}
+
+func TestEmptyHistogramNilAggregation(t *testing.T) {
+	assert.Nil(t, NewCumulativeHistogram[int64](histConf).Aggregation())
+	assert.Nil(t, NewCumulativeHistogram[float64](histConf).Aggregation())
+	assert.Nil(t, NewDeltaHistogram[int64](histConf).Aggregation())
+	assert.Nil(t, NewDeltaHistogram[float64](histConf).Aggregation())
 }
 
 func BenchmarkHistogram(b *testing.B) {

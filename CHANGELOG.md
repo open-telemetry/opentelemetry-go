@@ -15,6 +15,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
    This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
 - Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.
   This can be disabled using the `WithoutScopeInfo()` option added to that package.(#3273, #3357)
+- OTLP exporters now recognize: (#3363)
+  - `OTEL_EXPORTER_OTLP_INSECURE`
+  - `OTEL_EXPORTER_OTLP_TRACES_INSECURE`
+  - `OTEL_EXPORTER_OTLP_METRICS_INSECURE`
+  - `OTEL_EXPORTER_OTLP_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY`
+  - `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE`
+  - `OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE`
+- The `View` type and related `NewView` function to create a view according to the OpenTelemetry specification are added to `go.opentelemetry.io/otel/sdk/metric`.
+  These additions are replacements for the `View` type and `New` function from `go.opentelemetry.io/otel/sdk/metric/view`. (#3459)
+- The `Instrument` and `InstrumentKind` type are added to `go.opentelemetry.io/otel/sdk/metric`.
+  These additions are replacements for the `Instrument` and `InstrumentKind` types from `go.opentelemetry.io/otel/sdk/metric/view`. (#3459)
+- The `Stream` type is added to `go.opentelemetry.io/otel/sdk/metric` to define a metric data stream a view will produce. (#3459)
+- The `AssertHasAttributes` allows instrument authors to test that datapoints returned have appropriate attributes. (#3487)
 
 ### Changed
 
@@ -33,6 +49,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cumulative metrics from the OpenCensus bridge (`go.opentelemetry.io/otel/bridge/opencensus`) are defined as monotonic sums, instead of non-monotonic. (#3389)
 - Asynchronous counters (`Counter` and `UpDownCounter`) from the metric SDK now produce delta sums when configured with delta temporality. (#3398)
 - Exported `Status` codes in the `go.opentelemetry.io/otel/exporters/zipkin` exporter are now exported as all upper case values. (#3340)
+- `Aggregation`s from `go.opentelemetry.io/otel/sdk/metric` with no data are not exported. (#3394, #3436)
+- Reenabled Attribute Filters in the Metric SDK. (#3396)
+- Asynchronous callbacks are only called if they are registered with at least one instrument that does not use drop aggragation. (#3408)
+- Do not report empty partial-success responses in the `go.opentelemetry.io/otel/exporters/otlp` exporters. (#3438, #3432)
+- Handle partial success responses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporters. (#3162, #3440)
+- Prevents panic when using incorrect `attribute.Value.As[Type]Slice()`. (#3489)
+
+## Removed
+
+- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.Client` interface is removed. (#3486)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric.New` function is removed. Use the `otlpmetric[http|grpc].New` directly. (#3486)
+
+### Deprecated
+
+- The `go.opentelemetry.io/otel/sdk/metric/view` package is deprecated.
+  Use `Instrument`, `InstrumentKind`, `View`, and `NewView` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3476)
 
 ## [1.11.1/0.33.0] 2022-10-19
 
