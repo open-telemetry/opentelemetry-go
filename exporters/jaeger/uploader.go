@@ -118,10 +118,7 @@ var emptyLogger = logr.Logger{}
 
 // WithLogger sets a logger to be used by agent client.
 func WithLogger(logger *log.Logger) AgentEndpointOption {
-	return agentEndpointOptionFunc(func(o agentEndpointConfig) agentEndpointConfig {
-		o.Logger = stdr.New(logger)
-		return o
-	})
+	return WithLogr(stdr.New(logger))
 }
 
 // WithLogr sets a logr.Logger to be used by agent client.
