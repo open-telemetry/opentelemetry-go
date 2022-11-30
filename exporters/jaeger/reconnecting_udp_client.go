@@ -16,11 +16,12 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-logr/logr"
 )
 
 // reconnectingUDPConn is an implementation of udpConn that resolves hostPort every resolveTimeout, if the resolved address is

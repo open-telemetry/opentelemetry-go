@@ -88,7 +88,7 @@ func assertConnWritable(t *testing.T, conn udpConn, serverConn net.PacketConn) {
 	_, err := conn.Write([]byte(expectedString))
 	require.NoError(t, err)
 
-	var buf = make([]byte, len(expectedString))
+	buf := make([]byte, len(expectedString))
 	err = serverConn.SetReadDeadline(time.Now().Add(time.Second))
 	require.NoError(t, err)
 
@@ -145,7 +145,7 @@ func waitForConnCondition(conn *reconnectingUDPConn, condition func(conn *reconn
 }
 
 func newMockUDPAddr(t *testing.T, port int) *net.UDPAddr {
-	var buf = make([]byte, 4)
+	buf := make([]byte, 4)
 	// random is not seeded to ensure tests are deterministic (also doesnt matter if ip is valid)
 	_, err := rand.Read(buf)
 	require.NoError(t, err)

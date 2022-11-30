@@ -19,13 +19,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"sync"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )

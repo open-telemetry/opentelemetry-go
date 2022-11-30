@@ -17,11 +17,12 @@ package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	genAgent "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/agent"
 	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
