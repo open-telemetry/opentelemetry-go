@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -29,6 +31,10 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	ctx := context.Background()
@@ -58,12 +64,17 @@ func main() {
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	gauge, err := meter.SyncFloat64().UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+	gauge, err := meter.AsyncFloat64().Gauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	gauge.Add(ctx, 100, attrs...)
-	gauge.Add(ctx, -25, attrs...)
+	err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+		n := -10. + rand.Float64()*(90.) // [-10, 100)
+		gauge.Observe(ctx, n, attrs...)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
 	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
