@@ -489,7 +489,6 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// This Exporter will never return
 type blockingExporter struct {
 	block chan struct{}
 	close sync.Once
@@ -549,9 +548,9 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 
 		return reportedDropCount >= 1
 	}, time.Second, time.Millisecond)
-	te.Shutdown(context.Background())
+	_ = te.Shutdown(context.Background())
 
-	ssp.Shutdown(context.Background())
+	_ = ssp.Shutdown(context.Background())
 
 	// Reset the global logger so other tests are not impacted
 	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
