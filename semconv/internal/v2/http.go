@@ -16,9 +16,7 @@ package internal // import "go.opentelemetry.io/otel/semconv/internal/v2"
 
 import (
 	"fmt"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -270,23 +268,6 @@ func firstHostPort(source ...string) (host string, port int) {
 		}
 	}
 	return
-}
-
-// splitHostPort splits a network address of the form "host:port",
-// "host%zone:port", "[host]:port" or "[host%zone]:port" into host or
-// host%zone and port.
-//
-// A negative port is returned if no parsable port is found.
-func splitHostPort(hostport string) (host string, port int) {
-	host, portStr, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return host, -1
-	}
-	p, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil {
-		return host, -1
-	}
-	return host, int(p)
 }
 
 // RequestHeader returns the contents of h as OpenTelemetry attributes.

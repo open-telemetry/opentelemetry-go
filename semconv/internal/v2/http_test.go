@@ -250,27 +250,6 @@ func TestFirstHostPort(t *testing.T) {
 	}
 }
 
-func TestSplitHostPort(t *testing.T) {
-	tests := []struct {
-		hostport string
-		host     string
-		port     int
-	}{
-		{"", "", -1},
-		{":8080", "", 8080},
-		{"127.0.0.1", "", -1},
-		{"127.0.0.1:", "127.0.0.1", -1},
-		{"127.0.0.1:port", "127.0.0.1", -1},
-		{"127.0.0.1:8080", "127.0.0.1", 8080},
-	}
-
-	for _, test := range tests {
-		h, p := splitHostPort(test.hostport)
-		assert.Equal(t, test.host, h, test.hostport)
-		assert.Equal(t, test.port, p, test.hostport)
-	}
-}
-
 func TestRequestHeader(t *testing.T) {
 	ips := []string{"127.0.0.5", "127.0.0.9"}
 	user := []string{"alice"}
