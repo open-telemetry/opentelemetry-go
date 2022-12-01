@@ -59,8 +59,8 @@ func TestNetTransport(t *testing.T) {
 		"ip6:proto":  attribute.String("net.transport", "other"),
 	}
 
-	for net, want := range transports {
-		assert.Equal(t, want, nc.Transport(net))
+	for network, want := range transports {
+		assert.Equal(t, want, nc.Transport(network))
 	}
 }
 
@@ -163,7 +163,7 @@ func newTCPConn() (net.Conn, net.Listener, error) {
 
 	conn, err := net.Dial("tcp4", ln.Addr().String())
 	if err != nil {
-		ln.Close()
+		_ = ln.Close()
 		return nil, nil, err
 	}
 
@@ -206,7 +206,7 @@ type remoteOnlyConn struct{ net.Conn }
 func (remoteOnlyConn) LocalAddr() net.Addr { return nil }
 
 func TestNetClientTCPNilLocal(t *testing.T) {
-	conn, ln, err := newTCPConn("tcp")
+	conn, ln, err := newTCPConn()
 	require.NoError(t, err)
 	defer func() { require.NoError(t, ln.Close()) }()
 	defer func() { require.NoError(t, conn.Close()) }()
