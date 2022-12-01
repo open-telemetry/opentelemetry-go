@@ -77,15 +77,17 @@ func (c *NetConv) Host(address string) []attribute.KeyValue {
 	return attrs
 }
 
-// Server returns attributes for a server network listener at address. See
+// Server returns attributes for a network listener listening at address. See
 // net.Listen for information about acceptable address values, address should
-// be the same as the one used to create l.
-func (c *NetConv) Server(address string, l net.Listener) []attribute.KeyValue {
-	if l == nil {
+// be the same as the one used to create ln. If ln is nil, only network host
+// attributes will be returned that describe address. Otherwise, the socket
+// level information about ln will also be included.
+func (c *NetConv) Server(address string, ln net.Listener) []attribute.KeyValue {
+	if ln == nil {
 		return c.Host(address)
 	}
 
-	lAddr := l.Addr()
+	lAddr := ln.Addr()
 	if lAddr == nil {
 		return c.Host(address)
 	}
@@ -131,7 +133,9 @@ func (c *NetConv) HostPort(port int) attribute.KeyValue {
 
 // Client returns attributes for a client network connection to address. See
 // net.Dial for information about acceptable address values, address should be
-// the same as the one used to create conn.
+// the same as the one used to create conn. If conn is nil, only network peer
+// attributes will be returned that describe address. Otherwise, the socket
+// level information about conn will also be included.
 func (c *NetConv) Client(address string, conn net.Conn) []attribute.KeyValue {
 	if conn == nil {
 		return c.Peer(address)
