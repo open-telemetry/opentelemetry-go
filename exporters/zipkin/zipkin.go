@@ -68,11 +68,13 @@ func (fn optionFunc) apply(cfg config) config {
 }
 
 // WithLogger configures the exporter to use the passed logger.
+// WithLogger and WithLogr will overwrite each other.
 func WithLogger(logger *log.Logger) Option {
 	return WithLogr(stdr.New(logger))
 }
 
 // WithLogr configures the exporter to use the passed logr.Logger.
+// WithLogr and WithLogger will overwrite each other.
 func WithLogr(logger logr.Logger) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.logger = logger

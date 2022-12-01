@@ -118,11 +118,13 @@ func WithAgentPort(port string) AgentEndpointOption {
 var emptyLogger = logr.Logger{}
 
 // WithLogger sets a logger to be used by agent client.
+// WithLogger and WithLogr will overwrite each other.
 func WithLogger(logger *log.Logger) AgentEndpointOption {
 	return WithLogr(stdr.New(logger))
 }
 
 // WithLogr sets a logr.Logger to be used by agent client.
+// WithLogr and WithLogger will overwrite each other.
 func WithLogr(logger logr.Logger) AgentEndpointOption {
 	return agentEndpointOptionFunc(func(o agentEndpointConfig) agentEndpointConfig {
 		o.Logger = logger
