@@ -40,6 +40,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Temporality(view.InstrumentKind) metricdata.Temporality` and `Aggregation(view.InstrumentKind) aggregation.Aggregation` methods are added to the `"go.opentelemetry.io/otel/exporters/otlp/otlpmetric".Client` interface. (#3260)
 - The `WithTemporalitySelector` and `WithAggregationSelector` `ReaderOption`s have been changed to `ManualReaderOption`s in the `go.opentelemetry.io/otel/sdk/metric` package. (#3260)
 - The periodic reader in the `go.opentelemetry.io/otel/sdk/metric` package now uses the temporality and aggregation selectors from its configured exporter instead of accepting them as options. (#3260)
+- The synchronous and asynchronous instrument configuration is split to specific options for each in `go.opentelemetry.io/otel/metric/instrument`. (#3507)
+  - The asynchronous instrument provider now accepts `AsynchronousOption` instead of `Option` when creating instruments.
+  - The synchronous instrument provider now accepts `SynchronousOption` instead of `Option` when creating instruments.
 
 ### Fixed
 
