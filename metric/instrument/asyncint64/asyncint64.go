@@ -21,14 +21,20 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-// Callback is a function that returns a int64 observation value for an
-// Asynchronous instrument.
+// Observation is an recorded event value for a particular set of attributes.
+type Observation struct {
+	Attributes []attribute.KeyValue
+	Value      int64
+}
+
+// Callback is a function that returns observations for an Asynchronous
+// instrument.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context) (int64, error)
+type Callback func(context.Context) ([]Observation, error)
 
 // InstrumentProvider provides access to individual instruments.
 //

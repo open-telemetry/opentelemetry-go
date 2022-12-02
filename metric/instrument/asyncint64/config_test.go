@@ -31,11 +31,12 @@ func TestOptions(t *testing.T) {
 		uBytes       = unit.Bytes
 	)
 
+	want := []Observation{{Value: token}}
 	got := NewConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithCallback(func(context.Context) (int64, error) {
-			return token, nil
+		WithCallback(func(context.Context) ([]Observation, error) {
+			return want, nil
 		}),
 	)
 	assert.Equal(t, desc, got.Description(), "description")
@@ -46,5 +47,5 @@ func TestOptions(t *testing.T) {
 	require.Len(t, cBacks, 1, "callbacks")
 	val, err := cBacks[0](context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, token, val, "callback not set")
+	assert.Equal(t, want, val, "callback not set")
 }
