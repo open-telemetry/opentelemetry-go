@@ -45,10 +45,9 @@ type Exporter struct {
 	stopped   bool
 }
 
-var (
-	_           sdktrace.SpanExporter = &Exporter{}
-	emptyLogger                       = logr.Logger{}
-)
+var _ sdktrace.SpanExporter = &Exporter{}
+
+var emptyLogger = logr.Logger{}
 
 // Options contains configuration for the exporter.
 type config struct {
