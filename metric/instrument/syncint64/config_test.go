@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package syncint64 // import "go.opentelemetry.io/otel/metric/instrument/syncint64"
 
-// Asynchronous instruments are instruments that are updated within a Callback.
-// If an instrument is observed outside of it's callback it should be an error.
-//
-// This interface is used as a grouping mechanism.
-type Asynchronous interface {
-	asynchronous()
-}
+import (
+	"testing"
 
-// Synchronous instruments are updated in line with application code.
-//
-// This interface is used as a grouping mechanism.
-type Synchronous interface {
-	synchronous()
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/metric/unit"
+)
+
+func TestOptions(t *testing.T) {
+	const (
+		desc   = "Instrument description."
+		uBytes = unit.Bytes
+	)
+
+	got := NewConfig(WithDescription(desc), WithUnit(uBytes))
+	assert.Equal(t, desc, got.Description(), "description")
+	assert.Equal(t, uBytes, got.Unit(), "unit")
 }

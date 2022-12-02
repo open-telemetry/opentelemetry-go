@@ -21,18 +21,27 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
+// Callback is a function that returns a float64 observation value for an
+// Asynchronous instrument.
+//
+// The function needs to complete in a finite amount of time and the deadline
+// of the passed context is expected to be honored.
+//
+// The function needs to be concurrent safe.
+type Callback func(context.Context) (float64, error)
+
 // InstrumentProvider provides access to individual instruments.
 //
 // Warning: methods may be added to this interface in minor releases.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.AsynchronousOption) (Counter, error)
+	Counter(name string, opts ...Option) (Counter, error)
 
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.AsynchronousOption) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...Option) (UpDownCounter, error)
 
 	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.AsynchronousOption) (Gauge, error)
+	Gauge(name string, opts ...Option) (Gauge, error)
 }
 
 // Counter is an instrument that records increasing values.

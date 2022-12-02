@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package asyncint64 // import "go.opentelemetry.io/otel/metric/instrument/asyncint64"
 
 import (
 	"context"
@@ -24,41 +24,27 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-func TestSynchronousOptions(t *testing.T) {
+func TestOptions(t *testing.T) {
 	const (
-		desc   = "Instrument description."
-		uBytes = unit.Bytes
+		token  int64 = 43
+		desc         = "Instrument description."
+		uBytes       = unit.Bytes
 	)
 
-	got := NewSynchronousConfig(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), uBytes)
-}
-
-func TestAsynchronousOptions(t *testing.T) {
-	const (
-		token  = "token"
-		desc   = "Instrument description."
-		uBytes = unit.Bytes
-	)
-
-	var received string
-	cBack := Callback(func(context.Context, Asynchronous) error {
-		received = token
-		return nil
-	})
-
-	got := NewAsynchronousConfig(
+	got := NewConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithCallback(cBack),
+		WithCallback(func(context.Context) (int64, error) {
+			return token, nil
+		}),
 	)
 	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), uBytes)
+	assert.Equal(t, uBytes, got.Unit(), "unit")
 
 	// Functions are not comparable.
 	cBacks := got.Callbacks()
 	require.Len(t, cBacks, 1, "callbacks")
-	_ = cBacks[0](context.Background(), nil)
-	assert.Equal(t, token, received, "callback not set")
+	val, err := cBacks[0](context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, token, val, "callback not set")
 }
