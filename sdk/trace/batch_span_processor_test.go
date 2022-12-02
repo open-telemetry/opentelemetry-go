@@ -23,12 +23,12 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
-	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,16 +52,6 @@ type testBatchExporter struct {
 	droppedCount  int
 	idx           int
 	err           error
-}
-
-type logCounter struct {
-	logr.LogSink
-	logs []string
-}
-
-func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
-	l.logs = append(l.logs, fmt.Sprint(msg, keysAndValues))
-	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
@@ -328,19 +318,8 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 	}
 }
 
-type stuckExporter struct {
-	testBatchExporter
-}
-
-// ExportSpans waits for ctx to expire and returns that error.
-func (e *stuckExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
-	<-ctx.Done()
-	e.err = ctx.Err()
-	return ctx.Err()
-}
-
 func TestBatchSpanProcessorExportTimeout(t *testing.T) {
-	exp := new(stuckExporter)
+	exp := newBlockingExporter()
 	bsp := sdktrace.NewBatchSpanProcessor(
 		exp,
 		// Set a non-zero export timeout so a deadline is set.
@@ -489,16 +468,30 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// blockingExporter will block on ExportSpans until one of the following happens:
+// a) The context is Canceled.
+// b) unblock() is called.
+// c) The exporter is ShutDown().
 type blockingExporter struct {
+	testBatchExporter
 	block chan struct{}
 	close sync.Once
 }
 
-func (e *blockingExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	<-e.block
+func newBlockingExporter() *blockingExporter {
+	return &blockingExporter{block: make(chan struct{})}
+}
+
+func (e *blockingExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
+	select {
+	case <-e.block:
+	case <-ctx.Done():
+		e.err = ctx.Err()
+		return ctx.Err()
+	}
 	return nil
 }
-func (e *blockingExporter) Shutdown(ctx context.Context) error {
+func (e *blockingExporter) Shutdown(_ context.Context) error {
 	e.close.Do(func() {
 		close(e.block)
 	})
@@ -511,12 +504,30 @@ func (e *blockingExporter) unblock() {
 	}
 }
 
-func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
-	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 1})
-	l := &logCounter{LogSink: tLog.GetSink()}
-	otel.SetLogger(logr.New(l))
+type matchingLogger struct {
+	// This can be an atomic.Bool when we drop 1.18 support
+	_found atomic.Value
+	regex  *regexp.Regexp
+}
 
-	te := &blockingExporter{block: make(chan struct{})}
+func (l *matchingLogger) Logger() logr.Logger {
+	l._found.Store(false)
+	return funcr.New(func(prefix, args string) {
+		if l.regex.MatchString(args) {
+			l._found.Store(true)
+		}
+	}, funcr.Options{Verbosity: 10})
+}
+
+func (l *matchingLogger) found() bool {
+	return l._found.Load().(bool)
+}
+
+func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
+	tLog := &matchingLogger{regex: regexp.MustCompile(`"msg"="dropped spans" "total"=\d+ "this_batch"=\d+`)}
+	otel.SetLogger(tLog.Logger())
+
+	te := newBlockingExporter()
 	tp := basicTracerProvider(t)
 	option := testOption{
 		name: "default BatchSpanProcessorOptions",
@@ -533,23 +544,16 @@ func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
 	tp.RegisterSpanProcessor(ssp)
 	tr := tp.Tracer("BatchSpanProcessorWithOption")
 
-	logMatch := regexp.MustCompile(`dropped spans\[total \d+ this_batch \d+\]`)
 	assert.Eventually(t, func() bool {
 		generateSpan(t, tr, option)
 		te.unblock()
-		reportedDropCount := 0
 
-		for _, v := range l.logs {
-			match := logMatch.MatchString(v)
-			if match {
-				reportedDropCount++
-			}
-		}
-
-		return reportedDropCount >= 1
+		return tLog.found()
 	}, time.Second, time.Millisecond)
-	_ = te.Shutdown(context.Background())
 
+	// We shut down the exporter to clear any blocked ExportSpans().
+	// If we don't shut down the exporter first the SpanProcessor will block waiting for Exports to complete.
+	_ = te.Shutdown(context.Background())
 	_ = ssp.Shutdown(context.Background())
 
 	// Reset the global logger so other tests are not impacted
