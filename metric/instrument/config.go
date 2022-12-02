@@ -119,10 +119,6 @@ type AsynchronousOption interface {
 
 type callbackOption Callback
 
-func (o callbackOption) applyInstrument(cfg config) config {
-	return cfg
-}
-
 func (o callbackOption) applyAsynchronous(cfg AsynchronousConfig) AsynchronousConfig {
 	cfg.callbacks = append(cfg.callbacks, (Callback)(o))
 	return cfg
