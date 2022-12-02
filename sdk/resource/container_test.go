@@ -36,54 +36,6 @@ func setContainerProviders(
 	containerID = idProvider
 }
 
-func TestGetContainerIDFromLine(t *testing.T) {
-	testCases := []struct {
-		name                string
-		line                string
-		expectedContainerID string
-	}{
-		{
-			name:                "with suffix",
-			line:                "13:name=systemd:/podruntime/docker/kubepods/ac679f8a8319c8cf7d38e1adf263bc08d23.aaaa",
-			expectedContainerID: "ac679f8a8319c8cf7d38e1adf263bc08d23",
-		},
-		{
-			name:                "with prefix and suffix",
-			line:                "13:name=systemd:/podruntime/docker/kubepods/crio-dc679f8a8319c8cf7d38e1adf263bc08d23.stuff",
-			expectedContainerID: "dc679f8a8319c8cf7d38e1adf263bc08d23",
-		},
-		{
-			name:                "no prefix and suffix",
-			line:                "13:name=systemd:/pod/d86d75589bf6cc254f3e2cc29debdf85dde404998aa128997a819ff991827356",
-			expectedContainerID: "d86d75589bf6cc254f3e2cc29debdf85dde404998aa128997a819ff991827356",
-		},
-		{
-			name:                "with space",
-			line:                " 13:name=systemd:/pod/d86d75589bf6cc254f3e2cc29debdf85dde404998aa128997a819ff991827356 ",
-			expectedContainerID: "d86d75589bf6cc254f3e2cc29debdf85dde404998aa128997a819ff991827356",
-		},
-		{
-			name: "invalid hex string",
-			line: "13:name=systemd:/podruntime/docker/kubepods/ac679f8a8319c8cf7d38e1adf263bc08d23zzzz",
-		},
-		{
-			name: "no container id - 1",
-			line: "pids: /",
-		},
-		{
-			name: "no container id - 2",
-			line: "pids: ",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			containerID := getContainerIDFromLine(tc.line)
-			assert.Equal(t, tc.expectedContainerID, containerID)
-		})
-	}
-}
-
 func TestGetContainerIDFromReader(t *testing.T) {
 	testCases := []struct {
 		name                string
@@ -109,7 +61,7 @@ func TestGetContainerIDFromReader(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			containerID := getContainerIDFromReader(tc.reader)
+			containerID := getContainerIDFromReader(tc.reader, getContainerIDFromCgroupV1Line)
 			assert.Equal(t, tc.expectedContainerID, containerID)
 		})
 	}
@@ -122,16 +74,19 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 	})
 
 	testCases := []struct {
-		name                string
-		cgroupFileNotExist  bool
-		openFileError       error
-		content             string
-		expectedContainerID string
-		expectedError       bool
+		name                 string
+		cgroupV1FileNotExist bool
+		cgroupV2FileNotExist bool
+		openFileError        error
+		cgroupV1FileContent  string
+		cgroupV2FileContent  string
+		expectedContainerID  string
+		expectedError        bool
 	}{
 		{
-			name:               "the cgroup file does not exist",
-			cgroupFileNotExist: true,
+			name:                 "the cgroup file does not exist",
+			cgroupV1FileNotExist: true,
+			cgroupV2FileNotExist: true,
 		},
 		{
 			name:          "error when opening cgroup file",
@@ -139,16 +94,29 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name:                "cgroup file",
-			content:             "1:name=systemd:/podruntime/docker/kubepods/docker-dc579f8a8319c8cf7d38e1adf263bc08d23",
+			name:                "cgroup file v1",
+			cgroupV1FileContent: "1:name=systemd:/podruntime/docker/kubepods/docker-dc579f8a8319c8cf7d38e1adf263bc08d23",
 			expectedContainerID: "dc579f8a8319c8cf7d38e1adf263bc08d23",
+		},
+		{
+			name:                "cgroup file v2",
+			cgroupV2FileContent: "474 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/hosts /etc/hosts rw,relatime - ext4 /dev/vda1 rw",
+			expectedContainerID: "dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183",
+		},
+		{
+			name:                "both way fail",
+			cgroupV1FileContent: " ",
+			cgroupV2FileContent: " ",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			osStat = func(name string) (os.FileInfo, error) {
-				if tc.cgroupFileNotExist {
+				if tc.cgroupV1FileNotExist && name == cgroupV1Path {
+					return nil, os.ErrNotExist
+				}
+				if tc.cgroupV2FileNotExist && name == cgroupV2Path {
 					return nil, os.ErrNotExist
 				}
 				return nil, nil
@@ -158,7 +126,10 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 				if tc.openFileError != nil {
 					return nil, tc.openFileError
 				}
-				return io.NopCloser(strings.NewReader(tc.content)), nil
+				if name == cgroupV1Path {
+					return io.NopCloser(strings.NewReader(tc.cgroupV1FileContent)), nil
+				}
+				return io.NopCloser(strings.NewReader(tc.cgroupV2FileContent)), nil
 			}
 
 			containerID, err := getContainerIDFromCGroup()

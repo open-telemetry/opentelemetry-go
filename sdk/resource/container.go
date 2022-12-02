@@ -20,7 +20,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"regexp"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
@@ -28,13 +27,12 @@ import (
 type containerIDProvider func() (string, error)
 
 var (
-	containerID         containerIDProvider = getContainerIDFromCGroup
-	cgroupContainerIDRe                     = regexp.MustCompile(`^.*/(?:.*-)?([0-9a-f]+)(?:\.|\s*$)`)
+	containerID                 containerIDProvider = getContainerIDFromCGroup
+	cgroupV1ContainerIDProvider containerIDProvider = getContainerIDFromCGroupV1
+	cgroupV2ContainerIDProvider containerIDProvider = getContainerIDFromCGroupV2
 )
 
 type cgroupContainerIDDetector struct{}
-
-const cgroupPath = "/proc/self/cgroup"
 
 // Detect returns a *Resource that describes the id of the container.
 // If no container id found, an empty resource will be returned.
@@ -61,8 +59,26 @@ var (
 )
 
 // getContainerIDFromCGroup returns the id of the container from the cgroup file.
+// If cgroup v1 container id provider fails, then fall back to cgroup v2 container id provider.
 // If no container id found, an empty string will be returned.
 func getContainerIDFromCGroup() (string, error) {
+	containerID, err := cgroupV1ContainerIDProvider()
+	if err != nil {
+		return "", err
+	}
+
+	if containerID == "" {
+		// Fallback to cgroup v2
+		containerID, err = cgroupV2ContainerIDProvider()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return containerID, nil
+}
+
+func getContainerIDFromCGroupFile(cgroupPath string, extractor func(string) string) (string, error) {
 	if _, err := osStat(cgroupPath); errors.Is(err, os.ErrNotExist) {
 		// File does not exist, skip
 		return "", nil
@@ -74,27 +90,18 @@ func getContainerIDFromCGroup() (string, error) {
 	}
 	defer file.Close()
 
-	return getContainerIDFromReader(file), nil
+	return getContainerIDFromReader(file, extractor), nil
 }
 
 // getContainerIDFromReader returns the id of the container from reader.
-func getContainerIDFromReader(reader io.Reader) string {
+func getContainerIDFromReader(reader io.Reader, extractor func(string) string) string {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if id := getContainerIDFromLine(line); id != "" {
+		if id := extractor(line); id != "" {
 			return id
 		}
 	}
 	return ""
-}
-
-// getContainerIDFromLine returns the id of the container from one string line.
-func getContainerIDFromLine(line string) string {
-	matches := cgroupContainerIDRe.FindStringSubmatch(line)
-	if len(matches) <= 1 {
-		return ""
-	}
-	return matches[1]
 }
