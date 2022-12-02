@@ -30,7 +30,7 @@ import (
 
 type afCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncfloat64.Counter
 
@@ -61,7 +61,7 @@ func (i *afCounter) unwrap() instrument.Asynchronous {
 
 type afUpDownCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncfloat64.UpDownCounter
 
@@ -92,7 +92,7 @@ func (i *afUpDownCounter) unwrap() instrument.Asynchronous {
 
 type afGauge struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncfloat64.Gauge
 
@@ -123,7 +123,7 @@ func (i *afGauge) unwrap() instrument.Asynchronous {
 
 type aiCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncint64.Counter
 
@@ -154,7 +154,7 @@ func (i *aiCounter) unwrap() instrument.Asynchronous {
 
 type aiUpDownCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncint64.UpDownCounter
 
@@ -185,7 +185,7 @@ func (i *aiUpDownCounter) unwrap() instrument.Asynchronous {
 
 type aiGauge struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.AsynchronousOption
 
 	delegate atomic.Value //asyncint64.Gauge
 
@@ -217,7 +217,7 @@ func (i *aiGauge) unwrap() instrument.Asynchronous {
 // Sync Instruments.
 type sfCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncfloat64.Counter
 
@@ -241,7 +241,7 @@ func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 
 type sfUpDownCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncfloat64.UpDownCounter
 
@@ -265,7 +265,7 @@ func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attrib
 
 type sfHistogram struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncfloat64.Histogram
 
@@ -289,7 +289,7 @@ func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.
 
 type siCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncint64.Counter
 
@@ -313,7 +313,7 @@ func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValu
 
 type siUpDownCounter struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncint64.UpDownCounter
 
@@ -337,7 +337,7 @@ func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.K
 
 type siHistogram struct {
 	name string
-	opts []instrument.Option
+	opts []instrument.SynchronousOption
 
 	delegate atomic.Value //syncint64.Histogram
 
