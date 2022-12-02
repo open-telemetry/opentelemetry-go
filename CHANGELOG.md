@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   These additions are replacements for the `Instrument` and `InstrumentKind` types from `go.opentelemetry.io/otel/sdk/metric/view`. (#3459)
 - The `Stream` type is added to `go.opentelemetry.io/otel/sdk/metric` to define a metric data stream a view will produce. (#3459)
 - The `AssertHasAttributes` allows instrument authors to test that datapoints returned have appropriate attributes. (#3487)
-- The `"go.opentelemetry.io/otel/sdk/resource".WithContainer` and `"go.opentelemetry.io/otel/sdk/resource".WithContainerID` support the cgoupv2 files. (#3508)
+- Both `"go.opentelemetry.io/otel/sdk/resource".WithContainer` and `"go.opentelemetry.io/otel/sdk/resource".WithContainerID` now support the cgoupv2 files. (#3508)
 
 ### Changed
 
