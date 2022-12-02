@@ -26,7 +26,7 @@ func getContainerIDFromCGroupV1() (string, error) {
 	return getContainerIDFromCGroupFile(cgroupV1Path, getContainerIDFromCgroupV1Line)
 }
 
-// getContainerIDFromCgroupV1Line returns the id of the container from one string line.
+// getContainerIDFromCgroupV1Line returns the ID of the container from one string line.
 func getContainerIDFromCgroupV1Line(line string) string {
 	matches := cgroupV1ContainerIDRe.FindStringSubmatch(line)
 	if len(matches) <= 1 {

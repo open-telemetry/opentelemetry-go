@@ -59,7 +59,7 @@ var (
 )
 
 // getContainerIDFromCGroup returns the id of the container from the cgroup file.
-// If cgroup v1 container id provider fails, then fall back to cgroup v2 container id provider.
+// If cgroup v1 container ID provider fails, then fall back to cgroup v2 container ID provider.
 // If no container id found, an empty string will be returned.
 func getContainerIDFromCGroup() (string, error) {
 	containerID, err := cgroupV1ContainerIDProvider()
