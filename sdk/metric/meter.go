@@ -76,26 +76,26 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 		switch t := inst.(type) {
 		case *instrumentImpl[int64]:
 			if len(t.aggregators) > 0 {
-				return m.registerCallback(f)
+				return m.registerMultiCallback(f)
 			}
 		case *instrumentImpl[float64]:
 			if len(t.aggregators) > 0 {
-				return m.registerCallback(f)
+				return m.registerMultiCallback(f)
 			}
 		default:
 			// Instrument external to the SDK. For example, an instrument from
 			// the "go.opentelemetry.io/otel/metric/internal/global" package.
 			//
 			// Fail gracefully here, assume a valid instrument.
-			return m.registerCallback(f)
+			return m.registerMultiCallback(f)
 		}
 	}
 	// All insts use drop aggregation.
 	return nil
 }
 
-func (m *meter) registerCallback(f func(context.Context)) error {
-	m.pipes.registerCallback(f)
+func (m *meter) registerMultiCallback(f func(context.Context)) error {
+	m.pipes.registerMultiCallback(f)
 	return nil
 }
 

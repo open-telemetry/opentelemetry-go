@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -62,6 +63,11 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 	}
 }
 
+type callback struct {
+	inst instrument.Asynchronous
+	f    instrument.Callback
+}
+
 // pipeline connects all of the instruments created by a meter provider to a Reader.
 // This is the object that will be `Reader.register()` when a meter provider is created.
 //
@@ -74,8 +80,9 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    []func(context.Context)
+	aggregations   map[instrumentation.Scope][]instrumentSync
+	callbacks      []callback
+	multiCallbacks []func(context.Context)
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -93,11 +100,19 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(callback func(context.Context)) {
+// addMultiCallback registers a callback to be run when `produce()` is called.
+func (p *pipeline) addCallback(cback callback) {
 	p.Lock()
 	defer p.Unlock()
-	p.callbacks = append(p.callbacks, callback)
+	p.callbacks = append(p.callbacks, cback)
+}
+
+// addMultiCallback registers a multi-instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addMultiCallback(callback func(context.Context)) {
+	p.Lock()
+	defer p.Unlock()
+	p.multiCallbacks = append(p.multiCallbacks, callback)
 }
 
 // callbackKey is a context key type used to identify context that came from the SDK.
@@ -117,7 +132,21 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
+	var errs multierror
 	for _, callback := range p.callbacks {
+		// TODO make the callbacks parallel. ( #3034 )
+		err := callback.f(ctx, callback.inst)
+		if err != nil {
+			errs.append(err)
+		}
+		err = ctx.Err()
+		if err != nil {
+			// This means the context expired before we finished running callbacks.
+			return metricdata.ResourceMetrics{}, err
+		}
+	}
+
+	for _, callback := range p.multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
 		callback(ctx)
 		if err := ctx.Err(); err != nil {
@@ -151,7 +180,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
-	}, nil
+	}, errs.errorOrNil()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -439,9 +468,15 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(fn func(context.Context)) {
+func (p pipelines) registerCallback(cback callback) {
 	for _, pipe := range p {
-		pipe.addCallback(fn)
+		pipe.addCallback(cback)
+	}
+}
+
+func (p pipelines) registerMultiCallback(fn func(context.Context)) {
+	for _, pipe := range p {
+		pipe.addMultiCallback(fn)
 	}
 }
 
