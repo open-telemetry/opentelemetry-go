@@ -26,13 +26,13 @@ import (
 // Warning: methods may be added to this interface in minor releases.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Option) (Counter, error)
+	Counter(name string, opts ...instrument.AsynchronousOption) (Counter, error)
 
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...instrument.AsynchronousOption) (UpDownCounter, error)
 
 	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.Option) (Gauge, error)
+	Gauge(name string, opts ...instrument.AsynchronousOption) (Gauge, error)
 }
 
 // Counter is an instrument that records increasing values.
