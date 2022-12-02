@@ -34,8 +34,8 @@ var (
 
 type cgroupContainerIDDetector struct{}
 
-// Detect returns a *Resource that describes the id of the container.
-// If no container id found, an empty resource will be returned.
+// Detect returns a *Resource that describes the ID of the container.
+// If no container ID found, an empty resource will be returned.
 func (cgroupContainerIDDetector) Detect(ctx context.Context) (*Resource, error) {
 	containerID, err := containerID()
 	if err != nil {
@@ -58,9 +58,9 @@ var (
 	osOpen = defaultOSOpen
 )
 
-// getContainerIDFromCGroup returns the id of the container from the cgroup file.
+// getContainerIDFromCGroup returns the ID of the container from the cgroup file.
 // If cgroup v1 container ID provider fails, then fall back to cgroup v2 container ID provider.
-// If no container id found, an empty string will be returned.
+// If no container ID found, an empty string will be returned.
 func getContainerIDFromCGroup() (string, error) {
 	containerID, err := cgroupV1ContainerIDProvider()
 	if err != nil {
@@ -93,7 +93,7 @@ func getContainerIDFromCGroupFile(cgroupPath string, extractor func(string) stri
 	return getContainerIDFromReader(file, extractor), nil
 }
 
-// getContainerIDFromReader returns the id of the container from reader.
+// getContainerIDFromReader returns the ID of the container from reader.
 func getContainerIDFromReader(reader io.Reader, extractor func(string) string) string {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
