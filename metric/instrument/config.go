@@ -16,54 +16,119 @@ package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import "go.opentelemetry.io/otel/metric/unit"
 
-// Config contains options for metric instrument descriptors.
-type Config struct {
+// config contains options for all instruments.
+type config struct {
 	description string
 	unit        unit.Unit
 }
 
-// Description describes the instrument in human-readable terms.
-func (cfg Config) Description() string {
-	return cfg.description
+// Description returns the Config description.
+func (c config) Description() string {
+	return c.description
 }
 
-// Unit describes the measurement unit for an instrument.
-func (cfg Config) Unit() unit.Unit {
-	return cfg.unit
+// Unit returns the Config unit.
+func (c config) Unit() unit.Unit {
+	return c.unit
 }
 
-// Option is an interface for applying metric instrument options.
+// Option applies options to all instrument configuration.
 type Option interface {
-	applyInstrument(Config) Config
+	AsynchronousOption
+	SynchronousOption
 }
 
-// NewConfig creates a new Config and applies all the given options.
-func NewConfig(opts ...Option) Config {
-	var config Config
+type descriptionOption string
+
+func (o descriptionOption) applySynchronous(cfg SynchronousConfig) SynchronousConfig {
+	cfg.description = string(o)
+	return cfg
+}
+
+func (o descriptionOption) applyAsynchronous(cfg AsynchronousConfig) AsynchronousConfig {
+	cfg.description = string(o)
+	return cfg
+}
+
+// WithDescription sets the instrument description.
+func WithDescription(desc string) Option {
+	return descriptionOption(desc)
+}
+
+type unitOption unit.Unit
+
+func (o unitOption) applySynchronous(cfg SynchronousConfig) SynchronousConfig {
+	cfg.unit = unit.Unit(o)
+	return cfg
+}
+
+func (o unitOption) applyAsynchronous(cfg AsynchronousConfig) AsynchronousConfig {
+	cfg.unit = unit.Unit(o)
+	return cfg
+}
+
+// WithUnit sets the instrument unit.
+func WithUnit(u unit.Unit) Option {
+	return unitOption(u)
+}
+
+// SynchronousConfig contains options for Synchronous instruments.
+type SynchronousConfig struct {
+	config
+}
+
+// NewSynchronousConfig returns a new SynchronousConfig with all opts applied.
+func NewSynchronousConfig(opts ...SynchronousOption) SynchronousConfig {
+	var config SynchronousConfig
 	for _, o := range opts {
-		config = o.applyInstrument(config)
+		config = o.applySynchronous(config)
 	}
 	return config
 }
 
-type optionFunc func(Config) Config
-
-func (fn optionFunc) applyInstrument(cfg Config) Config {
-	return fn(cfg)
+// SynchronousOption applies options to Synchronous instruments.
+type SynchronousOption interface {
+	applySynchronous(SynchronousConfig) SynchronousConfig
 }
 
-// WithDescription applies provided description.
-func WithDescription(desc string) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.description = desc
-		return cfg
-	})
+// AsynchronousConfig contains options for Asynchronous instruments.
+type AsynchronousConfig struct {
+	config
+
+	callbacks []Callback
 }
 
-// WithUnit applies provided unit.
-func WithUnit(u unit.Unit) Option {
-	return optionFunc(func(cfg Config) Config {
-		cfg.unit = u
-		return cfg
-	})
+// NewAsynchronousConfig returns a new AsynchronousConfig with all opts applied.
+func NewAsynchronousConfig(opts ...AsynchronousOption) AsynchronousConfig {
+	var config AsynchronousConfig
+	for _, o := range opts {
+		config = o.applyAsynchronous(config)
+	}
+	return config
+}
+
+// Callbacks returns the AsynchronousConfig callbacks.
+func (c AsynchronousConfig) Callbacks() []Callback {
+	return c.callbacks
+}
+
+// AsynchronousOption applies options to Asynchronous instruments.
+type AsynchronousOption interface {
+	applyAsynchronous(AsynchronousConfig) AsynchronousConfig
+}
+
+type callbackOption Callback
+
+func (o callbackOption) applyInstrument(cfg config) config {
+	return cfg
+}
+
+func (o callbackOption) applyAsynchronous(cfg AsynchronousConfig) AsynchronousConfig {
+	cfg.callbacks = append(cfg.callbacks, (Callback)(o))
+	return cfg
+}
+
+// WithCallback adds callback to be called for an Asynchronous instrument.
+func WithCallback(callback Callback) AsynchronousOption {
+	return callbackOption(callback)
 }

@@ -14,6 +14,8 @@
 
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
+import "context"
+
 // Asynchronous instruments are instruments that are updated within a Callback.
 // If an instrument is observed outside of it's callback it should be an error.
 //
@@ -21,6 +23,17 @@ package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 type Asynchronous interface {
 	asynchronous()
 }
+
+// Callback is a function that records an observation for an Asynchronous
+// instrument. The Callback can only record observations for the instrument it
+// is registered with, that instrument will be passed to the Callback when it
+// is executed.
+//
+// The function needs to complete in a finite amount of time and the deadline
+// of the passed context is expected to be honored.
+//
+// The function needs to be concurrent safe.
+type Callback func(ctx context.Context, instrument Asynchronous) error
 
 // Synchronous instruments are updated in line with application code.
 //
