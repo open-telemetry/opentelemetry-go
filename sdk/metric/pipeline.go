@@ -21,8 +21,10 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -63,9 +65,36 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 	}
 }
 
-type callback struct {
-	inst instrument.Asynchronous
-	f    instrument.Callback
+type callbackInt64 struct {
+	observe func(context.Context, int64, ...attribute.KeyValue)
+	f       asyncint64.Callback
+}
+
+func (c callbackInt64) collect(ctx context.Context) error {
+	obsv, err := c.f(ctx)
+	if err != nil {
+		return err
+	}
+	for _, o := range obsv {
+		c.observe(ctx, o.Value, o.Attributes...)
+	}
+	return nil
+}
+
+type callbackFloat64 struct {
+	observe func(context.Context, float64, ...attribute.KeyValue)
+	f       asyncfloat64.Callback
+}
+
+func (c callbackFloat64) collect(ctx context.Context) error {
+	obsv, err := c.f(ctx)
+	if err != nil {
+		return err
+	}
+	for _, o := range obsv {
+		c.observe(ctx, o.Value, o.Attributes...)
+	}
+	return nil
 }
 
 // pipeline connects all of the instruments created by a meter provider to a Reader.
@@ -81,7 +110,8 @@ type pipeline struct {
 
 	sync.Mutex
 	aggregations   map[instrumentation.Scope][]instrumentSync
-	callbacks      []callback
+	iCallbacks     []callbackInt64
+	fCallbacks     []callbackFloat64
 	multiCallbacks []func(context.Context)
 }
 
@@ -100,11 +130,20 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addMultiCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(cback callback) {
+// addCallbackInt64 registers a callbackInt64 to be run when `produce()` is
+// called.
+func (p *pipeline) addCallbackInt64(cback callbackInt64) {
 	p.Lock()
 	defer p.Unlock()
-	p.callbacks = append(p.callbacks, cback)
+	p.iCallbacks = append(p.iCallbacks, cback)
+}
+
+// addCallbackFloat64 registers a callbackFloat64 to be run when `produce()` is
+// called.
+func (p *pipeline) addCallbackFloat64(cback callbackFloat64) {
+	p.Lock()
+	defer p.Unlock()
+	p.fCallbacks = append(p.fCallbacks, cback)
 }
 
 // addMultiCallback registers a multi-instrument callback to be run when
@@ -133,19 +172,24 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
 	var errs multierror
-	for _, callback := range p.callbacks {
+	for _, c := range p.iCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		err := callback.f(ctx, callback.inst)
-		if err != nil {
+		if err := c.collect(ctx); err != nil {
 			errs.append(err)
 		}
-		err = ctx.Err()
-		if err != nil {
-			// This means the context expired before we finished running callbacks.
+		if err := ctx.Err(); err != nil {
 			return metricdata.ResourceMetrics{}, err
 		}
 	}
-
+	for _, c := range p.fCallbacks {
+		// TODO make the callbacks parallel. ( #3034 )
+		if err := c.collect(ctx); err != nil {
+			errs.append(err)
+		}
+		if err := ctx.Err(); err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+	}
 	for _, callback := range p.multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
 		callback(ctx)
@@ -468,9 +512,15 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(cback callback) {
+func (p pipelines) registerCallbackInt64(cback callbackInt64) {
 	for _, pipe := range p {
-		pipe.addCallback(cback)
+		pipe.addCallbackInt64(cback)
+	}
+}
+
+func (p pipelines) registerCallbackFloat64(cback callbackFloat64) {
+	for _, pipe := range p {
+		pipe.addCallbackFloat64(cback)
 	}
 }
 

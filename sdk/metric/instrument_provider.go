@@ -15,11 +15,11 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -34,45 +34,14 @@ func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c 
 	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver(p, c)}
 }
 
-// lookupSync returns the resolved synchronous instrumentImpl.
-func (p *instProvider[N]) lookupSync(kind InstrumentKind, name string, opts []instrument.SynchronousOption) (*instrumentImpl[N], error) {
-	cfg := instrument.NewSynchronousConfig(opts...)
-	return p.lookup(Instrument{
+func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*instrumentImpl[N], error) {
+	inst := Instrument{
 		Name:        name,
-		Description: cfg.Description(),
-		Unit:        cfg.Unit(),
+		Description: desc,
+		Unit:        u,
 		Kind:        kind,
 		Scope:       p.scope,
-	})
-}
-
-// lookupAsync returns the resolved asyncchronous instrumentImpl.
-func (p *instProvider[N]) lookupAsync(kind InstrumentKind, name string, opts []instrument.AsynchronousOption) (*instrumentImpl[N], error) {
-	cfg := instrument.NewAsynchronousConfig(opts...)
-	inst, err := p.lookup(Instrument{
-		Name:        name,
-		Description: cfg.Description(),
-		Unit:        cfg.Unit(),
-		Kind:        kind,
-		Scope:       p.scope,
-	})
-	if err != nil {
-		return nil, err
 	}
-
-	if inst == nil {
-		// Drop aggregator.
-		return nil, nil
-	}
-
-	for _, cBack := range cfg.Callbacks() {
-		p.pipes.registerCallback(callback{inst: inst, f: cBack})
-	}
-
-	return inst, nil
-}
-
-func (p *instProvider[N]) lookup(inst Instrument) (*instrumentImpl[N], error) {
 	aggs, err := p.resolve.Aggregators(inst)
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
@@ -83,19 +52,51 @@ type asyncInt64Provider struct {
 
 var _ asyncint64.InstrumentProvider = asyncInt64Provider{}
 
+func (p asyncInt64Provider) registerCallbacks(inst *instrumentImpl[int64], cBacks []asyncint64.Callback) {
+	if inst == nil {
+		// Drop aggregator.
+		return
+	}
+
+	for _, cBack := range cBacks {
+		p.pipes.registerCallbackInt64(callbackInt64{
+			observe: inst.Observe,
+			f:       cBack,
+		})
+	}
+}
+
 // Counter creates an instrument for recording increasing values.
-func (p asyncInt64Provider) Counter(name string, opts ...instrument.AsynchronousOption) (asyncint64.Counter, error) {
-	return p.lookupAsync(InstrumentKindAsyncCounter, name, opts)
+func (p asyncInt64Provider) Counter(name string, opts ...asyncint64.Option) (asyncint64.Counter, error) {
+	cfg := asyncint64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncCounter, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p asyncInt64Provider) UpDownCounter(name string, opts ...instrument.AsynchronousOption) (asyncint64.UpDownCounter, error) {
-	return p.lookupAsync(InstrumentKindAsyncUpDownCounter, name, opts)
+func (p asyncInt64Provider) UpDownCounter(name string, opts ...asyncint64.Option) (asyncint64.UpDownCounter, error) {
+	cfg := asyncint64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncUpDownCounter, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 // Gauge creates an instrument for recording the current value.
-func (p asyncInt64Provider) Gauge(name string, opts ...instrument.AsynchronousOption) (asyncint64.Gauge, error) {
-	return p.lookupAsync(InstrumentKindAsyncGauge, name, opts)
+func (p asyncInt64Provider) Gauge(name string, opts ...asyncint64.Option) (asyncint64.Gauge, error) {
+	cfg := asyncint64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncGauge, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 type asyncFloat64Provider struct {
@@ -104,19 +105,51 @@ type asyncFloat64Provider struct {
 
 var _ asyncfloat64.InstrumentProvider = asyncFloat64Provider{}
 
+func (p asyncFloat64Provider) registerCallbacks(inst *instrumentImpl[float64], cBacks []asyncfloat64.Callback) {
+	if inst == nil {
+		// Drop aggregator.
+		return
+	}
+
+	for _, cBack := range cBacks {
+		p.pipes.registerCallbackFloat64(callbackFloat64{
+			observe: inst.Observe,
+			f:       cBack,
+		})
+	}
+}
+
 // Counter creates an instrument for recording increasing values.
-func (p asyncFloat64Provider) Counter(name string, opts ...instrument.AsynchronousOption) (asyncfloat64.Counter, error) {
-	return p.lookupAsync(InstrumentKindAsyncCounter, name, opts)
+func (p asyncFloat64Provider) Counter(name string, opts ...asyncfloat64.Option) (asyncfloat64.Counter, error) {
+	cfg := asyncfloat64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncCounter, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p asyncFloat64Provider) UpDownCounter(name string, opts ...instrument.AsynchronousOption) (asyncfloat64.UpDownCounter, error) {
-	return p.lookupAsync(InstrumentKindAsyncUpDownCounter, name, opts)
+func (p asyncFloat64Provider) UpDownCounter(name string, opts ...asyncfloat64.Option) (asyncfloat64.UpDownCounter, error) {
+	cfg := asyncfloat64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncUpDownCounter, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 // Gauge creates an instrument for recording the current value.
-func (p asyncFloat64Provider) Gauge(name string, opts ...instrument.AsynchronousOption) (asyncfloat64.Gauge, error) {
-	return p.lookupAsync(InstrumentKindAsyncGauge, name, opts)
+func (p asyncFloat64Provider) Gauge(name string, opts ...asyncfloat64.Option) (asyncfloat64.Gauge, error) {
+	cfg := asyncfloat64.NewConfig(opts...)
+	inst, err := p.lookup(InstrumentKindAsyncGauge, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return nil, err
+	}
+	p.registerCallbacks(inst, cfg.Callbacks())
+	return inst, nil
 }
 
 type syncInt64Provider struct {
@@ -126,18 +159,21 @@ type syncInt64Provider struct {
 var _ syncint64.InstrumentProvider = syncInt64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p syncInt64Provider) Counter(name string, opts ...instrument.SynchronousOption) (syncint64.Counter, error) {
-	return p.lookupSync(InstrumentKindSyncCounter, name, opts)
+func (p syncInt64Provider) Counter(name string, opts ...syncint64.Option) (syncint64.Counter, error) {
+	cfg := syncint64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncCounter, name, cfg.Description(), cfg.Unit())
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p syncInt64Provider) UpDownCounter(name string, opts ...instrument.SynchronousOption) (syncint64.UpDownCounter, error) {
-	return p.lookupSync(InstrumentKindSyncUpDownCounter, name, opts)
+func (p syncInt64Provider) UpDownCounter(name string, opts ...syncint64.Option) (syncint64.UpDownCounter, error) {
+	cfg := syncint64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncUpDownCounter, name, cfg.Description(), cfg.Unit())
 }
 
 // Histogram creates an instrument for recording the current value.
-func (p syncInt64Provider) Histogram(name string, opts ...instrument.SynchronousOption) (syncint64.Histogram, error) {
-	return p.lookupSync(InstrumentKindSyncHistogram, name, opts)
+func (p syncInt64Provider) Histogram(name string, opts ...syncint64.Option) (syncint64.Histogram, error) {
+	cfg := syncint64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncHistogram, name, cfg.Description(), cfg.Unit())
 }
 
 type syncFloat64Provider struct {
@@ -147,16 +183,19 @@ type syncFloat64Provider struct {
 var _ syncfloat64.InstrumentProvider = syncFloat64Provider{}
 
 // Counter creates an instrument for recording increasing values.
-func (p syncFloat64Provider) Counter(name string, opts ...instrument.SynchronousOption) (syncfloat64.Counter, error) {
-	return p.lookupSync(InstrumentKindSyncCounter, name, opts)
+func (p syncFloat64Provider) Counter(name string, opts ...syncfloat64.Option) (syncfloat64.Counter, error) {
+	cfg := syncfloat64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncCounter, name, cfg.Description(), cfg.Unit())
 }
 
 // UpDownCounter creates an instrument for recording changes of a value.
-func (p syncFloat64Provider) UpDownCounter(name string, opts ...instrument.SynchronousOption) (syncfloat64.UpDownCounter, error) {
-	return p.lookupSync(InstrumentKindSyncUpDownCounter, name, opts)
+func (p syncFloat64Provider) UpDownCounter(name string, opts ...syncfloat64.Option) (syncfloat64.UpDownCounter, error) {
+	cfg := syncfloat64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncUpDownCounter, name, cfg.Description(), cfg.Unit())
 }
 
 // Histogram creates an instrument for recording the current value.
-func (p syncFloat64Provider) Histogram(name string, opts ...instrument.SynchronousOption) (syncfloat64.Histogram, error) {
-	return p.lookupSync(InstrumentKindSyncHistogram, name, opts)
+func (p syncFloat64Provider) Histogram(name string, opts ...syncfloat64.Option) (syncfloat64.Histogram, error) {
+	cfg := syncfloat64.NewConfig(opts...)
+	return p.lookup(InstrumentKindSyncHistogram, name, cfg.Description(), cfg.Unit())
 }
