@@ -21,10 +21,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -65,38 +62,6 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 	}
 }
 
-type callbackInt64 struct {
-	observe func(context.Context, int64, ...attribute.KeyValue)
-	f       asyncint64.Callback
-}
-
-func (c callbackInt64) collect(ctx context.Context) error {
-	obsv, err := c.f(ctx)
-	if err != nil {
-		return err
-	}
-	for _, o := range obsv {
-		c.observe(ctx, o.Value, o.Attributes...)
-	}
-	return nil
-}
-
-type callbackFloat64 struct {
-	observe func(context.Context, float64, ...attribute.KeyValue)
-	f       asyncfloat64.Callback
-}
-
-func (c callbackFloat64) collect(ctx context.Context) error {
-	obsv, err := c.f(ctx)
-	if err != nil {
-		return err
-	}
-	for _, o := range obsv {
-		c.observe(ctx, o.Value, o.Attributes...)
-	}
-	return nil
-}
-
 // pipeline connects all of the instruments created by a meter provider to a Reader.
 // This is the object that will be `Reader.register()` when a meter provider is created.
 //
@@ -110,8 +75,8 @@ type pipeline struct {
 
 	sync.Mutex
 	aggregations   map[instrumentation.Scope][]instrumentSync
-	iCallbacks     []callbackInt64
-	fCallbacks     []callbackFloat64
+	iCallbacks     []callback[int64]
+	fCallbacks     []callback[float64]
 	multiCallbacks []func(context.Context)
 }
 
@@ -130,9 +95,9 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallbackInt64 registers a callbackInt64 to be run when `produce()` is
+// addCallbackInt64 registers a callback[int64] to be run when `produce()` is
 // called.
-func (p *pipeline) addCallbackInt64(cback callbackInt64) {
+func (p *pipeline) addCallbackInt64(cback callback[int64]) {
 	p.Lock()
 	defer p.Unlock()
 	p.iCallbacks = append(p.iCallbacks, cback)
@@ -140,7 +105,7 @@ func (p *pipeline) addCallbackInt64(cback callbackInt64) {
 
 // addCallbackFloat64 registers a callbackFloat64 to be run when `produce()` is
 // called.
-func (p *pipeline) addCallbackFloat64(cback callbackFloat64) {
+func (p *pipeline) addCallbackFloat64(cback callback[float64]) {
 	p.Lock()
 	defer p.Unlock()
 	p.fCallbacks = append(p.fCallbacks, cback)
@@ -512,13 +477,13 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallbackInt64(cback callbackInt64) {
+func (p pipelines) registerCallbackInt64(cback callback[int64]) {
 	for _, pipe := range p {
 		pipe.addCallbackInt64(cback)
 	}
 }
 
-func (p pipelines) registerCallbackFloat64(cback callbackFloat64) {
+func (p pipelines) registerCallbackFloat64(cback callback[float64]) {
 	for _, pipe := range p {
 		pipe.addCallbackFloat64(cback)
 	}

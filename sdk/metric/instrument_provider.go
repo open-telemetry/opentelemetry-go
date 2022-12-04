@@ -59,9 +59,9 @@ func (p asyncInt64Provider) registerCallbacks(inst *instrumentImpl[int64], cBack
 	}
 
 	for _, cBack := range cBacks {
-		p.pipes.registerCallbackInt64(callbackInt64{
+		p.pipes.registerCallbackInt64(callback[int64]{
 			observe: inst.Observe,
-			f:       cBack,
+			newIter: newInt64Iter(cBack),
 		})
 	}
 }
@@ -112,9 +112,9 @@ func (p asyncFloat64Provider) registerCallbacks(inst *instrumentImpl[float64], c
 	}
 
 	for _, cBack := range cBacks {
-		p.pipes.registerCallbackFloat64(callbackFloat64{
+		p.pipes.registerCallbackFloat64(callback[float64]{
 			observe: inst.Observe,
-			f:       cBack,
+			newIter: newFloat64Iter(cBack),
 		})
 	}
 }
