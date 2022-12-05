@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -219,7 +218,8 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
+
+	assert.Contains(t, err.Error(), "deadline exceeded")
 }
 
 func TestNoRetry(t *testing.T) {
@@ -246,7 +246,7 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces: 400 Bad Request", mc.endpoint), err.Error())
+	assert.Equal(t, fmt.Sprintf("trace export: failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), err.Error())
 	assert.Empty(t, mc.GetSpans())
 }
 

@@ -26,9 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -239,7 +237,8 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	// Release the export so everything is cleaned up on shutdown.
 	close(exportBlock)
 
-	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "deadline exceeded")
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
