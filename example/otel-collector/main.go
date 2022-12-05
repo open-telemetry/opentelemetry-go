@@ -57,10 +57,10 @@ func initProvider() (func(context.Context) error, error) {
 	defer cancel()
 	// If the OpenTelemetry Collector OTLP gRPC receiver is
 	// running on a local cluster (minikube or microk8s), it
-	// should be accessible by default at `127.0.0.1:4318` for the
-	// OTLP gRPC receiver. Otherwise, replace `127.0.0.1:4318`
+	// should be accessible by default at `127.0.0.1:4317` for the
+	// OTLP gRPC receiver. Otherwise, replace `127.0.0.1:4317`
 	// below with the ipaddr:port of your collector.
-	conn, err := grpc.DialContext(ctx, "127.0.0.1:4318",
+	conn, err := grpc.DialContext(ctx, "127.0.0.1:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 
