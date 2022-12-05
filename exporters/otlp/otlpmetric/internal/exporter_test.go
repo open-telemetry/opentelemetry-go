@@ -16,8 +16,10 @@ package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/i
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -31,6 +33,9 @@ type client struct {
 	// n is incremented by all Client methods. If these methods are called
 	// concurrently this should fail tests run with the race detector.
 	n int
+
+	// uploadErr is returned from UploadMetrics
+	uploadErr error
 }
 
 func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
@@ -43,7 +48,7 @@ func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 
 func (c *client) UploadMetrics(context.Context, *mpb.ResourceMetrics) error {
 	c.n++
-	return nil
+	return c.uploadErr
 }
 
 func (c *client) ForceFlush(context.Context) error {
@@ -97,4 +102,78 @@ func TestExporterClientConcurrency(t *testing.T) {
 
 	close(done)
 	wg.Wait()
+}
+
+func TestExporterClientErr(t *testing.T) {
+	startTime := time.Now()
+	time := startTime.Add(time.Minute)
+	c := &client{
+		uploadErr: context.Canceled,
+	}
+	exp := New(c)
+	rm := metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "gauge",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									StartTime: startTime,
+									Time:      time,
+									Value:     123,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := context.Background()
+
+	// Verifyt the export error case
+	err := exp.Export(ctx, rm)
+
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled))
+
+	assert.Equal(t, "metrics export: context canceled", err.Error())
+
+	rm.ScopeMetrics = append(rm.ScopeMetrics, metricdata.ScopeMetrics{
+		Metrics: []metricdata.Metrics{
+			{
+				Name: "badhisto",
+				Data: metricdata.Histogram{
+					DataPoints: []metricdata.HistogramDataPoint{
+						{
+							StartTime:    startTime,
+							Time:         time,
+							BucketCounts: []uint64{1, 2, 3},
+							Bounds:       []float64{1, 2, 3},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	// Verify the export error AND transform error case
+	err = exp.Export(ctx, rm)
+
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled))
+
+	assert.Regexp(t, `metrics export: incomplete .*`, err.Error())
+
+	// Verify the transform error case
+	c.uploadErr = nil
+
+	err = exp.Export(ctx, rm)
+
+	assert.Error(t, err)
+
+	assert.Regexp(t, `metrics incomplete export: .*`, err.Error())
+	assert.NoError(t, exp.Shutdown(ctx))
 }

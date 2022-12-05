@@ -51,19 +51,21 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation 
 
 // Export transforms and transmits metric data to an OTLP receiver.
 func (e *exporter) Export(ctx context.Context, rm metricdata.ResourceMetrics) error {
-	otlpRm, err := transform.ResourceMetrics(rm)
+	otlpRm, transformErr := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
-	if upErr != nil {
-		if err == nil {
-			return upErr
-		}
-		// Merge the two errors.
-		return fmt.Errorf("failed to upload incomplete metrics (%s): %w", err, upErr)
+
+	switch {
+	case upErr != nil && transformErr != nil:
+		return fmt.Errorf("metrics export: incomplete (%s): %w", transformErr, upErr)
+	case upErr != nil:
+		return fmt.Errorf("metrics export: %w", upErr)
+	case transformErr != nil:
+		return fmt.Errorf("metrics incomplete export: %w", transformErr)
 	}
-	return err
+	return nil
 }
 
 // ForceFlush flushes any metric data held by an exporter.

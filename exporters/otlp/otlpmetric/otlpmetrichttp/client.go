@@ -224,7 +224,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				return err
 			}
 		default:
-			rErr = fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
+			rErr = fmt.Errorf("failed to send to %s: %s", request.URL, resp.Status)
 		}
 
 		if err := resp.Body.Close(); err != nil {
