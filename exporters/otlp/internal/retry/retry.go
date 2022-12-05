@@ -92,19 +92,19 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 
 	return func(ctx context.Context, fn func(context.Context) error) error {
 		for {
-			err := fn(ctx)
-			if err == nil {
+			fnErr := fn(ctx)
+			if fnErr == nil {
 				return nil
 			}
 
-			retryable, throttle := evaluate(err)
+			retryable, throttle := evaluate(fnErr)
 			if !retryable {
-				return err
+				return fnErr
 			}
 
 			bOff := b.NextBackOff()
 			if bOff == backoff.Stop {
-				return fmt.Errorf("max retry time elapsed: %w", err)
+				return fmt.Errorf("max retry time elapsed: %w", fnErr)
 			}
 
 			// Wait for the greater of the backoff or throttle delay.
@@ -114,12 +114,12 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			} else {
 				elapsed := b.GetElapsedTime()
 				if b.MaxElapsedTime != 0 && elapsed+throttle > b.MaxElapsedTime {
-					return fmt.Errorf("max retry time would elapse: %w", err)
+					return fmt.Errorf("max retry time would elapse: %w", fnErr)
 				}
 				delay = throttle
 			}
 
-			if err := waitFunc(ctx, delay); err != nil {
+			if err := waitFunc(ctx, fnErr, delay); err != nil {
 				return err
 			}
 		}
@@ -129,7 +129,10 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 // Allow override for testing.
 var waitFunc = wait
 
-func wait(ctx context.Context, delay time.Duration) error {
+// wait takes the caller's context, the most recent retryable errors,
+// and the amount of time to wait.  It will return nil if the
+// operation can be retried or non-nil if the operation has timed out.
+func wait(ctx context.Context, retryableErr error, delay time.Duration) error {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
@@ -141,7 +144,8 @@ func wait(ctx context.Context, delay time.Duration) error {
 		select {
 		case <-timer.C:
 		default:
-			return ctx.Err()
+			// Include the final retryable error as an explanation.
+			return fmt.Errorf("%w: %s", ctx.Err(), retryableErr)
 		}
 	case <-timer.C:
 	}
