@@ -387,3 +387,265 @@ func TestMultiScopes(t *testing.T) {
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
 }
+
+func TestDuplicateMetrics(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		customResouceAttrs    []attribute.KeyValue
+		recordMetrics         func(ctx context.Context, meterA, meterB otelmetric.Meter)
+		options               []Option
+		possibleExpectedFiles []string
+	}{
+		{
+			name: "no_conflict_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.SyncInt64().Counter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter counter foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, attribute.String("A", "B"))
+
+				fooB, err := meterB.SyncInt64().Counter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter counter foo"))
+				assert.NoError(t, err)
+				fooB.Add(ctx, 100, attribute.String("A", "B"))
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_counters.txt"},
+		},
+		{
+			name: "no_conflict_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.SyncInt64().UpDownCounter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, attribute.String("A", "B"))
+
+				fooB, err := meterB.SyncInt64().UpDownCounter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooB.Add(ctx, 100, attribute.String("A", "B"))
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_updowncounters.txt"},
+		},
+		{
+			name: "no_conflict_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.SyncInt64().Histogram("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooA.Record(ctx, 100, attribute.String("A", "B"))
+
+				fooB, err := meterB.SyncInt64().Histogram("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooB.Record(ctx, 100, attribute.String("A", "B"))
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_histograms.txt"},
+		},
+		{
+			name: "conflict_help_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.SyncInt64().Counter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, attribute.String("type", "bar"))
+
+				barB, err := meterB.SyncInt64().Counter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, attribute.String("type", "bar"))
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_counters_1.txt",
+				"testdata/conflict_help_two_counters_2.txt",
+			},
+		},
+		{
+			name: "conflict_help_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.SyncInt64().UpDownCounter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, attribute.String("type", "bar"))
+
+				barB, err := meterB.SyncInt64().UpDownCounter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, attribute.String("type", "bar"))
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_updowncounters_1.txt",
+				"testdata/conflict_help_two_updowncounters_2.txt",
+			},
+		},
+		{
+			name: "conflict_help_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.SyncInt64().Histogram("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Record(ctx, 100, attribute.String("A", "B"))
+
+				barB, err := meterB.SyncInt64().Histogram("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Record(ctx, 100, attribute.String("A", "B"))
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_histograms_1.txt",
+				"testdata/conflict_help_two_histograms_2.txt",
+			},
+		},
+		{
+			name: "conflict_unit_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				bazA, err := meterA.SyncInt64().Counter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter bar"))
+				assert.NoError(t, err)
+				bazA.Add(ctx, 100, attribute.String("type", "bar"))
+
+				bazB, err := meterB.SyncInt64().Counter("bar",
+					syncint64.WithUnit(unit.Milliseconds),
+					syncint64.WithDescription("meter bar"))
+				assert.NoError(t, err)
+				bazB.Add(ctx, 100, attribute.String("type", "bar"))
+			},
+			options:               []Option{WithoutUnits()},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_counters.txt"},
+		},
+		{
+			name: "conflict_unit_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.SyncInt64().UpDownCounter("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter gauge bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, attribute.String("type", "bar"))
+
+				barB, err := meterB.SyncInt64().UpDownCounter("bar",
+					syncint64.WithUnit(unit.Milliseconds),
+					syncint64.WithDescription("meter gauge bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, attribute.String("type", "bar"))
+			},
+			options:               []Option{WithoutUnits()},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_updowncounters.txt"},
+		},
+		{
+			name: "conflict_unit_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.SyncInt64().Histogram("bar",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter histogram bar"))
+				assert.NoError(t, err)
+				barA.Record(ctx, 100, attribute.String("A", "B"))
+
+				barB, err := meterB.SyncInt64().Histogram("bar",
+					syncint64.WithUnit(unit.Milliseconds),
+					syncint64.WithDescription("meter histogram bar"))
+				assert.NoError(t, err)
+				barB.Record(ctx, 100, attribute.String("A", "B"))
+			},
+			options:               []Option{WithoutUnits()},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_histograms.txt"},
+		},
+		{
+			name: "conflict_type_counter_and_updowncounter",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				counter, err := meterA.SyncInt64().Counter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter foo"))
+				assert.NoError(t, err)
+				counter.Add(ctx, 100, attribute.String("type", "foo"))
+
+				gauge, err := meterA.SyncInt64().UpDownCounter("foo_total",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter foo"))
+				assert.NoError(t, err)
+				gauge.Add(ctx, 200, attribute.String("type", "foo"))
+			},
+			options: []Option{WithoutUnits()},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_type_counter_and_updowncounter_1.txt",
+				"testdata/conflict_type_counter_and_updowncounter_2.txt",
+			},
+		},
+		{
+			name: "conflict_type_histogram_and_updowncounter",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.SyncInt64().UpDownCounter("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, attribute.String("A", "B"))
+
+				fooHistogramA, err := meterA.SyncInt64().Histogram("foo",
+					syncint64.WithUnit(unit.Bytes),
+					syncint64.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooHistogramA.Record(ctx, 100, attribute.String("A", "B"))
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_type_histogram_and_updowncounter_1.txt",
+				"testdata/conflict_type_histogram_and_updowncounter_2.txt",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// initialize registry exporter
+			ctx := context.Background()
+			registry := prometheus.NewRegistry()
+			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
+			require.NoError(t, err)
+
+			// initialize resource
+			res, err := resource.New(ctx,
+				resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+			)
+			require.NoError(t, err)
+			res, err = resource.Merge(resource.Default(), res)
+			require.NoError(t, err)
+
+			// initialize provider
+			provider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+				metric.WithResource(res),
+			)
+
+			// initialize two meter a, b
+			meterA := provider.Meter("ma", otelmetric.WithInstrumentationVersion("v0.1.0"))
+			meterB := provider.Meter("mb", otelmetric.WithInstrumentationVersion("v0.1.0"))
+
+			tc.recordMetrics(ctx, meterA, meterB)
+
+			var match = false
+			for _, filename := range tc.possibleExpectedFiles {
+				file, ferr := os.Open(filename)
+				require.NoError(t, ferr)
+				t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+				err = testutil.GatherAndCompare(registry, file)
+				if err == nil {
+					match = true
+					break
+				}
+			}
+			require.Truef(t, match, "expected export not produced: %v", err)
+		})
+	}
+}
