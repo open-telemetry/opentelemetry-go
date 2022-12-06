@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// manualReader is a a simple Reader that allows an application to
+// manualReader is a simple Reader that allows an application to
 // read metrics on demand.
 type manualReader struct {
 	producer     atomic.Value
