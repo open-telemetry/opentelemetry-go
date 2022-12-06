@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## Removed
+### Removed
 
 - The deprecated `go.opentelemetry.io/otel/sdk/metric/view` package is removed. (#3520)
 
