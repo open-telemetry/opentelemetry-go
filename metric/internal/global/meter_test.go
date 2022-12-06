@@ -86,6 +86,35 @@ func TestMeterRace(t *testing.T) {
 	close(finish)
 }
 
+func TestUnregisterRace(t *testing.T) {
+	mtr := &meter{}
+	reg, err := mtr.RegisterCallback(nil, func(ctx context.Context) {})
+	require.NoError(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	finish := make(chan struct{})
+	go func() {
+		for i, once := 0, false; ; i++ {
+			_ = reg.Unregister()
+			if !once {
+				wg.Done()
+				once = true
+			}
+			select {
+			case <-finish:
+				return
+			default:
+			}
+		}
+	}()
+	_ = reg.Unregister()
+
+	wg.Wait()
+	mtr.setDelegate(metric.NewNoopMeterProvider())
+	close(finish)
+}
+
 func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {
 	afcounter, err := m.AsyncFloat64().Counter("test_Async_Counter")
 	require.NoError(t, err)
