@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-// Observation is an recorded event value for a particular set of attributes.
-type Observation struct {
+// Measurement is an recorded event value for a particular set of attributes.
+type Measurement struct {
 	Attributes []attribute.KeyValue
 	Value      float64
 }
@@ -34,7 +34,7 @@ type Observation struct {
 // of the passed context is expected to be honored.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context) ([]Observation, error)
+type Callback func(context.Context) ([]Measurement, error)
 
 // InstrumentProvider provides access to individual instruments.
 //

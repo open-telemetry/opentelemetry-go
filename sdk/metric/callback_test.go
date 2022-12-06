@@ -30,7 +30,7 @@ func TestCallbackCollectError(t *testing.T) {
 		observe: func(context.Context, int64, ...attribute.KeyValue) {
 			assert.Fail(t, "observe should not be called")
 		},
-		newIter: newInt64Iter(func(context.Context) ([]asyncint64.Observation, error) {
+		newIter: newInt64Iter(func(context.Context) ([]asyncint64.Measurement, error) {
 			return nil, assert.AnError
 		}),
 	}
@@ -49,8 +49,8 @@ func TestCallbackCollectInt64(t *testing.T) {
 			assert.Equal(t, val, v, "recorded value")
 			assert.Equal(t, attrs, a, "recorded attribute")
 		},
-		newIter: newInt64Iter(func(context.Context) ([]asyncint64.Observation, error) {
-			return []asyncint64.Observation{{Attributes: attrs, Value: val}}, nil
+		newIter: newInt64Iter(func(context.Context) ([]asyncint64.Measurement, error) {
+			return []asyncint64.Measurement{{Attributes: attrs, Value: val}}, nil
 		}),
 	}
 
@@ -68,8 +68,8 @@ func TestCallbackCollectFloat64(t *testing.T) {
 			assert.Equal(t, val, v, "recorded value")
 			assert.Equal(t, attrs, a, "recorded attribute")
 		},
-		newIter: newFloat64Iter(func(context.Context) ([]asyncfloat64.Observation, error) {
-			return []asyncfloat64.Observation{{Attributes: attrs, Value: val}}, nil
+		newIter: newFloat64Iter(func(context.Context) ([]asyncfloat64.Measurement, error) {
+			return []asyncfloat64.Measurement{{Attributes: attrs, Value: val}}, nil
 		}),
 	}
 

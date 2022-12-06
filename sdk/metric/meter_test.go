@@ -125,8 +125,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncint64.Observation, error) {
-					return []asyncint64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncint64.Measurement, error) {
+					return []asyncint64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				ctr, err := m.AsyncInt64().Counter("aint", asyncint64.WithCallback(cback))
 				assert.NoError(t, err)
@@ -153,8 +153,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncint64.Observation, error) {
-					return []asyncint64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncint64.Measurement, error) {
+					return []asyncint64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				ctr, err := m.AsyncInt64().UpDownCounter("aint", asyncint64.WithCallback(cback))
 				assert.NoError(t, err)
@@ -181,8 +181,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncint64.Observation, error) {
-					return []asyncint64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncint64.Measurement, error) {
+					return []asyncint64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				gauge, err := m.AsyncInt64().Gauge("agauge", asyncint64.WithCallback(cback))
 				assert.NoError(t, err)
@@ -207,8 +207,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncfloat64.Observation, error) {
-					return []asyncfloat64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncfloat64.Measurement, error) {
+					return []asyncfloat64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				ctr, err := m.AsyncFloat64().Counter("afloat", asyncfloat64.WithCallback(cback))
 				assert.NoError(t, err)
@@ -235,8 +235,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncfloat64.Observation, error) {
-					return []asyncfloat64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncfloat64.Measurement, error) {
+					return []asyncfloat64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				ctr, err := m.AsyncFloat64().UpDownCounter("afloat", asyncfloat64.WithCallback(cback))
 				assert.NoError(t, err)
@@ -263,8 +263,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context) ([]asyncfloat64.Observation, error) {
-					return []asyncfloat64.Observation{{Attributes: attrs, Value: 4}}, nil
+				cback := func(ctx context.Context) ([]asyncfloat64.Measurement, error) {
+					return []asyncfloat64.Measurement{{Attributes: attrs, Value: 4}}, nil
 				}
 				gauge, err := m.AsyncFloat64().Gauge("agauge", asyncfloat64.WithCallback(cback))
 				assert.NoError(t, err)

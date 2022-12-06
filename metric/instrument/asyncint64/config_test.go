@@ -31,11 +31,11 @@ func TestOptions(t *testing.T) {
 		uBytes       = unit.Bytes
 	)
 
-	want := []Observation{{Value: token}}
+	want := []Measurement{{Value: token}}
 	got := NewConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithCallback(func(context.Context) ([]Observation, error) {
+		WithCallback(func(context.Context) ([]Measurement, error) {
 			return want, nil
 		}),
 	)

@@ -55,7 +55,7 @@ func newInt64Iter(f asyncint64.Callback) func(context.Context) (iterator[int64],
 
 type iterInt64 struct {
 	idx    int
-	observ []asyncint64.Observation
+	observ []asyncint64.Measurement
 }
 
 func (i *iterInt64) Len() int {
@@ -81,7 +81,7 @@ func newFloat64Iter(f asyncfloat64.Callback) func(context.Context) (iterator[flo
 
 type iterFloat64 struct {
 	idx    int
-	observ []asyncfloat64.Observation
+	observ []asyncfloat64.Measurement
 }
 
 func (i *iterFloat64) Len() int {
