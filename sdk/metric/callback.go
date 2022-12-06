@@ -49,7 +49,7 @@ type iterator[N int64 | float64] interface {
 func newInt64Iter(f asyncint64.Callback) func(context.Context) (iterator[int64], error) {
 	return func(ctx context.Context) (iterator[int64], error) {
 		o, err := f(ctx)
-		return iterInt64{idx: -1, observ: o}, err
+		return &iterInt64{idx: -1, observ: o}, err
 	}
 }
 
@@ -58,19 +58,16 @@ type iterInt64 struct {
 	observ []asyncint64.Observation
 }
 
-func (i iterInt64) Len() int {
+func (i *iterInt64) Len() int {
 	return len(i.observ)
 }
 
-func (i iterInt64) Next() bool {
+func (i *iterInt64) Next() bool {
 	i.idx++
 	return i.idx < i.Len()
 }
 
-func (i iterInt64) Yield() (int64, []attribute.KeyValue) {
-	if i.observ == nil || i.idx < 0 || i.idx >= i.Len() {
-		return 0, nil
-	}
+func (i *iterInt64) Yield() (int64, []attribute.KeyValue) {
 	o := i.observ[i.idx]
 	return o.Value, o.Attributes
 }
@@ -78,7 +75,7 @@ func (i iterInt64) Yield() (int64, []attribute.KeyValue) {
 func newFloat64Iter(f asyncfloat64.Callback) func(context.Context) (iterator[float64], error) {
 	return func(ctx context.Context) (iterator[float64], error) {
 		o, err := f(ctx)
-		return iterFloat64{idx: -1, observ: o}, err
+		return &iterFloat64{idx: -1, observ: o}, err
 	}
 }
 
@@ -87,19 +84,16 @@ type iterFloat64 struct {
 	observ []asyncfloat64.Observation
 }
 
-func (i iterFloat64) Len() int {
+func (i *iterFloat64) Len() int {
 	return len(i.observ)
 }
 
-func (i iterFloat64) Next() bool {
+func (i *iterFloat64) Next() bool {
 	i.idx++
 	return i.idx < i.Len()
 }
 
-func (i iterFloat64) Yield() (float64, []attribute.KeyValue) {
-	if i.observ == nil || i.idx < 0 || i.idx >= i.Len() {
-		return 0, nil
-	}
+func (i *iterFloat64) Yield() (float64, []attribute.KeyValue) {
 	o := i.observ[i.idx]
 	return o.Value, o.Attributes
 }
