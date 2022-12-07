@@ -109,7 +109,9 @@ type meter struct {
 
 	mtx         sync.Mutex
 	instruments []delegatedInstrument
-	register    []*registration
+
+	regID uint
+	reg   map[uint]*registration
 
 	delegate atomic.Value // metric.Meter
 }
@@ -135,16 +137,12 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 		inst.setDelegate(meter)
 	}
 
-	for _, r := range m.register {
-		if r == nil {
-			// Already unregistered.
-			continue
-		}
+	for _, r := range m.reg {
 		r.setDelegate(meter)
 	}
 
 	m.instruments = nil
-	m.register = nil
+	m.reg = nil
 }
 
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
@@ -171,28 +169,42 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) (metric.Registration, error) {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
-		return del.RegisterCallback(insts, function)
+		return del.RegisterCallback(insts, f)
 	}
+	return m.register(insts, f)
+}
 
+func (m *meter) registrationID() uint {
+	defer func() { m.regID++ }()
+	return m.regID
+}
+
+func (m *meter) register(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
+
+	if m.reg == nil {
+		m.reg = make(map[uint]*registration)
+	}
+
+	id := m.registrationID()
 	reg := &registration{
 		instruments: insts,
-		function:    function,
-		unreg:       m.unregister(len(m.register)),
+		function:    f,
+		unreg:       m.unregister(id),
 	}
-	m.register = append(m.register, reg)
+	m.reg[id] = reg
 	return reg, nil
 }
 
-func (m *meter) unregister(idx int) func() error {
+func (m *meter) unregister(id uint) func() error {
 	return func() error {
 		m.mtx.Lock()
-		defer m.mtx.Unlock()
-		m.register[idx] = nil
+		delete(m.reg, id)
+		m.mtx.Unlock()
 		return nil
 	}
 }

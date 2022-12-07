@@ -304,17 +304,17 @@ func TestRegistrationDelegation(t *testing.T) {
 		called0 = true
 	})
 	require.NoError(t, err)
-	require.Len(t, mImpl.register, 1, "callback not registered")
+	require.Len(t, mImpl.reg, 1, "callback not registered")
 	// This means reg0 should not be delegated.
 	assert.NoError(t, reg0.Unregister())
-	assert.Nil(t, mImpl.register[0], "callback not unregister")
+	assert.Nil(t, mImpl.reg[0], "callback not unregister")
 
 	var called1 bool
 	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) {
 		called1 = true
 	})
 	require.NoError(t, err)
-	require.Len(t, mImpl.register, 2, "second callback not registered")
+	require.Len(t, mImpl.reg, 1, "second callback not registered")
 
 	mp := &testMeterProvider{}
 
