@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
+  This `Registration` can be used to unregister callbacks. (TBD)
+
 ## [1.11.2/0.34.0] 2022-12-05
 
 ### Added
