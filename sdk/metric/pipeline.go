@@ -15,6 +15,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -75,7 +77,7 @@ type pipeline struct {
 
 	sync.Mutex
 	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    []func(context.Context)
+	callbacks    list.List
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -94,10 +96,15 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(callback func(context.Context)) {
+func (p *pipeline) addCallback(c callback) func() {
 	p.Lock()
 	defer p.Unlock()
-	p.callbacks = append(p.callbacks, callback)
+	e := p.callbacks.PushBack(c)
+	return func() {
+		p.Lock()
+		p.callbacks.Remove(e)
+		p.Unlock()
+	}
 }
 
 // callbackKey is a context key type used to identify context that came from the SDK.
@@ -112,14 +119,15 @@ const produceKey callbackKey = 0
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+	ctx = context.WithValue(ctx, produceKey, struct{}{})
+
 	p.Lock()
 	defer p.Unlock()
 
-	ctx = context.WithValue(ctx, produceKey, struct{}{})
-
-	for _, callback := range p.callbacks {
+	for e := p.callbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
-		callback(ctx)
+		f := e.Value.(callback)
+		f(ctx)
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err
@@ -439,10 +447,21 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(fn func(context.Context)) {
-	for _, pipe := range p {
-		pipe.addCallback(fn)
+func (p pipelines) registerCallback(c callback) metric.Registration {
+	unregs := make([]func(), len(p))
+	for i, pipe := range p {
+		unregs[i] = pipe.addCallback(c)
 	}
+	return unregisterFuncs(unregs)
+}
+
+type unregisterFuncs []func()
+
+func (u unregisterFuncs) Unregister() error {
+	for _, f := range u {
+		f()
+	}
+	return nil
 }
 
 // resolver facilitates resolving Aggregators an instrument needs to aggregate
