@@ -15,6 +15,7 @@
 package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
+	"container/list"
 	"context"
 	"sync"
 	"sync/atomic"
@@ -110,8 +111,7 @@ type meter struct {
 	mtx         sync.Mutex
 	instruments []delegatedInstrument
 
-	regID uint
-	reg   map[uint]*registration
+	registry list.List
 
 	delegate atomic.Value // metric.Meter
 }
@@ -137,12 +137,14 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 		inst.setDelegate(meter)
 	}
 
-	for _, r := range m.reg {
+	for e := m.registry.Front(); e != nil; e = e.Next() {
+		r := e.Value.(*registration)
 		r.setDelegate(meter)
+		m.registry.Remove(e)
 	}
 
 	m.instruments = nil
-	m.reg = nil
+	m.registry.Init()
 }
 
 // AsyncInt64 is the namespace for the Asynchronous Integer instruments.
@@ -174,39 +176,19 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 		insts = unwrapInstruments(insts)
 		return del.RegisterCallback(insts, f)
 	}
-	return m.register(insts, f)
-}
 
-func (m *meter) registrationID() uint {
-	defer func() { m.regID++ }()
-	return m.regID
-}
-
-func (m *meter) register(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	if m.reg == nil {
-		m.reg = make(map[uint]*registration)
-	}
-
-	id := m.registrationID()
-	reg := &registration{
-		instruments: insts,
-		function:    f,
-		unreg:       m.unregister(id),
-	}
-	m.reg[id] = reg
-	return reg, nil
-}
-
-func (m *meter) unregister(id uint) func() error {
-	return func() error {
+	reg := &registration{instruments: insts, function: f}
+	e := m.registry.PushBack(reg)
+	reg.unreg = func() error {
 		m.mtx.Lock()
-		delete(m.reg, id)
+		_ = m.registry.Remove(e)
 		m.mtx.Unlock()
 		return nil
 	}
+	return reg, nil
 }
 
 type wrapped interface {
