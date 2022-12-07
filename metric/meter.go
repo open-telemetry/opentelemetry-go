@@ -56,7 +56,7 @@ type Meter interface {
 	// SyncFloat64 is the namespace for the Synchronous Float instruments
 	SyncFloat64() syncfloat64.InstrumentProvider
 
-	// RegisterCallback registeres f to be called during the collection of a
+	// RegisterCallback registers f to be called during the collection of a
 	// measurement cycle.
 	//
 	// If Unregister of the returned Registration is called, f needs to be
