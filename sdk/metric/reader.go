@@ -48,10 +48,10 @@ var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
 // Pull-based exporters will typically implement Register
 // themselves, since they read on demand.
 type Reader interface {
-	// register registers a Reader with a MeterProvider.
-	// The producer argument allows the Reader to signal the sdk to collect
-	// and send aggregated metric measurements.
-	register(producer)
+	// RegisterProducer registers a Reader with a Producer.
+	// The Producer argument allows the Reader to signal the Producer to
+	// collect and send aggregated metric measurements.
+	RegisterProducer(Producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
 	temporality(InstrumentKind) metricdata.Temporality
@@ -84,15 +84,15 @@ type Reader interface {
 	Shutdown(context.Context) error
 }
 
-// producer produces metrics for a Reader.
-type producer interface {
-	// produce returns aggregated metrics from a single collection.
+// Producer produces metrics for a Reader.
+type Producer interface {
+	// Produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
-	produce(context.Context) (metricdata.ResourceMetrics, error)
+	Produce(context.Context) (metricdata.ResourceMetrics, error)
 }
 
-// produceHolder is used as an atomic.Value to wrap the non-concrete producer
+// produceHolder is used as an atomic.Value to wrap the non-concrete Producer
 // type.
 type produceHolder struct {
 	produce func(context.Context) (metricdata.ResourceMetrics, error)
@@ -101,8 +101,8 @@ type produceHolder struct {
 // shutdownProducer produces an ErrReaderShutdown error always.
 type shutdownProducer struct{}
 
-// produce returns an ErrReaderShutdown error.
-func (p shutdownProducer) produce(context.Context) (metricdata.ResourceMetrics, error) {
+// Produce returns an ErrReaderShutdown error.
+func (p shutdownProducer) Produce(context.Context) (metricdata.ResourceMetrics, error) {
 	return metricdata.ResourceMetrics{}, ErrReaderShutdown
 }
 

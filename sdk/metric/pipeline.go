@@ -63,7 +63,8 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 }
 
 // pipeline connects all of the instruments created by a meter provider to a Reader.
-// This is the object that will be `Reader.register()` when a meter provider is created.
+// This is the object that will be `Reader.RegisterProducer()` when a meter provider
+// is created.
 //
 // As instruments are created the instrument should be checked if it exists in the
 // views of a the Reader, and if so each aggregator should be added to the pipeline.
@@ -108,10 +109,10 @@ type callbackKey int
 // they would have different integer values.
 const produceKey callbackKey = 0
 
-// produce returns aggregated metrics from a single collection.
+// Produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
-func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (p *pipeline) Produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -433,7 +434,7 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 			reader:   r,
 			views:    views,
 		}
-		r.register(p)
+		r.RegisterProducer(p)
 		pipes = append(pipes, p)
 	}
 	return pipes

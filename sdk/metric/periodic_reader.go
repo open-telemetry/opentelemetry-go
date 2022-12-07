@@ -114,6 +114,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		cancel:   cancel,
 		done:     make(chan struct{}),
 	}
+	r.externalProducers.Store([]Producer{})
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -126,7 +127,10 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 // periodicReader is a Reader that continuously collects and exports metric
 // data at a set interval.
 type periodicReader struct {
-	producer atomic.Value
+	sdkProducer atomic.Value
+
+	mu                sync.Mutex
+	externalProducers atomic.Value
 
 	timeout  time.Duration
 	exporter Exporter
@@ -165,12 +169,22 @@ func (r *periodicReader) run(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// register registers p as the producer of this reader.
-func (r *periodicReader) register(p producer) {
-	// Only register once. If producer is already set, do nothing.
-	if !r.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
-		msg := "did not register periodic reader"
-		global.Error(errDuplicateRegister, msg)
+// RegisterProducer registers p as the Producer of this reader.
+func (r *periodicReader) RegisterProducer(p Producer) {
+	if _, ok := p.(*pipeline); ok {
+		// Only register once. If producer is already set, do nothing.
+		if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.Produce}) {
+			msg := "did not register periodic reader"
+			global.Error(errDuplicateRegister, msg)
+		}
+	} else {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		currentProducers := r.externalProducers.Load().([]Producer)
+		newProducers := []Producer{}
+		newProducers = append(newProducers, currentProducers...)
+		newProducers = append(newProducers, p)
+		r.externalProducers.Store(newProducers)
 	}
 }
 
@@ -195,12 +209,13 @@ func (r *periodicReader) collectAndExport(ctx context.Context) error {
 }
 
 // Collect gathers and returns all metric data related to the Reader from
-// the SDK. The returned metric data is not exported to the configured
-// exporter, it is left to the caller to handle that if desired.
+// the SDK and other Producers. The returned metric data is not exported
+// to the configured exporter, it is left to the caller to handle that if
+// desired.
 //
 // An error is returned if this is called after Shutdown.
 func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	return r.collect(ctx, r.producer.Load())
+	return r.collect(ctx, r.sdkProducer.Load())
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.
@@ -218,7 +233,20 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
 		return metricdata.ResourceMetrics{}, err
 	}
-	return ph.produce(ctx)
+
+	rm, err := ph.produce(ctx)
+	if err != nil {
+		return metricdata.ResourceMetrics{}, err
+	}
+	for _, producer := range r.externalProducers.Load().([]Producer) {
+		externalMetrics, err := producer.Produce(ctx)
+		if err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+		// ignore resource from external metrics, but append scope metrics
+		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics.ScopeMetrics...)
+	}
+	return rm, nil
 }
 
 // export exports metric data m using r's exporter.
@@ -259,8 +287,8 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 		<-r.done
 
 		// Any future call to Collect will now return ErrReaderShutdown.
-		ph := r.producer.Swap(produceHolder{
-			produce: shutdownProducer{}.produce,
+		ph := r.sdkProducer.Swap(produceHolder{
+			produce: shutdownProducer{}.Produce,
 		})
 
 		if ph != nil { // Reader was registered.

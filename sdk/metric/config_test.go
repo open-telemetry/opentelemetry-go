@@ -28,7 +28,7 @@ import (
 )
 
 type reader struct {
-	producer        producer
+	producer        Producer
 	temporalityFunc TemporalitySelector
 	aggregationFunc AggregationSelector
 	collectFunc     func(context.Context) (metricdata.ResourceMetrics, error)
@@ -42,7 +42,7 @@ func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // n
 	return r.aggregationFunc(kind)
 }
 
-func (r *reader) register(p producer) { r.producer = p }
+func (r *reader) RegisterProducer(p Producer) { r.producer = p }
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }

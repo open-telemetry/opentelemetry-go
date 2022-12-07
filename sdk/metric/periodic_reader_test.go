@@ -114,7 +114,7 @@ func (ts *periodicReaderTestSuite) SetupTest() {
 	}
 
 	ts.ErrReader = NewPeriodicReader(e)
-	ts.ErrReader.register(testProducer{})
+	ts.ErrReader.RegisterProducer(testSDKProducer())
 }
 
 func (ts *periodicReaderTestSuite) TearDownTest() {
@@ -193,7 +193,8 @@ func TestPeriodicReaderRun(t *testing.T) {
 	}
 
 	r := NewPeriodicReader(exp)
-	r.register(testProducer{})
+	r.RegisterProducer(testSDKProducer())
+	r.RegisterProducer(testProducer{})
 	trigger <- time.Now()
 	assert.Equal(t, assert.AnError, <-eh.Err)
 
@@ -221,7 +222,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	t.Run("ForceFlush", func(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp)
-		r.register(testProducer{})
+		r.RegisterProducer(testSDKProducer())
+		r.RegisterProducer(testProducer{})
 		assert.Equal(t, assert.AnError, r.ForceFlush(context.Background()), "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 
@@ -232,7 +234,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	t.Run("Shutdown", func(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp)
-		r.register(testProducer{})
+		r.RegisterProducer(testSDKProducer())
+		r.RegisterProducer(testProducer{})
 		assert.Equal(t, assert.AnError, r.Shutdown(context.Background()), "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})

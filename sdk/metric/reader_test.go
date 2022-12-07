@@ -58,7 +58,8 @@ func (ts *readerTestSuite) TestErrorForNotRegistered() {
 }
 
 func (ts *readerTestSuite) TestProducer() {
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
+	ts.Reader.RegisterProducer(testProducer{})
 	m, err := ts.Reader.Collect(context.Background())
 	ts.NoError(err)
 	ts.Equal(testMetrics, m)
@@ -66,7 +67,7 @@ func (ts *readerTestSuite) TestProducer() {
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 
 	m, err := ts.Reader.Collect(ctx)
@@ -76,41 +77,42 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 
 func (ts *readerTestSuite) TestShutdownTwice() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
 }
 
 func (ts *readerTestSuite) TestMultipleForceFlush() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
 	ts.Require().NoError(ts.Reader.ForceFlush(ctx))
 	ts.NoError(ts.Reader.ForceFlush(ctx))
 }
 
 func (ts *readerTestSuite) TestMultipleRegister() {
-	p0 := testProducer{
-		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
-			// Differentiate this producer from the second by returning an
-			// error.
-			return testMetrics, assert.AnError
-		},
+	ctx, cancel := context.WithCancel(context.Background())
+	p0 := &pipeline{
+		callbacks: []func(_ context.Context){func(_ context.Context) {
+			// Differentiate this producer from the second by cancelling the context
+			// to generate an error.
+			cancel()
+		}},
 	}
-	p1 := testProducer{}
+	p1 := testSDKProducer()
 
-	ts.Reader.register(p0)
+	ts.Reader.RegisterProducer(p0)
 	// This should be ignored.
-	ts.Reader.register(p1)
+	ts.Reader.RegisterProducer(p1)
 
-	_, err := ts.Reader.Collect(context.Background())
-	ts.Equal(assert.AnError, err)
+	_, err := ts.Reader.Collect(ctx)
+	ts.Equal(context.Canceled, err)
 }
 
 func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
 
 	// All reader methods should be concurrent-safe.
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
@@ -141,7 +143,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ctx := context.Background()
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	// Registering after shutdown should not revert the shutdown.
-	ts.Reader.register(testProducer{})
+	ts.Reader.RegisterProducer(testSDKProducer())
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
@@ -170,11 +172,15 @@ var testMetrics = metricdata.ResourceMetrics{
 	}},
 }
 
+func testSDKProducer() Producer {
+	return &pipeline{resource: resource.NewSchemaless(attribute.String("test", "Reader"))}
+}
+
 type testProducer struct {
 	produceFunc func(context.Context) (metricdata.ResourceMetrics, error)
 }
 
-func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (p testProducer) Produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
@@ -183,7 +189,8 @@ func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, 
 
 func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	ctx := context.Background()
-	r.register(testProducer{})
+	r.RegisterProducer(testSDKProducer())
+	r.RegisterProducer(testProducer{})
 
 	// Store bechmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
