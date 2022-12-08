@@ -26,7 +26,7 @@ func benchCounter(b *testing.B, views ...View) (context.Context, Reader, syncint
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
-	cntr, _ := provider.Meter("test").SyncInt64().Counter("hello")
+	cntr, _ := provider.Meter("test").Int64Counter("hello")
 	b.ResetTimer()
 	b.ReportAllocs()
 	return ctx, rdr, cntr
