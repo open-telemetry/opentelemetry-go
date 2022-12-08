@@ -16,9 +16,11 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -32,6 +34,8 @@ type exporter struct {
 
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
+
+	redactTimestamps bool
 }
 
 // New returns a configured metric exporter.
@@ -43,6 +47,8 @@ func New(options ...Option) (metric.Exporter, error) {
 	exp := &exporter{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
+
+		redactTimestamps: cfg.redactTimestamps,
 	}
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
@@ -64,6 +70,9 @@ func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) 
 	default:
 		// Context is still valid, continue.
 	}
+	if e.redactTimestamps {
+		data = redactTimestamps(data)
+	}
 
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
@@ -80,4 +89,86 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 		})
 	})
 	return ctx.Err()
+}
+
+func redactTimestamps(orig metricdata.ResourceMetrics) metricdata.ResourceMetrics {
+	rm := metricdata.ResourceMetrics{
+		Resource:     orig.Resource,
+		ScopeMetrics: make([]metricdata.ScopeMetrics, 0, len(orig.ScopeMetrics)),
+	}
+	for i, sm := range orig.ScopeMetrics {
+		rm.ScopeMetrics[i] = metricdata.ScopeMetrics{
+			Scope:   sm.Scope,
+			Metrics: make([]metricdata.Metrics, 0, len(sm.Metrics)),
+		}
+		for j, m := range sm.Metrics {
+			rm.ScopeMetrics[i].Metrics[j] = metricdata.Metrics{
+				Name:        m.Name,
+				Description: m.Description,
+				Unit:        m.Unit,
+				Data:        redactAggregationTimestamps(m.Data),
+			}
+		}
+	}
+	return rm
+}
+
+func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggregation {
+	switch a := orig.(type) {
+	case metricdata.Histogram:
+		return metricdata.Histogram{
+			Temporality: a.Temporality,
+			DataPoints:  redactHistogramTimestamps(a.DataPoints),
+		}
+	case metricdata.Sum[int64]:
+		return metricdata.Sum[int64]{
+			Temporality: a.Temporality,
+			DataPoints:  redactDataPointTimestamps(a.DataPoints),
+			IsMonotonic: a.IsMonotonic,
+		}
+	case metricdata.Sum[float64]:
+		return metricdata.Sum[float64]{
+			Temporality: a.Temporality,
+			DataPoints:  redactDataPointTimestamps(a.DataPoints),
+			IsMonotonic: a.IsMonotonic,
+		}
+	case metricdata.Gauge[int64]:
+		return metricdata.Gauge[int64]{
+			DataPoints: redactDataPointTimestamps(a.DataPoints),
+		}
+	case metricdata.Gauge[float64]:
+		return metricdata.Gauge[float64]{
+			DataPoints: redactDataPointTimestamps(a.DataPoints),
+		}
+	default:
+		global.Debug("unknown aggregation type", "type", fmt.Sprintf("%T", a))
+	}
+	return orig
+}
+
+func redactHistogramTimestamps(hdp []metricdata.HistogramDataPoint) []metricdata.HistogramDataPoint {
+	out := make([]metricdata.HistogramDataPoint, 0, len(hdp))
+	for _, dp := range hdp {
+		out = append(out, metricdata.HistogramDataPoint{
+			Attributes:   dp.Attributes,
+			Count:        dp.Count,
+			Sum:          dp.Sum,
+			Bounds:       dp.Bounds,
+			BucketCounts: dp.BucketCounts,
+			Min:          dp.Min,
+			Max:          dp.Max,
+		})
+	}
+	return out
+}
+
+func redactDataPointTimestamps[T int64 | float64](sdp []metricdata.DataPoint[T]) []metricdata.DataPoint[T] {
+	out := make([]metricdata.DataPoint[T], 0, len(sdp))
+	for _, dp := range sdp {
+		out = append(out, metricdata.DataPoint[T]{
+			Attributes: dp.Attributes,
+			Value:      dp.Value,
+		})
+	}
+	return out
 }

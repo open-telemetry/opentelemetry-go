@@ -104,7 +104,10 @@ func Example() {
 	// Print with a JSON encoder that indents with two spaces.
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	exp, err := stdoutmetric.New(stdoutmetric.WithTimelessEncoder(enc))
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithEncoder(enc),
+		stdoutmetric.WithoutTimestamps(),
+	)
 	if err != nil {
 		panic(err)
 	}

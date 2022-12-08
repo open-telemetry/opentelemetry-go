@@ -27,6 +27,7 @@ type config struct {
 	encoder             *encoderHolder
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
+	redactTimestamps    bool
 }
 
 // newConfig creates a validated config configured with options.
@@ -124,4 +125,12 @@ type aggregationSelectorOption struct {
 func (t aggregationSelectorOption) apply(c config) config {
 	c.aggregationSelector = t.selector
 	return c
+}
+
+// WithoutTimestamps sets all timestamps to zero in the output stream.
+func WithoutTimestamps() Option {
+	return optionFunc(func(c config) config {
+		c.redactTimestamps = true
+		return c
+	})
 }
