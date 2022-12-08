@@ -96,7 +96,7 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(c callback) func() {
+func (p *pipeline) addCallback(c callback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
 	e := p.callbacks.PushBack(c)
