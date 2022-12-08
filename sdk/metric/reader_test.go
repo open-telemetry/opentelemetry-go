@@ -58,7 +58,7 @@ func (ts *readerTestSuite) TestErrorForNotRegistered() {
 }
 
 func (ts *readerTestSuite) TestProducer() {
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 	m, err := ts.Reader.Collect(context.Background())
 	ts.NoError(err)
 	ts.Equal(testMetrics, m)
@@ -66,7 +66,7 @@ func (ts *readerTestSuite) TestProducer() {
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 
 	m, err := ts.Reader.Collect(ctx)
@@ -76,27 +76,27 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 
 func (ts *readerTestSuite) TestShutdownTwice() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
 }
 
 func (ts *readerTestSuite) TestMultipleForceFlush() {
 	ctx := context.Background()
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 	ts.Require().NoError(ts.Reader.ForceFlush(ctx))
 	ts.NoError(ts.Reader.ForceFlush(ctx))
 }
 
 func (ts *readerTestSuite) TestMultipleRegister() {
-	p0 := testProducer{
+	p0 := testSDKProducer{
 		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
 			// Differentiate this producer from the second by returning an
 			// error.
 			return testMetrics, assert.AnError
 		},
 	}
-	p1 := testProducer{}
+	p1 := testSDKProducer{}
 
 	ts.Reader.register(p0)
 	// This should be ignored.
@@ -110,7 +110,7 @@ func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
 
 	// All reader methods should be concurrent-safe.
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
@@ -141,7 +141,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ctx := context.Background()
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	// Registering after shutdown should not revert the shutdown.
-	ts.Reader.register(testProducer{})
+	ts.Reader.register(testSDKProducer{})
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
@@ -170,11 +170,11 @@ var testMetrics = metricdata.ResourceMetrics{
 	}},
 }
 
-type testProducer struct {
+type testSDKProducer struct {
 	produceFunc func(context.Context) (metricdata.ResourceMetrics, error)
 }
 
-func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
@@ -183,7 +183,7 @@ func (p testProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, 
 
 func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	ctx := context.Background()
-	r.register(testProducer{})
+	r.register(testSDKProducer{})
 
 	// Store bechmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
