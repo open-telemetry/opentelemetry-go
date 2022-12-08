@@ -181,6 +181,34 @@ func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetric
 	return testResourceMetrics, nil
 }
 
+var testScopeMetrics = []metricdata.ScopeMetrics{{
+	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/external"},
+	Metrics: []metricdata.Metrics{{
+		Name:        "fake scope data",
+		Description: "Data used to test a Producer reader",
+		Unit:        unit.Milliseconds,
+		Data: metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{{
+				Attributes: attribute.NewSet(attribute.String("user", "ben")),
+				StartTime:  time.Now(),
+				Time:       time.Now().Add(time.Second),
+				Value:      10,
+			}},
+		},
+	}},
+}}
+
+type testExternalProducer struct {
+	produceFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
+}
+
+func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	if p.produceFunc != nil {
+		return p.produceFunc(ctx)
+	}
+	return testScopeMetrics, nil
+}
+
 func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	ctx := context.Background()
 	r.register(testSDKProducer{})
