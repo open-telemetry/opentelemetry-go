@@ -60,13 +60,15 @@ func main() {
 	// Write telemetry data to a file.
 	f, err := os.Create("traces.txt")
 	if err != nil {
-		l.Fatal(err)
+		l.Println(err)
+		return
 	}
 	defer f.Close()
 
 	exp, err := newExporter(f)
 	if err != nil {
-		l.Fatal(err)
+		l.Println(err)
+		return
 	}
 
 	tp := trace.NewTracerProvider(
@@ -75,7 +77,8 @@ func main() {
 	)
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
-			l.Fatal(err)
+			l.Println(err)
+			return
 		}
 	}()
 	otel.SetTracerProvider(tp)
@@ -95,7 +98,8 @@ func main() {
 		return
 	case err := <-errCh:
 		if err != nil {
-			l.Fatal(err)
+			l.Println(err)
+			return
 		}
 	}
 }
