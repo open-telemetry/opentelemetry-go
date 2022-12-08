@@ -186,8 +186,8 @@ func TestPeriodicReaderRun(t *testing.T) {
 
 	exp := &fnExporter{
 		exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
-			// The testSDKProducer produces testMetrics.
-			assert.Equal(t, testMetrics, m)
+			// The testSDKProducer produces testResourceMetrics.
+			assert.Equal(t, testResourceMetrics, m)
 			return assert.AnError
 		},
 	}
@@ -210,8 +210,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		called = new(bool)
 		return &fnExporter{
 			exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
-				// The testSDKProducer produces testMetrics.
-				assert.Equal(t, testMetrics, m)
+				// The testSDKProducer produces testResourceMetrics.
+				assert.Equal(t, testResourceMetrics, m)
 				*called = true
 				return assert.AnError
 			},

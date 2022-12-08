@@ -61,7 +61,7 @@ func (ts *readerTestSuite) TestProducer() {
 	ts.Reader.register(testSDKProducer{})
 	m, err := ts.Reader.Collect(context.Background())
 	ts.NoError(err)
-	ts.Equal(testMetrics, m)
+	ts.Equal(testResourceMetrics, m)
 }
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
@@ -93,7 +93,7 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
 			// Differentiate this producer from the second by returning an
 			// error.
-			return testMetrics, assert.AnError
+			return testResourceMetrics, assert.AnError
 		},
 	}
 	p1 := testSDKProducer{}
@@ -148,7 +148,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
-var testMetrics = metricdata.ResourceMetrics{
+var testResourceMetrics = metricdata.ResourceMetrics{
 	Resource: resource.NewSchemaless(attribute.String("test", "Reader")),
 	ScopeMetrics: []metricdata.ScopeMetrics{{
 		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
@@ -178,7 +178,7 @@ func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetric
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
-	return testMetrics, nil
+	return testResourceMetrics, nil
 }
 
 func benchReaderCollectFunc(r Reader) func(*testing.B) {
@@ -198,7 +198,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 
 		for n := 0; n < b.N; n++ {
 			collectedMetrics, err = r.Collect(ctx)
-			assert.Equalf(b, testMetrics, collectedMetrics, "unexpected Collect response: (%#v, %v)", collectedMetrics, err)
+			assert.Equalf(b, testResourceMetrics, collectedMetrics, "unexpected Collect response: (%#v, %v)", collectedMetrics, err)
 		}
 	}
 }
