@@ -532,6 +532,53 @@ func TestMetersProvideScope(t *testing.T) {
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
 
+func TestUnregisterUnregisters(t *testing.T) {
+	r := NewManualReader()
+	mp := NewMeterProvider(WithReader(r))
+	m := mp.Meter("TestUnregisterUnregisters")
+
+	int64Counter, err := m.AsyncInt64().Counter("int64.counter")
+	require.NoError(t, err)
+
+	int64UpDownCounter, err := m.AsyncInt64().UpDownCounter("int64.up_down_counter")
+	require.NoError(t, err)
+
+	int64Gauge, err := m.AsyncInt64().Gauge("int64.gauge")
+	require.NoError(t, err)
+
+	floag64Counter, err := m.AsyncFloat64().Counter("floag64.counter")
+	require.NoError(t, err)
+
+	floag64UpDownCounter, err := m.AsyncFloat64().UpDownCounter("floag64.up_down_counter")
+	require.NoError(t, err)
+
+	floag64Gauge, err := m.AsyncFloat64().Gauge("floag64.gauge")
+	require.NoError(t, err)
+
+	var called bool
+	reg, err := m.RegisterCallback([]instrument.Asynchronous{
+		int64Counter,
+		int64UpDownCounter,
+		int64Gauge,
+		floag64Counter,
+		floag64UpDownCounter,
+		floag64Gauge,
+	}, func(context.Context) { called = true })
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = r.Collect(ctx)
+	require.NoError(t, err)
+	assert.True(t, called, "callback not called for registered callback")
+
+	called = false
+	require.NoError(t, reg.Unregister(), "unregister")
+
+	_, err = r.Collect(ctx)
+	require.NoError(t, err)
+	assert.False(t, called, "callback called for unregistered callback")
+}
+
 func TestRegisterCallbackDropAggregations(t *testing.T) {
 	aggFn := func(InstrumentKind) aggregation.Aggregation {
 		return aggregation.Drop{}
