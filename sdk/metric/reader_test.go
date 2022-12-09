@@ -117,6 +117,20 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 	ts.Equal(assert.AnError, err)
 }
 
+func (ts *readerTestSuite) TestExternalProducerError() {
+	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(
+		testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				return []metricdata.ScopeMetrics{testScopeMetricsB}, assert.AnError
+			},
+		},
+	)
+
+	_, err := ts.Reader.Collect(context.Background())
+	ts.Equal(assert.AnError, err)
+}
+
 func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
 
@@ -218,9 +232,14 @@ func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetric
 	return testResourceMetricsA, nil
 }
 
-type testExternalProducer struct{}
+type testExternalProducer struct {
+	produceFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
+}
 
 func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	if p.produceFunc != nil {
+		return p.produceFunc(ctx)
+	}
 	return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
 }
 
