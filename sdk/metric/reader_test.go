@@ -57,16 +57,25 @@ func (ts *readerTestSuite) TestErrorForNotRegistered() {
 	ts.ErrorIs(err, ErrReaderNotRegistered)
 }
 
-func (ts *readerTestSuite) TestProducer() {
+func (ts *readerTestSuite) TestSDKProducer() {
 	ts.Reader.register(testSDKProducer{})
 	m, err := ts.Reader.Collect(context.Background())
 	ts.NoError(err)
 	ts.Equal(testResourceMetricsA, m)
 }
 
+func (ts *readerTestSuite) TestExternalProducer() {
+	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
+	m, err := ts.Reader.Collect(context.Background())
+	ts.NoError(err)
+	ts.Equal(testResourceMetricsAB, m)
+}
+
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
 	ctx := context.Background()
 	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 
 	m, err := ts.Reader.Collect(ctx)
@@ -77,6 +86,7 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 func (ts *readerTestSuite) TestShutdownTwice() {
 	ctx := context.Background()
 	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
 }
@@ -84,6 +94,7 @@ func (ts *readerTestSuite) TestShutdownTwice() {
 func (ts *readerTestSuite) TestMultipleForceFlush() {
 	ctx := context.Background()
 	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
 	ts.Require().NoError(ts.Reader.ForceFlush(ctx))
 	ts.NoError(ts.Reader.ForceFlush(ctx))
 }
@@ -111,6 +122,7 @@ func (ts *readerTestSuite) TestMethodConcurrency() {
 
 	// All reader methods should be concurrent-safe.
 	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
@@ -142,6 +154,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	// Registering after shutdown should not revert the shutdown.
 	ts.Reader.register(testSDKProducer{})
+	ts.Reader.RegisterProducer(testExternalProducer{})
 
 	m, err := ts.Reader.Collect(ctx)
 	ts.ErrorIs(err, ErrReaderShutdown)
@@ -205,14 +218,9 @@ func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetric
 	return testResourceMetricsA, nil
 }
 
-type testExternalProducer struct {
-	produceFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
-}
+type testExternalProducer struct{}
 
 func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
-	if p.produceFunc != nil {
-		return p.produceFunc(ctx)
-	}
 	return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
 }
 
