@@ -124,14 +124,15 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 	if err != nil {
 		return metricdata.ResourceMetrics{}, err
 	}
+	var errs []error
 	for _, producer := range mr.externalProducers.Load().([]Producer) {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
-			return metricdata.ResourceMetrics{}, err
+			errs = append(errs, err)
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
-	return rm, nil
+	return rm, unifyErrors(errs)
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.

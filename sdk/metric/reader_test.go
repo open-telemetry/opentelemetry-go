@@ -117,18 +117,26 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 	ts.Equal(assert.AnError, err)
 }
 
-func (ts *readerTestSuite) TestExternalProducerError() {
+func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 	ts.Reader.register(testSDKProducer{})
 	ts.Reader.RegisterProducer(
 		testExternalProducer{
 			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
-				return []metricdata.ScopeMetrics{testScopeMetricsB}, assert.AnError
+				return []metricdata.ScopeMetrics{}, assert.AnError
+			},
+		},
+	)
+	ts.Reader.RegisterProducer(
+		testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
 			},
 		},
 	)
 
-	_, err := ts.Reader.Collect(context.Background())
+	m, err := ts.Reader.Collect(context.Background())
 	ts.Equal(assert.AnError, err)
+	ts.Equal(testResourceMetricsAB, m)
 }
 
 func (ts *readerTestSuite) TestMethodConcurrency() {

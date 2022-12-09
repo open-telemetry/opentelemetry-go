@@ -239,14 +239,15 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata
 	if err != nil {
 		return metricdata.ResourceMetrics{}, err
 	}
+	var errs []error
 	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
-			return metricdata.ResourceMetrics{}, err
+			errs = append(errs, err)
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
-	return rm, nil
+	return rm, unifyErrors(errs)
 }
 
 // export exports metric data m using r's exporter.
