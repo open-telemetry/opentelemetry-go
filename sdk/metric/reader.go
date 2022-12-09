@@ -53,9 +53,9 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(sdkProducer)
 
-	// RegisterProducer registers a Reader with an external Producer.
-	// The Producer argument allows the Reader to signal the Producer to
-	// collect and send aggregated metric measurements.
+	// RegisterProducer registers a an external Producer with this Reader.
+	// The Producer is used as a source of aggregated metric data which is
+	// incorporated into metrics collected from the SDK.
 	RegisterProducer(Producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
