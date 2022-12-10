@@ -15,6 +15,8 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
@@ -59,11 +61,12 @@ func (p asyncInt64Provider) registerCallbacks(inst *instrumentImpl[int64], cBack
 	}
 
 	for _, cBack := range cBacks {
-		p.pipes.registerCallbackInt64(callback[int64]{
-			observe: inst.Observe,
-			newIter: newInt64Iter(cBack),
-		})
+		p.pipes.registerCallback(p.callback(inst, cBack))
 	}
+}
+
+func (p asyncInt64Provider) callback(i *instrumentImpl[int64], f asyncint64.Callback) func(context.Context) error {
+	return func(ctx context.Context) error { return f(ctx, i) }
 }
 
 // Counter creates an instrument for recording increasing values.
@@ -112,11 +115,12 @@ func (p asyncFloat64Provider) registerCallbacks(inst *instrumentImpl[float64], c
 	}
 
 	for _, cBack := range cBacks {
-		p.pipes.registerCallbackFloat64(callback[float64]{
-			observe: inst.Observe,
-			newIter: newFloat64Iter(cBack),
-		})
+		p.pipes.registerCallback(p.callback(inst, cBack))
 	}
+}
+
+func (p asyncFloat64Provider) callback(i *instrumentImpl[float64], f asyncfloat64.Callback) func(context.Context) error {
+	return func(ctx context.Context) error { return f(ctx, i) }
 }
 
 // Counter creates an instrument for recording increasing values.

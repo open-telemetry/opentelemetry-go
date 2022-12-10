@@ -75,8 +75,7 @@ type pipeline struct {
 
 	sync.Mutex
 	aggregations   map[instrumentation.Scope][]instrumentSync
-	iCallbacks     []callback[int64]
-	fCallbacks     []callback[float64]
+	callbacks      []func(context.Context) error
 	multiCallbacks []func(context.Context)
 }
 
@@ -95,20 +94,12 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallbackInt64 registers a callback[int64] to be run when `produce()` is
-// called.
-func (p *pipeline) addCallbackInt64(cback callback[int64]) {
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addCallback(cback func(context.Context) error) {
 	p.Lock()
 	defer p.Unlock()
-	p.iCallbacks = append(p.iCallbacks, cback)
-}
-
-// addCallbackFloat64 registers a callbackFloat64 to be run when `produce()` is
-// called.
-func (p *pipeline) addCallbackFloat64(cback callback[float64]) {
-	p.Lock()
-	defer p.Unlock()
-	p.fCallbacks = append(p.fCallbacks, cback)
+	p.callbacks = append(p.callbacks, cback)
 }
 
 // addMultiCallback registers a multi-instrument callback to be run when
@@ -137,18 +128,9 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
 	var errs multierror
-	for _, c := range p.iCallbacks {
+	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if err := c.collect(ctx); err != nil {
-			errs.append(err)
-		}
-		if err := ctx.Err(); err != nil {
-			return metricdata.ResourceMetrics{}, err
-		}
-	}
-	for _, c := range p.fCallbacks {
-		// TODO make the callbacks parallel. ( #3034 )
-		if err := c.collect(ctx); err != nil {
+		if err := c(ctx); err != nil {
 			errs.append(err)
 		}
 		if err := ctx.Err(); err != nil {
@@ -477,15 +459,9 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallbackInt64(cback callback[int64]) {
+func (p pipelines) registerCallback(cback func(context.Context) error) {
 	for _, pipe := range p {
-		pipe.addCallbackInt64(cback)
-	}
-}
-
-func (p pipelines) registerCallbackFloat64(cback callback[float64]) {
-	for _, pipe := range p {
-		pipe.addCallbackFloat64(cback)
+		pipe.addCallback(cback)
 	}
 }
 
