@@ -21,22 +21,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
 func TestOptions(t *testing.T) {
 	const (
-		token  = 43.0
-		desc   = "Instrument description."
-		uBytes = unit.Bytes
+		token  float64 = 43
+		desc           = "Instrument description."
+		uBytes         = unit.Bytes
 	)
 
-	want := []Measurement{{Value: token}}
 	got := NewConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithCallback(func(context.Context) ([]Measurement, error) {
-			return want, nil
+		WithCallback(func(ctx context.Context, o Observer) error {
+			o.Observe(ctx, token)
+			return nil
 		}),
 	)
 	assert.Equal(t, desc, got.Description(), "description")
@@ -45,7 +47,17 @@ func TestOptions(t *testing.T) {
 	// Functions are not comparable.
 	cBacks := got.Callbacks()
 	require.Len(t, cBacks, 1, "callbacks")
-	val, err := cBacks[0](context.Background())
+	o := &observer{}
+	err := cBacks[0](context.Background(), o)
 	require.NoError(t, err)
-	assert.Equal(t, want, val, "callback not set")
+	assert.Equal(t, token, o.got, "callback not set")
+}
+
+type observer struct {
+	instrument.Asynchronous
+	got float64
+}
+
+func (o *observer) Observe(_ context.Context, v float64, _ ...attribute.KeyValue) {
+	o.got = v
 }

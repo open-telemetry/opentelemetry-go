@@ -21,10 +21,18 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-// Measurement is an recorded event value for a particular set of attributes.
-type Measurement struct {
-	Attributes []attribute.KeyValue
-	Value      int64
+// Observer is a recorder of measurement values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Observer interface {
+	instrument.Asynchronous
+
+	// Observe records the measurement value for a set of attributes.
+	//
+	// It is only valid to call this within a callback. If called outside of
+	// the registered callback it should have no effect on the instrument, and
+	// an error will be reported via the error handler.
+	Observe(ctx context.Context, value int64, attributes ...attribute.KeyValue)
 }
 
 // Callback is a function that returns observations for an Asynchronous
@@ -34,7 +42,7 @@ type Measurement struct {
 // of the passed context is expected to be honored.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context) ([]Measurement, error)
+type Callback func(context.Context, Observer) error
 
 // InstrumentProvider provides access to individual instruments.
 //
@@ -50,46 +58,26 @@ type InstrumentProvider interface {
 	Gauge(name string, opts ...Option) (Gauge, error)
 }
 
-// Counter is an instrument that records increasing values.
+// Counter is an instrument used to asynchronously record increasing int64
+// measurements once per a measurement collection cycle. The Observe method is
+// used to record the measured state of the instrument when it is called.
+// Implementations will assume the observed value to be the cumulative sum of
+// the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Counter interface {
-	// Observe records the state of the instrument to be x. Implementations
-	// will assume x to be the cumulative sum of the count.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
+type Counter interface{ Observer }
 
-	instrument.Asynchronous
-}
-
-// UpDownCounter is an instrument that records increasing or decreasing values.
+// UpDownCounter is an instrument used to asynchronously record int64
+// measurements once per a measurement collection cycle. The Observe method is
+// used to record the measured state of the instrument when it is called.
+// Implementations will assume the observed value to be the cumulative sum of
+// the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type UpDownCounter interface {
-	// Observe records the state of the instrument to be x. Implementations
-	// will assume x to be the cumulative sum of the count.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
+type UpDownCounter interface{ Observer }
 
-	instrument.Asynchronous
-}
-
-// Gauge is an instrument that records independent readings.
+// Gauge is an instrument used to asynchronously record instantaneous int64
+// measurements once per a measurement collection cycle.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Gauge interface {
-	// Observe records the state of the instrument to be x.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue)
-
-	instrument.Asynchronous
-}
+type Gauge interface{ Observer }
