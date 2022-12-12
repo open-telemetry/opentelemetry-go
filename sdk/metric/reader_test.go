@@ -139,6 +139,18 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 	ts.Equal(testResourceMetricsAB, m)
 }
 
+func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
+	ts.Reader.register(testSDKProducer{
+		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
+			return metricdata.ResourceMetrics{}, assert.AnError
+		}})
+	ts.Reader.RegisterProducer(testExternalProducer{})
+
+	m, err := ts.Reader.Collect(context.Background())
+	ts.Equal(assert.AnError, err)
+	ts.Equal(metricdata.ResourceMetrics{}, m)
+}
+
 func (ts *readerTestSuite) TestMethodConcurrency() {
 	// Requires the race-detector (a default test option for the project).
 
