@@ -301,6 +301,9 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 			}
 		}
 
+		// release references to Producer(s)
+		r.externalProducers.Store([]Producer{})
+
 		sErr := r.exporter.Shutdown(ctx)
 		if err == nil || err == ErrReaderShutdown {
 			err = sErr

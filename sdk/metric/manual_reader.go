@@ -97,6 +97,8 @@ func (mr *manualReader) Shutdown(context.Context) error {
 		mr.sdkProducer.Store(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
+		// release references to Producer(s)
+		mr.externalProducers.Store([]Producer{})
 		err = nil
 	})
 	return err
