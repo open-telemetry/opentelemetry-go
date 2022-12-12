@@ -58,7 +58,7 @@ func unify(funcs []func(context.Context) error) func(context.Context) error {
 	}
 }
 
-// unifyErrors combines multiple errors into a single error
+// unifyErrors combines multiple errors into a single error.
 func unifyErrors(errs []error) error {
 	switch len(errs) {
 	case 0:
