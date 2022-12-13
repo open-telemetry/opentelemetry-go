@@ -39,19 +39,24 @@ func TestGetContainerIDFromCgroupV2Line(t *testing.T) {
 			line: "383 457 0:147 /null /proc/kcore rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
 		},
 		{
-			name:                "resolv.conf",
-			line:                "472 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/resolv.conf /etc/resolv.conf rw,relatime - ext4 /dev/vda1 rw",
-			expectedContainerID: "dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183",
-		},
-		{
 			name:                "hostname",
 			line:                "473 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
 			expectedContainerID: "dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183",
 		},
 		{
-			name:                "host",
-			line:                "474 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/hosts /etc/hosts rw,relatime - ext4 /dev/vda1 rw",
-			expectedContainerID: "dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183",
+			name:                "minikube containerd mountinfo",
+			line:                "1537 1517 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw",
+			expectedContainerID: "fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6",
+		},
+		{
+			name:                "minikube docker mountinfo",
+			line:                "2327 2307 8:1 /var/lib/docker/containers/a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw",
+			expectedContainerID: "a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19",
+		},
+		{
+			name:                "podman mountinfo",
+			line:                "1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000",
+			expectedContainerID: "1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809",
 		},
 	}
 

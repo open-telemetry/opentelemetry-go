@@ -100,7 +100,7 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 		},
 		{
 			name:                "cgroup file v2",
-			cgroupV2FileContent: "474 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/hosts /etc/hosts rw,relatime - ext4 /dev/vda1 rw",
+			cgroupV2FileContent: "474 456 254:1 /docker/containers/dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183/hostname /etc/hosts rw,relatime - ext4 /dev/vda1 rw",
 			expectedContainerID: "dc64b5743252dbaef6e30521c34d6bbd1620c8ce65bdb7bf9e7143b61bb5b183",
 		},
 		{
@@ -155,6 +155,20 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 2:cpuset:/
 1:memory:/user.slice/user-1000.slice/user@1000.service
 0::/user.slice/user-1000.slice/user@1000.service/app.slice/podman.service`,
+			cgroupV2FileContent: `1088 875 0:118 / / rw,noatime - fuse.fuse-overlayfs fuse-overlayfs rw,user_id=0,group_id=0,default_permissions,allow_other
+1089 1088 0:121 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+1090 1088 0:122 / /dev rw,nosuid,noexec - tmpfs tmpfs rw,size=65536k,mode=755,uid=1000,gid=1000
+1091 1088 0:123 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs rw
+1092 1090 0:124 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=100004,mode=620,ptmxmode=666
+1093 1090 0:120 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw
+1094 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hosts /etc/hosts rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000
+1095 1090 0:117 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=64000k,uid=1000,gid=1000
+1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000
+1097 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/.containerenv /run/.containerenv rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000
+1098 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/run/secrets /run/secrets rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000
+1099 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/resolv.conf /etc/resolv.conf rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000
+1100 1091 0:125 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - tmpfs cgroup rw,size=1024k,uid=1000,gid=1000`,
+			expectedContainerID: "1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809",
 		},
 	}
 
