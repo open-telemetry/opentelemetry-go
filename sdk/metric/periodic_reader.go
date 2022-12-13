@@ -130,6 +130,7 @@ type periodicReader struct {
 	sdkProducer atomic.Value
 
 	mu                sync.Mutex
+	isShutdown        bool
 	externalProducers atomic.Value
 
 	timeout  time.Duration
@@ -182,6 +183,9 @@ func (r *periodicReader) register(p sdkProducer) {
 func (r *periodicReader) RegisterProducer(p Producer) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.isShutdown {
+		return
+	}
 	currentProducers := r.externalProducers.Load().([]Producer)
 	newProducers := []Producer{}
 	newProducers = append(newProducers, currentProducers...)
@@ -301,13 +305,16 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 			}
 		}
 
-		// release references to Producer(s)
-		r.externalProducers.Store([]Producer{})
-
 		sErr := r.exporter.Shutdown(ctx)
 		if err == nil || err == ErrReaderShutdown {
 			err = sErr
 		}
+
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.isShutdown = true
+		// release references to Producer(s)
+		r.externalProducers.Store([]Producer{})
 	})
 	return err
 }

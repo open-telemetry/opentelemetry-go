@@ -32,6 +32,7 @@ type manualReader struct {
 	shutdownOnce sync.Once
 
 	mu                sync.Mutex
+	isShutdown        bool
 	externalProducers atomic.Value
 
 	temporalitySelector TemporalitySelector
@@ -67,6 +68,9 @@ func (mr *manualReader) register(p sdkProducer) {
 func (mr *manualReader) RegisterProducer(p Producer) {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
+	if mr.isShutdown {
+		return
+	}
 	currentProducers := mr.externalProducers.Load().([]Producer)
 	newProducers := []Producer{}
 	newProducers = append(newProducers, currentProducers...)
@@ -97,6 +101,9 @@ func (mr *manualReader) Shutdown(context.Context) error {
 		mr.sdkProducer.Store(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
+		mr.mu.Lock()
+		defer mr.mu.Unlock()
+		mr.isShutdown = true
 		// release references to Producer(s)
 		mr.externalProducers.Store([]Producer{})
 		err = nil
