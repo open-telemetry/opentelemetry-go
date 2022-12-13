@@ -55,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not report empty partial-success responses in the `go.opentelemetry.io/otel/exporters/otlp` exporters. (#3438, #3432)
 - Handle partial success responses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporters. (#3162, #3440)
 - Prevents panic when using incorrect `attribute.Value.As[Type]Slice()`. (#3489)
+- Both `"go.opentelemetry.io/otel/sdk/resource".WithContainer` and `"go.opentelemetry.io/otel/sdk/resource".WithContainerID` now return the correct container ID on the Podman. (#3508)
 
 ## Removed
 

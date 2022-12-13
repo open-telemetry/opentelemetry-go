@@ -16,11 +16,12 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"regexp"
+	"strings"
 )
 
 const cgroupV1Path = "/proc/self/cgroup"
 
-var cgroupV1ContainerIDRe = regexp.MustCompile(`^.*/(?:.*-)?([0-9a-f]+)(?:\.|\s*$)`)
+var cgroupV1ContainerIDRe = regexp.MustCompile(`^.*/(?:.*-)?([\w+-]+)(?:\.|\s*$)`)
 
 func getContainerIDFromCGroupV1() (string, error) {
 	return getContainerIDFromCGroupFile(cgroupV1Path, getContainerIDFromCgroupV1Line)
@@ -28,6 +29,11 @@ func getContainerIDFromCGroupV1() (string, error) {
 
 // getContainerIDFromCgroupV1Line returns the ID of the container from one string line.
 func getContainerIDFromCgroupV1Line(line string) string {
+	// Only match line contains "cpuset"
+	if !strings.Contains(line, "cpuset") {
+		return ""
+	}
+
 	matches := cgroupV1ContainerIDRe.FindStringSubmatch(line)
 	if len(matches) <= 1 {
 		return ""
