@@ -54,6 +54,11 @@ func TestGetContainerIDFromCgroupV2Line(t *testing.T) {
 			expectedContainerID: "a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19",
 		},
 		{
+			name:                "minikube docker mountinfo 2",
+			line:                "929 920 254:1 /docker/volumes/minikube/_data/lib/docker/containers/0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
+			expectedContainerID: "0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33",
+		},
+		{
 			name:                "podman mountinfo",
 			line:                "1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw,nosuid,nodev,relatime - tmpfs tmpfs rw,size=813800k,nr_inodes=203450,mode=700,uid=1000,gid=1000",
 			expectedContainerID: "1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809",
