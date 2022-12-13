@@ -16,6 +16,7 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -24,9 +25,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -62,6 +66,7 @@ type collector struct {
 	disableScopeInfo     bool
 	createTargetInfoOnce sync.Once
 	scopeInfos           map[instrumentation.Scope]prometheus.Metric
+	metricFamilies       map[string]*dto.MetricFamily
 }
 
 // prometheus counters MUST have a _total suffix:
@@ -83,6 +88,7 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutUnits:      cfg.withoutUnits,
 		disableScopeInfo:  cfg.disableScopeInfo,
 		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
+		metricFamilies:    make(map[string]*dto.MetricFamily),
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -149,22 +155,30 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
 			case metricdata.Histogram:
-				addHistogramMetric(ch, v, m, keys, values, c.getName(m))
+				addHistogramMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, keys, values, c.getName(m))
+				addSumMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, keys, values, c.getName(m))
+				addSumMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, keys, values, c.getName(m))
+				addGaugeMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, keys, values, c.getName(m))
+				addGaugeMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			}
 		}
 	}
 }
 
-func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, ks, vs [2]string, name string) {
+func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
+	drop, help := validateMetrics(name, m.Description, dto.MetricType_HISTOGRAM.Enum(), mfs)
+	if drop {
+		return
+	}
+	if help != "" {
+		m.Description = help
+	}
+
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes, ks, vs)
 
@@ -185,15 +199,26 @@ func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histog
 	}
 }
 
-func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string) {
+func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
 	valueType := prometheus.CounterValue
+	metricType := dto.MetricType_COUNTER
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
+		metricType = dto.MetricType_GAUGE
 	}
 	if sum.IsMonotonic {
 		// Add _total suffix for counters
 		name += counterSuffix
 	}
+
+	drop, help := validateMetrics(name, m.Description, metricType.Enum(), mfs)
+	if drop {
+		return
+	}
+	if help != "" {
+		m.Description = help
+	}
+
 	for _, dp := range sum.DataPoints {
 		keys, values := getAttrs(dp.Attributes, ks, vs)
 
@@ -207,7 +232,15 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	}
 }
 
-func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string) {
+func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
+	drop, help := validateMetrics(name, m.Description, dto.MetricType_GAUGE.Enum(), mfs)
+	if drop {
+		return
+	}
+	if help != "" {
+		m.Description = help
+	}
+
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes, ks, vs)
 
@@ -343,4 +376,37 @@ func sanitizeName(n string) string {
 	}
 
 	return b.String()
+}
+
+func validateMetrics(name, description string, metricType *dto.MetricType, mfs map[string]*dto.MetricFamily) (drop bool, help string) {
+	emf, exist := mfs[name]
+	if !exist {
+		mfs[name] = &dto.MetricFamily{
+			Name: proto.String(name),
+			Help: proto.String(description),
+			Type: metricType,
+		}
+		return false, ""
+	}
+	if emf.GetType() != *metricType {
+		global.Error(
+			errors.New("instrument type conflict"),
+			"Using existing type definition.",
+			"instrument", name,
+			"existing", emf.GetType(),
+			"dropped", *metricType,
+		)
+		return true, ""
+	}
+	if emf.GetHelp() != description {
+		global.Info(
+			"Instrument description conflict, using existing",
+			"instrument", name,
+			"existing", emf.GetHelp(),
+			"dropped", description,
+		)
+		return false, emf.GetHelp()
+	}
+
+	return false, ""
 }

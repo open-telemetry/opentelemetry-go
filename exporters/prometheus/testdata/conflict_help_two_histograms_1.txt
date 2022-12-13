@@ -1,0 +1,45 @@
+# HELP bar_bytes meter a bar
+# TYPE bar_bytes histogram
+bar_bytes_bucket{A="B",le="0",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="5",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="10",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="25",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="50",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="75",otel_scope_name="ma",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="100",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="250",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="500",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="750",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="1000",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="2500",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="5000",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="7500",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="10000",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="+Inf",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_sum{A="B",otel_scope_name="ma",otel_scope_version="v0.1.0"} 100
+bar_bytes_count{A="B",otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="0",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="5",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="10",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="25",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="50",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="75",otel_scope_name="mb",otel_scope_version="v0.1.0"} 0
+bar_bytes_bucket{A="B",le="100",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="250",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="500",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="750",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="1000",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="2500",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="5000",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="7500",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="10000",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_bucket{A="B",le="+Inf",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+bar_bytes_sum{A="B",otel_scope_name="mb",otel_scope_version="v0.1.0"} 100
+bar_bytes_count{A="B",otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+# HELP otel_scope_info Instrumentation Scope metadata
+# TYPE otel_scope_info gauge
+otel_scope_info{otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+otel_scope_info{otel_scope_name="mb",otel_scope_version="v0.1.0"} 1
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{service_name="prometheus_test",telemetry_sdk_language="go",telemetry_sdk_name="opentelemetry",telemetry_sdk_version="latest"} 1
