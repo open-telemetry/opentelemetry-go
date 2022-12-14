@@ -16,7 +16,6 @@ package jaeger
 
 import (
 	"context"
-	"log"
 	"net"
 	"testing"
 
@@ -54,7 +53,7 @@ func TestNewAgentClientUDPWithParams(t *testing.T) {
 	assert.Equal(t, 25000, agentClient.maxPacketSize)
 
 	if assert.IsType(t, &reconnectingUDPConn{}, agentClient.connUDP) {
-		assert.Equal(t, (*log.Logger)(nil), agentClient.connUDP.(*reconnectingUDPConn).logger)
+		assert.Equal(t, emptyLogger, agentClient.connUDP.(*reconnectingUDPConn).logger)
 	}
 
 	assert.NoError(t, agentClient.Close())
@@ -77,7 +76,7 @@ func TestNewAgentClientUDPWithParamsDefaults(t *testing.T) {
 	assert.Equal(t, udpPacketMaxLength, agentClient.maxPacketSize)
 
 	if assert.IsType(t, &reconnectingUDPConn{}, agentClient.connUDP) {
-		assert.Equal(t, (*log.Logger)(nil), agentClient.connUDP.(*reconnectingUDPConn).logger)
+		assert.Equal(t, emptyLogger, agentClient.connUDP.(*reconnectingUDPConn).logger)
 	}
 
 	assert.NoError(t, agentClient.Close())
@@ -93,7 +92,7 @@ func TestNewAgentClientUDPWithParamsReconnectingDisabled(t *testing.T) {
 	agentClient, err := newAgentClientUDP(agentClientUDPParams{
 		Host:                host,
 		Port:                port,
-		Logger:              nil,
+		Logger:              emptyLogger,
 		AttemptReconnecting: false,
 	})
 	assert.NoError(t, err)
