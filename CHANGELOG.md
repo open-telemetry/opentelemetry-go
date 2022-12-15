@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `WithCallback` option is added to `go.opentelemetry.io/otel/metric/instrument/asyncint64` to configure instrument callbacks during their creation. (#3507)
 - The `WithCallback` option is added to `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` to configure instrument callbacks during their creation. (#3507)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 
 ### Changed
 
