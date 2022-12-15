@@ -53,6 +53,9 @@ func (p *producer) Produce(_ context.Context) ([]metricdata.ScopeMetrics, error)
 		data = append(data, ocProducer.Read()...)
 	}
 	otelmetrics, err := internal.ConvertMetrics(data)
+	if len(otelmetrics) == 0 {
+		return nil, err
+	}
 	return []metricdata.ScopeMetrics{{
 		Scope: instrumentation.Scope{
 			Name: scopeName,

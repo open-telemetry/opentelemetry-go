@@ -38,16 +38,12 @@ func TestMetricProducer(t *testing.T) {
 	for _, tc := range []struct {
 		desc      string
 		input     []*ocmetricdata.Metric
-		expected  metricdata.ScopeMetrics
+		expected  []metricdata.ScopeMetrics
 		expectErr bool
 	}{
 		{
-			desc: "empty",
-			expected: metricdata.ScopeMetrics{
-				Scope: instrumentation.Scope{
-					Name: scopeName,
-				},
-			},
+			desc:     "empty",
+			expected: nil,
 		},
 		{
 			desc: "success",
@@ -69,7 +65,7 @@ func TestMetricProducer(t *testing.T) {
 					},
 				},
 			},
-			expected: metricdata.ScopeMetrics{
+			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
 					Name: scopeName,
 				},
@@ -87,7 +83,7 @@ func TestMetricProducer(t *testing.T) {
 						},
 					},
 				},
-			},
+			}},
 		},
 		{
 			desc: "partial success",
@@ -117,7 +113,7 @@ func TestMetricProducer(t *testing.T) {
 					},
 				},
 			},
-			expected: metricdata.ScopeMetrics{
+			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
 					Name: scopeName,
 				},
@@ -135,7 +131,7 @@ func TestMetricProducer(t *testing.T) {
 						},
 					},
 				},
-			},
+			}},
 			expectErr: true,
 		},
 	} {
@@ -149,8 +145,10 @@ func TestMetricProducer(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 			}
-			require.Equal(t, len(output), 1)
-			metricdatatest.AssertEqual(t, tc.expected, output[0])
+			require.Equal(t, len(output), len(tc.expected))
+			for i := range output {
+				metricdatatest.AssertEqual(t, tc.expected[i], output[i])
+			}
 		})
 	}
 }
