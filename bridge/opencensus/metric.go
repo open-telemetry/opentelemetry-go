@@ -38,7 +38,7 @@ type producer struct {
 	manager *metricproducer.Manager
 }
 
-// NewMetricExporter returns a metric.Producer that fetches metrics from
+// NewMetricProducer returns a metric.Producer that fetches metrics from
 // OpenCensus.
 func NewMetricProducer() metric.Producer {
 	return &producer{
@@ -46,7 +46,7 @@ func NewMetricProducer() metric.Producer {
 	}
 }
 
-func (p *producer) Produce(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	producers := p.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
 	for _, ocProducer := range producers {
