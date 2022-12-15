@@ -54,14 +54,19 @@ func unify(funcs []func(context.Context) error) func(context.Context) error {
 				errs = append(errs, err)
 			}
 		}
-		switch len(errs) {
-		case 0:
-			return nil
-		case 1:
-			return errs[0]
-		default:
-			return fmt.Errorf("%v", errs)
-		}
+		return unifyErrors(errs)
+	}
+}
+
+// unifyErrors combines multiple errors into a single error.
+func unifyErrors(errs []error) error {
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return fmt.Errorf("%v", errs)
 	}
 }
 
