@@ -95,9 +95,25 @@ type Meter interface {
 	// cycle.
 	Float64ObservableGauge(name string, options ...instrument.Option) (asyncfloat64.Gauge, error)
 
-	// RegisterCallback captures the function that will be called during Collect.
+	// RegisterCallback registers f to be called during the collection of a
+	// measurement cycle.
 	//
-	// It is only valid to call Observe within the scope of the passed function,
-	// and only on the instruments that were registered with this call.
-	RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error
+	// If Unregister of the returned Registration is called, f needs to be
+	// unregistered and not called during collection.
+	//
+	// The instruments f is registered with are the only instruments that f may
+	// observe values for.
+	//
+	// If no instruments are passed, f should not be registered nor called
+	// during collection.
+	RegisterCallback(instruments []instrument.Asynchronous, f func(context.Context)) (Registration, error)
+}
+
+// Registration is an token representing the unique registration of a callback
+// for a set of instruments with a Meter.
+type Registration interface {
+	// Unregister removes the callback registration from a Meter.
+	//
+	// This method needs to be idempotent and concurrent safe.
+	Unregister() error
 }

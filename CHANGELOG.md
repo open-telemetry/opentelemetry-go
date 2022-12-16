@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
+  This `Registration` can be used to unregister callbacks. (#3522)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+
 ### Changed
 
 - The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncint64` is removed.
@@ -30,14 +36,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `Counter` method is replaced by `Meter.Float64Counter`
   - The `UpDownCounter` method is replaced by `Meter.Float64UpDownCounter`
   - The `Histogram` method is replaced by `Meter.Float64Histogram`
+- Global error handler uses an atomic value instead of a mutex. (#3543)
 
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/sdk/metric/view` package is removed. (#3520)
-
-### Added
-
-- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 
 ## [1.11.2/0.34.0] 2022-12-05
 

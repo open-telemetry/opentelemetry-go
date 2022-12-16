@@ -15,6 +15,7 @@
 package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
+	"container/list"
 	"context"
 	"sync"
 	"sync/atomic"
@@ -109,7 +110,8 @@ type meter struct {
 
 	mtx         sync.Mutex
 	instruments []delegatedInstrument
-	callbacks   []delegatedCallback
+
+	registry list.List
 
 	delegate atomic.Value // metric.Meter
 }
@@ -135,12 +137,14 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 		inst.setDelegate(meter)
 	}
 
-	for _, callback := range m.callbacks {
-		callback.setDelegate(meter)
+	for e := m.registry.Front(); e != nil; e = e.Next() {
+		r := e.Value.(*registration)
+		r.setDelegate(meter)
+		m.registry.Remove(e)
 	}
 
 	m.instruments = nil
-	m.callbacks = nil
+	m.registry.Init()
 }
 
 func (m *meter) Int64Counter(name string, options ...instrument.Option) (syncint64.Counter, error) {
@@ -279,20 +283,24 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Option
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
-		return del.RegisterCallback(insts, function)
+		return del.RegisterCallback(insts, f)
 	}
 
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	m.callbacks = append(m.callbacks, delegatedCallback{
-		instruments: insts,
-		function:    function,
-	})
 
-	return nil
+	reg := &registration{instruments: insts, function: f}
+	e := m.registry.PushBack(reg)
+	reg.unreg = func() error {
+		m.mtx.Lock()
+		_ = m.registry.Remove(e)
+		m.mtx.Unlock()
+		return nil
+	}
+	return reg, nil
 }
 
 type wrapped interface {
@@ -313,15 +321,42 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 	return out
 }
 
-type delegatedCallback struct {
+type registration struct {
 	instruments []instrument.Asynchronous
 	function    func(context.Context)
+
+	unreg   func() error
+	unregMu sync.Mutex
 }
 
-func (c *delegatedCallback) setDelegate(m metric.Meter) {
+func (c *registration) setDelegate(m metric.Meter) {
 	insts := unwrapInstruments(c.instruments)
-	err := m.RegisterCallback(insts, c.function)
+
+	c.unregMu.Lock()
+	defer c.unregMu.Unlock()
+
+	if c.unreg == nil {
+		// Unregister already called.
+		return
+	}
+
+	reg, err := m.RegisterCallback(insts, c.function)
 	if err != nil {
 		otel.Handle(err)
 	}
+
+	c.unreg = reg.Unregister
+}
+
+func (c *registration) Unregister() error {
+	c.unregMu.Lock()
+	defer c.unregMu.Unlock()
+	if c.unreg == nil {
+		// Unregister already called.
+		return nil
+	}
+
+	var err error
+	err, c.unreg = c.unreg(), nil
+	return err
 }

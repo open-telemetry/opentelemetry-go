@@ -68,7 +68,7 @@ func TestMeterRace(t *testing.T) {
 			_, _ = mtr.Int64Counter(name)
 			_, _ = mtr.Int64UpDownCounter(name)
 			_, _ = mtr.Int64Histogram(name)
-			_ = mtr.RegisterCallback(nil, func(ctx context.Context) {})
+			_, _ = mtr.RegisterCallback(nil, func(ctx context.Context) {})
 			if !once {
 				wg.Done()
 				once = true
@@ -80,6 +80,35 @@ func TestMeterRace(t *testing.T) {
 			}
 		}
 	}()
+
+	wg.Wait()
+	mtr.setDelegate(metric.NewNoopMeterProvider())
+	close(finish)
+}
+
+func TestUnregisterRace(t *testing.T) {
+	mtr := &meter{}
+	reg, err := mtr.RegisterCallback(nil, func(ctx context.Context) {})
+	require.NoError(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	finish := make(chan struct{})
+	go func() {
+		for i, once := 0, false; ; i++ {
+			_ = reg.Unregister()
+			if !once {
+				wg.Done()
+				once = true
+			}
+			select {
+			case <-finish:
+				return
+			default:
+			}
+		}
+	}()
+	_ = reg.Unregister()
 
 	wg.Wait()
 	mtr.setDelegate(metric.NewNoopMeterProvider())
@@ -101,9 +130,10 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	_, err = m.Int64ObservableGauge("test_Async_Gauge")
 	assert.NoError(t, err)
 
-	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
+	_, err = m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
 		afcounter.Observe(ctx, 3)
-	}))
+	})
+	require.NoError(t, err)
 
 	sfcounter, err := m.Float64Counter("test_Async_Counter")
 	require.NoError(t, err)
@@ -280,4 +310,52 @@ func TestMeterDefersDelegations(t *testing.T) {
 	assert.IsType(t, &sfCounter{}, ctr)
 	assert.IsType(t, &afCounter{}, actr)
 	assert.Equal(t, 1, mp.count)
+}
+
+func TestRegistrationDelegation(t *testing.T) {
+	// globalMeterProvider := otel.GetMeterProvider
+	globalMeterProvider := &meterProvider{}
+
+	m := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	require.IsType(t, &meter{}, m)
+	mImpl := m.(*meter)
+
+	actr, err := m.Float64ObservableCounter("test_Async_Counter")
+	require.NoError(t, err)
+
+	var called0 bool
+	reg0, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) {
+		called0 = true
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, mImpl.registry.Len(), "callback not registered")
+	// This means reg0 should not be delegated.
+	assert.NoError(t, reg0.Unregister())
+	assert.Equal(t, 0, mImpl.registry.Len(), "callback not unregistered")
+
+	var called1 bool
+	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) {
+		called1 = true
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, mImpl.registry.Len(), "second callback not registered")
+
+	mp := &testMeterProvider{}
+
+	// otel.SetMeterProvider(mp)
+	globalMeterProvider.setDelegate(mp)
+
+	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
+	require.False(t, called0, "pre-delegation unregistered callback called")
+	require.True(t, called1, "callback not called")
+
+	called1 = false
+	assert.NoError(t, reg1.Unregister(), "unregister second callback")
+
+	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
+	assert.False(t, called1, "unregistered callback called")
+
+	assert.NotPanics(t, func() {
+		assert.NoError(t, reg1.Unregister(), "duplicate unregister calls")
+	})
 }

@@ -92,9 +92,13 @@ func (noopMeter) Float64ObservableGauge(string, ...instrument.Option) (asyncfloa
 }
 
 // RegisterCallback creates a register callback that does not record any metrics.
-func (noopMeter) RegisterCallback([]instrument.Asynchronous, func(context.Context)) error {
-	return nil
+func (noopMeter) RegisterCallback([]instrument.Asynchronous, func(context.Context)) (Registration, error) {
+	return noopReg{}, nil
 }
+
+type noopReg struct{}
+
+func (noopReg) Unregister() error { return nil }
 
 type nonrecordingAsyncFloat64Instrument struct {
 	instrument.Asynchronous

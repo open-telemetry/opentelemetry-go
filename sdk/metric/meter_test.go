@@ -103,11 +103,63 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 	m := NewMeterProvider().Meter("callback-concurrency")
 
 	go func() {
-		_ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
+		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
 		wg.Done()
 	}()
 	go func() {
-		_ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
+		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+func TestNoopCallbackUnregisterConcurrency(t *testing.T) {
+	m := NewMeterProvider().Meter("noop-unregister-concurrency")
+	reg, err := m.RegisterCallback(nil, func(ctx context.Context) {})
+	require.NoError(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		_ = reg.Unregister()
+		wg.Done()
+	}()
+	go func() {
+		_ = reg.Unregister()
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+func TestCallbackUnregisterConcurrency(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader))
+	meter := provider.Meter("unregister-concurrency")
+
+	actr, err := meter.Float64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	ag, err := meter.Int64ObservableGauge("gauge")
+	require.NoError(t, err)
+
+	i := []instrument.Asynchronous{actr}
+	regCtr, err := meter.RegisterCallback(i, func(ctx context.Context) {})
+	require.NoError(t, err)
+
+	i = []instrument.Asynchronous{ag}
+	regG, err := meter.RegisterCallback(i, func(ctx context.Context) {})
+	require.NoError(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		_ = regCtr.Unregister()
+		_ = regG.Unregister()
+		wg.Done()
+	}()
+	go func() {
+		_ = regCtr.Unregister()
+		_ = regG.Unregister()
 		wg.Done()
 	}()
 	wg.Wait()
@@ -126,7 +178,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableCounter("aint")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 3)
 				})
 				assert.NoError(t, err)
@@ -150,7 +202,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableUpDownCounter("aint")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
@@ -174,7 +226,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Int64ObservableGauge("agauge")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
 					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
@@ -196,7 +248,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableCounter("afloat")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 3)
 				})
 				assert.NoError(t, err)
@@ -220,7 +272,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableUpDownCounter("afloat")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
@@ -244,7 +296,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Float64ObservableGauge("agauge")
 				assert.NoError(t, err)
-				err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
 					gauge.Observe(ctx, 11)
 				})
 				assert.NoError(t, err)
@@ -418,7 +470,7 @@ func TestMetersProvideScope(t *testing.T) {
 	m1 := mp.Meter("scope1")
 	ctr1, err := m1.Float64ObservableCounter("ctr1")
 	assert.NoError(t, err)
-	err = m1.RegisterCallback([]instrument.Asynchronous{ctr1}, func(ctx context.Context) {
+	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr1}, func(ctx context.Context) {
 		ctr1.Observe(ctx, 5)
 	})
 	assert.NoError(t, err)
@@ -426,7 +478,7 @@ func TestMetersProvideScope(t *testing.T) {
 	m2 := mp.Meter("scope2")
 	ctr2, err := m2.Int64ObservableCounter("ctr2")
 	assert.NoError(t, err)
-	err = m1.RegisterCallback([]instrument.Asynchronous{ctr2}, func(ctx context.Context) {
+	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr2}, func(ctx context.Context) {
 		ctr2.Observe(ctx, 7)
 	})
 	assert.NoError(t, err)
@@ -480,6 +532,53 @@ func TestMetersProvideScope(t *testing.T) {
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
 
+func TestUnregisterUnregisters(t *testing.T) {
+	r := NewManualReader()
+	mp := NewMeterProvider(WithReader(r))
+	m := mp.Meter("TestUnregisterUnregisters")
+
+	int64Counter, err := m.Int64ObservableCounter("int64.counter")
+	require.NoError(t, err)
+
+	int64UpDownCounter, err := m.Int64ObservableUpDownCounter("int64.up_down_counter")
+	require.NoError(t, err)
+
+	int64Gauge, err := m.Int64ObservableGauge("int64.gauge")
+	require.NoError(t, err)
+
+	floag64Counter, err := m.Float64ObservableCounter("floag64.counter")
+	require.NoError(t, err)
+
+	floag64UpDownCounter, err := m.Float64ObservableUpDownCounter("floag64.up_down_counter")
+	require.NoError(t, err)
+
+	floag64Gauge, err := m.Float64ObservableGauge("floag64.gauge")
+	require.NoError(t, err)
+
+	var called bool
+	reg, err := m.RegisterCallback([]instrument.Asynchronous{
+		int64Counter,
+		int64UpDownCounter,
+		int64Gauge,
+		floag64Counter,
+		floag64UpDownCounter,
+		floag64Gauge,
+	}, func(context.Context) { called = true })
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = r.Collect(ctx)
+	require.NoError(t, err)
+	assert.True(t, called, "callback not called for registered callback")
+
+	called = false
+	require.NoError(t, reg.Unregister(), "unregister")
+
+	_, err = r.Collect(ctx)
+	require.NoError(t, err)
+	assert.False(t, called, "callback called for unregistered callback")
+}
+
 func TestRegisterCallbackDropAggregations(t *testing.T) {
 	aggFn := func(InstrumentKind) aggregation.Aggregation {
 		return aggregation.Drop{}
@@ -507,14 +606,15 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	require.NoError(t, err)
 
 	var called bool
-	require.NoError(t, m.RegisterCallback([]instrument.Asynchronous{
+	_, err = m.RegisterCallback([]instrument.Asynchronous{
 		int64Counter,
 		int64UpDownCounter,
 		int64Gauge,
 		floag64Counter,
 		floag64UpDownCounter,
 		floag64Gauge,
-	}, func(context.Context) { called = true }))
+	}, func(context.Context) { called = true })
+	require.NoError(t, err)
 
 	data, err := r.Collect(context.Background())
 	require.NoError(t, err)
@@ -538,10 +638,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afcounter",
@@ -564,10 +665,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afupdowncounter",
@@ -590,10 +692,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "afgauge",
@@ -614,10 +717,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aicounter",
@@ -640,10 +744,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aiupdowncounter",
@@ -666,10 +771,11 @@ func TestAttributeFilter(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
+				return err
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "aigauge",
