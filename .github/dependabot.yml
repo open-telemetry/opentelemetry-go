@@ -10,6 +10,15 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+  - package-ecosystem: docker
+    directory: /
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
   - package-ecosystem: gomod
     directory: /
     labels:
