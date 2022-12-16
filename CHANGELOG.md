@@ -16,6 +16,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 
+### Changed
+
+- OTLP trace exporter errors are wrapped in a type that prefixes the
+  signal name in front of error strings (e.g., "traces export: context
+  canceled" insterafd of just "context canceled"). (#3016)
+
 ## [1.11.2/0.34.0] 2022-12-05
 
 ### Added

@@ -16,8 +16,11 @@ package otlptracehttp_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -218,8 +221,9 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-
-	assert.Contains(t, err.Error(), "deadline exceeded")
+	unwrapped := errors.Unwrap(err)
+	assert.Equalf(t, true, os.IsTimeout(unwrapped), "expected timeout error, got: %v", unwrapped)
+	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
 }
 
 func TestNoRetry(t *testing.T) {
@@ -246,7 +250,9 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("trace export: failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), err.Error())
+	unwrapped := errors.Unwrap(err)
+	assert.Equal(t, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), unwrapped.Error())
+	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -384,14 +390,14 @@ func TestPartialSuccess(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 
-	errors := []error{}
+	errs := []error{}
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}))
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 
-	require.Equal(t, 1, len(errors))
-	require.Contains(t, errors[0].Error(), "partially successful")
-	require.Contains(t, errors[0].Error(), "2 spans rejected")
+	require.Equal(t, 1, len(errs))
+	require.Contains(t, errs[0].Error(), "partially successful")
+	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }
