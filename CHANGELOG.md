@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/syncfloat64` to configure instruments from that package.
   - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/asyncint64` to configure instruments from that package.
   - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` to configure instruments from that package.
+- Global error handler uses an atomic value instead of a mutex. (#3543)
 
 ### Removed
 
