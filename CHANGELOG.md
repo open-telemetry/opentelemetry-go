@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Global error handler uses an atomic value instead of a mutex. (#3543)
+- Global logger uses an atomic value instead of a mutex. (#3545)
 
 ## [1.11.2/0.34.0] 2022-12-05
 
