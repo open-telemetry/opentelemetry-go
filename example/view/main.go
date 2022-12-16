@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -69,13 +69,13 @@ func main() {
 		attribute.Key("C").String("D"),
 	}
 
-	counter, err := meter.SyncFloat64().Counter("foo", syncfloat64.WithDescription("a simple counter"))
+	counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	histogram, err := meter.SyncFloat64().Histogram("custom_histogram", syncfloat64.WithDescription("a histogram with custom buckets and rename"))
+	histogram, err := meter.SyncFloat64().Histogram("custom_histogram", instrument.WithDescription("a histogram with custom buckets and rename"))
 	if err != nil {
 		log.Fatal(err)
 	}

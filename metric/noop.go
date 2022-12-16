@@ -83,15 +83,15 @@ var (
 	_ asyncfloat64.Gauge              = nonrecordingAsyncFloat64Instrument{}
 )
 
-func (n nonrecordingAsyncFloat64Instrument) Counter(string, ...asyncfloat64.Option) (asyncfloat64.Counter, error) {
+func (n nonrecordingAsyncFloat64Instrument) Counter(string, ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error) {
 	return n, nil
 }
 
-func (n nonrecordingAsyncFloat64Instrument) UpDownCounter(string, ...asyncfloat64.Option) (asyncfloat64.UpDownCounter, error) {
+func (n nonrecordingAsyncFloat64Instrument) UpDownCounter(string, ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error) {
 	return n, nil
 }
 
-func (n nonrecordingAsyncFloat64Instrument) Gauge(string, ...asyncfloat64.Option) (asyncfloat64.Gauge, error) {
+func (n nonrecordingAsyncFloat64Instrument) Gauge(string, ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error) {
 	return n, nil
 }
 
@@ -110,15 +110,15 @@ var (
 	_ asyncint64.Gauge              = nonrecordingAsyncInt64Instrument{}
 )
 
-func (n nonrecordingAsyncInt64Instrument) Counter(string, ...asyncint64.Option) (asyncint64.Counter, error) {
+func (n nonrecordingAsyncInt64Instrument) Counter(string, ...instrument.Int64ObserverOption) (asyncint64.Counter, error) {
 	return n, nil
 }
 
-func (n nonrecordingAsyncInt64Instrument) UpDownCounter(string, ...asyncint64.Option) (asyncint64.UpDownCounter, error) {
+func (n nonrecordingAsyncInt64Instrument) UpDownCounter(string, ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error) {
 	return n, nil
 }
 
-func (n nonrecordingAsyncInt64Instrument) Gauge(string, ...asyncint64.Option) (asyncint64.Gauge, error) {
+func (n nonrecordingAsyncInt64Instrument) Gauge(string, ...instrument.Int64ObserverOption) (asyncint64.Gauge, error) {
 	return n, nil
 }
 
@@ -136,15 +136,15 @@ var (
 	_ syncfloat64.Histogram          = nonrecordingSyncFloat64Instrument{}
 )
 
-func (n nonrecordingSyncFloat64Instrument) Counter(string, ...syncfloat64.Option) (syncfloat64.Counter, error) {
+func (n nonrecordingSyncFloat64Instrument) Counter(string, ...instrument.Float64Option) (syncfloat64.Counter, error) {
 	return n, nil
 }
 
-func (n nonrecordingSyncFloat64Instrument) UpDownCounter(string, ...syncfloat64.Option) (syncfloat64.UpDownCounter, error) {
+func (n nonrecordingSyncFloat64Instrument) UpDownCounter(string, ...instrument.Float64Option) (syncfloat64.UpDownCounter, error) {
 	return n, nil
 }
 
-func (n nonrecordingSyncFloat64Instrument) Histogram(string, ...syncfloat64.Option) (syncfloat64.Histogram, error) {
+func (n nonrecordingSyncFloat64Instrument) Histogram(string, ...instrument.Float64Option) (syncfloat64.Histogram, error) {
 	return n, nil
 }
 
@@ -167,15 +167,15 @@ var (
 	_ syncint64.Histogram          = nonrecordingSyncInt64Instrument{}
 )
 
-func (n nonrecordingSyncInt64Instrument) Counter(string, ...syncint64.Option) (syncint64.Counter, error) {
+func (n nonrecordingSyncInt64Instrument) Counter(string, ...instrument.Int64Option) (syncint64.Counter, error) {
 	return n, nil
 }
 
-func (n nonrecordingSyncInt64Instrument) UpDownCounter(string, ...syncint64.Option) (syncint64.UpDownCounter, error) {
+func (n nonrecordingSyncInt64Instrument) UpDownCounter(string, ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
 	return n, nil
 }
 
-func (n nonrecordingSyncInt64Instrument) Histogram(string, ...syncint64.Option) (syncint64.Histogram, error) {
+func (n nonrecordingSyncInt64Instrument) Histogram(string, ...instrument.Int64Option) (syncint64.Histogram, error) {
 	return n, nil
 }
 

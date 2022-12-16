@@ -29,8 +29,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -60,13 +58,13 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewCounterVec
-	counter, err := meter.SyncFloat64().Counter("foo", syncfloat64.WithDescription("a simple counter"))
+	counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	gauge, err := meter.AsyncFloat64().Gauge("bar", asyncfloat64.WithDescription("a fun little gauge"))
+	gauge, err := meter.AsyncFloat64().Gauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,7 +77,7 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.SyncFloat64().Histogram("baz", syncfloat64.WithDescription("a very nice histogram"))
+	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
 	if err != nil {
 		log.Fatal(err)
 	}

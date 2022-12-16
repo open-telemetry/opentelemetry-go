@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/syncfloat64"
+package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import (
 	"testing"
@@ -22,13 +22,14 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-func TestOptions(t *testing.T) {
+func TestInt64Options(t *testing.T) {
 	const (
-		desc   = "Instrument description."
-		uBytes = unit.Bytes
+		token  int64 = 43
+		desc         = "Instrument description."
+		uBytes       = unit.Bytes
 	)
 
-	got := NewConfig(WithDescription(desc), WithUnit(uBytes))
+	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
 	assert.Equal(t, desc, got.Description(), "description")
 	assert.Equal(t, uBytes, got.Unit(), "unit")
 }

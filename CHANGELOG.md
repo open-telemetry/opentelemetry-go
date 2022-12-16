@@ -10,19 +10,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `WithCallback` option is added to `go.opentelemetry.io/otel/metric/instrument/asyncint64` to configure instrument callbacks during their creation. (#3507)
-- The `WithCallback` option is added to `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` to configure instrument callbacks during their creation. (#3507)
+- The `WithInt64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure int64 Observer callbacks during their creation. (#3507)
+- The `WithFloat64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure float64 Observer callbacks during their creation. (#3507)
 - Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
   This `Registration` can be used to unregister callbacks. (#3522)
 - Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 
 ### Changed
 
-- Instrument configuration is split from `go.opentelemetry.io/otel/metric/instrument` into specific instrument packages. (#3507)
-  - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/syncint64` to configure instruments from that package.
-  - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/syncfloat64` to configure instruments from that package.
-  - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/asyncint64` to configure instruments from that package.
-  - Use the added `Option` type in `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` to configure instruments from that package.
+- Instrument configuration in `go.opentelemetry.io/otel/metric/instrument` is split into specific options and confguration based on the instrument type. (#3507)
+  - Use the added `Int64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncint64`.
+  - Use the added `Float64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncfloat64`.
+  - Use the added `Int64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncint64`.
+  - Use the added `Float64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncfloat64`.
 - Global error handler uses an atomic value instead of a mutex. (#3543)
 
 ### Removed

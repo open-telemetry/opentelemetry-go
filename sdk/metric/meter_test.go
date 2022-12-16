@@ -177,11 +177,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncint64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				ctr, err := m.AsyncInt64().Counter("aint", asyncint64.WithCallback(cback))
+				ctr, err := m.AsyncInt64().Counter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 3)
@@ -206,11 +206,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncint64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				ctr, err := m.AsyncInt64().UpDownCounter("aint", asyncint64.WithCallback(cback))
+				ctr, err := m.AsyncInt64().UpDownCounter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 11)
@@ -235,11 +235,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncint64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				gauge, err := m.AsyncInt64().Gauge("agauge", asyncint64.WithCallback(cback))
+				gauge, err := m.AsyncInt64().Gauge("agauge", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
 					gauge.Observe(ctx, 11)
@@ -262,11 +262,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncfloat64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				ctr, err := m.AsyncFloat64().Counter("afloat", asyncfloat64.WithCallback(cback))
+				ctr, err := m.AsyncFloat64().Counter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 3)
@@ -291,11 +291,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncfloat64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				ctr, err := m.AsyncFloat64().UpDownCounter("afloat", asyncfloat64.WithCallback(cback))
+				ctr, err := m.AsyncFloat64().UpDownCounter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 11)
@@ -320,11 +320,11 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "AsyncFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o asyncfloat64.Observer) error {
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
 					o.Observe(ctx, 4, attrs...)
 					return nil
 				}
-				gauge, err := m.AsyncFloat64().Gauge("agauge", asyncfloat64.WithCallback(cback))
+				gauge, err := m.AsyncFloat64().Gauge("agauge", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
 					gauge.Observe(ctx, 11)

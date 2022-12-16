@@ -26,11 +26,11 @@ import (
 // Warning: methods may be added to this interface in minor releases.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...Option) (Counter, error)
+	Counter(name string, opts ...instrument.Int64Option) (Counter, error)
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...Option) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...instrument.Int64Option) (UpDownCounter, error)
 	// Histogram creates an instrument for recording a distribution of values.
-	Histogram(name string, opts ...Option) (Histogram, error)
+	Histogram(name string, opts ...instrument.Int64Option) (Histogram, error)
 }
 
 // Counter is an instrument that records increasing values.

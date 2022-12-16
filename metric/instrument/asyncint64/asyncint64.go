@@ -14,48 +14,20 @@
 
 package asyncint64 // import "go.opentelemetry.io/otel/metric/instrument/asyncint64"
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
-)
-
-// Observer is a recorder of measurement values.
-//
-// Warning: methods may be added to this interface in minor releases.
-type Observer interface {
-	instrument.Asynchronous
-
-	// Observe records the measurement value for a set of attributes.
-	//
-	// It is only valid to call this within a callback. If called outside of
-	// the registered callback it should have no effect on the instrument, and
-	// an error will be reported via the error handler.
-	Observe(ctx context.Context, value int64, attributes ...attribute.KeyValue)
-}
-
-// Callback is a function that returns observations for an Asynchronous
-// instrument.
-//
-// The function needs to complete in a finite amount of time and the deadline
-// of the passed context is expected to be honored.
-//
-// The function needs to be concurrent safe.
-type Callback func(context.Context, Observer) error
+import "go.opentelemetry.io/otel/metric/instrument"
 
 // InstrumentProvider provides access to individual instruments.
 //
 // Warning: methods may be added to this interface in minor releases.
 type InstrumentProvider interface {
 	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...Option) (Counter, error)
+	Counter(name string, opts ...instrument.Int64ObserverOption) (Counter, error)
 
 	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...Option) (UpDownCounter, error)
+	UpDownCounter(name string, opts ...instrument.Int64ObserverOption) (UpDownCounter, error)
 
 	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...Option) (Gauge, error)
+	Gauge(name string, opts ...instrument.Int64ObserverOption) (Gauge, error)
 }
 
 // Counter is an instrument used to asynchronously record increasing int64
@@ -65,7 +37,7 @@ type InstrumentProvider interface {
 // the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Counter interface{ Observer }
+type Counter interface{ instrument.Int64Observer }
 
 // UpDownCounter is an instrument used to asynchronously record int64
 // measurements once per a measurement collection cycle. The Observe method is
@@ -74,10 +46,10 @@ type Counter interface{ Observer }
 // the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type UpDownCounter interface{ Observer }
+type UpDownCounter interface{ instrument.Int64Observer }
 
 // Gauge is an instrument used to asynchronously record instantaneous int64
 // measurements once per a measurement collection cycle.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Gauge interface{ Observer }
+type Gauge interface{ instrument.Int64Observer }

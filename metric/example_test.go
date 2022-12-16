@@ -22,9 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
@@ -35,7 +33,7 @@ func ExampleMeter_synchronous() {
 
 	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").SyncInt64().Histogram(
 		"workDuration",
-		syncint64.WithUnit(unit.Milliseconds))
+		instrument.WithUnit(unit.Milliseconds))
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -56,7 +54,7 @@ func ExampleMeter_asynchronous_single() {
 
 	memoryUsage, err := meter.AsyncInt64().Gauge(
 		"MemoryUsage",
-		asyncint64.WithUnit(unit.Bytes),
+		instrument.WithUnit(unit.Bytes),
 	)
 	if err != nil {
 		fmt.Println("Failed to register instrument")

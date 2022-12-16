@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package asyncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
+package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import (
 	"context"
@@ -22,21 +22,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-func TestOptions(t *testing.T) {
+func TestInt64ObserverOptions(t *testing.T) {
 	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = unit.Bytes
+		token  int64 = 43
+		desc         = "Instrument description."
+		uBytes       = unit.Bytes
 	)
 
-	got := NewConfig(
+	got := NewInt64ObserverConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithCallback(func(ctx context.Context, o Observer) error {
+		WithInt64Callback(func(ctx context.Context, o Int64Observer) error {
 			o.Observe(ctx, token)
 			return nil
 		}),
@@ -47,17 +46,17 @@ func TestOptions(t *testing.T) {
 	// Functions are not comparable.
 	cBacks := got.Callbacks()
 	require.Len(t, cBacks, 1, "callbacks")
-	o := &observer{}
+	o := &int64Observer{}
 	err := cBacks[0](context.Background(), o)
 	require.NoError(t, err)
 	assert.Equal(t, token, o.got, "callback not set")
 }
 
-type observer struct {
-	instrument.Asynchronous
-	got float64
+type int64Observer struct {
+	Asynchronous
+	got int64
 }
 
-func (o *observer) Observe(_ context.Context, v float64, _ ...attribute.KeyValue) {
+func (o *int64Observer) Observe(_ context.Context, v int64, _ ...attribute.KeyValue) {
 	o.got = v
 }

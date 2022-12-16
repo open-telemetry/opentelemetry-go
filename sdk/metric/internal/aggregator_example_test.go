@@ -38,7 +38,7 @@ func (m *meter) SyncInt64() syncint64.InstrumentProvider {
 
 type syncInt64Provider meter
 
-func (p *syncInt64Provider) Counter(string, ...syncint64.Option) (syncint64.Counter, error) {
+func (p *syncInt64Provider) Counter(string, ...instrument.Int64Option) (syncint64.Counter, error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new counter. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader
@@ -55,7 +55,7 @@ func (p *syncInt64Provider) Counter(string, ...syncint64.Option) (syncint64.Coun
 	return count, nil
 }
 
-func (p *syncInt64Provider) UpDownCounter(string, ...syncint64.Option) (syncint64.UpDownCounter, error) {
+func (p *syncInt64Provider) UpDownCounter(string, ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new up-down counter. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader
@@ -73,7 +73,7 @@ func (p *syncInt64Provider) UpDownCounter(string, ...syncint64.Option) (syncint6
 	return upDownCount, nil
 }
 
-func (p *syncInt64Provider) Histogram(string, ...syncint64.Option) (syncint64.Histogram, error) {
+func (p *syncInt64Provider) Histogram(string, ...instrument.Int64Option) (syncint64.Histogram, error) {
 	// This is an example of how a synchronous int64 provider would create an
 	// aggregator for a new histogram. At this point the provider would
 	// determine the aggregation and temporality to used based on the Reader
