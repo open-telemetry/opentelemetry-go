@@ -63,7 +63,7 @@ func ExampleMeter_asynchronous_single() {
 		panic(err)
 	}
 
-	err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
+	_, err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
 		func(ctx context.Context) {
 			// instrument.WithCallbackFunc(func(ctx context.Context) {
 			//Do Work to get the real memoryUsage
@@ -88,7 +88,7 @@ func ExampleMeter_asynchronous_multiple() {
 	gcCount, _ := meter.AsyncInt64().Counter("gcCount")
 	gcPause, _ := meter.SyncFloat64().Histogram("gcPause")
 
-	err := meter.RegisterCallback([]instrument.Asynchronous{
+	_, err := meter.RegisterCallback([]instrument.Asynchronous{
 		heapAlloc,
 		gcCount,
 	},

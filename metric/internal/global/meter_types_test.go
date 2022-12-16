@@ -64,8 +64,21 @@ func (m *testMeter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *testMeter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	m.callbacks = append(m.callbacks, function)
+func (m *testMeter) RegisterCallback(i []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
+	m.callbacks = append(m.callbacks, f)
+	return testReg{
+		f: func(idx int) func() {
+			return func() { m.callbacks[idx] = nil }
+		}(len(m.callbacks) - 1),
+	}, nil
+}
+
+type testReg struct {
+	f func()
+}
+
+func (r testReg) Unregister() error {
+	r.f()
 	return nil
 }
 
@@ -85,6 +98,10 @@ func (m *testMeter) SyncFloat64() syncfloat64.InstrumentProvider {
 func (m *testMeter) collect() {
 	ctx := context.Background()
 	for _, f := range m.callbacks {
+		if f == nil {
+			// Unregister.
+			continue
+		}
 		f(ctx)
 	}
 }

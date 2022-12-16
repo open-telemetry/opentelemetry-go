@@ -15,6 +15,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -76,7 +78,7 @@ type pipeline struct {
 	sync.Mutex
 	aggregations   map[instrumentation.Scope][]instrumentSync
 	callbacks      []func(context.Context) error
-	multiCallbacks []func(context.Context)
+	multiCallbacks list.List
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -104,10 +106,15 @@ func (p *pipeline) addCallback(cback func(context.Context) error) {
 
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
-func (p *pipeline) addMultiCallback(callback func(context.Context)) {
+func (p *pipeline) addMultiCallback(c callback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
-	p.multiCallbacks = append(p.multiCallbacks, callback)
+	e := p.multiCallbacks.PushBack(c)
+	return func() {
+		p.Lock()
+		p.multiCallbacks.Remove(e)
+		p.Unlock()
+	}
 }
 
 // callbackKey is a context key type used to identify context that came from the SDK.
@@ -122,10 +129,10 @@ const produceKey callbackKey = 0
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+	ctx = context.WithValue(ctx, produceKey, struct{}{})
+
 	p.Lock()
 	defer p.Unlock()
-
-	ctx = context.WithValue(ctx, produceKey, struct{}{})
 
 	var errs multierror
 	for _, c := range p.callbacks {
@@ -137,9 +144,10 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 			return metricdata.ResourceMetrics{}, err
 		}
 	}
-	for _, callback := range p.multiCallbacks {
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
-		callback(ctx)
+		f := e.Value.(callback)
+		f(ctx)
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err
@@ -465,10 +473,21 @@ func (p pipelines) registerCallback(cback func(context.Context) error) {
 	}
 }
 
-func (p pipelines) registerMultiCallback(fn func(context.Context)) {
-	for _, pipe := range p {
-		pipe.addMultiCallback(fn)
+func (p pipelines) registerMultiCallback(c callback) metric.Registration {
+	unregs := make([]func(), len(p))
+	for i, pipe := range p {
+		unregs[i] = pipe.addMultiCallback(c)
 	}
+	return unregisterFuncs(unregs)
+}
+
+type unregisterFuncs []func()
+
+func (u unregisterFuncs) Unregister() error {
+	for _, f := range u {
+		f()
+	}
+	return nil
 }
 
 // resolver facilitates resolving Aggregators an instrument needs to aggregate
