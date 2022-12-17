@@ -299,7 +299,7 @@ To initialize the console exporter, add the following function to the `main.go` 
 
 ```go
 // newExporter returns a console exporter.
-func newExporter(w io.Writer) (trace.SpanExporter, error) {
+func newExporter(w io.Writer) (*stdouttrace.Exporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
 		// Use human-readable output.
