@@ -22,6 +22,7 @@ import (
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
 	"go.opencensus.io/metric/metricexport"
+	"go.opencensus.io/metric/metricproducer"
 
 	"go.opentelemetry.io/otel"
 	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
@@ -33,6 +34,36 @@ import (
 
 const scopeName = "go.opentelemetry.io/otel/bridge/opencensus"
 
+type producer struct {
+	manager *metricproducer.Manager
+}
+
+// NewMetricProducer returns a metric.Producer that fetches metrics from
+// OpenCensus.
+func NewMetricProducer() metric.Producer {
+	return &producer{
+		manager: metricproducer.GlobalManager(),
+	}
+}
+
+func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+	producers := p.manager.GetAll()
+	data := []*ocmetricdata.Metric{}
+	for _, ocProducer := range producers {
+		data = append(data, ocProducer.Read()...)
+	}
+	otelmetrics, err := internal.ConvertMetrics(data)
+	if len(otelmetrics) == 0 {
+		return nil, err
+	}
+	return []metricdata.ScopeMetrics{{
+		Scope: instrumentation.Scope{
+			Name: scopeName,
+		},
+		Metrics: otelmetrics,
+	}}, err
+}
+
 // exporter implements the OpenCensus metric Exporter interface using an
 // OpenTelemetry base exporter.
 type exporter struct {
@@ -42,6 +73,7 @@ type exporter struct {
 
 // NewMetricExporter returns an OpenCensus exporter that exports to an
 // OpenTelemetry (push) exporter.
+// Deprecated: Use NewMetricProducer instead.
 func NewMetricExporter(base metric.Exporter, res *resource.Resource) metricexport.Exporter {
 	return &exporter{base: base, res: res}
 }
