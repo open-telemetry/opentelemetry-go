@@ -155,6 +155,8 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesSum(e, attrs...)
 	case metricdata.HistogramDataPoint:
 		reasons = hasAttributesHistogramDataPoints(e, attrs...)
+	case metricdata.Extrema:
+		// Nothing to check.
 	case metricdata.Histogram:
 		reasons = hasAttributesHistogram(e, attrs...)
 	case metricdata.Metrics:
