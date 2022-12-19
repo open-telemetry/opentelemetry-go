@@ -267,10 +267,10 @@ func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint, cfg config) (r
 	if !equalSlices(a.BucketCounts, b.BucketCounts) {
 		reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
 	}
-	if !equalPtrValues(a.Min, b.Min) {
+	if !eqExtrema(a.Min, b.Min) {
 		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
 	}
-	if !equalPtrValues(a.Max, b.Max) {
+	if !eqExtrema(a.Max, b.Max) {
 		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
 	}
 	if a.Sum != b.Sum {
@@ -295,12 +295,18 @@ func equalSlices[T comparable](a, b []T) bool {
 	return true
 }
 
-func equalPtrValues[T comparable](a, b *T) bool {
-	if a == nil || b == nil {
-		return a == b
+func equalExtrema(a, b metricdata.Extrema, _ config) (reasons []string) {
+	if !eqExtrema(a, b) {
+		reasons = append(reasons, notEqualStr("Extrema", a, b))
 	}
+	return reasons
+}
 
-	return *a == *b
+func eqExtrema(a, b metricdata.Extrema) bool {
+	if !a.Valid || !b.Valid {
+		return a.Valid == b.Valid
+	}
+	return a.Value == b.Value
 }
 
 func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {

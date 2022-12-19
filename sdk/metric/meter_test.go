@@ -167,7 +167,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	seven := 7.0
+	extrema := metricdata.Extrema{Value: 7., Valid: true}
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -370,8 +370,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 							Count:        1,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Min:          &seven,
-							Max:          &seven,
+							Min:          extrema,
+							Max:          extrema,
 							Sum:          7.0,
 						},
 					},
@@ -434,8 +434,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 							Count:        1,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Min:          &seven,
-							Max:          &seven,
+							Min:          extrema,
+							Max:          extrema,
 							Sum:          7.0,
 						},
 					},
@@ -624,8 +624,6 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 }
 
 func TestAttributeFilter(t *testing.T) {
-	one := 1.0
-	two := 2.0
 	testcases := []struct {
 		name       string
 		register   func(t *testing.T, mtr metric.Meter) error
@@ -862,8 +860,8 @@ func TestAttributeFilter(t *testing.T) {
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
-							Min:          &one,
-							Max:          &two,
+							Min:          metricdata.Extrema{Value: 1., Valid: true},
+							Max:          metricdata.Extrema{Value: 2., Valid: true},
 							Sum:          3.0,
 						},
 					},
@@ -944,8 +942,8 @@ func TestAttributeFilter(t *testing.T) {
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
-							Min:          &one,
-							Max:          &two,
+							Min:          metricdata.Extrema{Value: 1., Valid: true},
+							Max:          metricdata.Extrema{Value: 2., Valid: true},
 							Sum:          3.0,
 						},
 					},

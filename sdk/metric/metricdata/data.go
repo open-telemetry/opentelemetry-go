@@ -122,9 +122,19 @@ type HistogramDataPoint struct {
 	BucketCounts []uint64
 
 	// Min is the minimum value recorded. (optional)
-	Min *float64 `json:",omitempty"`
+	Min Extrema
 	// Max is the maximum value recorded. (optional)
-	Max *float64 `json:",omitempty"`
+	Max Extrema
 	// Sum is the sum of the values recorded.
 	Sum float64
+}
+
+// Extrema are the minimum or maximum values of a data set.
+type Extrema struct {
+	// Value is the extrema value.
+	Value float64
+
+	// Valid is true if Value has been assigned a value. It is false if Value
+	// is the zero-value.
+	Valid bool
 }
