@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- OTLP exporter for traces and metrics will print the final retryable error message 
+- OTLP exporter for traces and metrics will print the final retryable error message
   when attempts to retry time out. (#3514)
 
 ## [1.11.2/0.34.0] 2022-12-05
