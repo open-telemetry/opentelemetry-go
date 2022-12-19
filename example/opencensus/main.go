@@ -22,7 +22,6 @@ import (
 
 	ocmetric "go.opencensus.io/metric"
 	"go.opencensus.io/metric/metricdata"
-	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/metric/metricproducer"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -34,7 +33,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -103,20 +101,12 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
-func monitoring(otExporter metric.Exporter) error {
-	log.Println("Using the OpenTelemetry stdoutmetric exporter to export OpenCensus metrics.  This allows routing telemetry from both OpenTelemetry and OpenCensus to a single exporter.")
-	ocExporter := opencensus.NewMetricExporter(otExporter, resource.Default())
-	intervalReader, err := metricexport.NewIntervalReader(&metricexport.Reader{}, ocExporter)
-	if err != nil {
-		return fmt.Errorf("failed to create interval reader: %w", err)
-	}
-	intervalReader.ReportingInterval = 10 * time.Second
-	log.Println("Emitting metrics using OpenCensus APIs.  These should be printed out using the OpenTelemetry stdoutmetric exporter.")
-	err = intervalReader.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start interval reader: %w", err)
-	}
-	defer intervalReader.Stop()
+func monitoring(exporter metric.Exporter) error {
+	log.Println("Adding the OpenCensus metric Producer to an OpenTelemetry Reader to export OpenCensus metrics using the OpenTelemetry stdout exporter.")
+	reader := metric.NewPeriodicReader(exporter)
+	// Register the OpenCensus metric Producer to add metrics from OpenCensus to the output.
+	reader.RegisterProducer(opencensus.NewMetricProducer())
+	metric.NewMeterProvider(metric.WithReader(reader))
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")
 	r := ocmetric.NewRegistry()
