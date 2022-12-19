@@ -202,7 +202,7 @@ func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
 }
 
 // aggregateFiltered records value with spatially re-aggregated attrs.
-func (s *precomputedDeltaSum[N]) aggregateFiltered(value N, attr attribute.Set) {
+func (s *precomputedDeltaSum[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
 	s.Lock()
 	s.recorded[attr] += value
 	s.Unlock()
@@ -269,6 +269,6 @@ func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
 }
 
 // aggregateFiltered records value with spatially re-aggregated attrs.
-func (s *precomputedSum[N]) aggregateFiltered(value N, attr attribute.Set) {
+func (s *precomputedSum[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
 	s.valueMap.Aggregate(value, attr)
 }

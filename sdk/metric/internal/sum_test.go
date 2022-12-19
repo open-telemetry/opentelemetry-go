@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -161,6 +162,29 @@ func testDeltaSumReset[N int64 | float64](t *testing.T) {
 func TestDeltaSumReset(t *testing.T) {
 	t.Run("Int64", testDeltaSumReset[int64])
 	t.Run("Float64", testDeltaSumReset[float64])
+}
+
+func TestAggregateFiltered(t *testing.T) {
+	t.Run("PreComputedDelta", testAggregateFiltered(NewPrecomputedDeltaSum[int64](false)))
+	t.Run("PreComputedCumulativeSum", testAggregateFiltered(NewPrecomputedCumulativeSum[int64](false)))
+}
+
+type af interface{ aggregateFiltered(int64, attribute.Set) }
+
+func testAggregateFiltered[N int64 | float64](a Aggregator[N]) func(*testing.T) {
+	attrs := attribute.NewSet(attribute.String("key", "val"))
+	return func(t *testing.T) {
+		a.Aggregate(1, attrs)
+
+		require.Implements(t, (*af)(nil), a)
+		a.(af).aggregateFiltered(1, attrs)
+
+		agg := a.Aggregation()
+		require.IsType(t, agg, metricdata.Sum[int64]{})
+		sum := agg.(metricdata.Sum[int64])
+		require.Len(t, sum.DataPoints, 1)
+		assert.Equal(t, N(2), sum.DataPoints[0].Value)
+	}
 }
 
 func TestEmptySumNilAggregation(t *testing.T) {
