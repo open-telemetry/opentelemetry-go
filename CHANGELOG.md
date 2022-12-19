@@ -37,6 +37,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `UpDownCounter` method is replaced by `Meter.Float64UpDownCounter`
   - The `Histogram` method is replaced by `Meter.Float64Histogram`
 - Global error handler uses an atomic value instead of a mutex. (#3543)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+- Add `NewMetricProducer` to `go.opentelemetry.io/otel/bridge/opencensus`, which can be used to pass OpenCensus metrics to an OpenTelemetry Reader. (#3541)
+- Global logger uses an atomic value instead of a mutex. (#3545)
+
+### Deprecated
+
+- The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
 
 ### Removed
 
