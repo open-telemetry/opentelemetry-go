@@ -21,14 +21,23 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+type filteredSet struct {
+	filtered bool
+	attrs    attribute.Set
+}
+
 // filter is an aggregator that applies attribute filter when Aggregating. filters
 // do not have any backing memory, and must be constructed with a backing Aggregator.
 type filter[N int64 | float64] struct {
 	filter     attribute.Filter
 	aggregator Aggregator[N]
 
+	// Used to aggreagte if an aggregator aggregates values differently for
+	// spatically reaggregated attributes.
+	filtered func(N, attribute.Set)
+
 	sync.Mutex
-	seen map[attribute.Set]attribute.Set
+	seen map[attribute.Set]filteredSet
 }
 
 // NewFilter wraps an Aggregator with an attribute filtering function.
@@ -36,10 +45,19 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggreg
 	if fn == nil {
 		return agg
 	}
+	af, ok := agg.(interface{ aggregateFiltered(N, attribute.Set) })
+	if ok {
+		return &filter[N]{
+			filter:     fn,
+			aggregator: agg,
+			filtered:   af.aggregateFiltered,
+			seen:       make(map[attribute.Set]filteredSet),
+		}
+	}
 	return &filter[N]{
 		filter:     fn,
 		aggregator: agg,
-		seen:       map[attribute.Set]attribute.Set{},
+		seen:       make(map[attribute.Set]filteredSet),
 	}
 }
 
@@ -51,10 +69,15 @@ func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
 	if !ok {
-		fAttr, _ = attr.Filter(f.filter)
+		a, na := attr.Filter(f.filter)
+		fAttr = filteredSet{filtered: len(na) != 0, attrs: a}
 		f.seen[attr] = fAttr
 	}
-	f.aggregator.Aggregate(measurement, fAttr)
+	if fAttr.filtered && f.filtered != nil {
+		f.filtered(measurement, fAttr.attrs)
+	} else {
+		f.aggregator.Aggregate(measurement, fAttr.attrs)
+	}
 }
 
 // Aggregation returns an Aggregation, for all the aggregated

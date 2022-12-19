@@ -624,6 +624,11 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 }
 
 func TestAttributeFilter(t *testing.T) {
+	t.Run("Delta", testAttributeFilter(metricdata.DeltaTemporality))
+	t.Run("Cumulative", testAttributeFilter(metricdata.CumulativeTemporality))
+}
+
+func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	one := 1.0
 	two := 2.0
 	testcases := []struct {
@@ -650,10 +655,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO (#3439): This should be 3.0.
+							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -677,10 +682,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO (#3439): This should be 3.0.
+							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -729,10 +734,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO (#3439): This should be 30.
+							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -756,10 +761,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO (#3439): This should be 30.
+							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -810,7 +815,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -836,7 +841,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -867,7 +872,7 @@ func TestAttributeFilter(t *testing.T) {
 							Sum:          3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 				},
 			},
 		},
@@ -892,7 +897,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -918,7 +923,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -949,34 +954,38 @@ func TestAttributeFilter(t *testing.T) {
 							Sum:          3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 				},
 			},
 		},
 	}
 
-	for _, tt := range testcases {
-		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewManualReader()
-			mtr := NewMeterProvider(
-				WithReader(rdr),
-				WithView(NewView(
-					Instrument{Name: "*"},
-					Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
-						return kv.Key == attribute.Key("foo")
-					}},
-				)),
-			).Meter("TestAttributeFilter")
-			require.NoError(t, tt.register(t, mtr))
+	return func(t *testing.T) {
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				rdr := NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
+					return temporality
+				}))
+				mtr := NewMeterProvider(
+					WithReader(rdr),
+					WithView(NewView(
+						Instrument{Name: "*"},
+						Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == attribute.Key("foo")
+						}},
+					)),
+				).Meter("TestAttributeFilter")
+				require.NoError(t, tt.register(t, mtr))
 
-			m, err := rdr.Collect(context.Background())
-			assert.NoError(t, err)
+				m, err := rdr.Collect(context.Background())
+				assert.NoError(t, err)
 
-			require.Len(t, m.ScopeMetrics, 1)
-			require.Len(t, m.ScopeMetrics[0].Metrics, 1)
+				require.Len(t, m.ScopeMetrics, 1)
+				require.Len(t, m.ScopeMetrics[0].Metrics, 1)
 
-			metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-		})
+				metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			})
+		}
 	}
 }
 

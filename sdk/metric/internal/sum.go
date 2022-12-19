@@ -201,6 +201,13 @@ func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
 	s.Unlock()
 }
 
+// aggregateFiltered records value with spatially re-aggregated attrs.
+func (s *precomputedDeltaSum[N]) aggregateFiltered(value N, attr attribute.Set) {
+	s.Lock()
+	s.recorded[attr] += value
+	s.Unlock()
+}
+
 func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 	s.Lock()
 	defer s.Unlock()
@@ -259,4 +266,9 @@ type precomputedSum[N int64 | float64] struct {
 // Aggregate records value as a cumulative sum for attr.
 func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
 	s.set(value, attr)
+}
+
+// aggregateFiltered records value with spatially re-aggregated attrs.
+func (s *precomputedSum[N]) aggregateFiltered(value N, attr attribute.Set) {
+	s.valueMap.Aggregate(value, attr)
 }
