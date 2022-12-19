@@ -69,7 +69,7 @@ func (m *meter) AsyncFloat64() asyncfloat64.InstrumentProvider {
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) error {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
 	for _, inst := range insts {
 		// Only register if at least one instrument has a non-drop aggregation.
 		// Otherwise, calling f during collection will be wasted computation.
@@ -91,12 +91,19 @@ func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context
 		}
 	}
 	// All insts use drop aggregation.
+	return noopRegister{}, nil
+}
+
+type noopRegister struct{}
+
+func (noopRegister) Unregister() error {
 	return nil
 }
 
-func (m *meter) registerCallback(f func(context.Context)) error {
-	m.pipes.registerCallback(f)
-	return nil
+type callback func(context.Context)
+
+func (m *meter) registerCallback(c callback) (metric.Registration, error) {
+	return m.pipes.registerCallback(c), nil
 }
 
 // SyncInt64 returns the synchronous integer instrument provider.
