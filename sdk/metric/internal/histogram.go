@@ -156,8 +156,8 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 			Sum:          b.sum,
 		}
 		if !s.noMinMax {
-			hdp.Min = metricdata.Extrema{Value: b.min, Valid: true}
-			hdp.Max = metricdata.Extrema{Value: b.max, Valid: true}
+			hdp.Min = metricdata.NewExtrema(b.min)
+			hdp.Max = metricdata.NewExtrema(b.max)
 		}
 		h.DataPoints = append(h.DataPoints, hdp)
 
@@ -227,8 +227,8 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 			Sum:          b.sum,
 		}
 		if !s.noMinMax {
-			hdp.Min = metricdata.Extrema{Value: b.min, Valid: true}
-			hdp.Max = metricdata.Extrema{Value: b.max, Valid: true}
+			hdp.Min = metricdata.NewExtrema(b.min)
+			hdp.Max = metricdata.NewExtrema(b.max)
 		}
 		h.DataPoints = append(h.DataPoints, hdp)
 		// TODO (#3006): This will use an unbounded amount of memory if there

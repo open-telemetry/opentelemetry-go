@@ -89,8 +89,8 @@ var (
 		Count:        3,
 		Bounds:       []float64{0, 10, 100},
 		BucketCounts: []uint64{1, 1, 1},
-		Max:          metricdata.Extrema{Valid: true, Value: 99.},
-		Min:          metricdata.Extrema{Valid: true, Value: 3.},
+		Max:          metricdata.NewExtrema(99.),
+		Min:          metricdata.NewExtrema(3.),
 		Sum:          3,
 	}
 	histogramDataPointC = metricdata.HistogramDataPoint{

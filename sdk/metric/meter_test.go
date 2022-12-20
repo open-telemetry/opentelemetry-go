@@ -167,7 +167,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	extrema := metricdata.Extrema{Value: 7., Valid: true}
+	extrema := metricdata.NewExtrema(7.)
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -860,8 +860,8 @@ func TestAttributeFilter(t *testing.T) {
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
-							Min:          metricdata.Extrema{Value: 1., Valid: true},
-							Max:          metricdata.Extrema{Value: 2., Valid: true},
+							Min:          metricdata.NewExtrema(1.),
+							Max:          metricdata.NewExtrema(2.),
 							Sum:          3.0,
 						},
 					},
@@ -942,8 +942,8 @@ func TestAttributeFilter(t *testing.T) {
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
-							Min:          metricdata.Extrema{Value: 1., Valid: true},
-							Max:          metricdata.Extrema{Value: 2., Valid: true},
+							Min:          metricdata.NewExtrema(1.),
+							Max:          metricdata.NewExtrema(2.),
 							Sum:          3.0,
 						},
 					},

@@ -138,3 +138,8 @@ type Extrema struct {
 	// is the zero-value.
 	Valid bool
 }
+
+// NewExtrema returns an Extrema set to v.
+func NewExtrema(v float64) Extrema {
+	return Extrema{Value: v, Valid: true}
+}
