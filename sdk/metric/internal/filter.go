@@ -21,11 +21,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-type filteredSet struct {
-	filtered bool
-	attrs    attribute.Set
-}
-
 // filter is an aggregator that applies attribute filter when Aggregating. filters
 // do not have any backing memory, and must be constructed with a backing Aggregator.
 type filter[N int64 | float64] struct {
@@ -34,10 +29,11 @@ type filter[N int64 | float64] struct {
 
 	// Used to aggreagte if an aggregator aggregates values differently for
 	// spatically reaggregated attributes.
-	filtered func(N, attribute.Set)
+	aggregateFiltered func(N, attribute.Set)
 
 	sync.Mutex
-	seen map[attribute.Set]filteredSet
+	seen     map[attribute.Set]attribute.Set
+	filtered map[attribute.Set]bool
 }
 
 // NewFilter wraps an Aggregator with an attribute filtering function.
@@ -48,16 +44,21 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggreg
 	af, ok := agg.(interface{ aggregateFiltered(N, attribute.Set) })
 	if ok {
 		return &filter[N]{
-			filter:     fn,
-			aggregator: agg,
-			filtered:   af.aggregateFiltered,
-			seen:       make(map[attribute.Set]filteredSet),
+			filter:            fn,
+			aggregator:        agg,
+			aggregateFiltered: af.aggregateFiltered,
+			seen:              make(map[attribute.Set]attribute.Set),
+			// Use distinct filtered and seen to ensure un-filtered attributes
+			// that match the same previously filtered attributes is treated
+			// the same (added, not set).
+			filtered: make(map[attribute.Set]bool),
 		}
 	}
 	return &filter[N]{
 		filter:     fn,
 		aggregator: agg,
-		seen:       make(map[attribute.Set]filteredSet),
+		seen:       make(map[attribute.Set]attribute.Set),
+		// Don't allocate filtered as it won't be used
 	}
 }
 
@@ -69,14 +70,17 @@ func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
 	if !ok {
-		a, na := attr.Filter(f.filter)
-		fAttr = filteredSet{filtered: len(na) != 0, attrs: a}
+		var na []attribute.KeyValue
+		fAttr, na = attr.Filter(f.filter)
 		f.seen[attr] = fAttr
+		if f.aggregateFiltered != nil && len(na) != 0 {
+			f.filtered[fAttr] = true
+		}
 	}
-	if fAttr.filtered && f.filtered != nil {
-		f.filtered(measurement, fAttr.attrs)
+	if f.aggregateFiltered != nil && f.filtered[fAttr] {
+		f.aggregateFiltered(measurement, fAttr)
 	} else {
-		f.aggregator.Aggregate(measurement, fAttr.attrs)
+		f.aggregator.Aggregate(measurement, fAttr)
 	}
 }
 

@@ -645,7 +645,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"))
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 				return err
 			},
@@ -655,7 +656,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      3.0,
+							Value:      4.0,
 						},
 					},
 					Temporality: temporality,
@@ -672,7 +673,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"))
+					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 				return err
 			},
@@ -682,7 +684,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      3.0,
+							Value:      4.0,
 						},
 					},
 					Temporality: temporality,
@@ -724,7 +726,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"))
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 				return err
 			},
@@ -734,7 +737,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      30,
+							Value:      40,
 						},
 					},
 					Temporality: temporality,
@@ -751,7 +754,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					ctr.Observe(ctx, 20, attribute.String("foo", "bar"))
+					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
 				})
 				return err
 			},
@@ -761,7 +765,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      30,
+							Value:      40,
 						},
 					},
 					Temporality: temporality,
