@@ -227,7 +227,8 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-// Shutdown shuts down the span processors in the order they were registered.
+// Shutdown shuts down TracerProvider. All registered span processors are shut down
+// in the order they were registered and any held computational resources are released.
 func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	spss := p.spanProcessors.Load().(spanProcessorStates)
 	if len(spss) == 0 {
@@ -255,6 +256,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 			}
 		}
 	}
+	p.spanProcessors.Store(spanProcessorStates{})
 	return retErr
 }
 
