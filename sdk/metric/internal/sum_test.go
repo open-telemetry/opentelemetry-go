@@ -164,25 +164,132 @@ func TestDeltaSumReset(t *testing.T) {
 	t.Run("Float64", testDeltaSumReset[float64])
 }
 
-func TestAggregateFiltered(t *testing.T) {
-	t.Run("PreComputedDelta", testAggregateFiltered(NewPrecomputedDeltaSum[int64](false)))
-	t.Run("PreComputedCumulativeSum", testAggregateFiltered(NewPrecomputedCumulativeSum[int64](false)))
+func TestPreComputedDeltaSum(t *testing.T) {
+	var mono bool
+	agg := NewPrecomputedDeltaSum[int64](mono)
+	require.Implements(t, (*filterAgg[int64])(nil), agg)
+
+	attrs := attribute.NewSet(attribute.String("key", "val"))
+	agg.Aggregate(1, attrs)
+	got := agg.Aggregation()
+	want := metricdata.Sum[int64]{
+		IsMonotonic: mono,
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.DataPoint[int64]{point[int64](attrs, 1)},
+	}
+	opt := metricdatatest.IgnoreTimestamp()
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Delta values should zero.
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 0)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	agg.(filterAgg[int64]).filtered(1, attrs)
+	got = agg.Aggregation()
+	// measured(+): 1, previous(-): 1, filtered(+): 1
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 1)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Filtered values should not persist.
+	got = agg.Aggregation()
+	// measured(+): 1, previous(-): 2, filtered(+): 0
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, -1)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	got = agg.Aggregation()
+	// measured(+): 1, previous(-): 1, filtered(+): 0
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 0)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Override set value.
+	agg.Aggregate(2, attrs)
+	agg.Aggregate(5, attrs)
+	// Filtered should add.
+	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.(filterAgg[int64]).filtered(10, attrs)
+	got = agg.Aggregation()
+	// measured(+): 5, previous(-): 1, filtered(+): 13
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 17)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Filtered values should not persist.
+	agg.Aggregate(5, attrs)
+	got = agg.Aggregation()
+	// measured(+): 5, previous(-): 18, filtered(+): 0
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, -13)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Order should not affect measure.
+	// Filtered should add.
+	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.Aggregate(7, attrs)
+	agg.(filterAgg[int64]).filtered(10, attrs)
+	got = agg.Aggregation()
+	// measured(+): 7, previous(-): 5, filtered(+): 13
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 15)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	agg.Aggregate(7, attrs)
+	got = agg.Aggregation()
+	// measured(+): 7, previous(-): 20, filtered(+): 0
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, -13)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 }
 
-func testAggregateFiltered[N int64 | float64](a Aggregator[N]) func(*testing.T) {
+func TestPreComputedCumulativeSum(t *testing.T) {
+	var mono bool
+	agg := NewPrecomputedCumulativeSum[int64](mono)
+	require.Implements(t, (*filterAgg[int64])(nil), agg)
+
 	attrs := attribute.NewSet(attribute.String("key", "val"))
-	return func(t *testing.T) {
-		a.Aggregate(1, attrs)
-
-		require.Implements(t, (*filterAgg[N])(nil), a)
-		a.(filterAgg[N]).filtered(1, attrs)
-
-		agg := a.Aggregation()
-		require.IsType(t, agg, metricdata.Sum[int64]{})
-		sum := agg.(metricdata.Sum[int64])
-		require.Len(t, sum.DataPoints, 1)
-		assert.Equal(t, N(2), sum.DataPoints[0].Value)
+	agg.Aggregate(1, attrs)
+	got := agg.Aggregation()
+	want := metricdata.Sum[int64]{
+		IsMonotonic: mono,
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.DataPoint[int64]{point[int64](attrs, 1)},
 	}
+	opt := metricdatatest.IgnoreTimestamp()
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Cumulative values should persist.
+	got = agg.Aggregation()
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	agg.(filterAgg[int64]).filtered(1, attrs)
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 2)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Filtered values should not persist.
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 1)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Override set value.
+	agg.Aggregate(5, attrs)
+	// Filtered should add.
+	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.(filterAgg[int64]).filtered(10, attrs)
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 18)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Filtered values should not persist.
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 5)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+
+	// Order should not affect measure.
+	// Filtered should add.
+	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.Aggregate(7, attrs)
+	agg.(filterAgg[int64]).filtered(10, attrs)
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 20)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	got = agg.Aggregation()
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 7)}
+	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 }
 
 func TestEmptySumNilAggregation(t *testing.T) {
