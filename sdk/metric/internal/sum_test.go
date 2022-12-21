@@ -169,15 +169,13 @@ func TestAggregateFiltered(t *testing.T) {
 	t.Run("PreComputedCumulativeSum", testAggregateFiltered(NewPrecomputedCumulativeSum[int64](false)))
 }
 
-type af interface{ aggregateFiltered(int64, attribute.Set) }
-
 func testAggregateFiltered[N int64 | float64](a Aggregator[N]) func(*testing.T) {
 	attrs := attribute.NewSet(attribute.String("key", "val"))
 	return func(t *testing.T) {
 		a.Aggregate(1, attrs)
 
-		require.Implements(t, (*af)(nil), a)
-		a.(af).aggregateFiltered(1, attrs)
+		require.Implements(t, (*filterAgg[N])(nil), a)
+		a.(filterAgg[N]).filtered(1, attrs)
 
 		agg := a.Aggregation()
 		require.IsType(t, agg, metricdata.Sum[int64]{})

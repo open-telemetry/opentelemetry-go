@@ -21,19 +21,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// filter is an aggregator that applies attribute filter when Aggregating. filters
-// do not have any backing memory, and must be constructed with a backing Aggregator.
-type filter[N int64 | float64] struct {
-	filter     attribute.Filter
-	aggregator Aggregator[N]
+type filterAgg[N int64 | float64] interface {
+	Aggregator[N]
 
-	// Used to aggreagte if an aggregator aggregates values differently for
-	// spatically reaggregated attributes.
-	aggregateFiltered func(N, attribute.Set)
-
-	sync.Mutex
-	seen     map[attribute.Set]attribute.Set
-	filtered map[attribute.Set]bool
+	// filtered records values for attributes that have been filtered.
+	filtered(N, attribute.Set)
 }
 
 // NewFilter wraps an Aggregator with an attribute filtering function.
@@ -41,24 +33,27 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggreg
 	if fn == nil {
 		return agg
 	}
-	af, ok := agg.(interface{ aggregateFiltered(N, attribute.Set) })
-	if ok {
-		return &filter[N]{
-			filter:            fn,
-			aggregator:        agg,
-			aggregateFiltered: af.aggregateFiltered,
-			seen:              make(map[attribute.Set]attribute.Set),
-			// Use distinct filtered and seen to ensure un-filtered attributes
-			// that match the same previously filtered attributes is treated
-			// the same (added, not set).
-			filtered: make(map[attribute.Set]bool),
-		}
+	if fa, ok := agg.(filterAgg[N]); ok {
+		return newPrecomputedFilter(fa, fn)
 	}
+	return newFilter(agg, fn)
+}
+
+// filter is an aggregator that applies attribute filter when Aggregating. filters
+// do not have any backing memory, and must be constructed with a backing Aggregator.
+type filter[N int64 | float64] struct {
+	filter     attribute.Filter
+	aggregator Aggregator[N]
+
+	sync.Mutex
+	seen map[attribute.Set]attribute.Set
+}
+
+func newFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) *filter[N] {
 	return &filter[N]{
 		filter:     fn,
 		aggregator: agg,
 		seen:       make(map[attribute.Set]attribute.Set),
-		// Don't allocate filtered as it won't be used
 	}
 }
 
@@ -70,22 +65,55 @@ func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 	defer f.Unlock()
 	fAttr, ok := f.seen[attr]
 	if !ok {
-		var na []attribute.KeyValue
-		fAttr, na = attr.Filter(f.filter)
+		fAttr, _ = attr.Filter(f.filter)
 		f.seen[attr] = fAttr
-		if f.aggregateFiltered != nil && len(na) != 0 {
-			f.filtered[fAttr] = true
-		}
 	}
-	if f.aggregateFiltered != nil && f.filtered[fAttr] {
-		f.aggregateFiltered(measurement, fAttr)
-	} else {
-		f.aggregator.Aggregate(measurement, fAttr)
-	}
+	f.aggregator.Aggregate(measurement, fAttr)
 }
 
 // Aggregation returns an Aggregation, for all the aggregated
 // measurements made and ends an aggregation cycle.
 func (f *filter[N]) Aggregation() metricdata.Aggregation {
+	return f.aggregator.Aggregation()
+}
+
+// precomputedFilter is an aggregator that applies attribute filter when
+// Aggregating for precomputed Aggregations. The precomputed Aggregations need
+// to operate normally when no attribute filtering is done (for sums this means
+// setting the value), but when attribute filtering is done it needs to be
+// added to any set value.
+type precomputedFilter[N int64 | float64] struct {
+	filter     attribute.Filter
+	aggregator filterAgg[N]
+
+	sync.Mutex
+	seen map[attribute.Set]attribute.Set
+}
+
+func newPrecomputedFilter[N int64 | float64](agg filterAgg[N], fn attribute.Filter) *precomputedFilter[N] {
+	return &precomputedFilter[N]{
+		filter:     fn,
+		aggregator: agg,
+		seen:       make(map[attribute.Set]attribute.Set),
+	}
+}
+func (f *precomputedFilter[N]) Aggregate(measurement N, attr attribute.Set) {
+	// TODO (#3006): drop stale attributes from seen.
+	f.Lock()
+	defer f.Unlock()
+	fAttr, ok := f.seen[attr]
+	if !ok {
+		fAttr, _ = attr.Filter(f.filter)
+		f.seen[attr] = fAttr
+	}
+	if fAttr.Equals(&attr) {
+		// No filtering done.
+		f.aggregator.Aggregate(measurement, fAttr)
+	} else {
+		f.aggregator.filtered(measurement, fAttr)
+	}
+}
+
+func (f *precomputedFilter[N]) Aggregation() metricdata.Aggregation {
 	return f.aggregator.Aggregation()
 }

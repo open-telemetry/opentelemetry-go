@@ -176,7 +176,7 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 // is up to the caller to ensure this is accurate.
 func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	return &precomputedDeltaSum[N]{
-		recorded:  make(map[attribute.Set]N),
+		recorded:  make(map[attribute.Set]precomputedValue[N]),
 		reported:  make(map[attribute.Set]N),
 		monotonic: monotonic,
 		start:     now(),
@@ -187,7 +187,7 @@ func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 // aggregation cycles as the delta arithmetic sum.
 type precomputedDeltaSum[N int64 | float64] struct {
 	sync.Mutex
-	recorded map[attribute.Set]N
+	recorded map[attribute.Set]precomputedValue[N]
 	reported map[attribute.Set]N
 
 	monotonic bool
@@ -197,14 +197,18 @@ type precomputedDeltaSum[N int64 | float64] struct {
 // Aggregate records value as a cumulative sum for attr.
 func (s *precomputedDeltaSum[N]) Aggregate(value N, attr attribute.Set) {
 	s.Lock()
-	s.recorded[attr] = value
+	v := s.recorded[attr]
+	v.measured = value
+	s.recorded[attr] = v
 	s.Unlock()
 }
 
-// aggregateFiltered records value with spatially re-aggregated attrs.
-func (s *precomputedDeltaSum[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
+// filtered records value with spatially re-aggregated attrs.
+func (s *precomputedDeltaSum[N]) filtered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
 	s.Lock()
-	s.recorded[attr] += value
+	v := s.recorded[attr]
+	v.filtered += value
+	s.recorded[attr] = v
 	s.Unlock()
 }
 
@@ -223,7 +227,8 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.recorded)),
 	}
 	for attr, recorded := range s.recorded {
-		value := recorded - s.reported[attr]
+		v := recorded.measured + recorded.filtered
+		value := v - s.reported[attr]
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
@@ -231,8 +236,10 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 			Value:      value,
 		})
 		if value != 0 {
-			s.reported[attr] = recorded
+			s.reported[attr] = v
 		}
+		recorded.filtered = N(0)
+		s.recorded[attr] = recorded
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
@@ -254,21 +261,75 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 // The output Aggregation will report recorded values as cumulative
 // temporality. It is up to the caller to ensure this is accurate.
 func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
-	return &precomputedSum[N]{newCumulativeSum[N](monotonic)}
+	return &precomputedCumulativeSum[N]{
+		values:    make(map[attribute.Set]precomputedValue[N]),
+		monotonic: monotonic,
+		start:     now(),
+	}
 }
 
-// precomputedSum summarizes a set of measurements recorded over all
+// precomputedCumulativeSum summarizes a set of measurements recorded over all
 // aggregation cycles directly as the cumulative arithmetic sum.
-type precomputedSum[N int64 | float64] struct {
-	*cumulativeSum[N]
+type precomputedCumulativeSum[N int64 | float64] struct {
+	sync.Mutex
+	values map[attribute.Set]precomputedValue[N]
+
+	monotonic bool
+	start     time.Time
 }
 
 // Aggregate records value as a cumulative sum for attr.
-func (s *precomputedSum[N]) Aggregate(value N, attr attribute.Set) {
-	s.set(value, attr)
+func (s *precomputedCumulativeSum[N]) Aggregate(value N, attr attribute.Set) {
+	s.Lock()
+	v := s.values[attr]
+	v.measured = value
+	s.values[attr] = v
+	s.Unlock()
 }
 
-// aggregateFiltered records value with spatially re-aggregated attrs.
-func (s *precomputedSum[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
-	s.valueMap.Aggregate(value, attr)
+// filtered records value with spatially re-aggregated attrs.
+func (s *precomputedCumulativeSum[N]) filtered(value N, attr attribute.Set) { // nolint: unused  // used to filter.
+	s.Lock()
+	v := s.values[attr]
+	v.filtered += value
+	s.values[attr] = v
+	s.Unlock()
+}
+
+func (s *precomputedCumulativeSum[N]) Aggregation() metricdata.Aggregation {
+	s.Lock()
+	defer s.Unlock()
+
+	if len(s.values) == 0 {
+		return nil
+	}
+
+	t := now()
+	out := metricdata.Sum[N]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: s.monotonic,
+		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
+	}
+	for attr, value := range s.values {
+		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
+			Attributes: attr,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      value.measured + value.filtered,
+		})
+		value.filtered = N(0)
+		s.values[attr] = value
+		// TODO (#3006): This will use an unbounded amount of memory if there
+		// are unbounded number of attribute sets being aggregated. Attribute
+		// sets that become "stale" need to be forgotten so this will not
+		// overload the system.
+	}
+	return out
+}
+
+type precomputedValue[N int64 | float64] struct {
+	// measured is the value directly measured.
+	measured N
+	// filtered is the sum of values from spatially aggregations.
+	filtered N
 }

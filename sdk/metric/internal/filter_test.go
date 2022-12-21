@@ -15,6 +15,8 @@
 package internal // import "go.opentelemetry.io/otel/sdk/metric/internal"
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -193,4 +195,91 @@ func TestFilterConcurrent(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
 		testFilterConcurrent[float64](t)
 	})
+}
+
+func TestPrecomputedFilter(t *testing.T) {
+	t.Run("Int64", testPrecomputedFilter[int64]())
+	t.Run("Float64", testPrecomputedFilter[float64]())
+}
+
+func testPrecomputedFilter[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		agg := newTestFilterAgg[N]()
+		f := NewFilter[N](agg, testAttributeFilter)
+		require.IsType(t, &precomputedFilter[N]{}, f)
+
+		var (
+			powerLevel = attribute.Int("power-level", 9000)
+			user       = attribute.String("user", "Alice")
+			admin      = attribute.Bool("admin", true)
+		)
+		a := attribute.NewSet(powerLevel)
+		key := a
+		f.Aggregate(1, a)
+		assert.Equal(t, N(1), agg.values[key].measured, str(a))
+		assert.Equal(t, N(0), agg.values[key].filtered, str(a))
+
+		a = attribute.NewSet(powerLevel, user)
+		f.Aggregate(2, a)
+		assert.Equal(t, N(1), agg.values[key].measured, str(a))
+		assert.Equal(t, N(2), agg.values[key].filtered, str(a))
+
+		a = attribute.NewSet(powerLevel, user, admin)
+		f.Aggregate(3, a)
+		assert.Equal(t, N(1), agg.values[key].measured, str(a))
+		assert.Equal(t, N(5), agg.values[key].filtered, str(a))
+
+		a = attribute.NewSet(powerLevel)
+		f.Aggregate(2, a)
+		assert.Equal(t, N(2), agg.values[key].measured, str(a))
+		assert.Equal(t, N(5), agg.values[key].filtered, str(a))
+
+		a = attribute.NewSet(user)
+		f.Aggregate(3, a)
+		assert.Equal(t, N(2), agg.values[key].measured, str(a))
+		assert.Equal(t, N(5), agg.values[key].filtered, str(a))
+		assert.Equal(t, N(3), agg.values[*attribute.EmptySet()].filtered, str(a))
+
+		_ = f.Aggregation()
+		assert.Equal(t, 1, agg.aggregationN, "failed to propagate Aggregation")
+	}
+}
+
+func str(a attribute.Set) string {
+	iter := a.Iter()
+	out := make([]string, 0, iter.Len())
+	for iter.Next() {
+		kv := iter.Attribute()
+		out = append(out, fmt.Sprintf("%s:%#v", kv.Key, kv.Value.AsInterface()))
+	}
+	return strings.Join(out, ",")
+}
+
+type testFilterAgg[N int64 | float64] struct {
+	values       map[attribute.Set]precomputedValue[N]
+	aggregationN int
+}
+
+func newTestFilterAgg[N int64 | float64]() *testFilterAgg[N] {
+	return &testFilterAgg[N]{
+		values: make(map[attribute.Set]precomputedValue[N]),
+	}
+}
+
+func (a *testFilterAgg[N]) Aggregate(val N, attr attribute.Set) {
+	v := a.values[attr]
+	v.measured = val
+	a.values[attr] = v
+}
+
+// nolint: unused  // Used to agg filtered.
+func (a *testFilterAgg[N]) filtered(val N, attr attribute.Set) {
+	v := a.values[attr]
+	v.filtered += val
+	a.values[attr] = v
+}
+
+func (a *testFilterAgg[N]) Aggregation() metricdata.Aggregation {
+	a.aggregationN++
+	return nil
 }
