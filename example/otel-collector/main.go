@@ -30,8 +30,11 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -58,9 +61,9 @@ func initProvider() (func(context.Context) error, error) {
 	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns.
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	conn, err := grpc.DialContext(ctx, "localhost:30080",
+	conn, err := grpc.DialContext(ctx, "otel-collector:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
@@ -88,8 +91,34 @@ func initProvider() (func(context.Context) error, error) {
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
+	// Set up a metric exporter
+	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metric exporter: %w", err)
+	}
+
+	metricProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(
+				metricExporter,
+				sdkmetric.WithInterval(5*time.Second),
+			),
+		),
+	)
+
+	metricglobal.SetMeterProvider(metricProvider)
+
+	shutdownFunction := func(ctx context.Context) error {
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown TracerProvider: %w", err)
+		}
+		if err := metricProvider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown MeterProvider: %w", err)
+		}
+		return nil
+	}
 	// Shutdown will flush any remaining spans and shut down the exporter.
-	return tracerProvider.Shutdown, nil
+	return shutdownFunction, nil
 }
 
 func main() {
@@ -104,7 +133,7 @@ func main() {
 	}
 	defer func() {
 		if err := shutdown(ctx); err != nil {
-			log.Fatal("failed to shutdown TracerProvider: %w", err)
+			log.Fatal("failed to shutdown: %w", err)
 		}
 	}()
 
@@ -117,18 +146,19 @@ func main() {
 		attribute.String("attrB", "raspberry"),
 		attribute.String("attrC", "vanilla"),
 	}
-
 	// work begins
 	ctx, span := tracer.Start(
 		ctx,
 		"CollectorExporter-Example",
 		trace.WithAttributes(commonAttrs...))
 	defer span.End()
+	meter, _ := metricglobal.Meter("test-meter").SyncInt64().Counter("test-counter")
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 
 		<-time.After(time.Second)
+		meter.Add(ctx, 1)
 		iSpan.End()
 	}
 

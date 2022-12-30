@@ -1,0 +1,31 @@
+receivers:
+  # Make sure to add the otlp receiver.
+  # This will open up the receiver on port 4317
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+processors:
+extensions:
+  health_check: {}
+exporters:
+  jaeger:
+    endpoint: "jaeger:14250"
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  logging:
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: []
+      exporters: [jaeger]
+
+    metrics:
+      receivers: [otlp]
+      processors: []
+      exporters: [prometheus, logging]

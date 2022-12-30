@@ -1,0 +1,42 @@
+version: "3.7"
+networks:
+  otel-collector-example:
+    name: otel-collector-example
+
+services:
+  go-app:
+    build:
+      context: ../..
+      dockerfile: $PWD/Dockerfile
+    networks:
+      - otel-collector-example
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    networks:
+      - otel-collector-example
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    expose:
+      - 4317 # Default endpoint for otlp receiver
+      - 8889 # Default endpoint for querying metrics
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    networks:
+      - otel-collector-example
+    expose:
+      - 14250 # Default endpoint for jaeger receiver
+      - 16686 # Default endpoint for jaeger query
+    ports:
+      - 16686:16686
+  prometheus: 
+    image: quay.io/prometheus/prometheus:latest
+    networks:
+      - otel-collector-example
+    volumes:
+      - ./prometheus-config.yaml:/etc/prometheus/prometheus.yml
+    expose:
+      - 9090 # Default endpoint for prometheus
+    ports:
+      - 9090:9090
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
