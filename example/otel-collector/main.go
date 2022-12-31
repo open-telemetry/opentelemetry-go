@@ -56,13 +56,11 @@ func initProvider() (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	// If the OpenTelemetry Collector is running on a local cluster (minikube or
-	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
-	// endpoint of your cluster. If you run the app inside k8s, then you can
-	// probably connect directly to the service through dns.
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	// OpenTelemtry Collector is running on docker-compose in same network as this go app,
+	// and exposes the OTLP receiver on port 4317.
 	conn, err := grpc.DialContext(ctx, "otel-collector:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -108,6 +106,7 @@ func initProvider() (func(context.Context) error, error) {
 
 	metricglobal.SetMeterProvider(metricProvider)
 
+	// Shutdown will flush any remaining spans, meters and shut down the exporter.
 	shutdownFunction := func(ctx context.Context) error {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
 			return fmt.Errorf("failed to shutdown TracerProvider: %w", err)
@@ -117,7 +116,6 @@ func initProvider() (func(context.Context) error, error) {
 		}
 		return nil
 	}
-	// Shutdown will flush any remaining spans and shut down the exporter.
 	return shutdownFunction, nil
 }
 
