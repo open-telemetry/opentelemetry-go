@@ -27,7 +27,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
   fixing random sampling when using ID generators like `xray.IDGenerator`
   and increasing parity with other language implementations. (#3557)
-- Update example of `otel-collector`: simplify setup by using `docker-compose` and add metric exporter (#3560)
 
 ### Deprecated
 
