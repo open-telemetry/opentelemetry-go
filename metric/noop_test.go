@@ -34,19 +34,19 @@ func TestNewNoopMeterProvider(t *testing.T) {
 func TestSyncFloat64(t *testing.T) {
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncFloat64().Counter("test instrument")
+		inst, err := meter.Float64Counter("test instrument")
 		require.NoError(t, err)
 		inst.Add(context.Background(), 1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncFloat64().UpDownCounter("test instrument")
+		inst, err := meter.Float64UpDownCounter("test instrument")
 		require.NoError(t, err)
 		inst.Add(context.Background(), -1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncFloat64().Histogram("test instrument")
+		inst, err := meter.Float64Histogram("test instrument")
 		require.NoError(t, err)
 		inst.Record(context.Background(), 1.0, attribute.String("key", "value"))
 	})
@@ -55,19 +55,19 @@ func TestSyncFloat64(t *testing.T) {
 func TestSyncInt64(t *testing.T) {
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncInt64().Counter("test instrument")
+		inst, err := meter.Int64Counter("test instrument")
 		require.NoError(t, err)
 		inst.Add(context.Background(), 1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncInt64().UpDownCounter("test instrument")
+		inst, err := meter.Int64UpDownCounter("test instrument")
 		require.NoError(t, err)
 		inst.Add(context.Background(), -1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.SyncInt64().Histogram("test instrument")
+		inst, err := meter.Int64Histogram("test instrument")
 		require.NoError(t, err)
 		inst.Record(context.Background(), 1, attribute.String("key", "value"))
 	})
@@ -76,19 +76,19 @@ func TestSyncInt64(t *testing.T) {
 func TestAsyncFloat64(t *testing.T) {
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncFloat64().Counter("test instrument")
+		inst, err := meter.Float64ObservableCounter("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), 1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncFloat64().UpDownCounter("test instrument")
+		inst, err := meter.Float64ObservableUpDownCounter("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), -1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncFloat64().Gauge("test instrument")
+		inst, err := meter.Float64ObservableGauge("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), 1.0, attribute.String("key", "value"))
 	})
@@ -97,19 +97,19 @@ func TestAsyncFloat64(t *testing.T) {
 func TestAsyncInt64(t *testing.T) {
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncInt64().Counter("test instrument")
+		inst, err := meter.Int64ObservableCounter("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), 1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncInt64().UpDownCounter("test instrument")
+		inst, err := meter.Int64ObservableUpDownCounter("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), -1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.AsyncInt64().Gauge("test instrument")
+		inst, err := meter.Int64ObservableGauge("test instrument")
 		require.NoError(t, err)
 		inst.Observe(context.Background(), 1, attribute.String("key", "value"))
 	})

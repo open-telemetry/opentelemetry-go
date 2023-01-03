@@ -16,20 +16,6 @@ package asyncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/async
 
 import "go.opentelemetry.io/otel/metric/instrument"
 
-// InstrumentProvider provides access to individual instruments.
-//
-// Warning: methods may be added to this interface in minor releases.
-type InstrumentProvider interface {
-	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Float64ObserverOption) (Counter, error)
-
-	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Float64ObserverOption) (UpDownCounter, error)
-
-	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.Float64ObserverOption) (Gauge, error)
-}
-
 // Counter is an instrument used to asynchronously record increasing float64
 // measurements once per a measurement collection cycle. The Observe method is
 // used to record the measured state of the instrument when it is called.

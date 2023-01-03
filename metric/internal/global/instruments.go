@@ -38,7 +38,7 @@ type afCounter struct {
 }
 
 func (i *afCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncFloat64().Counter(i.name, i.opts...)
+	ctr, err := m.Float64ObservableCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -69,7 +69,7 @@ type afUpDownCounter struct {
 }
 
 func (i *afUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncFloat64().UpDownCounter(i.name, i.opts...)
+	ctr, err := m.Float64ObservableUpDownCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -100,7 +100,7 @@ type afGauge struct {
 }
 
 func (i *afGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncFloat64().Gauge(i.name, i.opts...)
+	ctr, err := m.Float64ObservableGauge(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -131,7 +131,7 @@ type aiCounter struct {
 }
 
 func (i *aiCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncInt64().Counter(i.name, i.opts...)
+	ctr, err := m.Int64ObservableCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -162,7 +162,7 @@ type aiUpDownCounter struct {
 }
 
 func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncInt64().UpDownCounter(i.name, i.opts...)
+	ctr, err := m.Int64ObservableUpDownCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -193,7 +193,7 @@ type aiGauge struct {
 }
 
 func (i *aiGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.AsyncInt64().Gauge(i.name, i.opts...)
+	ctr, err := m.Int64ObservableGauge(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -225,7 +225,7 @@ type sfCounter struct {
 }
 
 func (i *sfCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncFloat64().Counter(i.name, i.opts...)
+	ctr, err := m.Float64Counter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -249,7 +249,7 @@ type sfUpDownCounter struct {
 }
 
 func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncFloat64().UpDownCounter(i.name, i.opts...)
+	ctr, err := m.Float64UpDownCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -273,7 +273,7 @@ type sfHistogram struct {
 }
 
 func (i *sfHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncFloat64().Histogram(i.name, i.opts...)
+	ctr, err := m.Float64Histogram(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -297,7 +297,7 @@ type siCounter struct {
 }
 
 func (i *siCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncInt64().Counter(i.name, i.opts...)
+	ctr, err := m.Int64Counter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -321,7 +321,7 @@ type siUpDownCounter struct {
 }
 
 func (i *siUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncInt64().UpDownCounter(i.name, i.opts...)
+	ctr, err := m.Int64UpDownCounter(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
@@ -345,7 +345,7 @@ type siHistogram struct {
 }
 
 func (i *siHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.SyncInt64().Histogram(i.name, i.opts...)
+	ctr, err := m.Int64Histogram(i.name, i.opts...)
 	if err != nil {
 		otel.Handle(err)
 		return
