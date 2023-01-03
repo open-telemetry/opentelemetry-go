@@ -70,8 +70,11 @@ sample application
 Jaeger UI is available at
 [http://localhost:16686](http://localhost:16686). Navigate there in your favorite
 web-browser to view the generated traces.
+After go application running, you can see the service name `test-service` in Searh bar.
 
 ## Prometheus
 
 Navigate to [http://localhost:9090](http://localhost:9090) to view
 the Prometheus dashboard.
+After go application running, you can query metrics by expression `work_duration / 1000` in the query bar.
+Result is duration of sample work in seconds.
