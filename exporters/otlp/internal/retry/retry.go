@@ -92,19 +92,19 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 
 	return func(ctx context.Context, fn func(context.Context) error) error {
 		for {
-			fnErr := fn(ctx)
-			if fnErr == nil {
+			err := fn(ctx)
+			if err == nil {
 				return nil
 			}
 
-			retryable, throttle := evaluate(fnErr)
+			retryable, throttle := evaluate(err)
 			if !retryable {
-				return fnErr
+				return err
 			}
 
 			bOff := b.NextBackOff()
 			if bOff == backoff.Stop {
-				return fmt.Errorf("max retry time elapsed: %w", fnErr)
+				return fmt.Errorf("max retry time elapsed: %w", err)
 			}
 
 			// Wait for the greater of the backoff or throttle delay.
@@ -114,13 +114,13 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			} else {
 				elapsed := b.GetElapsedTime()
 				if b.MaxElapsedTime != 0 && elapsed+throttle > b.MaxElapsedTime {
-					return fmt.Errorf("max retry time would elapse: %w", fnErr)
+					return fmt.Errorf("max retry time would elapse: %w", err)
 				}
 				delay = throttle
 			}
 
-			if err := waitFunc(ctx, fnErr, delay); err != nil {
-				return err
+			if ctxErr := waitFunc(ctx, delay); ctxErr != nil {
+				return fmt.Errorf("%w: %s", ctxErr, err)
 			}
 		}
 	}
@@ -129,10 +129,10 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 // Allow override for testing.
 var waitFunc = wait
 
-// wait takes the caller's context, the most recent retryable errors,
-// and the amount of time to wait.  It will return nil if the
-// operation can be retried or non-nil if the operation has timed out.
-func wait(ctx context.Context, retryableErr error, delay time.Duration) error {
+// wait takes the caller's context, and the amount of time to wait.  It will
+// return nil if the timer fires before or at the same time as the context's
+// deadline.  This indicates that the call can be retried.
+func wait(ctx context.Context, delay time.Duration) error {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
@@ -145,7 +145,7 @@ func wait(ctx context.Context, retryableErr error, delay time.Duration) error {
 		case <-timer.C:
 		default:
 			// Include the final retryable error as an explanation.
-			return fmt.Errorf("%w: %s", ctx.Err(), retryableErr)
+			return ctx.Err()
 		}
 	case <-timer.C:
 	}
