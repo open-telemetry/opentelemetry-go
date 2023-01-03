@@ -144,7 +144,6 @@ func wait(ctx context.Context, delay time.Duration) error {
 		select {
 		case <-timer.C:
 		default:
-			// Include the final retryable error as an explanation.
 			return ctx.Err()
 		}
 	case <-timer.C:

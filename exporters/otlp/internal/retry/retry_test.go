@@ -136,7 +136,7 @@ func TestBackoffRetry(t *testing.T) {
 	origWait := waitFunc
 	var done bool
 	waitFunc = func(_ context.Context, d time.Duration) error {
-		delta := math.Ceil(float64(delay)*backoff.DefaultRandomizationFactor) - float64(delay)
+		delta := math.Ceil(float64(delay) * backoff.DefaultRandomizationFactor)
 		assert.InDelta(t, delay, d, delta, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
@@ -156,13 +156,13 @@ func TestBackoffRetry(t *testing.T) {
 func TestBackoffRetryCanceledContext(t *testing.T) {
 	ev := func(error) (bool, time.Duration) { return true, 0 }
 
-	delay := time.Nanosecond
+	delay := time.Millisecond
 	reqFunc := Config{
 		Enabled:         true,
 		InitialInterval: delay,
 		MaxInterval:     delay,
 		// Never stop retrying.
-		MaxElapsedTime: 100 * time.Microsecond,
+		MaxElapsedTime: 10 * time.Millisecond,
 	}.RequestFunc(ev)
 
 	ctx, cancel := context.WithCancel(context.Background())
