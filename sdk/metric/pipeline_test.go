@@ -136,7 +136,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 	inst := Instrument{
 		Name:        "requests",
 		Description: "count of requests received",
-		Kind:        InstrumentKindSyncCounter,
+		Kind:        InstrumentKindCounter,
 		Unit:        unit.Dimensionless,
 	}
 	return func(t *testing.T) {
