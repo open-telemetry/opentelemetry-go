@@ -8,13 +8,50 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
+  This `Registration` can be used to unregister callbacks. (#3522)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+
+### Changed
+
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncint64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Int64ObservableCounter`
+  - The `UpDownCounter` method is replaced by `Meter.Int64ObservableUpDownCounter`
+  - The `Gauge` method is replaced by `Meter.Int64ObservableGauge`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncfloat64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Float64ObservableCounter`
+  - The `UpDownCounter` method is replaced by `Meter.Float64ObservableUpDownCounter`
+  - The `Gauge` method is replaced by `Meter.Float64ObservableGauge`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/syncint64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Int64Counter`
+  - The `UpDownCounter` method is replaced by `Meter.Int64UpDownCounter`
+  - The `Histogram` method is replaced by `Meter.Int64Histogram`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/syncfloat64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Float64Counter`
+  - The `UpDownCounter` method is replaced by `Meter.Float64UpDownCounter`
+  - The `Histogram` method is replaced by `Meter.Float64Histogram`
+- Global error handler uses an atomic value instead of a mutex. (#3543)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+- Add `NewMetricProducer` to `go.opentelemetry.io/otel/bridge/opencensus`, which can be used to pass OpenCensus metrics to an OpenTelemetry Reader. (#3541)
+- Global logger uses an atomic value instead of a mutex. (#3545)
+- The `Shutdown` method of the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` releases all computational resources when called the first time. (#3551)
+- `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
+  fixing random sampling when using ID generators like `xray.IDGenerator`
+  and increasing parity with other language implementations. (#3557)
+
+### Deprecated
+
+- The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/sdk/metric/view` package is removed. (#3520)
-
-### Added
-
-- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 
 ### Changed
 
