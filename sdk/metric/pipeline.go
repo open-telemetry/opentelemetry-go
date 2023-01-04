@@ -352,7 +352,7 @@ func (i *inserter[N]) instrumentID(kind InstrumentKind, stream Stream) instrumen
 	}
 
 	switch kind {
-	case InstrumentKindAsyncCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram:
+	case InstrumentKindObservableCounter, InstrumentKindCounter, InstrumentKindHistogram:
 		id.Monotonic = true
 	}
 
@@ -370,7 +370,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 		return internal.NewLastValue[N](), nil
 	case aggregation.Sum:
 		switch kind {
-		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
+		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 			// Asynchronous counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
@@ -408,18 +408,18 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 // isAggregatorCompatible checks if the aggregation can be used by the instrument.
 // Current compatibility:
 //
-// | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
-// |----------------------|------|-----------|-----|-----------|-----------------------|
-// | Sync Counter         | X    |           | X   | X         | X                     |
-// | Sync UpDown Counter  | X    |           | X   |           |                       |
-// | Sync Histogram       | X    |           | X   | X         | X                     |
-// | Async Counter        | X    |           | X   |           |                       |
-// | Async UpDown Counter | X    |           | X   |           |                       |
-// | Async Gauge          | X    | X         |     |           |                       |.
+// | Instrument Kind          | Drop | LastValue | Sum | Histogram | Exponential Histogram |
+// |--------------------------|------|-----------|-----|-----------|-----------------------|
+// | Counter                  | X    |           | X   | X         | X                     |
+// | UpDownCounter            | X    |           | X   |           |                       |
+// | Histogram                | X    |           | X   | X         | X                     |
+// | Observable Counter       | X    |           | X   |           |                       |
+// | Observable UpDownCounter | X    |           | X   |           |                       |
+// | Observable Gauge         | X    | X         |     |           |                       |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.ExplicitBucketHistogram:
-		if kind == InstrumentKindSyncCounter || kind == InstrumentKindSyncHistogram {
+		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
 			return nil
 		}
 		// TODO: review need for aggregation check after
@@ -427,7 +427,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 		return errIncompatibleAggregation
 	case aggregation.Sum:
 		switch kind {
-		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram, InstrumentKindSyncUpDownCounter:
+		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter, InstrumentKindCounter, InstrumentKindHistogram, InstrumentKindUpDownCounter:
 			return nil
 		default:
 			// TODO: review need for aggregation check after
@@ -435,7 +435,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 			return errIncompatibleAggregation
 		}
 	case aggregation.LastValue:
-		if kind == InstrumentKindAsyncGauge {
+		if kind == InstrumentKindObservableGauge {
 			return nil
 		}
 		// TODO: review need for aggregation check after

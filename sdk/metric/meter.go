@@ -63,7 +63,7 @@ var _ metric.Meter = (*meter)(nil)
 // measurements during a computational operation.
 func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error) {
 	cfg := instrument.NewInt64Config(options...)
-	const kind = InstrumentKindSyncCounter
+	const kind = InstrumentKindCounter
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -72,7 +72,7 @@ func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (sy
 // int64 measurements during a computational operation.
 func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
 	cfg := instrument.NewInt64Config(options...)
-	const kind = InstrumentKindSyncUpDownCounter
+	const kind = InstrumentKindUpDownCounter
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -81,7 +81,7 @@ func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Optio
 // distribution of int64 measurements during a computational operation.
 func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (syncint64.Histogram, error) {
 	cfg := instrument.NewInt64Config(options...)
-	const kind = InstrumentKindSyncHistogram
+	const kind = InstrumentKindHistogram
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -90,7 +90,7 @@ func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (
 // increasing int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.Counter, error) {
 	cfg := instrument.NewInt64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncCounter
+	const kind = InstrumentKindObservableCounter
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
@@ -105,7 +105,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64O
 // int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error) {
 	cfg := instrument.NewInt64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncUpDownCounter
+	const kind = InstrumentKindObservableUpDownCounter
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
@@ -120,7 +120,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.
 // instantaneous int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (asyncint64.Gauge, error) {
 	cfg := instrument.NewInt64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncGauge
+	const kind = InstrumentKindObservableGauge
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
@@ -135,7 +135,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64Obs
 // float64 measurements during a computational operation.
 func (m *meter) Float64Counter(name string, options ...instrument.Float64Option) (syncfloat64.Counter, error) {
 	cfg := instrument.NewFloat64Config(options...)
-	const kind = InstrumentKindSyncCounter
+	const kind = InstrumentKindCounter
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -144,7 +144,7 @@ func (m *meter) Float64Counter(name string, options ...instrument.Float64Option)
 // float64 measurements during a computational operation.
 func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64Option) (syncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewFloat64Config(options...)
-	const kind = InstrumentKindSyncUpDownCounter
+	const kind = InstrumentKindUpDownCounter
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -153,7 +153,7 @@ func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64O
 // distribution of float64 measurements during a computational operation.
 func (m *meter) Float64Histogram(name string, options ...instrument.Float64Option) (syncfloat64.Histogram, error) {
 	cfg := instrument.NewFloat64Config(options...)
-	const kind = InstrumentKindSyncHistogram
+	const kind = InstrumentKindHistogram
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
 
@@ -162,7 +162,7 @@ func (m *meter) Float64Histogram(name string, options ...instrument.Float64Optio
 // increasing float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error) {
 	cfg := instrument.NewFloat64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncCounter
+	const kind = InstrumentKindObservableCounter
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
@@ -177,7 +177,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...instrument.Floa
 // float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error) {
 	cfg := instrument.NewFloat64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncUpDownCounter
+	const kind = InstrumentKindObservableUpDownCounter
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
@@ -192,7 +192,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrumen
 // instantaneous float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error) {
 	cfg := instrument.NewFloat64ObserverConfig(options...)
-	const kind = InstrumentKindAsyncGauge
+	const kind = InstrumentKindObservableGauge
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
