@@ -44,6 +44,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
   fixing random sampling when using ID generators like `xray.IDGenerator`
   and increasing parity with other language implementations. (#3557)
+- OTLP exporter for traces and metrics will print the final retryable error message
+  when attempts to retry time out. (#3514)
 
 ### Deprecated
 
@@ -52,11 +54,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/sdk/metric/view` package is removed. (#3520)
-
-### Changed
-
-- OTLP exporter for traces and metrics will print the final retryable error message
-  when attempts to retry time out. (#3514)
 
 ## [1.11.2/0.34.0] 2022-12-05
 
