@@ -21,20 +21,6 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-// InstrumentProvider provides access to individual instruments.
-//
-// Warning: methods may be added to this interface in minor releases.
-type InstrumentProvider interface {
-	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Option) (Counter, error)
-
-	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
-
-	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.Option) (Gauge, error)
-}
-
 // Counter is an instrument that records increasing values.
 //
 // Warning: methods may be added to this interface in minor releases.

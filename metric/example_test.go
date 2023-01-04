@@ -31,7 +31,7 @@ func ExampleMeter_synchronous() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := metric.NewNoopMeterProvider()
 
-	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").SyncInt64().Histogram(
+	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
 		instrument.WithUnit(unit.Milliseconds))
 	if err != nil {
@@ -52,7 +52,7 @@ func ExampleMeter_asynchronous_single() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
-	memoryUsage, err := meter.AsyncInt64().Gauge(
+	memoryUsage, err := meter.Int64ObservableGauge(
 		"MemoryUsage",
 		instrument.WithUnit(unit.Bytes),
 	)
@@ -82,9 +82,9 @@ func ExampleMeter_asynchronous_multiple() {
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
-	heapAlloc, _ := meter.AsyncInt64().UpDownCounter("heapAllocs")
-	gcCount, _ := meter.AsyncInt64().Counter("gcCount")
-	gcPause, _ := meter.SyncFloat64().Histogram("gcPause")
+	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
+	gcCount, _ := meter.Int64ObservableCounter("gcCount")
+	gcPause, _ := meter.Float64Histogram("gcPause")
 
 	_, err := meter.RegisterCallback([]instrument.Asynchronous{
 		heapAlloc,
