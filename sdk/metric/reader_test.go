@@ -290,12 +290,12 @@ func TestDefaultAggregationSelector(t *testing.T) {
 	assert.Panics(t, func() { DefaultAggregationSelector(undefinedInstrument) })
 
 	iKinds := []InstrumentKind{
-		InstrumentKindSyncCounter,
-		InstrumentKindSyncUpDownCounter,
-		InstrumentKindSyncHistogram,
-		InstrumentKindAsyncCounter,
-		InstrumentKindAsyncUpDownCounter,
-		InstrumentKindAsyncGauge,
+		InstrumentKindCounter,
+		InstrumentKindUpDownCounter,
+		InstrumentKindHistogram,
+		InstrumentKindObservableCounter,
+		InstrumentKindObservableUpDownCounter,
+		InstrumentKindObservableGauge,
 	}
 
 	for _, ik := range iKinds {
@@ -307,12 +307,12 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 	var undefinedInstrument InstrumentKind
 	for _, ik := range []InstrumentKind{
 		undefinedInstrument,
-		InstrumentKindSyncCounter,
-		InstrumentKindSyncUpDownCounter,
-		InstrumentKindSyncHistogram,
-		InstrumentKindAsyncCounter,
-		InstrumentKindAsyncUpDownCounter,
-		InstrumentKindAsyncGauge,
+		InstrumentKindCounter,
+		InstrumentKindUpDownCounter,
+		InstrumentKindHistogram,
+		InstrumentKindObservableCounter,
+		InstrumentKindObservableUpDownCounter,
+		InstrumentKindObservableGauge,
 	} {
 		assert.Equal(t, metricdata.CumulativeTemporality, DefaultTemporalitySelector(ik))
 	}

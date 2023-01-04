@@ -48,6 +48,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
   fixing random sampling when using ID generators like `xray.IDGenerator`
   and increasing parity with other language implementations. (#3557)
+- The instrument kind names in `go.opentelemetry.io/otel/sdk/metric` are updated to match the API. (#3562)
+  - `InstrumentKindSyncCounter` is renamed to `InstrumentKindCounter`
+  - `InstrumentKindSyncUpDownCounter` is renamed to `InstrumentKindUpDownCounter`
+  - `InstrumentKindSyncHistogram` is renamed to `InstrumentKindHistogram`
+  - `InstrumentKindAsyncCounter` is renamed to `InstrumentKindObservableCounter`
+  - `InstrumentKindAsyncUpDownCounter` is renamed to `InstrumentKindObservableUpDownCounter`
+  - `InstrumentKindAsyncGauge` is renamed to `InstrumentKindObservableGauge`
 
 ### Deprecated
 

@@ -36,7 +36,7 @@ var (
 	completeIP = Instrument{
 		Name:        "foo",
 		Description: "foo desc",
-		Kind:        InstrumentKindSyncCounter,
+		Kind:        InstrumentKindCounter,
 		Unit:        unit.Bytes,
 		Scope: instrumentation.Scope{
 			Name:      "TestNewViewMatch",
@@ -193,15 +193,15 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Kind",
-			criteria: Instrument{Kind: InstrumentKindSyncCounter},
-			matches:  []Instrument{{Kind: InstrumentKindSyncCounter}, completeIP},
+			criteria: Instrument{Kind: InstrumentKindCounter},
+			matches:  []Instrument{{Kind: InstrumentKindCounter}, completeIP},
 			notMatches: []Instrument{
 				{},
-				{Kind: InstrumentKindSyncUpDownCounter},
-				{Kind: InstrumentKindSyncHistogram},
-				{Kind: InstrumentKindAsyncCounter},
-				{Kind: InstrumentKindAsyncUpDownCounter},
-				{Kind: InstrumentKindAsyncGauge},
+				{Kind: InstrumentKindUpDownCounter},
+				{Kind: InstrumentKindHistogram},
+				{Kind: InstrumentKindObservableCounter},
+				{Kind: InstrumentKindObservableUpDownCounter},
+				{Kind: InstrumentKindObservableGauge},
 			},
 		},
 		{
@@ -277,49 +277,49 @@ func TestNewViewMatch(t *testing.T) {
 				{
 					Name:        "Wrong Name",
 					Description: "foo desc",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "Wrong Description",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
-					Kind:        InstrumentKindAsyncUpDownCounter,
+					Kind:        InstrumentKindObservableUpDownCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Dimensionless,
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("Wrong Scope Name", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("TestNewViewMatch", "v1.4.3", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
-					Kind:        InstrumentKindSyncCounter,
+					Kind:        InstrumentKindCounter,
 					Unit:        unit.Bytes,
 					Scope:       scope("TestNewViewMatch", "v0.1.0", "https://go.dev"),
 				},
@@ -491,7 +491,7 @@ func ExampleNewView() {
 		Name:        "latency",
 		Description: "request latency",
 		Unit:        unit.Milliseconds,
-		Kind:        InstrumentKindSyncCounter,
+		Kind:        InstrumentKindCounter,
 		Scope: instrumentation.Scope{
 			Name:      "http",
 			Version:   "v0.34.0",
@@ -522,7 +522,7 @@ func ExampleNewView_drop() {
 
 	stream, _ := view(Instrument{
 		Name:  "queries",
-		Kind:  InstrumentKindSyncCounter,
+		Kind:  InstrumentKindCounter,
 		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
 	})
 	fmt.Println("name:", stream.Name)

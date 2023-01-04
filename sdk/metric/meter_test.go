@@ -174,7 +174,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		want metricdata.Metrics
 	}{
 		{
-			name: "AsyncInt64Count",
+			name: "ObservableInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableCounter("aint")
 				assert.NoError(t, err)
@@ -198,7 +198,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64UpDownCount",
+			name: "ObservableInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableUpDownCounter("aint")
 				assert.NoError(t, err)
@@ -222,7 +222,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64Gauge",
+			name: "ObservableInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Int64ObservableGauge("agauge")
 				assert.NoError(t, err)
@@ -244,7 +244,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64Count",
+			name: "ObservableFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableCounter("afloat")
 				assert.NoError(t, err)
@@ -268,7 +268,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64UpDownCount",
+			name: "ObservableFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableUpDownCounter("afloat")
 				assert.NoError(t, err)
@@ -292,7 +292,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64Gauge",
+			name: "ObservableFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Float64ObservableGauge("agauge")
 				assert.NoError(t, err)
@@ -637,7 +637,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		wantMetric metricdata.Metrics
 	}{
 		{
-			name: "AsyncFloat64Counter",
+			name: "ObservableFloat64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableCounter("afcounter")
 				if err != nil {
@@ -665,7 +665,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64UpDownCounter",
+			name: "ObservableFloat64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableUpDownCounter("afupdowncounter")
 				if err != nil {
@@ -693,7 +693,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64Gauge",
+			name: "ObservableFloat64Gauge",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableGauge("afgauge")
 				if err != nil {
@@ -718,7 +718,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64Counter",
+			name: "ObservableInt64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableCounter("aicounter")
 				if err != nil {
@@ -746,7 +746,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64UpDownCounter",
+			name: "ObservableInt64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableUpDownCounter("aiupdowncounter")
 				if err != nil {
@@ -774,7 +774,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64Gauge",
+			name: "ObservableInt64Gauge",
 			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableGauge("aigauge")
 				if err != nil {
@@ -1019,13 +1019,13 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		aiCounter, _ = meter.Int64ObservableCounter("async.int64.counter")
-		aiUpDownCounter, _ = meter.Int64ObservableUpDownCounter("async.int64.up.down.counter")
-		aiGauge, _ = meter.Int64ObservableGauge("async.int64.gauge")
+		aiCounter, _ = meter.Int64ObservableCounter("observable.int64.counter")
+		aiUpDownCounter, _ = meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		aiGauge, _ = meter.Int64ObservableGauge("observable.int64.gauge")
 
-		afCounter, _ = meter.Float64ObservableCounter("async.float64.counter")
-		afUpDownCounter, _ = meter.Float64ObservableUpDownCounter("async.float64.up.down.counter")
-		afGauge, _ = meter.Float64ObservableGauge("async.float64.gauge")
+		afCounter, _ = meter.Float64ObservableCounter("observable.float64.counter")
+		afUpDownCounter, _ = meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
+		afGauge, _ = meter.Float64ObservableGauge("observable.float64.gauge")
 
 		siCounter, _ = meter.Int64Counter("sync.int64.counter")
 		siUpDownCounter, _ = meter.Int64UpDownCounter("sync.int64.up.down.counter")
