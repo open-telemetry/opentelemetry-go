@@ -54,7 +54,7 @@ type HandlerTestSuite struct {
 
 func (s *HandlerTestSuite) SetupSuite() {
 	s.errCatcher = new(testErrCatcher)
-	s.origHandler = globalErrorHandler.eh
+	s.origHandler = globalErrorHandler.getDelegate()
 
 	globalErrorHandler.setDelegate(&errLogger{l: log.New(s.errCatcher, "", 0)})
 }
@@ -111,12 +111,12 @@ func (s *HandlerTestSuite) TestAllowMultipleSets() {
 	secondary := &errLogger{l: log.New(notUsed, "", 0)}
 	SetErrorHandler(secondary)
 	s.Require().Same(GetErrorHandler(), globalErrorHandler, "set changed globalErrorHandler")
-	s.Require().Same(globalErrorHandler.eh, secondary, "new Handler not set")
+	s.Require().Same(globalErrorHandler.getDelegate(), secondary, "new Handler not set")
 
 	tertiary := &errLogger{l: log.New(notUsed, "", 0)}
 	SetErrorHandler(tertiary)
 	s.Require().Same(GetErrorHandler(), globalErrorHandler, "set changed globalErrorHandler")
-	s.Assert().Same(globalErrorHandler.eh, tertiary, "user Handler not overridden")
+	s.Assert().Same(globalErrorHandler.getDelegate(), tertiary, "user Handler not overridden")
 }
 
 func TestHandlerTestSuite(t *testing.T) {
