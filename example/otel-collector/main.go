@@ -157,7 +157,10 @@ func main() {
 	}()
 
 	tracer := otel.Tracer("test-tracer")
-	counter, _ := metricglobal.Meter("MetricCollectorExporter-Example").SyncInt64().Counter("work_duration")
+	counter, err := metricglobal.Meter("MetricCollectorExporter-Example").Int64Counter("work_duration")
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Attributes represent additional key-value descriptors that can be bound
 	// to a metric observer or recorder.
 	commonAttrs := []attribute.KeyValue{
