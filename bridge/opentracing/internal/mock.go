@@ -48,6 +48,7 @@ type MockTracer struct {
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
 	SpareContextKeyValues []MockContextKeyValue
+	TraceFlags            trace.TraceFlags
 
 	randLock sync.Mutex
 	rand     *rand.Rand
@@ -76,7 +77,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    t.getTraceID(ctx, &config),
 		SpanID:     t.getSpanID(),
-		TraceFlags: 0,
+		TraceFlags: t.TraceFlags,
 	})
 	span := &MockSpan{
 		mockTracer:     t,

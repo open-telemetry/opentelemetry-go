@@ -72,6 +72,10 @@ func newTestTextMapReaderAndWriter() *testTextMapReaderAndWriter {
 	}
 }
 
+type Samplable interface {
+	IsSampled() bool
+}
+
 func TestTextMapWrapper_New(t *testing.T) {
 	_, err := newTextMapWrapperForExtract(newTestOnlyTextMapReader())
 	assert.NoError(t, err)
@@ -500,6 +504,38 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 
 			s := b.StartSpan(tc.name, tc.opt...)
 			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind, tc.expected)
+		})
+	}
+}
+
+func TestBridge_SpanContext_IsSampled(t *testing.T) {
+	testCases := []struct {
+		name     string
+		flags    trace.TraceFlags
+		expected bool
+	}{
+		{
+			name:     "not sampled",
+			flags:    0,
+			expected: false,
+		},
+		{
+			name:     "sampled",
+			flags:    trace.FlagsSampled,
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := internal.NewMockTracer()
+			tracer.TraceFlags = tc.flags
+
+			b, _ := NewTracerPair(tracer)
+			s := b.StartSpan("abc")
+			sc := s.Context()
+
+			assert.Equal(t, tc.expected, sc.(Samplable).IsSampled())
 		})
 	}
 }

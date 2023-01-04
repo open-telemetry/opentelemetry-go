@@ -86,6 +86,10 @@ func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
 	return c.bag.Member(crk)
 }
 
+func (c *bridgeSpanContext) IsSampled() bool {
+	return c.otelSpanContext.IsSampled()
+}
+
 type bridgeSpan struct {
 	otelSpan          trace.Span
 	ctx               *bridgeSpanContext
