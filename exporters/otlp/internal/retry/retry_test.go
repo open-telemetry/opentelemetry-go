@@ -60,7 +60,6 @@ func TestWait(t *testing.T) {
 		if test.expected == nil {
 			assert.NoError(t, err)
 		} else {
-			assert.Error(t, err)
 			assert.ErrorIs(t, err, test.expected)
 		}
 	}
