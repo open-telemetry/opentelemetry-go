@@ -63,12 +63,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 
 	instruments := []Instrument{
 		{Name: "foo", Kind: InstrumentKind(0)}, //Unknown kind
-		{Name: "foo", Kind: InstrumentKindSyncCounter},
-		{Name: "foo", Kind: InstrumentKindSyncUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindSyncHistogram},
-		{Name: "foo", Kind: InstrumentKindAsyncCounter},
-		{Name: "foo", Kind: InstrumentKindAsyncUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindAsyncGauge},
+		{Name: "foo", Kind: InstrumentKindCounter},
+		{Name: "foo", Kind: InstrumentKindUpDownCounter},
+		{Name: "foo", Kind: InstrumentKindHistogram},
+		{Name: "foo", Kind: InstrumentKindObservableCounter},
+		{Name: "foo", Kind: InstrumentKindObservableUpDownCounter},
+		{Name: "foo", Kind: InstrumentKindObservableGauge},
 	}
 
 	testcases := []struct {
@@ -84,13 +84,13 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:   "drop should return 0 aggregators",
 			reader: NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
 			views:  []View{defaultView},
-			inst:   instruments[InstrumentKindSyncCounter],
+			inst:   instruments[InstrumentKindCounter],
 		},
 		{
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindSyncUpDownCounter],
+			inst:     instruments[InstrumentKindUpDownCounter],
 			wantKind: internal.NewDeltaSum[N](false),
 			wantLen:  1,
 		},
@@ -98,7 +98,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindSyncHistogram],
+			inst:     instruments[InstrumentKindHistogram],
 			wantKind: internal.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
@@ -106,7 +106,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindAsyncCounter],
+			inst:     instruments[InstrumentKindObservableCounter],
 			wantKind: internal.NewPrecomputedDeltaSum[N](true),
 			wantLen:  1,
 		},
@@ -114,7 +114,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindAsyncUpDownCounter],
+			inst:     instruments[InstrumentKindObservableUpDownCounter],
 			wantKind: internal.NewPrecomputedDeltaSum[N](false),
 			wantLen:  1,
 		},
@@ -122,7 +122,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindAsyncGauge],
+			inst:     instruments[InstrumentKindObservableGauge],
 			wantKind: internal.NewLastValue[N](),
 			wantLen:  1,
 		},
@@ -130,7 +130,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "default agg should use reader",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
-			inst:     instruments[InstrumentKindSyncCounter],
+			inst:     instruments[InstrumentKindCounter],
 			wantKind: internal.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
@@ -138,7 +138,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindSyncUpDownCounter],
+			inst:     instruments[InstrumentKindUpDownCounter],
 			wantKind: internal.NewCumulativeSum[N](false),
 			wantLen:  1,
 		},
@@ -146,7 +146,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindSyncHistogram],
+			inst:     instruments[InstrumentKindHistogram],
 			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
@@ -154,7 +154,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindAsyncCounter],
+			inst:     instruments[InstrumentKindObservableCounter],
 			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
@@ -162,7 +162,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindAsyncUpDownCounter],
+			inst:     instruments[InstrumentKindObservableUpDownCounter],
 			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
 			wantLen:  1,
 		},
@@ -170,7 +170,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindAsyncGauge],
+			inst:     instruments[InstrumentKindObservableGauge],
 			wantKind: internal.NewLastValue[N](),
 			wantLen:  1,
 		},
@@ -178,7 +178,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "reader should set default agg",
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
-			inst:     instruments[InstrumentKindSyncCounter],
+			inst:     instruments[InstrumentKindCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
@@ -186,7 +186,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "view should overwrite reader",
 			reader:   NewManualReader(),
 			views:    []View{changeAggView},
-			inst:     instruments[InstrumentKindSyncCounter],
+			inst:     instruments[InstrumentKindCounter],
 			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
@@ -194,7 +194,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:     "multiple views should create multiple aggregators",
 			reader:   NewManualReader(),
 			views:    []View{defaultView, renameView},
-			inst:     instruments[InstrumentKindSyncCounter],
+			inst:     instruments[InstrumentKindCounter],
 			wantKind: internal.NewCumulativeSum[N](true),
 			wantLen:  2,
 		},
@@ -202,14 +202,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			name:    "reader with invalid aggregation should error",
 			reader:  NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:   []View{defaultView},
-			inst:    instruments[InstrumentKindSyncCounter],
+			inst:    instruments[InstrumentKindCounter],
 			wantErr: errCreatingAggregators,
 		},
 		{
 			name:    "view with invalid aggregation should error",
 			reader:  NewManualReader(),
 			views:   []View{invalidAggView},
-			inst:    instruments[InstrumentKindSyncCounter],
+			inst:    instruments[InstrumentKindCounter],
 			wantErr: errCreatingAggregators,
 		},
 	}
@@ -308,7 +308,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 }
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
-	inst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	c := newInstrumentCache[int64](nil, nil)
 	r := newResolver(p, c)
 	aggs, err := r.Aggregators(inst)
@@ -318,7 +318,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 }
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
-	inst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	c := newInstrumentCache[float64](nil, nil)
 	r := newResolver(p, c)
 	aggs, err := r.Aggregators(inst)
@@ -344,7 +344,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
 	p := newPipelines(resource.Empty(), readers, views)
-	inst := Instrument{Name: "foo", Kind: InstrumentKindAsyncGauge}
+	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
 	vc := cache[string, instrumentID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
@@ -392,8 +392,8 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	readers := []Reader{NewManualReader()}
 	views := []View{defaultView, renameView}
 
-	fooInst := Instrument{Name: "foo", Kind: InstrumentKindSyncCounter}
-	barInst := Instrument{Name: "bar", Kind: InstrumentKindSyncCounter}
+	fooInst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	barInst := Instrument{Name: "bar", Kind: InstrumentKindCounter}
 
 	p := newPipelines(resource.Empty(), readers, views)
 
@@ -419,7 +419,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
-	fooInst = Instrument{Name: "foo-float", Kind: InstrumentKindSyncCounter}
+	fooInst = Instrument{Name: "foo-float", Kind: InstrumentKindCounter}
 
 	floatAggs, err = rf.Aggregators(fooInst)
 	assert.NoError(t, err)
@@ -445,137 +445,137 @@ func TestIsAggregatorCompatible(t *testing.T) {
 	}{
 		{
 			name: "SyncCounter and Drop",
-			kind: InstrumentKindSyncCounter,
+			kind: InstrumentKindCounter,
 			agg:  aggregation.Drop{},
 		},
 		{
 			name: "SyncCounter and LastValue",
-			kind: InstrumentKindSyncCounter,
+			kind: InstrumentKindCounter,
 			agg:  aggregation.LastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncCounter and Sum",
-			kind: InstrumentKindSyncCounter,
+			kind: InstrumentKindCounter,
 			agg:  aggregation.Sum{},
 		},
 		{
 			name: "SyncCounter and ExplicitBucketHistogram",
-			kind: InstrumentKindSyncCounter,
+			kind: InstrumentKindCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
 			name: "SyncUpDownCounter and Drop",
-			kind: InstrumentKindSyncUpDownCounter,
+			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.Drop{},
 		},
 		{
 			name: "SyncUpDownCounter and LastValue",
-			kind: InstrumentKindSyncUpDownCounter,
+			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.LastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncUpDownCounter and Sum",
-			kind: InstrumentKindSyncUpDownCounter,
+			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.Sum{},
 		},
 		{
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
-			kind: InstrumentKindSyncUpDownCounter,
+			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncHistogram and Drop",
-			kind: InstrumentKindSyncHistogram,
+			kind: InstrumentKindHistogram,
 			agg:  aggregation.Drop{},
 		},
 		{
 			name: "SyncHistogram and LastValue",
-			kind: InstrumentKindSyncHistogram,
+			kind: InstrumentKindHistogram,
 			agg:  aggregation.LastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncHistogram and Sum",
-			kind: InstrumentKindSyncHistogram,
+			kind: InstrumentKindHistogram,
 			agg:  aggregation.Sum{},
 		},
 		{
 			name: "SyncHistogram and ExplicitBucketHistogram",
-			kind: InstrumentKindSyncHistogram,
+			kind: InstrumentKindHistogram,
 			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
-			name: "AsyncCounter and Drop",
-			kind: InstrumentKindAsyncCounter,
+			name: "ObservableCounter and Drop",
+			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.Drop{},
 		},
 		{
-			name: "AsyncCounter and LastValue",
-			kind: InstrumentKindAsyncCounter,
+			name: "ObservableCounter and LastValue",
+			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.LastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "AsyncCounter and Sum",
-			kind: InstrumentKindAsyncCounter,
+			name: "ObservableCounter and Sum",
+			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.Sum{},
 		},
 		{
-			name: "AsyncCounter and ExplicitBucketHistogram",
-			kind: InstrumentKindAsyncCounter,
+			name: "ObservableCounter and ExplicitBucketHistogram",
+			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "AsyncUpDownCounter and Drop",
-			kind: InstrumentKindAsyncUpDownCounter,
+			name: "ObservableUpDownCounter and Drop",
+			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.Drop{},
 		},
 		{
-			name: "AsyncUpDownCounter and LastValue",
-			kind: InstrumentKindAsyncUpDownCounter,
+			name: "ObservableUpDownCounter and LastValue",
+			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.LastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "AsyncUpDownCounter and Sum",
-			kind: InstrumentKindAsyncUpDownCounter,
+			name: "ObservableUpDownCounter and Sum",
+			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.Sum{},
 		},
 		{
-			name: "AsyncUpDownCounter and ExplicitBucketHistogram",
-			kind: InstrumentKindAsyncUpDownCounter,
+			name: "ObservableUpDownCounter and ExplicitBucketHistogram",
+			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "AsyncGauge and Drop",
-			kind: InstrumentKindAsyncGauge,
+			name: "ObservableGauge and Drop",
+			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.Drop{},
 		},
 		{
-			name: "AsyncGauge and aggregation.LastValue{}",
-			kind: InstrumentKindAsyncGauge,
+			name: "ObservableGauge and aggregation.LastValue{}",
+			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.LastValue{},
 		},
 		{
-			name: "AsyncGauge and Sum",
-			kind: InstrumentKindAsyncGauge,
+			name: "ObservableGauge and Sum",
+			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.Sum{},
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "AsyncGauge and ExplicitBucketHistogram",
-			kind: InstrumentKindAsyncGauge,
+			name: "ObservableGauge and ExplicitBucketHistogram",
+			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.ExplicitBucketHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "Default aggregation should error",
-			kind: InstrumentKindSyncCounter,
+			kind: InstrumentKindCounter,
 			agg:  aggregation.Default{},
 			want: errUnknownAggregation,
 		},

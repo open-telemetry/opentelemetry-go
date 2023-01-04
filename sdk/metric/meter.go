@@ -61,84 +61,84 @@ var _ metric.Meter = (*meter)(nil)
 // options. The instrument is used to synchronously record increasing int64
 // measurements during a computational operation.
 func (m *meter) Int64Counter(name string, options ...instrument.Option) (syncint64.Counter, error) {
-	return m.instProviderInt64.lookup(InstrumentKindSyncCounter, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindCounter, name, options)
 }
 
 // Int64UpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to synchronously record
 // int64 measurements during a computational operation.
 func (m *meter) Int64UpDownCounter(name string, options ...instrument.Option) (syncint64.UpDownCounter, error) {
-	return m.instProviderInt64.lookup(InstrumentKindSyncUpDownCounter, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindUpDownCounter, name, options)
 }
 
 // Int64Histogram returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record the
 // distribution of int64 measurements during a computational operation.
 func (m *meter) Int64Histogram(name string, options ...instrument.Option) (syncint64.Histogram, error) {
-	return m.instProviderInt64.lookup(InstrumentKindSyncHistogram, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindHistogram, name, options)
 }
 
 // Int64ObservableCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // increasing int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableCounter(name string, options ...instrument.Option) (asyncint64.Counter, error) {
-	return m.instProviderInt64.lookup(InstrumentKindAsyncCounter, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindObservableCounter, name, options)
 }
 
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncint64.UpDownCounter, error) {
-	return m.instProviderInt64.lookup(InstrumentKindAsyncUpDownCounter, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindObservableUpDownCounter, name, options)
 }
 
 // Int64ObservableGauge returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // instantaneous int64 measurements once per a measurement collection cycle.
 func (m *meter) Int64ObservableGauge(name string, options ...instrument.Option) (asyncint64.Gauge, error) {
-	return m.instProviderInt64.lookup(InstrumentKindAsyncGauge, name, options)
+	return m.instProviderInt64.lookup(InstrumentKindObservableGauge, name, options)
 }
 
 // Float64Counter returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record increasing
 // float64 measurements during a computational operation.
 func (m *meter) Float64Counter(name string, options ...instrument.Option) (syncfloat64.Counter, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindSyncCounter, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindCounter, name, options)
 }
 
 // Float64UpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to synchronously record
 // float64 measurements during a computational operation.
 func (m *meter) Float64UpDownCounter(name string, options ...instrument.Option) (syncfloat64.UpDownCounter, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindSyncUpDownCounter, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindUpDownCounter, name, options)
 }
 
 // Float64Histogram returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record the
 // distribution of float64 measurements during a computational operation.
 func (m *meter) Float64Histogram(name string, options ...instrument.Option) (syncfloat64.Histogram, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindSyncHistogram, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindHistogram, name, options)
 }
 
 // Float64ObservableCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // increasing float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableCounter(name string, options ...instrument.Option) (asyncfloat64.Counter, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindAsyncCounter, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindObservableCounter, name, options)
 }
 
 // Float64ObservableUpDownCounter returns a new instrument identified by name
 // and configured with options. The instrument is used to asynchronously record
 // float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindAsyncUpDownCounter, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindObservableUpDownCounter, name, options)
 }
 
 // Float64ObservableGauge returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // instantaneous float64 measurements once per a measurement collection cycle.
 func (m *meter) Float64ObservableGauge(name string, options ...instrument.Option) (asyncfloat64.Gauge, error) {
-	return m.instProviderFloat64.lookup(InstrumentKindAsyncGauge, name, options)
+	return m.instProviderFloat64.lookup(InstrumentKindObservableGauge, name, options)
 }
 
 // RegisterCallback registers the function f to be called when any of the

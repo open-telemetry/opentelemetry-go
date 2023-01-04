@@ -135,11 +135,11 @@ func TestWithReader(t *testing.T) {
 func TestWithView(t *testing.T) {
 	c := newConfig([]Option{WithView(
 		NewView(
-			Instrument{Kind: InstrumentKindAsyncCounter},
+			Instrument{Kind: InstrumentKindObservableCounter},
 			Stream{Name: "a"},
 		),
 		NewView(
-			Instrument{Kind: InstrumentKindSyncCounter},
+			Instrument{Kind: InstrumentKindCounter},
 			Stream{Name: "b"},
 		),
 	)})
