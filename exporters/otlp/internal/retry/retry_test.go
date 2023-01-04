@@ -23,15 +23,13 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func TestWait(t *testing.T) {
 	tests := []struct {
-		ctx          context.Context
-		delay        time.Duration
-		expectedToBe error
+		ctx      context.Context
+		delay    time.Duration
+		expected error
 	}{
 		{
 			ctx:   context.Background(),
@@ -52,20 +50,18 @@ func TestWait(t *testing.T) {
 				return ctx
 			}(),
 			// Ensure the timer and context do not end simultaneously.
-			delay:        1 * time.Hour,
-			expectedToBe: context.Canceled,
+			delay:    1 * time.Hour,
+			expected: context.Canceled,
 		},
 	}
 
-	retryable := status.Error(codes.Unavailable, "sending to xyz: connection refused")
 	for _, test := range tests {
-		err := wait(test.ctx, retryable, test.delay)
-		if test.expectedToBe == nil {
+		err := wait(test.ctx, test.delay)
+		if test.expected == nil {
 			assert.NoError(t, err)
 		} else {
 			assert.Error(t, err)
-			assert.True(t, errors.Is(err, test.expectedToBe))
-			assert.Contains(t, err.Error(), "xyz: connection refused")
+			assert.ErrorIs(t, err, test.expected)
 		}
 	}
 }
@@ -108,7 +104,7 @@ func TestThrottledRetry(t *testing.T) {
 
 	origWait := waitFunc
 	var done bool
-	waitFunc = func(_ context.Context, _ error, delay time.Duration) error {
+	waitFunc = func(_ context.Context, delay time.Duration) error {
 		assert.Equal(t, throttleDelay, delay, "retry not throttled")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
@@ -139,8 +135,8 @@ func TestBackoffRetry(t *testing.T) {
 
 	origWait := waitFunc
 	var done bool
-	waitFunc = func(_ context.Context, _ error, d time.Duration) error {
-		delta := math.Ceil(float64(delay)*backoff.DefaultRandomizationFactor) - float64(delay)
+	waitFunc = func(_ context.Context, d time.Duration) error {
+		delta := math.Ceil(float64(delay) * backoff.DefaultRandomizationFactor)
 		assert.InDelta(t, delay, d, delta, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
@@ -155,6 +151,31 @@ func TestBackoffRetry(t *testing.T) {
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
 		return errors.New("not this error")
 	}), assert.AnError)
+}
+
+func TestBackoffRetryCanceledContext(t *testing.T) {
+	ev := func(error) (bool, time.Duration) { return true, 0 }
+
+	delay := time.Millisecond
+	reqFunc := Config{
+		Enabled:         true,
+		InitialInterval: delay,
+		MaxInterval:     delay,
+		// Never stop retrying.
+		MaxElapsedTime: 10 * time.Millisecond,
+	}.RequestFunc(ev)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	count := 0
+	cancel()
+	err := reqFunc(ctx, func(context.Context) error {
+		count++
+		return assert.AnError
+	})
+
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Contains(t, err.Error(), assert.AnError.Error())
+	assert.Equal(t, 1, count)
 }
 
 func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {
