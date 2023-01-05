@@ -44,26 +44,27 @@ const (
 	// instrumentKindUndefined is an undefined instrument kind, it should not
 	// be used by any initialized type.
 	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck,unused
-	// InstrumentKindSyncCounter identifies a group of instruments that record
+	// InstrumentKindCounter identifies a group of instruments that record
 	// increasing values synchronously with the code path they are measuring.
-	InstrumentKindSyncCounter
-	// InstrumentKindSyncUpDownCounter identifies a group of instruments that
+	InstrumentKindCounter
+	// InstrumentKindUpDownCounter identifies a group of instruments that
 	// record increasing and decreasing values synchronously with the code path
 	// they are measuring.
-	InstrumentKindSyncUpDownCounter
-	// InstrumentKindSyncHistogram identifies a group of instruments that
-	// record a distribution of values synchronously with the code path they
-	// are measuring.
-	InstrumentKindSyncHistogram
-	// InstrumentKindAsyncCounter identifies a group of instruments that record
-	// increasing values in an asynchronous callback.
-	InstrumentKindAsyncCounter
-	// InstrumentKindAsyncUpDownCounter identifies a group of instruments that
-	// record increasing and decreasing values in an asynchronous callback.
-	InstrumentKindAsyncUpDownCounter
-	// InstrumentKindAsyncGauge identifies a group of instruments that record
-	// current values in an asynchronous callback.
-	InstrumentKindAsyncGauge
+	InstrumentKindUpDownCounter
+	// InstrumentKindHistogram identifies a group of instruments that record a
+	// distribution of values synchronously with the code path they are
+	// measuring.
+	InstrumentKindHistogram
+	// InstrumentKindObservableCounter identifies a group of instruments that
+	// record increasing values in an asynchronous callback.
+	InstrumentKindObservableCounter
+	// InstrumentKindObservableUpDownCounter identifies a group of instruments
+	// that record increasing and decreasing values in an asynchronous
+	// callback.
+	InstrumentKindObservableUpDownCounter
+	// InstrumentKindObservableGauge identifies a group of instruments that
+	// record current values in an asynchronous callback.
+	InstrumentKindObservableGauge
 )
 
 type nonComparable [0]func() // nolint: unused  // This is indeed used.
