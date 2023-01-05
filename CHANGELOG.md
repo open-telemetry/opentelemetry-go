@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
 - Add the `Callback` function type to the `go.opentelemetry.io/otel/metric` package.
   This new named function type is registered with a `Meter`. (#3564)
+- Add the `go.opentelemetry.io/otel/semconv/v1.14.0` package.
+  The package contains semantic conventions from the `v1.14.0` version of the OpenTelemetry specification. (#3566)
 
 ### Changed
 
