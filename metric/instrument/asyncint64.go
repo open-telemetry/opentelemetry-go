@@ -41,6 +41,11 @@ type Int64Observer interface {
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.
 //
+// The function needs to make unique observations across all registered
+// Int64Callback. Meaning, it should not report measurements with the same
+// attributes as another Int64Callbacks also registered for the same
+// instrument.
+//
 // The function needs to be concurrent safe.
 type Int64Callback func(context.Context, Int64Observer) error
 

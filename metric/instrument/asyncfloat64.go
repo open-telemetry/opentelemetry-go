@@ -40,6 +40,11 @@ type Float64Observer interface {
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.
 //
+// The function needs to make unique observations across all registered
+// Float64Callbacks. Meaning, it should not report measurements with the same
+// attributes as another Float64Callbacks also registered for the same
+// instrument.
+//
 // The function needs to be concurrent safe.
 type Float64Callback func(context.Context, Float64Observer) error
 
