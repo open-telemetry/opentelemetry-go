@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -32,10 +33,7 @@ import (
 func TestCumulativeAsynchronousExample(t *testing.T) {
 	ctx := context.Background()
 	filter := attribute.Filter(func(kv attribute.KeyValue) bool {
-		if kv.Key == "tid" {
-			return false
-		}
-		return true
+		return kv.Key != "tid"
 	})
 	reader := metric.NewManualReader()
 
@@ -59,13 +57,14 @@ func TestCumulativeAsynchronousExample(t *testing.T) {
 
 	pfValues := []int64{0, 0, 0}
 
-	meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+	_, err = meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 		for i := range pfValues {
 			if pfValues[i] != 0 {
 				ctr.Observe(ctx, pfValues[i], attrs[i]...)
 			}
 		}
 	})
+	assert.NoError(t, err)
 
 	filteredAttributeSet := attribute.NewSet(attribute.KeyValue{Key: "pid", Value: attribute.StringValue("1001")})
 
@@ -197,7 +196,6 @@ func TestCumulativeAsynchronousExample(t *testing.T) {
 	metrics, err = reader.Collect(ctx)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, wantScopeMetrics, metrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
-
 }
 
 // This example can be found: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/supplementary-guidelines.md#asynchronous-example
@@ -205,10 +203,7 @@ func TestCumulativeAsynchronousExample(t *testing.T) {
 func TestDeltaAsynchronousExample(t *testing.T) {
 	ctx := context.Background()
 	filter := attribute.Filter(func(kv attribute.KeyValue) bool {
-		if kv.Key == "tid" {
-			return false
-		}
-		return true
+		return kv.Key != "tid"
 	})
 	reader := metric.NewManualReader(metric.WithTemporalitySelector(func(ik metric.InstrumentKind) metricdata.Temporality { return metricdata.DeltaTemporality }))
 
@@ -232,13 +227,14 @@ func TestDeltaAsynchronousExample(t *testing.T) {
 
 	pfValues := []int64{0, 0, 0}
 
-	meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+	_, err = meter.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
 		for i := range pfValues {
 			if pfValues[i] != 0 {
 				ctr.Observe(ctx, pfValues[i], attrs[i]...)
 			}
 		}
 	})
+	assert.NoError(t, err)
 
 	filteredAttributeSet := attribute.NewSet(attribute.KeyValue{Key: "pid", Value: attribute.StringValue("1001")})
 
