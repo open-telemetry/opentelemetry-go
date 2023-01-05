@@ -136,16 +136,16 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // DefaultAggregationSelector returns the default aggregation and parameters
 // that will be used to summarize measurement made from an instrument of
 // InstrumentKind. This AggregationSelector using the following selection
-// mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
-// Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
+// mapping: Counter ⇨ Sum, Observable Counter ⇨ Sum, UpDownCounter ⇨ Sum,
+// Observable UpDownCounter ⇨ Sum, Observable Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
 func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	switch ik {
-	case InstrumentKindSyncCounter, InstrumentKindSyncUpDownCounter, InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
+	case InstrumentKindCounter, InstrumentKindUpDownCounter, InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 		return aggregation.Sum{}
-	case InstrumentKindAsyncGauge:
+	case InstrumentKindObservableGauge:
 		return aggregation.LastValue{}
-	case InstrumentKindSyncHistogram:
+	case InstrumentKindHistogram:
 		return aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 			NoMinMax:   false,
