@@ -119,7 +119,7 @@ func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Op
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *testMeter) RegisterCallback(i []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
+func (m *testMeter) RegisterCallback(i []instrument.Asynchronous, f metric.Callback) (metric.Registration, error) {
 	m.callbacks = append(m.callbacks, f)
 	return testReg{
 		f: func(idx int) func() {

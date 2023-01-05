@@ -96,7 +96,7 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 }
 
 // addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(c callback) (unregister func()) {
+func (p *pipeline) addCallback(c metric.Callback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
 	e := p.callbacks.PushBack(c)
@@ -126,7 +126,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 
 	for e := p.callbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(callback)
+		f := e.Value.(metric.Callback)
 		f(ctx)
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
@@ -447,7 +447,7 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(c callback) metric.Registration {
+func (p pipelines) registerCallback(c metric.Callback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
 		unregs[i] = pipe.addCallback(c)
