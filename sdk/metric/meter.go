@@ -15,8 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
@@ -143,7 +141,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Option
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f metric.Callback) (metric.Registration, error) {
 	for _, inst := range insts {
 		// Only register if at least one instrument has a non-drop aggregation.
 		// Otherwise, calling f during collection will be wasted computation.
@@ -174,9 +172,7 @@ func (noopRegister) Unregister() error {
 	return nil
 }
 
-type callback func(context.Context)
-
-func (m *meter) registerCallback(c callback) (metric.Registration, error) {
+func (m *meter) registerCallback(c metric.Callback) (metric.Registration, error) {
 	return m.pipes.registerCallback(c), nil
 }
 
