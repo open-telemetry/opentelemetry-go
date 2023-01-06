@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
@@ -52,26 +53,29 @@ func ExampleMeter_asynchronous_single() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
-	memoryUsage, err := meter.Int64ObservableGauge(
-		"MemoryUsage",
+	_, err := meter.Int64ObservableGauge(
+		"DiskUsage",
 		instrument.WithUnit(unit.Bytes),
+		instrument.WithInt64Callback(func(ctx context.Context, inst instrument.Int64Observer) error {
+			// Do the real work here to get the real disk usage. For example,
+			//
+			//   usage, err := GetDiskUsage(diskID)
+			//   if err != nil {
+			//   	if retryable(err) {
+			//   		// Retry the usage measurement.
+			//   	} else {
+			//   		return err
+			//   	}
+			//   }
+			//
+			// For demonstration purpose, a static value is used here.
+			usage := 75000
+			inst.Observe(ctx, int64(usage), attribute.Int("disk.id", 3))
+			return nil
+		}),
 	)
 	if err != nil {
-		fmt.Println("Failed to register instrument")
-		panic(err)
-	}
-
-	_, err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
-		func(ctx context.Context) {
-			// instrument.WithCallbackFunc(func(ctx context.Context) {
-			//Do Work to get the real memoryUsage
-			// mem := GatherMemory(ctx)
-			mem := 75000
-
-			memoryUsage.Observe(ctx, int64(mem))
-		})
-	if err != nil {
-		fmt.Println("Failed to register callback")
+		fmt.Println("failed to register instrument")
 		panic(err)
 	}
 }
