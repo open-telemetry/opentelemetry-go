@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package asyncint64 provides asynchronous instruments that accept int64
+// measurments.
+//
+// Deprecated: Use the instruments provided by
+// go.opentelemetry.io/otel/metric/instrument instead.
 package asyncint64 // import "go.opentelemetry.io/otel/metric/instrument/asyncint64"
 
 import "go.opentelemetry.io/otel/metric/instrument"
@@ -23,6 +28,9 @@ import "go.opentelemetry.io/otel/metric/instrument"
 // the count.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: Use the Int64ObservableCounter in
+// go.opentelemetry.io/otel/metric/instrument instead.
 type Counter interface{ instrument.Int64Observer }
 
 // UpDownCounter is an instrument used to asynchronously record int64
@@ -32,10 +40,16 @@ type Counter interface{ instrument.Int64Observer }
 // the count.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: Use the Int64ObservableUpDownCounter in
+// go.opentelemetry.io/otel/metric/instrument instead.
 type UpDownCounter interface{ instrument.Int64Observer }
 
 // Gauge is an instrument used to asynchronously record instantaneous int64
 // measurements once per a measurement collection cycle.
 //
 // Warning: methods may be added to this interface in minor releases.
+//
+// Deprecated: Use the Int64ObservableGauge in
+// go.opentelemetry.io/otel/metric/instrument instead.
 type Gauge interface{ instrument.Int64Observer }

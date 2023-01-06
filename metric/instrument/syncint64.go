@@ -15,8 +15,43 @@
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 )
+
+// Int64Counter is an instrument that records increasing int64 values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64Counter interface {
+	// Add records a change to the counter.
+	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
+
+// Int64UpDownCounter is an instrument that records increasing or decreasing
+// int64 values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64UpDownCounter interface {
+	// Add records a change to the counter.
+	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
+
+// Int64Histogram is an instrument that records a distribution of int64
+// values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64Histogram interface {
+	// Record adds an additional value to the distribution.
+	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
 
 // Int64Config contains options for Synchronous instruments that record int64
 // values.
