@@ -29,6 +29,7 @@ var (
 
 var (
 	CommandArgs = commandArgs
+	CommandLine = commandLine
 	RuntimeName = runtimeName
 	RuntimeOS   = runtimeOS
 	RuntimeArch = runtimeArch

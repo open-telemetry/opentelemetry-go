@@ -21,14 +21,16 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 type pidProvider func() int
 type executablePathProvider func() (string, error)
-type commandArgsProvider func() []string
 type ownerProvider func() (*user.User, error)
+type commandArgsProvider func() []string
+type commandLineProvider func() string
 type runtimeNameProvider func() string
 type runtimeVersionProvider func() string
 type runtimeOSProvider func() string
@@ -38,6 +40,7 @@ var (
 	defaultPidProvider            pidProvider            = os.Getpid
 	defaultExecutablePathProvider executablePathProvider = os.Executable
 	defaultCommandArgsProvider    commandArgsProvider    = func() []string { return os.Args }
+	defaultCommandLineProvider    commandLineProvider    = func() string { return strings.Join(os.Args, " ") }
 	defaultOwnerProvider          ownerProvider          = user.Current
 	defaultRuntimeNameProvider    runtimeNameProvider    = func() string {
 		if runtime.Compiler == "gc" {
@@ -54,6 +57,7 @@ var (
 	pid            = defaultPidProvider
 	executablePath = defaultExecutablePathProvider
 	commandArgs    = defaultCommandArgsProvider
+	commandLine    = defaultCommandLineProvider
 	owner          = defaultOwnerProvider
 	runtimeName    = defaultRuntimeNameProvider
 	runtimeVersion = defaultRuntimeVersionProvider
@@ -66,6 +70,7 @@ func setDefaultOSProviders() {
 		defaultPidProvider,
 		defaultExecutablePathProvider,
 		defaultCommandArgsProvider,
+		defaultCommandLineProvider,
 	)
 }
 
@@ -73,10 +78,12 @@ func setOSProviders(
 	pidProvider pidProvider,
 	executablePathProvider executablePathProvider,
 	commandArgsProvider commandArgsProvider,
+	commandLineProvider commandLineProvider,
 ) {
 	pid = pidProvider
 	executablePath = executablePathProvider
 	commandArgs = commandArgsProvider
+	commandLine = commandLineProvider
 }
 
 func setDefaultRuntimeProviders() {
@@ -112,6 +119,7 @@ type processPIDDetector struct{}
 type processExecutableNameDetector struct{}
 type processExecutablePathDetector struct{}
 type processCommandArgsDetector struct{}
+type processCommandLineDetector struct{}
 type processOwnerDetector struct{}
 type processRuntimeNameDetector struct{}
 type processRuntimeVersionDetector struct{}
@@ -144,6 +152,11 @@ func (processExecutablePathDetector) Detect(ctx context.Context) (*Resource, err
 // by the process.
 func (processCommandArgsDetector) Detect(ctx context.Context) (*Resource, error) {
 	return NewWithAttributes(semconv.SchemaURL, semconv.ProcessCommandArgsKey.StringSlice(commandArgs())), nil
+}
+
+// Detect returns a *Resource that describes the full command line used to invoke the process.
+func (processCommandLineDetector) Detect(ctx context.Context) (*Resource, error) {
+	return NewWithAttributes(semconv.SchemaURL, semconv.ProcessCommandLineKey.String(commandLine())), nil
 }
 
 // Detect returns a *Resource that describes the username of the user that owns the

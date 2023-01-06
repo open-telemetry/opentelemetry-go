@@ -116,16 +116,18 @@ func WithOSDescription() Option {
 //
 // This option is equivalent to calling WithProcessPID,
 // WithProcessExecutableName, WithProcessExecutablePath,
-// WithProcessCommandArgs, WithProcessOwner, WithProcessRuntimeName,
-// WithProcessRuntimeVersion, and WithProcessRuntimeDescription. See each
-// option function for information about what resource attributes each
-// includes.
+// WithProcessCommandArgs, WithProcessCommandLine, WithProcessOwner,
+// WithProcessRuntimeName, WithProcessRuntimeVersion,
+// and WithProcessRuntimeDescription.
+// See each option function for information about what resource
+// attributes each includes.
 func WithProcess() Option {
 	return WithDetectors(
 		processPIDDetector{},
 		processExecutableNameDetector{},
 		processExecutablePathDetector{},
 		processCommandArgsDetector{},
+		processCommandLineDetector{},
 		processOwnerDetector{},
 		processRuntimeNameDetector{},
 		processRuntimeVersionDetector{},
@@ -159,6 +161,16 @@ func WithProcessExecutablePath() Option {
 // contain sensitive information it will be included in the exported resource.
 func WithProcessCommandArgs() Option {
 	return WithDetectors(processCommandArgsDetector{})
+}
+
+// WithProcessCommandLine adds an attribute with all the command arguments (including
+// the command/executable itself) as received by the process to the configured
+// Resource.
+//
+// Warning! This option will include process command line arguments. If these
+// contain sensitive information it will be included in the exported resource.
+func WithProcessCommandLine() Option {
+	return WithDetectors(processCommandLineDetector{})
 }
 
 // WithProcessOwner adds an attribute with the username of the user that owns the process

@@ -557,6 +557,20 @@ func TestWithProcessCommandArgs(t *testing.T) {
 	}, toMap(res))
 }
 
+func TestWithProcessCommandLine(t *testing.T) {
+	mockProcessAttributesProvidersWithErrors()
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithProcessCommandLine(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"process.command_line": fakeCommandLine,
+	}, toMap(res))
+}
+
 func TestWithProcessOwner(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := context.Background()
@@ -627,6 +641,7 @@ func TestWithProcess(t *testing.T) {
 		"process.executable.name":     fakeExecutableName,
 		"process.executable.path":     fakeExecutablePath,
 		"process.command_args":        fmt.Sprint(fakeCommandArgs),
+		"process.command_line":        fakeCommandLine,
 		"process.owner":               fakeOwner,
 		"process.runtime.name":        fakeRuntimeName,
 		"process.runtime.version":     fakeRuntimeVersion,

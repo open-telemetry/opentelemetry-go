@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,7 @@ var (
 	fakePID            = 123
 	fakeExecutablePath = "/fake/path/mock"
 	fakeCommandArgs    = []string{"mock", "-t", "30"}
+	fakeCommandLine    = "mock -t 30"
 	fakeOwner          = "gopher"
 	fakeRuntimeName    = "gcmock"
 	fakeRuntimeVersion = "go1.2.3"
@@ -47,6 +49,7 @@ var (
 	fakePidProvider            = func() int { return fakePID }
 	fakeExecutablePathProvider = func() (string, error) { return fakeExecutablePath, nil }
 	fakeCommandArgsProvider    = func() []string { return fakeCommandArgs }
+	fakeCommandLineProvider    = func() string { return fakeCommandLine }
 	fakeOwnerProvider          = func() (*user.User, error) { return &user.User{Username: fakeOwner}, nil }
 	fakeRuntimeNameProvider    = func() string { return fakeRuntimeName }
 	fakeRuntimeVersionProvider = func() string { return fakeRuntimeVersion }
@@ -68,6 +71,7 @@ func mockProcessAttributesProviders() {
 		fakePidProvider,
 		fakeExecutablePathProvider,
 		fakeCommandArgsProvider,
+		fakeCommandLineProvider,
 	)
 	resource.SetRuntimeProviders(
 		fakeRuntimeNameProvider,
@@ -85,6 +89,7 @@ func mockProcessAttributesProvidersWithErrors() {
 		fakePidProvider,
 		fakeExecutablePathProviderWithError,
 		fakeCommandArgsProvider,
+		fakeCommandLineProvider,
 	)
 	resource.SetRuntimeProviders(
 		fakeRuntimeNameProvider,
@@ -116,6 +121,10 @@ func TestWithProcessFuncsErrors(t *testing.T) {
 
 func TestCommandArgs(t *testing.T) {
 	require.EqualValues(t, os.Args, resource.CommandArgs())
+}
+
+func TestCommandLine(t *testing.T) {
+	require.EqualValues(t, strings.Join(os.Args, " "), resource.CommandLine())
 }
 
 func TestRuntimeName(t *testing.T) {
