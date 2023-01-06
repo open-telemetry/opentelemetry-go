@@ -25,10 +25,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -1012,21 +1008,21 @@ func TestAttributeFilter(t *testing.T) {
 }
 
 var (
-	aiCounter       asyncint64.Counter
-	aiUpDownCounter asyncint64.UpDownCounter
-	aiGauge         asyncint64.Gauge
+	aiCounter       instrument.Int64ObservableCounter
+	aiUpDownCounter instrument.Int64ObservableUpDownCounter
+	aiGauge         instrument.Int64ObservableGauge
 
-	afCounter       asyncfloat64.Counter
-	afUpDownCounter asyncfloat64.UpDownCounter
-	afGauge         asyncfloat64.Gauge
+	afCounter       instrument.Float64ObservableCounter
+	afUpDownCounter instrument.Float64ObservableUpDownCounter
+	afGauge         instrument.Float64ObservableGauge
 
-	siCounter       syncint64.Counter
-	siUpDownCounter syncint64.UpDownCounter
-	siHistogram     syncint64.Histogram
+	siCounter       instrument.Int64Counter
+	siUpDownCounter instrument.Int64UpDownCounter
+	siHistogram     instrument.Int64Histogram
 
-	sfCounter       syncfloat64.Counter
-	sfUpDownCounter syncfloat64.UpDownCounter
-	sfHistogram     syncfloat64.Histogram
+	sfCounter       instrument.Float64Counter
+	sfUpDownCounter instrument.Float64UpDownCounter
+	sfHistogram     instrument.Float64Histogram
 )
 
 func BenchmarkInstrumentCreation(b *testing.B) {
