@@ -106,8 +106,21 @@ type Meter interface {
 	//
 	// If no instruments are passed, f should not be registered nor called
 	// during collection.
-	RegisterCallback(instruments []instrument.Asynchronous, f func(context.Context)) (Registration, error)
+	RegisterCallback(instruments []instrument.Asynchronous, f Callback) (Registration, error)
 }
+
+// Callback is a function registered with a Meter that makes observations for
+// the set of instruments it is registered with.
+//
+// The function needs to complete in a finite amount of time and the deadline
+// of the passed context is expected to be honored.
+//
+// The function needs to make unique observations across all registered
+// Callbacks. Meaning, it should not report measurements for an instrument with
+// the same attributes as another Callback will report.
+//
+// The function needs to be concurrent safe.
+type Callback func(context.Context)
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
