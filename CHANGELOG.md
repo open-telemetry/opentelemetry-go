@@ -32,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
   - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
 - Add the `go.opentelemetry.io/otel/semconv/v1.15.0` package.
-  The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#TBD)
+  The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#3578)
 
 ### Changed
 
