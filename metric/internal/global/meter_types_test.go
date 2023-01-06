@@ -55,62 +55,62 @@ type testMeter struct {
 	callbacks []func(context.Context)
 }
 
-func (m *testMeter) Int64Counter(name string, options ...instrument.Option) (syncint64.Counter, error) {
+func (m *testMeter) Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error) {
 	m.siCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64UpDownCounter(name string, options ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (m *testMeter) Int64UpDownCounter(name string, options ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
 	m.siUDCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64Histogram(name string, options ...instrument.Option) (syncint64.Histogram, error) {
+func (m *testMeter) Int64Histogram(name string, options ...instrument.Int64Option) (syncint64.Histogram, error) {
 	m.siHist++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableCounter(name string, options ...instrument.Option) (asyncint64.Counter, error) {
+func (m *testMeter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.Counter, error) {
 	m.aiCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncint64.UpDownCounter, error) {
+func (m *testMeter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error) {
 	m.aiUDCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableGauge(name string, options ...instrument.Option) (asyncint64.Gauge, error) {
+func (m *testMeter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (asyncint64.Gauge, error) {
 	m.aiGauge++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Float64Counter(name string, options ...instrument.Option) (syncfloat64.Counter, error) {
+func (m *testMeter) Float64Counter(name string, options ...instrument.Float64Option) (syncfloat64.Counter, error) {
 	m.sfCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64UpDownCounter(name string, options ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+func (m *testMeter) Float64UpDownCounter(name string, options ...instrument.Float64Option) (syncfloat64.UpDownCounter, error) {
 	m.sfUDCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64Histogram(name string, options ...instrument.Option) (syncfloat64.Histogram, error) {
+func (m *testMeter) Float64Histogram(name string, options ...instrument.Float64Option) (syncfloat64.Histogram, error) {
 	m.sfHist++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableCounter(name string, options ...instrument.Option) (asyncfloat64.Counter, error) {
+func (m *testMeter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error) {
 	m.afCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+func (m *testMeter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error) {
 	m.afUDCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Option) (asyncfloat64.Gauge, error) {
+func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error) {
 	m.afGauge++
 	return &testCountingFloatInstrument{}, nil
 }

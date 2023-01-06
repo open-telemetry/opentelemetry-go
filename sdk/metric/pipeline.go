@@ -76,8 +76,9 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    list.List
+	aggregations   map[instrumentation.Scope][]instrumentSync
+	callbacks      []func(context.Context) error
+	multiCallbacks list.List
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -95,14 +96,23 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(c metric.Callback) (unregister func()) {
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addCallback(cback func(context.Context) error) {
 	p.Lock()
 	defer p.Unlock()
-	e := p.callbacks.PushBack(c)
+	p.callbacks = append(p.callbacks, cback)
+}
+
+// addMultiCallback registers a multi-instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addMultiCallback(c metric.Callback) (unregister func()) {
+	p.Lock()
+	defer p.Unlock()
+	e := p.multiCallbacks.PushBack(c)
 	return func() {
 		p.Lock()
-		p.callbacks.Remove(e)
+		p.multiCallbacks.Remove(e)
 		p.Unlock()
 	}
 }
@@ -124,7 +134,17 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	p.Lock()
 	defer p.Unlock()
 
-	for e := p.callbacks.Front(); e != nil; e = e.Next() {
+	var errs multierror
+	for _, c := range p.callbacks {
+		// TODO make the callbacks parallel. ( #3034 )
+		if err := c(ctx); err != nil {
+			errs.append(err)
+		}
+		if err := ctx.Err(); err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
 		f := e.Value.(metric.Callback)
 		f(ctx)
@@ -159,7 +179,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
-	}, nil
+	}, errs.errorOrNil()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -447,10 +467,16 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(c metric.Callback) metric.Registration {
+func (p pipelines) registerCallback(cback func(context.Context) error) {
+	for _, pipe := range p {
+		pipe.addCallback(cback)
+	}
+}
+
+func (p pipelines) registerMultiCallback(c metric.Callback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
-		unregs[i] = pipe.addCallback(c)
+		unregs[i] = pipe.addMultiCallback(c)
 	}
 	return unregisterFuncs(unregs)
 }
