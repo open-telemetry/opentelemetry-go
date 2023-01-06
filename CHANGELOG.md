@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
   - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
 - Metric instruments were added to `go.opentelemetry.io/otel/metric/instrument`.
-  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#TBD)
+  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575)
   - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
   - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
   - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`
@@ -94,13 +94,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
 - The `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is deprecated.
-  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 - The `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is deprecated.
-  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 - The `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is deprecated.
-  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 - The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
-  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 
 ### Removed
 
