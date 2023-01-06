@@ -52,7 +52,7 @@ type testMeter struct {
 	siUDCount int
 	siHist    int
 
-	callbacks []func(context.Context)
+	callbacks []metric.Callback
 }
 
 func (m *testMeter) Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error) {
@@ -145,6 +145,6 @@ func (m *testMeter) collect() {
 			// Unregister.
 			continue
 		}
-		f(ctx)
+		_ = f(ctx)
 	}
 }
