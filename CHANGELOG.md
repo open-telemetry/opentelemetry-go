@@ -29,6 +29,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `SpanStatusFromHTTPStatusCodeAndSpanKind` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `ClientStatus` and `ServerStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
   - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
   - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
+- Metric instruments were added to `go.opentelemetry.io/otel/metric/instrument`.
+  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#TBD)
+  - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
+  - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
+  - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`
+  - `Int64ObservableCounter` replaces the `asyncint64.Counter`
+  - `Int64ObservableUpDownCounter` replaces the `asyncint64.UpDownCounter`
+  - `Int64ObservableGauge` replaces the `asyncint64.Gauge`
+  - `Float64Counter` replaces the `syncfloat64.Counter`
+  - `Float64UpDownCounter` replaces the `syncfloat64.UpDownCounter`
+  - `Float64Histogram` replaces the `syncfloat64.Histogram`
+  - `Int64Counter` replaces the `syncint64.Counter`
+  - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
+  - `Int64Histogram` replaces the `syncint64.Histogram`
 
 ### Changed
 
@@ -79,6 +93,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+- The `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
+- The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#TBD)
 
 ### Removed
 
