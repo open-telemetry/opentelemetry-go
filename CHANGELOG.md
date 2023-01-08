@@ -31,6 +31,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `SpanStatusFromHTTPStatusCodeAndSpanKind` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `ClientStatus` and `ServerStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
   - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
   - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
+- Add the `go.opentelemetry.io/otel/semconv/v1.15.0` package.
+  The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#3578)
 - Add the `go.opentelemetry.io/otel/semconv/v1.16.0` package.
   The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
 
@@ -79,6 +81,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `InstrumentKindAsyncGauge` is renamed to `InstrumentKindObservableGauge`
 - Update the `RegisterCallback` method of the `Meter` in the `go.opentelemetry.io/otel/sdk/metric` package to accept the added `Callback` type instead of an inline function type definition.
   The underlying type of a `Callback` is the same `func(context.Context)` that the method used to accept. (#3564)
+- The callback function registered with a `Meter` from the `go.opentelemetry.io/otel/metric` package is required to return an error now. (#3576)
 
 ### Deprecated
 

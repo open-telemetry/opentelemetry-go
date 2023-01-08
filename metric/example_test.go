@@ -62,13 +62,14 @@ func ExampleMeter_asynchronous_single() {
 	}
 
 	_, err = meter.RegisterCallback([]instrument.Asynchronous{memoryUsage},
-		func(ctx context.Context) {
+		func(ctx context.Context) error {
 			// instrument.WithCallbackFunc(func(ctx context.Context) {
 			//Do Work to get the real memoryUsage
 			// mem := GatherMemory(ctx)
 			mem := 75000
 
 			memoryUsage.Observe(ctx, int64(mem))
+			return nil
 		})
 	if err != nil {
 		fmt.Println("Failed to register callback")
@@ -90,7 +91,7 @@ func ExampleMeter_asynchronous_multiple() {
 		heapAlloc,
 		gcCount,
 	},
-		func(ctx context.Context) {
+		func(ctx context.Context) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)
@@ -100,6 +101,7 @@ func ExampleMeter_asynchronous_multiple() {
 
 			// This function synchronously records the pauses
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
+			return nil
 		},
 	)
 
