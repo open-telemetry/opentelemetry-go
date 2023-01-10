@@ -94,7 +94,7 @@ func ExampleMeter_asynchronous_multiple() {
 		heapAlloc,
 		gcCount,
 	},
-		func(ctx context.Context) {
+		func(ctx context.Context) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)
@@ -104,6 +104,7 @@ func ExampleMeter_asynchronous_multiple() {
 
 			// This function synchronously records the pauses
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
+			return nil
 		},
 	)
 
