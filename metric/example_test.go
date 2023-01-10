@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
@@ -115,4 +114,4 @@ func ExampleMeter_asynchronous_multiple() {
 }
 
 // This is just an example, see the the contrib runtime instrumentation for real implementation.
-func computeGCPauses(ctx context.Context, recorder syncfloat64.Histogram, pauseBuff []uint64) {}
+func computeGCPauses(ctx context.Context, recorder instrument.Float64Histogram, pauseBuff []uint64) {}

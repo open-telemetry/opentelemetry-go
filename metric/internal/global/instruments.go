@@ -22,17 +22,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 type afCounter struct {
 	name string
 	opts []instrument.Float64ObserverOption
 
-	delegate atomic.Value //asyncfloat64.Counter
+	delegate atomic.Value //instrument.Float64ObservableCounter
 
 	instrument.Asynchronous
 }
@@ -48,13 +44,13 @@ func (i *afCounter) setDelegate(m metric.Meter) {
 
 func (i *afCounter) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncfloat64.Counter).Observe(ctx, x, attrs...)
+		ctr.(instrument.Float64ObservableCounter).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *afCounter) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncfloat64.Counter)
+		return ctr.(instrument.Float64ObservableCounter)
 	}
 	return nil
 }
@@ -63,7 +59,7 @@ type afUpDownCounter struct {
 	name string
 	opts []instrument.Float64ObserverOption
 
-	delegate atomic.Value //asyncfloat64.UpDownCounter
+	delegate atomic.Value //instrument.Float64ObservableUpDownCounter
 
 	instrument.Asynchronous
 }
@@ -79,13 +75,13 @@ func (i *afUpDownCounter) setDelegate(m metric.Meter) {
 
 func (i *afUpDownCounter) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncfloat64.UpDownCounter).Observe(ctx, x, attrs...)
+		ctr.(instrument.Float64ObservableUpDownCounter).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *afUpDownCounter) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncfloat64.UpDownCounter)
+		return ctr.(instrument.Float64ObservableUpDownCounter)
 	}
 	return nil
 }
@@ -94,7 +90,7 @@ type afGauge struct {
 	name string
 	opts []instrument.Float64ObserverOption
 
-	delegate atomic.Value //asyncfloat64.Gauge
+	delegate atomic.Value //instrument.Float64ObservableGauge
 
 	instrument.Asynchronous
 }
@@ -110,13 +106,13 @@ func (i *afGauge) setDelegate(m metric.Meter) {
 
 func (i *afGauge) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncfloat64.Gauge).Observe(ctx, x, attrs...)
+		ctr.(instrument.Float64ObservableGauge).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *afGauge) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncfloat64.Gauge)
+		return ctr.(instrument.Float64ObservableGauge)
 	}
 	return nil
 }
@@ -125,7 +121,7 @@ type aiCounter struct {
 	name string
 	opts []instrument.Int64ObserverOption
 
-	delegate atomic.Value //asyncint64.Counter
+	delegate atomic.Value //instrument.Int64ObservableCounter
 
 	instrument.Asynchronous
 }
@@ -141,13 +137,13 @@ func (i *aiCounter) setDelegate(m metric.Meter) {
 
 func (i *aiCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncint64.Counter).Observe(ctx, x, attrs...)
+		ctr.(instrument.Int64ObservableCounter).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *aiCounter) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncint64.Counter)
+		return ctr.(instrument.Int64ObservableCounter)
 	}
 	return nil
 }
@@ -156,7 +152,7 @@ type aiUpDownCounter struct {
 	name string
 	opts []instrument.Int64ObserverOption
 
-	delegate atomic.Value //asyncint64.UpDownCounter
+	delegate atomic.Value //instrument.Int64ObservableUpDownCounter
 
 	instrument.Asynchronous
 }
@@ -172,13 +168,13 @@ func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
 
 func (i *aiUpDownCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncint64.UpDownCounter).Observe(ctx, x, attrs...)
+		ctr.(instrument.Int64ObservableUpDownCounter).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *aiUpDownCounter) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncint64.UpDownCounter)
+		return ctr.(instrument.Int64ObservableUpDownCounter)
 	}
 	return nil
 }
@@ -187,7 +183,7 @@ type aiGauge struct {
 	name string
 	opts []instrument.Int64ObserverOption
 
-	delegate atomic.Value //asyncint64.Gauge
+	delegate atomic.Value //instrument.Int64ObservableGauge
 
 	instrument.Asynchronous
 }
@@ -203,13 +199,13 @@ func (i *aiGauge) setDelegate(m metric.Meter) {
 
 func (i *aiGauge) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(asyncint64.Gauge).Observe(ctx, x, attrs...)
+		ctr.(instrument.Int64ObservableGauge).Observe(ctx, x, attrs...)
 	}
 }
 
 func (i *aiGauge) unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(asyncint64.Gauge)
+		return ctr.(instrument.Int64ObservableGauge)
 	}
 	return nil
 }
@@ -219,7 +215,7 @@ type sfCounter struct {
 	name string
 	opts []instrument.Float64Option
 
-	delegate atomic.Value //syncfloat64.Counter
+	delegate atomic.Value //instrument.Float64Counter
 
 	instrument.Synchronous
 }
@@ -235,7 +231,7 @@ func (i *sfCounter) setDelegate(m metric.Meter) {
 
 func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncfloat64.Counter).Add(ctx, incr, attrs...)
+		ctr.(instrument.Float64Counter).Add(ctx, incr, attrs...)
 	}
 }
 
@@ -243,7 +239,7 @@ type sfUpDownCounter struct {
 	name string
 	opts []instrument.Float64Option
 
-	delegate atomic.Value //syncfloat64.UpDownCounter
+	delegate atomic.Value //instrument.Float64UpDownCounter
 
 	instrument.Synchronous
 }
@@ -259,7 +255,7 @@ func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
 
 func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncfloat64.UpDownCounter).Add(ctx, incr, attrs...)
+		ctr.(instrument.Float64UpDownCounter).Add(ctx, incr, attrs...)
 	}
 }
 
@@ -267,7 +263,7 @@ type sfHistogram struct {
 	name string
 	opts []instrument.Float64Option
 
-	delegate atomic.Value //syncfloat64.Histogram
+	delegate atomic.Value //instrument.Float64Histogram
 
 	instrument.Synchronous
 }
@@ -283,7 +279,7 @@ func (i *sfHistogram) setDelegate(m metric.Meter) {
 
 func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncfloat64.Histogram).Record(ctx, x, attrs...)
+		ctr.(instrument.Float64Histogram).Record(ctx, x, attrs...)
 	}
 }
 
@@ -291,7 +287,7 @@ type siCounter struct {
 	name string
 	opts []instrument.Int64Option
 
-	delegate atomic.Value //syncint64.Counter
+	delegate atomic.Value //instrument.Int64Counter
 
 	instrument.Synchronous
 }
@@ -307,7 +303,7 @@ func (i *siCounter) setDelegate(m metric.Meter) {
 
 func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncint64.Counter).Add(ctx, x, attrs...)
+		ctr.(instrument.Int64Counter).Add(ctx, x, attrs...)
 	}
 }
 
@@ -315,7 +311,7 @@ type siUpDownCounter struct {
 	name string
 	opts []instrument.Int64Option
 
-	delegate atomic.Value //syncint64.UpDownCounter
+	delegate atomic.Value //instrument.Int64UpDownCounter
 
 	instrument.Synchronous
 }
@@ -331,7 +327,7 @@ func (i *siUpDownCounter) setDelegate(m metric.Meter) {
 
 func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncint64.UpDownCounter).Add(ctx, x, attrs...)
+		ctr.(instrument.Int64UpDownCounter).Add(ctx, x, attrs...)
 	}
 }
 
@@ -339,7 +335,7 @@ type siHistogram struct {
 	name string
 	opts []instrument.Int64Option
 
-	delegate atomic.Value //syncint64.Histogram
+	delegate atomic.Value //instrument.Int64Histogram
 
 	instrument.Synchronous
 }
@@ -355,6 +351,6 @@ func (i *siHistogram) setDelegate(m metric.Meter) {
 
 func (i *siHistogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(syncint64.Histogram).Record(ctx, x, attrs...)
+		ctr.(instrument.Int64Histogram).Record(ctx, x, attrs...)
 	}
 }
