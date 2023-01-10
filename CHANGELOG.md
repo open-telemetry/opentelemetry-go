@@ -69,6 +69,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Extrema` type to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
   This type is used to represent min/max values and still be able to distinguish unset and zero values. (#3487)
 - The `go.opentelemetry.io/otel/semconv/v1.17.0` package.
+- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not.
   The package contains semantic conventions from the `v1.17.0` version of the OpenTelemetry specification. (#3599)
 
 ### Changed
