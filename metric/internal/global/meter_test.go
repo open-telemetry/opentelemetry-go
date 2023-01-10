@@ -45,6 +45,10 @@ func TestMeterProviderRace(t *testing.T) {
 	close(finish)
 }
 
+var zeroCallback metric.Callback = func(ctx context.Context, or metric.ObservationRecorder) error {
+	return nil
+}
+
 func TestMeterRace(t *testing.T) {
 	mtr := &meter{}
 
@@ -66,7 +70,7 @@ func TestMeterRace(t *testing.T) {
 			_, _ = mtr.Int64Counter(name)
 			_, _ = mtr.Int64UpDownCounter(name)
 			_, _ = mtr.Int64Histogram(name)
-			_, _ = mtr.RegisterCallback(nil, func(ctx context.Context) error { return nil })
+			_, _ = mtr.RegisterCallback(zeroCallback)
 			if !once {
 				wg.Done()
 				once = true
@@ -86,7 +90,7 @@ func TestMeterRace(t *testing.T) {
 
 func TestUnregisterRace(t *testing.T) {
 	mtr := &meter{}
-	reg, err := mtr.RegisterCallback(nil, func(ctx context.Context) error { return nil })
+	reg, err := mtr.RegisterCallback(zeroCallback)
 	require.NoError(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -128,10 +132,10 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float
 	_, err = m.Int64ObservableGauge("test_Async_Gauge")
 	assert.NoError(t, err)
 
-	_, err = m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) error {
-		afcounter.Observe(ctx, 3)
+	_, err = m.RegisterCallback(func(ctx context.Context, obs metric.ObservationRecorder) error {
+		obs.Float64(afcounter, 3)
 		return nil
-	})
+	}, afcounter)
 	require.NoError(t, err)
 
 	sfcounter, err := m.Float64Counter("test_Async_Counter")
@@ -323,10 +327,10 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 
 	var called0 bool
-	reg0, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) error {
+	reg0, err := m.RegisterCallback(func(context.Context, metric.ObservationRecorder) error {
 		called0 = true
 		return nil
-	})
+	}, actr)
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "callback not registered")
 	// This means reg0 should not be delegated.
@@ -334,10 +338,10 @@ func TestRegistrationDelegation(t *testing.T) {
 	assert.Equal(t, 0, mImpl.registry.Len(), "callback not unregistered")
 
 	var called1 bool
-	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) error {
+	reg1, err := m.RegisterCallback(func(context.Context, metric.ObservationRecorder) error {
 		called1 = true
 		return nil
-	})
+	}, actr)
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "second callback not registered")
 
