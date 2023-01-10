@@ -34,6 +34,30 @@ type Float64Observer interface {
 	Observe(ctx context.Context, value float64, attributes ...attribute.KeyValue)
 }
 
+// Float64ObservableCounter is an instrument used to asynchronously record
+// increasing float64 measurements once per a measurement collection cycle. The
+// Observe method is used to record the measured state of the instrument when
+// it is called. Implementations will assume the observed value to be the
+// cumulative sum of the count.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64ObservableCounter interface{ Float64Observer }
+
+// Float64ObservableUpDownCounter is an instrument used to asynchronously
+// record float64 measurements once per a measurement collection cycle. The
+// Observe method is used to record the measured state of the instrument when
+// it is called. Implementations will assume the observed value to be the
+// cumulative sum of the count.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64ObservableUpDownCounter interface{ Float64Observer }
+
+// Float64ObservableGauge is an instrument used to asynchronously record
+// instantaneous float64 measurements once per a measurement collection cycle.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64ObservableGauge interface{ Float64Observer }
+
 // Float64Callback is a function registered with a Meter that makes
 // observations for a Float64Observer it is registered with.
 //

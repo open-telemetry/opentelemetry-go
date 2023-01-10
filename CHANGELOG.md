@@ -35,6 +35,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#3578)
 - Add the `go.opentelemetry.io/otel/semconv/v1.16.0` package.
   The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
+- Metric instruments were added to `go.opentelemetry.io/otel/metric/instrument`.
+  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575)
+  - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
+  - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
+  - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`
+  - `Int64ObservableCounter` replaces the `asyncint64.Counter`
+  - `Int64ObservableUpDownCounter` replaces the `asyncint64.UpDownCounter`
+  - `Int64ObservableGauge` replaces the `asyncint64.Gauge`
+  - `Float64Counter` replaces the `syncfloat64.Counter`
+  - `Float64UpDownCounter` replaces the `syncfloat64.UpDownCounter`
+  - `Float64Histogram` replaces the `syncfloat64.Histogram`
+  - `Int64Counter` replaces the `syncint64.Counter`
+  - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
+  - `Int64Histogram` replaces the `syncint64.Histogram`
 
 ### Changed
 
@@ -82,10 +96,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update the `RegisterCallback` method of the `Meter` in the `go.opentelemetry.io/otel/sdk/metric` package to accept the added `Callback` type instead of an inline function type definition.
   The underlying type of a `Callback` is the same `func(context.Context)` that the method used to accept. (#3564)
 - The callback function registered with a `Meter` from the `go.opentelemetry.io/otel/metric` package is required to return an error now. (#3576)
+- The exporter from `go.opentelemetry.io/otel/exporters/zipkin` is updated to use the `v1.16.0` version of semantic conventions.
+  This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
+  Instead it uses the `net.sock.peer` attributes. (#3581)
 
 ### Deprecated
 
 - The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 
 ### Removed
 

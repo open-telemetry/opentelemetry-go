@@ -19,10 +19,10 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-func benchCounter(b *testing.B, views ...View) (context.Context, Reader, syncint64.Counter) {
+func benchCounter(b *testing.B, views ...View) (context.Context, Reader, instrument.Int64Counter) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
