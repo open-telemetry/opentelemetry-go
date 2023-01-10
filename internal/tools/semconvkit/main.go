@@ -21,6 +21,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ var (
 	out = flag.String("output", "./", "output directory")
 	tag = flag.String("tag", "", "OpenTelemetry tagged version")
 
-	//go:embed templates/*.tmpl
+	//go:embed templates/*.tmpl templates/netconv/*.tmpl templates/httpconv/*.tmpl
 	rootFS embed.FS
 )
 
@@ -48,8 +49,8 @@ func (sc SemanticConventions) SemVer() string {
 }
 
 // render renders all templates to the dest directory using the data.
-func render(dest string, data *SemanticConventions) error {
-	tmpls, err := template.ParseFS(rootFS, "templates/*.tmpl")
+func render(src, dest string, data *SemanticConventions) error {
+	tmpls, err := template.ParseFS(rootFS, src)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,25 @@ func main() {
 
 	sc := &SemanticConventions{TagVer: *tag}
 
-	if err := render(*out, sc); err != nil {
+	if err := render("templates/*.tmpl", *out, sc); err != nil {
+		log.Fatal(err)
+	}
+
+	dest := fmt.Sprintf("%s/netconv", *out)
+	// Ensure the dest dir exists (MkdirAll does nothing if dest is a directory
+	// and already exists).
+	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	if err := render("templates/netconv/*.tmpl", dest, sc); err != nil {
+		log.Fatal(err)
+	}
+
+	dest = fmt.Sprintf("%s/httpconv", *out)
+	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	if err := render("templates/httpconv/*.tmpl", dest, sc); err != nil {
 		log.Fatal(err)
 	}
 }

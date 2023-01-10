@@ -16,7 +16,6 @@ package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
 	"container/list"
-	"context"
 	"sync"
 	"sync/atomic"
 
@@ -147,7 +146,7 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	m.registry.Init()
 }
 
-func (m *meter) Int64Counter(name string, options ...instrument.Option) (syncint64.Counter, error) {
+func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64Counter(name, options...)
 	}
@@ -158,7 +157,7 @@ func (m *meter) Int64Counter(name string, options ...instrument.Option) (syncint
 	return i, nil
 }
 
-func (m *meter) Int64UpDownCounter(name string, options ...instrument.Option) (syncint64.UpDownCounter, error) {
+func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64UpDownCounter(name, options...)
 	}
@@ -169,7 +168,7 @@ func (m *meter) Int64UpDownCounter(name string, options ...instrument.Option) (s
 	return i, nil
 }
 
-func (m *meter) Int64Histogram(name string, options ...instrument.Option) (syncint64.Histogram, error) {
+func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (syncint64.Histogram, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64Histogram(name, options...)
 	}
@@ -180,7 +179,7 @@ func (m *meter) Int64Histogram(name string, options ...instrument.Option) (synci
 	return i, nil
 }
 
-func (m *meter) Int64ObservableCounter(name string, options ...instrument.Option) (asyncint64.Counter, error) {
+func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableCounter(name, options...)
 	}
@@ -191,7 +190,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...instrument.Option
 	return i, nil
 }
 
-func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncint64.UpDownCounter, error) {
+func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableUpDownCounter(name, options...)
 	}
@@ -202,7 +201,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.
 	return i, nil
 }
 
-func (m *meter) Int64ObservableGauge(name string, options ...instrument.Option) (asyncint64.Gauge, error) {
+func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (asyncint64.Gauge, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableGauge(name, options...)
 	}
@@ -213,7 +212,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...instrument.Option) 
 	return i, nil
 }
 
-func (m *meter) Float64Counter(name string, options ...instrument.Option) (syncfloat64.Counter, error) {
+func (m *meter) Float64Counter(name string, options ...instrument.Float64Option) (syncfloat64.Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64Counter(name, options...)
 	}
@@ -224,7 +223,7 @@ func (m *meter) Float64Counter(name string, options ...instrument.Option) (syncf
 	return i, nil
 }
 
-func (m *meter) Float64UpDownCounter(name string, options ...instrument.Option) (syncfloat64.UpDownCounter, error) {
+func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64Option) (syncfloat64.UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64UpDownCounter(name, options...)
 	}
@@ -235,7 +234,7 @@ func (m *meter) Float64UpDownCounter(name string, options ...instrument.Option) 
 	return i, nil
 }
 
-func (m *meter) Float64Histogram(name string, options ...instrument.Option) (syncfloat64.Histogram, error) {
+func (m *meter) Float64Histogram(name string, options ...instrument.Float64Option) (syncfloat64.Histogram, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64Histogram(name, options...)
 	}
@@ -246,7 +245,7 @@ func (m *meter) Float64Histogram(name string, options ...instrument.Option) (syn
 	return i, nil
 }
 
-func (m *meter) Float64ObservableCounter(name string, options ...instrument.Option) (asyncfloat64.Counter, error) {
+func (m *meter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableCounter(name, options...)
 	}
@@ -257,7 +256,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...instrument.Opti
 	return i, nil
 }
 
-func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Option) (asyncfloat64.UpDownCounter, error) {
+func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableUpDownCounter(name, options...)
 	}
@@ -268,7 +267,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrumen
 	return i, nil
 }
 
-func (m *meter) Float64ObservableGauge(name string, options ...instrument.Option) (asyncfloat64.Gauge, error) {
+func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableGauge(name, options...)
 	}
@@ -283,7 +282,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Option
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f func(context.Context)) (metric.Registration, error) {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f metric.Callback) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
 		return del.RegisterCallback(insts, f)
@@ -323,7 +322,7 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 
 type registration struct {
 	instruments []instrument.Asynchronous
-	function    func(context.Context)
+	function    metric.Callback
 
 	unreg   func() error
 	unregMu sync.Mutex

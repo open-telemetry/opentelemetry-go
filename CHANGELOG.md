@@ -10,9 +10,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- The `WithInt64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure int64 Observer callbacks during their creation. (#3507)
+- The `WithFloat64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure float64 Observer callbacks during their creation. (#3507)
 - Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
   This `Registration` can be used to unregister callbacks. (#3522)
 - Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+- Add the `Callback` function type to the `go.opentelemetry.io/otel/metric` package.
+  This new named function type is registered with a `Meter`. (#3564)
+- Add the `go.opentelemetry.io/otel/semconv/v1.14.0` package.
+  The package contains semantic conventions from the `v1.14.0` version of the OpenTelemetry specification. (#3566)
+- Add the `go.opentelemetry.io/otel/semconv/v1.13.0` package.
+  The package contains semantic conventions from the `v1.13.0` version of the OpenTelemetry specification. (#3499)
+  - The `EndUserAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientRequest` and `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPAttributesFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientResponse` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPClientAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerMetricAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `NetAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `Transport` in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` and `ClientRequest` or `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCodeAndSpanKind` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `ClientStatus` and `ServerStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
+  - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
+- Add the `go.opentelemetry.io/otel/semconv/v1.15.0` package.
+  The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#3578)
+- Add the `go.opentelemetry.io/otel/semconv/v1.16.0` package.
+  The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
 
 ### Fixed
 
@@ -20,6 +42,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Instrument configuration in `go.opentelemetry.io/otel/metric/instrument` is split into specific options and confguration based on the instrument type. (#3507)
+  - Use the added `Int64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncint64`.
+  - Use the added `Float64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncfloat64`.
+  - Use the added `Int64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncint64`.
+  - Use the added `Float64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncfloat64`.
 - The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncint64` is removed.
   Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
   - The `Counter` method is replaced by `Meter.Int64ObservableCounter`
@@ -56,6 +83,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `InstrumentKindAsyncCounter` is renamed to `InstrumentKindObservableCounter`
   - `InstrumentKindAsyncUpDownCounter` is renamed to `InstrumentKindObservableUpDownCounter`
   - `InstrumentKindAsyncGauge` is renamed to `InstrumentKindObservableGauge`
+- Update the `RegisterCallback` method of the `Meter` in the `go.opentelemetry.io/otel/sdk/metric` package to accept the added `Callback` type instead of an inline function type definition.
+  The underlying type of a `Callback` is the same `func(context.Context)` that the method used to accept. (#3564)
+- The callback function registered with a `Meter` from the `go.opentelemetry.io/otel/metric` package is required to return an error now. (#3576)
 
 ### Deprecated
 
