@@ -16,7 +16,6 @@ package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
 	"container/list"
-	"context"
 	"sync"
 	"sync/atomic"
 
@@ -319,7 +318,7 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 
 type registration struct {
 	instruments []instrument.Asynchronous
-	function    func(context.Context)
+	function    metric.Callback
 
 	unreg   func() error
 	unregMu sync.Mutex

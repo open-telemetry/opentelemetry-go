@@ -116,7 +116,7 @@ type Meter interface {
 // the same attributes as another Callback will report.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context)
+type Callback func(context.Context) error
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
