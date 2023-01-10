@@ -35,6 +35,30 @@ type Int64Observer interface {
 	Observe(ctx context.Context, value int64, attributes ...attribute.KeyValue)
 }
 
+// Int64ObservableCounter is an instrument used to asynchronously record
+// increasing int64 measurements once per a measurement collection cycle. The
+// Observe method is used to record the measured state of the instrument when
+// it is called. Implementations will assume the observed value to be the
+// cumulative sum of the count.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64ObservableCounter interface{ Int64Observer }
+
+// Int64ObservableUpDownCounter is an instrument used to asynchronously record
+// int64 measurements once per a measurement collection cycle. The Observe
+// method is used to record the measured state of the instrument when it is
+// called. Implementations will assume the observed value to be the cumulative
+// sum of the count.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64ObservableUpDownCounter interface{ Int64Observer }
+
+// Int64ObservableGauge is an instrument used to asynchronously record
+// instantaneous int64 measurements once per a measurement collection cycle.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64ObservableGauge interface{ Int64Observer }
+
 // Int64Callback is a function registered with a Meter that makes
 // observations for an Int64Observer it is registered with.
 //
