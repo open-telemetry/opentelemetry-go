@@ -82,6 +82,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update the `RegisterCallback` method of the `Meter` in the `go.opentelemetry.io/otel/sdk/metric` package to accept the added `Callback` type instead of an inline function type definition.
   The underlying type of a `Callback` is the same `func(context.Context)` that the method used to accept. (#3564)
 - The callback function registered with a `Meter` from the `go.opentelemetry.io/otel/metric` package is required to return an error now. (#3576)
+- The exporter from `go.opentelemetry.io/otel/exporters/zipkin` is updated to use the `v1.16.0` version of semantic conventions.
+  This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
+  Instead it uses the `net.sock.peer` attributes. (#3581)
 
 ### Deprecated
 
