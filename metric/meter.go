@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
@@ -102,11 +103,14 @@ type Meter interface {
 	//
 	// If no instruments are passed, f should not be registered nor called
 	// during collection.
-	RegisterCallback(instruments []instrument.Asynchronous, f Callback) (Registration, error)
+	RegisterCallback(f Callback, instruments ...instrument.Asynchronous) (Registration, error)
 }
 
 // Callback is a function registered with a Meter that makes observations for
 // the set of instruments it is registered with.
+//
+// The ObservationRecorder parameter is used to record measurment observations.
+// Measurments should not be recorded directly with an Observer.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.
@@ -116,7 +120,15 @@ type Meter interface {
 // the same attributes as another Callback will report.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context) error
+type Callback func(context.Context, ObservationRecorder) error
+
+// ObservationRecorder records the measurements in a Callback.
+type ObservationRecorder interface {
+	// Float64 records the float64 value with attributes for inst.
+	Float64(inst instrument.Float64Observer, value float64, attributes ...attribute.KeyValue)
+	// Int64 records the int64 value with attributes for inst.
+	Int64(inst instrument.Int64Observer, value int64, attributes ...attribute.KeyValue)
+}
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
