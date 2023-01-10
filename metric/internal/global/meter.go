@@ -22,10 +22,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 // meterProvider is a placeholder for a configured SDK MeterProvider.
@@ -146,7 +142,7 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	m.registry.Init()
 }
 
-func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error) {
+func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (instrument.Int64Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64Counter(name, options...)
 	}
@@ -157,7 +153,7 @@ func (m *meter) Int64Counter(name string, options ...instrument.Int64Option) (sy
 	return i, nil
 }
 
-func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Option) (syncint64.UpDownCounter, error) {
+func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Option) (instrument.Int64UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64UpDownCounter(name, options...)
 	}
@@ -168,7 +164,7 @@ func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64Optio
 	return i, nil
 }
 
-func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (syncint64.Histogram, error) {
+func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (instrument.Int64Histogram, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64Histogram(name, options...)
 	}
@@ -179,7 +175,7 @@ func (m *meter) Int64Histogram(name string, options ...instrument.Int64Option) (
 	return i, nil
 }
 
-func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.Counter, error) {
+func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableCounter(name, options...)
 	}
@@ -190,7 +186,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64O
 	return i, nil
 }
 
-func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error) {
+func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableUpDownCounter(name, options...)
 	}
@@ -201,7 +197,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.
 	return i, nil
 }
 
-func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (asyncint64.Gauge, error) {
+func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64ObservableGauge(name, options...)
 	}
@@ -212,7 +208,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64Obs
 	return i, nil
 }
 
-func (m *meter) Float64Counter(name string, options ...instrument.Float64Option) (syncfloat64.Counter, error) {
+func (m *meter) Float64Counter(name string, options ...instrument.Float64Option) (instrument.Float64Counter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64Counter(name, options...)
 	}
@@ -223,7 +219,7 @@ func (m *meter) Float64Counter(name string, options ...instrument.Float64Option)
 	return i, nil
 }
 
-func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64Option) (syncfloat64.UpDownCounter, error) {
+func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64Option) (instrument.Float64UpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64UpDownCounter(name, options...)
 	}
@@ -234,7 +230,7 @@ func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64O
 	return i, nil
 }
 
-func (m *meter) Float64Histogram(name string, options ...instrument.Float64Option) (syncfloat64.Histogram, error) {
+func (m *meter) Float64Histogram(name string, options ...instrument.Float64Option) (instrument.Float64Histogram, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64Histogram(name, options...)
 	}
@@ -245,7 +241,7 @@ func (m *meter) Float64Histogram(name string, options ...instrument.Float64Optio
 	return i, nil
 }
 
-func (m *meter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error) {
+func (m *meter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableCounter(name, options...)
 	}
@@ -256,7 +252,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...instrument.Floa
 	return i, nil
 }
 
-func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error) {
+func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableUpDownCounter(name, options...)
 	}
@@ -267,7 +263,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrumen
 	return i, nil
 }
 
-func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error) {
+func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Float64ObservableGauge(name, options...)
 	}
