@@ -207,7 +207,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 
 // RegisterCallback registers the function f to be called when any of the
 // insts Collect method is called.
-func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f metric.Callback) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a multiObserver if not needed.
 		return noopRegister{}, nil

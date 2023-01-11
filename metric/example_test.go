@@ -89,7 +89,10 @@ func ExampleMeter_asynchronous_multiple() {
 	gcCount, _ := meter.Int64ObservableCounter("gcCount")
 	gcPause, _ := meter.Float64Histogram("gcPause")
 
-	_, err := meter.RegisterCallback(
+	_, err := meter.RegisterCallback([]instrument.Asynchronous{
+		heapAlloc,
+		gcCount,
+	},
 		func(ctx context.Context, o metric.MultiObserver) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
@@ -102,8 +105,6 @@ func ExampleMeter_asynchronous_multiple() {
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
 			return nil
 		},
-		heapAlloc,
-		gcCount,
 	)
 
 	if err != nil {

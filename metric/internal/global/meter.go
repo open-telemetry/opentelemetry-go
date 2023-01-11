@@ -278,10 +278,10 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 //
 // It is only valid to call Observe within the scope of the passed function,
 // and only on the instruments that were registered with this call.
-func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
+func (m *meter) RegisterCallback(insts []instrument.Asynchronous, f metric.Callback) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
-		return del.RegisterCallback(f, insts...)
+		return del.RegisterCallback(insts, f)
 	}
 
 	m.mtx.Lock()
@@ -335,7 +335,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 		return
 	}
 
-	reg, err := m.RegisterCallback(c.function, insts...)
+	reg, err := m.RegisterCallback(insts, c.function)
 	if err != nil {
 		otel.Handle(err)
 	}
