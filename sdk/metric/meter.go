@@ -209,7 +209,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 // insts Collect method is called.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
 	if len(insts) == 0 {
-		// Don't allocate an obeservationRegistry if not needed.
+		// Don't allocate an obeserverRegistry if not needed.
 		return noopRegister{}, nil
 	}
 
