@@ -209,11 +209,11 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 // insts Collect method is called.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
 	if len(insts) == 0 {
-		// Don't allocate an obeserverRegistry if not needed.
+		// Don't allocate a multiObserver if not needed.
 		return noopRegister{}, nil
 	}
 
-	reg := newObserverRegistry()
+	reg := newMultiObserver()
 	var errs multierror
 	for _, inst := range insts {
 		switch o := inst.(type) {
@@ -249,43 +249,33 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 	}
 
 	cback := func(ctx context.Context) error {
-		return f(ctx, reg.multiObserver(ctx))
+		return f(ctx, reg)
 	}
 	return m.pipes.registerMultiCallback(cback), nil
 }
 
-type obeserverRegistry struct {
+type multiObserver struct {
 	float64 map[observerID[float64]]struct{}
 	int64   map[observerID[int64]]struct{}
 }
 
-func newObserverRegistry() obeserverRegistry {
-	return obeserverRegistry{
+func newMultiObserver() multiObserver {
+	return multiObserver{
 		float64: make(map[observerID[float64]]struct{}),
 		int64:   make(map[observerID[int64]]struct{}),
 	}
 }
 
-func (r obeserverRegistry) len() int {
+func (r multiObserver) len() int {
 	return len(r.float64) + len(r.int64)
 }
 
-func (r obeserverRegistry) registerFloat64(id observerID[float64]) {
+func (r multiObserver) registerFloat64(id observerID[float64]) {
 	r.float64[id] = struct{}{}
 }
 
-func (r obeserverRegistry) registerInt64(id observerID[int64]) {
+func (r multiObserver) registerInt64(id observerID[int64]) {
 	r.int64[id] = struct{}{}
-}
-
-func (r obeserverRegistry) multiObserver(ctx context.Context) metric.MultiObserver {
-	return multiObserver{obeserverRegistry: r, ctx: ctx}
-}
-
-type multiObserver struct {
-	obeserverRegistry
-
-	ctx context.Context
 }
 
 var (
@@ -308,7 +298,7 @@ func (r multiObserver) Float64(o instrument.Float64Observer, v float64, a ...att
 		)
 		return
 	}
-	oImpl.observe(r.ctx, v, a)
+	oImpl.observe(v, a)
 }
 
 func (r multiObserver) Int64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
@@ -326,7 +316,7 @@ func (r multiObserver) Int64(o instrument.Int64Observer, v int64, a ...attribute
 		)
 		return
 	}
-	oImpl.observe(r.ctx, v, a)
+	oImpl.observe(v, a)
 }
 
 type noopRegister struct{}
@@ -415,6 +405,6 @@ type callbackObserver[N int64 | float64] struct {
 	*observer[N]
 }
 
-func (o callbackObserver[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
-	o.observe(ctx, val, attrs)
+func (o callbackObserver[N]) Observe(_ context.Context, val N, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }

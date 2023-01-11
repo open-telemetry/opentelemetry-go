@@ -251,7 +251,7 @@ func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.Key
 }
 
 // observe records the val for the set of attrs.
-func (o *observer[N]) observe(_ context.Context, val N, attrs []attribute.KeyValue) {
+func (o *observer[N]) observe(val N, attrs []attribute.KeyValue) {
 	for _, agg := range o.aggregators {
 		agg.Aggregate(val, attribute.NewSet(attrs...))
 	}
