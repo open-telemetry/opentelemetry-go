@@ -546,6 +546,72 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 	)
 }
 
+func TestCallbackObserverNonRegistered(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+
+	m1 := mp.Meter("scope1")
+	valid, err := m1.Int64ObservableCounter("ctr")
+	require.NoError(t, err)
+
+	m2 := mp.Meter("scope2")
+	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	require.NoError(t, err)
+	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	require.NoError(t, err)
+
+	// Panics if Observe is called.
+	type int64Obsrv struct{ instrument.Int64Observer }
+	int64Foreign := int64Obsrv{}
+	type float64Obsrv struct{ instrument.Float64Observer }
+	float64Foreign := float64Obsrv{}
+
+	_, err = m1.RegisterCallback(
+		[]instrument.Asynchronous{valid},
+		func(_ context.Context, o metric.MultiObserver) error {
+			o.Int64(valid, 1)
+			o.Int64(iCtr, 1)
+			o.Float64(fCtr, 1)
+			o.Int64(int64Foreign, 1)
+			o.Float64(float64Foreign, 1)
+			return nil
+		},
+	)
+	require.NoError(t, err)
+
+	var got metricdata.ResourceMetrics
+	assert.NotPanics(t, func() {
+		got, err = rdr.Collect(context.Background())
+	})
+
+	assert.NoError(t, err)
+	want := metricdata.ResourceMetrics{
+		Resource: resource.Default(),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{
+					Name: "scope1",
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "ctr",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Value: 1,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
 func TestMetersProvideScope(t *testing.T) {
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
