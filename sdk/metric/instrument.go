@@ -275,7 +275,3 @@ func (o *observer[N]) registerable(scope instrumentation.Scope) error {
 	}
 	return nil
 }
-
-type registerabler interface {
-	registerable(instrumentation.Scope) error
-}
