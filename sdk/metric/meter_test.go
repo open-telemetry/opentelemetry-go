@@ -498,6 +498,54 @@ func TestMeterCreatesInstruments(t *testing.T) {
 	}
 }
 
+func TestRegisterNonSDKObserverErrors(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	meter := mp.Meter("scope")
+
+	type obsrv struct{ instrument.Asynchronous }
+	o := obsrv{}
+
+	_, err := meter.RegisterCallback(
+		[]instrument.Asynchronous{o},
+		func(context.Context, metric.MultiObserver) error { return nil },
+	)
+	assert.ErrorContains(
+		t,
+		err,
+		"invalid observer: from different implementation",
+		"External instrument registred",
+	)
+}
+
+func TestMeterMixingOnRegisterErrors(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+
+	m1 := mp.Meter("scope1")
+	m2 := mp.Meter("scope2")
+	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	require.NoError(t, err)
+	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	require.NoError(t, err)
+	_, err = m1.RegisterCallback(
+		[]instrument.Asynchronous{iCtr, fCtr},
+		func(context.Context, metric.MultiObserver) error { return nil },
+	)
+	assert.ErrorContains(
+		t,
+		err,
+		`invalid registration: observer "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		"Instrument registred with non-creation Meter",
+	)
+	assert.ErrorContains(
+		t,
+		err,
+		`invalid registration: observer "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		"Instrument registred with non-creation Meter",
+	)
+}
+
 func TestMetersProvideScope(t *testing.T) {
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -519,7 +567,6 @@ func TestMetersProvideScope(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-	// TODO: verify this should be an error and then fix this test.
 
 	want := metricdata.ResourceMetrics{
 		Resource: resource.Default(),
