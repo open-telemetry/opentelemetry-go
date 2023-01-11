@@ -16,8 +16,11 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -170,33 +173,17 @@ type instrumentID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Asynchronous
 	instrument.Synchronous
 
 	aggregators []internal.Aggregator[N]
 }
 
-var _ instrument.Float64ObservableCounter = &instrumentImpl[float64]{}
-var _ instrument.Float64ObservableUpDownCounter = &instrumentImpl[float64]{}
-var _ instrument.Float64ObservableGauge = &instrumentImpl[float64]{}
-var _ instrument.Int64ObservableCounter = &instrumentImpl[int64]{}
-var _ instrument.Int64ObservableUpDownCounter = &instrumentImpl[int64]{}
-var _ instrument.Int64ObservableGauge = &instrumentImpl[int64]{}
-var _ instrument.Float64Counter = &instrumentImpl[float64]{}
-var _ instrument.Float64UpDownCounter = &instrumentImpl[float64]{}
-var _ instrument.Float64Histogram = &instrumentImpl[float64]{}
-var _ instrument.Int64Counter = &instrumentImpl[int64]{}
-var _ instrument.Int64UpDownCounter = &instrumentImpl[int64]{}
-var _ instrument.Int64Histogram = &instrumentImpl[int64]{}
-
-func (i *instrumentImpl[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
-	// Only record a value if this is being called from the MetricProvider.
-	_, ok := ctx.Value(produceKey).(struct{})
-	if !ok {
-		return
-	}
-	i.aggregate(ctx, val, attrs)
-}
+var _ instrument.Float64Counter = (*instrumentImpl[float64])(nil)
+var _ instrument.Float64UpDownCounter = (*instrumentImpl[float64])(nil)
+var _ instrument.Float64Histogram = (*instrumentImpl[float64])(nil)
+var _ instrument.Int64Counter = (*instrumentImpl[int64])(nil)
+var _ instrument.Int64UpDownCounter = (*instrumentImpl[int64])(nil)
+var _ instrument.Int64Histogram = (*instrumentImpl[int64])(nil)
 
 func (i *instrumentImpl[N]) Add(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	i.aggregate(ctx, val, attrs)
@@ -213,4 +200,82 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 	for _, agg := range i.aggregators {
 		agg.Aggregate(val, attribute.NewSet(attrs...))
 	}
+}
+
+// observerID is a comparable unique identifier of an observer.
+type observerID[N int64 | float64] struct {
+	name        string
+	description string
+	kind        InstrumentKind
+	unit        unit.Unit
+	scope       instrumentation.Scope
+}
+
+type observer[N int64 | float64] struct {
+	instrument.Asynchronous
+	observerID[N]
+
+	aggregators []internal.Aggregator[N]
+}
+
+func newObserver[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observer[N] {
+	return &observer[N]{
+		observerID: observerID[N]{
+			name:        name,
+			description: desc,
+			kind:        kind,
+			unit:        u,
+			scope:       scope,
+		},
+		aggregators: agg,
+	}
+}
+
+var _ instrument.Float64ObservableCounter = (*observer[float64])(nil)
+var _ instrument.Float64ObservableUpDownCounter = (*observer[float64])(nil)
+var _ instrument.Float64ObservableGauge = (*observer[float64])(nil)
+var _ instrument.Int64ObservableCounter = (*observer[int64])(nil)
+var _ instrument.Int64ObservableUpDownCounter = (*observer[int64])(nil)
+var _ instrument.Int64ObservableGauge = (*observer[int64])(nil)
+
+// Observe logs an error.
+func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
+	var zero N
+	err := errors.New("invalid observation recording")
+	global.Error(err, "dropping measurement",
+		"name", o.name,
+		"description", o.description,
+		"unit", o.unit,
+		"number", fmt.Sprintf("%T", zero),
+	)
+}
+
+func (o *observer[N]) observe(ctx context.Context, val N, attrs []attribute.KeyValue) {
+	if err := ctx.Err(); err != nil {
+		return
+	}
+	for _, agg := range o.aggregators {
+		agg.Aggregate(val, attribute.NewSet(attrs...))
+	}
+}
+
+var errEmptyAgg = errors.New("no aggregators for observer")
+
+func (o *observer[N]) registerable(scope instrumentation.Scope) error {
+	if len(o.aggregators) == 0 {
+		return errEmptyAgg
+	}
+	if scope != o.scope {
+		return fmt.Errorf(
+			"invalid registration: observer %q from Meter %q, registered with Meter %q",
+			o.name,
+			scope.Name,
+			o.scope.Name,
+		)
+	}
+	return nil
+}
+
+type registerabler interface {
+	registerable(instrumentation.Scope) error
 }
