@@ -33,11 +33,7 @@ type TracerProvider struct {
 var _ trace.TracerProvider = (*TracerProvider)(nil)
 
 // NewTracerProvider returns a new TracerProvider that creates new instances of
-// WrapperTracer that wraps OpenTelemetry tracer for each call to Tracer() with
-// new configuration.
-//
-// Repeated calls to Tracer() with the same configuration will look up and return
-// an existing instance of WrapperTracer.
+// WrapperTracer from the given TracerProvider.
 func NewTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *TracerProvider {
 	return &TracerProvider{
 		bridge:   bridge,
@@ -52,6 +48,9 @@ type wrappedTracerKey struct {
 	version string
 }
 
+// Tracer creates a WrappedTracer that wraps the OpenTelemetry tracer for each call to
+// Tracer(). Repeated calls to Tracer() with the same configuration will look up and
+// return an existing instance of WrapperTracer.
 func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
