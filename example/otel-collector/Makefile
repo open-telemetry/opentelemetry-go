@@ -1,9 +1,11 @@
+JAEGER_OPERATOR_VERSION = v1.36.0
+
 namespace-k8s:
 	kubectl apply -f k8s/namespace.yaml
 
 jaeger-operator-k8s:
 	# Create the jaeger operator and necessary artifacts in ns observability
-	kubectl create -n observability -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.31.0/jaeger-operator.yaml
+	kubectl create -n observability -f https://github.com/jaegertracing/jaeger-operator/releases/download/$(JAEGER_OPERATOR_VERSION)/jaeger-operator.yaml
 
 jaeger-k8s:
 	kubectl apply -f k8s/jaeger.yaml
@@ -23,4 +25,4 @@ clean-k8s:
 
 	- kubectl delete -f k8s/jaeger.yaml
 
-	- kubectl delete -n observability -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.31.0/jaeger-operator.yaml
+	- kubectl delete -n observability -f https://github.com/jaegertracing/jaeger-operator/releases/download/$(JAEGER_OPERATOR_VERSION)/jaeger-operator.yaml

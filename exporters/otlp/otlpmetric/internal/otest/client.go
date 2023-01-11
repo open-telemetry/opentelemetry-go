@@ -26,9 +26,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/metric/unit"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -168,13 +168,13 @@ var (
 )
 
 // ClientFactory is a function that when called returns a
-// otlpmetric.Client implementation that is connected to also returned
+// internal.Client implementation that is connected to also returned
 // Collector implementation. The Client is ready to upload metric data to the
 // Collector which is ready to store that data.
 //
 // If resultCh is not nil, the returned Collector needs to use the responses
 // from that channel to send back to the client for every export request.
-type ClientFactory func(resultCh <-chan ExportResult) (otlpmetric.Client, Collector)
+type ClientFactory func(resultCh <-chan ExportResult) (internal.Client, Collector)
 
 // RunClientTests runs a suite of Client integration tests. For example:
 //

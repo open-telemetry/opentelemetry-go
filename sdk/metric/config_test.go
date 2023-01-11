@@ -28,12 +28,13 @@ import (
 )
 
 type reader struct {
-	producer        producer
-	temporalityFunc TemporalitySelector
-	aggregationFunc AggregationSelector
-	collectFunc     func(context.Context) (metricdata.ResourceMetrics, error)
-	forceFlushFunc  func(context.Context) error
-	shutdownFunc    func(context.Context) error
+	producer          sdkProducer
+	externalProducers []Producer
+	temporalityFunc   TemporalitySelector
+	aggregationFunc   AggregationSelector
+	collectFunc       func(context.Context) (metricdata.ResourceMetrics, error)
+	forceFlushFunc    func(context.Context) error
+	shutdownFunc      func(context.Context) error
 }
 
 var _ Reader = (*reader)(nil)
@@ -42,7 +43,8 @@ func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // n
 	return r.aggregationFunc(kind)
 }
 
-func (r *reader) register(p producer) { r.producer = p }
+func (r *reader) register(p sdkProducer)      { r.producer = p }
+func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
@@ -133,11 +135,11 @@ func TestWithReader(t *testing.T) {
 func TestWithView(t *testing.T) {
 	c := newConfig([]Option{WithView(
 		NewView(
-			Instrument{Kind: InstrumentKindAsyncCounter},
+			Instrument{Kind: InstrumentKindObservableCounter},
 			Stream{Name: "a"},
 		),
 		NewView(
-			Instrument{Kind: InstrumentKindSyncCounter},
+			Instrument{Kind: InstrumentKindCounter},
 			Stream{Name: "b"},
 		),
 	)})

@@ -12,19 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package view // import "go.opentelemetry.io/otel/sdk/metric/view"
-
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-)
-
-// Instrument uniquely identifies an instrument within a meter.
-type Instrument struct {
-	Scope instrumentation.Scope
-
-	Name        string
-	Description string
-	Kind        InstrumentKind
-	Aggregation aggregation.Aggregation
-}
+// Package semconv implements OpenTelemetry semantic conventions.
+//
+// OpenTelemetry semantic conventions are agreed standardized naming
+// patterns for OpenTelemetry things. This package represents the conventions
+// as of the v1.16.0 version of the OpenTelemetry specification.
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.16.0"

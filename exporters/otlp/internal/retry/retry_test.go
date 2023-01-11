@@ -32,19 +32,16 @@ func TestWait(t *testing.T) {
 		expected error
 	}{
 		{
-			ctx:      context.Background(),
-			delay:    time.Duration(0),
-			expected: nil,
+			ctx:   context.Background(),
+			delay: time.Duration(0),
 		},
 		{
-			ctx:      context.Background(),
-			delay:    time.Duration(1),
-			expected: nil,
+			ctx:   context.Background(),
+			delay: time.Duration(1),
 		},
 		{
-			ctx:      context.Background(),
-			delay:    time.Duration(-1),
-			expected: nil,
+			ctx:   context.Background(),
+			delay: time.Duration(-1),
 		},
 		{
 			ctx: func() context.Context {
@@ -59,7 +56,12 @@ func TestWait(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.expected, wait(test.ctx, test.delay))
+		err := wait(test.ctx, test.delay)
+		if test.expected == nil {
+			assert.NoError(t, err)
+		} else {
+			assert.ErrorIs(t, err, test.expected)
+		}
 	}
 }
 
@@ -133,7 +135,7 @@ func TestBackoffRetry(t *testing.T) {
 	origWait := waitFunc
 	var done bool
 	waitFunc = func(_ context.Context, d time.Duration) error {
-		delta := math.Ceil(float64(delay)*backoff.DefaultRandomizationFactor) - float64(delay)
+		delta := math.Ceil(float64(delay) * backoff.DefaultRandomizationFactor)
 		assert.InDelta(t, delay, d, delta, "retry not backoffed")
 		// Try twice to ensure call is attempted again after delay.
 		if done {
@@ -148,6 +150,31 @@ func TestBackoffRetry(t *testing.T) {
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
 		return errors.New("not this error")
 	}), assert.AnError)
+}
+
+func TestBackoffRetryCanceledContext(t *testing.T) {
+	ev := func(error) (bool, time.Duration) { return true, 0 }
+
+	delay := time.Millisecond
+	reqFunc := Config{
+		Enabled:         true,
+		InitialInterval: delay,
+		MaxInterval:     delay,
+		// Never stop retrying.
+		MaxElapsedTime: 10 * time.Millisecond,
+	}.RequestFunc(ev)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	count := 0
+	cancel()
+	err := reqFunc(ctx, func(context.Context) error {
+		count++
+		return assert.AnError
+	})
+
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Contains(t, err.Error(), assert.AnError.Error())
+	assert.Equal(t, 1, count)
 }
 
 func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {

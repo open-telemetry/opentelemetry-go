@@ -25,11 +25,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// manualReader is a a simple Reader that allows an application to
+// manualReader is a simple Reader that allows an application to
 // read metrics on demand.
 type manualReader struct {
-	producer     atomic.Value
+	sdkProducer  atomic.Value
 	shutdownOnce sync.Once
+
+	mu                sync.Mutex
+	isShutdown        bool
+	externalProducers atomic.Value
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
@@ -41,20 +45,37 @@ var _ = map[Reader]struct{}{&manualReader{}: {}}
 // NewManualReader returns a Reader which is directly called to collect metrics.
 func NewManualReader(opts ...ManualReaderOption) Reader {
 	cfg := newManualReaderConfig(opts)
-	return &manualReader{
+	r := &manualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
 	}
+	r.externalProducers.Store([]Producer{})
+	return r
 }
 
-// register stores the Producer which enables the caller to read
-// metrics on demand.
-func (mr *manualReader) register(p producer) {
+// register stores the sdkProducer which enables the caller
+// to read metrics from the SDK on demand.
+func (mr *manualReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
-	if !mr.producer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
+}
+
+// RegisterProducer stores the external Producer which enables the caller
+// to read metrics on demand.
+func (mr *manualReader) RegisterProducer(p Producer) {
+	mr.mu.Lock()
+	defer mr.mu.Unlock()
+	if mr.isShutdown {
+		return
+	}
+	currentProducers := mr.externalProducers.Load().([]Producer)
+	newProducers := []Producer{}
+	newProducers = append(newProducers, currentProducers...)
+	newProducers = append(newProducers, p)
+	mr.externalProducers.Store(newProducers)
 }
 
 // temporality reports the Temporality for the instrument kind provided.
@@ -77,18 +98,23 @@ func (mr *manualReader) Shutdown(context.Context) error {
 	err := ErrReaderShutdown
 	mr.shutdownOnce.Do(func() {
 		// Any future call to Collect will now return ErrReaderShutdown.
-		mr.producer.Store(produceHolder{
+		mr.sdkProducer.Store(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
+		mr.mu.Lock()
+		defer mr.mu.Unlock()
+		mr.isShutdown = true
+		// release references to Producer(s)
+		mr.externalProducers.Store([]Producer{})
 		err = nil
 	})
 	return err
 }
 
-// Collect gathers all metrics from the SDK, calling any callbacks necessary.
-// Collect will return an error if called after shutdown.
+// Collect gathers all metrics from the SDK and other Producers, calling any
+// callbacks necessary. Collect will return an error if called after shutdown.
 func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	p := mr.producer.Load()
+	p := mr.sdkProducer.Load()
 	if p == nil {
 		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
 	}
@@ -103,7 +129,19 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 		return metricdata.ResourceMetrics{}, err
 	}
 
-	return ph.produce(ctx)
+	rm, err := ph.produce(ctx)
+	if err != nil {
+		return metricdata.ResourceMetrics{}, err
+	}
+	var errs []error
+	for _, producer := range mr.externalProducers.Load().([]Producer) {
+		externalMetrics, err := producer.Produce(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
+	}
+	return rm, unifyErrors(errs)
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.
