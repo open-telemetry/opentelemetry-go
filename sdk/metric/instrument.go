@@ -250,6 +250,7 @@ func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.Key
 	)
 }
 
+// observe records the val for the set of attrs.
 func (o *observer[N]) observe(ctx context.Context, val N, attrs []attribute.KeyValue) {
 	if err := ctx.Err(); err != nil {
 		return
@@ -261,6 +262,10 @@ func (o *observer[N]) observe(ctx context.Context, val N, attrs []attribute.KeyV
 
 var errEmptyAgg = errors.New("no aggregators for observer")
 
+// registerable returns an error if the observer o should not be registered,
+// and nil if it should. An errEmptyAgg error is returned if o is effecively a
+// no-op because it does not have any aggregators. Also, an error is returned
+// if scope defines a Meter other than the one o was created by.
 func (o *observer[N]) registerable(scope instrumentation.Scope) error {
 	if len(o.aggregators) == 0 {
 		return errEmptyAgg
