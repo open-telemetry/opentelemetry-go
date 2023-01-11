@@ -21,46 +21,50 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Int64Observer is a recorder of int64 measurement values.
+// Int64ObservableCounter describes a set of instruments used asynchronously
+// to record int64 measurements once per a measurement collection cycle.
+// Observations of these instruments are only made within a callback for this
+// instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Int64Observer interface {
+type Int64Observable interface {
 	Asynchronous
 
-	// Observe records the measurement value for a set of attributes.
-	//
-	// It is only valid to call this within a callback. If called outside of
-	// the registered callback it should have no effect on the instrument, and
-	// an error will be reported via the error handler.
-	Observe(ctx context.Context, value int64, attributes ...attribute.KeyValue)
+	int64Observable()
 }
 
 // Int64ObservableCounter is an instrument used to asynchronously record
-// increasing int64 measurements once per a measurement collection cycle. The
-// Observe method is used to record the measured state of the instrument when
-// it is called. Implementations will assume the observed value to be the
-// cumulative sum of the count.
+// increasing int64 measurements once per a measurement collection cycle.
+// Observations are only made within a callback for this instrument. The value
+// observed is assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Int64ObservableCounter interface{ Int64Observer }
+type Int64ObservableCounter interface{ Int64Observable }
 
 // Int64ObservableUpDownCounter is an instrument used to asynchronously record
-// int64 measurements once per a measurement collection cycle. The Observe
-// method is used to record the measured state of the instrument when it is
-// called. Implementations will assume the observed value to be the cumulative
-// sum of the count.
+// int64 measurements once per a measurement collection cycle. Observations are
+// only made within a callback for this instrument. The value observed is
+// assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Int64ObservableUpDownCounter interface{ Int64Observer }
+type Int64ObservableUpDownCounter interface{ Int64Observable }
 
 // Int64ObservableGauge is an instrument used to asynchronously record
 // instantaneous int64 measurements once per a measurement collection cycle.
+// Observations are only made within a callback for this instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Int64ObservableGauge interface{ Int64Observer }
+type Int64ObservableGauge interface{ Int64Observable }
+
+// Int64Observer is a recorder of int64 measurement values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Int64Observer func(value int64, attributes ...attribute.KeyValue)
 
 // Int64Callback is a function registered with a Meter that makes
-// observations for an Int64Observer it is registered with.
+// observations for a Int64Observerable instrument it is registered with.
+// Calls to the Int64Observer record measurement values for the
+// Int64Observable.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.

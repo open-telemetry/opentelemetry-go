@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -211,15 +210,44 @@ type observerID[N int64 | float64] struct {
 	scope       instrumentation.Scope
 }
 
-type observer[N int64 | float64] struct {
-	instrument.Asynchronous
+type float64Observable struct {
+	instrument.Float64Observable
+	*observable[float64]
+}
+
+var _ instrument.Float64ObservableCounter = float64Observable{}
+var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
+var _ instrument.Float64ObservableGauge = float64Observable{}
+
+func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[float64]) float64Observable {
+	return float64Observable{
+		observable: newObservable[float64](scope, kind, name, desc, u, agg),
+	}
+}
+
+type int64Observable struct {
+	instrument.Int64Observable
+	*observable[int64]
+}
+
+var _ instrument.Int64ObservableCounter = int64Observable{}
+var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
+var _ instrument.Int64ObservableGauge = int64Observable{}
+
+func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[int64]) int64Observable {
+	return int64Observable{
+		observable: newObservable[int64](scope, kind, name, desc, u, agg),
+	}
+}
+
+type observable[N int64 | float64] struct {
 	observerID[N]
 
 	aggregators []internal.Aggregator[N]
 }
 
-func newObserver[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observer[N] {
-	return &observer[N]{
+func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observable[N] {
+	return &observable[N]{
 		observerID: observerID[N]{
 			name:        name,
 			description: desc,
@@ -231,29 +259,7 @@ func newObserver[N int64 | float64](scope instrumentation.Scope, kind Instrument
 	}
 }
 
-var _ instrument.Float64ObservableCounter = (*observer[float64])(nil)
-var _ instrument.Float64ObservableUpDownCounter = (*observer[float64])(nil)
-var _ instrument.Float64ObservableGauge = (*observer[float64])(nil)
-var _ instrument.Int64ObservableCounter = (*observer[int64])(nil)
-var _ instrument.Int64ObservableUpDownCounter = (*observer[int64])(nil)
-var _ instrument.Int64ObservableGauge = (*observer[int64])(nil)
-
-// Observe logs an error.
-func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
-	var zero N
-	err := errors.New("invalid observation recording")
-	global.Error(err, "dropping measurement",
-		"name", o.name,
-		"description", o.description,
-		"unit", o.unit,
-		"number", fmt.Sprintf("%T", zero),
-	)
-}
-
-func (o *observer[N]) observe(ctx context.Context, val N, attrs []attribute.KeyValue) {
-	if err := ctx.Err(); err != nil {
-		return
-	}
+func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 	for _, agg := range o.aggregators {
 		agg.Aggregate(val, attribute.NewSet(attrs...))
 	}
@@ -261,7 +267,7 @@ func (o *observer[N]) observe(ctx context.Context, val N, attrs []attribute.KeyV
 
 var errEmptyAgg = errors.New("no aggregators for observer")
 
-func (o *observer[N]) registerable(scope instrumentation.Scope) error {
+func (o *observable[N]) registerable(scope instrumentation.Scope) error {
 	if len(o.aggregators) == 0 {
 		return errEmptyAgg
 	}

@@ -57,45 +57,6 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 	close(finish)
 }
 
-func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
-	// Float64 Instruments
-	t.Run("Float64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &afCounter{}
-			testFloat64Race(delegate.Observe, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &afUpDownCounter{}
-			testFloat64Race(delegate.Observe, delegate.setDelegate)
-		})
-
-		t.Run("Gauge", func(t *testing.T) {
-			delegate := &afGauge{}
-			testFloat64Race(delegate.Observe, delegate.setDelegate)
-		})
-	})
-
-	// Int64 Instruments
-
-	t.Run("Int64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &aiCounter{}
-			testInt64Race(delegate.Observe, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &aiUpDownCounter{}
-			testInt64Race(delegate.Observe, delegate.setDelegate)
-		})
-
-		t.Run("Gauge", func(t *testing.T) {
-			delegate := &aiGauge{}
-			testInt64Race(delegate.Observe, delegate.setDelegate)
-		})
-	})
-}
-
 func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
 	t.Run("Float64", func(t *testing.T) {
@@ -138,11 +99,11 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 type testCountingFloatInstrument struct {
 	count int
 
-	instrument.Asynchronous
+	instrument.Float64Observable
 	instrument.Synchronous
 }
 
-func (i *testCountingFloatInstrument) Observe(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
 func (i *testCountingFloatInstrument) Add(context.Context, float64, ...attribute.KeyValue) {
@@ -155,11 +116,11 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attrib
 type testCountingIntInstrument struct {
 	count int
 
-	instrument.Asynchronous
+	instrument.Int64Observable
 	instrument.Synchronous
 }
 
-func (i *testCountingIntInstrument) Observe(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
 func (i *testCountingIntInstrument) Add(context.Context, int64, ...attribute.KeyValue) {

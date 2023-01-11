@@ -35,8 +35,8 @@ func TestFloat64ObserverOptions(t *testing.T) {
 	got := NewFloat64ObserverConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithFloat64Callback(func(ctx context.Context, o Float64Observer) error {
-			o.Observe(ctx, token)
+		WithFloat64Callback(func(ctx context.Context, observe Float64Observer) error {
+			observe(token)
 			return nil
 		}),
 	)
@@ -46,17 +46,11 @@ func TestFloat64ObserverOptions(t *testing.T) {
 	// Functions are not comparable.
 	cBacks := got.Callbacks()
 	require.Len(t, cBacks, 1, "callbacks")
-	o := &float64Observer{}
-	err := cBacks[0](context.Background(), o)
+	var gotV float64
+	err := cBacks[0](
+		context.Background(),
+		func(v float64, _ ...attribute.KeyValue) { gotV = v },
+	)
 	require.NoError(t, err)
-	assert.Equal(t, token, o.got, "callback not set")
-}
-
-type float64Observer struct {
-	Asynchronous
-	got float64
-}
-
-func (o *float64Observer) Observe(_ context.Context, v float64, _ ...attribute.KeyValue) {
-	o.got = v
+	assert.Equal(t, token, gotV, "callback not set")
 }
