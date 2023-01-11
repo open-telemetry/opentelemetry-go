@@ -274,8 +274,8 @@ func (o *observer[N]) registerable(scope instrumentation.Scope) error {
 		return fmt.Errorf(
 			"invalid registration: observer %q from Meter %q, registered with Meter %q",
 			o.name,
-			scope.Name,
 			o.scope.Name,
+			scope.Name,
 		)
 	}
 	return nil
