@@ -90,7 +90,7 @@ func ExampleMeter_asynchronous_multiple() {
 	gcPause, _ := meter.Float64Histogram("gcPause")
 
 	_, err := meter.RegisterCallback(
-		func(ctx context.Context, o metric.ObservationRecorder) error {
+		func(ctx context.Context, o metric.MultiObserver) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)

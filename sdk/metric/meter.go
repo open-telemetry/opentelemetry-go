@@ -213,7 +213,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 		return noopRegister{}, nil
 	}
 
-	reg := newObservationRegistry()
+	reg := newObserverRegistry()
 	var errs multierror
 	for _, inst := range insts {
 		switch o := inst.(type) {
@@ -249,41 +249,41 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 	}
 
 	cback := func(ctx context.Context) error {
-		return f(ctx, reg.recorder(ctx))
+		return f(ctx, reg.multiObserver(ctx))
 	}
 	return m.pipes.registerMultiCallback(cback), nil
 }
 
-type obeservationRegistry struct {
+type obeserverRegistry struct {
 	float64 map[observerID[float64]]struct{}
 	int64   map[observerID[int64]]struct{}
 }
 
-func newObservationRegistry() obeservationRegistry {
-	return obeservationRegistry{
+func newObserverRegistry() obeserverRegistry {
+	return obeserverRegistry{
 		float64: make(map[observerID[float64]]struct{}),
 		int64:   make(map[observerID[int64]]struct{}),
 	}
 }
 
-func (r obeservationRegistry) len() int {
+func (r obeserverRegistry) len() int {
 	return len(r.float64) + len(r.int64)
 }
 
-func (r obeservationRegistry) registerFloat64(id observerID[float64]) {
+func (r obeserverRegistry) registerFloat64(id observerID[float64]) {
 	r.float64[id] = struct{}{}
 }
 
-func (r obeservationRegistry) registerInt64(id observerID[int64]) {
+func (r obeserverRegistry) registerInt64(id observerID[int64]) {
 	r.int64[id] = struct{}{}
 }
 
-func (r obeservationRegistry) recorder(ctx context.Context) metric.ObservationRecorder {
-	return obeservationRecorder{obeservationRegistry: r, ctx: ctx}
+func (r obeserverRegistry) multiObserver(ctx context.Context) metric.MultiObserver {
+	return multiObserver{obeserverRegistry: r, ctx: ctx}
 }
 
-type obeservationRecorder struct {
-	obeservationRegistry
+type multiObserver struct {
+	obeserverRegistry
 
 	ctx context.Context
 }
@@ -293,7 +293,7 @@ var (
 	errUnregObserver   = errors.New("observer not registered for callback")
 )
 
-func (r obeservationRecorder) Float64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
+func (r multiObserver) Float64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
 	oImpl, ok := o.(*observer[float64])
 	if !ok {
 		global.Error(errUnknownObserver, "failed to record")
@@ -311,7 +311,7 @@ func (r obeservationRecorder) Float64(o instrument.Float64Observer, v float64, a
 	oImpl.observe(r.ctx, v, a)
 }
 
-func (r obeservationRecorder) Int64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
+func (r multiObserver) Int64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
 	oImpl, ok := o.(*observer[int64])
 	if !ok {
 		global.Error(errUnknownObserver, "failed to record")

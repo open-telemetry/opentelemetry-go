@@ -69,7 +69,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = meter.RegisterCallback(func(_ context.Context, o api.ObservationRecorder) error {
+	_, err = meter.RegisterCallback(func(_ context.Context, o api.MultiObserver) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
 		o.Float64(gauge, n, attrs...)
 		return nil
