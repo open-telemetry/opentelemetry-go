@@ -147,7 +147,9 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
 		f := e.Value.(metric.Callback)
-		f(ctx)
+		if err := f(ctx); err != nil {
+			errs.append(err)
+		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err

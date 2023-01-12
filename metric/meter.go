@@ -18,10 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
@@ -44,56 +40,56 @@ type Meter interface {
 	// Int64Counter returns a new instrument identified by name and configured
 	// with options. The instrument is used to synchronously record increasing
 	// int64 measurements during a computational operation.
-	Int64Counter(name string, options ...instrument.Int64Option) (syncint64.Counter, error)
+	Int64Counter(name string, options ...instrument.Int64Option) (instrument.Int64Counter, error)
 	// Int64UpDownCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// int64 measurements during a computational operation.
-	Int64UpDownCounter(name string, options ...instrument.Int64Option) (syncint64.UpDownCounter, error)
+	Int64UpDownCounter(name string, options ...instrument.Int64Option) (instrument.Int64UpDownCounter, error)
 	// Int64Histogram returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// the distribution of int64 measurements during a computational operation.
-	Int64Histogram(name string, options ...instrument.Int64Option) (syncint64.Histogram, error)
+	Int64Histogram(name string, options ...instrument.Int64Option) (instrument.Int64Histogram, error)
 	// Int64ObservableCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// increasing int64 measurements once per a measurement collection cycle.
-	Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.Counter, error)
+	Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error)
 	// Int64ObservableUpDownCounter returns a new instrument identified by name
 	// and configured with options. The instrument is used to asynchronously
 	// record int64 measurements once per a measurement collection cycle.
-	Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (asyncint64.UpDownCounter, error)
+	Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error)
 	// Int64ObservableGauge returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// instantaneous int64 measurements once per a measurement collection
 	// cycle.
-	Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (asyncint64.Gauge, error)
+	Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error)
 
 	// Float64Counter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// increasing float64 measurements during a computational operation.
-	Float64Counter(name string, options ...instrument.Float64Option) (syncfloat64.Counter, error)
+	Float64Counter(name string, options ...instrument.Float64Option) (instrument.Float64Counter, error)
 	// Float64UpDownCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// float64 measurements during a computational operation.
-	Float64UpDownCounter(name string, options ...instrument.Float64Option) (syncfloat64.UpDownCounter, error)
+	Float64UpDownCounter(name string, options ...instrument.Float64Option) (instrument.Float64UpDownCounter, error)
 	// Float64Histogram returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// the distribution of float64 measurements during a computational
 	// operation.
-	Float64Histogram(name string, options ...instrument.Float64Option) (syncfloat64.Histogram, error)
+	Float64Histogram(name string, options ...instrument.Float64Option) (instrument.Float64Histogram, error)
 	// Float64ObservableCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// increasing float64 measurements once per a measurement collection cycle.
-	Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Counter, error)
+	Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error)
 	// Float64ObservableUpDownCounter returns a new instrument identified by
 	// name and configured with options. The instrument is used to
 	// asynchronously record float64 measurements once per a measurement
 	// collection cycle.
-	Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.UpDownCounter, error)
+	Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error)
 	// Float64ObservableGauge returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// instantaneous float64 measurements once per a measurement collection
 	// cycle.
-	Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (asyncfloat64.Gauge, error)
+	Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error)
 
 	// RegisterCallback registers f to be called during the collection of a
 	// measurement cycle.
@@ -120,7 +116,7 @@ type Meter interface {
 // the same attributes as another Callback will report.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context)
+type Callback func(context.Context) error
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.

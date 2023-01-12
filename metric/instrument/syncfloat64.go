@@ -15,8 +15,43 @@
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/unit"
 )
+
+// Float64Counter is an instrument that records increasing float64 values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64Counter interface {
+	// Add records a change to the counter.
+	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
+
+// Float64UpDownCounter is an instrument that records increasing or decreasing
+// float64 values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64UpDownCounter interface {
+	// Add records a change to the counter.
+	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
+
+// Float64Histogram is an instrument that records a distribution of float64
+// values.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64Histogram interface {
+	// Record adds an additional value to the distribution.
+	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+
+	Synchronous
+}
 
 // Float64Config contains options for Asynchronous instruments that
 // observe float64 values.
