@@ -548,7 +548,6 @@ documentation.
 You'll also want to configure an appropriate exporter to [export your telemetry
 data](/docs/instrumentation/go/exporters) to one or more telemetry backends.
 
-
 [`go.opentelemetry.io/otel/trace`]: https://pkg.go.dev/go.opentelemetry.io/otel/trace
 [`go.opentelemetry.io/otel/sdk`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk
 [`go.opentelemetry.io/otel/codes`]: https://pkg.go.dev/go.opentelemetry.io/otel/codes
