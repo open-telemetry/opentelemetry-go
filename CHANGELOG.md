@@ -101,7 +101,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
   Instead it uses the `net.sock.peer` attributes. (#3581)
 - The `Callback` in `go.opentelemetry.io/otel/metric` has the added `Observer` parameter added.
-  This new parameter is used by `Callback` implementations to observe values for asynchronous instruments instead of calling the `Observer` method of the instrument directly. (#3584)
+  This new parameter is used by `Callback` implementations to observe values for asynchronous instruments instead of calling the `Observe` method of the instrument directly. (#3584)
 
 ### Fixed
 
