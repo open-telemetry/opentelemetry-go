@@ -25,10 +25,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -44,56 +40,58 @@ func TestMeterInstrumentConcurrency(t *testing.T) {
 	m := NewMeterProvider().Meter("inst-concurrency")
 
 	go func() {
-		_, _ = m.AsyncFloat64().Counter("AFCounter")
+		_, _ = m.Float64ObservableCounter("AFCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.AsyncFloat64().UpDownCounter("AFUpDownCounter")
+		_, _ = m.Float64ObservableUpDownCounter("AFUpDownCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.AsyncFloat64().Gauge("AFGauge")
+		_, _ = m.Float64ObservableGauge("AFGauge")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.AsyncInt64().Counter("AICounter")
+		_, _ = m.Int64ObservableCounter("AICounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.AsyncInt64().UpDownCounter("AIUpDownCounter")
+		_, _ = m.Int64ObservableUpDownCounter("AIUpDownCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.AsyncInt64().Gauge("AIGauge")
+		_, _ = m.Int64ObservableGauge("AIGauge")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncFloat64().Counter("SFCounter")
+		_, _ = m.Float64Counter("SFCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncFloat64().UpDownCounter("SFUpDownCounter")
+		_, _ = m.Float64UpDownCounter("SFUpDownCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncFloat64().Histogram("SFHistogram")
+		_, _ = m.Float64Histogram("SFHistogram")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncInt64().Counter("SICounter")
+		_, _ = m.Int64Counter("SICounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncInt64().UpDownCounter("SIUpDownCounter")
+		_, _ = m.Int64UpDownCounter("SIUpDownCounter")
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.SyncInt64().Histogram("SIHistogram")
+		_, _ = m.Int64Histogram("SIHistogram")
 		wg.Done()
 	}()
 
 	wg.Wait()
 }
+
+var emptyCallback metric.Callback = func(ctx context.Context) error { return nil }
 
 // A Meter Should be able register Callbacks Concurrently.
 func TestMeterCallbackCreationConcurrency(t *testing.T) {
@@ -103,11 +101,11 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 	m := NewMeterProvider().Meter("callback-concurrency")
 
 	go func() {
-		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
+		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, emptyCallback)
 		wg.Done()
 	}()
 	go func() {
-		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, func(ctx context.Context) {})
+		_, _ = m.RegisterCallback([]instrument.Asynchronous{}, emptyCallback)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -115,7 +113,7 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 
 func TestNoopCallbackUnregisterConcurrency(t *testing.T) {
 	m := NewMeterProvider().Meter("noop-unregister-concurrency")
-	reg, err := m.RegisterCallback(nil, func(ctx context.Context) {})
+	reg, err := m.RegisterCallback(nil, emptyCallback)
 	require.NoError(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -136,18 +134,18 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 	provider := NewMeterProvider(WithReader(reader))
 	meter := provider.Meter("unregister-concurrency")
 
-	actr, err := meter.AsyncFloat64().Counter("counter")
+	actr, err := meter.Float64ObservableCounter("counter")
 	require.NoError(t, err)
 
-	ag, err := meter.AsyncInt64().Gauge("gauge")
+	ag, err := meter.Int64ObservableGauge("gauge")
 	require.NoError(t, err)
 
 	i := []instrument.Asynchronous{actr}
-	regCtr, err := meter.RegisterCallback(i, func(ctx context.Context) {})
+	regCtr, err := meter.RegisterCallback(i, emptyCallback)
 	require.NoError(t, err)
 
 	i = []instrument.Asynchronous{ag}
-	regG, err := meter.RegisterCallback(i, func(ctx context.Context) {})
+	regG, err := meter.RegisterCallback(i, emptyCallback)
 	require.NoError(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -168,18 +166,24 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	extrema := metricdata.NewExtrema(7.)
+	attrs := []attribute.KeyValue{attribute.String("name", "alice")}
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
 		want metricdata.Metrics
 	}{
 		{
-			name: "AsyncInt64Count",
+			name: "ObservableInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncInt64().Counter("aint")
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				ctr, err := m.Int64ObservableCounter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 3)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -192,18 +196,24 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 3},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncInt64UpDownCount",
+			name: "ObservableInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncInt64().UpDownCounter("aint")
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				ctr, err := m.Int64ObservableUpDownCounter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 11)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -216,18 +226,24 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 11},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncInt64Gauge",
+			name: "ObservableInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.AsyncInt64().Gauge("agauge")
+				cback := func(ctx context.Context, o instrument.Int64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				gauge, err := m.Int64ObservableGauge("agauge", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) error {
 					gauge.Observe(ctx, 11)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -238,18 +254,24 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 11},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncFloat64Count",
+			name: "ObservableFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncFloat64().Counter("afloat")
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				ctr, err := m.Float64ObservableCounter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 3)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -262,18 +284,24 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[float64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 3},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncFloat64UpDownCount",
+			name: "ObservableFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.AsyncFloat64().UpDownCounter("afloat")
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				ctr, err := m.Float64ObservableUpDownCounter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 11)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -286,18 +314,24 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 11},
 					},
 				},
 			},
 		},
 		{
-			name: "AsyncFloat64Gauge",
+			name: "ObservableFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.AsyncFloat64().Gauge("agauge")
+				cback := func(ctx context.Context, o instrument.Float64Observer) error {
+					o.Observe(ctx, 4, attrs...)
+					return nil
+				}
+				gauge, err := m.Float64ObservableGauge("agauge", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
-				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) error {
 					gauge.Observe(ctx, 11)
+					return nil
 				})
 				assert.NoError(t, err)
 
@@ -308,6 +342,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 4},
 						{Value: 11},
 					},
 				},
@@ -317,7 +352,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncInt64().Counter("sint")
+				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
 				ctr.Add(context.Background(), 3)
@@ -336,7 +371,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncInt64().UpDownCounter("sint")
+				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
 				ctr.Add(context.Background(), 11)
@@ -355,7 +390,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncInt64Histogram",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.SyncInt64().Histogram("histogram")
+				gauge, err := m.Int64Histogram("histogram")
 				assert.NoError(t, err)
 
 				gauge.Record(context.Background(), 7)
@@ -381,7 +416,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncFloat64().Counter("sfloat")
+				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
 				ctr.Add(context.Background(), 3)
@@ -400,7 +435,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.SyncFloat64().UpDownCounter("sfloat")
+				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
 				ctr.Add(context.Background(), 11)
@@ -419,7 +454,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncFloat64Histogram",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.SyncFloat64().Histogram("histogram")
+				gauge, err := m.Float64Histogram("histogram")
 				assert.NoError(t, err)
 
 				gauge.Record(context.Background(), 7)
@@ -468,18 +503,20 @@ func TestMetersProvideScope(t *testing.T) {
 	mp := NewMeterProvider(WithReader(rdr))
 
 	m1 := mp.Meter("scope1")
-	ctr1, err := m1.AsyncFloat64().Counter("ctr1")
+	ctr1, err := m1.Float64ObservableCounter("ctr1")
 	assert.NoError(t, err)
-	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr1}, func(ctx context.Context) {
+	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr1}, func(ctx context.Context) error {
 		ctr1.Observe(ctx, 5)
+		return nil
 	})
 	assert.NoError(t, err)
 
 	m2 := mp.Meter("scope2")
-	ctr2, err := m2.AsyncInt64().Counter("ctr2")
+	ctr2, err := m2.Int64ObservableCounter("ctr2")
 	assert.NoError(t, err)
-	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr2}, func(ctx context.Context) {
+	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr2}, func(ctx context.Context) error {
 		ctr2.Observe(ctx, 7)
+		return nil
 	})
 	assert.NoError(t, err)
 
@@ -537,22 +574,22 @@ func TestUnregisterUnregisters(t *testing.T) {
 	mp := NewMeterProvider(WithReader(r))
 	m := mp.Meter("TestUnregisterUnregisters")
 
-	int64Counter, err := m.AsyncInt64().Counter("int64.counter")
+	int64Counter, err := m.Int64ObservableCounter("int64.counter")
 	require.NoError(t, err)
 
-	int64UpDownCounter, err := m.AsyncInt64().UpDownCounter("int64.up_down_counter")
+	int64UpDownCounter, err := m.Int64ObservableUpDownCounter("int64.up_down_counter")
 	require.NoError(t, err)
 
-	int64Gauge, err := m.AsyncInt64().Gauge("int64.gauge")
+	int64Gauge, err := m.Int64ObservableGauge("int64.gauge")
 	require.NoError(t, err)
 
-	floag64Counter, err := m.AsyncFloat64().Counter("floag64.counter")
+	floag64Counter, err := m.Float64ObservableCounter("floag64.counter")
 	require.NoError(t, err)
 
-	floag64UpDownCounter, err := m.AsyncFloat64().UpDownCounter("floag64.up_down_counter")
+	floag64UpDownCounter, err := m.Float64ObservableUpDownCounter("floag64.up_down_counter")
 	require.NoError(t, err)
 
-	floag64Gauge, err := m.AsyncFloat64().Gauge("floag64.gauge")
+	floag64Gauge, err := m.Float64ObservableGauge("floag64.gauge")
 	require.NoError(t, err)
 
 	var called bool
@@ -563,7 +600,10 @@ func TestUnregisterUnregisters(t *testing.T) {
 		floag64Counter,
 		floag64UpDownCounter,
 		floag64Gauge,
-	}, func(context.Context) { called = true })
+	}, func(context.Context) error {
+		called = true
+		return nil
+	})
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -587,22 +627,22 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	mp := NewMeterProvider(WithReader(r))
 	m := mp.Meter("testRegisterCallbackDropAggregations")
 
-	int64Counter, err := m.AsyncInt64().Counter("int64.counter")
+	int64Counter, err := m.Int64ObservableCounter("int64.counter")
 	require.NoError(t, err)
 
-	int64UpDownCounter, err := m.AsyncInt64().UpDownCounter("int64.up_down_counter")
+	int64UpDownCounter, err := m.Int64ObservableUpDownCounter("int64.up_down_counter")
 	require.NoError(t, err)
 
-	int64Gauge, err := m.AsyncInt64().Gauge("int64.gauge")
+	int64Gauge, err := m.Int64ObservableGauge("int64.gauge")
 	require.NoError(t, err)
 
-	floag64Counter, err := m.AsyncFloat64().Counter("floag64.counter")
+	floag64Counter, err := m.Float64ObservableCounter("floag64.counter")
 	require.NoError(t, err)
 
-	floag64UpDownCounter, err := m.AsyncFloat64().UpDownCounter("floag64.up_down_counter")
+	floag64UpDownCounter, err := m.Float64ObservableUpDownCounter("floag64.up_down_counter")
 	require.NoError(t, err)
 
-	floag64Gauge, err := m.AsyncFloat64().Gauge("floag64.gauge")
+	floag64Gauge, err := m.Float64ObservableGauge("floag64.gauge")
 	require.NoError(t, err)
 
 	var called bool
@@ -613,7 +653,10 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 		floag64Counter,
 		floag64UpDownCounter,
 		floag64Gauge,
-	}, func(context.Context) { called = true })
+	}, func(context.Context) error {
+		called = true
+		return nil
+	})
 	require.NoError(t, err)
 
 	data, err := r.Collect(context.Background())
@@ -630,15 +673,16 @@ func TestAttributeFilter(t *testing.T) {
 		wantMetric metricdata.Metrics
 	}{
 		{
-			name: "AsyncFloat64Counter",
+			name: "ObservableFloat64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncFloat64().Counter("afcounter")
+				ctr, err := mtr.Float64ObservableCounter("afcounter")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -657,15 +701,16 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64UpDownCounter",
+			name: "ObservableFloat64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncFloat64().UpDownCounter("afupdowncounter")
+				ctr, err := mtr.Float64ObservableUpDownCounter("afupdowncounter")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -684,15 +729,16 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncFloat64Gauge",
+			name: "ObservableFloat64Gauge",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncFloat64().Gauge("afgauge")
+				ctr, err := mtr.Float64ObservableGauge("afgauge")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -709,15 +755,16 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64Counter",
+			name: "ObservableInt64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncInt64().Counter("aicounter")
+				ctr, err := mtr.Int64ObservableCounter("aicounter")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -736,15 +783,16 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64UpDownCounter",
+			name: "ObservableInt64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncInt64().UpDownCounter("aiupdowncounter")
+				ctr, err := mtr.Int64ObservableUpDownCounter("aiupdowncounter")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -763,15 +811,16 @@ func TestAttributeFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "AsyncInt64Gauge",
+			name: "ObservableInt64Gauge",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.AsyncInt64().Gauge("aigauge")
+				ctr, err := mtr.Int64ObservableGauge("aigauge")
 				if err != nil {
 					return err
 				}
-				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) {
+				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(ctx context.Context) error {
 					ctr.Observe(ctx, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
 					ctr.Observe(ctx, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					return nil
 				})
 				return err
 			},
@@ -790,7 +839,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncFloat64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncFloat64().Counter("sfcounter")
+				ctr, err := mtr.Float64Counter("sfcounter")
 				if err != nil {
 					return err
 				}
@@ -816,7 +865,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncFloat64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncFloat64().UpDownCounter("sfupdowncounter")
+				ctr, err := mtr.Float64UpDownCounter("sfupdowncounter")
 				if err != nil {
 					return err
 				}
@@ -842,7 +891,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncFloat64Histogram",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncFloat64().Histogram("sfhistogram")
+				ctr, err := mtr.Float64Histogram("sfhistogram")
 				if err != nil {
 					return err
 				}
@@ -872,7 +921,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncInt64Counter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncInt64().Counter("sicounter")
+				ctr, err := mtr.Int64Counter("sicounter")
 				if err != nil {
 					return err
 				}
@@ -898,7 +947,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncInt64UpDownCounter",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncInt64().UpDownCounter("siupdowncounter")
+				ctr, err := mtr.Int64UpDownCounter("siupdowncounter")
 				if err != nil {
 					return err
 				}
@@ -924,7 +973,7 @@ func TestAttributeFilter(t *testing.T) {
 		{
 			name: "SyncInt64Histogram",
 			register: func(t *testing.T, mtr metric.Meter) error {
-				ctr, err := mtr.SyncInt64().Histogram("sihistogram")
+				ctr, err := mtr.Int64Histogram("sihistogram")
 				if err != nil {
 					return err
 				}
@@ -979,21 +1028,21 @@ func TestAttributeFilter(t *testing.T) {
 }
 
 var (
-	aiCounter       asyncint64.Counter
-	aiUpDownCounter asyncint64.UpDownCounter
-	aiGauge         asyncint64.Gauge
+	aiCounter       instrument.Int64ObservableCounter
+	aiUpDownCounter instrument.Int64ObservableUpDownCounter
+	aiGauge         instrument.Int64ObservableGauge
 
-	afCounter       asyncfloat64.Counter
-	afUpDownCounter asyncfloat64.UpDownCounter
-	afGauge         asyncfloat64.Gauge
+	afCounter       instrument.Float64ObservableCounter
+	afUpDownCounter instrument.Float64ObservableUpDownCounter
+	afGauge         instrument.Float64ObservableGauge
 
-	siCounter       syncint64.Counter
-	siUpDownCounter syncint64.UpDownCounter
-	siHistogram     syncint64.Histogram
+	siCounter       instrument.Int64Counter
+	siUpDownCounter instrument.Int64UpDownCounter
+	siHistogram     instrument.Int64Histogram
 
-	sfCounter       syncfloat64.Counter
-	sfUpDownCounter syncfloat64.UpDownCounter
-	sfHistogram     syncfloat64.Histogram
+	sfCounter       instrument.Float64Counter
+	sfUpDownCounter instrument.Float64UpDownCounter
+	sfHistogram     instrument.Float64Histogram
 )
 
 func BenchmarkInstrumentCreation(b *testing.B) {
@@ -1004,20 +1053,20 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		aiCounter, _ = meter.AsyncInt64().Counter("async.int64.counter")
-		aiUpDownCounter, _ = meter.AsyncInt64().UpDownCounter("async.int64.up.down.counter")
-		aiGauge, _ = meter.AsyncInt64().Gauge("async.int64.gauge")
+		aiCounter, _ = meter.Int64ObservableCounter("observable.int64.counter")
+		aiUpDownCounter, _ = meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		aiGauge, _ = meter.Int64ObservableGauge("observable.int64.gauge")
 
-		afCounter, _ = meter.AsyncFloat64().Counter("async.float64.counter")
-		afUpDownCounter, _ = meter.AsyncFloat64().UpDownCounter("async.float64.up.down.counter")
-		afGauge, _ = meter.AsyncFloat64().Gauge("async.float64.gauge")
+		afCounter, _ = meter.Float64ObservableCounter("observable.float64.counter")
+		afUpDownCounter, _ = meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
+		afGauge, _ = meter.Float64ObservableGauge("observable.float64.gauge")
 
-		siCounter, _ = meter.SyncInt64().Counter("sync.int64.counter")
-		siUpDownCounter, _ = meter.SyncInt64().UpDownCounter("sync.int64.up.down.counter")
-		siHistogram, _ = meter.SyncInt64().Histogram("sync.int64.histogram")
+		siCounter, _ = meter.Int64Counter("sync.int64.counter")
+		siUpDownCounter, _ = meter.Int64UpDownCounter("sync.int64.up.down.counter")
+		siHistogram, _ = meter.Int64Histogram("sync.int64.histogram")
 
-		sfCounter, _ = meter.SyncFloat64().Counter("sync.float64.counter")
-		sfUpDownCounter, _ = meter.SyncFloat64().UpDownCounter("sync.float64.up.down.counter")
-		sfHistogram, _ = meter.SyncFloat64().Histogram("sync.float64.histogram")
+		sfCounter, _ = meter.Float64Counter("sync.float64.counter")
+		sfUpDownCounter, _ = meter.Float64UpDownCounter("sync.float64.up.down.counter")
+		sfHistogram, _ = meter.Float64Histogram("sync.float64.histogram")
 	}
 }

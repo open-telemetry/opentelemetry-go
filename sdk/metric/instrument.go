@@ -19,10 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -44,26 +40,27 @@ const (
 	// instrumentKindUndefined is an undefined instrument kind, it should not
 	// be used by any initialized type.
 	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck,unused
-	// InstrumentKindSyncCounter identifies a group of instruments that record
+	// InstrumentKindCounter identifies a group of instruments that record
 	// increasing values synchronously with the code path they are measuring.
-	InstrumentKindSyncCounter
-	// InstrumentKindSyncUpDownCounter identifies a group of instruments that
+	InstrumentKindCounter
+	// InstrumentKindUpDownCounter identifies a group of instruments that
 	// record increasing and decreasing values synchronously with the code path
 	// they are measuring.
-	InstrumentKindSyncUpDownCounter
-	// InstrumentKindSyncHistogram identifies a group of instruments that
-	// record a distribution of values synchronously with the code path they
-	// are measuring.
-	InstrumentKindSyncHistogram
-	// InstrumentKindAsyncCounter identifies a group of instruments that record
-	// increasing values in an asynchronous callback.
-	InstrumentKindAsyncCounter
-	// InstrumentKindAsyncUpDownCounter identifies a group of instruments that
-	// record increasing and decreasing values in an asynchronous callback.
-	InstrumentKindAsyncUpDownCounter
-	// InstrumentKindAsyncGauge identifies a group of instruments that record
-	// current values in an asynchronous callback.
-	InstrumentKindAsyncGauge
+	InstrumentKindUpDownCounter
+	// InstrumentKindHistogram identifies a group of instruments that record a
+	// distribution of values synchronously with the code path they are
+	// measuring.
+	InstrumentKindHistogram
+	// InstrumentKindObservableCounter identifies a group of instruments that
+	// record increasing values in an asynchronous callback.
+	InstrumentKindObservableCounter
+	// InstrumentKindObservableUpDownCounter identifies a group of instruments
+	// that record increasing and decreasing values in an asynchronous
+	// callback.
+	InstrumentKindObservableUpDownCounter
+	// InstrumentKindObservableGauge identifies a group of instruments that
+	// record current values in an asynchronous callback.
+	InstrumentKindObservableGauge
 )
 
 type nonComparable [0]func() // nolint: unused  // This is indeed used.
@@ -179,18 +176,18 @@ type instrumentImpl[N int64 | float64] struct {
 	aggregators []internal.Aggregator[N]
 }
 
-var _ asyncfloat64.Counter = &instrumentImpl[float64]{}
-var _ asyncfloat64.UpDownCounter = &instrumentImpl[float64]{}
-var _ asyncfloat64.Gauge = &instrumentImpl[float64]{}
-var _ asyncint64.Counter = &instrumentImpl[int64]{}
-var _ asyncint64.UpDownCounter = &instrumentImpl[int64]{}
-var _ asyncint64.Gauge = &instrumentImpl[int64]{}
-var _ syncfloat64.Counter = &instrumentImpl[float64]{}
-var _ syncfloat64.UpDownCounter = &instrumentImpl[float64]{}
-var _ syncfloat64.Histogram = &instrumentImpl[float64]{}
-var _ syncint64.Counter = &instrumentImpl[int64]{}
-var _ syncint64.UpDownCounter = &instrumentImpl[int64]{}
-var _ syncint64.Histogram = &instrumentImpl[int64]{}
+var _ instrument.Float64ObservableCounter = &instrumentImpl[float64]{}
+var _ instrument.Float64ObservableUpDownCounter = &instrumentImpl[float64]{}
+var _ instrument.Float64ObservableGauge = &instrumentImpl[float64]{}
+var _ instrument.Int64ObservableCounter = &instrumentImpl[int64]{}
+var _ instrument.Int64ObservableUpDownCounter = &instrumentImpl[int64]{}
+var _ instrument.Int64ObservableGauge = &instrumentImpl[int64]{}
+var _ instrument.Float64Counter = &instrumentImpl[float64]{}
+var _ instrument.Float64UpDownCounter = &instrumentImpl[float64]{}
+var _ instrument.Float64Histogram = &instrumentImpl[float64]{}
+var _ instrument.Int64Counter = &instrumentImpl[int64]{}
+var _ instrument.Int64UpDownCounter = &instrumentImpl[int64]{}
+var _ instrument.Int64Histogram = &instrumentImpl[int64]{}
 
 func (i *instrumentImpl[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	// Only record a value if this is being called from the MetricProvider.

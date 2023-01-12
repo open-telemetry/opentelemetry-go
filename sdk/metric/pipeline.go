@@ -76,8 +76,9 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    list.List
+	aggregations   map[instrumentation.Scope][]instrumentSync
+	callbacks      []func(context.Context) error
+	multiCallbacks list.List
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -95,14 +96,23 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(c callback) (unregister func()) {
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addCallback(cback func(context.Context) error) {
 	p.Lock()
 	defer p.Unlock()
-	e := p.callbacks.PushBack(c)
+	p.callbacks = append(p.callbacks, cback)
+}
+
+// addMultiCallback registers a multi-instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addMultiCallback(c metric.Callback) (unregister func()) {
+	p.Lock()
+	defer p.Unlock()
+	e := p.multiCallbacks.PushBack(c)
 	return func() {
 		p.Lock()
-		p.callbacks.Remove(e)
+		p.multiCallbacks.Remove(e)
 		p.Unlock()
 	}
 }
@@ -124,10 +134,22 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	p.Lock()
 	defer p.Unlock()
 
-	for e := p.callbacks.Front(); e != nil; e = e.Next() {
+	var errs multierror
+	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(callback)
-		f(ctx)
+		if err := c(ctx); err != nil {
+			errs.append(err)
+		}
+		if err := ctx.Err(); err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		// TODO make the callbacks parallel. ( #3034 )
+		f := e.Value.(metric.Callback)
+		if err := f(ctx); err != nil {
+			errs.append(err)
+		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err
@@ -159,7 +181,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
-	}, nil
+	}, errs.errorOrNil()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -332,7 +354,7 @@ func (i *inserter[N]) instrumentID(kind InstrumentKind, stream Stream) instrumen
 	}
 
 	switch kind {
-	case InstrumentKindAsyncCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram:
+	case InstrumentKindObservableCounter, InstrumentKindCounter, InstrumentKindHistogram:
 		id.Monotonic = true
 	}
 
@@ -350,7 +372,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 		return internal.NewLastValue[N](), nil
 	case aggregation.Sum:
 		switch kind {
-		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
+		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 			// Asynchronous counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
@@ -388,18 +410,18 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 // isAggregatorCompatible checks if the aggregation can be used by the instrument.
 // Current compatibility:
 //
-// | Instrument Kind      | Drop | LastValue | Sum | Histogram | Exponential Histogram |
-// |----------------------|------|-----------|-----|-----------|-----------------------|
-// | Sync Counter         | X    |           | X   | X         | X                     |
-// | Sync UpDown Counter  | X    |           | X   |           |                       |
-// | Sync Histogram       | X    |           | X   | X         | X                     |
-// | Async Counter        | X    |           | X   |           |                       |
-// | Async UpDown Counter | X    |           | X   |           |                       |
-// | Async Gauge          | X    | X         |     |           |                       |.
+// | Instrument Kind          | Drop | LastValue | Sum | Histogram | Exponential Histogram |
+// |--------------------------|------|-----------|-----|-----------|-----------------------|
+// | Counter                  | X    |           | X   | X         | X                     |
+// | UpDownCounter            | X    |           | X   |           |                       |
+// | Histogram                | X    |           | X   | X         | X                     |
+// | Observable Counter       | X    |           | X   |           |                       |
+// | Observable UpDownCounter | X    |           | X   |           |                       |
+// | Observable Gauge         | X    | X         |     |           |                       |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.ExplicitBucketHistogram:
-		if kind == InstrumentKindSyncCounter || kind == InstrumentKindSyncHistogram {
+		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
 			return nil
 		}
 		// TODO: review need for aggregation check after
@@ -407,7 +429,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 		return errIncompatibleAggregation
 	case aggregation.Sum:
 		switch kind {
-		case InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter, InstrumentKindSyncCounter, InstrumentKindSyncHistogram, InstrumentKindSyncUpDownCounter:
+		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter, InstrumentKindCounter, InstrumentKindHistogram, InstrumentKindUpDownCounter:
 			return nil
 		default:
 			// TODO: review need for aggregation check after
@@ -415,7 +437,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 			return errIncompatibleAggregation
 		}
 	case aggregation.LastValue:
-		if kind == InstrumentKindAsyncGauge {
+		if kind == InstrumentKindObservableGauge {
 			return nil
 		}
 		// TODO: review need for aggregation check after
@@ -447,10 +469,16 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(c callback) metric.Registration {
+func (p pipelines) registerCallback(cback func(context.Context) error) {
+	for _, pipe := range p {
+		pipe.addCallback(cback)
+	}
+}
+
+func (p pipelines) registerMultiCallback(c metric.Callback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
-		unregs[i] = pipe.addCallback(c)
+		unregs[i] = pipe.addMultiCallback(c)
 	}
 	return unregisterFuncs(unregs)
 }
