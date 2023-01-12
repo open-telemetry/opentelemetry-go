@@ -107,8 +107,8 @@ type Meter interface {
 }
 
 // Callback is a function registered with a Meter that makes observations for
-// the set of instruments it is registered with. The MultiObserver parameter is
-// used to record measurment observations for these instruments.
+// the set of instruments it is registered with. The Observer parameter is used
+// to record measurment observations for these instruments.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.
@@ -118,10 +118,10 @@ type Meter interface {
 // the same attributes as another Callback will report.
 //
 // The function needs to be concurrent safe.
-type Callback func(context.Context, MultiObserver) error
+type Callback func(context.Context, Observer) error
 
-// MultiObserver records measurements for multiple instruments in a Callback.
-type MultiObserver interface {
+// Observer records measurements for multiple instruments in a Callback.
+type Observer interface {
 	// ObserveFloat64 records the float64 value with attributes for obsrv.
 	ObserveFloat64(obsrv instrument.Float64Observer, value float64, attributes ...attribute.KeyValue)
 	// ObserveInt64 records the int64 value with attributes for obsrv.

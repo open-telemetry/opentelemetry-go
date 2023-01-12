@@ -45,7 +45,7 @@ func TestMeterProviderRace(t *testing.T) {
 	close(finish)
 }
 
-var zeroCallback metric.Callback = func(ctx context.Context, or metric.MultiObserver) error {
+var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer) error {
 	return nil
 }
 
@@ -134,7 +134,7 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float
 
 	_, err = m.RegisterCallback([]instrument.Asynchronous{
 		afcounter,
-	}, func(ctx context.Context, obs metric.MultiObserver) error {
+	}, func(ctx context.Context, obs metric.Observer) error {
 		obs.ObserveFloat64(afcounter, 3)
 		return nil
 	})
@@ -329,7 +329,7 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 
 	var called0 bool
-	reg0, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context, metric.MultiObserver) error {
+	reg0, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context, metric.Observer) error {
 		called0 = true
 		return nil
 	})
@@ -340,7 +340,7 @@ func TestRegistrationDelegation(t *testing.T) {
 	assert.Equal(t, 0, mImpl.registry.Len(), "callback not unregistered")
 
 	var called1 bool
-	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context, metric.MultiObserver) error {
+	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context, metric.Observer) error {
 		called1 = true
 		return nil
 	})

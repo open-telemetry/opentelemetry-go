@@ -93,7 +93,7 @@ func ExampleMeter_asynchronous_multiple() {
 		heapAlloc,
 		gcCount,
 	},
-		func(ctx context.Context, o metric.MultiObserver) error {
+		func(ctx context.Context, o metric.Observer) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)

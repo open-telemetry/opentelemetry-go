@@ -202,8 +202,8 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 	}
 }
 
-// observerID is a comparable unique identifier of an observer.
-type observerID[N int64 | float64] struct {
+// observablID is a comparable unique identifier of an observable.
+type observablID[N int64 | float64] struct {
 	name        string
 	description string
 	kind        InstrumentKind
@@ -211,16 +211,16 @@ type observerID[N int64 | float64] struct {
 	scope       instrumentation.Scope
 }
 
-type observer[N int64 | float64] struct {
+type observable[N int64 | float64] struct {
 	instrument.Asynchronous
-	observerID[N]
+	observablID[N]
 
 	aggregators []internal.Aggregator[N]
 }
 
-func newObserver[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observer[N] {
-	return &observer[N]{
-		observerID: observerID[N]{
+func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observable[N] {
+	return &observable[N]{
+		observablID: observablID[N]{
 			name:        name,
 			description: desc,
 			kind:        kind,
@@ -231,15 +231,15 @@ func newObserver[N int64 | float64](scope instrumentation.Scope, kind Instrument
 	}
 }
 
-var _ instrument.Float64ObservableCounter = (*observer[float64])(nil)
-var _ instrument.Float64ObservableUpDownCounter = (*observer[float64])(nil)
-var _ instrument.Float64ObservableGauge = (*observer[float64])(nil)
-var _ instrument.Int64ObservableCounter = (*observer[int64])(nil)
-var _ instrument.Int64ObservableUpDownCounter = (*observer[int64])(nil)
-var _ instrument.Int64ObservableGauge = (*observer[int64])(nil)
+var _ instrument.Float64ObservableCounter = (*observable[float64])(nil)
+var _ instrument.Float64ObservableUpDownCounter = (*observable[float64])(nil)
+var _ instrument.Float64ObservableGauge = (*observable[float64])(nil)
+var _ instrument.Int64ObservableCounter = (*observable[int64])(nil)
+var _ instrument.Int64ObservableUpDownCounter = (*observable[int64])(nil)
+var _ instrument.Int64ObservableGauge = (*observable[int64])(nil)
 
 // Observe logs an error.
-func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
+func (o *observable[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	var zero N
 	err := errors.New("invalid observation recording")
 	global.Error(err, "dropping measurement",
@@ -251,25 +251,25 @@ func (o *observer[N]) Observe(ctx context.Context, val N, attrs ...attribute.Key
 }
 
 // observe records the val for the set of attrs.
-func (o *observer[N]) observe(val N, attrs []attribute.KeyValue) {
+func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 	for _, agg := range o.aggregators {
 		agg.Aggregate(val, attribute.NewSet(attrs...))
 	}
 }
 
-var errEmptyAgg = errors.New("no aggregators for observer")
+var errEmptyAgg = errors.New("no aggregators for observable")
 
-// registerable returns an error if the observer o should not be registered,
+// registerable returns an error if the observable o should not be registered,
 // and nil if it should. An errEmptyAgg error is returned if o is effecively a
 // no-op because it does not have any aggregators. Also, an error is returned
 // if scope defines a Meter other than the one o was created by.
-func (o *observer[N]) registerable(scope instrumentation.Scope) error {
+func (o *observable[N]) registerable(scope instrumentation.Scope) error {
 	if len(o.aggregators) == 0 {
 		return errEmptyAgg
 	}
 	if scope != o.scope {
 		return fmt.Errorf(
-			"invalid registration: observer %q from Meter %q, registered with Meter %q",
+			"invalid registration: observable %q from Meter %q, registered with Meter %q",
 			o.name,
 			o.scope.Name,
 			scope.Name,
