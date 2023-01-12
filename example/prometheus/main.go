@@ -71,7 +71,7 @@ func main() {
 	}
 	_, err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(_ context.Context, o api.MultiObserver) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
-		o.Float64(gauge, n, attrs...)
+		o.ObserveFloat64(gauge, n, attrs...)
 		return nil
 	})
 	if err != nil {

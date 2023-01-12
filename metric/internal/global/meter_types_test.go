@@ -151,10 +151,10 @@ type observationRecorder struct {
 	ctx context.Context
 }
 
-func (o observationRecorder) Float64(i instrument.Float64Observer, value float64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observer, value float64, attr ...attribute.KeyValue) {
 	i.Observe(o.ctx, value, attr...)
 }
 
-func (o observationRecorder) Int64(i instrument.Int64Observer, value int64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observer, value int64, attr ...attribute.KeyValue) {
 	i.Observe(o.ctx, value, attr...)
 }

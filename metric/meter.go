@@ -122,10 +122,10 @@ type Callback func(context.Context, MultiObserver) error
 
 // MultiObserver records measurements for multiple instruments in a Callback.
 type MultiObserver interface {
-	// Float64 records the float64 value with attributes for obsrv.
-	Float64(obsrv instrument.Float64Observer, value float64, attributes ...attribute.KeyValue)
-	// Int64 records the int64 value with attributes for obsrv.
-	Int64(obsrv instrument.Int64Observer, value int64, attributes ...attribute.KeyValue)
+	// ObserveFloat64 records the float64 value with attributes for obsrv.
+	ObserveFloat64(obsrv instrument.Float64Observer, value float64, attributes ...attribute.KeyValue)
+	// ObserveInt64 records the int64 value with attributes for obsrv.
+	ObserveInt64(obsrv instrument.Int64Observer, value int64, attributes ...attribute.KeyValue)
 }
 
 // Registration is an token representing the unique registration of a callback

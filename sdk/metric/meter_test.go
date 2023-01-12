@@ -182,7 +182,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64ObservableCounter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(ctr, 3)
+					o.ObserveInt64(ctr, 3)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -212,7 +212,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64ObservableUpDownCounter("aint", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(ctr, 11)
+					o.ObserveInt64(ctr, 11)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -242,7 +242,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Int64ObservableGauge("agauge", instrument.WithInt64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(gauge, 11)
+					o.ObserveInt64(gauge, 11)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -270,7 +270,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64ObservableCounter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(ctr, 3)
+					o.ObserveFloat64(ctr, 3)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -300,7 +300,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64ObservableUpDownCounter("afloat", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(ctr, 11)
+					o.ObserveFloat64(ctr, 11)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -330,7 +330,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Float64ObservableGauge("agauge", instrument.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback([]instrument.Asynchronous{gauge}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(gauge, 11)
+					o.ObserveFloat64(gauge, 11)
 					return nil
 				})
 				assert.NoError(t, err)
@@ -569,11 +569,11 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	_, err = m1.RegisterCallback(
 		[]instrument.Asynchronous{valid},
 		func(_ context.Context, o metric.MultiObserver) error {
-			o.Int64(valid, 1)
-			o.Int64(iCtr, 1)
-			o.Float64(fCtr, 1)
-			o.Int64(int64Foreign, 1)
-			o.Float64(float64Foreign, 1)
+			o.ObserveInt64(valid, 1)
+			o.ObserveInt64(iCtr, 1)
+			o.ObserveFloat64(fCtr, 1)
+			o.ObserveInt64(int64Foreign, 1)
+			o.ObserveFloat64(float64Foreign, 1)
 			return nil
 		},
 	)
@@ -620,7 +620,7 @@ func TestMetersProvideScope(t *testing.T) {
 	ctr1, err := m1.Float64ObservableCounter("ctr1")
 	assert.NoError(t, err)
 	_, err = m1.RegisterCallback([]instrument.Asynchronous{ctr1}, func(_ context.Context, o metric.MultiObserver) error {
-		o.Float64(ctr1, 5)
+		o.ObserveFloat64(ctr1, 5)
 		return nil
 	})
 	assert.NoError(t, err)
@@ -629,7 +629,7 @@ func TestMetersProvideScope(t *testing.T) {
 	ctr2, err := m2.Int64ObservableCounter("ctr2")
 	assert.NoError(t, err)
 	_, err = m2.RegisterCallback([]instrument.Asynchronous{ctr2}, func(_ context.Context, o metric.MultiObserver) error {
-		o.Int64(ctr2, 7)
+		o.ObserveInt64(ctr2, 7)
 		return nil
 	})
 	assert.NoError(t, err)
@@ -796,8 +796,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Float64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err
@@ -824,8 +824,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Float64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err
@@ -852,8 +852,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Float64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Float64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err
@@ -878,8 +878,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Int64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err
@@ -906,8 +906,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Int64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err
@@ -934,8 +934,8 @@ func TestAttributeFilter(t *testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback([]instrument.Asynchronous{ctr}, func(_ context.Context, o metric.MultiObserver) error {
-					o.Int64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.Int64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
+					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				})
 				return err

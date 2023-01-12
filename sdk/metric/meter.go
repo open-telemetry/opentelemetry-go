@@ -283,7 +283,7 @@ var (
 	errUnregObserver   = errors.New("observer not registered for callback")
 )
 
-func (r multiObserver) Float64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
+func (r multiObserver) ObserveFloat64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
 	oImpl, ok := o.(*observer[float64])
 	if !ok {
 		global.Error(errUnknownObserver, "failed to record")
@@ -301,7 +301,7 @@ func (r multiObserver) Float64(o instrument.Float64Observer, v float64, a ...att
 	oImpl.observe(v, a)
 }
 
-func (r multiObserver) Int64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
+func (r multiObserver) ObserveInt64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
 	oImpl, ok := o.(*observer[int64])
 	if !ok {
 		global.Error(errUnknownObserver, "failed to record")

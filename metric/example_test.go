@@ -98,8 +98,8 @@ func ExampleMeter_asynchronous_multiple() {
 			// This call does work
 			runtime.ReadMemStats(memStats)
 
-			o.Int64(heapAlloc, int64(memStats.HeapAlloc))
-			o.Int64(gcCount, int64(memStats.NumGC))
+			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
+			o.ObserveInt64(gcCount, int64(memStats.NumGC))
 
 			// This function synchronously records the pauses
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])

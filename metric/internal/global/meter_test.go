@@ -135,7 +135,7 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float
 	_, err = m.RegisterCallback([]instrument.Asynchronous{
 		afcounter,
 	}, func(ctx context.Context, obs metric.MultiObserver) error {
-		obs.Float64(afcounter, 3)
+		obs.ObserveFloat64(afcounter, 3)
 		return nil
 	})
 	require.NoError(t, err)
