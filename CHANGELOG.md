@@ -101,6 +101,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The exporter from `go.opentelemetry.io/otel/exporters/zipkin` is updated to use the `v1.16.0` version of semantic conventions.
   This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
   Instead it uses the `net.sock.peer` attributes. (#3581)
+- The parameters for the `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/metric` are changed.
+  The slice of `instrument.Asynchronous` parameter is now passed as a variadic argument. (#3587)
 - The `Min` and `Max` fields of the `HistogramDataPoint` in `go.opentelemetry.io/otel/sdk/metric/metricdata` are now defined with the added `Extrema` type instead of a `*float64`. (#3487)
 
 ### Deprecated
