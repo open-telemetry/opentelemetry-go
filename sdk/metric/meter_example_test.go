@@ -342,7 +342,7 @@ func TestDeltaAsynchronousExample(t *testing.T) {
 	atomic.StoreInt64(&pfValues[1], 53)
 	atomic.StoreInt64(&pfValues[2], 5)
 
-	*wantFilterValue = -49 // TODO: This should be 11
+	*wantFilterValue = -49
 
 	wantAgg := metricdata.Sum[int64]{
 		Temporality: metricdata.DeltaTemporality,
