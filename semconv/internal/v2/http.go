@@ -84,7 +84,7 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 		h = req.URL.Host
 	}
 	peer, p := firstHostPort(h, req.Header.Get("Host"))
-	port := requiredHTTPPort(req.TLS != nil, p)
+	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", p)
 	if port > 0 {
 		n++
 	}
