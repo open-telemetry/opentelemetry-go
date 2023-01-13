@@ -59,6 +59,31 @@ func TestHTTPClientResponse(t *testing.T) {
 	}, got)
 }
 
+func TestHTTPSClientRequest(t *testing.T) {
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL: &url.URL{
+			Scheme: "https",
+			Host:   "127.0.0.1:443",
+			Path:   "/resource",
+		},
+		Proto:      "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+	}
+
+	assert.Equal(
+		t,
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("http.flavor", "1.0"),
+			attribute.String("http.url", "https://127.0.0.1:443/resource"),
+			attribute.String("net.peer.name", "127.0.0.1"),
+		},
+		hc.ClientRequest(req),
+	)
+}
+
 func TestHTTPClientRequest(t *testing.T) {
 	const (
 		user  = "alice"
