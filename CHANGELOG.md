@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `Int64Counter` replaces the `syncint64.Counter`
   - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
   - `Int64Histogram` replaces the `syncint64.Histogram`
+- Add `NewTracerProvider` to `go.opentelemetry.io/otel/bridge/opentracing` to create `WrapperTracer` instances from a `TracerProvider`. (#3316)
 
 ### Fixed
 
@@ -103,6 +104,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The exporter from `go.opentelemetry.io/otel/exporters/zipkin` is updated to use the `v1.16.0` version of semantic conventions.
   This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
   Instead it uses the `net.sock.peer` attributes. (#3581)
+- The parameters for the `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/metric` are changed.
+  The slice of `instrument.Asynchronous` parameter is now passed as a variadic argument. (#3587)
 
 ### Deprecated
 
@@ -115,6 +118,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 - The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
   Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `NewWrappedTracerProvider` in `go.opentelemetry.io/otel/bridge/opentracing` is now deprecated. Use `NewTracerProvider` instead. (#3316)
 
 ### Removed
 
