@@ -69,11 +69,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(_ context.Context, o api.Observer) error {
+	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
 		o.ObserveFloat64(gauge, n, attrs...)
 		return nil
-	})
+	}, gauge)
 	if err != nil {
 		log.Fatal(err)
 	}
