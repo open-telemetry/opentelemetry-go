@@ -1059,7 +1059,7 @@ func TestAsynchronousExample(t *testing.T) {
 		process1001 = attribute.NewSet(processID1001)
 	)
 
-	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Set]int64, func(*testing.T), *metricdata.ScopeMetrics) {
+	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Set]int64, func(*testing.T), *metricdata.ScopeMetrics, *int64, *int64, *int64) {
 		t.Helper()
 
 		const (
@@ -1091,9 +1091,34 @@ func TestAsynchronousExample(t *testing.T) {
 		require.NoError(t, err)
 
 		want := &metricdata.ScopeMetrics{
-			Scope:   instrumentation.Scope{Name: scopeName},
-			Metrics: []metricdata.Metrics{{Name: filteredStream}, {Name: instName}},
+			Scope: instrumentation.Scope{Name: scopeName},
+			Metrics: []metricdata.Metrics{
+				{
+					Name: filteredStream,
+					Data: metricdata.Sum[int64]{
+						Temporality: temp,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: process1001},
+						},
+					},
+				},
+				{
+					Name: instName,
+					Data: metricdata.Sum[int64]{
+						Temporality: temp,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: thread1},
+							{Attributes: thread2},
+						},
+					},
+				},
+			},
 		}
+		wantFiltered := &want.Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value
+		wantThread1 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Value
+		wantThread2 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[1].Value
 
 		collect := func(t *testing.T) {
 			t.Helper()
@@ -1103,31 +1128,12 @@ func TestAsynchronousExample(t *testing.T) {
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 		}
 
-		return observations, collect, want
+		return observations, collect, want, wantFiltered, wantThread1, wantThread2
 	}
 
 	t.Run("Cumulative", func(t *testing.T) {
 		temporality := metricdata.CumulativeTemporality
-		observations, verify, want := setup(t, temporality)
-
-		want.Metrics[0].Data = metricdata.Sum[int64]{
-			Temporality: temporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{
-				{Attributes: process1001},
-			},
-		}
-		want.Metrics[1].Data = metricdata.Sum[int64]{
-			Temporality: temporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{
-				{Attributes: thread1},
-				{Attributes: thread2},
-			},
-		}
-		wantFiltered := &want.Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value
-		wantThread1 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Value
-		wantThread2 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[1].Value
+		observations, verify, want, wantFiltered, wantThread1, wantThread2 := setup(t, temporality)
 
 		// During the time range (T0, T1]:
 		//     pid = 1001, tid = 1, #PF = 50
@@ -1202,26 +1208,7 @@ func TestAsynchronousExample(t *testing.T) {
 
 	t.Run("Delta", func(t *testing.T) {
 		temporality := metricdata.DeltaTemporality
-		observations, verify, want := setup(t, temporality)
-
-		want.Metrics[0].Data = metricdata.Sum[int64]{
-			Temporality: temporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{
-				{Attributes: process1001},
-			},
-		}
-		want.Metrics[1].Data = metricdata.Sum[int64]{
-			Temporality: temporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{
-				{Attributes: thread1},
-				{Attributes: thread2},
-			},
-		}
-		wantFiltered := &want.Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value
-		wantThread1 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Value
-		wantThread2 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[1].Value
+		observations, verify, want, wantFiltered, wantThread1, wantThread2 := setup(t, temporality)
 
 		// During the time range (T0, T1]:
 		//     pid = 1001, tid = 1, #PF = 50
