@@ -22,7 +22,7 @@ import (
 )
 
 // now is used to return the current local time while allowing tests to
-// override the the default time.Now function.
+// override the default time.Now function.
 var now = time.Now
 
 // Aggregator forms an aggregation from a collection of recorded measurements.
@@ -39,7 +39,7 @@ type Aggregator[N int64 | float64] interface {
 	Aggregation() metricdata.Aggregation
 }
 
-// precomputeAggregator is an Aggregator that recieves values to aggregate that
+// precomputeAggregator is an Aggregator that receives values to aggregate that
 // have been pre-computed by the caller.
 type precomputeAggregator[N int64 | float64] interface {
 	// The Aggregate method of the embedded Aggregator is used to record
@@ -53,7 +53,7 @@ type precomputeAggregator[N int64 | float64] interface {
 	// Pre-computed measurements of filtered attributes need to be recorded
 	// separate from those that haven't been filtered so they can be added to
 	// the non-filtered pre-computed measurements in a collection cycle and
-	// then resest after the cycle (the non-filtered pre-computed measurements
+	// then resets after the cycle (the non-filtered pre-computed measurements
 	// are not reset).
 	aggregateFiltered(N, attribute.Set)
 }
