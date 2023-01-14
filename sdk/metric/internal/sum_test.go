@@ -167,7 +167,7 @@ func TestDeltaSumReset(t *testing.T) {
 func TestPreComputedDeltaSum(t *testing.T) {
 	var mono bool
 	agg := NewPrecomputedDeltaSum[int64](mono)
-	require.Implements(t, (*filterAgg[int64])(nil), agg)
+	require.Implements(t, (*precomputeAggregator[int64])(nil), agg)
 
 	attrs := attribute.NewSet(attribute.String("key", "val"))
 	agg.Aggregate(1, attrs)
@@ -185,7 +185,7 @@ func TestPreComputedDeltaSum(t *testing.T) {
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 0)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
-	agg.(filterAgg[int64]).filtered(1, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(1, attrs)
 	got = agg.Aggregation()
 	// measured(+): 1, previous(-): 1, filtered(+): 1
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 1)}
@@ -205,8 +205,8 @@ func TestPreComputedDeltaSum(t *testing.T) {
 	agg.Aggregate(2, attrs)
 	agg.Aggregate(5, attrs)
 	// Filtered should add.
-	agg.(filterAgg[int64]).filtered(3, attrs)
-	agg.(filterAgg[int64]).filtered(10, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
 	// measured(+): 5, previous(-): 1, filtered(+): 13
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 17)}
@@ -221,9 +221,9 @@ func TestPreComputedDeltaSum(t *testing.T) {
 
 	// Order should not affect measure.
 	// Filtered should add.
-	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
 	agg.Aggregate(7, attrs)
-	agg.(filterAgg[int64]).filtered(10, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
 	// measured(+): 7, previous(-): 5, filtered(+): 13
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 15)}
@@ -238,7 +238,7 @@ func TestPreComputedDeltaSum(t *testing.T) {
 func TestPreComputedCumulativeSum(t *testing.T) {
 	var mono bool
 	agg := NewPrecomputedCumulativeSum[int64](mono)
-	require.Implements(t, (*filterAgg[int64])(nil), agg)
+	require.Implements(t, (*precomputeAggregator[int64])(nil), agg)
 
 	attrs := attribute.NewSet(attribute.String("key", "val"))
 	agg.Aggregate(1, attrs)
@@ -255,7 +255,7 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 	got = agg.Aggregation()
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
-	agg.(filterAgg[int64]).filtered(1, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(1, attrs)
 	got = agg.Aggregation()
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 2)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
@@ -268,8 +268,8 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 	// Override set value.
 	agg.Aggregate(5, attrs)
 	// Filtered should add.
-	agg.(filterAgg[int64]).filtered(3, attrs)
-	agg.(filterAgg[int64]).filtered(10, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 18)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
@@ -281,9 +281,9 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 
 	// Order should not affect measure.
 	// Filtered should add.
-	agg.(filterAgg[int64]).filtered(3, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
 	agg.Aggregate(7, attrs)
-	agg.(filterAgg[int64]).filtered(10, attrs)
+	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 20)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)

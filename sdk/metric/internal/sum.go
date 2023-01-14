@@ -158,14 +158,17 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	return out
 }
 
+// precomputedValue is the recorded measurement value for a set of attributes.
 type precomputedValue[N int64 | float64] struct {
-	// measured is the value directly measured.
+	// measured is the last value measured for a set of attributes that were
+	// not filtered.
 	measured N
-	// filtered is the sum of values from spatially aggregations.
+	// filtered is the sum of values from measurements that had their
+	// attributes filtered.
 	filtered N
 }
 
-// valueMap is the storage for precomputed sums.
+// precomputedMap is the storage for precomputed sums.
 type precomputedMap[N int64 | float64] struct {
 	sync.Mutex
 	values map[attribute.Set]precomputedValue[N]
@@ -177,7 +180,14 @@ func newPrecomputedMap[N int64 | float64]() *precomputedMap[N] {
 	}
 }
 
-// Aggregate records value as a cumulative sum for attr.
+// Aggregate records value with the unfiltered attributes attr.
+//
+// If a previous measurement was made for the same attribute set:
+//
+//   - If that measurement's attributes were not filtered, this value overwrite
+//     that value.
+//   - If that measurement's attributes were filtered, this value will be
+//     recorded along side that value.
 func (s *precomputedMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Lock()
 	v := s.values[attr]
@@ -186,8 +196,18 @@ func (s *precomputedMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Unlock()
 }
 
-// filtered records value with spatially re-aggregated attrs.
-func (s *precomputedMap[N]) filtered(value N, attr attribute.Set) { // nolint: unused  // Used to agg filtered.
+// aggregateFiltered records value with the filtered attributes attr.
+//
+// If a previous measurement was made for the same attribute set:
+//
+//   - If that measurement's attributes were not filtered, this value will be
+//     recorded along side that value.
+//   - If that measurement's attributes were filtered, this value will be
+//     added to it.
+//
+// This method should not be used if attr have not been reduced by an attribute
+// filter.
+func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // Used to agg filtered.
 	s.Lock()
 	v := s.values[attr]
 	v.filtered += value
@@ -196,15 +216,14 @@ func (s *precomputedMap[N]) filtered(value N, attr attribute.Set) { // nolint: u
 }
 
 // NewPrecomputedDeltaSum returns an Aggregator that summarizes a set of
-// measurements as their pre-computed arithmetic sum. Each sum is scoped by
-// attributes and the aggregation cycle the measurements were made in.
+// pre-computed sums. Each sum is scoped by attributes and the aggregation
+// cycle the measurements were made in.
 //
 // The monotonic value is used to communicate the produced Aggregation is
 // monotonic or not. The returned Aggregator does not make any guarantees this
 // value is accurate. It is up to the caller to ensure it.
 //
-// The output Aggregation will report recorded values as delta temporality. It
-// is up to the caller to ensure this is accurate.
+// The output Aggregation will report recorded values as delta temporality.
 func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	return &precomputedDeltaSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
@@ -214,8 +233,8 @@ func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	}
 }
 
-// precomputedDeltaSum summarizes a set of measurements recorded over all
-// aggregation cycles as the delta arithmetic sum.
+// precomputedDeltaSum summarizes a set of pre-computed sums recorded over all
+// aggregation cycles as the delta of these sums.
 type precomputedDeltaSum[N int64 | float64] struct {
 	*precomputedMap[N]
 
@@ -225,6 +244,16 @@ type precomputedDeltaSum[N int64 | float64] struct {
 	start     time.Time
 }
 
+// Aggregation returns the recorded pre-computed sums as an Aggregation. The
+// sum values are expressed as the delta between what was measured this
+// collection cycle and the previous.
+//
+// All pre-computed sums that were recorded for attributes sets reduced by an
+// attribute filter (filtered-sums) are summed together and added to any
+// pre-computed sum value recorded directly for the resulting attribute set
+// (unfiltered-sum). The filtered-sums are reset to zero for the next
+// collection cycle, and the unfiltered-sum is kept for the next collection
+// cycle.
 func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 	s.Lock()
 	defer s.Unlock()
@@ -264,15 +293,15 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 }
 
 // NewPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
-// measurements as their pre-computed arithmetic sum. Each sum is scoped by
-// attributes and the aggregation cycle the measurements were made in.
+// pre-computed sums. Each sum is scoped by attributes and the aggregation
+// cycle the measurements were made in.
 //
 // The monotonic value is used to communicate the produced Aggregation is
 // monotonic or not. The returned Aggregator does not make any guarantees this
 // value is accurate. It is up to the caller to ensure it.
 //
 // The output Aggregation will report recorded values as cumulative
-// temporality. It is up to the caller to ensure this is accurate.
+// temporality.
 func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
 	return &precomputedCumulativeSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
@@ -281,8 +310,7 @@ func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N
 	}
 }
 
-// precomputedCumulativeSum summarizes a set of measurements recorded over all
-// aggregation cycles directly as the cumulative arithmetic sum.
+// precomputedCumulativeSum directly records and reports a set of pre-computed sums.
 type precomputedCumulativeSum[N int64 | float64] struct {
 	*precomputedMap[N]
 
@@ -290,6 +318,16 @@ type precomputedCumulativeSum[N int64 | float64] struct {
 	start     time.Time
 }
 
+// Aggregation returns the recorded pre-computed sums as an Aggregation. The
+// sum values are expressed directly as they are assumed to be recorded as the
+// cumulative sum of a some measured phenomena.
+//
+// All pre-computed sums that were recorded for attributes sets reduced by an
+// attribute filter (filtered-sums) are summed together and added to any
+// pre-computed sum value recorded directly for the resulting attribute set
+// (unfiltered-sum). The filtered-sums are reset to zero for the next
+// collection cycle, and the unfiltered-sum is kept for the next collection
+// cycle.
 func (s *precomputedCumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	s.Lock()
 	defer s.Unlock()

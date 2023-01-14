@@ -273,7 +273,7 @@ func (a *testFilterAgg[N]) Aggregate(val N, attr attribute.Set) {
 }
 
 // nolint: unused  // Used to agg filtered.
-func (a *testFilterAgg[N]) filtered(val N, attr attribute.Set) {
+func (a *testFilterAgg[N]) aggregateFiltered(val N, attr attribute.Set) {
 	v := a.values[attr]
 	v.filtered += val
 	a.values[attr] = v
