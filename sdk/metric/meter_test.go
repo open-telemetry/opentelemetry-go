@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -1141,6 +1142,41 @@ func TestAttributeFilter(t *testing.T) {
 			metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
 		})
 	}
+}
+
+func TestGlobalInstRegisterCallback(t *testing.T) {
+	const mtrName = "TestGlobalInstRegisterCallback"
+	preMtr := global.Meter(mtrName)
+	preCtr, err := preMtr.Int64ObservableCounter("pre.counter")
+	require.NoError(t, err)
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	global.SetMeterProvider(mp)
+
+	postMtr := global.Meter(mtrName)
+	postCtr, err := postMtr.Int64ObservableCounter("post.counter")
+	require.NoError(t, err)
+
+	cb := func(_ context.Context, o metric.Observer) error {
+		o.ObserveInt64(preCtr, 2)
+		return nil
+	}
+
+	_, err = preMtr.RegisterCallback(cb, preCtr)
+	assert.NoError(t, err)
+
+	_, err = preMtr.RegisterCallback(cb, postCtr)
+	assert.NoError(t, err)
+
+	_, err = postMtr.RegisterCallback(cb, preCtr)
+	assert.NoError(t, err)
+
+	_, err = postMtr.RegisterCallback(cb, postCtr)
+	assert.NoError(t, err)
+
+	_, err = rdr.Collect(context.Background())
+	assert.NoError(t, err)
 }
 
 var (
