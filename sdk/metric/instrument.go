@@ -241,8 +241,8 @@ var _ instrument.Int64ObservableGauge = (*observable[int64])(nil)
 // Observe logs an error.
 func (o *observable[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	var zero N
-	err := errors.New("invalid observation recording")
-	global.Error(err, "dropping measurement",
+	err := errors.New("invalid observation")
+	global.Error(err, "dropping observation made outside a callback",
 		"name", o.name,
 		"description", o.description,
 		"unit", o.unit,
