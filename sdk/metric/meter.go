@@ -406,8 +406,8 @@ func (p float64ObservProvider) callback(i *observable[float64], f instrument.Flo
 	return func(ctx context.Context) error { return f(ctx, inst) }
 }
 
-// callbackObserver is passed to a callback where a users is expected to call
-// Observe directly to record a measurement.
+// callbackObserver is an observer that records values for a wrapped
+// observable.
 type callbackObserver[N int64 | float64] struct {
 	*observable[N]
 }
