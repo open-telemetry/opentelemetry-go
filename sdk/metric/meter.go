@@ -216,6 +216,13 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 	reg := newObserver()
 	var errs multierror
 	for _, inst := range insts {
+		// Unwrap any global.
+		if u, ok := inst.(interface {
+			Unwrap() instrument.Asynchronous
+		}); ok {
+			inst = u.Unwrap()
+		}
+
 		switch o := inst.(type) {
 		case *observable[int64]:
 			if err := o.registerable(m.scope); err != nil {
