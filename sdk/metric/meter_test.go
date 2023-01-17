@@ -1071,7 +1071,8 @@ func TestAsynchronousExample(t *testing.T) {
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
 		reader := NewManualReader(WithTemporalitySelector(selector))
 
-		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName})
+		noopFilter := func(kv attribute.KeyValue) bool { return true }
+		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: noopFilter})
 
 		filter := func(kv attribute.KeyValue) bool { return kv.Key != "tid" }
 		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
