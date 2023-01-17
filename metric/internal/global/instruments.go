@@ -24,7 +24,8 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-type Unwrapper interface {
+// unwrapper unwraps to return the underlying instrument implementation.
+type unwrapper interface {
 	Unwrap() instrument.Asynchronous
 }
 
@@ -37,7 +38,7 @@ type afCounter struct {
 	instrument.Asynchronous
 }
 
-var _ Unwrapper = (*afCounter)(nil)
+var _ unwrapper = (*afCounter)(nil)
 var _ instrument.Float64ObservableCounter = (*afCounter)(nil)
 
 func (i *afCounter) setDelegate(m metric.Meter) {
@@ -71,7 +72,7 @@ type afUpDownCounter struct {
 	instrument.Asynchronous
 }
 
-var _ Unwrapper = (*afUpDownCounter)(nil)
+var _ unwrapper = (*afUpDownCounter)(nil)
 var _ instrument.Float64ObservableUpDownCounter = (*afUpDownCounter)(nil)
 
 func (i *afUpDownCounter) setDelegate(m metric.Meter) {
@@ -114,7 +115,7 @@ func (i *afGauge) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-var _ Unwrapper = (*afGauge)(nil)
+var _ unwrapper = (*afGauge)(nil)
 var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
 
 func (i *afGauge) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
@@ -139,7 +140,7 @@ type aiCounter struct {
 	instrument.Asynchronous
 }
 
-var _ Unwrapper = (*aiCounter)(nil)
+var _ unwrapper = (*aiCounter)(nil)
 var _ instrument.Int64ObservableCounter = (*aiCounter)(nil)
 
 func (i *aiCounter) setDelegate(m metric.Meter) {
@@ -173,7 +174,7 @@ type aiUpDownCounter struct {
 	instrument.Asynchronous
 }
 
-var _ Unwrapper = (*aiUpDownCounter)(nil)
+var _ unwrapper = (*aiUpDownCounter)(nil)
 var _ instrument.Int64ObservableUpDownCounter = (*aiUpDownCounter)(nil)
 
 func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
@@ -207,7 +208,7 @@ type aiGauge struct {
 	instrument.Asynchronous
 }
 
-var _ Unwrapper = (*aiGauge)(nil)
+var _ unwrapper = (*aiGauge)(nil)
 var _ instrument.Int64ObservableGauge = (*aiGauge)(nil)
 
 func (i *aiGauge) setDelegate(m metric.Meter) {
