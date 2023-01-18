@@ -286,8 +286,8 @@ func (r observer) registerInt64(id observablID[int64]) {
 }
 
 var (
-	errUnknownObserver = errors.New("unknown observable")
-	errUnregObserver   = errors.New("observable not registered for callback")
+	errUnknownObserver = errors.New("unknown observable instrument")
+	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
 func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
