@@ -291,11 +291,25 @@ var (
 )
 
 func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
-	oImpl, ok := o.(*observable[float64])
-	if !ok {
+	var oImpl *observable[float64]
+	switch conv := o.(type) {
+	case *observable[float64]:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(*observable[float64]); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return
 	}
+
 	if _, registered := r.float64[oImpl.observablID]; !registered {
 		global.Error(errUnregObserver, "failed to record",
 			"name", oImpl.name,
@@ -309,11 +323,25 @@ func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...a
 }
 
 func (r observer) ObserveInt64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
-	oImpl, ok := o.(*observable[int64])
-	if !ok {
+	var oImpl *observable[int64]
+	switch conv := o.(type) {
+	case *observable[int64]:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(*observable[int64]); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return
 	}
+
 	if _, registered := r.int64[oImpl.observablID]; !registered {
 		global.Error(errUnregObserver, "failed to record",
 			"name", oImpl.name,

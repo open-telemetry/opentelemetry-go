@@ -16,12 +16,17 @@ package metric
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -611,10 +616,43 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
 
+type logSink struct {
+	logr.LogSink
+
+	messages []string
+}
+
+func newLogSink(t *testing.T) *logSink {
+	return &logSink{LogSink: testr.New(t).GetSink()}
+}
+
+func (l *logSink) Info(level int, msg string, keysAndValues ...interface{}) {
+	l.messages = append(l.messages, msg)
+	l.LogSink.Info(level, msg, keysAndValues...)
+}
+
+func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
+	l.messages = append(l.messages, fmt.Sprintf("%s: %s", err, msg))
+	l.LogSink.Error(err, msg, keysAndValues...)
+}
+
+func (l *logSink) String() string {
+	out := make([]string, len(l.messages))
+	for i := range l.messages {
+		out[i] = "\t-" + l.messages[i]
+	}
+	return strings.Join(out, "\n")
+}
+
 func TestGlobalInstRegisterCallback(t *testing.T) {
+	l := newLogSink(t)
+	otel.SetLogger(logr.New(l))
+
 	const mtrName = "TestGlobalInstRegisterCallback"
 	preMtr := global.Meter(mtrName)
-	preCtr, err := preMtr.Int64ObservableCounter("pre.counter")
+	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
+	require.NoError(t, err)
+	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
 	require.NoError(t, err)
 
 	rdr := NewManualReader()
@@ -622,28 +660,28 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	global.SetMeterProvider(mp)
 
 	postMtr := global.Meter(mtrName)
-	postCtr, err := postMtr.Int64ObservableCounter("post.counter")
+	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
+	require.NoError(t, err)
+	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
 	require.NoError(t, err)
 
 	cb := func(_ context.Context, o metric.Observer) error {
-		o.ObserveInt64(preCtr, 2)
+		o.ObserveInt64(preInt64Ctr, 1)
+		o.ObserveFloat64(preFloat64Ctr, 2)
+		o.ObserveInt64(postInt64Ctr, 3)
+		o.ObserveFloat64(postFloat64Ctr, 4)
 		return nil
 	}
 
-	_, err = preMtr.RegisterCallback(cb, preCtr)
+	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
 	assert.NoError(t, err)
 
-	_, err = preMtr.RegisterCallback(cb, postCtr)
-	assert.NoError(t, err)
-
-	_, err = postMtr.RegisterCallback(cb, preCtr)
-	assert.NoError(t, err)
-
-	_, err = postMtr.RegisterCallback(cb, postCtr)
+	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
 	assert.NoError(t, err)
 
 	_, err = rdr.Collect(context.Background())
 	assert.NoError(t, err)
+	assert.Lenf(t, l.messages, 0, "Warnings and errors logged:\n%s", l)
 }
 
 func TestMetersProvideScope(t *testing.T) {
