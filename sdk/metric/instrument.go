@@ -260,6 +260,7 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 	}
 }
 
+// observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 	for _, agg := range o.aggregators {
 		agg.Aggregate(val, attribute.NewSet(attrs...))
