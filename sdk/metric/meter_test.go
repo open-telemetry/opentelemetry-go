@@ -656,7 +656,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	require.NoError(t, err)
 
 	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr))
+	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
 	global.SetMeterProvider(mp)
 
 	postMtr := global.Meter(mtrName)
@@ -679,9 +679,50 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
 	assert.NoError(t, err)
 
-	_, err = rdr.Collect(context.Background())
+	got, err := rdr.Collect(context.Background())
 	assert.NoError(t, err)
 	assert.Lenf(t, l.messages, 0, "Warnings and errors logged:\n%s", l)
+	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{Name: "TestGlobalInstRegisterCallback"},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "pre.int64.counter",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+						},
+					},
+					{
+						Name: "pre.float64.counter",
+						Data: metricdata.Sum[float64]{
+							DataPoints:  []metricdata.DataPoint[float64]{{Value: 2}},
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+						},
+					},
+					{
+						Name: "post.int64.counter",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints:  []metricdata.DataPoint[int64]{{Value: 3}},
+						},
+					},
+					{
+						Name: "post.float64.counter",
+						Data: metricdata.Sum[float64]{
+							DataPoints:  []metricdata.DataPoint[float64]{{Value: 4}},
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+						},
+					},
+				},
+			},
+		},
+	}, got, metricdatatest.IgnoreTimestamp())
 }
 
 func TestMetersProvideScope(t *testing.T) {
