@@ -13,26 +13,24 @@
 // limitations under the License.
 
 /*
-Package trace provides an implementation of the tracing part of the
+Package log provides an implementation of the logging part of the
 OpenTelemetry API.
 
 To participate in distributed traces a LogRecord needs to be created for the
 operation being performed as part of a traced workflow. In its simplest form:
 
-	var tracer trace.Logger
+	var logger log.Logger
 
 	func init() {
-		tracer = otel.Tracer("instrumentation/package/name")
+		logger = otel.Logger("instrumentation/package/name")
 	}
 
 	func operation(ctx context.Context) {
-		var span trace.LogRecord
-		ctx, span = tracer.Start(ctx, "operation")
-		defer span.End()
+		logger.Emit(ctx, log.WithAttributes(...))
 		// ...
 	}
 
-A Logger is unique to the instrumentation and is used to create Spans.
+A Logger is unique to the instrumentation and is used to create LogRecords.
 Instrumentation should be designed to accept a LoggerProvider from which it
 can create its own unique Logger. Alternatively, the registered global
 LoggerProvider from the go.opentelemetry.io/otel package can be used as
@@ -44,22 +42,20 @@ a default.
 	)
 
 	type Instrumentation struct {
-		tracer trace.Logger
+		logger log.Logger
 	}
 
-	func NewInstrumentation(tp trace.LoggerProvider) *Instrumentation {
+	func NewInstrumentation(tp log.LoggerProvider) *Instrumentation {
 		if tp == nil {
 			tp = otel.LoggerProvider()
 		}
 		return &Instrumentation{
-			tracer: tp.Logger(name, trace.WithInstrumentationVersion(version)),
+			logger: tp.Logger(name, log.WithInstrumentationVersion(version)),
 		}
 	}
 
 	func operation(ctx context.Context, inst *Instrumentation) {
-		var span trace.LogRecord
-		ctx, span = inst.tracer.Start(ctx, "operation")
-		defer span.End()
+		inst.tracer.Emit(ctx, log.WithAttributes(...))
 		// ...
 	}
 */

@@ -27,10 +27,6 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type LogRecord interface {
-	// IsRecording returns the recording state of the LogRecord. It will return
-	// true if the LogRecord is active and events can be recorded.
-	IsRecording() bool
-
 	// SetAttributes sets kv as attributes of the LogRecord. If a key from kv
 	// already exists for an attribute of the LogRecord it will be overwritten with
 	// the value contained in kv.
