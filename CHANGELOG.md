@@ -102,6 +102,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Instead it uses the `net.sock.peer` attributes. (#3581)
 - The parameters for the `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/metric` are changed.
   The slice of `instrument.Asynchronous` parameter is now passed as a variadic argument. (#3587)
+- The `Callback` in `go.opentelemetry.io/otel/metric` has the added `Observer` parameter added.
+  This new parameter is used by `Callback` implementations to observe values for asynchronous instruments instead of calling the `Observe` method of the instrument directly. (#3584)
+
+### Fixed
+
+- The `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/sdk/metric` only registers a callback for instruments created by that meter.
+  Trying to register a callback with instruments from a different meter will result in an error being returned. (#3584)
 
 ### Deprecated
 
