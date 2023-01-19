@@ -546,7 +546,6 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
 	require.NoError(t, err)
 
-	// Panics if Observe is called.
 	type int64Obsrv struct{ instrument.Int64Observable }
 	int64Foreign := int64Obsrv{}
 	type float64Obsrv struct{ instrument.Float64Observable }
