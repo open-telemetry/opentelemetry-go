@@ -728,7 +728,6 @@ func TestMetersProvideScope(t *testing.T) {
 		return nil
 	}, ctr2)
 	assert.NoError(t, err)
-	// TODO: verify this should be an error and then fix this test.
 
 	want := metricdata.ResourceMetrics{
 		Resource: resource.Default(),
