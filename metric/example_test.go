@@ -55,7 +55,7 @@ func ExampleMeter_asynchronous_single() {
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
 		instrument.WithUnit(unit.Bytes),
-		instrument.WithInt64Callback(func(_ context.Context, observe instrument.Int64Observer) error {
+		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
 			// Do the real work here to get the real disk usage. For example,
 			//
 			//   usage, err := GetDiskUsage(diskID)
@@ -69,7 +69,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			observe(int64(usage), attribute.Int("disk.id", 3))
+			obsrv.Observe(int64(usage), attribute.Int("disk.id", 3))
 			return nil
 		}),
 	)

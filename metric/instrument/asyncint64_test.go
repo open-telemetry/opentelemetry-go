@@ -35,8 +35,8 @@ func TestInt64ObserverOptions(t *testing.T) {
 	got := NewInt64ObserverConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithInt64Callback(func(_ context.Context, observe Int64Observer) error {
-			observe(token)
+		WithInt64Callback(func(_ context.Context, obsrv Int64Observer) error {
+			obsrv.Observe(token)
 			return nil
 		}),
 	)
@@ -46,11 +46,17 @@ func TestInt64ObserverOptions(t *testing.T) {
 	// Functions are not comparable.
 	cBacks := got.Callbacks()
 	require.Len(t, cBacks, 1, "callbacks")
-	var gotV int64
-	err := cBacks[0](
-		context.Background(),
-		func(v int64, _ ...attribute.KeyValue) { gotV = v },
-	)
+	o := &int64Observer{}
+	err := cBacks[0](context.Background(), o)
 	require.NoError(t, err)
-	assert.Equal(t, token, gotV, "callback not set")
+	assert.Equal(t, token, o.got, "callback not set")
+}
+
+type int64Observer struct {
+	Asynchronous
+	got int64
+}
+
+func (o *int64Observer) Observe(v int64, _ ...attribute.KeyValue) {
+	o.got = v
 }

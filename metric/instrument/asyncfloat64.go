@@ -56,8 +56,12 @@ type Float64ObservableUpDownCounter interface{ Float64Observable }
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableGauge interface{ Float64Observable }
 
-// Float64Observer records float64 measurement values for a set of attributes.
-type Float64Observer func(value float64, attributes ...attribute.KeyValue)
+// Float64Observer is a recorder of float64 measurements.
+//
+// Warning: methods may be added to this interface in minor releases.
+type Float64Observer interface {
+	Observe(value float64, attributes ...attribute.KeyValue)
+}
 
 // Float64Callback is a function registered with a Meter that makes
 // observations for a Float64Observerable instrument it is registered with.

@@ -407,10 +407,16 @@ func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []in
 }
 
 func (p int64ObservProvider) callback(i int64Observable, f instrument.Int64Callback) func(context.Context) error {
-	observe := func(v int64, a ...attribute.KeyValue) { i.observe(v, a) }
-	return func(ctx context.Context) error {
-		return f(ctx, observe)
-	}
+	inst := int64Observer{i}
+	return func(ctx context.Context) error { return f(ctx, inst) }
+}
+
+type int64Observer struct {
+	int64Observable
+}
+
+func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }
 
 type float64ObservProvider struct{ *instProvider[float64] }
@@ -432,8 +438,14 @@ func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks 
 }
 
 func (p float64ObservProvider) callback(i float64Observable, f instrument.Float64Callback) func(context.Context) error {
-	observe := func(v float64, a ...attribute.KeyValue) { i.observe(v, a) }
-	return func(ctx context.Context) error {
-		return f(ctx, observe)
-	}
+	inst := float64Observer{i}
+	return func(ctx context.Context) error { return f(ctx, inst) }
+}
+
+type float64Observer struct {
+	float64Observable
+}
+
+func (o float64Observer) Observe(val float64, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }

@@ -56,10 +56,12 @@ type Int64ObservableUpDownCounter interface{ Int64Observable }
 // Warning: methods may be added to this interface in minor releases.
 type Int64ObservableGauge interface{ Int64Observable }
 
-// Int64Observer is a recorder of int64 measurement values.
+// Int64Observer is a recorder of int64 measurements.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Int64Observer func(value int64, attributes ...attribute.KeyValue)
+type Int64Observer interface {
+	Observe(value int64, attributes ...attribute.KeyValue)
+}
 
 // Int64Callback is a function registered with a Meter that makes
 // observations for a Int64Observerable instrument it is registered with.
