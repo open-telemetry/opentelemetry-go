@@ -57,6 +57,51 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 	close(finish)
 }
 
+func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
+	// Float64 Instruments
+	t.Run("Float64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
+			delegate := &afCounter{}
+			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testFloat64Race(f, delegate.setDelegate)
+		})
+
+		t.Run("UpDownCounter", func(t *testing.T) {
+			delegate := &afUpDownCounter{}
+			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testFloat64Race(f, delegate.setDelegate)
+		})
+
+		t.Run("Gauge", func(t *testing.T) {
+			delegate := &afGauge{}
+			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testFloat64Race(f, delegate.setDelegate)
+		})
+	})
+
+	// Int64 Instruments
+
+	t.Run("Int64", func(t *testing.T) {
+		t.Run("Counter", func(t *testing.T) {
+			delegate := &aiCounter{}
+			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testInt64Race(f, delegate.setDelegate)
+		})
+
+		t.Run("UpDownCounter", func(t *testing.T) {
+			delegate := &aiUpDownCounter{}
+			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testInt64Race(f, delegate.setDelegate)
+		})
+
+		t.Run("Gauge", func(t *testing.T) {
+			delegate := &aiGauge{}
+			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			testInt64Race(f, delegate.setDelegate)
+		})
+	})
+}
+
 func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	// Float64 Instruments
 	t.Run("Float64", func(t *testing.T) {
