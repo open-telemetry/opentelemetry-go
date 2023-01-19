@@ -209,13 +209,20 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 // insts Collect method is called.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
 	if len(insts) == 0 {
-		// Don't allocate an obeservationRegistry if not needed.
+		// Don't allocate a observer if not needed.
 		return noopRegister{}, nil
 	}
 
-	reg := newMultiObserver()
+	reg := newObserver()
 	var errs multierror
 	for _, inst := range insts {
+		// Unwrap any global.
+		if u, ok := inst.(interface {
+			Unwrap() instrument.Asynchronous
+		}); ok {
+			inst = u.Unwrap()
+		}
+
 		switch o := inst.(type) {
 		case int64Observable:
 			if err := o.registerable(m.scope); err != nil {
@@ -224,7 +231,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 				}
 				continue
 			}
-			reg.registerInt64(o.observerID)
+			reg.registerInt64(o.observablID)
 		case float64Observable:
 			if err := o.registerable(m.scope); err != nil {
 				if !errors.Is(err, errEmptyAgg) {
@@ -232,10 +239,10 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 				}
 				continue
 			}
-			reg.registerFloat64(o.observerID)
+			reg.registerFloat64(o.observablID)
 		default:
 			// Instrument external to the SDK.
-			return nil, fmt.Errorf("invalid observer: from different implementation")
+			return nil, fmt.Errorf("invalid observable: from different implementation")
 		}
 	}
 
@@ -254,42 +261,56 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 	return m.pipes.registerMultiCallback(cback), nil
 }
 
-type multiObserver struct {
-	float64 map[observerID[float64]]struct{}
-	int64   map[observerID[int64]]struct{}
+type observer struct {
+	float64 map[observablID[float64]]struct{}
+	int64   map[observablID[int64]]struct{}
 }
 
-func newMultiObserver() multiObserver {
-	return multiObserver{
-		float64: make(map[observerID[float64]]struct{}),
-		int64:   make(map[observerID[int64]]struct{}),
+func newObserver() observer {
+	return observer{
+		float64: make(map[observablID[float64]]struct{}),
+		int64:   make(map[observablID[int64]]struct{}),
 	}
 }
 
-func (mo multiObserver) len() int {
-	return len(mo.float64) + len(mo.int64)
+func (r observer) len() int {
+	return len(r.float64) + len(r.int64)
 }
 
-func (mo multiObserver) registerFloat64(id observerID[float64]) {
-	mo.float64[id] = struct{}{}
+func (r observer) registerFloat64(id observablID[float64]) {
+	r.float64[id] = struct{}{}
 }
 
-func (mo multiObserver) registerInt64(id observerID[int64]) {
-	mo.int64[id] = struct{}{}
+func (r observer) registerInt64(id observablID[int64]) {
+	r.int64[id] = struct{}{}
 }
 
 var (
-	errUnknownObserver = errors.New("unknown observer")
-	errUnregObserver   = errors.New("observer not registered for callback")
+	errUnknownObserver = errors.New("unknown observable instrument")
+	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
-func (mo multiObserver) Float64(o instrument.Float64Observable, v float64, a ...attribute.KeyValue) {
-	oImpl, ok := o.(float64Observable)
-	if !ok {
+func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ...attribute.KeyValue) {
+	var oImpl float64Observable
+	switch conv := o.(type) {
+	case float64Observable:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(float64Observable); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return
 	}
-	if _, registered := mo.float64[oImpl.observerID]; !registered {
+
+	if _, registered := r.float64[oImpl.observablID]; !registered {
 		global.Error(errUnregObserver, "failed to record",
 			"name", oImpl.name,
 			"description", oImpl.description,
@@ -301,13 +322,27 @@ func (mo multiObserver) Float64(o instrument.Float64Observable, v float64, a ...
 	oImpl.observe(v, a)
 }
 
-func (mo multiObserver) Int64(o instrument.Int64Observable, v int64, a ...attribute.KeyValue) {
-	oImpl, ok := o.(int64Observable)
-	if !ok {
+func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attribute.KeyValue) {
+	var oImpl int64Observable
+	switch conv := o.(type) {
+	case int64Observable:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(int64Observable); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return
 	}
-	if _, registered := mo.int64[oImpl.observerID]; !registered {
+
+	if _, registered := r.int64[oImpl.observablID]; !registered {
 		global.Error(errUnregObserver, "failed to record",
 			"name", oImpl.name,
 			"description", oImpl.description,

@@ -151,14 +151,14 @@ type observationRecorder struct {
 	ctx context.Context
 }
 
-func (o observationRecorder) Float64(i instrument.Float64Observable, value float64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64, attr ...attribute.KeyValue) {
 	iImpl, ok := i.(*testCountingFloatInstrument)
 	if ok {
 		iImpl.observe()
 	}
 }
 
-func (o observationRecorder) Int64(i instrument.Int64Observable, value int64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64, attr ...attribute.KeyValue) {
 	iImpl, ok := i.(*testCountingIntInstrument)
 	if ok {
 		iImpl.observe()
