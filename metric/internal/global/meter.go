@@ -275,9 +275,6 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 }
 
 // RegisterCallback captures the function that will be called during Collect.
-//
-// It is only valid to call Observe within the scope of the passed function,
-// and only on the instruments that were registered with this call.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
