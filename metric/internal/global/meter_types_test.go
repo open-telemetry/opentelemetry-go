@@ -17,6 +17,7 @@ package global // import "go.opentelemetry.io/otel/metric/internal/global"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -136,11 +137,24 @@ func (r testReg) Unregister() error {
 // This enables async collection.
 func (m *testMeter) collect() {
 	ctx := context.Background()
+	o := observationRecorder{ctx}
 	for _, f := range m.callbacks {
 		if f == nil {
 			// Unregister.
 			continue
 		}
-		_ = f(ctx)
+		_ = f(ctx, o)
 	}
+}
+
+type observationRecorder struct {
+	ctx context.Context
+}
+
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observer, value float64, attr ...attribute.KeyValue) {
+	i.Observe(o.ctx, value, attr...)
+}
+
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observer, value int64, attr ...attribute.KeyValue) {
+	i.Observe(o.ctx, value, attr...)
 }

@@ -104,9 +104,11 @@ func (p *pipeline) addCallback(cback func(context.Context) error) {
 	p.callbacks = append(p.callbacks, cback)
 }
 
+type multiCallback func(context.Context) error
+
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
-func (p *pipeline) addMultiCallback(c metric.Callback) (unregister func()) {
+func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
 	e := p.multiCallbacks.PushBack(c)
@@ -146,7 +148,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(metric.Callback)
+		f := e.Value.(multiCallback)
 		if err := f(ctx); err != nil {
 			errs.append(err)
 		}
@@ -475,7 +477,7 @@ func (p pipelines) registerCallback(cback func(context.Context) error) {
 	}
 }
 
-func (p pipelines) registerMultiCallback(c metric.Callback) metric.Registration {
+func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
 		unregs[i] = pipe.addMultiCallback(c)

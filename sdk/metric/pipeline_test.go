@@ -54,7 +54,7 @@ func TestEmptyPipeline(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() {
-		pipe.addMultiCallback(emptyCallback)
+		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
 	output, err = pipe.produce(context.Background())
@@ -78,7 +78,7 @@ func TestNewPipeline(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() {
-		pipe.addMultiCallback(emptyCallback)
+		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
 	output, err = pipe.produce(context.Background())
@@ -121,7 +121,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			pipe.addMultiCallback(emptyCallback)
+			pipe.addMultiCallback(func(context.Context) error { return nil })
 		}()
 	}
 	wg.Wait()
