@@ -21,10 +21,9 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Float64ObservableCounter describes a set of instruments used asynchronously
-// to record float64 measurements once per a measurement collection cycle.
-// Observations of these instruments are only made within a callback for this
-// instrument.
+// Float64Observable describes a set of instruments used asynchronously to
+// record float64 measurements once per collection cycle. Observations of
+// these instruments are only made within a callback.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observable interface {
@@ -34,24 +33,24 @@ type Float64Observable interface {
 }
 
 // Float64ObservableCounter is an instrument used to asynchronously record
-// increasing float64 measurements once per a measurement collection cycle.
-// Observations are only made within a callback for this instrument. The value
-// observed is assumed the to be the cumulative sum of the count.
+// increasing float64 measurements once per collection cycle. Observations are
+// only made within a callback for this instrument. The value observed is
+// assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableCounter interface{ Float64Observable }
 
 // Float64ObservableUpDownCounter is an instrument used to asynchronously
-// record float64 measurements once per a measurement collection cycle.
-// Observations are only made within a callback for this instrument. The value
-// observed is assumed the to be the cumulative sum of the count.
+// record float64 measurements once per collection cycle. Observations are only
+// made within a callback for this instrument. The value observed is assumed
+// the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableUpDownCounter interface{ Float64Observable }
 
 // Float64ObservableGauge is an instrument used to asynchronously record
-// instantaneous float64 measurements once per a measurement collection cycle.
-// Observations are only made within a callback for this instrument.
+// instantaneous float64 measurements once per collection cycle. Observations
+// are only made within a callback for this instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableGauge interface{ Float64Observable }

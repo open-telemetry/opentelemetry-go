@@ -21,10 +21,9 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Int64ObservableCounter describes a set of instruments used asynchronously
-// to record int64 measurements once per a measurement collection cycle.
-// Observations of these instruments are only made within a callback for this
-// instrument.
+// Int64Observable describes a set of instruments used asynchronously to record
+// int64 measurements once per collection cycle. Observations of these
+// instruments are only made within a callback.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Observable interface {
@@ -34,24 +33,24 @@ type Int64Observable interface {
 }
 
 // Int64ObservableCounter is an instrument used to asynchronously record
-// increasing int64 measurements once per a measurement collection cycle.
-// Observations are only made within a callback for this instrument. The value
-// observed is assumed the to be the cumulative sum of the count.
+// increasing int64 measurements once per collection cycle. Observations are
+// only made within a callback for this instrument. The value observed is
+// assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64ObservableCounter interface{ Int64Observable }
 
 // Int64ObservableUpDownCounter is an instrument used to asynchronously record
-// int64 measurements once per a measurement collection cycle. Observations are
-// only made within a callback for this instrument. The value observed is
-// assumed the to be the cumulative sum of the count.
+// int64 measurements once per collection cycle. Observations are only made
+// within a callback for this instrument. The value observed is assumed the to
+// be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64ObservableUpDownCounter interface{ Int64Observable }
 
 // Int64ObservableGauge is an instrument used to asynchronously record
-// instantaneous int64 measurements once per a measurement collection cycle.
-// Observations are only made within a callback for this instrument.
+// instantaneous int64 measurements once per collection cycle. Observations are
+// only made within a callback for this instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64ObservableGauge interface{ Int64Observable }
