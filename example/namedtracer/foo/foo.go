@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -28,16 +29,18 @@ var (
 
 // SubOperation is an example to demonstrate the use of named tracer.
 // It creates a named tracer with its package path.
-func SubOperation(ctx context.Context) error {
+func SubOperation(ctx context.Context, logger log.Logger) error {
 	// Using global provider. Alternative is to have application provide a getter
 	// for its component to get the instance of the provider.
 	tr := otel.Tracer("example/namedtracer/foo")
 
 	var span trace.Span
-	_, span = tr.Start(ctx, "Sub operation...")
+	ctx, span = tr.Start(ctx, "Sub operation...")
 	defer span.End()
 	span.SetAttributes(lemonsKey.String("five"))
 	span.AddEvent("Sub span event")
+
+	logger.Emit(ctx, log.WithAttributes(attribute.String("operation", "suboperation")))
 
 	return nil
 }

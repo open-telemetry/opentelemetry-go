@@ -25,7 +25,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	otellog "go.opentelemetry.io/otel/log"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -37,6 +40,7 @@ var (
 )
 
 var tp *sdktrace.TracerProvider
+var lp *sdklog.LoggerProvider
 
 // initTracer creates and registers trace provider instance.
 func initTracer() error {
@@ -53,6 +57,20 @@ func initTracer() error {
 	return nil
 }
 
+// initLogger creates and registers logger provider instance.
+func initLogger() error {
+	exp, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
+	if err != nil {
+		return fmt.Errorf("failed to initialize stdoutlog exporter: %w", err)
+	}
+	bsp := sdklog.NewBatchLogRecordProcessor(exp)
+	lp = sdklog.NewLoggerProvider(
+		sdklog.WithLogRecordProcessor(bsp),
+	)
+	//otel.SetTracerProvider(tp)
+	return nil
+}
+
 func main() {
 	// Set logging level to info to see SDK status messages
 	stdr.SetVerbosity(5)
@@ -61,11 +79,16 @@ func main() {
 	if err := initTracer(); err != nil {
 		log.Panic(err)
 	}
+	// initialize logger provider.
+	if err := initLogger(); err != nil {
+		log.Panic(err)
+	}
 
 	// Create a named tracer with package path as its name.
 	tracer := tp.Tracer("example/namedtracer/main")
 	ctx := context.Background()
 	defer func() { _ = tp.Shutdown(ctx) }()
+	defer func() { _ = lp.Shutdown(ctx) }()
 
 	m0, _ := baggage.NewMember(string(fooKey), "foo1")
 	m1, _ := baggage.NewMember(string(barKey), "bar1")
@@ -77,7 +100,11 @@ func main() {
 	defer span.End()
 	span.AddEvent("Nice operation!", trace.WithAttributes(attribute.Int("bogons", 100)))
 	span.SetAttributes(anotherKey.String("yes"))
-	if err := foo.SubOperation(ctx); err != nil {
+
+	logger := lp.Logger("example/namedtracer/main")
+	logger.Emit(ctx, otellog.WithAttributes(attribute.String("operation", "main")))
+
+	if err := foo.SubOperation(ctx, logger); err != nil {
 		panic(err)
 	}
 }

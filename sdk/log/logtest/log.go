@@ -58,7 +58,6 @@ func (s LogRecordStubs) Snapshots() []logsdk.ReadOnlyLogRecord {
 type LogRecordStub struct {
 	SpanContext            trace.SpanContext
 	Timestamp              time.Time
-	EndTime                time.Time
 	Attributes             []attribute.KeyValue
 	DroppedAttributes      int
 	Resource               *resource.Resource
