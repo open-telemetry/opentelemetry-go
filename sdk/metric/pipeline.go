@@ -119,20 +119,10 @@ func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 	}
 }
 
-// callbackKey is a context key type used to identify context that came from the SDK.
-type callbackKey int
-
-// produceKey is the context key to tell if a Observe is called within a callback.
-// Its value of zero is arbitrary. If this package defined other context keys,
-// they would have different integer values.
-const produceKey callbackKey = 0
-
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	ctx = context.WithValue(ctx, produceKey, struct{}{})
-
 	p.Lock()
 	defer p.Unlock()
 
