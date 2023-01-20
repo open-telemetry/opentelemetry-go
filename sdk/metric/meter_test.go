@@ -877,6 +877,11 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 }
 
 func TestAttributeFilter(t *testing.T) {
+	t.Run("Delta", testAttributeFilter(metricdata.DeltaTemporality))
+	t.Run("Cumulative", testAttributeFilter(metricdata.CumulativeTemporality))
+}
+
+func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	one := 1.0
 	two := 2.0
 	testcases := []struct {
@@ -893,7 +898,8 @@ func TestAttributeFilter(t *testing.T) {
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"))
+					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				}, ctr)
 				return err
@@ -904,10 +910,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO (#3439): This should be 3.0.
+							Value:      4.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -921,7 +927,8 @@ func TestAttributeFilter(t *testing.T) {
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"))
+					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				}, ctr)
 				return err
@@ -932,10 +939,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0, // TODO (#3439): This should be 3.0.
+							Value:      4.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -975,7 +982,8 @@ func TestAttributeFilter(t *testing.T) {
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"))
+					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				}, ctr)
 				return err
@@ -986,10 +994,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO (#3439): This should be 30.
+							Value:      40,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -1003,7 +1011,8 @@ func TestAttributeFilter(t *testing.T) {
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"))
+					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
 					return nil
 				}, ctr)
 				return err
@@ -1014,10 +1023,10 @@ func TestAttributeFilter(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20, // TODO (#3439): This should be 30.
+							Value:      40,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -1069,7 +1078,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -1095,7 +1104,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -1126,7 +1135,7 @@ func TestAttributeFilter(t *testing.T) {
 							Sum:          3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 				},
 			},
 		},
@@ -1151,7 +1160,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: true,
 				},
 			},
@@ -1177,7 +1186,7 @@ func TestAttributeFilter(t *testing.T) {
 							Value:      30,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 					IsMonotonic: false,
 				},
 			},
@@ -1208,35 +1217,280 @@ func TestAttributeFilter(t *testing.T) {
 							Sum:          3.0,
 						},
 					},
-					Temporality: metricdata.CumulativeTemporality,
+					Temporality: temporality,
 				},
 			},
 		},
 	}
 
-	for _, tt := range testcases {
-		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewManualReader()
-			mtr := NewMeterProvider(
-				WithReader(rdr),
-				WithView(NewView(
-					Instrument{Name: "*"},
-					Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
-						return kv.Key == attribute.Key("foo")
-					}},
-				)),
-			).Meter("TestAttributeFilter")
-			require.NoError(t, tt.register(t, mtr))
+	return func(t *testing.T) {
+		for _, tt := range testcases {
+			t.Run(tt.name, func(t *testing.T) {
+				rdr := NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
+					return temporality
+				}))
+				mtr := NewMeterProvider(
+					WithReader(rdr),
+					WithView(NewView(
+						Instrument{Name: "*"},
+						Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == attribute.Key("foo")
+						}},
+					)),
+				).Meter("TestAttributeFilter")
+				require.NoError(t, tt.register(t, mtr))
 
-			m, err := rdr.Collect(context.Background())
-			assert.NoError(t, err)
+				m, err := rdr.Collect(context.Background())
+				assert.NoError(t, err)
 
-			require.Len(t, m.ScopeMetrics, 1)
-			require.Len(t, m.ScopeMetrics[0].Metrics, 1)
+				require.Len(t, m.ScopeMetrics, 1)
+				require.Len(t, m.ScopeMetrics[0].Metrics, 1)
 
-			metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-		})
+				metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+			})
+		}
 	}
+}
+
+func TestAsynchronousExample(t *testing.T) {
+	// This example can be found:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/8b91585e6175dd52b51e1d60bea105041225e35d/specification/metrics/supplementary-guidelines.md#asynchronous-example
+	var (
+		threadID1 = attribute.Int("tid", 1)
+		threadID2 = attribute.Int("tid", 2)
+		threadID3 = attribute.Int("tid", 3)
+
+		processID1001 = attribute.String("pid", "1001")
+
+		thread1 = attribute.NewSet(processID1001, threadID1)
+		thread2 = attribute.NewSet(processID1001, threadID2)
+		thread3 = attribute.NewSet(processID1001, threadID3)
+
+		process1001 = attribute.NewSet(processID1001)
+	)
+
+	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Set]int64, func(*testing.T), *metricdata.ScopeMetrics, *int64, *int64, *int64) {
+		t.Helper()
+
+		const (
+			instName       = "pageFaults"
+			filteredStream = "filteredPageFaults"
+			scopeName      = "AsynchronousExample"
+		)
+
+		selector := func(InstrumentKind) metricdata.Temporality { return temp }
+		reader := NewManualReader(WithTemporalitySelector(selector))
+
+		noopFilter := func(kv attribute.KeyValue) bool { return true }
+		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: noopFilter})
+
+		filter := func(kv attribute.KeyValue) bool { return kv.Key != "tid" }
+		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
+
+		mp := NewMeterProvider(WithReader(reader), WithView(noFiltered, filtered))
+		meter := mp.Meter(scopeName)
+
+		observations := make(map[attribute.Set]int64)
+		_, err := meter.Int64ObservableCounter(instName, instrument.WithInt64Callback(
+			func(_ context.Context, o instrument.Int64Observer) error {
+				for attrSet, val := range observations {
+					o.Observe(val, attrSet.ToSlice()...)
+				}
+				return nil
+			},
+		))
+		require.NoError(t, err)
+
+		want := &metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{Name: scopeName},
+			Metrics: []metricdata.Metrics{
+				{
+					Name: filteredStream,
+					Data: metricdata.Sum[int64]{
+						Temporality: temp,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: process1001},
+						},
+					},
+				},
+				{
+					Name: instName,
+					Data: metricdata.Sum[int64]{
+						Temporality: temp,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: thread1},
+							{Attributes: thread2},
+						},
+					},
+				},
+			},
+		}
+		wantFiltered := &want.Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value
+		wantThread1 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Value
+		wantThread2 := &want.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[1].Value
+
+		collect := func(t *testing.T) {
+			t.Helper()
+			got, err := reader.Collect(context.Background())
+			require.NoError(t, err)
+			require.Len(t, got.ScopeMetrics, 1)
+			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+		}
+
+		return observations, collect, want, wantFiltered, wantThread1, wantThread2
+	}
+
+	t.Run("Cumulative", func(t *testing.T) {
+		temporality := metricdata.CumulativeTemporality
+		observations, verify, want, wantFiltered, wantThread1, wantThread2 := setup(t, temporality)
+
+		// During the time range (T0, T1]:
+		//     pid = 1001, tid = 1, #PF = 50
+		//     pid = 1001, tid = 2, #PF = 30
+		observations[thread1] = 50
+		observations[thread2] = 30
+
+		*wantFiltered = 80
+		*wantThread1 = 50
+		*wantThread2 = 30
+
+		verify(t)
+
+		// During the time range (T1, T2]:
+		//     pid = 1001, tid = 1, #PF = 53
+		//     pid = 1001, tid = 2, #PF = 38
+		observations[thread1] = 53
+		observations[thread2] = 38
+
+		*wantFiltered = 91
+		*wantThread1 = 53
+		*wantThread2 = 38
+
+		verify(t)
+
+		// During the time range (T2, T3]
+		//     pid = 1001, tid = 1, #PF = 56
+		//     pid = 1001, tid = 2, #PF = 42
+		observations[thread1] = 56
+		observations[thread2] = 42
+
+		*wantFiltered = 98
+		*wantThread1 = 56
+		*wantThread2 = 42
+
+		verify(t)
+
+		// During the time range (T3, T4]:
+		//     pid = 1001, tid = 1, #PF = 60
+		//     pid = 1001, tid = 2, #PF = 47
+		observations[thread1] = 60
+		observations[thread2] = 47
+
+		*wantFiltered = 107
+		*wantThread1 = 60
+		*wantThread2 = 47
+
+		verify(t)
+
+		// During the time range (T4, T5]:
+		//     thread 1 died, thread 3 started
+		//     pid = 1001, tid = 2, #PF = 53
+		//     pid = 1001, tid = 3, #PF = 5
+		delete(observations, thread1)
+		observations[thread2] = 53
+		observations[thread3] = 5
+
+		*wantFiltered = 58
+		want.Metrics[1].Data = metricdata.Sum[int64]{
+			Temporality: temporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[int64]{
+				// Thread 1 remains at last measured value.
+				{Attributes: thread1, Value: 60},
+				{Attributes: thread2, Value: 53},
+				{Attributes: thread3, Value: 5},
+			},
+		}
+
+		verify(t)
+	})
+
+	t.Run("Delta", func(t *testing.T) {
+		temporality := metricdata.DeltaTemporality
+		observations, verify, want, wantFiltered, wantThread1, wantThread2 := setup(t, temporality)
+
+		// During the time range (T0, T1]:
+		//     pid = 1001, tid = 1, #PF = 50
+		//     pid = 1001, tid = 2, #PF = 30
+		observations[thread1] = 50
+		observations[thread2] = 30
+
+		*wantFiltered = 80
+		*wantThread1 = 50
+		*wantThread2 = 30
+
+		verify(t)
+
+		// During the time range (T1, T2]:
+		//     pid = 1001, tid = 1, #PF = 53
+		//     pid = 1001, tid = 2, #PF = 38
+		observations[thread1] = 53
+		observations[thread2] = 38
+
+		*wantFiltered = 11
+		*wantThread1 = 3
+		*wantThread2 = 8
+
+		verify(t)
+
+		// During the time range (T2, T3]
+		//     pid = 1001, tid = 1, #PF = 56
+		//     pid = 1001, tid = 2, #PF = 42
+		observations[thread1] = 56
+		observations[thread2] = 42
+
+		*wantFiltered = 7
+		*wantThread1 = 3
+		*wantThread2 = 4
+
+		verify(t)
+
+		// During the time range (T3, T4]:
+		//     pid = 1001, tid = 1, #PF = 60
+		//     pid = 1001, tid = 2, #PF = 47
+		observations[thread1] = 60
+		observations[thread2] = 47
+
+		*wantFiltered = 9
+		*wantThread1 = 4
+		*wantThread2 = 5
+
+		verify(t)
+
+		// During the time range (T4, T5]:
+		//     thread 1 died, thread 3 started
+		//     pid = 1001, tid = 2, #PF = 53
+		//     pid = 1001, tid = 3, #PF = 5
+		delete(observations, thread1)
+		observations[thread2] = 53
+		observations[thread3] = 5
+
+		*wantFiltered = -49
+		want.Metrics[1].Data = metricdata.Sum[int64]{
+			Temporality: temporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[int64]{
+				// Thread 1 remains at last measured value.
+				{Attributes: thread1, Value: 0},
+				{Attributes: thread2, Value: 6},
+				{Attributes: thread3, Value: 5},
+			},
+		}
+
+		verify(t)
+	})
 }
 
 var (
