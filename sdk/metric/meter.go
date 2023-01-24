@@ -205,8 +205,16 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 	return inst, nil
 }
 
-// RegisterCallback registers the function f to be called when any of the
-// insts Collect method is called.
+// RegisterCallback registers f to be called each collection cycle so it will
+// make observations for insts during those cycles.
+//
+// The only instruments f can make observations for are insts. All other
+// observations will be dropped and an error will be logged.
+//
+// Only instruments from this meter can be registered with f, an error is
+// returned if other instrument are provided.
+//
+// The returned Registration can be used to unregister f.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a observer if not needed.
