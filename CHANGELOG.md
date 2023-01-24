@@ -50,6 +50,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
   - `Int64Histogram` replaces the `syncint64.Histogram`
 - Add `NewTracerProvider` to `go.opentelemetry.io/otel/bridge/opentracing` to create `WrapperTracer` instances from a `TracerProvider`. (#3316)
+- Add the `go.opentelemetry.io/otel/semconv/v1.17.0` package.
+  The package contains semantic conventions from the `v1.17.0` version of the OpenTelemetry specification. (#3599)
 
 ### Changed
 
