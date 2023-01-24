@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func Example() {
