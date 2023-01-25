@@ -97,7 +97,7 @@ type noopReg struct{}
 func (noopReg) Unregister() error { return nil }
 
 type nonrecordingAsyncFloat64Instrument struct {
-	instrument.Asynchronous
+	instrument.Float64Observable
 }
 
 var (
@@ -118,12 +118,8 @@ func (n nonrecordingAsyncFloat64Instrument) Gauge(string, ...instrument.Float64O
 	return n, nil
 }
 
-func (nonrecordingAsyncFloat64Instrument) Observe(context.Context, float64, ...attribute.KeyValue) {
-
-}
-
 type nonrecordingAsyncInt64Instrument struct {
-	instrument.Asynchronous
+	instrument.Int64Observable
 }
 
 var (
@@ -142,9 +138,6 @@ func (n nonrecordingAsyncInt64Instrument) UpDownCounter(string, ...instrument.In
 
 func (n nonrecordingAsyncInt64Instrument) Gauge(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
 	return n, nil
-}
-
-func (nonrecordingAsyncInt64Instrument) Observe(context.Context, int64, ...attribute.KeyValue) {
 }
 
 type nonrecordingSyncFloat64Instrument struct {

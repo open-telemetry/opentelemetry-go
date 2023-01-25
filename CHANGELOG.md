@@ -36,7 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/semconv/v1.16.0` package.
   The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
 - Metric instruments were added to `go.opentelemetry.io/otel/metric/instrument`.
-  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575)
+  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575, #3586)
   - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
   - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
   - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`

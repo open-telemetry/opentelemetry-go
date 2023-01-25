@@ -35,8 +35,8 @@ func TestFloat64ObserverOptions(t *testing.T) {
 	got := NewFloat64ObserverConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
-		WithFloat64Callback(func(ctx context.Context, o Float64Observer) error {
-			o.Observe(ctx, token)
+		WithFloat64Callback(func(ctx context.Context, obsrv Float64Observer) error {
+			obsrv.Observe(token)
 			return nil
 		}),
 	)
@@ -57,6 +57,6 @@ type float64Observer struct {
 	got float64
 }
 
-func (o *float64Observer) Observe(_ context.Context, v float64, _ ...attribute.KeyValue) {
+func (o *float64Observer) Observe(v float64, _ ...attribute.KeyValue) {
 	o.got = v
 }
