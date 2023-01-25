@@ -129,7 +129,7 @@ type HistogramDataPoint struct {
 	Sum float64
 }
 
-// Extrema is the minimum or maximum value of a data set.
+// Extrema is the minimum or maximum value of a dataset.
 type Extrema struct {
 	value float64
 	valid bool
