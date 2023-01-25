@@ -47,7 +47,7 @@ var hc = &HTTPConv{
 
 func TestHTTPClientResponse(t *testing.T) {
 	const stat, n = 201, 397
-	resp := http.Response{
+	resp := &http.Response{
 		StatusCode:    stat,
 		ContentLength: n,
 	}
