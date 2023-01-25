@@ -88,13 +88,22 @@ func ClientStatus(code int) (codes.Code, string) {
 }
 
 // ServerRequest returns attributes for an HTTP request received by a server.
+//
+// The server must be the primary server name (the default virtual host if
+// there are multiple), if it is known. It should include the host identifier
+// and if a port is used to route to the server that port identifier should be
+// included as an appropriate port suffix.
+//
+// If the primary server name is not known, server should be an empty string.
+// The req Host will be used to determine the server instead.
+//
 // The following attributes are always returned: "http.method", "http.scheme",
 // "http.flavor", "http.target", "net.host.name". The following attributes are
 // returned if they related values are defined in req: "net.host.port",
 // "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
 // "http.client_ip".
-func ServerRequest(req *http.Request) []attribute.KeyValue {
-	return hc.ServerRequest(req)
+func ServerRequest(server string, req *http.Request) []attribute.KeyValue {
+	return hc.ServerRequest(server, req)
 }
 
 // ServerStatus returns a span status code and message for an HTTP status code

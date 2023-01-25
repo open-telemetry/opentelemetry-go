@@ -178,13 +178,26 @@ func TestHTTPServerRequest(t *testing.T) {
 			attribute.String("enduser.id", user),
 			attribute.String("http.client_ip", clientIP),
 		},
-		hc.ServerRequest(req))
+		hc.ServerRequest("", req))
+}
+
+func TestHTTPServerName(t *testing.T) {
+	req := new(http.Request)
+	var got []attribute.KeyValue
+	const (
+		host = "test.semconv.server"
+		port = 8080
+	)
+	server := host + ":" + strconv.Itoa(port)
+	assert.NotPanics(t, func() { got = hc.ServerRequest(server, req) })
+	assert.Contains(t, got, attribute.String("net.host.name", host))
+	assert.Contains(t, got, attribute.Int("net.host.port", port))
 }
 
 func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	req := new(http.Request)
 	var got []attribute.KeyValue
-	assert.NotPanics(t, func() { got = hc.ServerRequest(req) })
+	assert.NotPanics(t, func() { got = hc.ServerRequest("", req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
 		attribute.String("http.target", ""),

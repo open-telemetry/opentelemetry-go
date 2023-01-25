@@ -136,14 +136,33 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 }
 
 // ServerRequest returns attributes for an HTTP request received by a server.
+//
+// The server must be the primary server name (the default virtual host if
+// there are multiple), if it is known. It should include the host identifier
+// and if a port is used to route to the server that port identifier should be
+// included as an appropriate port suffix.
+//
+// If the primary server name is not known, server should be an empty string.
+// The req Host will be used to determine the server instead.
+//
 // The following attributes are always returned: "http.method", "http.scheme",
 // "http.flavor", "http.target", "net.host.name". The following attributes are
 // returned if they related values are defined in req: "net.host.port",
 // "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
 // "http.client_ip".
-func (c *HTTPConv) ServerRequest(req *http.Request) []attribute.KeyValue {
+func (c *HTTPConv) ServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	n := 5 // Method, scheme, target, proto, and host name.
-	host, p := splitHostPort(req.Host)
+	var host string
+	var p int
+	if server == "" {
+		host, p = splitHostPort(req.Host)
+	} else {
+		// Prioritize the primary server name.
+		host, p = splitHostPort(server)
+		if p < 0 {
+			_, p = splitHostPort(req.Host)
+		}
+	}
 	hostPort := requiredHTTPPort(req.TLS != nil, p)
 	if hostPort > 0 {
 		n++
