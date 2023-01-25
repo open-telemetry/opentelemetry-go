@@ -131,15 +131,17 @@ type HistogramDataPoint struct {
 
 // Extrema are the minimum or maximum values of a data set.
 type Extrema struct {
-	// Value is the extrema value.
-	Value float64
-
-	// Valid is true if Value has been assigned a value. It is false if Value
-	// is the zero-value.
-	Valid bool
+	value float64
+	valid bool
 }
 
 // NewExtrema returns an Extrema set to v.
 func NewExtrema(v float64) Extrema {
-	return Extrema{Value: v, Valid: true}
+	return Extrema{value: v, valid: true}
+}
+
+// Value returns the Extrema value and true if the Extrema is defined.
+// Otherwise, if the Extrema is its zero-value, defined will be false.
+func (e Extrema) Value() (v float64, defined bool) {
+	return e.value, e.valid
 }

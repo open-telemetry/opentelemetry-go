@@ -303,10 +303,13 @@ func equalExtrema(a, b metricdata.Extrema, _ config) (reasons []string) {
 }
 
 func eqExtrema(a, b metricdata.Extrema) bool {
-	if !a.Valid || !b.Valid {
-		return a.Valid == b.Valid
+	aV, aOk := a.Value()
+	bV, bOk := b.Value()
+
+	if !aOk || !bOk {
+		return aOk == bOk
 	}
-	return a.Value == b.Value
+	return aV == bV
 }
 
 func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {

@@ -183,13 +183,11 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 			BucketCounts:      dPt.BucketCounts,
 			ExplicitBounds:    dPt.Bounds,
 		}
-		if dPt.Min.Valid {
-			min := dPt.Min.Value
-			hdp.Min = &min
+		if v, ok := dPt.Min.Value(); ok {
+			hdp.Min = &v
 		}
-		if dPt.Max.Valid {
-			max := dPt.Max.Value
-			hdp.Max = &max
+		if v, ok := dPt.Max.Value(); ok {
+			hdp.Max = &v
 		}
 		out = append(out, hdp)
 	}
