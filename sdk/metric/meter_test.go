@@ -179,8 +179,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Int64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Int64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				ctr, err := m.Int64ObservableCounter("aint", instrument.WithInt64Callback(cback))
@@ -190,9 +190,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "aint",
@@ -209,8 +206,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Int64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Int64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				ctr, err := m.Int64ObservableUpDownCounter("aint", instrument.WithInt64Callback(cback))
@@ -220,9 +217,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "aint",
@@ -239,8 +233,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Int64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Int64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				gauge, err := m.Int64ObservableGauge("agauge", instrument.WithInt64Callback(cback))
@@ -250,9 +244,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, gauge)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				gauge.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "agauge",
@@ -267,8 +258,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Float64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Float64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				ctr, err := m.Float64ObservableCounter("afloat", instrument.WithFloat64Callback(cback))
@@ -278,9 +269,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "afloat",
@@ -297,8 +285,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Float64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Float64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				ctr, err := m.Float64ObservableUpDownCounter("afloat", instrument.WithFloat64Callback(cback))
@@ -308,9 +296,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				ctr.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "afloat",
@@ -327,8 +312,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(ctx context.Context, o instrument.Float64Observer) error {
-					o.Observe(ctx, 4, attrs...)
+				cback := func(_ context.Context, o instrument.Float64Observer) error {
+					o.Observe(4, attrs...)
 					return nil
 				}
 				gauge, err := m.Float64ObservableGauge("agauge", instrument.WithFloat64Callback(cback))
@@ -338,9 +323,6 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					return nil
 				}, gauge)
 				assert.NoError(t, err)
-
-				// Observed outside of a callback, it should be ignored.
-				gauge.Observe(context.Background(), 19)
 			},
 			want: metricdata.Metrics{
 				Name: "agauge",
@@ -564,10 +546,9 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
 	require.NoError(t, err)
 
-	// Panics if Observe is called.
-	type int64Obsrv struct{ instrument.Int64Observer }
+	type int64Obsrv struct{ instrument.Int64Observable }
 	int64Foreign := int64Obsrv{}
-	type float64Obsrv struct{ instrument.Float64Observer }
+	type float64Obsrv struct{ instrument.Float64Observable }
 	float64Foreign := float64Obsrv{}
 
 	_, err = m1.RegisterCallback(
@@ -1311,9 +1292,9 @@ func TestAsynchronousExample(t *testing.T) {
 
 		observations := make(map[attribute.Set]int64)
 		_, err := meter.Int64ObservableCounter(instName, instrument.WithInt64Callback(
-			func(ctx context.Context, o instrument.Int64Observer) error {
+			func(_ context.Context, o instrument.Int64Observer) error {
 				for attrSet, val := range observations {
-					o.Observe(ctx, val, attrSet.ToSlice()...)
+					o.Observe(val, attrSet.ToSlice()...)
 				}
 				return nil
 			},

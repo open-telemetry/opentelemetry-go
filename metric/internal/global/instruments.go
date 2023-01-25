@@ -30,12 +30,12 @@ type unwrapper interface {
 }
 
 type afCounter struct {
+	instrument.Float64Observable
+
 	name string
 	opts []instrument.Float64ObserverOption
 
 	delegate atomic.Value //instrument.Float64ObservableCounter
-
-	instrument.Asynchronous
 }
 
 var _ unwrapper = (*afCounter)(nil)
@@ -50,12 +50,6 @@ func (i *afCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *afCounter) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64ObservableCounter).Observe(ctx, x, attrs...)
-	}
-}
-
 func (i *afCounter) Unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(instrument.Float64ObservableCounter)
@@ -64,12 +58,12 @@ func (i *afCounter) Unwrap() instrument.Asynchronous {
 }
 
 type afUpDownCounter struct {
+	instrument.Float64Observable
+
 	name string
 	opts []instrument.Float64ObserverOption
 
 	delegate atomic.Value //instrument.Float64ObservableUpDownCounter
-
-	instrument.Asynchronous
 }
 
 var _ unwrapper = (*afUpDownCounter)(nil)
@@ -84,12 +78,6 @@ func (i *afUpDownCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *afUpDownCounter) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64ObservableUpDownCounter).Observe(ctx, x, attrs...)
-	}
-}
-
 func (i *afUpDownCounter) Unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(instrument.Float64ObservableUpDownCounter)
@@ -98,13 +86,16 @@ func (i *afUpDownCounter) Unwrap() instrument.Asynchronous {
 }
 
 type afGauge struct {
+	instrument.Float64Observable
+
 	name string
 	opts []instrument.Float64ObserverOption
 
 	delegate atomic.Value //instrument.Float64ObservableGauge
-
-	instrument.Asynchronous
 }
+
+var _ unwrapper = (*afGauge)(nil)
+var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
 
 func (i *afGauge) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64ObservableGauge(i.name, i.opts...)
@@ -115,15 +106,6 @@ func (i *afGauge) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-var _ unwrapper = (*afGauge)(nil)
-var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
-
-func (i *afGauge) Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64ObservableGauge).Observe(ctx, x, attrs...)
-	}
-}
-
 func (i *afGauge) Unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(instrument.Float64ObservableGauge)
@@ -132,12 +114,12 @@ func (i *afGauge) Unwrap() instrument.Asynchronous {
 }
 
 type aiCounter struct {
+	instrument.Int64Observable
+
 	name string
 	opts []instrument.Int64ObserverOption
 
 	delegate atomic.Value //instrument.Int64ObservableCounter
-
-	instrument.Asynchronous
 }
 
 var _ unwrapper = (*aiCounter)(nil)
@@ -152,12 +134,6 @@ func (i *aiCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *aiCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64ObservableCounter).Observe(ctx, x, attrs...)
-	}
-}
-
 func (i *aiCounter) Unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(instrument.Int64ObservableCounter)
@@ -166,12 +142,12 @@ func (i *aiCounter) Unwrap() instrument.Asynchronous {
 }
 
 type aiUpDownCounter struct {
+	instrument.Int64Observable
+
 	name string
 	opts []instrument.Int64ObserverOption
 
 	delegate atomic.Value //instrument.Int64ObservableUpDownCounter
-
-	instrument.Asynchronous
 }
 
 var _ unwrapper = (*aiUpDownCounter)(nil)
@@ -186,12 +162,6 @@ func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *aiUpDownCounter) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64ObservableUpDownCounter).Observe(ctx, x, attrs...)
-	}
-}
-
 func (i *aiUpDownCounter) Unwrap() instrument.Asynchronous {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(instrument.Int64ObservableUpDownCounter)
@@ -200,12 +170,12 @@ func (i *aiUpDownCounter) Unwrap() instrument.Asynchronous {
 }
 
 type aiGauge struct {
+	instrument.Int64Observable
+
 	name string
 	opts []instrument.Int64ObserverOption
 
 	delegate atomic.Value //instrument.Int64ObservableGauge
-
-	instrument.Asynchronous
 }
 
 var _ unwrapper = (*aiGauge)(nil)
@@ -218,12 +188,6 @@ func (i *aiGauge) setDelegate(m metric.Meter) {
 		return
 	}
 	i.delegate.Store(ctr)
-}
-
-func (i *aiGauge) Observe(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64ObservableGauge).Observe(ctx, x, attrs...)
-	}
 }
 
 func (i *aiGauge) Unwrap() instrument.Asynchronous {

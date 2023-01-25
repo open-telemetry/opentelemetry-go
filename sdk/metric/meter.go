@@ -232,7 +232,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 		}
 
 		switch o := inst.(type) {
-		case *observable[int64]:
+		case int64Observable:
 			if err := o.registerable(m.scope); err != nil {
 				if !errors.Is(err, errEmptyAgg) {
 					errs.append(err)
@@ -240,7 +240,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 				continue
 			}
 			reg.registerInt64(o.observablID)
-		case *observable[float64]:
+		case float64Observable:
 			if err := o.registerable(m.scope); err != nil {
 				if !errors.Is(err, errEmptyAgg) {
 					errs.append(err)
@@ -298,10 +298,10 @@ var (
 	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
-func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...attribute.KeyValue) {
-	var oImpl *observable[float64]
+func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ...attribute.KeyValue) {
+	var oImpl float64Observable
 	switch conv := o.(type) {
-	case *observable[float64]:
+	case float64Observable:
 		oImpl = conv
 	case interface {
 		Unwrap() instrument.Asynchronous
@@ -309,7 +309,7 @@ func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...a
 		// Unwrap any global.
 		async := conv.Unwrap()
 		var ok bool
-		if oImpl, ok = async.(*observable[float64]); !ok {
+		if oImpl, ok = async.(float64Observable); !ok {
 			global.Error(errUnknownObserver, "failed to record asynchronous")
 			return
 		}
@@ -330,10 +330,10 @@ func (r observer) ObserveFloat64(o instrument.Float64Observer, v float64, a ...a
 	oImpl.observe(v, a)
 }
 
-func (r observer) ObserveInt64(o instrument.Int64Observer, v int64, a ...attribute.KeyValue) {
-	var oImpl *observable[int64]
+func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attribute.KeyValue) {
+	var oImpl int64Observable
 	switch conv := o.(type) {
-	case *observable[int64]:
+	case int64Observable:
 		oImpl = conv
 	case interface {
 		Unwrap() instrument.Asynchronous
@@ -341,7 +341,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observer, v int64, a ...attribu
 		// Unwrap any global.
 		async := conv.Unwrap()
 		var ok bool
-		if oImpl, ok = async.(*observable[int64]); !ok {
+		if oImpl, ok = async.(int64Observable); !ok {
 			global.Error(errUnknownObserver, "failed to record asynchronous")
 			return
 		}
@@ -398,13 +398,13 @@ func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.
 
 type int64ObservProvider struct{ *instProvider[int64] }
 
-func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*observable[int64], error) {
+func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (int64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	return newObservable(p.scope, kind, name, desc, u, aggs), err
+	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
 }
 
-func (p int64ObservProvider) registerCallbacks(inst *observable[int64], cBacks []instrument.Int64Callback) {
-	if inst == nil {
+func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []instrument.Int64Callback) {
+	if inst.observable == nil || len(inst.aggregators) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -414,20 +414,28 @@ func (p int64ObservProvider) registerCallbacks(inst *observable[int64], cBacks [
 	}
 }
 
-func (p int64ObservProvider) callback(i *observable[int64], f instrument.Int64Callback) func(context.Context) error {
-	inst := callbackObserver[int64]{i}
+func (p int64ObservProvider) callback(i int64Observable, f instrument.Int64Callback) func(context.Context) error {
+	inst := int64Observer{i}
 	return func(ctx context.Context) error { return f(ctx, inst) }
+}
+
+type int64Observer struct {
+	int64Observable
+}
+
+func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }
 
 type float64ObservProvider struct{ *instProvider[float64] }
 
-func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*observable[float64], error) {
+func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (float64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	return newObservable(p.scope, kind, name, desc, u, aggs), err
+	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
 }
 
-func (p float64ObservProvider) registerCallbacks(inst *observable[float64], cBacks []instrument.Float64Callback) {
-	if inst == nil {
+func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks []instrument.Float64Callback) {
+	if inst.observable == nil || len(inst.aggregators) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -437,17 +445,15 @@ func (p float64ObservProvider) registerCallbacks(inst *observable[float64], cBac
 	}
 }
 
-func (p float64ObservProvider) callback(i *observable[float64], f instrument.Float64Callback) func(context.Context) error {
-	inst := callbackObserver[float64]{i}
+func (p float64ObservProvider) callback(i float64Observable, f instrument.Float64Callback) func(context.Context) error {
+	inst := float64Observer{i}
 	return func(ctx context.Context) error { return f(ctx, inst) }
 }
 
-// callbackObserver is an observer that records values for a wrapped
-// observable.
-type callbackObserver[N int64 | float64] struct {
-	*observable[N]
+type float64Observer struct {
+	float64Observable
 }
 
-func (o callbackObserver[N]) Observe(_ context.Context, val N, attrs ...attribute.KeyValue) {
+func (o float64Observer) Observe(val float64, attrs ...attribute.KeyValue) {
 	o.observe(val, attrs)
 }
