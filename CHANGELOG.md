@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
   - `Int64Histogram` replaces the `syncint64.Histogram`
 - Add `NewTracerProvider` to `go.opentelemetry.io/otel/bridge/opentracing` to create `WrapperTracer` instances from a `TracerProvider`. (#3316)
+- The `Extrema` type to `go.opentelemetry.io/otel/sdk/metric/metricdata` to represent min/max values and still be able to distinguish unset and zero values. (#3487)
 - Add the `go.opentelemetry.io/otel/semconv/v1.17.0` package.
   The package contains semantic conventions from the `v1.17.0` version of the OpenTelemetry specification. (#3599)
 
@@ -106,6 +107,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The slice of `instrument.Asynchronous` parameter is now passed as a variadic argument. (#3587)
 - The `Callback` in `go.opentelemetry.io/otel/metric` has the added `Observer` parameter added.
   This new parameter is used by `Callback` implementations to observe values for asynchronous instruments instead of calling the `Observe` method of the instrument directly. (#3584)
+- The `Min` and `Max` fields of the `HistogramDataPoint` in `go.opentelemetry.io/otel/sdk/metric/metricdata` are now defined with the added `Extrema` type instead of a `*float64`. (#3487)
 
 ### Fixed
 

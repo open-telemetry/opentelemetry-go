@@ -32,6 +32,7 @@ type Datatypes interface {
 		metricdata.Gauge[int64] |
 		metricdata.Histogram |
 		metricdata.HistogramDataPoint |
+		metricdata.Extrema |
 		metricdata.Metrics |
 		metricdata.ResourceMetrics |
 		metricdata.ScopeMetrics |
@@ -92,6 +93,8 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalHistograms(e, aIface.(metricdata.Histogram), cfg)
 	case metricdata.HistogramDataPoint:
 		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint), cfg)
+	case metricdata.Extrema:
+		r = equalExtrema(e, aIface.(metricdata.Extrema), cfg)
 	case metricdata.Metrics:
 		r = equalMetrics(e, aIface.(metricdata.Metrics), cfg)
 	case metricdata.ResourceMetrics:
@@ -152,6 +155,8 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesSum(e, attrs...)
 	case metricdata.HistogramDataPoint:
 		reasons = hasAttributesHistogramDataPoints(e, attrs...)
+	case metricdata.Extrema:
+		// Nothing to check.
 	case metricdata.Histogram:
 		reasons = hasAttributesHistogram(e, attrs...)
 	case metricdata.Metrics:
