@@ -53,7 +53,7 @@ type HTTPConv struct {
 // request contained in resp. For example:
 //
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
-func (c *HTTPConv) ClientResponse(resp http.Response) []attribute.KeyValue {
+func (c *HTTPConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	var n int
 	if resp.StatusCode > 0 {
 		n++
