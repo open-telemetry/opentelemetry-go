@@ -188,8 +188,16 @@ func TestHTTPServerName(t *testing.T) {
 		host = "test.semconv.server"
 		port = 8080
 	)
-	server := host + ":" + strconv.Itoa(port)
+	portStr := strconv.Itoa(port)
+	server := host + ":" + portStr
 	assert.NotPanics(t, func() { got = hc.ServerRequest(server, req) })
+	assert.Contains(t, got, attribute.String("net.host.name", host))
+	assert.Contains(t, got, attribute.Int("net.host.port", port))
+
+	req = &http.Request{Host: "alt.host.name:" + portStr}
+	// The server parameter does not include a port, ServerRequest should use
+	// the port in the request Host field.
+	assert.NotPanics(t, func() { got = hc.ServerRequest(host, req) })
 	assert.Contains(t, got, attribute.String("net.host.name", host))
 	assert.Contains(t, got, attribute.Int("net.host.port", port))
 }
