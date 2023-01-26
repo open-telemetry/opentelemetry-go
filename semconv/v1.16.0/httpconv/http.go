@@ -68,7 +68,7 @@ var (
 // request contained in resp. For example:
 //
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
-func ClientResponse(resp http.Response) []attribute.KeyValue {
+func ClientResponse(resp *http.Response) []attribute.KeyValue {
 	return hc.ClientResponse(resp)
 }
 
