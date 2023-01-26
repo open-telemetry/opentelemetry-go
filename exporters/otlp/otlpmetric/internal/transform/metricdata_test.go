@@ -60,8 +60,8 @@ var (
 		Count:        30,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 30, 0},
-		Min:          &minA,
-		Max:          &maxA,
+		Min:          metricdata.NewExtrema(minA),
+		Max:          metricdata.NewExtrema(maxA),
 		Sum:          sumA,
 	}, {
 		Attributes:   bob,
@@ -70,8 +70,8 @@ var (
 		Count:        3,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 1, 2},
-		Min:          &minB,
-		Max:          &maxB,
+		Min:          metricdata.NewExtrema(minB),
+		Max:          metricdata.NewExtrema(maxB),
 		Sum:          sumB,
 	}}
 
