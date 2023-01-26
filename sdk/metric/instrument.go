@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -211,6 +210,36 @@ type observablID[N int64 | float64] struct {
 	scope       instrumentation.Scope
 }
 
+type float64Observable struct {
+	instrument.Float64Observable
+	*observable[float64]
+}
+
+var _ instrument.Float64ObservableCounter = float64Observable{}
+var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
+var _ instrument.Float64ObservableGauge = float64Observable{}
+
+func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[float64]) float64Observable {
+	return float64Observable{
+		observable: newObservable[float64](scope, kind, name, desc, u, agg),
+	}
+}
+
+type int64Observable struct {
+	instrument.Int64Observable
+	*observable[int64]
+}
+
+var _ instrument.Int64ObservableCounter = int64Observable{}
+var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
+var _ instrument.Int64ObservableGauge = int64Observable{}
+
+func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[int64]) int64Observable {
+	return int64Observable{
+		observable: newObservable[int64](scope, kind, name, desc, u, agg),
+	}
+}
+
 type observable[N int64 | float64] struct {
 	instrument.Asynchronous
 	observablID[N]
@@ -229,25 +258,6 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 		},
 		aggregators: agg,
 	}
-}
-
-var _ instrument.Float64ObservableCounter = (*observable[float64])(nil)
-var _ instrument.Float64ObservableUpDownCounter = (*observable[float64])(nil)
-var _ instrument.Float64ObservableGauge = (*observable[float64])(nil)
-var _ instrument.Int64ObservableCounter = (*observable[int64])(nil)
-var _ instrument.Int64ObservableUpDownCounter = (*observable[int64])(nil)
-var _ instrument.Int64ObservableGauge = (*observable[int64])(nil)
-
-// Observe logs an error.
-func (o *observable[N]) Observe(ctx context.Context, val N, attrs ...attribute.KeyValue) {
-	var zero N
-	err := errors.New("invalid observation")
-	global.Error(err, "dropping observation made outside a callback",
-		"name", o.name,
-		"description", o.description,
-		"unit", o.unit,
-		"number", fmt.Sprintf("%T", zero),
-	)
 }
 
 // observe records the val for the set of attrs.
