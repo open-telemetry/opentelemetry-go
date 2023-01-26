@@ -137,10 +137,16 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 
 // ServerRequest returns attributes for an HTTP request received by a server.
 //
-// The server must be the primary server name (the default virtual host if
-// there are multiple), if it is known. It should include the host identifier
-// and if a port is used to route to the server that port identifier should be
-// included as an appropriate port suffix.
+// The server must be the primary server name if it is known. For example this
+// would be the ServerName directive
+// (https://httpd.apache.org/docs/2.4/mod/core.html#servername) for an Apache
+// server, and the server_name directive
+// (http://nginx.org/en/docs/http/ngx_http_core_module.html#server_name) for an
+// nginx server. More generically, the primary server name would be the host
+// header value that matches the default virtual host of an HTTP server. It
+// should include the host identifier and if a port is used to route to the
+// server that port identifier should be included as an appropriate port
+// suffix.
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
