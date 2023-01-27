@@ -114,6 +114,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Asynchronous instruments that use sum aggregators and attribute filters correctly add values from equivalent attribute sets that have been filtered. (#3439, #3549)
 - The `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/sdk/metric` only registers a callback for instruments created by that meter.
   Trying to register a callback with instruments from a different meter will result in an error being returned. (#3584)
+- Backoff reset for OTLP client retry now behaves as expected, instead of never being reset after the first client instantiation. (#3621)
 
 ### Deprecated
 
