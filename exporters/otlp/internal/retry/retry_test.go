@@ -177,6 +177,33 @@ func TestBackoffRetryCanceledContext(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
+func TestBackoffReset(t *testing.T) {
+	ev := func(error) (bool, time.Duration) { return true, 0 }
+
+	delay := time.Millisecond
+	reqFunc := Config{
+		Enabled:         true,
+		InitialInterval: 0,
+		MaxInterval:     0,
+		MaxElapsedTime:  delay,
+	}.RequestFunc(ev)
+
+	ctx := context.Background()
+	err1 := reqFunc(ctx, func(context.Context) error {
+		return assert.AnError
+	})
+	// Call reqFunc second time and ensure we retry at least once.
+	count := 0
+	err2 := reqFunc(ctx, func(context.Context) error {
+		count++
+		return assert.AnError
+	})
+
+	assert.Contains(t, err1.Error(), "max retry")
+	assert.Contains(t, err2.Error(), "max retry")
+	assert.GreaterOrEqual(t, count, 2)
+}
+
 func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {
 	// Ensure the throttle delay is used by making longer than backoff delay.
 	tDelay, bDelay := time.Hour, time.Nanosecond

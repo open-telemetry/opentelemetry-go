@@ -88,9 +88,9 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 		Stop:                backoff.Stop,
 		Clock:               backoff.SystemClock,
 	}
-	b.Reset()
 
 	return func(ctx context.Context, fn func(context.Context) error) error {
+		b.Reset()
 		for {
 			err := fn(ctx)
 			if err == nil {
