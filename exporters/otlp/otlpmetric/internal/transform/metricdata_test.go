@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
@@ -60,8 +60,8 @@ var (
 		Count:        30,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 30, 0},
-		Min:          &minA,
-		Max:          &maxA,
+		Min:          metricdata.NewExtrema(minA),
+		Max:          metricdata.NewExtrema(maxA),
 		Sum:          sumA,
 	}, {
 		Attributes:   bob,
@@ -70,8 +70,8 @@ var (
 		Count:        3,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 1, 2},
-		Min:          &minB,
-		Max:          &maxB,
+		Min:          metricdata.NewExtrema(minB),
+		Max:          metricdata.NewExtrema(maxB),
 		Sum:          sumB,
 	}}
 

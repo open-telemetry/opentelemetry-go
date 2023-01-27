@@ -76,8 +76,9 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	aggregations map[instrumentation.Scope][]instrumentSync
-	callbacks    list.List
+	aggregations   map[instrumentation.Scope][]instrumentSync
+	callbacks      []func(context.Context) error
+	multiCallbacks list.List
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -95,39 +96,52 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallback registers a callback to be run when `produce()` is called.
-func (p *pipeline) addCallback(c callback) (unregister func()) {
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addCallback(cback func(context.Context) error) {
 	p.Lock()
 	defer p.Unlock()
-	e := p.callbacks.PushBack(c)
+	p.callbacks = append(p.callbacks, cback)
+}
+
+type multiCallback func(context.Context) error
+
+// addMultiCallback registers a multi-instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+	p.Lock()
+	defer p.Unlock()
+	e := p.multiCallbacks.PushBack(c)
 	return func() {
 		p.Lock()
-		p.callbacks.Remove(e)
+		p.multiCallbacks.Remove(e)
 		p.Unlock()
 	}
 }
-
-// callbackKey is a context key type used to identify context that came from the SDK.
-type callbackKey int
-
-// produceKey is the context key to tell if a Observe is called within a callback.
-// Its value of zero is arbitrary. If this package defined other context keys,
-// they would have different integer values.
-const produceKey callbackKey = 0
 
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	ctx = context.WithValue(ctx, produceKey, struct{}{})
-
 	p.Lock()
 	defer p.Unlock()
 
-	for e := p.callbacks.Front(); e != nil; e = e.Next() {
+	var errs multierror
+	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(callback)
-		f(ctx)
+		if err := c(ctx); err != nil {
+			errs.append(err)
+		}
+		if err := ctx.Err(); err != nil {
+			return metricdata.ResourceMetrics{}, err
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		// TODO make the callbacks parallel. ( #3034 )
+		f := e.Value.(multiCallback)
+		if err := f(ctx); err != nil {
+			errs.append(err)
+		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			return metricdata.ResourceMetrics{}, err
@@ -159,7 +173,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 	return metricdata.ResourceMetrics{
 		Resource:     p.resource,
 		ScopeMetrics: sm,
-	}, nil
+	}, errs.errorOrNil()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -447,10 +461,16 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(c callback) metric.Registration {
+func (p pipelines) registerCallback(cback func(context.Context) error) {
+	for _, pipe := range p {
+		pipe.addCallback(cback)
+	}
+}
+
+func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
-		unregs[i] = pipe.addCallback(c)
+		unregs[i] = pipe.addMultiCallback(c)
 	}
 	return unregisterFuncs(unregs)
 }

@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -68,10 +69,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
-		gauge.Observe(ctx, n, attrs...)
-	})
+		o.ObserveFloat64(gauge, n, attrs...)
+		return nil
+	}, gauge)
 	if err != nil {
 		log.Fatal(err)
 	}

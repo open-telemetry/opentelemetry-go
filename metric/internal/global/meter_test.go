@@ -25,8 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
 )
 
 func TestMeterProviderRace(t *testing.T) {
@@ -45,6 +43,10 @@ func TestMeterProviderRace(t *testing.T) {
 
 	mp.setDelegate(metric.NewNoopMeterProvider())
 	close(finish)
+}
+
+var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer) error {
+	return nil
 }
 
 func TestMeterRace(t *testing.T) {
@@ -68,7 +70,7 @@ func TestMeterRace(t *testing.T) {
 			_, _ = mtr.Int64Counter(name)
 			_, _ = mtr.Int64UpDownCounter(name)
 			_, _ = mtr.Int64Histogram(name)
-			_, _ = mtr.RegisterCallback(nil, func(ctx context.Context) {})
+			_, _ = mtr.RegisterCallback(zeroCallback)
 			if !once {
 				wg.Done()
 				once = true
@@ -88,7 +90,7 @@ func TestMeterRace(t *testing.T) {
 
 func TestUnregisterRace(t *testing.T) {
 	mtr := &meter{}
-	reg, err := mtr.RegisterCallback(nil, func(ctx context.Context) {})
+	reg, err := mtr.RegisterCallback(zeroCallback)
 	require.NoError(t, err)
 
 	wg := &sync.WaitGroup{}
@@ -115,7 +117,7 @@ func TestUnregisterRace(t *testing.T) {
 	close(finish)
 }
 
-func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Counter, asyncfloat64.Counter) {
+func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float64Counter, instrument.Float64ObservableCounter) {
 	afcounter, err := m.Float64ObservableCounter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64ObservableUpDownCounter("test_Async_UpDownCounter")
@@ -130,9 +132,10 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (syncfloat64.Coun
 	_, err = m.Int64ObservableGauge("test_Async_Gauge")
 	assert.NoError(t, err)
 
-	_, err = m.RegisterCallback([]instrument.Asynchronous{afcounter}, func(ctx context.Context) {
-		afcounter.Observe(ctx, 3)
-	})
+	_, err = m.RegisterCallback(func(ctx context.Context, obs metric.Observer) error {
+		obs.ObserveFloat64(afcounter, 3)
+		return nil
+	}, afcounter)
 	require.NoError(t, err)
 
 	sfcounter, err := m.Float64Counter("test_Async_Counter")
@@ -324,9 +327,10 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 
 	var called0 bool
-	reg0, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) {
+	reg0, err := m.RegisterCallback(func(context.Context, metric.Observer) error {
 		called0 = true
-	})
+		return nil
+	}, actr)
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "callback not registered")
 	// This means reg0 should not be delegated.
@@ -334,9 +338,10 @@ func TestRegistrationDelegation(t *testing.T) {
 	assert.Equal(t, 0, mImpl.registry.Len(), "callback not unregistered")
 
 	var called1 bool
-	reg1, err := m.RegisterCallback([]instrument.Asynchronous{actr}, func(context.Context) {
+	reg1, err := m.RegisterCallback(func(context.Context, metric.Observer) error {
 		called1 = true
-	})
+		return nil
+	}, actr)
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "second callback not registered")
 
