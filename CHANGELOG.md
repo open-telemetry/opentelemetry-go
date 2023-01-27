@@ -89,6 +89,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
   fixing random sampling when using ID generators like `xray.IDGenerator`
   and increasing parity with other language implementations. (#3557)
+- OTLP trace exporter errors are wrapped in a type that prefixes the signal name in front of error strings (e.g., "traces export: context canceled" instead of just "context canceled").
+  Existing users of the exporters attempting to identify specific errors will need to use `errors.Unwrap()` to get the underlying error. (#3516)
 - The OTLP exporter for traces and metrics will print the final retryable error message when attempts to retry time out. (#3514)
 - The instrument kind names in `go.opentelemetry.io/otel/sdk/metric` are updated to match the API. (#3562)
   - `InstrumentKindSyncCounter` is renamed to `InstrumentKindCounter`

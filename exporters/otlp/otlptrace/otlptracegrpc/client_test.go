@@ -16,6 +16,7 @@ package otlptracegrpc_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -239,7 +240,9 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	// Release the export so everything is cleaned up on shutdown.
 	close(exportBlock)
 
-	require.Equal(t, codes.DeadlineExceeded, status.Convert(err).Code())
+	unwrapped := errors.Unwrap(err)
+	require.Equal(t, codes.DeadlineExceeded, status.Convert(unwrapped).Code())
+	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
@@ -399,18 +402,18 @@ func TestPartialSuccess(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	errors := []error{}
+	errs := []error{}
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}))
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
-	require.Equal(t, 1, len(errors))
-	require.Contains(t, errors[0].Error(), "partially successful")
-	require.Contains(t, errors[0].Error(), "2 spans rejected")
+	require.Equal(t, 1, len(errs))
+	require.Contains(t, errs[0].Error(), "partially successful")
+	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }
 
 func TestCustomUserAgent(t *testing.T) {
