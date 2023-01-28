@@ -53,7 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
   - `Int64Histogram` replaces the `syncint64.Histogram`
 - `NewTracerProvider` to `go.opentelemetry.io/otel/bridge/opentracing`.
-  This is used to create `WrapperTracer` instances from a `TracerProvider`. (#3316)
+  This is used to create `WrapperTracer` instances from a `TracerProvider`. (#3116)
 - The `Extrema` type to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
   This type is used to represent min/max values and still be able to distinguish unset and zero values. (#3487)
 - The `go.opentelemetry.io/otel/semconv/v1.17.0` package.
@@ -114,7 +114,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
   Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
 - The `NewWrappedTracerProvider` in `go.opentelemetry.io/otel/bridge/opentracing` is now deprecated.
-  Use `NewTracerProvider` instead. (#3316)
+  Use `NewTracerProvider` instead. (#3116)
 
 ### Removed
 
