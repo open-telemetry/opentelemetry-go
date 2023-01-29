@@ -7,6 +7,11 @@ jobs:
   create-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
       - uses: actions/checkout@v3
 
       - name: Install zsh
@@ -15,4 +20,4 @@ jobs:
       - name: Run dependabot-pr.sh
         run: ./.github/workflows/scripts/dependabot-pr.sh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.OPENTELEMETRYBOT_GITHUB_TOKEN }}

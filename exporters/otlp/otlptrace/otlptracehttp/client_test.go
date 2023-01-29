@@ -16,18 +16,22 @@ package otlptracehttp_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
 const (
@@ -39,6 +43,10 @@ var (
 	testHeaders = map[string]string{
 		"Otel-Go-Key-1": "somevalue",
 		"Otel-Go-Key-2": "someothervalue",
+	}
+
+	customUserAgentHeader = map[string]string{
+		"user-agent": "custome-user-agent",
 	}
 )
 
@@ -140,6 +148,15 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: testHeaders,
 			},
 		},
+		{
+			name: "with custom user agent",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHeaders(customUserAgentHeader),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: customUserAgentHeader,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -204,7 +221,9 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Equalf(t, true, os.IsTimeout(err), "expected timeout error, got: %v", err)
+	unwrapped := errors.Unwrap(err)
+	assert.Equalf(t, true, os.IsTimeout(unwrapped), "expected timeout error, got: %v", unwrapped)
+	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
 }
 
 func TestNoRetry(t *testing.T) {
@@ -231,7 +250,9 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("failed to send traces to http://%s/v1/traces: 400 Bad Request", mc.endpoint), err.Error())
+	unwrapped := errors.Unwrap(err)
+	assert.Equal(t, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), unwrapped.Error())
+	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -347,4 +368,36 @@ func TestStopWhileExporting(t *testing.T) {
 	err = exporter.Shutdown(ctx)
 	assert.NoError(t, err)
 	<-doneCh
+}
+
+func TestPartialSuccess(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: 2,
+			ErrorMessage:  "partially successful",
+		},
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	ctx := context.Background()
+	exporter, err := otlptrace.New(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(context.Background()))
+	}()
+
+	errs := []error{}
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		errs = append(errs, err)
+	}))
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	assert.NoError(t, err)
+
+	require.Equal(t, 1, len(errs))
+	require.Contains(t, errs[0].Error(), "partially successful")
+	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }

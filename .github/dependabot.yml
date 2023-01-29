@@ -10,6 +10,15 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+  - package-ecosystem: docker
+    directory: /
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
   - package-ecosystem: gomod
     directory: /
     labels:
@@ -102,6 +111,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /example/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /example/view
     labels:
       - dependencies
       - go

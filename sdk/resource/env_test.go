@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestDetectOnePair(t *testing.T) {
@@ -43,7 +43,7 @@ func TestDetectOnePair(t *testing.T) {
 func TestDetectMultiPairs(t *testing.T) {
 	store, err := ottest.SetEnvVariables(map[string]string{
 		"x":             "1",
-		resourceAttrKey: "key=value, k = v , a= x, a=z",
+		resourceAttrKey: "key=value, k = v , a= x, a=z, b=c%2Fd",
 	})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, store.Restore()) }()
@@ -51,12 +51,13 @@ func TestDetectMultiPairs(t *testing.T) {
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, res, NewSchemaless(
+	assert.Equal(t, NewSchemaless(
 		attribute.String("key", "value"),
 		attribute.String("k", "v"),
 		attribute.String("a", "x"),
 		attribute.String("a", "z"),
-	))
+		attribute.String("b", "c/d"),
+	), res)
 }
 
 func TestEmpty(t *testing.T) {
@@ -100,6 +101,21 @@ func TestMissingKeyError(t *testing.T) {
 	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
 	))
+}
+
+func TestInvalidPercentDecoding(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		resourceAttrKey: "key=%invalid",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	detector := &fromEnv{}
+	res, err := detector.Detect(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, NewSchemaless(
+		attribute.String("key", "%invalid"),
+	), res)
 }
 
 func TestDetectServiceNameFromEnv(t *testing.T) {

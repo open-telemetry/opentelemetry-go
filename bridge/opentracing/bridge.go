@@ -546,6 +546,14 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 		return key.String(fmt.Sprintf("%d", val))
 	case float64:
 		return key.Float64(val)
+	case int8:
+		return key.Int64(int64(val))
+	case uint8:
+		return key.Int64(int64(val))
+	case int16:
+		return key.Int64(int64(val))
+	case uint16:
+		return key.Int64(int64(val))
 	case int32:
 		return key.Int64(int64(val))
 	case uint32:

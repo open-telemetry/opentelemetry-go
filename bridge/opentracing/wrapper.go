@@ -22,7 +22,9 @@ import (
 )
 
 // WrapperTracerProvider is an OpenTelemetry TracerProvider that wraps an
-// OpenTracing Tracer.
+// OpenTracing Tracer, created by the deprecated NewWrappedTracerProvider.
+//
+// Deprecated: Use the TracerProvider from NewTracerProvider(...) instead.
 type WrapperTracerProvider struct {
 	wTracer *WrapperTracer
 }
@@ -35,7 +37,10 @@ func (p *WrapperTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.
 }
 
 // NewWrappedTracerProvider creates a new trace provider that creates a single
-// instance of WrapperTracer that wraps OpenTelemetry tracer.
+// instance of WrapperTracer that wraps OpenTelemetry tracer, and always returns
+// it unmodified from Tracer().
+//
+// Deprecated: Use NewTracerProvider(...) instead.
 func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *WrapperTracerProvider {
 	return &WrapperTracerProvider{
 		wTracer: NewWrapperTracer(bridge, tracer),

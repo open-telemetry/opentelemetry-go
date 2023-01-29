@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -45,7 +45,85 @@ func TestModelConversion(t *testing.T) {
 	)
 
 	inputBatch := tracetest.SpanStubs{
-		// typical span data
+		// typical span data with UNSET status
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
+				attribute.IntSlice("attr3", []int{0, 1, 2}),
+			},
+			Events: []tracesdk.Event{
+				{
+					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Name: "ev1",
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
+					},
+				},
+				{
+					Time:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Name:       "ev2",
+					Attributes: nil,
+				},
+			},
+			Status: tracesdk.Status{
+				Code:        codes.Unset,
+				Description: "",
+			},
+			Resource: res,
+		},
+		// typical span data with OK status
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+			Parent: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0x3F, 0x3E, 0x3D, 0x3C, 0x3B, 0x3A, 0x39, 0x38},
+			}),
+			SpanKind:  trace.SpanKindServer,
+			Name:      "foo",
+			StartTime: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			EndTime:   time.Date(2020, time.March, 11, 19, 25, 0, 0, time.UTC),
+			Attributes: []attribute.KeyValue{
+				attribute.Int64("attr1", 42),
+				attribute.String("attr2", "bar"),
+				attribute.IntSlice("attr3", []int{0, 1, 2}),
+			},
+			Events: []tracesdk.Event{
+				{
+					Time: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Name: "ev1",
+					Attributes: []attribute.KeyValue{
+						attribute.Int64("eventattr1", 123),
+					},
+				},
+				{
+					Time:       time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Name:       "ev2",
+					Attributes: nil,
+				},
+			},
+			Status: tracesdk.Status{
+				Code:        codes.Ok,
+				Description: "",
+			},
+			Resource: res,
+		},
+		// typical span data with ERROR status
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
@@ -213,8 +291,8 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 				attribute.String("peer.hostname", "test-peer-hostname"),
-				attribute.String("net.peer.ip", "1.2.3.4"),
-				attribute.Int64("net.peer.port", 9876),
+				attribute.String("net.sock.peer.addr", "1.2.3.4"),
+				attribute.Int64("net.sock.peer.port", 9876),
 			},
 			Events: []tracesdk.Event{
 				{
@@ -373,7 +451,49 @@ func TestModelConversion(t *testing.T) {
 	}.Snapshots()
 
 	expectedOutputBatch := []zkmodel.SpanModel{
-		// model for typical span data
+		// model for typical span data with UNSET status
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xfffefdfcfbfaf9f8),
+				ParentID: zkmodelIDPtr(0x3f3e3d3c3b3a3938),
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
+			RemoteEndpoint: nil,
+			Annotations: []zkmodel.Annotation{
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Value:     `ev1: {"eventattr1":123}`,
+				},
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Value:     "ev2",
+				},
+			},
+			Tags: map[string]string{
+				"attr1":           "42",
+				"attr2":           "bar",
+				"attr3":           "[0,1,2]",
+				"service.name":    "model-test",
+				"service.version": "0.1.0",
+				"resource-attr1":  "42",
+				"resource-attr2":  "[0,1,2]",
+			},
+		},
+		// model for typical span data with OK status
 		{
 			SpanContext: zkmodel.SpanContext{
 				TraceID: zkmodel.TraceID{
@@ -409,7 +529,50 @@ func TestModelConversion(t *testing.T) {
 				"attr1":            "42",
 				"attr2":            "bar",
 				"attr3":            "[0,1,2]",
-				"otel.status_code": "Error",
+				"otel.status_code": "OK",
+				"service.name":     "model-test",
+				"service.version":  "0.1.0",
+				"resource-attr1":   "42",
+				"resource-attr2":   "[0,1,2]",
+			},
+		},
+		// model for typical span data with ERROR status
+		{
+			SpanContext: zkmodel.SpanContext{
+				TraceID: zkmodel.TraceID{
+					High: 0x001020304050607,
+					Low:  0x8090a0b0c0d0e0f,
+				},
+				ID:       zkmodel.ID(0xfffefdfcfbfaf9f8),
+				ParentID: zkmodelIDPtr(0x3f3e3d3c3b3a3938),
+				Debug:    false,
+				Sampled:  nil,
+				Err:      nil,
+			},
+			Name:      "foo",
+			Kind:      "SERVER",
+			Timestamp: time.Date(2020, time.March, 11, 19, 24, 0, 0, time.UTC),
+			Duration:  time.Minute,
+			Shared:    false,
+			LocalEndpoint: &zkmodel.Endpoint{
+				ServiceName: "model-test",
+			},
+			RemoteEndpoint: nil,
+			Annotations: []zkmodel.Annotation{
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 30, 0, time.UTC),
+					Value:     `ev1: {"eventattr1":123}`,
+				},
+				{
+					Timestamp: time.Date(2020, time.March, 11, 19, 24, 45, 0, time.UTC),
+					Value:     "ev2",
+				},
+			},
+			Tags: map[string]string{
+				"attr1":            "42",
+				"attr2":            "bar",
+				"attr3":            "[0,1,2]",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -452,7 +615,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -495,7 +658,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -538,7 +701,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -582,17 +745,17 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":            "42",
-				"attr2":            "bar",
-				"net.peer.ip":      "1.2.3.4",
-				"net.peer.port":    "9876",
-				"peer.hostname":    "test-peer-hostname",
-				"otel.status_code": "Error",
-				"error":            "404, file not found",
-				"service.name":     "model-test",
-				"service.version":  "0.1.0",
-				"resource-attr1":   "42",
-				"resource-attr2":   "[0,1,2]",
+				"attr1":              "42",
+				"attr2":              "bar",
+				"net.sock.peer.addr": "1.2.3.4",
+				"net.sock.peer.port": "9876",
+				"peer.hostname":      "test-peer-hostname",
+				"otel.status_code":   "ERROR",
+				"error":              "404, file not found",
+				"service.name":       "model-test",
+				"service.version":    "0.1.0",
+				"resource-attr1":     "42",
+				"resource-attr2":     "[0,1,2]",
 			},
 		},
 		// model for span data of producer kind
@@ -630,7 +793,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -673,7 +836,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -707,7 +870,7 @@ func TestModelConversion(t *testing.T) {
 			Tags: map[string]string{
 				"attr1":            "42",
 				"attr2":            "bar",
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "model-test",
 				"service.version":  "0.1.0",
@@ -809,7 +972,40 @@ func TestTagsTransformation(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "statusCode",
+			name: "statusCode UNSET",
+			data: tracetest.SpanStub{
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+				},
+				Status: tracesdk.Status{
+					Code:        codes.Unset,
+					Description: "",
+				},
+			},
+			want: map[string]string{
+				"key": keyValue,
+			},
+		},
+		{
+			name: "statusCode OK",
+			data: tracetest.SpanStub{
+				Attributes: []attribute.KeyValue{
+					attribute.String("key", keyValue),
+					attribute.Bool("ok", true),
+				},
+				Status: tracesdk.Status{
+					Code:        codes.Ok,
+					Description: "",
+				},
+			},
+			want: map[string]string{
+				"key":              keyValue,
+				"ok":               "true",
+				"otel.status_code": "OK",
+			},
+		},
+		{
+			name: "statusCode ERROR",
 			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{
 					attribute.String("key", keyValue),
@@ -823,7 +1019,7 @@ func TestTagsTransformation(t *testing.T) {
 			want: map[string]string{
 				"error":            statusMessage,
 				"key":              keyValue,
-				"otel.status_code": codes.Error.String(),
+				"otel.status_code": "ERROR",
 			},
 		},
 		{
@@ -901,7 +1097,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					semconv.PeerServiceKey.String("peer-service-test"),
 					semconv.NetPeerNameKey.String("peer-name-test"),
-					semconv.HTTPHostKey.String("http-host-test"),
+					semconv.NetSockPeerNameKey.String("net-sock-peer-test"),
 				},
 			},
 			want: &zkmodel.Endpoint{
@@ -909,16 +1105,16 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "http-host-rank",
+			name: "net-sock-peer-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.HTTPHostKey.String("http-host-test"),
+					semconv.NetSockPeerNameKey.String("net-sock-peer-test"),
 					semconv.DBNameKey.String("db-name-test"),
 				},
 			},
 			want: &zkmodel.Endpoint{
-				ServiceName: "http-host-test",
+				ServiceName: "net-sock-peer-test",
 			},
 		},
 		{
@@ -941,7 +1137,6 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					keyPeerHostname.String("peer-hostname-test"),
 					keyPeerAddress.String("peer-address-test"),
-					semconv.HTTPHostKey.String("http-host-test"),
 					semconv.DBNameKey.String("http-host-test"),
 				},
 			},
@@ -955,7 +1150,6 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					keyPeerAddress.String("peer-address-test"),
-					semconv.HTTPHostKey.String("http-host-test"),
 					semconv.DBNameKey.String("http-host-test"),
 				},
 			},
@@ -968,7 +1162,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetPeerIPKey.String("INVALID"),
+					semconv.NetSockPeerAddrKey.String("INVALID"),
 				},
 			},
 			want: nil,
@@ -978,7 +1172,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetPeerIPKey.String("0:0:1:5ee:bad:c0de:0:0"),
+					semconv.NetSockPeerAddrKey.String("0:0:1:5ee:bad:c0de:0:0"),
 				},
 			},
 			want: &zkmodel.Endpoint{
@@ -990,8 +1184,8 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetPeerIPKey.String("1.2.3.4"),
-					semconv.NetPeerPortKey.Int(9876),
+					semconv.NetSockPeerAddrKey.String("1.2.3.4"),
+					semconv.NetSockPeerPortKey.Int(9876),
 				},
 			},
 			want: &zkmodel.Endpoint{

@@ -1,7 +1,7 @@
 ---
 title: Go
 description: >-
-  <img width="35" src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Golang_SDK.svg"></img>
+  <img width="35" src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Golang_SDK.svg" alt="Go"></img>
   A language-specific implementation of OpenTelemetry in Go.
 aliases: [/golang, /golang/metrics, /golang/tracing]
 cascade:
@@ -13,20 +13,8 @@ spelling: cSpell:ignore godoc
 weight: 16
 ---
 
-This is the OpenTelemetry for Go documentation. OpenTelemetry is an observability framework -- an API, SDK, and tools that are designed to aid in the generation and collection of application telemetry data such as metrics, logs, and traces. This documentation is designed to help you understand how to get started using OpenTelemetry for Go.
+{{% lang_instrumentation_index_head "go" /%}}
 
-## Status and Releases
+## More
 
-The current status of the major functional components for OpenTelemetry Go is as follows:
-
-| Traces  | Metrics | Logs    |
-| ------- | ------- | ------- |
-| Stable  | Alpha   | Not Yet Implemented |
-
-{{% latest_release "go" /%}}
-
-## Further Reading
-
-- [godoc](https://pkg.go.dev/go.opentelemetry.io/otel)
-- [Examples](https://github.com/open-telemetry/opentelemetry-go/tree/main/example)
-- [Contrib Repository](https://github.com/open-telemetry/opentelemetry-go-contrib)
+- [Contrib repository](https://github.com/open-telemetry/opentelemetry-go-contrib)

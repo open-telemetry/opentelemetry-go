@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -270,7 +270,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "404, file not found",
 				"service.name":     "exporter-test",
 				"service.version":  "0.1.0",
@@ -300,7 +300,7 @@ func TestExportSpans(t *testing.T) {
 			RemoteEndpoint: nil,
 			Annotations:    nil,
 			Tags: map[string]string{
-				"otel.status_code": "Error",
+				"otel.status_code": "ERROR",
 				"error":            "403, forbidden",
 				"service.name":     "exporter-test",
 				"service.version":  "0.1.0",

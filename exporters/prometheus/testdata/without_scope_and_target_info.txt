@@ -1,0 +1,3 @@
+# HELP bar_bytes_total a fun little counter
+# TYPE bar_bytes_total counter
+bar_bytes_total{A="B",C="D"} 3
