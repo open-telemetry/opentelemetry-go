@@ -8,6 +8,128 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `WithInt64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure int64 Observer callbacks during their creation. (#3507)
+- The `WithFloat64Callback` option is added to `go.opentelemetry.io/otel/metric/instrument` to configure float64 Observer callbacks during their creation. (#3507)
+- Return a `Registration` from the `RegisterCallback` method of a `Meter` in the `go.opentelemetry.io/otel/metric` package.
+  This `Registration` can be used to unregister callbacks. (#3522)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+- Add the `Callback` function type to the `go.opentelemetry.io/otel/metric` package.
+  This new named function type is registered with a `Meter`. (#3564)
+- Add the `go.opentelemetry.io/otel/semconv/v1.14.0` package.
+  The package contains semantic conventions from the `v1.14.0` version of the OpenTelemetry specification. (#3566)
+- Add the `go.opentelemetry.io/otel/semconv/v1.13.0` package.
+  The package contains semantic conventions from the `v1.13.0` version of the OpenTelemetry specification. (#3499)
+  - The `EndUserAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientRequest` and `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPAttributesFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is merged into `ClientResponse` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPClientAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `HTTPServerMetricAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `NetAttributesFromHTTPRequest` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `Transport` in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` and `ClientRequest` or `ServerRequest` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCode` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is replaced by `ClientStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `SpanStatusFromHTTPStatusCodeAndSpanKind` function in `go.opentelemetry.io/otel/semconv/v1.12.0` is split into `ClientStatus` and `ServerStatus` in `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`.
+  - The `Client` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Conn`.
+  - The `Server` function is included in `go.opentelemetry.io/otel/semconv/v1.13.0/netconv` to generate attributes for a `net.Listener`.
+- Add the `go.opentelemetry.io/otel/semconv/v1.15.0` package.
+  The package contains semantic conventions from the `v1.15.0` version of the OpenTelemetry specification. (#3578)
+- Add the `go.opentelemetry.io/otel/semconv/v1.16.0` package.
+  The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
+- Metric instruments were added to `go.opentelemetry.io/otel/metric/instrument`.
+  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575, #3586)
+  - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
+  - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
+  - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`
+  - `Int64ObservableCounter` replaces the `asyncint64.Counter`
+  - `Int64ObservableUpDownCounter` replaces the `asyncint64.UpDownCounter`
+  - `Int64ObservableGauge` replaces the `asyncint64.Gauge`
+  - `Float64Counter` replaces the `syncfloat64.Counter`
+  - `Float64UpDownCounter` replaces the `syncfloat64.UpDownCounter`
+  - `Float64Histogram` replaces the `syncfloat64.Histogram`
+  - `Int64Counter` replaces the `syncint64.Counter`
+  - `Int64UpDownCounter` replaces the `syncint64.UpDownCounter`
+  - `Int64Histogram` replaces the `syncint64.Histogram`
+- Add `NewTracerProvider` to `go.opentelemetry.io/otel/bridge/opentracing` to create `WrapperTracer` instances from a `TracerProvider`. (#3316)
+- The `Extrema` type to `go.opentelemetry.io/otel/sdk/metric/metricdata` to represent min/max values and still be able to distinguish unset and zero values. (#3487)
+- Add the `go.opentelemetry.io/otel/semconv/v1.17.0` package.
+  The package contains semantic conventions from the `v1.17.0` version of the OpenTelemetry specification. (#3599)
+
+### Changed
+
+- Instrument configuration in `go.opentelemetry.io/otel/metric/instrument` is split into specific options and confguration based on the instrument type. (#3507)
+  - Use the added `Int64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncint64`.
+  - Use the added `Float64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncfloat64`.
+  - Use the added `Int64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncint64`.
+  - Use the added `Float64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncfloat64`.
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncint64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Int64ObservableCounter`
+  - The `UpDownCounter` method is replaced by `Meter.Int64ObservableUpDownCounter`
+  - The `Gauge` method is replaced by `Meter.Int64ObservableGauge`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/asyncfloat64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Float64ObservableCounter`
+  - The `UpDownCounter` method is replaced by `Meter.Float64ObservableUpDownCounter`
+  - The `Gauge` method is replaced by `Meter.Float64ObservableGauge`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/syncint64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Int64Counter`
+  - The `UpDownCounter` method is replaced by `Meter.Int64UpDownCounter`
+  - The `Histogram` method is replaced by `Meter.Int64Histogram`
+- The `InstrumentProvider` from `go.opentelemetry.io/otel/sdk/metric/syncfloat64` is removed.
+  Use the new creation methods of the `Meter` in `go.opentelemetry.io/otel/sdk/metric` instead. (#3530)
+  - The `Counter` method is replaced by `Meter.Float64Counter`
+  - The `UpDownCounter` method is replaced by `Meter.Float64UpDownCounter`
+  - The `Histogram` method is replaced by `Meter.Float64Histogram`
+- Global error handler uses an atomic value instead of a mutex. (#3543)
+- Add `Producer` interface and `Reader.RegisterProducer(Producer)` to `go.opentelemetry.io/otel/sdk/metric` to enable external metric Producers. (#3524)
+- Add `NewMetricProducer` to `go.opentelemetry.io/otel/bridge/opencensus`, which can be used to pass OpenCensus metrics to an OpenTelemetry Reader. (#3541)
+- Global logger uses an atomic value instead of a mutex. (#3545)
+- The `Shutdown` method of the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` releases all computational resources when called the first time. (#3551)
+- `traceIDRatioSampler` (given by `TraceIDRatioBased(float64)`) now uses the rightmost bits for sampling decisions,
+  fixing random sampling when using ID generators like `xray.IDGenerator`
+  and increasing parity with other language implementations. (#3557)
+- OTLP trace exporter errors are wrapped in a type that prefixes the signal name in front of error strings (e.g., "traces export: context canceled" instead of just "context canceled").
+  Existing users of the exporters attempting to identify specific errors will need to use `errors.Unwrap()` to get the underlying error. (#3516)
+- The OTLP exporter for traces and metrics will print the final retryable error message when attempts to retry time out. (#3514)
+- The instrument kind names in `go.opentelemetry.io/otel/sdk/metric` are updated to match the API. (#3562)
+  - `InstrumentKindSyncCounter` is renamed to `InstrumentKindCounter`
+  - `InstrumentKindSyncUpDownCounter` is renamed to `InstrumentKindUpDownCounter`
+  - `InstrumentKindSyncHistogram` is renamed to `InstrumentKindHistogram`
+  - `InstrumentKindAsyncCounter` is renamed to `InstrumentKindObservableCounter`
+  - `InstrumentKindAsyncUpDownCounter` is renamed to `InstrumentKindObservableUpDownCounter`
+  - `InstrumentKindAsyncGauge` is renamed to `InstrumentKindObservableGauge`
+- Update the `RegisterCallback` method of the `Meter` in the `go.opentelemetry.io/otel/sdk/metric` package to accept the added `Callback` type instead of an inline function type definition.
+  The underlying type of a `Callback` is the same `func(context.Context)` that the method used to accept. (#3564)
+- The callback function registered with a `Meter` from the `go.opentelemetry.io/otel/metric` package is required to return an error now. (#3576)
+- The exporter from `go.opentelemetry.io/otel/exporters/zipkin` is updated to use the `v1.16.0` version of semantic conventions.
+  This means it no longer uses the removed `net.peer.ip` or `http.host` attributes to determine the remote endpoint.
+  Instead it uses the `net.sock.peer` attributes. (#3581)
+- The parameters for the `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/metric` are changed.
+  The slice of `instrument.Asynchronous` parameter is now passed as a variadic argument. (#3587)
+- The `Callback` in `go.opentelemetry.io/otel/metric` has the added `Observer` parameter added.
+  This new parameter is used by `Callback` implementations to observe values for asynchronous instruments instead of calling the `Observe` method of the instrument directly. (#3584)
+- The `Min` and `Max` fields of the `HistogramDataPoint` in `go.opentelemetry.io/otel/sdk/metric/metricdata` are now defined with the added `Extrema` type instead of a `*float64`. (#3487)
+
+### Fixed
+
+- Asynchronous instruments that use sum aggregators and attribute filters correctly add values from equivalent attribute sets that have been filtered. (#3439, #3549)
+- The `RegisterCallback` method of the `Meter` from `go.opentelemetry.io/otel/sdk/metric` only registers a callback for instruments created by that meter.
+  Trying to register a callback with instruments from a different meter will result in an error being returned. (#3584)
+
+### Deprecated
+
+- The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` is deprecated.  Use `NewMetricProducer` instead. (#3541)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `go.opentelemetry.io/otel/metric/instrument/syncint64` package is deprecated.
+  Use the instruments from `go.opentelemetry.io/otel/metric/instrument` instead. (#3575)
+- The `NewWrappedTracerProvider` in `go.opentelemetry.io/otel/bridge/opentracing` is now deprecated. Use `NewTracerProvider` instead. (#3316)
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/sdk/metric/view` package is removed. (#3520)

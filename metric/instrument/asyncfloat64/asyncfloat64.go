@@ -12,69 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package asyncfloat64 provides asynchronous instruments that accept float64
+// measurments.
+//
+// Deprecated: Use the instruments provided by
+// go.opentelemetry.io/otel/metric/instrument instead.
 package asyncfloat64 // import "go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 
-import (
-	"context"
+import "go.opentelemetry.io/otel/metric/instrument"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
-)
-
-// InstrumentProvider provides access to individual instruments.
+// Counter is an instrument used to asynchronously record increasing float64
+// measurements once per a measurement collection cycle. The Observe method is
+// used to record the measured state of the instrument when it is called.
+// Implementations will assume the observed value to be the cumulative sum of
+// the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type InstrumentProvider interface {
-	// Counter creates an instrument for recording increasing values.
-	Counter(name string, opts ...instrument.Option) (Counter, error)
+//
+// Deprecated: Use the Float64ObservableCounter in
+// go.opentelemetry.io/otel/metric/instrument instead.
+type Counter interface{ instrument.Float64Observer }
 
-	// UpDownCounter creates an instrument for recording changes of a value.
-	UpDownCounter(name string, opts ...instrument.Option) (UpDownCounter, error)
-
-	// Gauge creates an instrument for recording the current value.
-	Gauge(name string, opts ...instrument.Option) (Gauge, error)
-}
-
-// Counter is an instrument that records increasing values.
+// UpDownCounter is an instrument used to asynchronously record float64
+// measurements once per a measurement collection cycle. The Observe method is
+// used to record the measured state of the instrument when it is called.
+// Implementations will assume the observed value to be the cumulative sum of
+// the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Counter interface {
-	// Observe records the state of the instrument to be x. Implementations
-	// will assume x to be the cumulative sum of the count.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
+//
+// Deprecated: Use the Float64ObservableUpDownCounter in
+// go.opentelemetry.io/otel/metric/instrument instead.
+type UpDownCounter interface{ instrument.Float64Observer }
 
-	instrument.Asynchronous
-}
-
-// UpDownCounter is an instrument that records increasing or decreasing values.
+// Gauge is an instrument used to asynchronously record instantaneous float64
+// measurements once per a measurement collection cycle.
 //
 // Warning: methods may be added to this interface in minor releases.
-type UpDownCounter interface {
-	// Observe records the state of the instrument to be x. Implementations
-	// will assume x to be the cumulative sum of the count.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
-
-	instrument.Asynchronous
-}
-
-// Gauge is an instrument that records independent readings.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Gauge interface {
-	// Observe records the state of the instrument to be x.
-	//
-	// It is only valid to call this within a callback. If called outside of the
-	// registered callback it should have no effect on the instrument, and an
-	// error will be reported via the error handler.
-	Observe(ctx context.Context, x float64, attrs ...attribute.KeyValue)
-
-	instrument.Asynchronous
-}
+// Deprecated: Use the Float64ObservableGauge in
+// go.opentelemetry.io/otel/metric/instrument instead.
+type Gauge interface{ instrument.Float64Observer }

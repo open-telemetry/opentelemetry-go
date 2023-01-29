@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -238,13 +238,13 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 // Rank determines selection order for remote endpoint. See the specification
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
 var remoteEndpointKeyRank = map[attribute.Key]int{
-	semconv.PeerServiceKey: 0,
-	semconv.NetPeerNameKey: 1,
-	semconv.NetPeerIPKey:   2,
-	keyPeerHostname:        3,
-	keyPeerAddress:         4,
-	semconv.HTTPHostKey:    5,
-	semconv.DBNameKey:      6,
+	semconv.PeerServiceKey:     0,
+	semconv.NetPeerNameKey:     1,
+	semconv.NetSockPeerNameKey: 2,
+	semconv.NetSockPeerAddrKey: 3,
+	keyPeerHostname:            4,
+	keyPeerAddress:             5,
+	semconv.DBNameKey:          6,
 }
 
 func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
@@ -273,7 +273,7 @@ func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
 		return nil
 	}
 
-	if endpointAttr.Key != semconv.NetPeerIPKey &&
+	if endpointAttr.Key != semconv.NetSockPeerAddrKey &&
 		endpointAttr.Value.Type() == attribute.STRING {
 		return &zkmodel.Endpoint{
 			ServiceName: endpointAttr.Value.AsString(),
@@ -300,7 +300,7 @@ func remoteEndpointPeerIPWithPort(peerIP string, attrs []attribute.KeyValue) *zk
 	}
 
 	for _, kv := range attrs {
-		if kv.Key == semconv.NetPeerPortKey {
+		if kv.Key == semconv.NetSockPeerPortKey {
 			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
 			endpoint.Port = uint16(port)
 			return endpoint

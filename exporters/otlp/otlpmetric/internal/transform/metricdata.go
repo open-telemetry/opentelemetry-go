@@ -174,7 +174,7 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		sum := dPt.Sum
-		out = append(out, &mpb.HistogramDataPoint{
+		hdp := &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
 			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
@@ -182,9 +182,14 @@ func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramD
 			Sum:               &sum,
 			BucketCounts:      dPt.BucketCounts,
 			ExplicitBounds:    dPt.Bounds,
-			Min:               dPt.Min,
-			Max:               dPt.Max,
-		})
+		}
+		if v, ok := dPt.Min.Value(); ok {
+			hdp.Min = &v
+		}
+		if v, ok := dPt.Max.Value(); ok {
+			hdp.Max = &v
+		}
+		out = append(out, hdp)
 	}
 	return out
 }

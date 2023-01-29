@@ -54,7 +54,7 @@ func TestEmptyPipeline(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() {
-		pipe.addCallback(func(ctx context.Context) {})
+		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
 	output, err = pipe.produce(context.Background())
@@ -78,7 +78,7 @@ func TestNewPipeline(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() {
-		pipe.addCallback(func(ctx context.Context) {})
+		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
 	output, err = pipe.produce(context.Background())
@@ -121,7 +121,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			pipe.addCallback(func(ctx context.Context) {})
+			pipe.addMultiCallback(func(context.Context) error { return nil })
 		}()
 	}
 	wg.Wait()
@@ -136,7 +136,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 	inst := Instrument{
 		Name:        "requests",
 		Description: "count of requests received",
-		Kind:        InstrumentKindSyncCounter,
+		Kind:        InstrumentKindCounter,
 		Unit:        unit.Dimensionless,
 	}
 	return func(t *testing.T) {

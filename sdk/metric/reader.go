@@ -51,7 +51,12 @@ type Reader interface {
 	// register registers a Reader with a MeterProvider.
 	// The producer argument allows the Reader to signal the sdk to collect
 	// and send aggregated metric measurements.
-	register(producer)
+	register(sdkProducer)
+
+	// RegisterProducer registers a an external Producer with this Reader.
+	// The Producer is used as a source of aggregated metric data which is
+	// incorporated into metrics collected from the SDK.
+	RegisterProducer(Producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
 	temporality(InstrumentKind) metricdata.Temporality
@@ -84,12 +89,20 @@ type Reader interface {
 	Shutdown(context.Context) error
 }
 
-// producer produces metrics for a Reader.
-type producer interface {
+// sdkProducer produces metrics for a Reader.
+type sdkProducer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
 	produce(context.Context) (metricdata.ResourceMetrics, error)
+}
+
+// Producer produces metrics for a Reader from an external source.
+type Producer interface {
+	// Produce returns aggregated metrics from an external source.
+	//
+	// This method should be safe to call concurrently.
+	Produce(context.Context) ([]metricdata.ScopeMetrics, error)
 }
 
 // produceHolder is used as an atomic.Value to wrap the non-concrete producer
@@ -123,16 +136,16 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // DefaultAggregationSelector returns the default aggregation and parameters
 // that will be used to summarize measurement made from an instrument of
 // InstrumentKind. This AggregationSelector using the following selection
-// mapping: Counter ⇨ Sum, Asynchronous Counter ⇨ Sum, UpDownCounter ⇨ Sum,
-// Asynchronous UpDownCounter ⇨ Sum, Asynchronous Gauge ⇨ LastValue,
+// mapping: Counter ⇨ Sum, Observable Counter ⇨ Sum, UpDownCounter ⇨ Sum,
+// Observable UpDownCounter ⇨ Sum, Observable Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
 func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	switch ik {
-	case InstrumentKindSyncCounter, InstrumentKindSyncUpDownCounter, InstrumentKindAsyncCounter, InstrumentKindAsyncUpDownCounter:
+	case InstrumentKindCounter, InstrumentKindUpDownCounter, InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 		return aggregation.Sum{}
-	case InstrumentKindAsyncGauge:
+	case InstrumentKindObservableGauge:
 		return aggregation.LastValue{}
-	case InstrumentKindSyncHistogram:
+	case InstrumentKindHistogram:
 		return aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 			NoMinMax:   false,

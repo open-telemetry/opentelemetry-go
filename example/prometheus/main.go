@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -58,26 +59,27 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewCounterVec
-	counter, err := meter.SyncFloat64().Counter("foo", instrument.WithDescription("a simple counter"))
+	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	gauge, err := meter.AsyncFloat64().Gauge("bar", instrument.WithDescription("a fun little gauge"))
+	gauge, err := meter.Float64ObservableGauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = meter.RegisterCallback([]instrument.Asynchronous{gauge}, func(ctx context.Context) {
+	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
-		gauge.Observe(ctx, n, attrs...)
-	})
+		o.ObserveFloat64(gauge, n, attrs...)
+		return nil
+	}, gauge)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.SyncFloat64().Histogram("baz", instrument.WithDescription("a very nice histogram"))
+	histogram, err := meter.Float64Histogram("baz", instrument.WithDescription("a very nice histogram"))
 	if err != nil {
 		log.Fatal(err)
 	}

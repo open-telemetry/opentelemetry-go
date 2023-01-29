@@ -92,8 +92,8 @@ func hPoint(a attribute.Set, v float64, multi uint64) metricdata.HistogramDataPo
 		Count:        multi,
 		Bounds:       bounds,
 		BucketCounts: counts,
-		Min:          &v,
-		Max:          &v,
+		Min:          metricdata.NewExtrema(v),
+		Max:          metricdata.NewExtrema(v),
 		Sum:          v * float64(multi),
 	}
 }
