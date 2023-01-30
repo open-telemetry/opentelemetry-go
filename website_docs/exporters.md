@@ -1,6 +1,6 @@
 ---
 title: Exporters
-aliases: [/docs/instrumentation/go/exporting_data/]
+aliases: [/docs/instrumentation/go/exporting_data]
 weight: 4
 ---
 
