@@ -10,10 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#TBD)
-- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is removed. (#TBD)
-- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is removed. (#TBD)
-- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncint64` package is removed. (#TBD)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncint64` package is removed. (#3631)
 
 ## [1.12.0/0.35.0] 2023-01-28
 
