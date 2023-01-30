@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-git config user.name $GITHUB_ACTOR
-git config user.email $GITHUB_ACTOR@users.noreply.github.com
+git config user.name opentelemetrybot
+git config user.email 107717825+opentelemetrybot@users.noreply.github.com
 
 PR_NAME=dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
 git checkout -b $PR_NAME

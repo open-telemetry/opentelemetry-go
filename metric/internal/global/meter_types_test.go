@@ -17,6 +17,7 @@ package global // import "go.opentelemetry.io/otel/metric/internal/global"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -112,9 +113,6 @@ func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Fl
 }
 
 // RegisterCallback captures the function that will be called during Collect.
-//
-// It is only valid to call Observe within the scope of the passed function,
-// and only on the instruments that were registered with this call.
 func (m *testMeter) RegisterCallback(f metric.Callback, i ...instrument.Asynchronous) (metric.Registration, error) {
 	m.callbacks = append(m.callbacks, f)
 	return testReg{
@@ -136,11 +134,30 @@ func (r testReg) Unregister() error {
 // This enables async collection.
 func (m *testMeter) collect() {
 	ctx := context.Background()
+	o := observationRecorder{ctx}
 	for _, f := range m.callbacks {
 		if f == nil {
 			// Unregister.
 			continue
 		}
-		_ = f(ctx)
+		_ = f(ctx, o)
+	}
+}
+
+type observationRecorder struct {
+	ctx context.Context
+}
+
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64, attr ...attribute.KeyValue) {
+	iImpl, ok := i.(*testCountingFloatInstrument)
+	if ok {
+		iImpl.observe()
+	}
+}
+
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64, attr ...attribute.KeyValue) {
+	iImpl, ok := i.(*testCountingIntInstrument)
+	if ok {
+		iImpl.observe()
 	}
 }

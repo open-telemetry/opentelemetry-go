@@ -16,11 +16,16 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
 
 // meter handles the creation and coordination of all metric instruments. A
@@ -28,6 +33,7 @@ import (
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
+	scope instrumentation.Scope
 	pipes pipelines
 
 	int64IP   *instProvider[int64]
@@ -45,6 +51,7 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	fc := newInstrumentCache[float64](nil, &viewCache)
 
 	return &meter{
+		scope:     s,
 		pipes:     p,
 		int64IP:   newInstProvider(s, p, ic),
 		float64IP: newInstProvider(s, p, fc),
@@ -198,41 +205,167 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 	return inst, nil
 }
 
-// RegisterCallback registers the function f to be called when any of the
-// insts Collect method is called.
+// RegisterCallback registers f to be called each collection cycle so it will
+// make observations for insts during those cycles.
+//
+// The only instruments f can make observations for are insts. All other
+// observations will be dropped and an error will be logged.
+//
+// Only instruments from this meter can be registered with f, an error is
+// returned if other instrument are provided.
+//
+// The returned Registration can be used to unregister f.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
+	if len(insts) == 0 {
+		// Don't allocate a observer if not needed.
+		return noopRegister{}, nil
+	}
+
+	reg := newObserver()
+	var errs multierror
 	for _, inst := range insts {
-		// Only register if at least one instrument has a non-drop aggregation.
-		// Otherwise, calling f during collection will be wasted computation.
-		switch t := inst.(type) {
-		case *instrumentImpl[int64]:
-			if len(t.aggregators) > 0 {
-				return m.registerMultiCallback(f)
+		// Unwrap any global.
+		if u, ok := inst.(interface {
+			Unwrap() instrument.Asynchronous
+		}); ok {
+			inst = u.Unwrap()
+		}
+
+		switch o := inst.(type) {
+		case int64Observable:
+			if err := o.registerable(m.scope); err != nil {
+				if !errors.Is(err, errEmptyAgg) {
+					errs.append(err)
+				}
+				continue
 			}
-		case *instrumentImpl[float64]:
-			if len(t.aggregators) > 0 {
-				return m.registerMultiCallback(f)
+			reg.registerInt64(o.observablID)
+		case float64Observable:
+			if err := o.registerable(m.scope); err != nil {
+				if !errors.Is(err, errEmptyAgg) {
+					errs.append(err)
+				}
+				continue
 			}
+			reg.registerFloat64(o.observablID)
 		default:
-			// Instrument external to the SDK. For example, an instrument from
-			// the "go.opentelemetry.io/otel/metric/internal/global" package.
-			//
-			// Fail gracefully here, assume a valid instrument.
-			return m.registerMultiCallback(f)
+			// Instrument external to the SDK.
+			return nil, fmt.Errorf("invalid observable: from different implementation")
 		}
 	}
-	// All insts use drop aggregation.
-	return noopRegister{}, nil
+
+	if err := errs.errorOrNil(); err != nil {
+		return nil, err
+	}
+
+	if reg.len() == 0 {
+		// All insts use drop aggregation.
+		return noopRegister{}, nil
+	}
+
+	cback := func(ctx context.Context) error {
+		return f(ctx, reg)
+	}
+	return m.pipes.registerMultiCallback(cback), nil
+}
+
+type observer struct {
+	float64 map[observablID[float64]]struct{}
+	int64   map[observablID[int64]]struct{}
+}
+
+func newObserver() observer {
+	return observer{
+		float64: make(map[observablID[float64]]struct{}),
+		int64:   make(map[observablID[int64]]struct{}),
+	}
+}
+
+func (r observer) len() int {
+	return len(r.float64) + len(r.int64)
+}
+
+func (r observer) registerFloat64(id observablID[float64]) {
+	r.float64[id] = struct{}{}
+}
+
+func (r observer) registerInt64(id observablID[int64]) {
+	r.int64[id] = struct{}{}
+}
+
+var (
+	errUnknownObserver = errors.New("unknown observable instrument")
+	errUnregObserver   = errors.New("observable instrument not registered for callback")
+)
+
+func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ...attribute.KeyValue) {
+	var oImpl float64Observable
+	switch conv := o.(type) {
+	case float64Observable:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(float64Observable); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
+		global.Error(errUnknownObserver, "failed to record")
+		return
+	}
+
+	if _, registered := r.float64[oImpl.observablID]; !registered {
+		global.Error(errUnregObserver, "failed to record",
+			"name", oImpl.name,
+			"description", oImpl.description,
+			"unit", oImpl.unit,
+			"number", fmt.Sprintf("%T", float64(0)),
+		)
+		return
+	}
+	oImpl.observe(v, a)
+}
+
+func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attribute.KeyValue) {
+	var oImpl int64Observable
+	switch conv := o.(type) {
+	case int64Observable:
+		oImpl = conv
+	case interface {
+		Unwrap() instrument.Asynchronous
+	}:
+		// Unwrap any global.
+		async := conv.Unwrap()
+		var ok bool
+		if oImpl, ok = async.(int64Observable); !ok {
+			global.Error(errUnknownObserver, "failed to record asynchronous")
+			return
+		}
+	default:
+		global.Error(errUnknownObserver, "failed to record")
+		return
+	}
+
+	if _, registered := r.int64[oImpl.observablID]; !registered {
+		global.Error(errUnregObserver, "failed to record",
+			"name", oImpl.name,
+			"description", oImpl.description,
+			"unit", oImpl.unit,
+			"number", fmt.Sprintf("%T", int64(0)),
+		)
+		return
+	}
+	oImpl.observe(v, a)
 }
 
 type noopRegister struct{}
 
 func (noopRegister) Unregister() error {
 	return nil
-}
-
-func (m *meter) registerMultiCallback(c metric.Callback) (metric.Registration, error) {
-	return m.pipes.registerMultiCallback(c), nil
 }
 
 // instProvider provides all OpenTelemetry instruments.
@@ -246,8 +379,7 @@ func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c 
 	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver(p, c)}
 }
 
-// lookup returns the resolved instrumentImpl.
-func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*instrumentImpl[N], error) {
+func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Unit) ([]internal.Aggregator[N], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -255,14 +387,24 @@ func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	aggs, err := p.resolve.Aggregators(inst)
+	return p.resolve.Aggregators(inst)
+}
+
+// lookup returns the resolved instrumentImpl.
+func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*instrumentImpl[N], error) {
+	aggs, err := p.aggs(kind, name, desc, u)
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
 type int64ObservProvider struct{ *instProvider[int64] }
 
-func (p int64ObservProvider) registerCallbacks(inst *instrumentImpl[int64], cBacks []instrument.Int64Callback) {
-	if inst == nil {
+func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (int64Observable, error) {
+	aggs, err := p.aggs(kind, name, desc, u)
+	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
+}
+
+func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []instrument.Int64Callback) {
+	if inst.observable == nil || len(inst.aggregators) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -272,14 +414,28 @@ func (p int64ObservProvider) registerCallbacks(inst *instrumentImpl[int64], cBac
 	}
 }
 
-func (p int64ObservProvider) callback(i *instrumentImpl[int64], f instrument.Int64Callback) func(context.Context) error {
-	return func(ctx context.Context) error { return f(ctx, i) }
+func (p int64ObservProvider) callback(i int64Observable, f instrument.Int64Callback) func(context.Context) error {
+	inst := int64Observer{i}
+	return func(ctx context.Context) error { return f(ctx, inst) }
+}
+
+type int64Observer struct {
+	int64Observable
+}
+
+func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }
 
 type float64ObservProvider struct{ *instProvider[float64] }
 
-func (p float64ObservProvider) registerCallbacks(inst *instrumentImpl[float64], cBacks []instrument.Float64Callback) {
-	if inst == nil {
+func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (float64Observable, error) {
+	aggs, err := p.aggs(kind, name, desc, u)
+	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
+}
+
+func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks []instrument.Float64Callback) {
+	if inst.observable == nil || len(inst.aggregators) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -289,6 +445,15 @@ func (p float64ObservProvider) registerCallbacks(inst *instrumentImpl[float64], 
 	}
 }
 
-func (p float64ObservProvider) callback(i *instrumentImpl[float64], f instrument.Float64Callback) func(context.Context) error {
-	return func(ctx context.Context) error { return f(ctx, i) }
+func (p float64ObservProvider) callback(i float64Observable, f instrument.Float64Callback) func(context.Context) error {
+	inst := float64Observer{i}
+	return func(ctx context.Context) error { return f(ctx, inst) }
+}
+
+type float64Observer struct {
+	float64Observable
+}
+
+func (o float64Observer) Observe(val float64, attrs ...attribute.KeyValue) {
+	o.observe(val, attrs)
 }

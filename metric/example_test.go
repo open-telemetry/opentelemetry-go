@@ -55,7 +55,7 @@ func ExampleMeter_asynchronous_single() {
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
 		instrument.WithUnit(unit.Bytes),
-		instrument.WithInt64Callback(func(ctx context.Context, inst instrument.Int64Observer) error {
+		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
 			// Do the real work here to get the real disk usage. For example,
 			//
 			//   usage, err := GetDiskUsage(diskID)
@@ -69,7 +69,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			inst.Observe(ctx, int64(usage), attribute.Int("disk.id", 3))
+			obsrv.Observe(int64(usage), attribute.Int("disk.id", 3))
 			return nil
 		}),
 	)
@@ -90,13 +90,13 @@ func ExampleMeter_asynchronous_multiple() {
 	gcPause, _ := meter.Float64Histogram("gcPause")
 
 	_, err := meter.RegisterCallback(
-		func(ctx context.Context) error {
+		func(ctx context.Context, o metric.Observer) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)
 
-			heapAlloc.Observe(ctx, int64(memStats.HeapAlloc))
-			gcCount.Observe(ctx, int64(memStats.NumGC))
+			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
+			o.ObserveInt64(gcCount, int64(memStats.NumGC))
 
 			// This function synchronously records the pauses
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
