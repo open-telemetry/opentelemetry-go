@@ -12,9 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "1.12.0"
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestWrappedError(t *testing.T) {
+	e := WrapTracesError(context.Canceled)
+
+	require.Equal(t, context.Canceled, errors.Unwrap(e))
+	require.Equal(t, TracesExport, e.(wrappedExportError).kind)
+	require.Equal(t, "traces export: context canceled", e.Error())
+	require.True(t, errors.Is(e, context.Canceled))
 }
