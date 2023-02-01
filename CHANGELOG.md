@@ -12,6 +12,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Backoff reset for OTLP client in `go.opentelemetry.io/otel/exporters/otlp/internal/retry` now behaves as expected, instead of never being reset after the first client instantiation. (#3621)
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncint64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncfloat64` package is removed. (#3631)
+- The deprecated `go.opentelemetry.io/otel/metric/instrument/syncint64` package is removed. (#3631)
+
 ## [1.12.0/0.35.0] 2023-01-28
 
 ### Added
