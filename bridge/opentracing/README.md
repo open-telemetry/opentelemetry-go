@@ -38,3 +38,24 @@ When you have started an OpenTracing Span, make sure the OpenTelemetry knows abo
 	// Propagate the otSpan to both OpenTracing and OpenTelemetry
 	// instrumentation by using the ctxWithOTAndOTelSpan context.
 ```
+
+## Extended Functionality
+
+While the bridge does not expose functionality that is not implemented by OpenTelemetry, it does expose some that is part of OpenTelemetry API and not OpenTracing API.
+
+**`SpanContext.IsSampled`**
+
+Proxies underlying `trace.IsSampled` method (see [documentation](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext.IsSampled)). In order to use it, you have to cast it:
+
+```go
+type samplable interface {
+	IsSampled() bool
+}
+
+var sc opentracing.SpanContext = ...
+if sc.(samplable).IsSampled() {
+	// Span is expected to be sampled.
+} else {
+	// Span will be discarded.
+}
+```
