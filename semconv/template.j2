@@ -64,27 +64,24 @@ Note: {{ attr.note }}
 {%- macro fndoc(attr) -%}
 // {{ to_go_name(attr.fqn) }} returns an attribute KeyValue conforming to the "{{ attr.fqn }}" semantic conventions. {{ it_reps(attr.brief) }}
 {%- endmacro -%}
-{%- macro to_go_type(type) -%}
-  {%- if type == "string" -%}
-    string
-  {%- elif type == "string[]" -%}
-    []string
-  {%- elif type == "int" -%}
-    int
-  {%- elif type == "int[]" -%}
-    []int
-  {%- elif type == "double" -%}
-    float64
-  {%- elif type == "double[]" -%}
-    []float64
-  {%- elif type == "boolean" -%}
-    bool
-  {%- elif type == "boolean[]" -%}
-    []bool
-  {%- endif -%}
-{%- endmacro -%}
 {%- macro to_go_func(type, name) -%}
-func {{name}}(val {{to_go_type(type)}}) attribute.KeyValue {
+{%- if type == "string" -%}
+func {{name}}(val string) attribute.KeyValue {
+{%- elif type == "string[]" -%}
+func {{name}}(val ...string) attribute.KeyValue {
+{%- elif type == "int" -%}
+func {{name}}(val int) attribute.KeyValue {
+{%- elif type == "int[]" -%}
+func {{name}}(val ...int) attribute.KeyValue {
+{%- elif type == "double" -%}
+func {{name}}(val float64) attribute.KeyValue {
+{%- elif type == "double[]" -%}
+func {{name}}(val ...float64) attribute.KeyValue {
+{%- elif type == "boolean" -%}
+func {{name}}(val bool) attribute.KeyValue {
+{%- elif type == "boolean[]" -%}
+func {{name}}(val ...bool) attribute.KeyValue {
+{%- endif -%}
 	return {{name}}Key.{{keyval_method(type)}}(val)
 }
 {%- endmacro -%}

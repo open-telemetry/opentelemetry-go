@@ -103,7 +103,7 @@ const (
 // BrowserBrands returns an attribute KeyValue conforming to the
 // "browser.brands" semantic conventions. It represents the array of brand name
 // and version separated by a space
-func BrowserBrands(val []string) attribute.KeyValue {
+func BrowserBrands(val ...string) attribute.KeyValue {
 	return BrowserBrandsKey.StringSlice(val)
 }
 
@@ -481,28 +481,28 @@ const (
 // AWSLogGroupNames returns an attribute KeyValue conforming to the
 // "aws.log.group.names" semantic conventions. It represents the name(s) of the
 // AWS log group(s) an application is writing to.
-func AWSLogGroupNames(val []string) attribute.KeyValue {
+func AWSLogGroupNames(val ...string) attribute.KeyValue {
 	return AWSLogGroupNamesKey.StringSlice(val)
 }
 
 // AWSLogGroupARNs returns an attribute KeyValue conforming to the
 // "aws.log.group.arns" semantic conventions. It represents the Amazon Resource
 // Name(s) (ARN) of the AWS log group(s).
-func AWSLogGroupARNs(val []string) attribute.KeyValue {
+func AWSLogGroupARNs(val ...string) attribute.KeyValue {
 	return AWSLogGroupARNsKey.StringSlice(val)
 }
 
 // AWSLogStreamNames returns an attribute KeyValue conforming to the
 // "aws.log.stream.names" semantic conventions. It represents the name(s) of
 // the AWS log stream(s) an application is writing to.
-func AWSLogStreamNames(val []string) attribute.KeyValue {
+func AWSLogStreamNames(val ...string) attribute.KeyValue {
 	return AWSLogStreamNamesKey.StringSlice(val)
 }
 
 // AWSLogStreamARNs returns an attribute KeyValue conforming to the
 // "aws.log.stream.arns" semantic conventions. It represents the ARN(s) of the
 // AWS log stream(s).
-func AWSLogStreamARNs(val []string) attribute.KeyValue {
+func AWSLogStreamARNs(val ...string) attribute.KeyValue {
 	return AWSLogStreamARNsKey.StringSlice(val)
 }
 
@@ -1619,7 +1619,7 @@ func ProcessCommandLine(val string) attribute.KeyValue {
 // supporting procfs), can be set according to the list of null-delimited
 // strings extracted from `proc/[pid]/cmdline`. For libc-based executables,
 // this would be the full argv vector passed to `main`.
-func ProcessCommandArgs(val []string) attribute.KeyValue {
+func ProcessCommandArgs(val ...string) attribute.KeyValue {
 	return ProcessCommandArgsKey.StringSlice(val)
 }
 

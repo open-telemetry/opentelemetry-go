@@ -2103,14 +2103,14 @@ const (
 // AWSDynamoDBTableNames returns an attribute KeyValue conforming to the
 // "aws.dynamodb.table_names" semantic conventions. It represents the keys in
 // the `RequestItems` object field.
-func AWSDynamoDBTableNames(val []string) attribute.KeyValue {
+func AWSDynamoDBTableNames(val ...string) attribute.KeyValue {
 	return AWSDynamoDBTableNamesKey.StringSlice(val)
 }
 
 // AWSDynamoDBConsumedCapacity returns an attribute KeyValue conforming to
 // the "aws.dynamodb.consumed_capacity" semantic conventions. It represents the
 // JSON-serialized value of each item in the `ConsumedCapacity` response field.
-func AWSDynamoDBConsumedCapacity(val []string) attribute.KeyValue {
+func AWSDynamoDBConsumedCapacity(val ...string) attribute.KeyValue {
 	return AWSDynamoDBConsumedCapacityKey.StringSlice(val)
 }
 
@@ -2162,7 +2162,7 @@ func AWSDynamoDBLimit(val int) attribute.KeyValue {
 // AWSDynamoDBAttributesToGet returns an attribute KeyValue conforming to
 // the "aws.dynamodb.attributes_to_get" semantic conventions. It represents the
 // value of the `AttributesToGet` request parameter.
-func AWSDynamoDBAttributesToGet(val []string) attribute.KeyValue {
+func AWSDynamoDBAttributesToGet(val ...string) attribute.KeyValue {
 	return AWSDynamoDBAttributesToGetKey.StringSlice(val)
 }
 
@@ -2215,7 +2215,7 @@ const (
 // conforming to the "aws.dynamodb.global_secondary_indexes" semantic
 // conventions. It represents the JSON-serialized value of each item of the
 // `GlobalSecondaryIndexes` request field
-func AWSDynamoDBGlobalSecondaryIndexes(val []string) attribute.KeyValue {
+func AWSDynamoDBGlobalSecondaryIndexes(val ...string) attribute.KeyValue {
 	return AWSDynamoDBGlobalSecondaryIndexesKey.StringSlice(val)
 }
 
@@ -2223,7 +2223,7 @@ func AWSDynamoDBGlobalSecondaryIndexes(val []string) attribute.KeyValue {
 // to the "aws.dynamodb.local_secondary_indexes" semantic conventions. It
 // represents the JSON-serialized value of each item of the
 // `LocalSecondaryIndexes` request field.
-func AWSDynamoDBLocalSecondaryIndexes(val []string) attribute.KeyValue {
+func AWSDynamoDBLocalSecondaryIndexes(val ...string) attribute.KeyValue {
 	return AWSDynamoDBLocalSecondaryIndexesKey.StringSlice(val)
 }
 
@@ -2387,7 +2387,7 @@ const (
 // to the "aws.dynamodb.attribute_definitions" semantic conventions. It
 // represents the JSON-serialized value of each item in the
 // `AttributeDefinitions` request field.
-func AWSDynamoDBAttributeDefinitions(val []string) attribute.KeyValue {
+func AWSDynamoDBAttributeDefinitions(val ...string) attribute.KeyValue {
 	return AWSDynamoDBAttributeDefinitionsKey.StringSlice(val)
 }
 
@@ -2395,7 +2395,7 @@ func AWSDynamoDBAttributeDefinitions(val []string) attribute.KeyValue {
 // conforming to the "aws.dynamodb.global_secondary_index_updates" semantic
 // conventions. It represents the JSON-serialized value of each item in the the
 // `GlobalSecondaryIndexUpdates` request field.
-func AWSDynamoDBGlobalSecondaryIndexUpdates(val []string) attribute.KeyValue {
+func AWSDynamoDBGlobalSecondaryIndexUpdates(val ...string) attribute.KeyValue {
 	return AWSDynamoDBGlobalSecondaryIndexUpdatesKey.StringSlice(val)
 }
 
@@ -3171,7 +3171,7 @@ func MessagingRocketmqMessageTag(val string) attribute.KeyValue {
 // MessagingRocketmqMessageKeys returns an attribute KeyValue conforming to
 // the "messaging.rocketmq.message.keys" semantic conventions. It represents
 // the key(s) of message, another way to mark message besides message id.
-func MessagingRocketmqMessageKeys(val []string) attribute.KeyValue {
+func MessagingRocketmqMessageKeys(val ...string) attribute.KeyValue {
 	return MessagingRocketmqMessageKeysKey.StringSlice(val)
 }
 
