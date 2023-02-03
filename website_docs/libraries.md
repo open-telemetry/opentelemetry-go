@@ -86,7 +86,8 @@ Connecting manual instrumentation you write in your app with instrumentation gen
 
 ## Available packages
 
-A full list of instrumentation libraries available can be found in the [OpenTelemetry registry](/registry/?language=go&component=instrumentation).
+A full list of instrumentation libraries available can be found in the
+[OpenTelemetry registry](/ecosystem/registry/?language=go&component=instrumentation).
 
 ## Next steps
 
