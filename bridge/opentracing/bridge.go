@@ -661,28 +661,26 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	}
 
 	var textCarrier propagation.TextMapCarrier
+	var err error
 
 	switch builtinFormat {
 	case ot.HTTPHeaders:
 		if hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier); ok {
 			textCarrier = propagation.HeaderCarrier(hhcarrier)
 		} else if carrier, ok := carrier.(ot.TextMapWriter); ok {
-			var err error
-			if textCarrier, err = newTextMapWrapperForInject(carrier); err != nil {
-				return err
-			}
+			textCarrier, err = newTextMapWrapperForInject(carrier)
 		} else {
-			return ot.ErrInvalidCarrier
+			err = ot.ErrInvalidCarrier
 		}
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
-			var err error
-			if textCarrier, err = newTextMapWrapperForInject(carrier); err != nil {
-				return err
-			}
+			textCarrier, err = newTextMapWrapperForInject(carrier)
 		}
 	default:
-		return ot.ErrUnsupportedFormat
+		err = ot.ErrUnsupportedFormat
+	}
+	if err != nil {
+		return err
 	}
 
 	fs := fakeSpan{
@@ -706,29 +704,26 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	}
 
 	var textCarrier propagation.TextMapCarrier
+	var err error
 
 	switch builtinFormat {
 	case ot.HTTPHeaders:
 		if hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier); ok {
 			textCarrier = propagation.HeaderCarrier(hhcarrier)
 		} else if carrier, ok := carrier.(ot.TextMapReader); ok {
-			var err error
-			if textCarrier, err = newTextMapWrapperForExtract(carrier); err != nil {
-				return nil, err
-			}
+			textCarrier, err = newTextMapWrapperForExtract(carrier)
 		} else {
-			return nil, ot.ErrInvalidCarrier
+			err = ot.ErrInvalidCarrier
 		}
-
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
-			var err error
-			if textCarrier, err = newTextMapWrapperForExtract(carrier); err != nil {
-				return nil, err
-			}
+			textCarrier, err = newTextMapWrapperForExtract(carrier)
 		}
 	default:
-		return nil, ot.ErrUnsupportedFormat
+		err = ot.ErrUnsupportedFormat
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	ctx := t.getPropagator().Extract(context.Background(), textCarrier)
