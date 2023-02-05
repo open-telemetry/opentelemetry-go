@@ -90,5 +90,9 @@ func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
 		return len(tracer.FinishedSpans) == 2
 	}
 	require.Eventuallyf(t, checkSpans, 5*time.Second, 5*time.Millisecond, "expecting two spans")
-	assert.Equal(t, tracer.FinishedSpans[0].SpanContext().TraceID(), tracer.FinishedSpans[1].SpanContext().TraceID(), "expecting same trace ID")
+	assert.Equal(t,
+		tracer.FinishedSpans[0].SpanContext().TraceID(),
+		tracer.FinishedSpans[1].SpanContext().TraceID(),
+		"expecting same trace ID",
+	)
 }
