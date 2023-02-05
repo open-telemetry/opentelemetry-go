@@ -667,10 +667,8 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 	case ot.HTTPHeaders:
 		if hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier); ok {
 			textCarrier = propagation.HeaderCarrier(hhcarrier)
-		} else if carrier, ok := carrier.(ot.TextMapWriter); ok {
-			textCarrier, err = newTextMapWrapperForInject(carrier)
 		} else {
-			err = ot.ErrInvalidCarrier
+			textCarrier, err = newTextMapWrapperForInject(carrier)
 		}
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
@@ -710,10 +708,8 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 	case ot.HTTPHeaders:
 		if hhcarrier, ok := carrier.(ot.HTTPHeadersCarrier); ok {
 			textCarrier = propagation.HeaderCarrier(hhcarrier)
-		} else if carrier, ok := carrier.(ot.TextMapReader); ok {
-			textCarrier, err = newTextMapWrapperForExtract(carrier)
 		} else {
-			err = ot.ErrInvalidCarrier
+			textCarrier, err = newTextMapWrapperForExtract(carrier)
 		}
 	case ot.TextMap:
 		if textCarrier, ok = carrier.(propagation.TextMapCarrier); !ok {
