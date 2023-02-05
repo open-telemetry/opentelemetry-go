@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#3631)
