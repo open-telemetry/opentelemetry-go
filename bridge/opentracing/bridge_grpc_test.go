@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	testpb "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc/test/otgrpc_testing"
 	otgrpc "github.com/opentracing-contrib/go-grpc"
+	testpb "github.com/opentracing-contrib/go-grpc/test/otgrpc_testing"
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
