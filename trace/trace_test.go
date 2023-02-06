@@ -17,6 +17,7 @@ package trace
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -239,6 +240,69 @@ func TestSpanIDFromHex(t *testing.T) {
 
 			if sid != testcase.sid {
 				t.Errorf("Want: %v, but have: %v", testcase.sid, sid)
+			}
+		})
+	}
+}
+
+func TestTraceIDFromJSON(t *testing.T) {
+	for _, testcase := range []struct {
+		name  string
+		json  string
+		tid   TraceID
+		valid bool
+	}{
+		{
+			name:  "Valid TraceID",
+			tid:   TraceID([16]byte{42}),
+			json:  `"2a000000000000000000000000000000"`,
+			valid: true,
+		}, {
+			name:  "Invalid TraceID with invalid length",
+			json:  `"80f198ee56343ba0000000000000000"`,
+			valid: false,
+		}, {
+			name:  "Invalid TraceID with invalid char",
+			json:  `"80f198ee563433g70000000000000000"`,
+			valid: false,
+		}, {
+			name:  "Invalid TraceID with uppercase",
+			json:  `"80f198ee53ba86F0000000000000000"`,
+			valid: false,
+		},
+		{
+			name:  "Invalid TraceID is boolean",
+			json:  `true`,
+			valid: false,
+		},
+		{
+			name:  "Invalid TraceID is number",
+			json:  `42`,
+			valid: false,
+		},
+		{
+			name:  "Invalid TraceID is null",
+			json:  `null`,
+			valid: false,
+		},
+		{
+			name:  "Invalid TraceID is not a string",
+			json:  `2a000000000000000000000000000000`,
+			valid: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			var tid TraceID
+			err := json.Unmarshal([]byte(testcase.json), &tid)
+
+			if testcase.valid && err != nil {
+				t.Errorf("Expected TraceID %s to be valid but end with error %s", testcase.json, err.Error())
+			} else if !testcase.valid && err == nil {
+				t.Errorf("Expected TraceID %s to be invalid but end no error", testcase.json)
+			}
+
+			if tid != testcase.tid {
+				t.Errorf("Want: %v, but have: %v", testcase.tid, tid)
 			}
 		})
 	}
