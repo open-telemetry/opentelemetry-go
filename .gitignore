@@ -8,9 +8,6 @@ Thumbs.db
 *.so
 coverage.*
 
-go.work
-go.work.sum
-
 gen/
 
 /example/fib/fib
