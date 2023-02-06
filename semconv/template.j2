@@ -1,16 +1,39 @@
-{%- macro to_go_attr_type(type, val) -%}
+{%- macro keyval_method(type) -%}
   {%- if type == "string" -%}
-    String("{{val}}")
+    String
+  {%- elif type == "string[]" -%}
+    StringSlice
   {%- elif type == "int" -%}
-    Int({{val}})
+    Int
+  {%- elif type == "int[]" -%}
+    IntSlice
+  {%- elif type == "double" -%}
+    Float64
+  {%- elif type == "double[]" -%}
+    Float64Slice
+  {%- elif type == "boolean" -%}
+    Bool
+  {%- elif type == "boolean[]" -%}
+    BoolSlice
   {%- endif -%}
+{%- endmacro -%}
+{%- macro to_go_attr_type(type, val) -%}
+{{keyval_method(type)}}({% if type == "string" %}"{{val}}"{% else %}{{val}}{% endif %})
 {%- endmacro -%}
 {%- macro to_go_name(fqn) -%}
 {{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
 {%- endmacro -%}
-{%- macro godoc(attr) -%}
-{{ attr.brief }}
-//
+{%- macro it_reps(brief) -%}
+It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
+  {{ brief[0]|lower }}{{ brief[1:] }}
+{%- else -%}
+  the {{ brief[0]|lower }}{{ brief[1:] }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro keydoc(attr) -%}
+{{ to_go_name(attr.fqn) }}Key is the attribute Key conforming to the "{{ attr.fqn }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- endmacro -%}
+{%- macro keydetails(attr) -%}
 {%- if attr.attr_type is string %}
 Type: {{ attr.attr_type }}
 {%- else %}
@@ -38,6 +61,33 @@ Examples: {{ attr.examples | pprint | trim("[]")  }}
 Note: {{ attr.note }}
 {%- endif %}
 {%- endmacro -%}
+{%- macro fndoc(attr) -%}
+// {{ to_go_name(attr.fqn) }} returns an attribute KeyValue conforming to the "{{ attr.fqn }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- endmacro -%}
+{%- macro to_go_func(type, name) -%}
+{%- if type == "string" -%}
+func {{name}}(val string) attribute.KeyValue {
+{%- elif type == "string[]" -%}
+func {{name}}(val ...string) attribute.KeyValue {
+{%- elif type == "int" -%}
+func {{name}}(val int) attribute.KeyValue {
+{%- elif type == "int[]" -%}
+func {{name}}(val ...int) attribute.KeyValue {
+{%- elif type == "double" -%}
+func {{name}}(val float64) attribute.KeyValue {
+{%- elif type == "double[]" -%}
+func {{name}}(val ...float64) attribute.KeyValue {
+{%- elif type == "boolean" -%}
+func {{name}}(val bool) attribute.KeyValue {
+{%- elif type == "boolean[]" -%}
+func {{name}}(val ...bool) attribute.KeyValue {
+{%- endif -%}
+	return {{name}}Key.{{keyval_method(type)}}(val)
+}
+{%- endmacro -%}
+{%- macro sentence_case(text) -%}
+    {{ text[0]|upper}}{{text[1:] }}
+{%- endmacro -%}
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,12 +110,13 @@ import "go.opentelemetry.io/otel/attribute"
 
 {% for semconv in semconvs -%}
 {%- if semconvs[semconv].attributes | rejectattr("ref") | selectattr("is_local") | sort(attribute=fqn) | length > 0 -%}
-// {{ semconvs[semconv].brief }}
+// {{ sentence_case(semconvs[semconv].brief | replace("This document defines ", "")) | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}
 const (
-{% for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
-    // {{ godoc(attr) | wordwrap | indent(3) | replace("   ", "\t// ") | replace("// //", "//") }}
-    {{to_go_name(attr.fqn)}}Key = attribute.Key("{{attr.fqn}}")
-{% endfor %}
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref %}
+	// {{ keydoc(attr) | wordwrap(72, break_long_words=false, break_on_hyphens=false, wrapstring="\n\t// ") }}
+	// {{ keydetails(attr) | wordwrap(72, break_long_words=false, break_on_hyphens=false, wrapstring="\n\t// ") }}
+	{{to_go_name(attr.fqn)}}Key = attribute.Key("{{attr.fqn}}")
+{% endfor -%}
 )
 {%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
 {%- if attr.attr_type is not string %}
@@ -76,6 +127,13 @@ var (
     {{to_go_name("{}.{}".format(attr.fqn, val.member_id))}} = {{to_go_name(attr.fqn)}}Key.{{to_go_attr_type(attr.attr_type.enum_type, val.value)}}
 {%- endfor %}
 )
+{%- endif -%}
+{%- endfor %}
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
+{%- if attr.attr_type is string %}
+
+{{ fndoc(attr) | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}
+{{to_go_func(attr.attr_type, to_go_name(attr.fqn))}}
 {%- endif -%}
 {%- endfor %}
 
