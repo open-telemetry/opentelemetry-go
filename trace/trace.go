@@ -63,6 +63,20 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// UnmarshalJSON implements a custom unmarshal function to decode a TraceID from a hex string.
+func (t *TraceID) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	traceID, err := TraceIDFromHex(str)
+	if err != nil {
+		return err
+	}
+	*t = traceID
+	return nil
+}
+
 // String returns the hex string representation form of a TraceID.
 func (t TraceID) String() string {
 	return hex.EncodeToString(t[:])
