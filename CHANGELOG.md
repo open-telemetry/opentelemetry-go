@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Attribute `KeyValue` creations functions to `go.opentelemetry.io/otel/semconv/v1.17.0` for all non-enum semantic conventions.
   These functions ensure semantic convention type correctness.
+- Add Go workspace files to .gitignore (#3681)
 
 ### Removed
 
