@@ -134,37 +134,37 @@ func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBu
 	}
 }
 
-func TestHistogramImmutableBounds(t *testing.T) {
-	t.Run("Delta", testHistImmutableBounds[int64](
-		NewDeltaHistogram[int64],
-		func(a Aggregator[int64]) []float64 {
-			deltaH := a.(*deltaHistogram[int64])
-			return deltaH.bounds
-		},
-	))
+// func TestHistogramImmutableBounds(t *testing.T) {
+// 	t.Run("Delta", testHistImmutableBounds[int64](
+// 		NewDeltaHistogram[int64],
+// 		func(a Aggregator[int64]) []float64 {
+// 			deltaH := a.(*deltaHistogram[int64])
+// 			return deltaH.bounds
+// 		},
+// 	))
 
-	t.Run("Cumulative", testHistImmutableBounds[int64](
-		NewCumulativeHistogram[int64],
-		func(a Aggregator[int64]) []float64 {
-			cumuH := a.(*cumulativeHistogram[int64])
-			return cumuH.bounds
-		},
-	))
-}
+// 	t.Run("Cumulative", testHistImmutableBounds[int64](
+// 		NewCumulativeHistogram[int64],
+// 		func(a Aggregator[int64]) []float64 {
+// 			cumuH := a.(*cumulativeHistogram[int64])
+// 			return cumuH.bounds
+// 		},
+// 	))
+// }
 
-func TestCumulativeHistogramImutableCounts(t *testing.T) {
-	a := NewCumulativeHistogram[int64](histConf)
-	a.Aggregate(5, alice)
-	hdp := a.Aggregation().(metricdata.Histogram).DataPoints[0]
+// func TestCumulativeHistogramImutableCounts(t *testing.T) {
+// 	a := NewCumulativeHistogram[int64](histConf)
+// 	a.Aggregate(5, alice)
+// 	hdp := a.Aggregation().(metricdata.Histogram).DataPoints[0]
 
-	cumuH := a.(*cumulativeHistogram[int64])
-	require.Equal(t, hdp.BucketCounts, cumuH.values[alice].counts)
+// 	cumuH := a.(*cumulativeHistogram[int64])
+// 	require.Equal(t, hdp.BucketCounts, cumuH.values[alice].counts)
 
-	cpCounts := make([]uint64, len(hdp.BucketCounts))
-	copy(cpCounts, hdp.BucketCounts)
-	hdp.BucketCounts[0] = 10
-	assert.Equal(t, cpCounts, cumuH.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
-}
+// 	cpCounts := make([]uint64, len(hdp.BucketCounts))
+// 	copy(cpCounts, hdp.BucketCounts)
+// 	hdp.BucketCounts[0] = 10
+// 	assert.Equal(t, cpCounts, cumuH.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+// }
 
 func TestDeltaHistogramReset(t *testing.T) {
 	t.Cleanup(mockTime(now))

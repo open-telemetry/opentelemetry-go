@@ -139,8 +139,8 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 
 	t := now()
 	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
+	// bounds := make([]float64, len(s.bounds))
+	// copy(bounds, s.bounds)
 	h := metricdata.Histogram{
 		Temporality: metricdata.DeltaTemporality,
 		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
@@ -151,7 +151,7 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 			StartTime:    s.start,
 			Time:         t,
 			Count:        b.count,
-			Bounds:       bounds,
+			Bounds:       s.bounds,
 			BucketCounts: b.counts,
 			Sum:          b.sum,
 		}
@@ -202,8 +202,8 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 
 	t := now()
 	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
+	// bounds := make([]float64, len(s.bounds))
+	// copy(bounds, s.bounds)
 	h := metricdata.Histogram{
 		Temporality: metricdata.CumulativeTemporality,
 		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
@@ -214,16 +214,16 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 		//
 		// TODO (#3047): Making copies for bounds and counts incurs a large
 		// memory allocation footprint. Alternatives should be explored.
-		counts := make([]uint64, len(b.counts))
-		copy(counts, b.counts)
+		// counts := make([]uint64, len(b.counts))
+		// copy(counts, b.counts)
 
 		hdp := metricdata.HistogramDataPoint{
 			Attributes:   a,
 			StartTime:    s.start,
 			Time:         t,
 			Count:        b.count,
-			Bounds:       bounds,
-			BucketCounts: counts,
+			Bounds:       s.bounds,
+			BucketCounts: b.counts,
 			Sum:          b.sum,
 		}
 		if !s.noMinMax {
