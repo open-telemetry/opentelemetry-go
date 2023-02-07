@@ -8,8 +8,8 @@ require (
 	github.com/opentracing-contrib/go-grpc v0.0.0-20210225150812-73cb765af46e
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.8.1
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/trace v1.12.0
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/trace v1.13.0
 	google.golang.org/grpc v1.52.3
 )
 
