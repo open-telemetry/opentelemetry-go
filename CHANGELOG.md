@@ -13,6 +13,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Attribute `KeyValue` creations functions to `go.opentelemetry.io/otel/semconv/v1.17.0` for all non-enum semantic conventions.
   These functions ensure semantic convention type correctness.
 
+### Fixed
+
+- Removed the `http.target` attribute from being added by `ServerRequest` in the following packages. (#TBD)
+  - `go.opentelemetry.io/otel/semconv/v1.13.0` 
+  - `go.opentelemetry.io/otel/semconv/v1.14.0` 
+  - `go.opentelemetry.io/otel/semconv/v1.15.0` 
+  - `go.opentelemetry.io/otel/semconv/v1.16.0` 
+  - `go.opentelemetry.io/otel/semconv/v1.17.0` 
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#3631)
