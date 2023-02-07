@@ -5,10 +5,10 @@ go 1.18
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/stretchr/testify v1.8.1
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.12.0
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.13.0
 	go.opentelemetry.io/otel/metric v0.35.0
-	go.opentelemetry.io/otel/sdk v1.12.0
+	go.opentelemetry.io/otel/sdk v1.13.0
 	go.opentelemetry.io/otel/sdk/metric v0.35.0
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.52.3
@@ -23,7 +23,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.opentelemetry.io/otel/trace v1.12.0 // indirect
+	go.opentelemetry.io/otel/trace v1.13.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
