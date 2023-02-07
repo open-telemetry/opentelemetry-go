@@ -16,11 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Removed the `http.target` attribute from being added by `ServerRequest` in the following packages. (#3687)
-  - `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv` 
-  - `go.opentelemetry.io/otel/semconv/v1.14.0/httpconv` 
-  - `go.opentelemetry.io/otel/semconv/v1.15.0/httpconv` 
-  - `go.opentelemetry.io/otel/semconv/v1.16.0/httpconv` 
-  - `go.opentelemetry.io/otel/semconv/v1.17.0/httpconv` 
+  - `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.14.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.15.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.16.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.17.0/httpconv`
 
 ### Removed
 
