@@ -11,7 +11,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /
+    directory: /example/zipkin
     labels:
       - dependencies
       - docker
