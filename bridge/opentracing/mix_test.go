@@ -17,6 +17,7 @@ package opentracing
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -109,19 +110,20 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 
 func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
-		t.Logf("Running test case %d: %s", idx, tc.desc)
-		mockOtelTracer := internal.NewMockTracer()
-		ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
-		otTracer.SetWarningHandler(func(msg string) {
-			t.Log(msg)
+		t.Run(fmt.Sprintf("Running test case %d: %s", idx, tc.desc), func(t *testing.T) {
+			mockOtelTracer := internal.NewMockTracer()
+			ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
+			otTracer.SetWarningHandler(func(msg string) {
+				t.Log(msg)
+			})
+
+			otel.SetTracerProvider(otelProvider)
+			ot.SetGlobalTracer(otTracer)
+
+			tc.setup(t, mockOtelTracer)
+			tc.run(t, ctx)
+			tc.check(t, mockOtelTracer)
 		})
-
-		otel.SetTracerProvider(otelProvider)
-		ot.SetGlobalTracer(otTracer)
-
-		tc.setup(t, mockOtelTracer)
-		tc.run(t, ctx)
-		tc.check(t, mockOtelTracer)
 	}
 }
 
@@ -335,7 +337,7 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 			},
 			{
 				key:   "Third",
-				value: "three",
+				value: "three space four", // not URL-encoded
 			},
 		},
 	}
@@ -428,7 +430,7 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 			},
 			{
 				key:   "Third",
-				value: "three",
+				value: "three space four", // not URL-encoded
 			},
 		},
 	}
@@ -515,7 +517,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 
 	otSpan.SetBaggageItem(otKey, value)
 
-	m, err := baggage.NewMember(otelKey, value)
+	m, err := baggage.NewMember(otelKey, url.QueryEscape(value))
 	if err != nil {
 		t.Error(err)
 		return ctx

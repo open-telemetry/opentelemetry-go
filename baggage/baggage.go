@@ -254,6 +254,9 @@ type Member struct {
 // used directly while the value will be url decoded after validation. An error
 // is returned if the created Member would be invalid according to the W3C
 // Baggage specification.
+//
+// Note: value must be encoded via url.QueryEscape(). But Value() will return
+// the unencoded value (inconsistency).
 func NewMember(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
