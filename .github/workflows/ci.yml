@@ -8,7 +8,7 @@ env:
   # Path to where test results will be saved.
   TEST_RESULTS: /tmp/test-results
   # Default minimum version of Go to support.
-  DEFAULT_GO_VERSION: 1.18
+  DEFAULT_GO_VERSION: 1.19
 jobs:
   lint:
     runs-on: ubuntu-latest
