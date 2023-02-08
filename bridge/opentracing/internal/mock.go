@@ -267,8 +267,8 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 
 	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
-		semconv.ExceptionMessageKey.String(err.Error()),
+		semconv.ExceptionType(reflect.TypeOf(err).String()),
+		semconv.ExceptionMessage(err.Error()),
 	))
 	s.AddEvent(semconv.ExceptionEventName, opts...)
 }

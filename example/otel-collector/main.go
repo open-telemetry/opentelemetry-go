@@ -46,7 +46,7 @@ func initProvider() (func(context.Context) error, error) {
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			// the service name used to display traces in backends
-			semconv.ServiceNameKey.String("test-service"),
+			semconv.ServiceName("test-service"),
 		),
 	)
 	if err != nil {

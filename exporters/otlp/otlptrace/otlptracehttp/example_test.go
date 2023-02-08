@@ -60,8 +60,8 @@ func multiply(ctx context.Context, x, y int64) int64 {
 func newResource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("otlptrace-example"),
-		semconv.ServiceVersionKey.String("0.0.1"),
+		semconv.ServiceName("otlptrace-example"),
+		semconv.ServiceVersion("0.0.1"),
 	)
 }
 

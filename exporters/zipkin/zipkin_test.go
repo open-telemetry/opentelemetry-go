@@ -199,8 +199,8 @@ func logStoreLogger(s *logStore) *log.Logger {
 
 func TestExportSpans(t *testing.T) {
 	res := resource.NewSchemaless(
-		semconv.ServiceNameKey.String("exporter-test"),
-		semconv.ServiceVersionKey.String("0.1.0"),
+		semconv.ServiceName("exporter-test"),
+		semconv.ServiceVersion("0.1.0"),
 	)
 
 	spans := tracetest.SpanStubs{
