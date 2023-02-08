@@ -8,9 +8,9 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/stretchr/testify v1.8.1
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/trace v1.12.0
 	golang.org/x/sys v0.4.0
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/trace v1.13.0
 )
 
 require (
