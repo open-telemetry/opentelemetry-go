@@ -345,9 +345,9 @@ func TestBaggageParse(t *testing.T) {
 		},
 		{
 			name: "url encoded value",
-			in:   "key1=val%252",
+			in:   "key1=val+%27+2",
 			want: baggage.List{
-				"key1": {Value: "val%2"},
+				"key1": {Value: "val ' 2"},
 			},
 		},
 		{
@@ -406,7 +406,7 @@ func TestBaggageParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := Parse(tc.in)
 			assert.ErrorIs(t, err, tc.err)
-			assert.Equal(t, Baggage{list: tc.want}, actual)
+			assert.Equal(t, Baggage{list: tc.want}, actual, "and error=%v", err)
 		})
 	}
 }

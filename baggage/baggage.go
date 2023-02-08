@@ -315,15 +315,16 @@ func parseMember(member string) (Member, error) {
 		// "Leading and trailing whitespaces are allowed but MUST be trimmed
 		// when converting the header into a data structure."
 		key = strings.TrimSpace(kv[0])
+		valueEscaped := strings.TrimSpace(kv[1])
 		var err error
-		value, err = url.QueryUnescape(strings.TrimSpace(kv[1]))
+		value, err = url.QueryUnescape(valueEscaped)
 		if err != nil {
 			return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
 		}
 		if !keyRe.MatchString(key) {
 			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 		}
-		if !valueRe.MatchString(value) {
+		if !valueRe.MatchString(valueEscaped) {
 			return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 		}
 	default:
