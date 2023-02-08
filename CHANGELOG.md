@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Semantic conventions of the `event` type are now generated. (#3697)
+
 ## [1.13.0/0.36.0] 2023-02-07
 
 ### Added
