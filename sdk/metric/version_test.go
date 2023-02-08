@@ -15,9 +15,10 @@
 package metric
 
 import (
-	"github.com/stretchr/testify/assert"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
