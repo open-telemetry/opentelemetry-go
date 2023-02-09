@@ -83,7 +83,7 @@ func TestNoResourceAttributesSet(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, res, NewSchemaless(
-		semconv.ServiceNameKey.String("bar"),
+		semconv.ServiceName("bar"),
 	))
 }
 
@@ -131,6 +131,6 @@ func TestDetectServiceNameFromEnv(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
-		semconv.ServiceNameKey.String("bar"),
+		semconv.ServiceName("bar"),
 	))
 }

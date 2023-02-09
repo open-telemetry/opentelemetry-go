@@ -227,8 +227,8 @@ func TestDefault(t *testing.T) {
 		"default service.name should include executable name")
 
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
-	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersionKey.String(otel.Version()))
-	require.Contains(t, res.Attributes(), semconv.TelemetrySDKNameKey.String("opentelemetry"))
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(otel.Version()))
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
 }
 
 func TestString(t *testing.T) {
