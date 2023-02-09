@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Attribute `KeyValue` creations functions to `go.opentelemetry.io/otel/semconv/v1.17.0` for all non-enum semantic conventions.
   These functions ensure semantic convention type correctness.
+- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
 
 ### Removed
 
@@ -70,7 +71,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This type is used to represent min/max values and still be able to distinguish unset and zero values. (#3487)
 - The `go.opentelemetry.io/otel/semconv/v1.17.0` package.
   The package contains semantic conventions from the `v1.17.0` version of the OpenTelemetry specification. (#3599)
-- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not.
 
 ### Changed
 
