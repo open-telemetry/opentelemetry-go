@@ -55,7 +55,7 @@ func initTracer(url string) (func(context.Context) error, error) {
 		sdktrace.WithSpanProcessor(batcher),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("zipkin-test"),
+			semconv.ServiceName("zipkin-test"),
 		)),
 	)
 	otel.SetTracerProvider(tp)
