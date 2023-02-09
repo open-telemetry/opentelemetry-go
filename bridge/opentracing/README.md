@@ -53,9 +53,7 @@ type samplable interface {
 }
 
 var sc opentracing.SpanContext = ...
-if sc.(samplable).IsSampled() {
-	// Span is expected to be sampled.
-} else {
-	// Span will be discarded.
+if s, ok := sc.(samplable); ok && s.IsSampled() {
+	// Do something with sc knowing it is sampled.
 }
 ```
