@@ -43,7 +43,7 @@ When you have started an OpenTracing Span, make sure the OpenTelemetry knows abo
 
 The bridge functionality can be extended beyond the OpenTracing API.
 
-**`SpanContext.IsSampled`**
+### `SpanContext.IsSampled`
 
 Proxies underlying `trace.IsSampled` method (see [documentation](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext.IsSampled)). In order to use it, you have to cast it:
 
