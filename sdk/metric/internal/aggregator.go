@@ -39,6 +39,11 @@ type Aggregator[N int64 | float64] interface {
 	Aggregation() metricdata.Aggregation
 }
 
+// TODO: replace Aggregator[N].Aggregation with this signature.
+type AggregatorInto interface {
+	AggregationInto(*metricdata.Metrics)
+}
+
 // precomputeAggregator is an Aggregator that receives values to aggregate that
 // have been pre-computed by the caller.
 type precomputeAggregator[N int64 | float64] interface {

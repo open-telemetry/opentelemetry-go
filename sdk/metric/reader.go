@@ -90,11 +90,13 @@ type Reader interface {
 }
 
 // sdkProducer produces metrics for a Reader.
+// TODO: replace produce signature with produceInto.
 type sdkProducer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
 	produce(context.Context) (metricdata.ResourceMetrics, error)
+	produceInto(context.Context, *metricdata.ResourceMetrics) error
 }
 
 // Producer produces metrics for a Reader from an external source.
@@ -108,7 +110,8 @@ type Producer interface {
 // produceHolder is used as an atomic.Value to wrap the non-concrete producer
 // type.
 type produceHolder struct {
-	produce func(context.Context) (metricdata.ResourceMetrics, error)
+	produce     func(context.Context) (metricdata.ResourceMetrics, error)
+	produceInto func(context.Context, *metricdata.ResourceMetrics) error
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.

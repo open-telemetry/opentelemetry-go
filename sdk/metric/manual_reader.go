@@ -57,7 +57,10 @@ func NewManualReader(opts ...ManualReaderOption) Reader {
 // to read metrics from the SDK on demand.
 func (mr *manualReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
-	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{
+		produce:     p.produce,
+		produceInto: p.produceInto,
+	}) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
@@ -100,6 +103,7 @@ func (mr *manualReader) Shutdown(context.Context) error {
 		// Any future call to Collect will now return ErrReaderShutdown.
 		mr.sdkProducer.Store(produceHolder{
 			produce: shutdownProducer{}.produce,
+			//TODO add produceInto to shutdownProducer
 		})
 		mr.mu.Lock()
 		defer mr.mu.Unlock()
@@ -142,6 +146,43 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
 	return rm, unifyErrors(errs)
+}
+
+func (mr *manualReader) CollectInto(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	p := mr.sdkProducer.Load()
+	if p == nil {
+		return ErrReaderNotRegistered
+	}
+
+	ph, ok := p.(produceHolder)
+	if !ok {
+		// The atomic.Value is entirely in the periodicReader's control so
+		// this should never happen. In the unforeseen case that this does
+		// happen, return an error instead of panicking so a users code does
+		// not halt in the processes.
+		err := fmt.Errorf("manual reader: invalid producer: %T", p)
+		return err
+	}
+
+	if rm == nil {
+		rm = &metricdata.ResourceMetrics{}
+	}
+
+	err := ph.produceInto(ctx, rm)
+	if err != nil {
+		return err
+	}
+
+	var errs []error
+	for _, producer := range mr.externalProducers.Load().([]Producer) {
+		// TODO make externalMetrics also produceInto's
+		externalMetrics, err := producer.Produce(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
+	}
+	return unifyErrors(errs)
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.

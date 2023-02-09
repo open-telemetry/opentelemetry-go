@@ -252,6 +252,15 @@ func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetric
 	return testResourceMetricsA, nil
 }
 
+func (p testSDKProducer) produceInto(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	m, err := p.produce(ctx)
+	if err != nil {
+		return err
+	}
+	*rm = m
+	return nil
+}
+
 type testExternalProducer struct {
 	produceFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
 }

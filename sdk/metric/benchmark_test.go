@@ -117,7 +117,7 @@ func BenchmarkCollectHistograms(b *testing.B) {
 
 func benchCollectHistograms(count int) func(*testing.B) {
 	ctx := context.Background()
-	r := NewManualReader()
+	r := NewManualReader().(*manualReader)
 	mtr := NewMeterProvider(
 		WithReader(r),
 	).Meter("sdk/metric/bench/histogram")
@@ -140,7 +140,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			collectedMetrics, _ = r.Collect(ctx)
+			_ = r.CollectInto(ctx, &collectedMetrics)
 			if len(collectedMetrics.ScopeMetrics[0].Metrics) != count {
 				b.Fatalf("got %d metrics, want %d", len(collectedMetrics.ScopeMetrics[0].Metrics), count)
 			}

@@ -82,6 +82,14 @@ func (f *filter[N]) Aggregation() metricdata.Aggregation {
 	return f.aggregator.Aggregation()
 }
 
+func (f *filter[N]) AggregationInto(m *metricdata.Metrics) {
+	if agg, ok := f.aggregator.(AggregatorInto); ok {
+		agg.AggregationInto(m)
+		return
+	}
+	m.Data = f.aggregator.Aggregation()
+}
+
 // precomputedFilter is an aggregator that applies attribute filter when
 // Aggregating for pre-computed Aggregations. The pre-computed Aggregations
 // need to operate normally when no attribute filtering is done (for sums this

@@ -43,6 +43,11 @@ type aggregator interface {
 	Aggregation() metricdata.Aggregation
 }
 
+// TODO: Migrate aggregator interface to this type.
+type aggregatorInto interface {
+	AggregationInto(*metricdata.Metrics)
+}
+
 // instrumentSync is a synchronization point between a pipeline and an
 // instrument's Aggregators.
 type instrumentSync struct {
@@ -123,6 +128,12 @@ func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 //
 // This method is safe to call concurrently.
 func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+	rm := metricdata.ResourceMetrics{}
+	err := p.produceInto(ctx, &rm)
+	return rm, err
+}
+
+func (p *pipeline) produceInto(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -133,7 +144,7 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 			errs.append(err)
 		}
 		if err := ctx.Err(); err != nil {
-			return metricdata.ResourceMetrics{}, err
+			return err
 		}
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
@@ -144,36 +155,51 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
-			return metricdata.ResourceMetrics{}, err
+			return err
 		}
 	}
+	if rm == nil {
+		rm = &metricdata.ResourceMetrics{}
+	}
+	rm.Resource = p.resource
 
-	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
+	if cap(rm.ScopeMetrics) < len(p.aggregations) {
+		rm.ScopeMetrics = make([]metricdata.ScopeMetrics, len(p.aggregations))
+	} else {
+		rm.ScopeMetrics = rm.ScopeMetrics[:len(p.aggregations)]
+	}
+
+	i := 0
 	for scope, instruments := range p.aggregations {
-		metrics := make([]metricdata.Metrics, 0, len(instruments))
+		rm.ScopeMetrics[i].Scope = scope
+		if cap(rm.ScopeMetrics[i].Metrics) < len(instruments) {
+			rm.ScopeMetrics[i].Metrics = make([]metricdata.Metrics, len(instruments))
+		} else {
+			rm.ScopeMetrics[i].Metrics = rm.ScopeMetrics[i].Metrics[:len(instruments)]
+		}
+		j := 0
 		for _, inst := range instruments {
-			data := inst.aggregator.Aggregation()
-			if data != nil {
-				metrics = append(metrics, metricdata.Metrics{
-					Name:        inst.name,
-					Description: inst.description,
-					Unit:        inst.unit,
-					Data:        data,
-				})
+			if aggregator, ok := inst.aggregator.(aggregatorInto); ok {
+				aggregator.AggregationInto(&rm.ScopeMetrics[i].Metrics[j])
+			} else {
+				rm.ScopeMetrics[i].Metrics[j].Data = inst.aggregator.Aggregation()
+			}
+			if rm.ScopeMetrics[i].Metrics[j].Data != nil {
+				rm.ScopeMetrics[i].Metrics[j].Name = inst.name
+				rm.ScopeMetrics[i].Metrics[j].Description = inst.description
+				rm.ScopeMetrics[i].Metrics[j].Unit = inst.unit
+				j++
 			}
 		}
-		if len(metrics) > 0 {
-			sm = append(sm, metricdata.ScopeMetrics{
-				Scope:   scope,
-				Metrics: metrics,
-			})
+		rm.ScopeMetrics[i].Metrics = rm.ScopeMetrics[i].Metrics[:j]
+
+		if len(rm.ScopeMetrics[i].Metrics) > 0 {
+			i++
 		}
 	}
+	rm.ScopeMetrics = rm.ScopeMetrics[:i]
 
-	return metricdata.ResourceMetrics{
-		Resource:     p.resource,
-		ScopeMetrics: sm,
-	}, errs.errorOrNil()
+	return nil
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
