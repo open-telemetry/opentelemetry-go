@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Do not log errors for 202 Accepted response for otlptracehttp exporter. (#3706)
+- Do not log errors for 2XX response for otlptracehttp exporter. (#3706)
 
 ### Added
 

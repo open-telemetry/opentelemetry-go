@@ -68,9 +68,9 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
-			name: "no errors on 202 Accepted",
+			name: "no errors on 2XX Accepted",
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{202},
+				InjectHTTPStatus: []int{201, 202, 203, 204},
 			},
 		},
 		{

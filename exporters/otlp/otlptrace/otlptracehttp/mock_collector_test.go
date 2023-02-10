@@ -106,7 +106,7 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	injectedStatus := c.getInjectHTTPStatus()
 	if injectedStatus != 0 {
 		writeReply(w, rawResponse, injectedStatus, c.injectContentType, h)
-		if injectedStatus != http.StatusAccepted {
+		if injectedStatus < 200 || injectedStatus > 299 {
 			return
 		}
 	}
