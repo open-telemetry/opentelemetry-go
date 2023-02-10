@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Semantic conventions of the `event` type are now generated. (#3697)
+- The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
 - Support [Go 1.20]. (#3693)
 
 ### Changed
