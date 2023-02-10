@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Do not log errors for 202 Accepted response for otlptracehttp exporter. (#3706)
+
 ### Added
 
 - Semantic conventions of the `event` type are now generated. (#3697)
