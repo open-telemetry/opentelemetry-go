@@ -165,7 +165,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		}
 
 		switch resp.StatusCode {
-		case http.StatusOK:
+		case http.StatusOK, http.StatusAccepted:
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer

@@ -68,6 +68,12 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
+			name: "no errors on 202 Accepted",
+			mcCfg: mockCollectorConfig{
+				InjectHTTPStatus: []int{202},
+			},
+		},
+		{
 			name: "retry",
 			opts: []otlptracehttp.Option{
 				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{

@@ -103,9 +103,12 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h := c.getInjectResponseHeader()
-	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
+	injectedStatus := c.getInjectHTTPStatus()
+	if injectedStatus != 0 {
 		writeReply(w, rawResponse, injectedStatus, c.injectContentType, h)
-		return
+		if injectedStatus != http.StatusAccepted {
+			return
+		}
 	}
 	rawRequest, err := readRequest(r)
 	if err != nil {
@@ -118,7 +121,9 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	writeReply(w, rawResponse, 0, c.injectContentType, h)
+	if injectedStatus == 0 {
+		writeReply(w, rawResponse, 0, c.injectContentType, h)
+	}
 	c.spanLock.Lock()
 	defer c.spanLock.Unlock()
 	c.spansStorage.AddSpans(request)
