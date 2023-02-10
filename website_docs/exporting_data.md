@@ -65,7 +65,7 @@ resources := resource.New(context.Background(),
 ## OTLP endpoint
 
 To send trace data to an OTLP endpoint (like the [collector](/docs/collector) or
-Jaeger) you'll want to configure an OTLP exporter that sends to your endpoint.
+Jaeger >= v1.35.0) you'll want to configure an OTLP exporter that sends to your endpoint.
 
 ### Using HTTP
 
@@ -89,8 +89,8 @@ To learn more on how to use the OTLP HTTP exporter, try out the [otel-collector]
 
 ### Jaeger
 
-To try out the OTLP exporter, you can run
-[Jaeger](https://www.jaegertracing.io/) as an OTLP endpoint and for trace
+To try out the OTLP exporter, since v1.35.0 you can run
+[Jaeger](https://www.jaegertracing.io/)  as an OTLP endpoint and for trace
 visualization in a docker container:
 
 ```shell
