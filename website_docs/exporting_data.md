@@ -62,19 +62,55 @@ resources := resource.New(context.Background(),
 )
 ```
 
-## OTLP Exporter
+## OTLP endpoint
 
-OpenTelemetry Protocol (OTLP) export is available in the `go.opentelemetry.io/otel/exporters/otlp/otlptrace` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` packages.
+To send trace data to an OTLP endpoint (like the [collector](/docs/collector) or
+Jaeger) you'll want to configure an OTLP exporter that sends to your endpoint.
 
-Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/otlp)
+### Using HTTP
 
-## Jaeger Exporter
+```go
+import (
+  	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+  	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+)
 
-Jaeger export is available in the `go.opentelemetry.io/otel/exporters/jaeger` package.
+func installExportPipeline(ctx context.Context) (func(context.Context) error, error) {
+	client := otlptracehttp.NewClient()
+	exporter, err := otlptrace.New(ctx, client)
+	if err != nil {
+		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+	}
+  	/* … */
+}
+```
 
-Please find more documentation on [GitHub](https://github.com/open-telemetry/opentelemetry-go/tree/main/exporters/jaeger)
+To learn more on how to use the OTLP HTTP exporter, try out the [otel-collector](https://github.com/open-telemetry/opentelemetry-go/tree/main/example/otel-collector)
 
-## Prometheus Exporter
+### Jaeger
+
+To try out the OTLP exporter, you can run
+[Jaeger](https://www.jaegertracing.io/) as an OTLP endpoint and for trace
+visualization in a docker container:
+
+```shell
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 14250:14250 \
+  -p 14268:14268 \
+  -p 14269:14269 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:latest
+```
+
+## Prometheus
 
 Prometheus export is available in the `go.opentelemetry.io/otel/exporters/prometheus` package.
 
