@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentracing
+package test
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
+	ototel "go.opentelemetry.io/otel/bridge/opentracing"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -65,7 +66,7 @@ func startTestGRPCServer(t *testing.T, tracer ot.Tracer) (*grpc.Server, net.Addr
 func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
 	tracer := internal.NewMockTracer()
 
-	bridge := NewBridgeTracer()
+	bridge := ototel.NewBridgeTracer()
 	bridge.SetOpenTelemetryTracer(tracer)
 	bridge.SetTextMapPropagator(propagation.TraceContext{})
 
