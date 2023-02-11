@@ -6,8 +6,6 @@ replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../
 
-replace go.opentelemetry.io/otel/sdk => ../../../sdk
-
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
 require (
