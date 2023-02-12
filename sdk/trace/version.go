@@ -16,5 +16,5 @@ package trace // import "go.opentelemetry.io/otel/sdk/metric"
 
 // version is the current release version of the metric SDK in use.
 func version() string {
-	return "v1.12.0"
+	return "v1.13.0"
 }
