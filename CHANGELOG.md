@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
 - Support [Go 1.20]. (#3693)
 - The `go.opentelemetry.io/otel/semconv/v1.18.0` package.
-  The package contains semantic conventions from the `v1.18.0` version of the OpenTelemetry specification. (#TBD)
+  The package contains semantic conventions from the `v1.18.0` version of the OpenTelemetry specification. (#3719)
   - The following `const` renames from `go.opentelemetry.io/otel/semconv/v1.17.0` are included:
     - `OtelScopeNameKey` -> `OTelScopeNameKey`
     - `OtelScopeVersionKey` -> `OTelScopeVersionKey`
