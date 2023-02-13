@@ -274,9 +274,9 @@ func TestPrometheusExporter(t *testing.T) {
 			} else {
 				res, err = resource.New(ctx,
 					// always specify service.name because the default depends on the running OS
-					resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
-					resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 					resource.WithAttributes(tc.customResouceAttrs...),
 				)
 				require.NoError(t, err)
@@ -350,9 +350,9 @@ func TestMultiScopes(t *testing.T) {
 
 	res, err := resource.New(ctx,
 		// always specify service.name because the default depends on the running OS
-		resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
-		resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 	)
 	require.NoError(t, err)
 	res, err = resource.Merge(resource.Default(), res)
@@ -613,8 +613,8 @@ func TestDuplicateMetrics(t *testing.T) {
 
 			// initialize resource
 			res, err := resource.New(ctx,
-				resource.WithAttributes(semconv.ServiceNameKey.String("prometheus_test")),
-				resource.WithAttributes(semconv.TelemetrySDKVersionKey.String("latest")),
+				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 			)
 			require.NoError(t, err)
 			res, err = resource.Merge(resource.Default(), res)

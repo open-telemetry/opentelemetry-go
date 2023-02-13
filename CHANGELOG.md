@@ -8,6 +8,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Semantic conventions of the `event` type are now generated. (#3697)
+- The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
+- Support [Go 1.20]. (#3693)
+
+## [1.13.0/0.36.0] 2023-02-07
+
+### Added
+
+- Attribute `KeyValue` creations functions to `go.opentelemetry.io/otel/semconv/v1.17.0` for all non-enum semantic conventions.
+  These functions ensure semantic convention type correctness. (#3675)
+
+### Fixed
+
+- Removed the `http.target` attribute from being added by `ServerRequest` in the following packages. (#3687)
+  - `go.opentelemetry.io/otel/semconv/v1.13.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.14.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.15.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.16.0/httpconv`
+  - `go.opentelemetry.io/otel/semconv/v1.17.0/httpconv`
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/instrument/asyncfloat64` package is removed. (#3631)
@@ -2227,7 +2249,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.13.0...HEAD
+[1.13.0/0.36.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.13.0
 [1.12.0/0.35.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.12.0
 [1.11.2/0.34.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.2
 [1.11.1/0.33.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.1
@@ -2286,3 +2309,5 @@ It contains api and sdk for trace and meter.
 [0.1.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.2
 [0.1.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.1
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
+
+[Go 1.20]: https://go.dev/doc/go1.20

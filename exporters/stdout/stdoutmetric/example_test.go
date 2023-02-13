@@ -35,7 +35,7 @@ var (
 	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
 	res = resource.NewSchemaless(
-		semconv.ServiceNameKey.String("stdoutmetric-example"),
+		semconv.ServiceName("stdoutmetric-example"),
 	)
 
 	mockData = metricdata.ResourceMetrics{

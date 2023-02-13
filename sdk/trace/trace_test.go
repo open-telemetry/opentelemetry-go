@@ -1235,8 +1235,8 @@ func TestRecordError(t *testing.T) {
 					Name: semconv.ExceptionEventName,
 					Time: errTime,
 					Attributes: []attribute.KeyValue{
-						semconv.ExceptionTypeKey.String(s.typ),
-						semconv.ExceptionMessageKey.String(s.msg),
+						semconv.ExceptionType(s.typ),
+						semconv.ExceptionMessage(s.msg),
 					},
 				},
 			},
@@ -1279,8 +1279,8 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 				Name: semconv.ExceptionEventName,
 				Time: errTime,
 				Attributes: []attribute.KeyValue{
-					semconv.ExceptionTypeKey.String(typ),
-					semconv.ExceptionMessageKey.String(msg),
+					semconv.ExceptionType(typ),
+					semconv.ExceptionMessage(msg),
 				},
 			},
 		},
@@ -1502,8 +1502,8 @@ func TestSpanCapturesPanic(t *testing.T) {
 	require.Len(t, spans[0].Events(), 1)
 	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
 	assert.Equal(t, spans[0].Events()[0].Attributes, []attribute.KeyValue{
-		semconv.ExceptionTypeKey.String("*errors.errorString"),
-		semconv.ExceptionMessageKey.String("error message"),
+		semconv.ExceptionType("*errors.errorString"),
+		semconv.ExceptionMessage("error message"),
 	})
 }
 
