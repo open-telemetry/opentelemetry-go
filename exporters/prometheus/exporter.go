@@ -113,7 +113,8 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	metrics, err := c.reader.Collect(context.TODO())
+	metrics := metricdata.ResourceMetrics{}
+	err := c.reader.Collect(context.TODO(), &metrics)
 	if err != nil {
 		otel.Handle(err)
 		if err == metric.ErrReaderNotRegistered {

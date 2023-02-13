@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -206,9 +207,10 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
-	m, err := r.Collect(ctx)
+	rm := metricdata.ResourceMetrics{}
+	err := r.Collect(ctx, &rm)
 	if err == nil {
-		err = r.export(ctx, m)
+		err = r.export(ctx, rm)
 	}
 	return err
 }
@@ -218,9 +220,14 @@ func (r *periodicReader) collectAndExport(ctx context.Context) error {
 // to the configured exporter, it is left to the caller to handle that if
 // desired.
 //
-// An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	return r.collect(ctx, r.sdkProducer.Load())
+// An error is returned if this is called after Shutdown. An error is return if rm is a nil ResourceMetrics.
+func (r *periodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	if rm == nil {
+		return errors.New("metricdata.ResourceMetrics is nil")
+	}
+	rmTemp, err := r.collect(ctx, r.sdkProducer.Load())
+	*rm = rmTemp
+	return err
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.
