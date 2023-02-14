@@ -38,7 +38,7 @@ func Int64SliceValue(v []int64) any {
 	return cp.Elem().Interface()
 }
 
-// SliceValue convert a float64 slice into an array with same elements as slice.
+// Float64SliceValue converts a float64 slice into an array with same elements as slice.
 func Float64SliceValue(v []float64) any {
 	var zero float64
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
