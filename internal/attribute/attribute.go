@@ -30,7 +30,7 @@ func BoolSliceValue(v []bool) any {
 	return cp.Elem().Interface()
 }
 
-// Int64SliceValue converts a int64 slice into an array with same elements as slice.
+// Int64SliceValue converts an int64 slice into an array with same elements as slice.
 func Int64SliceValue(v []int64) any {
 	var zero int64
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
