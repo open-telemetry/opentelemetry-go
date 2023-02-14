@@ -31,6 +31,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
 
+### Changed
+
+- [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+
 ## [1.13.0/0.36.0] 2023-02-07
 
 ### Added
