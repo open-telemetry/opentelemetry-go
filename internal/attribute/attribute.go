@@ -46,7 +46,7 @@ func Float64SliceValue(v []float64) any {
 	return cp.Elem().Interface()
 }
 
-// SliceValue convert a string slice into an array with same elements as slice.
+// StringSliceValue converts a string slice into an array with same elements as slice.
 func StringSliceValue(v []string) any {
 	var zero string
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
