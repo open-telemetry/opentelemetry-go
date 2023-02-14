@@ -19,161 +19,84 @@ import (
 	"testing"
 )
 
-func TestBoolSliceValue(t *testing.T) {
-	type args struct {
-		v []bool
+var wrapFloat64SliceValue = func(v any) any {
+	if vi, ok := v.([]float64); ok {
+		return Float64SliceValue(vi)
 	}
-	tests := []struct {
-		name string
-		args args
-		want interface{}
-	}{
-		{name: "TestBoolSliceValue", args: args{v: []bool{true, false, true}}, want: [3]bool{true, false, true}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := BoolSliceValue(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("BoolSliceValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	return nil
 }
 
-func TestInt64SliceValue(t *testing.T) {
+var wrapInt64SliceValue = func(v any) any {
+	if vi, ok := v.([]int64); ok {
+		return Int64SliceValue(vi)
+	}
+	return nil
+}
+
+var wrapBoolSliceValue = func(v any) any {
+	if vi, ok := v.([]bool); ok {
+		return BoolSliceValue(vi)
+	}
+	return nil
+}
+var wrapStringSliceValue = func(v any) any {
+	if vi, ok := v.([]string); ok {
+		return StringSliceValue(vi)
+	}
+	return nil
+}
+var wrapAsBoolSlice = func(v any) any { return AsBoolSlice(v) }
+var wrapAsInt64Slice = func(v any) any { return AsInt64Slice(v) }
+var wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
+var wrapAsStringSlice = func(v any) any { return AsStringSlice(v) }
+
+func TestSliceValue(t *testing.T) {
 	type args struct {
-		v []int64
+		v any
 	}
 	tests := []struct {
 		name string
 		args args
 		want any
+		fn   func(any) any
 	}{
-		{name: "TestInt64SliceValue", args: args{[]int64{1, 2}}, want: [2]int64{1, 2}},
+		{
+			name: "Float64SliceValue() two items",
+			args: args{v: []float64{1, 2.3}}, want: [2]float64{1, 2.3}, fn: wrapFloat64SliceValue,
+		},
+		{
+			name: "Int64SliceValue() two items",
+			args: args{[]int64{1, 2}}, want: [2]int64{1, 2}, fn: wrapInt64SliceValue,
+		},
+		{
+			name: "BoolSliceValue() two items",
+			args: args{v: []bool{true, false}}, want: [2]bool{true, false}, fn: wrapBoolSliceValue,
+		},
+		{
+			name: "StringSliceValue() two items",
+			args: args{[]string{"123", "2"}}, want: [2]string{"123", "2"}, fn: wrapStringSliceValue,
+		},
+		{
+			name: "AsBoolSlice() two items",
+			args: args{[2]bool{true, false}}, want: []bool{true, false}, fn: wrapAsBoolSlice,
+		},
+		{
+			name: "AsInt64Slice() two items",
+			args: args{[2]int64{1, 3}}, want: []int64{1, 3}, fn: wrapAsInt64Slice,
+		},
+		{
+			name: "AsFloat64Slice() two items",
+			args: args{[2]float64{1.2, 3.1}}, want: []float64{1.2, 3.1}, fn: wrapAsFloat64Slice,
+		},
+		{
+			name: "AsStringSlice() two items",
+			args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}, fn: wrapAsStringSlice,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Int64SliceValue(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Int64SliceValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestFloat64SliceValue(t *testing.T) {
-	type args struct {
-		v []float64
-	}
-	tests := []struct {
-		name string
-		args args
-		want any
-	}{
-		{name: "TestFloat64SliceValue", args: args{v: []float64{1, 2.3}}, want: [2]float64{1, 2.3}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Float64SliceValue(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Float64SliceValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestStringSliceValue(t *testing.T) {
-	type args struct {
-		v []string
-	}
-	tests := []struct {
-		name string
-		args args
-		want any
-	}{
-		{name: "TestStringSliceValue", args: args{[]string{"123456", "2"}}, want: [2]string{"123456", "2"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := StringSliceValue(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("StringSliceValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAsBoolSlice(t *testing.T) {
-	type args struct {
-		v any
-	}
-	tests := []struct {
-		name string
-		args args
-		want []bool
-	}{
-		{name: "TestAsBoolSlice", args: args{[2]bool{true, false}}, want: []bool{true, false}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := AsBoolSlice(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AsSliceBool() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAsInt64Slice(t *testing.T) {
-	type args struct {
-		v any
-	}
-	tests := []struct {
-		name string
-		args args
-		want []int64
-	}{
-		{name: "TestAsInt64Slice", args: args{[2]int64{1, 3}}, want: []int64{1, 3}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := AsInt64Slice(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AsInt64Slice() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAsFloat64Slice(t *testing.T) {
-	type args struct {
-		v any
-	}
-	tests := []struct {
-		name string
-		args args
-		want []float64
-	}{
-		{name: "TestAsFloat64Slice", args: args{[2]float64{1.2, 3.1}}, want: []float64{1.2, 3.1}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := AsFloat64Slice(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AsFloat64Slice() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAsStringSlice(t *testing.T) {
-	type args struct {
-		v any
-	}
-	tests := []struct {
-		name string
-		args args
-		want []string
-	}{
-		{name: "TestAsStringSlice", args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := AsStringSlice(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AsStringSlice() = %v, want %v", got, tt.want)
+			if got := tt.fn(tt.args.v); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
 	}
