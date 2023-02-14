@@ -68,7 +68,7 @@ func AsBoolSlice(v any) []bool {
 	return cpy.Elem().Slice(0, correctLen).Interface().([]bool)
 }
 
-// AsSlice convert an int64 array into a slice into with same elements as array.
+// AsInt64Slice converts an int64 array into a slice into with same elements as array.
 func AsInt64Slice(v any) []int64 {
 	rv := reflect.ValueOf(v)
 	if rv.Type().Kind() != reflect.Array {
