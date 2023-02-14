@@ -54,7 +54,7 @@ func StringSliceValue(v []string) any {
 	return cp.Elem().Interface()
 }
 
-// AsSlice convert an bool array into a slice into with same elements as array.
+// AsBoolSlice converts a bool array into a slice into with same elements as array.
 func AsBoolSlice(v any) []bool {
 	rv := reflect.ValueOf(v)
 	if rv.Type().Kind() != reflect.Array {
