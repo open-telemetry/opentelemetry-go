@@ -10,7 +10,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Semantic conventions of the `event` type are now generated. (#3697)
+- The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
 - Support [Go 1.20]. (#3693)
+- The `go.opentelemetry.io/otel/semconv/v1.18.0` package.
+  The package contains semantic conventions from the `v1.18.0` version of the OpenTelemetry specification. (#3719)
+  - The following `const` renames from `go.opentelemetry.io/otel/semconv/v1.17.0` are included:
+    - `OtelScopeNameKey` -> `OTelScopeNameKey`
+    - `OtelScopeVersionKey` -> `OTelScopeVersionKey`
+    - `OtelLibraryNameKey` -> `OTelLibraryNameKey`
+    - `OtelLibraryVersionKey` -> `OTelLibraryVersionKey`
+    - `OtelStatusCodeKey` -> `OTelStatusCodeKey`
+    - `OtelStatusDescriptionKey` -> `OTelStatusDescriptionKey`
+    - `OtelStatusCodeOk` -> `OTelStatusCodeOk`
+    - `OtelStatusCodeError` -> `OTelStatusCodeError`
+  - The following `func` renames from `go.opentelemetry.io/otel/semconv/v1.17.0` are included:
+    - `OtelScopeName` -> `OTelScopeName`
+    - `OtelScopeVersion` -> `OTelScopeVersion`
+    - `OtelLibraryName` -> `OTelLibraryName`
+    - `OtelLibraryVersion` -> `OTelLibraryVersion`
+    - `OtelStatusDescription` -> `OTelStatusDescription`
 - Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
 
 ## [1.13.0/0.36.0] 2023-02-07
