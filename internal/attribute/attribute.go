@@ -22,7 +22,7 @@ import (
 	"reflect"
 )
 
-// SliceValue convert a bool slice into an array with same elements as slice.
+// BoolSliceValue converts a bool slice into an array with same elements as slice.
 func BoolSliceValue(v []bool) any {
 	var zero bool
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero)))
