@@ -96,7 +96,7 @@ func AsFloat64Slice(v any) []float64 {
 	return cpy.Elem().Slice(0, correctLen).Interface().([]float64)
 }
 
-// AsSlice convert an string array into a slice into with same elements as array.
+// AsStringSlice converts a string array into a slice into with same elements as array.
 func AsStringSlice(v any) []string {
 	rv := reflect.ValueOf(v)
 	if rv.Type().Kind() != reflect.Array {
