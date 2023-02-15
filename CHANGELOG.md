@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Ensure `go.opentelemetry.io/otel` does not use generics. (#3723, #3725)
 - Multi-reader `MeterProvider`s now export metrics for all readers, instead of just the first reader. (#3720, #3724)
 
 ## [1.13.0/0.36.0] 2023-02-07
