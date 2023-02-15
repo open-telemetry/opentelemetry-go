@@ -104,10 +104,11 @@ func (ts *readerTestSuite) TestMultipleForceFlush() {
 
 func (ts *readerTestSuite) TestMultipleRegister() {
 	p0 := testSDKProducer{
-		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
+		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 			// Differentiate this producer from the second by returning an
 			// error.
-			return testResourceMetricsA, assert.AnError
+			*rm = testResourceMetricsA
+			return assert.AnError
 		},
 	}
 	p1 := testSDKProducer{}
@@ -145,8 +146,9 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 
 func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 	ts.Reader.register(testSDKProducer{
-		produceFunc: func(ctx context.Context) (metricdata.ResourceMetrics, error) {
-			return metricdata.ResourceMetrics{}, assert.AnError
+		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+			*rm = metricdata.ResourceMetrics{}
+			return assert.AnError
 		}})
 	ts.Reader.RegisterProducer(testExternalProducer{})
 
@@ -253,14 +255,15 @@ var testResourceMetricsAB = metricdata.ResourceMetrics{
 }
 
 type testSDKProducer struct {
-	produceFunc func(context.Context) (metricdata.ResourceMetrics, error)
+	produceFunc func(context.Context, *metricdata.ResourceMetrics) error
 }
 
-func (p testSDKProducer) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (p testSDKProducer) produce(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if p.produceFunc != nil {
-		return p.produceFunc(ctx)
+		return p.produceFunc(ctx, rm)
 	}
-	return testResourceMetricsA, nil
+	*rm = testResourceMetricsA
+	return nil
 }
 
 type testExternalProducer struct {

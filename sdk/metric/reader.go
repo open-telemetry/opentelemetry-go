@@ -95,7 +95,7 @@ type sdkProducer interface {
 	// produce returns aggregated metrics from a single collection.
 	//
 	// This method is safe to call concurrently.
-	produce(context.Context) (metricdata.ResourceMetrics, error)
+	produce(context.Context, *metricdata.ResourceMetrics) error
 }
 
 // Producer produces metrics for a Reader from an external source.
@@ -109,15 +109,15 @@ type Producer interface {
 // produceHolder is used as an atomic.Value to wrap the non-concrete producer
 // type.
 type produceHolder struct {
-	produce func(context.Context) (metricdata.ResourceMetrics, error)
+	produce func(context.Context, *metricdata.ResourceMetrics) error
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.
 type shutdownProducer struct{}
 
 // produce returns an ErrReaderShutdown error.
-func (p shutdownProducer) produce(context.Context) (metricdata.ResourceMetrics, error) {
-	return metricdata.ResourceMetrics{}, ErrReaderShutdown
+func (p shutdownProducer) produce(context.Context, *metricdata.ResourceMetrics) error {
+	return ErrReaderShutdown
 }
 
 // TemporalitySelector selects the temporality to use based on the InstrumentKind.

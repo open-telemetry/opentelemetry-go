@@ -135,9 +135,8 @@ func (mr *manualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
 		return err
 	}
-	// TODO (#3047): When produce is updated to accept output as param, pass rm.
-	rmTemp, err := ph.produce(ctx)
-	*rm = rmTemp
+
+	err := ph.produce(ctx, rm)
 	if err != nil {
 		return err
 	}
