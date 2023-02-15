@@ -59,30 +59,18 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewCounterVec
-	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	counter := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 	counter.Add(ctx, 5, attrs...)
 
-	gauge, err := meter.Float64ObservableGauge("bar", instrument.WithDescription("a fun little gauge"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
+	gauge := meter.Float64ObservableGauge("bar", instrument.WithDescription("a fun little gauge"))
+	_ = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rand.Float64()*(90.) // [-10, 100)
 		o.ObserveFloat64(gauge, n, attrs...)
 		return nil
 	}, gauge)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.Float64Histogram("baz", instrument.WithDescription("a very nice histogram"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	histogram := meter.Float64Histogram("baz", instrument.WithDescription("a very nice histogram"))
 	histogram.Record(ctx, 23, attrs...)
 	histogram.Record(ctx, 7, attrs...)
 	histogram.Record(ctx, 101, attrs...)

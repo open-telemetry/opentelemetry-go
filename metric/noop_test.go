@@ -19,9 +19,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/internaltest"
 )
 
 func TestNewNoopMeterProvider(t *testing.T) {
@@ -32,43 +33,49 @@ func TestNewNoopMeterProvider(t *testing.T) {
 }
 
 func TestSyncFloat64(t *testing.T) {
+	eh := internaltest.NewErrorHandler()
+	otel.SetErrorHandler(eh)
+
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.Float64Counter("test instrument")
-		require.NoError(t, err)
+		inst := meter.Float64Counter("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Add(context.Background(), 1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.Float64UpDownCounter("test instrument")
-		require.NoError(t, err)
+		inst := meter.Float64UpDownCounter("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Add(context.Background(), -1.0, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.Float64Histogram("test instrument")
-		require.NoError(t, err)
+		inst := meter.Float64Histogram("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Record(context.Background(), 1.0, attribute.String("key", "value"))
 	})
 }
 
 func TestSyncInt64(t *testing.T) {
+	eh := internaltest.NewErrorHandler()
+	otel.SetErrorHandler(eh)
+
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
-		inst, err := meter.Int64Counter("test instrument")
-		require.NoError(t, err)
+		inst := meter.Int64Counter("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Add(context.Background(), 1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.Int64UpDownCounter("test instrument")
-		require.NoError(t, err)
+		inst := meter.Int64UpDownCounter("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Add(context.Background(), -1, attribute.String("key", "value"))
 	})
 
 	assert.NotPanics(t, func() {
-		inst, err := meter.Int64Histogram("test instrument")
-		require.NoError(t, err)
+		inst := meter.Int64Histogram("test instrument")
+		eh.RequireNoErrors(t)
 		inst.Record(context.Background(), 1, attribute.String("key", "value"))
 	})
 }

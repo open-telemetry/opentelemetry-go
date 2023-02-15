@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -33,7 +34,6 @@ import (
 )
 
 var (
-	errCreatingAggregators     = errors.New("could not create all aggregators")
 	errIncompatibleAggregation = errors.New("incompatible aggregation")
 	errUnknownAggregation      = errors.New("unrecognized aggregation")
 	errUnknownTemporality      = errors.New("unrecognized temporality")
@@ -208,13 +208,12 @@ func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], error) {
+func (i *inserter[N]) Instrument(inst Instrument) []internal.Aggregator[N] {
 	var (
 		matched bool
 		aggs    []internal.Aggregator[N]
 	)
 
-	errs := &multierror{wrapped: errCreatingAggregators}
 	// The cache will return the same Aggregator instance. Use this fact to
 	// compare pointer addresses to deduplicate Aggregators.
 	seen := make(map[internal.Aggregator[N]]struct{})
@@ -225,10 +224,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 		}
 		matched = true
 
-		agg, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
-		if err != nil {
-			errs.append(err)
-		}
+		agg := i.cachedAggregator(inst.Scope, inst.Kind, stream)
 		if agg == nil { // Drop aggregator.
 			continue
 		}
@@ -241,7 +237,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 	}
 
 	if matched {
-		return aggs, errs.errorOrNil()
+		return aggs
 	}
 
 	// Apply implicit default view if no explicit matched.
@@ -250,15 +246,30 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
-	agg, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
-	if err != nil {
-		errs.append(err)
-	}
+	agg := i.cachedAggregator(inst.Scope, inst.Kind, stream)
 	if agg != nil {
 		// Ensured to have not seen given matched was false.
 		aggs = append(aggs, agg)
 	}
-	return aggs, errs.errorOrNil()
+	return aggs
+}
+
+type aggregatorLookupError struct {
+	Name  string
+	Scope instrumentation.Scope
+	Kind  InstrumentKind
+	Err   error
+}
+
+func (e aggregatorLookupError) Error() string {
+	return fmt.Sprintf(
+		`failed to create aggregator for instrument %q (scope: %s (%s), kind: %s): %s`,
+		e.Name, e.Scope.Name, e.Scope.Version, e.Kind, e.Err.Error(),
+	)
+}
+
+func (e aggregatorLookupError) Unwrap() error {
+	return e.Err
 }
 
 // cachedAggregator returns the appropriate Aggregator for an instrument
@@ -274,7 +285,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind InstrumentKind, stream Stream) (internal.Aggregator[N], error) {
+func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind InstrumentKind, stream Stream) internal.Aggregator[N] {
 	switch stream.Aggregation.(type) {
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
@@ -282,23 +293,32 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
-		return nil, fmt.Errorf(
-			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
-			kind, stream.Aggregation, err,
-		)
+		otel.Handle(aggregatorLookupError{
+			Name:  stream.Name,
+			Scope: scope,
+			Kind:  kind,
+			Err:   err,
+		})
+		return nil
 	}
 
 	id := i.instrumentID(kind, stream)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
-	return i.cache.LookupAggregator(id, func() (internal.Aggregator[N], error) {
+	return i.cache.LookupAggregator(id, func() internal.Aggregator[N] {
 		agg, err := i.aggregator(stream.Aggregation, kind, id.Temporality, id.Monotonic)
 		if err != nil {
-			return nil, err
+			otel.Handle(aggregatorLookupError{
+				Name:  stream.Name,
+				Scope: scope,
+				Kind:  kind,
+				Err:   err,
+			})
+			return nil
 		}
 		if agg == nil { // Drop aggregator.
-			return nil, nil
+			return nil
 		}
 		if stream.AttributeFilter != nil {
 			agg = internal.NewFilter(agg, stream.AttributeFilter)
@@ -310,7 +330,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 			unit:        stream.Unit,
 			aggregator:  agg,
 		})
-		return agg, err
+		return agg
 	})
 }
 
@@ -477,11 +497,10 @@ func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 
 type unregisterFuncs []func()
 
-func (u unregisterFuncs) Unregister() error {
+func (u unregisterFuncs) Unregister() {
 	for _, f := range u {
 		f()
 	}
-	return nil
 }
 
 // resolver facilitates resolving Aggregators an instrument needs to aggregate
@@ -501,18 +520,12 @@ func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument) ([]internal.Aggregator[N], error) {
+func (r resolver[N]) Aggregators(id Instrument) []internal.Aggregator[N] {
 	var aggs []internal.Aggregator[N]
-
-	errs := &multierror{}
 	for _, i := range r.inserters {
-		a, err := i.Instrument(id)
-		if err != nil {
-			errs.append(err)
-		}
-		aggs = append(aggs, a...)
+		aggs = append(aggs, i.Instrument(id)...)
 	}
-	return aggs, errs.errorOrNil()
+	return aggs
 }
 
 type multierror struct {

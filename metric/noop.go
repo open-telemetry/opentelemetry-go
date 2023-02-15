@@ -39,62 +39,62 @@ func NewNoopMeter() Meter {
 
 type noopMeter struct{}
 
-func (noopMeter) Int64Counter(string, ...instrument.Int64Option) (instrument.Int64Counter, error) {
-	return nonrecordingSyncInt64Instrument{}, nil
+func (noopMeter) Int64Counter(string, ...instrument.Int64Option) instrument.Int64Counter {
+	return nonrecordingSyncInt64Instrument{}
 }
 
-func (noopMeter) Int64UpDownCounter(string, ...instrument.Int64Option) (instrument.Int64UpDownCounter, error) {
-	return nonrecordingSyncInt64Instrument{}, nil
+func (noopMeter) Int64UpDownCounter(string, ...instrument.Int64Option) instrument.Int64UpDownCounter {
+	return nonrecordingSyncInt64Instrument{}
 }
 
-func (noopMeter) Int64Histogram(string, ...instrument.Int64Option) (instrument.Int64Histogram, error) {
-	return nonrecordingSyncInt64Instrument{}, nil
+func (noopMeter) Int64Histogram(string, ...instrument.Int64Option) instrument.Int64Histogram {
+	return nonrecordingSyncInt64Instrument{}
 }
 
-func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error) {
-	return nonrecordingAsyncInt64Instrument{}, nil
+func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObserverOption) instrument.Int64ObservableCounter {
+	return nonrecordingAsyncInt64Instrument{}
 }
 
-func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error) {
-	return nonrecordingAsyncInt64Instrument{}, nil
+func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObserverOption) instrument.Int64ObservableUpDownCounter {
+	return nonrecordingAsyncInt64Instrument{}
 }
 
-func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
-	return nonrecordingAsyncInt64Instrument{}, nil
+func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObserverOption) instrument.Int64ObservableGauge {
+	return nonrecordingAsyncInt64Instrument{}
 }
 
-func (noopMeter) Float64Counter(string, ...instrument.Float64Option) (instrument.Float64Counter, error) {
-	return nonrecordingSyncFloat64Instrument{}, nil
+func (noopMeter) Float64Counter(string, ...instrument.Float64Option) instrument.Float64Counter {
+	return nonrecordingSyncFloat64Instrument{}
 }
 
-func (noopMeter) Float64UpDownCounter(string, ...instrument.Float64Option) (instrument.Float64UpDownCounter, error) {
-	return nonrecordingSyncFloat64Instrument{}, nil
+func (noopMeter) Float64UpDownCounter(string, ...instrument.Float64Option) instrument.Float64UpDownCounter {
+	return nonrecordingSyncFloat64Instrument{}
 }
 
-func (noopMeter) Float64Histogram(string, ...instrument.Float64Option) (instrument.Float64Histogram, error) {
-	return nonrecordingSyncFloat64Instrument{}, nil
+func (noopMeter) Float64Histogram(string, ...instrument.Float64Option) instrument.Float64Histogram {
+	return nonrecordingSyncFloat64Instrument{}
 }
 
-func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error) {
-	return nonrecordingAsyncFloat64Instrument{}, nil
+func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObserverOption) instrument.Float64ObservableCounter {
+	return nonrecordingAsyncFloat64Instrument{}
 }
 
-func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error) {
-	return nonrecordingAsyncFloat64Instrument{}, nil
+func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObserverOption) instrument.Float64ObservableUpDownCounter {
+	return nonrecordingAsyncFloat64Instrument{}
 }
 
-func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error) {
-	return nonrecordingAsyncFloat64Instrument{}, nil
+func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption) instrument.Float64ObservableGauge {
+	return nonrecordingAsyncFloat64Instrument{}
 }
 
 // RegisterCallback creates a register callback that does not record any metrics.
-func (noopMeter) RegisterCallback(Callback, ...instrument.Asynchronous) (Registration, error) {
-	return noopReg{}, nil
+func (noopMeter) RegisterCallback(Callback, ...instrument.Asynchronous) Registration {
+	return noopReg{}
 }
 
 type noopReg struct{}
 
-func (noopReg) Unregister() error { return nil }
+func (noopReg) Unregister() {}
 
 type nonrecordingAsyncFloat64Instrument struct {
 	instrument.Float64Observable

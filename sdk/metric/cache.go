@@ -61,7 +61,7 @@ func (c *cache[K, V]) Lookup(key K, f func() V) V {
 type instrumentCache[N int64 | float64] struct {
 	// aggregators is used to ensure duplicate creations of the same instrument
 	// return the same instance of that instrument's aggregator.
-	aggregators *cache[instrumentID, aggVal[N]]
+	aggregators *cache[instrumentID, internal.Aggregator[N]]
 	// views is used to ensure if instruments with the same name are created,
 	// but do not have the same identifying properties, a warning is logged.
 	views *cache[string, instrumentID]
@@ -70,9 +70,9 @@ type instrumentCache[N int64 | float64] struct {
 // newInstrumentCache returns a new instrumentCache that uses ac as the
 // underlying cache for aggregators and vc as the cache for views. If ac or vc
 // are nil, a new empty cache will be used.
-func newInstrumentCache[N int64 | float64](ac *cache[instrumentID, aggVal[N]], vc *cache[string, instrumentID]) instrumentCache[N] {
+func newInstrumentCache[N int64 | float64](ac *cache[instrumentID, internal.Aggregator[N]], vc *cache[string, instrumentID]) instrumentCache[N] {
 	if ac == nil {
-		ac = &cache[instrumentID, aggVal[N]]{}
+		ac = &cache[instrumentID, internal.Aggregator[N]]{}
 	}
 	if vc == nil {
 		vc = &cache[string, instrumentID]{}
@@ -85,18 +85,8 @@ func newInstrumentCache[N int64 | float64](ac *cache[instrumentID, aggVal[N]], v
 // in the cache and returned.
 //
 // LookupAggregator is safe to call concurrently.
-func (c instrumentCache[N]) LookupAggregator(id instrumentID, f func() (internal.Aggregator[N], error)) (agg internal.Aggregator[N], err error) {
-	v := c.aggregators.Lookup(id, func() aggVal[N] {
-		a, err := f()
-		return aggVal[N]{Aggregator: a, Err: err}
-	})
-	return v.Aggregator, v.Err
-}
-
-// aggVal is the cached value of an instrumentCache's aggregators cache.
-type aggVal[N int64 | float64] struct {
-	Aggregator internal.Aggregator[N]
-	Err        error
+func (c instrumentCache[N]) LookupAggregator(id instrumentID, f func() internal.Aggregator[N]) internal.Aggregator[N] {
+	return c.aggregators.Lookup(id, f)
 }
 
 // Unique returns if id is unique or a duplicate instrument. If an instrument

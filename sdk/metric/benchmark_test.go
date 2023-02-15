@@ -28,7 +28,7 @@ func benchCounter(b *testing.B, views ...View) (context.Context, Reader, instrum
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
-	cntr, _ := provider.Meter("test").Int64Counter("hello")
+	cntr := provider.Meter("test").Int64Counter("hello")
 	b.ResetTimer()
 	b.ReportAllocs()
 	return ctx, rdr, cntr
@@ -124,7 +124,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 
 	for i := 0; i < count; i++ {
 		name := fmt.Sprintf("fake data %d", i)
-		h, _ := mtr.Int64Histogram(name)
+		h := mtr.Int64Histogram(name)
 
 		h.Record(ctx, 1)
 	}

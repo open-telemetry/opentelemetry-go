@@ -38,31 +38,33 @@ var (
 // performing the same function.
 type InstrumentKind uint8
 
+//go:generate stringer -type=InstrumentKind -linecomment
 const (
 	// instrumentKindUndefined is an undefined instrument kind, it should not
 	// be used by any initialized type.
-	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck,unused
+	// nolint:deadcode,varcheck,unused
+	instrumentKindUndefined InstrumentKind = iota // undefined
 	// InstrumentKindCounter identifies a group of instruments that record
 	// increasing values synchronously with the code path they are measuring.
-	InstrumentKindCounter
+	InstrumentKindCounter // Counter
 	// InstrumentKindUpDownCounter identifies a group of instruments that
 	// record increasing and decreasing values synchronously with the code path
 	// they are measuring.
-	InstrumentKindUpDownCounter
+	InstrumentKindUpDownCounter // UpDownCounter
 	// InstrumentKindHistogram identifies a group of instruments that record a
 	// distribution of values synchronously with the code path they are
 	// measuring.
-	InstrumentKindHistogram
+	InstrumentKindHistogram // Histogram
 	// InstrumentKindObservableCounter identifies a group of instruments that
 	// record increasing values in an asynchronous callback.
-	InstrumentKindObservableCounter
+	InstrumentKindObservableCounter // ObservableCounter
 	// InstrumentKindObservableUpDownCounter identifies a group of instruments
 	// that record increasing and decreasing values in an asynchronous
 	// callback.
-	InstrumentKindObservableUpDownCounter
+	InstrumentKindObservableUpDownCounter // ObservableUpDownCounter
 	// InstrumentKindObservableGauge identifies a group of instruments that
 	// record current values in an asynchronous callback.
-	InstrumentKindObservableGauge
+	InstrumentKindObservableGauge // ObservableGauge
 )
 
 type nonComparable [0]func() // nolint: unused  // This is indeed used.

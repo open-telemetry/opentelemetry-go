@@ -21,10 +21,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/internaltest"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -35,6 +36,9 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
+	eh := internaltest.NewErrorHandler()
+	otel.SetErrorHandler(eh)
+
 	testCases := []struct {
 		name               string
 		emptyResource      bool
@@ -53,12 +57,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.Float64Counter(
+				counter := meter.Float64Counter(
 					"foo",
 					instrument.WithDescription("a simple counter"),
 					instrument.WithUnit(unit.Milliseconds),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
@@ -80,12 +84,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				gauge, err := meter.Float64UpDownCounter(
+				gauge := meter.Float64UpDownCounter(
 					"bar",
 					instrument.WithDescription("a fun little gauge"),
 					instrument.WithUnit(unit.Dimensionless),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				gauge.Add(ctx, 1.0, attrs...)
 				gauge.Add(ctx, -.25, attrs...)
 			},
@@ -98,12 +102,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				histogram, err := meter.Float64Histogram(
+				histogram := meter.Float64Histogram(
 					"histogram_baz",
 					instrument.WithDescription("a very nice histogram"),
 					instrument.WithUnit(unit.Bytes),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				histogram.Record(ctx, 23, attrs...)
 				histogram.Record(ctx, 7, attrs...)
 				histogram.Record(ctx, 101, attrs...)
@@ -124,13 +128,13 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C.D").String("Y"),
 					attribute.Key("C/D").String("Z"),
 				}
-				counter, err := meter.Float64Counter(
+				counter := meter.Float64Counter(
 					"foo",
 					instrument.WithDescription("a sanitary counter"),
 					// This unit is not added to
 					instrument.WithUnit(unit.Bytes),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
@@ -145,22 +149,22 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C").String("D"),
 				}
 				// Valid.
-				gauge, err := meter.Float64UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
-				require.NoError(t, err)
+				gauge := meter.Float64UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
+				eh.RequireNoErrors(t)
 				gauge.Add(ctx, 100, attrs...)
 				gauge.Add(ctx, -25, attrs...)
 
 				// Invalid, will be renamed.
-				gauge, err = meter.Float64UpDownCounter("invalid.gauge.name", instrument.WithDescription("a gauge with an invalid name"))
-				require.NoError(t, err)
+				gauge = meter.Float64UpDownCounter("invalid.gauge.name", instrument.WithDescription("a gauge with an invalid name"))
+				eh.RequireNoErrors(t)
 				gauge.Add(ctx, 100, attrs...)
 
-				counter, err := meter.Float64Counter("0invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
-				require.NoError(t, err)
+				counter := meter.Float64Counter("0invalid.counter.name", instrument.WithDescription("a counter with an invalid name"))
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 100, attrs...)
 
-				histogram, err := meter.Float64Histogram("invalid.hist.name", instrument.WithDescription("a histogram with an invalid name"))
-				require.NoError(t, err)
+				histogram := meter.Float64Histogram("invalid.hist.name", instrument.WithDescription("a histogram with an invalid name"))
+				eh.RequireNoErrors(t)
 				histogram.Record(ctx, 23, attrs...)
 			},
 		},
@@ -175,8 +179,8 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
-				require.NoError(t, err)
+				counter := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
@@ -196,8 +200,8 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
-				require.NoError(t, err)
+				counter := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
@@ -214,8 +218,8 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				}
-				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
-				require.NoError(t, err)
+				counter := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 5, attrs...)
 				counter.Add(ctx, 10.3, attrs...)
 				counter.Add(ctx, 9, attrs...)
@@ -230,12 +234,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				gauge, err := meter.Int64UpDownCounter(
+				gauge := meter.Int64UpDownCounter(
 					"bar",
 					instrument.WithDescription("a fun little gauge"),
 					instrument.WithUnit(unit.Dimensionless),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				gauge.Add(ctx, 2, attrs...)
 				gauge.Add(ctx, -1, attrs...)
 			},
@@ -249,12 +253,12 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				}
-				counter, err := meter.Int64Counter(
+				counter := meter.Int64Counter(
 					"bar",
 					instrument.WithDescription("a fun little counter"),
 					instrument.WithUnit(unit.Bytes),
 				)
-				require.NoError(t, err)
+				eh.RequireNoErrors(t)
 				counter.Add(ctx, 2, attrs...)
 				counter.Add(ctx, 1, attrs...)
 			},
@@ -343,6 +347,9 @@ func TestSantitizeName(t *testing.T) {
 }
 
 func TestMultiScopes(t *testing.T) {
+	eh := internaltest.NewErrorHandler()
+	otel.SetErrorHandler(eh)
+
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
 	exporter, err := New(WithRegisterer(registry))
@@ -363,20 +370,20 @@ func TestMultiScopes(t *testing.T) {
 		metric.WithResource(res),
 	)
 
-	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+	fooCounter := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
 		Int64Counter(
 			"foo",
 			instrument.WithUnit(unit.Milliseconds),
 			instrument.WithDescription("meter foo counter"))
-	assert.NoError(t, err)
+	eh.AssertNoErrors(t)
 	fooCounter.Add(ctx, 100, attribute.String("type", "foo"))
 
-	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
+	barCounter := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
 		Int64Counter(
 			"bar",
 			instrument.WithUnit(unit.Milliseconds),
 			instrument.WithDescription("meter bar counter"))
-	assert.NoError(t, err)
+	eh.AssertNoErrors(t)
 	barCounter.Add(ctx, 200, attribute.String("type", "bar"))
 
 	file, err := os.Open("testdata/multi_scopes.txt")
@@ -388,6 +395,9 @@ func TestMultiScopes(t *testing.T) {
 }
 
 func TestDuplicateMetrics(t *testing.T) {
+	eh := internaltest.NewErrorHandler()
+	otel.SetErrorHandler(eh)
+
 	testCases := []struct {
 		name                  string
 		customResouceAttrs    []attribute.KeyValue
@@ -398,16 +408,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "no_conflict_two_counters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				fooA, err := meterA.Int64Counter("foo",
+				fooA := meterA.Int64Counter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter counter foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooA.Add(ctx, 100, attribute.String("A", "B"))
 
-				fooB, err := meterB.Int64Counter("foo",
+				fooB := meterB.Int64Counter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter counter foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooB.Add(ctx, 100, attribute.String("A", "B"))
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_counters.txt"},
@@ -415,16 +425,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "no_conflict_two_updowncounters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				fooA, err := meterA.Int64UpDownCounter("foo",
+				fooA := meterA.Int64UpDownCounter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooA.Add(ctx, 100, attribute.String("A", "B"))
 
-				fooB, err := meterB.Int64UpDownCounter("foo",
+				fooB := meterB.Int64UpDownCounter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooB.Add(ctx, 100, attribute.String("A", "B"))
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_updowncounters.txt"},
@@ -432,16 +442,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "no_conflict_two_histograms",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				fooA, err := meterA.Int64Histogram("foo",
+				fooA := meterA.Int64Histogram("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooA.Record(ctx, 100, attribute.String("A", "B"))
 
-				fooB, err := meterB.Int64Histogram("foo",
+				fooB := meterB.Int64Histogram("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooB.Record(ctx, 100, attribute.String("A", "B"))
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_histograms.txt"},
@@ -449,16 +459,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_help_two_counters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				barA, err := meterA.Int64Counter("bar",
+				barA := meterA.Int64Counter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barA.Add(ctx, 100, attribute.String("type", "bar"))
 
-				barB, err := meterB.Int64Counter("bar",
+				barB := meterB.Int64Counter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barB.Add(ctx, 100, attribute.String("type", "bar"))
 			},
 			possibleExpectedFiles: []string{
@@ -469,16 +479,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_help_two_updowncounters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				barA, err := meterA.Int64UpDownCounter("bar",
+				barA := meterA.Int64UpDownCounter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barA.Add(ctx, 100, attribute.String("type", "bar"))
 
-				barB, err := meterB.Int64UpDownCounter("bar",
+				barB := meterB.Int64UpDownCounter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barB.Add(ctx, 100, attribute.String("type", "bar"))
 			},
 			possibleExpectedFiles: []string{
@@ -489,16 +499,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_help_two_histograms",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				barA, err := meterA.Int64Histogram("bar",
+				barA := meterA.Int64Histogram("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barA.Record(ctx, 100, attribute.String("A", "B"))
 
-				barB, err := meterB.Int64Histogram("bar",
+				barB := meterB.Int64Histogram("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barB.Record(ctx, 100, attribute.String("A", "B"))
 			},
 			possibleExpectedFiles: []string{
@@ -509,16 +519,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_unit_two_counters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				bazA, err := meterA.Int64Counter("bar",
+				bazA := meterA.Int64Counter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				bazA.Add(ctx, 100, attribute.String("type", "bar"))
 
-				bazB, err := meterB.Int64Counter("bar",
+				bazB := meterB.Int64Counter("bar",
 					instrument.WithUnit(unit.Milliseconds),
 					instrument.WithDescription("meter bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				bazB.Add(ctx, 100, attribute.String("type", "bar"))
 			},
 			options:               []Option{WithoutUnits()},
@@ -527,16 +537,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_unit_two_updowncounters",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				barA, err := meterA.Int64UpDownCounter("bar",
+				barA := meterA.Int64UpDownCounter("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter gauge bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barA.Add(ctx, 100, attribute.String("type", "bar"))
 
-				barB, err := meterB.Int64UpDownCounter("bar",
+				barB := meterB.Int64UpDownCounter("bar",
 					instrument.WithUnit(unit.Milliseconds),
 					instrument.WithDescription("meter gauge bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barB.Add(ctx, 100, attribute.String("type", "bar"))
 			},
 			options:               []Option{WithoutUnits()},
@@ -545,16 +555,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_unit_two_histograms",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				barA, err := meterA.Int64Histogram("bar",
+				barA := meterA.Int64Histogram("bar",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter histogram bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barA.Record(ctx, 100, attribute.String("A", "B"))
 
-				barB, err := meterB.Int64Histogram("bar",
+				barB := meterB.Int64Histogram("bar",
 					instrument.WithUnit(unit.Milliseconds),
 					instrument.WithDescription("meter histogram bar"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				barB.Record(ctx, 100, attribute.String("A", "B"))
 			},
 			options:               []Option{WithoutUnits()},
@@ -563,16 +573,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_type_counter_and_updowncounter",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				counter, err := meterA.Int64Counter("foo",
+				counter := meterA.Int64Counter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				counter.Add(ctx, 100, attribute.String("type", "foo"))
 
-				gauge, err := meterA.Int64UpDownCounter("foo_total",
+				gauge := meterA.Int64UpDownCounter("foo_total",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				gauge.Add(ctx, 200, attribute.String("type", "foo"))
 			},
 			options: []Option{WithoutUnits()},
@@ -584,16 +594,16 @@ func TestDuplicateMetrics(t *testing.T) {
 		{
 			name: "conflict_type_histogram_and_updowncounter",
 			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
-				fooA, err := meterA.Int64UpDownCounter("foo",
+				fooA := meterA.Int64UpDownCounter("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooA.Add(ctx, 100, attribute.String("A", "B"))
 
-				fooHistogramA, err := meterA.Int64Histogram("foo",
+				fooHistogramA := meterA.Int64Histogram("foo",
 					instrument.WithUnit(unit.Bytes),
 					instrument.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				eh.AssertNoErrors(t)
 				fooHistogramA.Record(ctx, 100, attribute.String("A", "B"))
 			},
 			possibleExpectedFiles: []string{

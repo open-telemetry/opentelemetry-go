@@ -16,7 +16,6 @@ package metric_test
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"time"
 
@@ -31,13 +30,10 @@ func ExampleMeter_synchronous() {
 	// In a library or program this would be provided by otel.GetMeterProvider().
 	meterProvider := metric.NewNoopMeterProvider()
 
-	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
+	workDuration := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
-		instrument.WithUnit(unit.Milliseconds))
-	if err != nil {
-		fmt.Println("Failed to register instrument")
-		panic(err)
-	}
+		instrument.WithUnit(unit.Milliseconds),
+	)
 
 	startTime := time.Now()
 	ctx := context.Background()
@@ -52,7 +48,7 @@ func ExampleMeter_asynchronous_single() {
 	meterProvider := metric.NewNoopMeterProvider()
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
-	_, err := meter.Int64ObservableGauge(
+	_ = meter.Int64ObservableGauge(
 		"DiskUsage",
 		instrument.WithUnit(unit.Bytes),
 		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
@@ -73,10 +69,6 @@ func ExampleMeter_asynchronous_single() {
 			return nil
 		}),
 	)
-	if err != nil {
-		fmt.Println("failed to register instrument")
-		panic(err)
-	}
 }
 
 //nolint:govet // Meter doesn't register for go vet
@@ -85,11 +77,11 @@ func ExampleMeter_asynchronous_multiple() {
 	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
-	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
-	gcCount, _ := meter.Int64ObservableCounter("gcCount")
-	gcPause, _ := meter.Float64Histogram("gcPause")
+	heapAlloc := meter.Int64ObservableUpDownCounter("heapAllocs")
+	gcCount := meter.Int64ObservableCounter("gcCount")
+	gcPause := meter.Float64Histogram("gcPause")
 
-	_, err := meter.RegisterCallback(
+	_ = meter.RegisterCallback(
 		func(ctx context.Context, o metric.Observer) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
@@ -105,11 +97,6 @@ func ExampleMeter_asynchronous_multiple() {
 		heapAlloc,
 		gcCount,
 	)
-
-	if err != nil {
-		fmt.Println("Failed to register callback")
-		panic(err)
-	}
 }
 
 // This is just an example, see the the contrib runtime instrumentation for real implementation.

@@ -18,7 +18,6 @@ import (
 	"context"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -42,12 +41,7 @@ var _ unwrapper = (*afCounter)(nil)
 var _ instrument.Float64ObservableCounter = (*afCounter)(nil)
 
 func (i *afCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64ObservableCounter(i.name, i.opts...))
 }
 
 func (i *afCounter) Unwrap() instrument.Asynchronous {
@@ -70,12 +64,7 @@ var _ unwrapper = (*afUpDownCounter)(nil)
 var _ instrument.Float64ObservableUpDownCounter = (*afUpDownCounter)(nil)
 
 func (i *afUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableUpDownCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64ObservableUpDownCounter(i.name, i.opts...))
 }
 
 func (i *afUpDownCounter) Unwrap() instrument.Asynchronous {
@@ -98,12 +87,7 @@ var _ unwrapper = (*afGauge)(nil)
 var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
 
 func (i *afGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableGauge(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64ObservableGauge(i.name, i.opts...))
 }
 
 func (i *afGauge) Unwrap() instrument.Asynchronous {
@@ -126,12 +110,7 @@ var _ unwrapper = (*aiCounter)(nil)
 var _ instrument.Int64ObservableCounter = (*aiCounter)(nil)
 
 func (i *aiCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64ObservableCounter(i.name, i.opts...))
 }
 
 func (i *aiCounter) Unwrap() instrument.Asynchronous {
@@ -154,12 +133,7 @@ var _ unwrapper = (*aiUpDownCounter)(nil)
 var _ instrument.Int64ObservableUpDownCounter = (*aiUpDownCounter)(nil)
 
 func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableUpDownCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64ObservableUpDownCounter(i.name, i.opts...))
 }
 
 func (i *aiUpDownCounter) Unwrap() instrument.Asynchronous {
@@ -182,12 +156,7 @@ var _ unwrapper = (*aiGauge)(nil)
 var _ instrument.Int64ObservableGauge = (*aiGauge)(nil)
 
 func (i *aiGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableGauge(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64ObservableGauge(i.name, i.opts...))
 }
 
 func (i *aiGauge) Unwrap() instrument.Asynchronous {
@@ -210,12 +179,7 @@ type sfCounter struct {
 var _ instrument.Float64Counter = (*sfCounter)(nil)
 
 func (i *sfCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64Counter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64Counter(i.name, i.opts...))
 }
 
 func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
@@ -236,12 +200,7 @@ type sfUpDownCounter struct {
 var _ instrument.Float64UpDownCounter = (*sfUpDownCounter)(nil)
 
 func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64UpDownCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64UpDownCounter(i.name, i.opts...))
 }
 
 func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
@@ -262,12 +221,7 @@ type sfHistogram struct {
 var _ instrument.Float64Histogram = (*sfHistogram)(nil)
 
 func (i *sfHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64Histogram(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Float64Histogram(i.name, i.opts...))
 }
 
 func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
@@ -288,12 +242,7 @@ type siCounter struct {
 var _ instrument.Int64Counter = (*siCounter)(nil)
 
 func (i *siCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64Counter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64Counter(i.name, i.opts...))
 }
 
 func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
@@ -314,12 +263,7 @@ type siUpDownCounter struct {
 var _ instrument.Int64UpDownCounter = (*siUpDownCounter)(nil)
 
 func (i *siUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64UpDownCounter(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64UpDownCounter(i.name, i.opts...))
 }
 
 func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
@@ -340,12 +284,7 @@ type siHistogram struct {
 var _ instrument.Int64Histogram = (*siHistogram)(nil)
 
 func (i *siHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64Histogram(i.name, i.opts...)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
+	i.delegate.Store(m.Int64Histogram(i.name, i.opts...))
 }
 
 func (i *siHistogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {

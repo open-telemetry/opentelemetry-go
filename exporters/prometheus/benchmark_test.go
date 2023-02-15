@@ -34,8 +34,7 @@ func benchmarkCollect(b *testing.B, n int) {
 	meter := provider.Meter("testmeter")
 
 	for i := 0; i < n; i++ {
-		counter, err := meter.Float64Counter(fmt.Sprintf("foo_%d", i))
-		require.NoError(b, err)
+		counter := meter.Float64Counter(fmt.Sprintf("foo_%d", i))
 		counter.Add(ctx, float64(i))
 	}
 
