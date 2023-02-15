@@ -215,8 +215,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			c := newInstrumentCache[N](nil, nil)
-			i := newInserter(newPipeline(nil, tt.reader, tt.views), c)
+			var c cache[string, instrumentID]
+			i := newInserter[N](newPipeline(nil, tt.reader, tt.views), &c)
 			got, err := i.Instrument(tt.inst)
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.Len(t, got, tt.wantLen)
@@ -227,9 +227,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 }
 
+func TestCreateAggregators(t *testing.T) {
+	t.Run("Int64", testCreateAggregators[int64])
+	t.Run("Float64", testCreateAggregators[float64])
+}
+
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	c := newInstrumentCache[N](nil, nil)
-	i := newInserter(newPipeline(nil, NewManualReader(), []View{defaultView}), c)
+	var c cache[string, instrumentID]
+	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}), &c)
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
@@ -242,9 +247,25 @@ func TestInvalidInstrumentShouldPanic(t *testing.T) {
 	assert.Panics(t, testInvalidInstrumentShouldPanic[float64])
 }
 
-func TestCreateAggregators(t *testing.T) {
-	t.Run("Int64", testCreateAggregators[int64])
-	t.Run("Float64", testCreateAggregators[float64])
+func TestPipelinesAggregatorForEachReader(t *testing.T) {
+	r0, r1 := NewManualReader(), NewManualReader()
+	pipes := newPipelines(resource.Empty(), []Reader{r0, r1}, nil)
+	require.Len(t, pipes, 2, "created pipelines")
+
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	var c cache[string, instrumentID]
+	r := newResolver[int64](pipes, &c)
+	aggs, err := r.Aggregators(inst)
+	require.NoError(t, err, "resolved Aggregators error")
+	require.Len(t, aggs, 2, "instrument aggregators")
+
+	for i, p := range pipes {
+		var aggN int
+		for _, is := range p.aggregations {
+			aggN += len(is)
+		}
+		assert.Equalf(t, 1, aggN, "pipeline %d: number of instrumentSync", i)
+	}
 }
 
 func TestPipelineRegistryCreateAggregators(t *testing.T) {
@@ -309,8 +330,8 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	c := newInstrumentCache[int64](nil, nil)
-	r := newResolver(p, c)
+	var c cache[string, instrumentID]
+	r := newResolver[int64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
 
@@ -319,8 +340,8 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	c := newInstrumentCache[float64](nil, nil)
-	r := newResolver(p, c)
+	var c cache[string, instrumentID]
+	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
 
@@ -346,13 +367,13 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	p := newPipelines(resource.Empty(), readers, views)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
-	vc := cache[string, instrumentID]{}
-	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
+	var vc cache[string, instrumentID]
+	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
 	assert.Len(t, intAggs, 0)
 
-	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
+	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(inst)
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
@@ -397,8 +418,8 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), readers, views)
 
-	vc := cache[string, instrumentID]{}
-	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
+	var vc cache[string, instrumentID]
+	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
@@ -413,7 +434,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	// Creating a float foo instrument should log a warning because there is an
 	// int foo instrument.
-	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
+	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(fooInst)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
