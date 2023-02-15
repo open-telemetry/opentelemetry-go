@@ -9,7 +9,7 @@ env:
   TEST_RESULTS: /tmp/test-results
   # Default version of Go to use by CI workflows. This should be the latest
   # release of Go; developers likely use the latest release in development and
-  # we want to catch any bugs (e.g. lint errors, race detection) with the this
+  # we want to catch any bugs (e.g. lint errors, race detection) with this
   # release before they are merged. The Go compatibility guarantees ensure
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
