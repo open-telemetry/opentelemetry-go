@@ -288,7 +288,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		)
 	}
 
-	id := i.instrumentID(kind, stream)
+	id := i.streamID(kind, stream)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
@@ -316,7 +316,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 
 // logConflict validates if an instrument with the same name as id has already
 // been created. If that instrument conflicts with id, a warning is logged.
-func (i *inserter[N]) logConflict(id instrumentID) {
+func (i *inserter[N]) logConflict(id streamID) {
 	existing, unique := i.cache.Unique(id)
 	if unique {
 		return
@@ -334,9 +334,9 @@ func (i *inserter[N]) logConflict(id instrumentID) {
 	)
 }
 
-func (i *inserter[N]) instrumentID(kind InstrumentKind, stream Stream) instrumentID {
+func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
 	var zero N
-	id := instrumentID{
+	id := streamID{
 		Name:        stream.Name,
 		Description: stream.Description,
 		Unit:        stream.Unit,

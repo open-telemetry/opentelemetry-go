@@ -150,24 +150,24 @@ type Stream struct {
 	AttributeFilter attribute.Filter
 }
 
-// instrumentID are the identifying properties of an instrument.
-type instrumentID struct {
-	// Name is the name of the instrument.
+// streamID are the identifying properties of a stream.
+type streamID struct {
+	// Name is the name of the stream.
 	Name string
-	// Description is the description of the instrument.
+	// Description is the description of the stream.
 	Description string
-	// Unit is the unit of the instrument.
+	// Unit is the unit of the stream.
 	Unit unit.Unit
-	// Aggregation is the aggregation data type of the instrument.
+	// Aggregation is the aggregation data type of the stream.
 	Aggregation string
 	// Monotonic is the monotonicity of an instruments data type. This field is
 	// not used for all data types, so a zero value needs to be understood in the
 	// context of Aggregation.
 	Monotonic bool
-	// Temporality is the temporality of an instrument's data type. This field
-	// is not used by some data types.
+	// Temporality is the temporality of a stream's data type. This field is
+	// not used by some data types.
 	Temporality metricdata.Temporality
-	// Number is the number type of the instrument.
+	// Number is the number type of the stream.
 	Number string
 }
 

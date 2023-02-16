@@ -346,7 +346,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	p := newPipelines(resource.Empty(), readers, views)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
-	vc := cache[string, instrumentID]{}
+	vc := cache[string, streamID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
@@ -397,7 +397,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), readers, views)
 
-	vc := cache[string, instrumentID]{}
+	vc := cache[string, streamID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)

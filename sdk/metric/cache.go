@@ -61,21 +61,21 @@ func (c *cache[K, V]) Lookup(key K, f func() V) V {
 type instrumentCache[N int64 | float64] struct {
 	// aggregators is used to ensure duplicate creations of the same instrument
 	// return the same instance of that instrument's aggregator.
-	aggregators *cache[instrumentID, aggVal[N]]
+	aggregators *cache[streamID, aggVal[N]]
 	// views is used to ensure if instruments with the same name are created,
 	// but do not have the same identifying properties, a warning is logged.
-	views *cache[string, instrumentID]
+	views *cache[string, streamID]
 }
 
 // newInstrumentCache returns a new instrumentCache that uses ac as the
 // underlying cache for aggregators and vc as the cache for views. If ac or vc
 // are nil, a new empty cache will be used.
-func newInstrumentCache[N int64 | float64](ac *cache[instrumentID, aggVal[N]], vc *cache[string, instrumentID]) instrumentCache[N] {
+func newInstrumentCache[N int64 | float64](ac *cache[streamID, aggVal[N]], vc *cache[string, streamID]) instrumentCache[N] {
 	if ac == nil {
-		ac = &cache[instrumentID, aggVal[N]]{}
+		ac = &cache[streamID, aggVal[N]]{}
 	}
 	if vc == nil {
-		vc = &cache[string, instrumentID]{}
+		vc = &cache[string, streamID]{}
 	}
 	return instrumentCache[N]{aggregators: ac, views: vc}
 }
@@ -85,7 +85,7 @@ func newInstrumentCache[N int64 | float64](ac *cache[instrumentID, aggVal[N]], v
 // in the cache and returned.
 //
 // LookupAggregator is safe to call concurrently.
-func (c instrumentCache[N]) LookupAggregator(id instrumentID, f func() (internal.Aggregator[N], error)) (agg internal.Aggregator[N], err error) {
+func (c instrumentCache[N]) LookupAggregator(id streamID, f func() (internal.Aggregator[N], error)) (agg internal.Aggregator[N], err error) {
 	v := c.aggregators.Lookup(id, func() aggVal[N] {
 		a, err := f()
 		return aggVal[N]{Aggregator: a, Err: err}
@@ -100,11 +100,11 @@ type aggVal[N int64 | float64] struct {
 }
 
 // Unique returns if id is unique or a duplicate instrument. If an instrument
-// with the same name has already been created, that instrumentID will be
-// returned along with false. Otherwise, id is returned with true.
+// with the same name has already been created, that streamID will be returned
+// along with false. Otherwise, id is returned with true.
 //
 // Unique is safe to call concurrently.
-func (c instrumentCache[N]) Unique(id instrumentID) (instrumentID, bool) {
-	got := c.views.Lookup(id.Name, func() instrumentID { return id })
+func (c instrumentCache[N]) Unique(id streamID) (streamID, bool) {
+	got := c.views.Lookup(id.Name, func() streamID { return id })
 	return got, id == got
 }
