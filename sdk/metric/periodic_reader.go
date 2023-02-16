@@ -207,6 +207,7 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
+	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := metricdata.ResourceMetrics{}
 	err := r.Collect(ctx, &rm)
 	if err == nil {
@@ -216,15 +217,16 @@ func (r *periodicReader) collectAndExport(ctx context.Context) error {
 }
 
 // Collect gathers and returns all metric data related to the Reader from
-// the SDK and other Producers. The returned metric data is not exported
-// to the configured exporter, it is left to the caller to handle that if
-// desired.
+// the SDK and other Producers and stores the result in rm. The returned metric
+// data is not exported to the configured exporter, it is left to the caller to
+// handle that if desired.
 //
-// An error is returned if this is called after Shutdown. An error is return if rm is a nil ResourceMetrics.
+// An error is returned if this is called after Shutdown. An error is return if rm is nil.
 func (r *periodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
-		return errors.New("metricdata.ResourceMetrics is nil")
+		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
 	}
+	// TODO (#3047): When collect is updated to accept output as param, pass rm.
 	rmTemp, err := r.collect(ctx, r.sdkProducer.Load())
 	*rm = rmTemp
 	return err

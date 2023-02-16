@@ -113,11 +113,13 @@ func (mr *manualReader) Shutdown(context.Context) error {
 }
 
 // Collect gathers all metrics from the SDK and other Producers, calling any
-// callbacks necessary. Collect will return an error if called after shutdown.
-// Collect wil return an error if rm is a nil ResourceMetrics.
+// callbacks necessary and stores the result in rm.
+//
+// Collect will return an error if called after shutdown.
+// Collect will return an error if rm is a nil ResourceMetrics.
 func (mr *manualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
-		return errors.New("manual reader: metricdata.ResourceMetrics is nil")
+		return errors.New("manual reader: *metricdata.ResourceMetrics is nil")
 	}
 	p := mr.sdkProducer.Load()
 	if p == nil {
@@ -133,8 +135,7 @@ func (mr *manualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
 		return err
 	}
-
-	//TODO:
+	// TODO (#3047): When produce is updated to accept output as param, pass rm.	//TODO:
 	rmTemp, err := ph.produce(ctx)
 	*rm = rmTemp
 	if err != nil {

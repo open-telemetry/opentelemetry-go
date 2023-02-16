@@ -23,8 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Metric SDK `Reader.Collect()` signature has changed to enable memory reuse (#????)
-
+- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into.
+  This change is made to enable memory reuse by SDK users. (#3732)
 ### Fixed
 
 - Removed the `http.target` attribute from being added by `ServerRequest` in the following packages. (#3687)
