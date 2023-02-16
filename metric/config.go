@@ -34,8 +34,8 @@ func (cfg MeterConfig) InstrumentationVersion() string {
 
 // InstrumentationAttributes returns the attributes associated with the library
 // providing instrumentation.
-func (cfg MeterConfig) InstrumentationAttributes() []attribute.KeyValue {
-	return cfg.attrs.ToSlice()
+func (cfg MeterConfig) InstrumentationAttributes() attribute.Set {
+	return cfg.attrs
 }
 
 // SchemaURL is the schema_url of the library providing instrumentation.
