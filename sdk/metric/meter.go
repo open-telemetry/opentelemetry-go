@@ -43,7 +43,7 @@ type meter struct {
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
-	var viewCache cache[string, instrumentID]
+	var viewCache cache[string, streamID]
 
 	// Passing nil as the ac parameter to newInstrumentCache will have each
 	// create its own aggregator cache.
