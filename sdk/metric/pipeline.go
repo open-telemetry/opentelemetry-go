@@ -184,24 +184,24 @@ type inserter[N int64 | float64] struct {
 	// are inserted into the reader pipeline and if a new request during an
 	// instrument creation asks for the same Aggregator the same instance is
 	// returned.
-	aggregators *cache[instrumentID, aggCV[N]]
+	aggregators *cache[streamID, aggCV[N]]
 
 	// views is a cache that holds instrument identifiers for all the
 	// instruments a Meter has created, it is provided from the Meter that owns
 	// this inserter. This cache ensures during the creation of instruments
 	// with the same name but different options (e.g. description, unit) a
 	// warning message is logged.
-	views *cache[string, instrumentID]
+	views *cache[string, streamID]
 
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instrumentID]) *inserter[N] {
+func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *inserter[N] {
 	if vc == nil {
-		vc = &cache[string, instrumentID]{}
+		vc = &cache[string, streamID]{}
 	}
 	return &inserter[N]{
-		aggregators: &cache[instrumentID, aggCV[N]]{},
+		aggregators: &cache[streamID, aggCV[N]]{},
 		views:       vc,
 		pipeline:    p,
 	}
@@ -314,7 +314,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		)
 	}
 
-	id := i.instrumentID(kind, stream)
+	id := i.streamID(kind, stream)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
@@ -343,8 +343,8 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 
 // logConflict validates if an instrument with the same name as id has already
 // been created. If that instrument conflicts with id, a warning is logged.
-func (i *inserter[N]) logConflict(id instrumentID) {
-	existing := i.views.Lookup(id.Name, func() instrumentID { return id })
+func (i *inserter[N]) logConflict(id streamID) {
+	existing := i.views.Lookup(id.Name, func() streamID { return id })
 	if id == existing {
 		return
 	}
@@ -361,9 +361,9 @@ func (i *inserter[N]) logConflict(id instrumentID) {
 	)
 }
 
-func (i *inserter[N]) instrumentID(kind InstrumentKind, stream Stream) instrumentID {
+func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
 	var zero N
-	id := instrumentID{
+	id := streamID{
 		Name:        stream.Name,
 		Description: stream.Description,
 		Unit:        stream.Unit,
@@ -518,7 +518,7 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, vc *cache[string, instrumentID]) resolver[N] {
+func newResolver[N int64 | float64](p pipelines, vc *cache[string, streamID]) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter[N](p[i], vc)

@@ -159,7 +159,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				var c cache[string, instrumentID]
+				var c cache[string, streamID]
 				i := newInserter[N](test.pipe, &c)
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)

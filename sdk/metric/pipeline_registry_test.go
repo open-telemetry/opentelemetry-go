@@ -215,7 +215,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			var c cache[string, instrumentID]
+			var c cache[string, streamID]
 			i := newInserter[N](newPipeline(nil, tt.reader, tt.views), &c)
 			got, err := i.Instrument(tt.inst)
 			assert.ErrorIs(t, err, tt.wantErr)
@@ -233,7 +233,7 @@ func TestCreateAggregators(t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	var c cache[string, instrumentID]
+	var c cache[string, streamID]
 	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}), &c)
 	inst := Instrument{
 		Name: "foo",
@@ -253,7 +253,7 @@ func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	require.Len(t, pipes, 2, "created pipelines")
 
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, instrumentID]
+	var c cache[string, streamID]
 	r := newResolver[int64](pipes, &c)
 	aggs, err := r.Aggregators(inst)
 	require.NoError(t, err, "resolved Aggregators error")
@@ -330,7 +330,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, instrumentID]
+	var c cache[string, streamID]
 	r := newResolver[int64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
@@ -340,7 +340,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, instrumentID]
+	var c cache[string, streamID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
@@ -367,7 +367,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	p := newPipelines(resource.Empty(), readers, views)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
-	var vc cache[string, instrumentID]
+	var vc cache[string, streamID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
@@ -418,7 +418,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), readers, views)
 
-	var vc cache[string, instrumentID]
+	var vc cache[string, streamID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)
