@@ -12,41 +12,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internaltest // import "go.opentelemetry.io/otel/internal/internaltest"
+package errhand // import "go.opentelemetry.io/otel/internal/errhand"
 
 import (
 	"fmt"
-	"testing"
+	"testing" //nolint: depguard  // This is a testing util pkg.
+
+	"go.opentelemetry.io/otel"
 )
 
+// ErrorHandler is an OTel ErrorHandler used for testing.
 type ErrorHandler struct {
 	errors []error
 }
 
-func NewErrorHandler() *ErrorHandler {
+// New returns a new *ErrorHandler. It does not set the returned value to the
+// OTel global, see NewGlobal for that.
+func New() *ErrorHandler {
 	return &ErrorHandler{}
 }
 
+// NewGlobal returns a new *ErrorHandler after setting it as the OTel global
+// ErrorHandler.
+func NewGlobal() *ErrorHandler {
+	eh := New()
+	otel.SetErrorHandler(eh)
+	return eh
+}
+
+// Handle handles err.
 func (e *ErrorHandler) Handle(err error) {
 	e.errors = append(e.errors, err)
 }
 
+// Errors returns a copy of the errors e has handled.
 func (e *ErrorHandler) Errors() []error {
 	cp := make([]error, len(e.errors))
 	copy(cp, e.errors)
 	return cp
 }
 
+// Len returns the number of errors e has handled.
 func (e *ErrorHandler) Len() int {
 	return len(e.errors)
 }
 
+// Reset clears any handled errors from e.
 func (e *ErrorHandler) Reset() {
 	if e.Len() > 0 {
 		e.errors = e.errors[:0]
 	}
 }
 
+// ErrorAt returns the idx-th error handled if e has handled that many errors.
+// Otherwise nil is returned.
+func (e *ErrorHandler) ErrorAt(idx int) error {
+	if idx >= e.Len() {
+		return nil
+	}
+	return e.errors[idx]
+}
+
+// RequireNoErrors ensures e handled no errors, failing the test immediately if
+// it has.
 func (e *ErrorHandler) RequireNoErrors(t *testing.T, msgAndArgs ...interface{}) {
 	t.Helper()
 	if e.hasErrors(t, msgAndArgs) {
@@ -54,6 +82,8 @@ func (e *ErrorHandler) RequireNoErrors(t *testing.T, msgAndArgs ...interface{}) 
 	}
 }
 
+// AssertNoErrors asserts e handled no errors, failing the test and resetting
+// if it has.
 func (e *ErrorHandler) AssertNoErrors(t *testing.T, msgAndArgs ...interface{}) bool {
 	t.Helper()
 	if e.hasErrors(t, msgAndArgs) {

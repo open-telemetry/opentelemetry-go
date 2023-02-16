@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -216,18 +216,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			eh := internaltest.NewErrorHandler()
-			otel.SetErrorHandler(eh)
+			eh := errhand.NewGlobal()
 
 			c := newInstrumentCache[N](nil, nil)
 			i := newInserter(newPipeline(nil, tt.reader, tt.views), c)
 			got := i.Instrument(tt.inst)
-			if tt.wantErr != nil {
-				require.Equal(t, 1, eh.Len())
-				assert.ErrorIs(t, eh.Errors()[0], tt.wantErr)
-			} else {
-				eh.AssertNoErrors(t)
-			}
+			assert.ErrorIs(t, eh.ErrorAt(0), tt.wantErr)
 			require.Len(t, got, tt.wantLen)
 			for _, agg := range got {
 				assert.IsType(t, tt.wantKind, agg)
@@ -346,8 +340,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 }
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
 
@@ -359,13 +352,13 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	vc := cache[string, instrumentID]{}
 	ri := newResolver(p, newInstrumentCache[int64](nil, &vc))
 	intAggs := ri.Aggregators(inst)
-	assert.Equal(t, 1, eh.Len(), "An error is expected")
+	assert.Error(t, eh.ErrorAt(0))
 	eh.Reset()
 	assert.Len(t, intAggs, 0)
 
 	rf := newResolver(p, newInstrumentCache[float64](nil, &vc))
 	floatAggs := rf.Aggregators(inst)
-	assert.Equal(t, 1, eh.Len(), "An error is expected")
+	assert.Error(t, eh.ErrorAt(0))
 	eh.Reset()
 	assert.Len(t, floatAggs, 0)
 }
@@ -396,8 +389,7 @@ func (l *logCounter) ErrorN() int {
 }
 
 func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 6})
 	l := &logCounter{LogSink: tLog.GetSink()}

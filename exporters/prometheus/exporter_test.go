@@ -23,9 +23,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -36,8 +35,7 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	testCases := []struct {
 		name               string
@@ -347,8 +345,7 @@ func TestSantitizeName(t *testing.T) {
 }
 
 func TestMultiScopes(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
@@ -395,8 +392,7 @@ func TestMultiScopes(t *testing.T) {
 }
 
 func TestDuplicateMetrics(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	testCases := []struct {
 		name                  string

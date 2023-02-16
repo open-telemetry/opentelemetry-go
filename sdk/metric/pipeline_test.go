@@ -23,9 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -161,8 +160,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				eh := internaltest.NewErrorHandler()
-				otel.SetErrorHandler(eh)
+				eh := errhand.NewGlobal()
 				c := newInstrumentCache[N](nil, nil)
 				i := newInserter(test.pipe, c)
 				got := i.Instrument(inst)

@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -41,8 +41,7 @@ import (
 
 // A meter should be able to make instruments concurrently.
 func TestMeterInstrumentConcurrency(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(12)
@@ -106,8 +105,7 @@ var emptyCallback metric.Callback = func(context.Context, metric.Observer) error
 
 // A Meter Should be able register Callbacks Concurrently.
 func TestMeterCallbackCreationConcurrency(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
@@ -127,8 +125,7 @@ func TestMeterCallbackCreationConcurrency(t *testing.T) {
 }
 
 func TestNoopCallbackUnregisterConcurrency(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	m := NewMeterProvider().Meter("noop-unregister-concurrency")
 	reg := m.RegisterCallback(emptyCallback)
@@ -149,8 +146,7 @@ func TestNoopCallbackUnregisterConcurrency(t *testing.T) {
 }
 
 func TestCallbackUnregisterConcurrency(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	reader := NewManualReader()
 	provider := NewMeterProvider(WithReader(reader))
@@ -186,8 +182,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	extrema := metricdata.NewExtrema(7.)
 	attrs := []attribute.KeyValue{attribute.String("name", "alice")}
@@ -505,8 +500,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 }
 
 func TestRegisterNonSDKObserverErrors(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -529,8 +523,7 @@ func TestRegisterNonSDKObserverErrors(t *testing.T) {
 }
 
 func TestMeterMixingOnRegisterErrors(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -562,8 +555,7 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 }
 
 func TestCallbackObserverNonRegistered(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -659,8 +651,7 @@ func (l *logSink) String() string {
 }
 
 func TestGlobalInstRegisterCallback(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	l := newLogSink(t)
 	otel.SetLogger(logr.New(l))
@@ -743,8 +734,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 }
 
 func TestMetersProvideScope(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -817,8 +807,7 @@ func TestMetersProvideScope(t *testing.T) {
 }
 
 func TestUnregisterUnregisters(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	r := NewManualReader()
 	mp := NewMeterProvider(WithReader(r))
@@ -872,8 +861,7 @@ func TestUnregisterUnregisters(t *testing.T) {
 }
 
 func TestRegisterCallbackDropAggregations(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	aggFn := func(InstrumentKind) aggregation.Aggregation {
 		return aggregation.Drop{}
@@ -1214,8 +1202,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	}
 
 	return func(t *testing.T) {
-		eh := internaltest.NewErrorHandler()
-		otel.SetErrorHandler(eh)
+		eh := errhand.NewGlobal()
 		for _, tt := range testcases {
 			t.Run(tt.name, func(t *testing.T) {
 				rdr := NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
@@ -1265,8 +1252,7 @@ func TestAsynchronousExample(t *testing.T) {
 	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Set]int64, func(*testing.T), *metricdata.ScopeMetrics, *int64, *int64, *int64) {
 		t.Helper()
 
-		eh := internaltest.NewErrorHandler()
-		otel.SetErrorHandler(eh)
+		eh := errhand.NewGlobal()
 
 		const (
 			instName       = "pageFaults"

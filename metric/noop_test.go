@@ -20,9 +20,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 )
 
 func TestNewNoopMeterProvider(t *testing.T) {
@@ -33,8 +32,7 @@ func TestNewNoopMeterProvider(t *testing.T) {
 }
 
 func TestSyncFloat64(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {
@@ -57,8 +55,7 @@ func TestSyncFloat64(t *testing.T) {
 }
 
 func TestSyncInt64(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	meter := NewNoopMeterProvider().Meter("test instrumentation")
 	assert.NotPanics(t, func() {

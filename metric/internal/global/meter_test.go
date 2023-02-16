@@ -23,8 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/internal/errhand"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -52,8 +51,7 @@ var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer)
 }
 
 func TestMeterRace(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	mtr := &meter{}
 
@@ -95,8 +93,7 @@ func TestMeterRace(t *testing.T) {
 }
 
 func TestUnregisterRace(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	mtr := &meter{}
 	reg := mtr.RegisterCallback(zeroCallback)
@@ -127,8 +124,7 @@ func TestUnregisterRace(t *testing.T) {
 }
 
 func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float64Counter, instrument.Float64ObservableCounter) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	afcounter := m.Float64ObservableCounter("test_Async_Counter")
 	eh.RequireNoErrors(t)
@@ -328,8 +324,7 @@ func TestMeterDefersDelegations(t *testing.T) {
 }
 
 func TestRegistrationDelegation(t *testing.T) {
-	eh := internaltest.NewErrorHandler()
-	otel.SetErrorHandler(eh)
+	eh := errhand.NewGlobal()
 
 	// globalMeterProvider := otel.GetMeterProvider
 	globalMeterProvider := &meterProvider{}
