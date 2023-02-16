@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Ensure `go.opentelemetry.io/otel` does not use generics. (#3723, #3725)
+- Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
