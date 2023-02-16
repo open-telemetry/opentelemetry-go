@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
 
 ### Fixed
 
@@ -46,10 +47,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Attribute `KeyValue` creations functions to `go.opentelemetry.io/otel/semconv/v1.17.0` for all non-enum semantic conventions.
   These functions ensure semantic convention type correctness. (#3675)
 
-### Changed
-
-- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into.
-  This change is made to enable memory reuse by SDK users. (#3732)
 ### Fixed
 
 - Removed the `http.target` attribute from being added by `ServerRequest` in the following packages. (#3687)
