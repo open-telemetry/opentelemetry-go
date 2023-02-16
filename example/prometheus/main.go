@@ -33,11 +33,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func main() {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ctx := context.Background()
 
 	// The exporter embeds a default OpenTelemetry Reader and
@@ -70,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
-		n := -10. + rand.Float64()*(90.) // [-10, 100)
+		n := -10. + rng.Float64()*(90.) // [-10, 100)
 		o.ObserveFloat64(gauge, n, attrs...)
 		return nil
 	}, gauge)

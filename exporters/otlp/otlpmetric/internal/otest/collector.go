@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	cryptorand "crypto/rand"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix" // nolint:depguard  // This is for testing.
@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	mathrand "math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -389,25 +388,17 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 	}
 }
 
-type mathRandReader struct{}
-
-func (mathRandReader) Read(p []byte) (n int, err error) {
-	return mathrand.Read(p)
-}
-
-var randReader mathRandReader
-
 // Based on https://golang.org/src/crypto/tls/generate_cert.go,
 // simplified and weakened.
 func weakCertificate() (tls.Certificate, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), randReader)
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
 	notBefore := time.Now()
 	notAfter := notBefore.Add(time.Hour)
 	max := new(big.Int).Lsh(big.NewInt(1), 128)
-	sn, err := cryptorand.Int(randReader, max)
+	sn, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
@@ -422,7 +413,7 @@ func weakCertificate() (tls.Certificate, error) {
 		DNSNames:              []string{"localhost"},
 		IPAddresses:           []net.IP{net.IPv6loopback, net.IPv4(127, 0, 0, 1)},
 	}
-	derBytes, err := x509.CreateCertificate(randReader, &tmpl, &tmpl, &priv.PublicKey, priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &priv.PublicKey, priv)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
