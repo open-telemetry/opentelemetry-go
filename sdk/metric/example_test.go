@@ -34,8 +34,8 @@ func Example() {
 	// information about how to create and use Resources.
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("my-service"),
-		semconv.ServiceVersionKey.String("v0.1.0"),
+		semconv.ServiceName("my-service"),
+		semconv.ServiceVersion("v0.1.0"),
 	)
 
 	meterProvider := metric.NewMeterProvider(

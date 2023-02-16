@@ -167,7 +167,6 @@ func TestHTTPServerRequest(t *testing.T) {
 	assert.ElementsMatch(t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.target", "/"),
 			attribute.String("http.scheme", "http"),
 			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
@@ -208,7 +207,6 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	assert.NotPanics(t, func() { got = hc.ServerRequest("", req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
-		attribute.String("http.target", ""),
 		attribute.String("http.scheme", "http"),
 		attribute.String("http.flavor", ""),
 		attribute.String("net.host.name", ""),

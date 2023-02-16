@@ -59,8 +59,8 @@ func multiply(ctx context.Context, x, y int64) int64 {
 func Resource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("stdout-example"),
-		semconv.ServiceVersionKey.String("0.0.1"),
+		semconv.ServiceName("stdout-example"),
+		semconv.ServiceVersion("0.0.1"),
 	)
 }
 

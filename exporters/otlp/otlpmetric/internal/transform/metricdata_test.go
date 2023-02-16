@@ -288,8 +288,8 @@ var (
 
 	otelRes = resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("test server"),
-		semconv.ServiceVersionKey.String("v0.1.0"),
+		semconv.ServiceName("test server"),
+		semconv.ServiceVersion("v0.1.0"),
 	)
 
 	pbRes = &rpb.Resource{
