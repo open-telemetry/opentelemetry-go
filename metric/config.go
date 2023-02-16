@@ -23,7 +23,7 @@ type MeterConfig struct {
 	attrs                  attribute.Set
 
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCompare [0]func()
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 // InstrumentationVersion returns the version of the library providing
