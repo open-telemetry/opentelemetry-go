@@ -184,7 +184,7 @@ type inserter[N int64 | float64] struct {
 	// are inserted into the reader pipeline and if a new request during an
 	// instrument creation asks for the same Aggregator the same instance is
 	// returned.
-	aggregators *cache[streamID, aggCV[N]]
+	aggregators *cache[streamID, aggVal[N]]
 
 	// views is a cache that holds instrument identifiers for all the
 	// instruments a Meter has created, it is provided from the Meter that owns
@@ -201,7 +201,7 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *i
 		vc = &cache[string, streamID]{}
 	}
 	return &inserter[N]{
-		aggregators: &cache[streamID, aggCV[N]]{},
+		aggregators: &cache[streamID, aggVal[N]]{},
 		views:       vc,
 		pipeline:    p,
 	}
@@ -281,8 +281,8 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 	return aggs, errs.errorOrNil()
 }
 
-// aggCV is the cached value in an aggregators cache.
-type aggCV[N int64 | float64] struct {
+// aggVal is the cached value in an aggregators cache.
+type aggVal[N int64 | float64] struct {
 	Aggregator internal.Aggregator[N]
 	Err        error
 }
@@ -318,13 +318,13 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
-	cv := i.aggregators.Lookup(id, func() aggCV[N] {
+	cv := i.aggregators.Lookup(id, func() aggVal[N] {
 		agg, err := i.aggregator(stream.Aggregation, kind, id.Temporality, id.Monotonic)
 		if err != nil {
-			return aggCV[N]{nil, err}
+			return aggVal[N]{nil, err}
 		}
 		if agg == nil { // Drop aggregator.
-			return aggCV[N]{nil, nil}
+			return aggVal[N]{nil, nil}
 		}
 		if stream.AttributeFilter != nil {
 			agg = internal.NewFilter(agg, stream.AttributeFilter)
@@ -336,7 +336,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 			unit:        stream.Unit,
 			aggregator:  agg,
 		})
-		return aggCV[N]{agg, err}
+		return aggVal[N]{agg, err}
 	})
 	return cv.Aggregator, cv.Err
 }
