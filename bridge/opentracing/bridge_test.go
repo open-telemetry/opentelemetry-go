@@ -26,6 +26,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -200,6 +201,8 @@ type textMapCarrier struct {
 	m map[string]string
 }
 
+var _ propagation.TextMapCarrier = (*textMapCarrier)(nil)
+
 func newTextCarrier() *textMapCarrier {
 	return &textMapCarrier{m: map[string]string{}}
 }
@@ -362,6 +365,10 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 				if tc.extractErr == nil {
 					bsc, ok := spanContext.(*bridgeSpanContext)
 					assert.True(t, ok)
+					require.NotNil(t, bsc)
+					require.NotNil(t, bsc.otelSpanContext)
+					require.NotNil(t, bsc.otelSpanContext.SpanID())
+					require.NotNil(t, bsc.otelSpanContext.TraceID())
 
 					assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
 					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())

@@ -16,8 +16,8 @@ package jaeger
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"net"
 	"testing"
 	"time"

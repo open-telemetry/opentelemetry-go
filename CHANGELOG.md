@@ -31,6 +31,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
 - Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
+- The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
+
+### Changed
+
+- [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+
+### Fixed
+
+- Ensure `go.opentelemetry.io/otel` does not use generics. (#3723, #3725)
+- Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
