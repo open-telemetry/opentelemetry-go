@@ -25,6 +25,8 @@ var (
 	SetOSDescriptionProvider        = setOSDescriptionProvider
 	SetDefaultContainerProviders    = setDefaultContainerProviders
 	SetContainerProviders           = setContainerProviders
+	SetDefaultHostIDProvider        = setDefaultHostIDProvider
+	SetHostIDProvider               = setHostIDProvider
 )
 
 var (

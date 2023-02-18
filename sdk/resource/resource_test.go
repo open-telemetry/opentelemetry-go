@@ -471,6 +471,36 @@ func TestNewWrapedError(t *testing.T) {
 	assert.NotErrorIs(t, err, errors.New("false positive error"))
 }
 
+func TestWithHostID(t *testing.T) {
+	mockHostIDProvider()
+	t.Cleanup(restoreHostIDProvider)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithHostID(),
+	)
+
+	require.NoError(t, err)
+	require.EqualValues(t, map[string]string{
+		"host.id": "f2c668b579780554f70f72a063dc0864",
+	}, toMap(res))
+}
+
+func TestWithHostIDError(t *testing.T) {
+	mockHostIDProviderWithError()
+	t.Cleanup(restoreHostIDProvider)
+
+	ctx := context.Background()
+
+	res, err := resource.New(ctx,
+		resource.WithHostID(),
+	)
+
+	require.Error(t, err)
+	require.EqualValues(t, map[string]string{}, toMap(res))
+}
+
 func TestWithOSType(t *testing.T) {
 	mockRuntimeProviders()
 	t.Cleanup(restoreAttributesProviders)

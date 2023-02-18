@@ -71,6 +71,11 @@ func WithHost() Option {
 	return WithDetectors(host{})
 }
 
+// WithHostID adds a host id attribute to the configured resource
+func WithHostID() Option {
+	return WithDetectors(hostIDDetector{})
+}
+
 // WithTelemetrySDK adds TelemetrySDK version info to the configured resource.
 func WithTelemetrySDK() Option {
 	return WithDetectors(telemetrySDK{})

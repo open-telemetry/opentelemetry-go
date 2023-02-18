@@ -8,11 +8,26 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
+type hostIDProvider func() (string, error)
+
+var defaultHostIDProvider hostIDProvider = platformHostIDReader.read
+
+var hostID = defaultHostIDProvider
+
+func setDefaultHostIDProvider() {
+	setHostIDProvider(defaultHostIDProvider)
+}
+
+func setHostIDProvider(hostIDProvider hostIDProvider) {
+	hostID = hostIDProvider
+}
+
 type hostIDReader interface {
 	read() (string, error)
 }
 
 type fileReader func(string) (string, error)
+
 type commandExecutor func(string, ...string) (string, error)
 
 func readFile(filename string) (string, error) {
@@ -38,7 +53,7 @@ type hostIDDetector struct{}
 
 // Detect returns a *Resource containing the platform specific host id
 func (hostIDDetector) Detect(ctx context.Context) (*Resource, error) {
-	hostID, err := platformHostIDReader.read()
+	hostID, err := hostID()
 	if err != nil {
 		return nil, err
 	}
