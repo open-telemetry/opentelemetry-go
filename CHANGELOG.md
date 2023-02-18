@@ -13,6 +13,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Semantic conventions of the `event` type are now generated. (#3697)
 - The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
 - Support [Go 1.20]. (#3693)
+- The `go.opentelemetry.io/otel/semconv/v1.18.0` package.
+  The package contains semantic conventions from the `v1.18.0` version of the OpenTelemetry specification. (#3719)
+  - The following `const` renames from `go.opentelemetry.io/otel/semconv/v1.17.0` are included:
+    - `OtelScopeNameKey` -> `OTelScopeNameKey`
+    - `OtelScopeVersionKey` -> `OTelScopeVersionKey`
+    - `OtelLibraryNameKey` -> `OTelLibraryNameKey`
+    - `OtelLibraryVersionKey` -> `OTelLibraryVersionKey`
+    - `OtelStatusCodeKey` -> `OTelStatusCodeKey`
+    - `OtelStatusDescriptionKey` -> `OTelStatusDescriptionKey`
+    - `OtelStatusCodeOk` -> `OTelStatusCodeOk`
+    - `OtelStatusCodeError` -> `OTelStatusCodeError`
+  - The following `func` renames from `go.opentelemetry.io/otel/semconv/v1.17.0` are included:
+    - `OtelScopeName` -> `OTelScopeName`
+    - `OtelScopeVersion` -> `OTelScopeVersion`
+    - `OtelLibraryName` -> `OTelLibraryName`
+    - `OtelLibraryVersion` -> `OTelLibraryVersion`
+    - `OtelStatusDescription` -> `OTelStatusDescription`
+- The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
+
+### Changed
+
+- [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+
+### Fixed
+
+- Ensure `go.opentelemetry.io/otel` does not use generics. (#3723, #3725)
+- Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
