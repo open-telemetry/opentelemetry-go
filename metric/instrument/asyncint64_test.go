@@ -27,10 +27,10 @@ import (
 
 func TestInt64ObserverOptions(t *testing.T) {
 	const (
-		token  int64 = 43
-		desc         = "Instrument description."
-		uBytes       = unit.Bytes
+		token int64 = 43
+		desc        = "Instrument description."
 	)
+	uBytes := unit.Byte
 
 	got := NewInt64ObserverConfig(
 		WithDescription(desc),

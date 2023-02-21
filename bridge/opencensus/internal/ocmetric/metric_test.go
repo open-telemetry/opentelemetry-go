@@ -252,7 +252,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-a",
 					Description: "an int testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        unit.Byte,
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
@@ -281,7 +281,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-b",
 					Description: "a float testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        unit.Byte,
 					Data: metricdata.Gauge[float64]{
 						DataPoints: []metricdata.DataPoint[float64]{
 							{
@@ -310,7 +310,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-a",
 					Description: "an int testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        unit.Milli(unit.Second),
 					Data: metricdata.Sum[int64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -341,7 +341,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-b",
 					Description: "a float testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        unit.Milli(unit.Second),
 					Data: metricdata.Sum[float64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -596,11 +596,11 @@ func TestConvertUnits(t *testing.T) {
 	}, {
 		desc:     "milliseconds",
 		input:    ocmetricdata.UnitMilliseconds,
-		expected: unit.Milliseconds,
+		expected: unit.Milli(unit.Second),
 	}, {
 		desc:     "bytes",
 		input:    ocmetricdata.UnitBytes,
-		expected: unit.Bytes,
+		expected: unit.Byte,
 	},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

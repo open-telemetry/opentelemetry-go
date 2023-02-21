@@ -64,7 +64,7 @@ var (
 					{
 						Name:        "latency",
 						Description: "Time spend processing received requests",
-						Unit:        unit.Milliseconds,
+						Unit:        unit.Milli(unit.Second),
 						Data: metricdata.Histogram{
 							Temporality: metricdata.DeltaTemporality,
 							DataPoints: []metricdata.HistogramDataPoint{
@@ -83,7 +83,7 @@ var (
 					{
 						Name:        "temperature",
 						Description: "CPU global temperature",
-						Unit:        unit.Unit("cel(1 K)"),
+						Unit:        unit.DegreeCelsius,
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{

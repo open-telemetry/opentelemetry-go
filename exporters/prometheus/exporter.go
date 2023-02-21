@@ -310,9 +310,9 @@ func sanitizeRune(r rune) rune {
 }
 
 var unitSuffixes = map[unit.Unit]string{
-	unit.Dimensionless: "_ratio",
-	unit.Bytes:         "_bytes",
-	unit.Milliseconds:  "_milliseconds",
+	unit.Dimensionless:      "_ratio",
+	unit.Byte:               "_bytes",
+	unit.Milli(unit.Second): "_milliseconds",
 }
 
 // getName returns the sanitized name, including unit suffix.

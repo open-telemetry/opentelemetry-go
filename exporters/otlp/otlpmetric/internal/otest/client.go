@@ -118,31 +118,31 @@ var (
 		{
 			Name:        "int64-gauge",
 			Description: "Gauge with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        unit.Dimensionless.Code(),
 			Data:        &mpb.Metric_Gauge{Gauge: gaugeInt64},
 		},
 		{
 			Name:        "float64-gauge",
 			Description: "Gauge with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        unit.Dimensionless.Code(),
 			Data:        &mpb.Metric_Gauge{Gauge: gaugeFloat64},
 		},
 		{
 			Name:        "int64-sum",
 			Description: "Sum with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        unit.Dimensionless.Code(),
 			Data:        &mpb.Metric_Sum{Sum: sumInt64},
 		},
 		{
 			Name:        "float64-sum",
 			Description: "Sum with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        unit.Dimensionless.Code(),
 			Data:        &mpb.Metric_Sum{Sum: sumFloat64},
 		},
 		{
 			Name:        "histogram",
 			Description: "Histogram",
-			Unit:        string(unit.Dimensionless),
+			Unit:        unit.Dimensionless.Code(),
 			Data:        &mpb.Metric_Histogram{Histogram: hist},
 		},
 	}

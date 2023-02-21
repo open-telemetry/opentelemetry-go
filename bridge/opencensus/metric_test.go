@@ -235,7 +235,6 @@ func TestPushMetricsExporter(t *testing.T) {
 							{
 								Name:        "",
 								Description: "",
-								Unit:        "",
 								Data: metricdata.Gauge[int64]{
 									DataPoints: []metricdata.DataPoint[int64]{
 										{

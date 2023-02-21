@@ -27,10 +27,10 @@ import (
 
 func TestFloat64ObserverOptions(t *testing.T) {
 	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = unit.Bytes
+		token float64 = 43
+		desc          = "Instrument description."
 	)
+	uBytes := unit.Byte
 
 	got := NewFloat64ObserverConfig(
 		WithDescription(desc),

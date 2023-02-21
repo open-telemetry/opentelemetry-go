@@ -24,10 +24,10 @@ import (
 
 func TestFloat64Options(t *testing.T) {
 	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = unit.Bytes
+		token float64 = 43
+		desc          = "Instrument description."
 	)
+	uBytes := unit.Byte
 
 	got := NewFloat64Config(WithDescription(desc), WithUnit(uBytes))
 	assert.Equal(t, desc, got.Description(), "description")

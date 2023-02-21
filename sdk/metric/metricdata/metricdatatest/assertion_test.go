@@ -181,7 +181,7 @@ var (
 	metricsB = metricdata.Metrics{
 		Name:        "B",
 		Description: "B desc",
-		Unit:        unit.Bytes,
+		Unit:        unit.Byte,
 		Data:        gaugeFloat64B,
 	}
 	metricsC = metricdata.Metrics{

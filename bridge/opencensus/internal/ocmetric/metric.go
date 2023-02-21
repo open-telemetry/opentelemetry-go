@@ -208,9 +208,9 @@ func convertUnit(u ocmetricdata.Unit) unit.Unit {
 	case ocmetricdata.UnitDimensionless:
 		return unit.Dimensionless
 	case ocmetricdata.UnitBytes:
-		return unit.Bytes
+		return unit.Byte
 	case ocmetricdata.UnitMilliseconds:
-		return unit.Milliseconds
+		return unit.Milli(unit.Second)
 	}
-	return unit.Unit(string(u))
+	return unit.New(string(u))
 }
