@@ -44,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Multi-reader `MeterProvider`s now export metrics for all readers, instead of just the first reader. (#3720, #3724)
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
+- Data race issue in OTLP exporter retry mechanism. (#3756)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
