@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
+- The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
 
 ### Changed
 
