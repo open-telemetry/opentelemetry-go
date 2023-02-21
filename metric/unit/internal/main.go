@@ -72,6 +72,10 @@ var renderManifest = []struct {
 		Dest:   "../prefix.go",
 	},
 	{
+		Source: parseTmpl("./prefix_test.tmpl"),
+		Dest:   "../prefix_test.go",
+	},
+	{
 		Source: parseTmpl("./base.tmpl"),
 		Dest:   "../base.go",
 	},
