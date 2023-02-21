@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -112,11 +113,17 @@ func (mr *manualReader) Shutdown(context.Context) error {
 }
 
 // Collect gathers all metrics from the SDK and other Producers, calling any
-// callbacks necessary. Collect will return an error if called after shutdown.
-func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
+// callbacks necessary and stores the result in rm.
+//
+// Collect will return an error if called after shutdown.
+// Collect will return an error if rm is a nil ResourceMetrics.
+func (mr *manualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	if rm == nil {
+		return errors.New("manual reader: *metricdata.ResourceMetrics is nil")
+	}
 	p := mr.sdkProducer.Load()
 	if p == nil {
-		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
+		return ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -126,12 +133,13 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("manual reader: invalid producer: %T", p)
-		return metricdata.ResourceMetrics{}, err
+		return err
 	}
-
-	rm, err := ph.produce(ctx)
+	// TODO (#3047): When produce is updated to accept output as param, pass rm.
+	rmTemp, err := ph.produce(ctx)
+	*rm = rmTemp
 	if err != nil {
-		return metricdata.ResourceMetrics{}, err
+		return err
 	}
 	var errs []error
 	for _, producer := range mr.externalProducers.Load().([]Producer) {
@@ -141,7 +149,7 @@ func (mr *manualReader) Collect(ctx context.Context) (metricdata.ResourceMetrics
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
-	return rm, unifyErrors(errs)
+	return unifyErrors(errs)
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.
