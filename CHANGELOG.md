@@ -37,6 +37,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
 - The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
+- The structure of the `go.opentelemetry.io/otel/metric/unit` package is updated. (#3761)
+  - The underlying `Unit` type is changed from a `string` to a `struct`.
+  - The `New` function is added to create user defined `Unit`s based on a UCUM code string.
+  - All prefixes are now defined as their own functions.
+  - `Milliseconds` is replaced by the new function call `Milli(Second)`.
+  - `Bytes` is replaced by the new `Unit` variable `Byte`.
+  - The following units were added: `Hertz`, `Watt`, `Volt`, `DegreeCelsius`, `Bit`, `Baud`.
 
 ### Fixed
 

@@ -1,0 +1,2047 @@
+<?xml version="1.0" encoding="ascii"?>
+<root xmlns="http://unitsofmeasure.org/ucum-essence" version="2.1"
+      revision="$Revision: 442 $"
+      revision-date="$Date: 2017-11-21 19:04:52 -0500 (Tue, 21 Nov 2017) $">
+   <prefix Code="Y" CODE="YA">
+      <name>yotta</name>
+      <printSymbol>Y</printSymbol>
+      <value value="1e24">1 &#215; 10<sup>24</sup>
+      </value>
+   </prefix>
+   <prefix Code="Z" CODE="ZA">
+      <name>zetta</name>
+      <printSymbol>Z</printSymbol>
+      <value value="1e21">1 &#215; 10<sup>21</sup>
+      </value>
+   </prefix>
+   <prefix Code="E" CODE="EX">
+      <name>exa</name>
+      <printSymbol>E</printSymbol>
+      <value value="1e18">1 &#215; 10<sup>18</sup>
+      </value>
+   </prefix>
+   <prefix Code="P" CODE="PT">
+      <name>peta</name>
+      <printSymbol>P</printSymbol>
+      <value value="1e15">1 &#215; 10<sup>15</sup>
+      </value>
+   </prefix>
+   <prefix Code="T" CODE="TR">
+      <name>tera</name>
+      <printSymbol>T</printSymbol>
+      <value value="1e12">1 &#215; 10<sup>12</sup>
+      </value>
+   </prefix>
+   <prefix Code="G" CODE="GA">
+      <name>giga</name>
+      <printSymbol>G</printSymbol>
+      <value value="1e9">1 &#215; 10<sup>9</sup>
+      </value>
+   </prefix>
+   <prefix Code="M" CODE="MA">
+      <name>mega</name>
+      <printSymbol>M</printSymbol>
+      <value value="1e6">1 &#215; 10<sup>6</sup>
+      </value>
+   </prefix>
+   <prefix Code="k" CODE="K">
+      <name>kilo</name>
+      <printSymbol>k</printSymbol>
+      <value value="1e3">1 &#215; 10<sup>3</sup>
+      </value>
+   </prefix>
+   <prefix Code="h" CODE="H">
+      <name>hecto</name>
+      <printSymbol>h</printSymbol>
+      <value value="1e2">1 &#215; 10<sup>2</sup>
+      </value>
+   </prefix>
+   <prefix Code="da" CODE="DA">
+      <name>deka</name>
+      <printSymbol>da</printSymbol>
+      <value value="1e1">1 &#215; 10<sup>1</sup>
+      </value>
+   </prefix>
+   <prefix Code="d" CODE="D">
+      <name>deci</name>
+      <printSymbol>d</printSymbol>
+      <value value="1e-1">1 &#215; 10<sup>-1</sup>
+      </value>
+   </prefix>
+   <prefix Code="c" CODE="C">
+      <name>centi</name>
+      <printSymbol>c</printSymbol>
+      <value value="1e-2">1 &#215; 10<sup>-2</sup>
+      </value>
+   </prefix>
+   <prefix Code="m" CODE="M">
+      <name>milli</name>
+      <printSymbol>m</printSymbol>
+      <value value="1e-3">1 &#215; 10<sup>-3</sup>
+      </value>
+   </prefix>
+   <prefix Code="u" CODE="U">
+      <name>micro</name>
+      <printSymbol>&#956;</printSymbol>
+      <value value="1e-6">1 &#215; 10<sup>-6</sup>
+      </value>
+   </prefix>
+   <prefix Code="n" CODE="N">
+      <name>nano</name>
+      <printSymbol>n</printSymbol>
+      <value value="1e-9">1 &#215; 10<sup>-9</sup>
+      </value>
+   </prefix>
+   <prefix Code="p" CODE="P">
+      <name>pico</name>
+      <printSymbol>p</printSymbol>
+      <value value="1e-12">1 &#215; 10<sup>-12</sup>
+      </value>
+   </prefix>
+   <prefix Code="f" CODE="F">
+      <name>femto</name>
+      <printSymbol>f</printSymbol>
+      <value value="1e-15">1 &#215; 10<sup>-15</sup>
+      </value>
+   </prefix>
+   <prefix Code="a" CODE="A">
+      <name>atto</name>
+      <printSymbol>a</printSymbol>
+      <value value="1e-18">1 &#215; 10<sup>-18</sup>
+      </value>
+   </prefix>
+   <prefix Code="z" CODE="ZO">
+      <name>zepto</name>
+      <printSymbol>z</printSymbol>
+      <value value="1e-21">1 &#215; 10<sup>-21</sup>
+      </value>
+   </prefix>
+   <prefix Code="y" CODE="YO">
+      <name>yocto</name>
+      <printSymbol>y</printSymbol>
+      <value value="1e-24">1 &#215; 10<sup>-24</sup>
+      </value>
+   </prefix>
+   <base-unit Code="m" CODE="M" dim="L">
+      <name>meter</name>
+      <printSymbol>m</printSymbol>
+      <property>length</property>
+   </base-unit>
+   <base-unit Code="s" CODE="S" dim="T">
+      <name>second</name>
+      <printSymbol>s</printSymbol>
+      <property>time</property>
+   </base-unit>
+   <base-unit Code="g" CODE="G" dim="M">
+      <name>gram</name>
+      <printSymbol>g</printSymbol>
+      <property>mass</property>
+   </base-unit>
+   <base-unit Code="rad" CODE="RAD" dim="A">
+      <name>radian</name>
+      <printSymbol>rad</printSymbol>
+      <property>plane angle</property>
+   </base-unit>
+   <base-unit Code="K" CODE="K" dim="C">
+      <name>kelvin</name>
+      <printSymbol>K</printSymbol>
+      <property>temperature</property>
+   </base-unit>
+   <base-unit Code="C" CODE="C" dim="Q">
+      <name>coulomb</name>
+      <printSymbol>C</printSymbol>
+      <property>electric charge</property>
+   </base-unit>
+   <base-unit Code="cd" CODE="CD" dim="F">
+      <name>candela</name>
+      <printSymbol>cd</printSymbol>
+      <property>luminous intensity</property>
+   </base-unit>
+   <unit Code="10*" CODE="10*" isMetric="no" class="dimless">
+      <name>the number ten for arbitrary powers</name>
+      <printSymbol>10</printSymbol>
+      <property>number</property>
+      <value Unit="1" UNIT="1" value="10">10</value>
+   </unit>
+   <unit Code="10^" CODE="10^" isMetric="no" class="dimless">
+      <name>the number ten for arbitrary powers</name>
+      <printSymbol>10</printSymbol>
+      <property>number</property>
+      <value Unit="1" UNIT="1" value="10">10</value>
+   </unit>
+   <unit Code="[pi]" CODE="[PI]" isMetric="no" class="dimless">
+      <name>the number pi</name>
+      <printSymbol>&#960;</printSymbol>
+      <property>number</property>
+      <value Unit="1" UNIT="1"
+             value="3.1415926535897932384626433832795028841971693993751058209749445923">&#960;</value>
+   </unit>
+   <unit Code="%" CODE="%" isMetric="no" class="dimless">
+      <name>percent</name>
+      <printSymbol>%</printSymbol>
+      <property>fraction</property>
+      <value Unit="10*-2" UNIT="10*-2" value="1">1</value>
+   </unit>
+   <unit Code="[ppth]" CODE="[PPTH]" isMetric="no" class="dimless">
+      <name>parts per thousand</name>
+      <printSymbol>ppth</printSymbol>
+      <property>fraction</property>
+      <value Unit="10*-3" UNIT="10*-3" value="1">1</value>
+   </unit>
+   <unit Code="[ppm]" CODE="[PPM]" isMetric="no" class="dimless">
+      <name>parts per million</name>
+      <printSymbol>ppm</printSymbol>
+      <property>fraction</property>
+      <value Unit="10*-6" UNIT="10*-6" value="1">1</value>
+   </unit>
+   <unit Code="[ppb]" CODE="[PPB]" isMetric="no" class="dimless">
+      <name>parts per billion</name>
+      <printSymbol>ppb</printSymbol>
+      <property>fraction</property>
+      <value Unit="10*-9" UNIT="10*-9" value="1">1</value>
+   </unit>
+   <unit Code="[pptr]" CODE="[PPTR]" isMetric="no" class="dimless">
+      <name>parts per trillion</name>
+      <printSymbol>pptr</printSymbol>
+      <property>fraction</property>
+      <value Unit="10*-12" UNIT="10*-12" value="1">1</value>
+   </unit>
+   <unit Code="mol" CODE="MOL" isMetric="yes" class="si">
+      <name>mole</name>
+      <printSymbol>mol</printSymbol>
+      <property>amount of substance</property>
+      <value Unit="10*23" UNIT="10*23" value="6.0221367">6.0221367</value>
+   </unit>
+   <unit Code="sr" CODE="SR" isMetric="yes" class="si">
+      <name>steradian</name>
+      <printSymbol>sr</printSymbol>
+      <property>solid angle</property>
+      <value Unit="rad2" UNIT="RAD2" value="1">1</value>
+   </unit>
+   <unit Code="Hz" CODE="HZ" isMetric="yes" class="si">
+      <name>hertz</name>
+      <printSymbol>Hz</printSymbol>
+      <property>frequency</property>
+      <value Unit="s-1" UNIT="S-1" value="1">1</value>
+   </unit>
+   <unit Code="N" CODE="N" isMetric="yes" class="si">
+      <name>newton</name>
+      <printSymbol>N</printSymbol>
+      <property>force</property>
+      <value Unit="kg.m/s2" UNIT="KG.M/S2" value="1">1</value>
+   </unit>
+   <unit Code="Pa" CODE="PAL" isMetric="yes" class="si">
+      <name>pascal</name>
+      <printSymbol>Pa</printSymbol>
+      <property>pressure</property>
+      <value Unit="N/m2" UNIT="N/M2" value="1">1</value>
+   </unit>
+   <unit Code="J" CODE="J" isMetric="yes" class="si">
+      <name>joule</name>
+      <printSymbol>J</printSymbol>
+      <property>energy</property>
+      <value Unit="N.m" UNIT="N.M" value="1">1</value>
+   </unit>
+   <unit Code="W" CODE="W" isMetric="yes" class="si">
+      <name>watt</name>
+      <printSymbol>W</printSymbol>
+      <property>power</property>
+      <value Unit="J/s" UNIT="J/S" value="1">1</value>
+   </unit>
+   <unit Code="A" CODE="A" isMetric="yes" class="si">
+      <name>amp&#232;re</name>
+      <printSymbol>A</printSymbol>
+      <property>electric current</property>
+      <value Unit="C/s" UNIT="C/S" value="1">1</value>
+   </unit>
+   <unit Code="V" CODE="V" isMetric="yes" class="si">
+      <name>volt</name>
+      <printSymbol>V</printSymbol>
+      <property>electric potential</property>
+      <value Unit="J/C" UNIT="J/C" value="1">1</value>
+   </unit>
+   <unit Code="F" CODE="F" isMetric="yes" class="si">
+      <name>farad</name>
+      <printSymbol>F</printSymbol>
+      <property>electric capacitance</property>
+      <value Unit="C/V" UNIT="C/V" value="1">1</value>
+   </unit>
+   <unit Code="Ohm" CODE="OHM" isMetric="yes" class="si">
+      <name>ohm</name>
+      <printSymbol>&#937;</printSymbol>
+      <property>electric resistance</property>
+      <value Unit="V/A" UNIT="V/A" value="1">1</value>
+   </unit>
+   <unit Code="S" CODE="SIE" isMetric="yes" class="si">
+      <name>siemens</name>
+      <printSymbol>S</printSymbol>
+      <property>electric conductance</property>
+      <value Unit="Ohm-1" UNIT="OHM-1" value="1">1</value>
+   </unit>
+   <unit Code="Wb" CODE="WB" isMetric="yes" class="si">
+      <name>weber</name>
+      <printSymbol>Wb</printSymbol>
+      <property>magnetic flux</property>
+      <value Unit="V.s" UNIT="V.S" value="1">1</value>
+   </unit>
+   <unit Code="Cel" CODE="CEL" isMetric="yes" isSpecial="yes" class="si">
+      <name>degree Celsius</name>
+      <printSymbol>&#176;C</printSymbol>
+      <property>temperature</property>
+      <value Unit="cel(1 K)" UNIT="CEL(1 K)">
+         <function name="Cel" value="1" Unit="K"/>
+      </value>
+   </unit>
+   <unit Code="T" CODE="T" isMetric="yes" class="si">
+      <name>tesla</name>
+      <printSymbol>T</printSymbol>
+      <property>magnetic flux density</property>
+      <value Unit="Wb/m2" UNIT="WB/M2" value="1">1</value>
+   </unit>
+   <unit Code="H" CODE="H" isMetric="yes" class="si">
+      <name>henry</name>
+      <printSymbol>H</printSymbol>
+      <property>inductance</property>
+      <value Unit="Wb/A" UNIT="WB/A" value="1">1</value>
+   </unit>
+   <unit Code="lm" CODE="LM" isMetric="yes" class="si">
+      <name>lumen</name>
+      <printSymbol>lm</printSymbol>
+      <property>luminous flux</property>
+      <value Unit="cd.sr" UNIT="CD.SR" value="1">1</value>
+   </unit>
+   <unit Code="lx" CODE="LX" isMetric="yes" class="si">
+      <name>lux</name>
+      <printSymbol>lx</printSymbol>
+      <property>illuminance</property>
+      <value Unit="lm/m2" UNIT="LM/M2" value="1">1</value>
+   </unit>
+   <unit Code="Bq" CODE="BQ" isMetric="yes" class="si">
+      <name>becquerel</name>
+      <printSymbol>Bq</printSymbol>
+      <property>radioactivity</property>
+      <value Unit="s-1" UNIT="S-1" value="1">1</value>
+   </unit>
+   <unit Code="Gy" CODE="GY" isMetric="yes" class="si">
+      <name>gray</name>
+      <printSymbol>Gy</printSymbol>
+      <property>energy dose</property>
+      <value Unit="J/kg" UNIT="J/KG" value="1">1</value>
+   </unit>
+   <unit Code="Sv" CODE="SV" isMetric="yes" class="si">
+      <name>sievert</name>
+      <printSymbol>Sv</printSymbol>
+      <property>dose equivalent</property>
+      <value Unit="J/kg" UNIT="J/KG" value="1">1</value>
+   </unit>
+   <unit Code="gon" CODE="GON" isMetric="no" class="iso1000">
+      <name>gon</name>
+      <name>grade</name>
+      <printSymbol>&#9633;<sup>g</sup>
+      </printSymbol>
+      <property>plane angle</property>
+      <value Unit="deg" UNIT="DEG" value="0.9">0.9</value>
+   </unit>
+   <unit Code="deg" CODE="DEG" isMetric="no" class="iso1000">
+      <name>degree</name>
+      <printSymbol>&#176;</printSymbol>
+      <property>plane angle</property>
+      <value Unit="[pi].rad/360" UNIT="[PI].RAD/360" value="2">2</value>
+   </unit>
+   <unit Code="'" CODE="'" isMetric="no" class="iso1000">
+      <name>minute</name>
+      <printSymbol>'</printSymbol>
+      <property>plane angle</property>
+      <value Unit="deg/60" UNIT="DEG/60" value="1">1</value>
+   </unit>
+   <unit Code="''" CODE="''" isMetric="no" class="iso1000">
+      <name>second</name>
+      <printSymbol>''</printSymbol>
+      <property>plane angle</property>
+      <value Unit="'/60" UNIT="'/60" value="1">1</value>
+   </unit>
+   <unit Code="l" CODE="L" isMetric="yes" class="iso1000">
+      <name>liter</name>
+      <printSymbol>l</printSymbol>
+      <property>volume</property>
+      <value Unit="dm3" UNIT="DM3" value="1">1</value>
+   </unit>
+   <unit Code="L" isMetric="yes" class="iso1000">
+      <name>liter</name>
+      <printSymbol>L</printSymbol>
+      <property>volume</property>
+      <value Unit="l" value="1">1</value>
+   </unit>
+   <unit Code="ar" CODE="AR" isMetric="yes" class="iso1000">
+      <name>are</name>
+      <printSymbol>a</printSymbol>
+      <property>area</property>
+      <value Unit="m2" UNIT="M2" value="100">100</value>
+   </unit>
+   <unit Code="min" CODE="MIN" isMetric="no" class="iso1000">
+      <name>minute</name>
+      <printSymbol>min</printSymbol>
+      <property>time</property>
+      <value Unit="s" UNIT="S" value="60">60</value>
+   </unit>
+   <unit Code="h" CODE="HR" isMetric="no" class="iso1000">
+      <name>hour</name>
+      <printSymbol>h</printSymbol>
+      <property>time</property>
+      <value Unit="min" UNIT="MIN" value="60">60</value>
+   </unit>
+   <unit Code="d" CODE="D" isMetric="no" class="iso1000">
+      <name>day</name>
+      <printSymbol>d</printSymbol>
+      <property>time</property>
+      <value Unit="h" UNIT="HR" value="24">24</value>
+   </unit>
+   <unit Code="a_t" CODE="ANN_T" isMetric="no" class="iso1000">
+      <name>tropical year</name>
+      <printSymbol>a<sub>t</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="d" UNIT="D" value="365.24219">365.24219</value>
+   </unit>
+   <unit Code="a_j" CODE="ANN_J" isMetric="no" class="iso1000">
+      <name>mean Julian year</name>
+      <printSymbol>a<sub>j</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="d" UNIT="D" value="365.25">365.25</value>
+   </unit>
+   <unit Code="a_g" CODE="ANN_G" isMetric="no" class="iso1000">
+      <name>mean Gregorian year</name>
+      <printSymbol>a<sub>g</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="d" UNIT="D" value="365.2425">365.2425</value>
+   </unit>
+   <unit Code="a" CODE="ANN" isMetric="no" class="iso1000">
+      <name>year</name>
+      <printSymbol>a</printSymbol>
+      <property>time</property>
+      <value Unit="a_j" UNIT="ANN_J" value="1">1</value>
+   </unit>
+   <unit Code="wk" CODE="WK" isMetric="no" class="iso1000">
+      <name>week</name>
+      <printSymbol>wk</printSymbol>
+      <property>time</property>
+      <value Unit="d" UNIT="D" value="7">7</value>
+   </unit>
+   <unit Code="mo_s" CODE="MO_S" isMetric="no" class="iso1000">
+      <name>synodal month</name>
+      <printSymbol>mo<sub>s</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="d" UNIT="D" value="29.53059">29.53059</value>
+   </unit>
+   <unit Code="mo_j" CODE="MO_J" isMetric="no" class="iso1000">
+      <name>mean Julian month</name>
+      <printSymbol>mo<sub>j</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="a_j/12" UNIT="ANN_J/12" value="1">1</value>
+   </unit>
+   <unit Code="mo_g" CODE="MO_G" isMetric="no" class="iso1000">
+      <name>mean Gregorian month</name>
+      <printSymbol>mo<sub>g</sub>
+      </printSymbol>
+      <property>time</property>
+      <value Unit="a_g/12" UNIT="ANN_G/12" value="1">1</value>
+   </unit>
+   <unit Code="mo" CODE="MO" isMetric="no" class="iso1000">
+      <name>month</name>
+      <printSymbol>mo</printSymbol>
+      <property>time</property>
+      <value Unit="mo_j" UNIT="MO_J" value="1">1</value>
+   </unit>
+   <unit Code="t" CODE="TNE" isMetric="yes" class="iso1000">
+      <name>tonne</name>
+      <printSymbol>t</printSymbol>
+      <property>mass</property>
+      <value Unit="kg" UNIT="KG" value="1e3">1 &#215; 10<sup>3</sup>
+      </value>
+   </unit>
+   <unit Code="bar" CODE="BAR" isMetric="yes" class="iso1000">
+      <name>bar</name>
+      <printSymbol>bar</printSymbol>
+      <property>pressure</property>
+      <value Unit="Pa" UNIT="PAL" value="1e5">1 &#215; 10<sup>5</sup>
+      </value>
+   </unit>
+   <unit Code="u" CODE="AMU" isMetric="yes" class="iso1000">
+      <name>unified atomic mass unit</name>
+      <printSymbol>u</printSymbol>
+      <property>mass</property>
+      <value Unit="g" UNIT="G" value="1.6605402e-24">1.6605402 &#215; 10<sup>-24</sup>
+      </value>
+   </unit>
+   <unit Code="eV" CODE="EV" isMetric="yes" class="iso1000">
+      <name>electronvolt</name>
+      <printSymbol>eV</printSymbol>
+      <property>energy</property>
+      <value Unit="[e].V" UNIT="[E].V" value="1">1</value>
+   </unit>
+   <unit Code="AU" CODE="ASU" isMetric="no" class="iso1000">
+      <name>astronomic unit</name>
+      <printSymbol>AU</printSymbol>
+      <property>length</property>
+      <value Unit="Mm" UNIT="MAM" value="149597.870691">149597.870691</value>
+   </unit>
+   <unit Code="pc" CODE="PRS" isMetric="yes" class="iso1000">
+      <name>parsec</name>
+      <printSymbol>pc</printSymbol>
+      <property>length</property>
+      <value Unit="m" UNIT="M" value="3.085678e16">3.085678 &#215; 10<sup>16</sup>
+      </value>
+   </unit>
+   <unit Code="[c]" CODE="[C]" isMetric="yes" class="const">
+      <name>velocity of light</name>
+      <printSymbol>
+         <i>c</i>
+      </printSymbol>
+      <property>velocity</property>
+      <value Unit="m/s" UNIT="M/S" value="299792458">299792458</value>
+   </unit>
+   <unit Code="[h]" CODE="[H]" isMetric="yes" class="const">
+      <name>Planck constant</name>
+      <printSymbol>
+         <i>h</i>
+      </printSymbol>
+      <property>action</property>
+      <value Unit="J.s" UNIT="J.S" value="6.6260755e-34">6.6260755 &#215; 10<sup>-34</sup>
+      </value>
+   </unit>
+   <unit Code="[k]" CODE="[K]" isMetric="yes" class="const">
+      <name>Boltzmann constant</name>
+      <printSymbol>
+         <i>k</i>
+      </printSymbol>
+      <property>(unclassified)</property>
+      <value Unit="J/K" UNIT="J/K" value="1.380658e-23">1.380658 &#215; 10<sup>-23</sup>
+      </value>
+   </unit>
+   <unit Code="[eps_0]" CODE="[EPS_0]" isMetric="yes" class="const">
+      <name>permittivity of vacuum</name>
+      <printSymbol>
+         <i>&#949;<sub>
+               <r>0</r>
+            </sub>
+         </i>
+      </printSymbol>
+      <property>electric permittivity</property>
+      <value Unit="F/m" UNIT="F/M" value="8.854187817e-12">8.854187817 &#215; 10<sup>-12</sup>
+      </value>
+   </unit>
+   <unit Code="[mu_0]" CODE="[MU_0]" isMetric="yes" class="const">
+      <name>permeability of vacuum</name>
+      <printSymbol>
+         <i>&#956;<sub>
+               <r>0</r>
+            </sub>
+         </i>
+      </printSymbol>
+      <property>magnetic permeability</property>
+      <value Unit="4.[pi].10*-7.N/A2" UNIT="4.[PI].10*-7.N/A2" value="1">1</value>
+   </unit>
+   <unit Code="[e]" CODE="[E]" isMetric="yes" class="const">
+      <name>elementary charge</name>
+      <printSymbol>
+         <i>e</i>
+      </printSymbol>
+      <property>electric charge</property>
+      <value Unit="C" UNIT="C" value="1.60217733e-19">1.60217733 &#215; 10<sup>-19</sup>
+      </value>
+   </unit>
+   <unit Code="[m_e]" CODE="[M_E]" isMetric="yes" class="const">
+      <name>electron mass</name>
+      <printSymbol>
+         <i>m<sub>
+               <r>e</r>
+            </sub>
+         </i>
+      </printSymbol>
+      <property>mass</property>
+      <value Unit="g" UNIT="g" value="9.1093897e-28">9.1093897 &#215; 10<sup>-28</sup>
+      </value>
+   </unit>
+   <unit Code="[m_p]" CODE="[M_P]" isMetric="yes" class="const">
+      <name>proton mass</name>
+      <printSymbol>
+         <i>m<sub>
+               <r>p</r>
+            </sub>
+         </i>
+      </printSymbol>
+      <property>mass</property>
+      <value Unit="g" UNIT="g" value="1.6726231e-24">1.6726231 &#215; 10<sup>-24</sup>
+      </value>
+   </unit>
+   <unit Code="[G]" CODE="[GC]" isMetric="yes" class="const">
+      <name>Newtonian constant of gravitation</name>
+      <printSymbol>
+         <i>G</i>
+      </printSymbol>
+      <property>(unclassified)</property>
+      <value Unit="m3.kg-1.s-2" UNIT="M3.KG-1.S-2" value="6.67259e-11">6.67259 &#215; 10<sup>-11</sup>
+      </value>
+   </unit>
+   <unit Code="[g]" CODE="[G]" isMetric="yes" class="const">
+      <name>standard acceleration of free fall</name>
+      <printSymbol>
+         <i>g<sub>n</sub>
+         </i>
+      </printSymbol>
+      <property>acceleration</property>
+      <value Unit="m/s2" UNIT="M/S2" value="980665e-5">9.80665</value>
+   </unit>
+   <unit Code="atm" CODE="ATM" isMetric="no" class="const">
+      <name>standard atmosphere</name>
+      <printSymbol>atm</printSymbol>
+      <property>pressure</property>
+      <value Unit="Pa" UNIT="PAL" value="101325">101325</value>
+   </unit>
+   <unit Code="[ly]" CODE="[LY]" isMetric="yes" class="const">
+      <name>light-year</name>
+      <printSymbol>l.y.</printSymbol>
+      <property>length</property>
+      <value Unit="[c].a_j" UNIT="[C].ANN_J" value="1">1</value>
+   </unit>
+   <unit Code="gf" CODE="GF" isMetric="yes" class="const">
+      <name>gram-force</name>
+      <printSymbol>gf</printSymbol>
+      <property>force</property>
+      <value Unit="g.[g]" UNIT="G.[G]" value="1">1</value>
+   </unit>
+   <unit Code="[lbf_av]" CODE="[LBF_AV]" isMetric="no" class="const">
+      <name>pound force</name>
+      <printSymbol>lbf</printSymbol>
+      <property>force</property>
+      <value Unit="[lb_av].[g]" UNIT="[LB_AV].[G]" value="1">1</value>
+   </unit>
+   <unit Code="Ky" CODE="KY" isMetric="yes" class="cgs">
+      <name>Kayser</name>
+      <printSymbol>K</printSymbol>
+      <property>lineic number</property>
+      <value Unit="cm-1" UNIT="CM-1" value="1">1</value>
+   </unit>
+   <unit Code="Gal" CODE="GL" isMetric="yes" class="cgs">
+      <name>Gal</name>
+      <printSymbol>Gal</printSymbol>
+      <property>acceleration</property>
+      <value Unit="cm/s2" UNIT="CM/S2" value="1">1</value>
+   </unit>
+   <unit Code="dyn" CODE="DYN" isMetric="yes" class="cgs">
+      <name>dyne</name>
+      <printSymbol>dyn</printSymbol>
+      <property>force</property>
+      <value Unit="g.cm/s2" UNIT="G.CM/S2" value="1">1</value>
+   </unit>
+   <unit Code="erg" CODE="ERG" isMetric="yes" class="cgs">
+      <name>erg</name>
+      <printSymbol>erg</printSymbol>
+      <property>energy</property>
+      <value Unit="dyn.cm" UNIT="DYN.CM" value="1">1</value>
+   </unit>
+   <unit Code="P" CODE="P" isMetric="yes" class="cgs">
+      <name>Poise</name>
+      <printSymbol>P</printSymbol>
+      <property>dynamic viscosity</property>
+      <value Unit="dyn.s/cm2" UNIT="DYN.S/CM2" value="1">1</value>
+   </unit>
+   <unit Code="Bi" CODE="BI" isMetric="yes" class="cgs">
+      <name>Biot</name>
+      <printSymbol>Bi</printSymbol>
+      <property>electric current</property>
+      <value Unit="A" UNIT="A" value="10">10</value>
+   </unit>
+   <unit Code="St" CODE="ST" isMetric="yes" class="cgs">
+      <name>Stokes</name>
+      <printSymbol>St</printSymbol>
+      <property>kinematic viscosity</property>
+      <value Unit="cm2/s" UNIT="CM2/S" value="1">1</value>
+   </unit>
+   <unit Code="Mx" CODE="MX" isMetric="yes" class="cgs">
+      <name>Maxwell</name>
+      <printSymbol>Mx</printSymbol>
+      <property>flux of magnetic induction</property>
+      <value Unit="Wb" UNIT="WB" value="1e-8">1 &#215; 10<sup>-8</sup>
+      </value>
+   </unit>
+   <unit Code="G" CODE="GS" isMetric="yes" class="cgs">
+      <name>Gauss</name>
+      <printSymbol>Gs</printSymbol>
+      <property>magnetic flux density</property>
+      <value Unit="T" UNIT="T" value="1e-4">1 &#215; 10<sup>-4</sup>
+      </value>
+   </unit>
+   <unit Code="Oe" CODE="OE" isMetric="yes" class="cgs">
+      <name>Oersted</name>
+      <printSymbol>Oe</printSymbol>
+      <property>magnetic field intensity</property>
+      <value Unit="/[pi].A/m" UNIT="/[PI].A/M" value="250">250</value>
+   </unit>
+   <unit Code="Gb" CODE="GB" isMetric="yes" class="cgs">
+      <name>Gilbert</name>
+      <printSymbol>Gb</printSymbol>
+      <property>magnetic tension</property>
+      <value Unit="Oe.cm" UNIT="OE.CM" value="1">1</value>
+   </unit>
+   <unit Code="sb" CODE="SB" isMetric="yes" class="cgs">
+      <name>stilb</name>
+      <printSymbol>sb</printSymbol>
+      <property>lum. intensity density</property>
+      <value Unit="cd/cm2" UNIT="CD/CM2" value="1">1</value>
+   </unit>
+   <unit Code="Lmb" CODE="LMB" isMetric="yes" class="cgs">
+      <name>Lambert</name>
+      <printSymbol>L</printSymbol>
+      <property>brightness</property>
+      <value Unit="cd/cm2/[pi]" UNIT="CD/CM2/[PI]" value="1">1</value>
+   </unit>
+   <unit Code="ph" CODE="PHT" isMetric="yes" class="cgs">
+      <name>phot</name>
+      <printSymbol>ph</printSymbol>
+      <property>illuminance</property>
+      <value Unit="lx" UNIT="LX" value="1e-4">1 &#215; 10<sup>-4</sup>
+      </value>
+   </unit>
+   <unit Code="Ci" CODE="CI" isMetric="yes" class="cgs">
+      <name>Curie</name>
+      <printSymbol>Ci</printSymbol>
+      <property>radioactivity</property>
+      <value Unit="Bq" UNIT="BQ" value="37e9">3.7 &#215; 10<sup>10</sup>
+      </value>
+   </unit>
+   <unit Code="R" CODE="ROE" isMetric="yes" class="cgs">
+      <name>Roentgen</name>
+      <printSymbol>R</printSymbol>
+      <property>ion dose</property>
+      <value Unit="C/kg" UNIT="C/KG" value="2.58e-4">2.58 &#215; 10<sup>-4</sup>
+      </value>
+   </unit>
+   <unit Code="RAD" CODE="[RAD]" isMetric="yes" class="cgs">
+      <name>radiation absorbed dose</name>
+      <printSymbol>RAD</printSymbol>
+      <property>energy dose</property>
+      <value Unit="erg/g" UNIT="ERG/G" value="100">100</value>
+   </unit>
+   <unit Code="REM" CODE="[REM]" isMetric="yes" class="cgs">
+      <name>radiation equivalent man</name>
+      <printSymbol>REM</printSymbol>
+      <property>dose equivalent</property>
+      <value Unit="RAD" UNIT="[RAD]" value="1">1</value>
+   </unit>
+   <unit Code="[in_i]" CODE="[IN_I]" isMetric="no" class="intcust">
+      <name>inch</name>
+      <printSymbol>in</printSymbol>
+      <property>length</property>
+      <value Unit="cm" UNIT="CM" value="254e-2">2.54</value>
+   </unit>
+   <unit Code="[ft_i]" CODE="[FT_I]" isMetric="no" class="intcust">
+      <name>foot</name>
+      <printSymbol>ft</printSymbol>
+      <property>length</property>
+      <value Unit="[in_i]" UNIT="[IN_I]" value="12">12</value>
+   </unit>
+   <unit Code="[yd_i]" CODE="[YD_I]" isMetric="no" class="intcust">
+      <name>yard</name>
+      <printSymbol>yd</printSymbol>
+      <property>length</property>
+      <value Unit="[ft_i]" UNIT="[FT_I]" value="3">3</value>
+   </unit>
+   <unit Code="[mi_i]" CODE="[MI_I]" isMetric="no" class="intcust">
+      <name>mile</name>
+      <printSymbol>mi</printSymbol>
+      <property>length</property>
+      <value Unit="[ft_i]" UNIT="[FT_I]" value="5280">5280</value>
+   </unit>
+   <unit Code="[fth_i]" CODE="[FTH_I]" isMetric="no" class="intcust">
+      <name>fathom</name>
+      <printSymbol>fth</printSymbol>
+      <property>depth of water</property>
+      <value Unit="[ft_i]" UNIT="[FT_I]" value="6">6</value>
+   </unit>
+   <unit Code="[nmi_i]" CODE="[NMI_I]" isMetric="no" class="intcust">
+      <name>nautical mile</name>
+      <printSymbol>n.mi</printSymbol>
+      <property>length</property>
+      <value Unit="m" UNIT="M" value="1852">1852</value>
+   </unit>
+   <unit Code="[kn_i]" CODE="[KN_I]" isMetric="no" class="intcust">
+      <name>knot</name>
+      <printSymbol>knot</printSymbol>
+      <property>velocity</property>
+      <value Unit="[nmi_i]/h" UNIT="[NMI_I]/H" value="1">1</value>
+   </unit>
+   <unit Code="[sin_i]" CODE="[SIN_I]" isMetric="no" class="intcust">
+      <name>square inch</name>
+      <property>area</property>
+      <value Unit="[in_i]2" UNIT="[IN_I]2" value="1">1</value>
+   </unit>
+   <unit Code="[sft_i]" CODE="[SFT_I]" isMetric="no" class="intcust">
+      <name>square foot</name>
+      <property>area</property>
+      <value Unit="[ft_i]2" UNIT="[FT_I]2" value="1">1</value>
+   </unit>
+   <unit Code="[syd_i]" CODE="[SYD_I]" isMetric="no" class="intcust">
+      <name>square yard</name>
+      <property>area</property>
+      <value Unit="[yd_i]2" UNIT="[YD_I]2" value="1">1</value>
+   </unit>
+   <unit Code="[cin_i]" CODE="[CIN_I]" isMetric="no" class="intcust">
+      <name>cubic inch</name>
+      <property>volume</property>
+      <value Unit="[in_i]3" UNIT="[IN_I]3" value="1">1</value>
+   </unit>
+   <unit Code="[cft_i]" CODE="[CFT_I]" isMetric="no" class="intcust">
+      <name>cubic foot</name>
+      <property>volume</property>
+      <value Unit="[ft_i]3" UNIT="[FT_I]3" value="1">1</value>
+   </unit>
+   <unit Code="[cyd_i]" CODE="[CYD_I]" isMetric="no" class="intcust">
+      <name>cubic yard</name>
+      <printSymbol>cu.yd</printSymbol>
+      <property>volume</property>
+      <value Unit="[yd_i]3" UNIT="[YD_I]3" value="1">1</value>
+   </unit>
+   <unit Code="[bf_i]" CODE="[BF_I]" isMetric="no" class="intcust">
+      <name>board foot</name>
+      <property>volume</property>
+      <value Unit="[in_i]3" UNIT="[IN_I]3" value="144">144</value>
+   </unit>
+   <unit Code="[cr_i]" CODE="[CR_I]" isMetric="no" class="intcust">
+      <name>cord</name>
+      <property>volume</property>
+      <value Unit="[ft_i]3" UNIT="[FT_I]3" value="128">128</value>
+   </unit>
+   <unit Code="[mil_i]" CODE="[MIL_I]" isMetric="no" class="intcust">
+      <name>mil</name>
+      <printSymbol>mil</printSymbol>
+      <property>length</property>
+      <value Unit="[in_i]" UNIT="[IN_I]" value="1e-3">1 &#215; 10<sup>-3</sup>
+      </value>
+   </unit>
+   <unit Code="[cml_i]" CODE="[CML_I]" isMetric="no" class="intcust">
+      <name>circular mil</name>
+      <printSymbol>circ.mil</printSymbol>
+      <property>area</property>
+      <value Unit="[pi]/4.[mil_i]2" UNIT="[PI]/4.[MIL_I]2" value="1">1</value>
+   </unit>
+   <unit Code="[hd_i]" CODE="[HD_I]" isMetric="no" class="intcust">
+      <name>hand</name>
+      <printSymbol>hd</printSymbol>
+      <property>height of horses</property>
+      <value Unit="[in_i]" UNIT="[IN_I]" value="4">4</value>
+   </unit>
+   <unit Code="[ft_us]" CODE="[FT_US]" isMetric="no" class="us-lengths">
+      <name>foot</name>
+      <printSymbol>ft<sub>us</sub>
+      </printSymbol>
+      <property>length</property>
+      <value Unit="m/3937" UNIT="M/3937" value="1200">1200</value>
+   </unit>
+   <unit Code="[yd_us]" CODE="[YD_US]" isMetric="no" class="us-lengths">
+      <name>yard</name>
+      <property>length</property>
+      <value Unit="[ft_us]" UNIT="[FT_US]" value="3">3</value>
+   </unit>
+   <unit Code="[in_us]" CODE="[IN_US]" isMetric="no" class="us-lengths">
+      <name>inch</name>
+      <property>length</property>
+      <value Unit="[ft_us]/12" UNIT="[FT_US]/12" value="1">1</value>
+   </unit>
+   <unit Code="[rd_us]" CODE="[RD_US]" isMetric="no" class="us-lengths">
+      <name>rod</name>
+      <property>length</property>
+      <value Unit="[ft_us]" UNIT="[FT_US]" value="16.5">16.5</value>
+   </unit>
+   <unit Code="[ch_us]" CODE="[CH_US]" isMetric="no" class="us-lengths">
+      <name>Gunter's chain</name>
+      <name>Surveyor's chain</name>
+      <property>length</property>
+      <value Unit="[rd_us]" UNIT="[RD_US]" value="4">4</value>
+   </unit>
+   <unit Code="[lk_us]" CODE="[LK_US]" isMetric="no" class="us-lengths">
+      <name>link for Gunter's chain</name>
+      <property>length</property>
+      <value Unit="[ch_us]/100" UNIT="[CH_US]/100" value="1">1</value>
+   </unit>
+   <unit Code="[rch_us]" CODE="[RCH_US]" isMetric="no" class="us-lengths">
+      <name>Ramden's chain</name>
+      <name>Engineer's chain</name>
+      <property>length</property>
+      <value Unit="[ft_us]" UNIT="[FT_US]" value="100">100</value>
+   </unit>
+   <unit Code="[rlk_us]" CODE="[RLK_US]" isMetric="no" class="us-lengths">
+      <name>link for Ramden's chain</name>
+      <property>length</property>
+      <value Unit="[rch_us]/100" UNIT="[RCH_US]/100" value="1">1</value>
+   </unit>
+   <unit Code="[fth_us]" CODE="[FTH_US]" isMetric="no" class="us-lengths">
+      <name>fathom</name>
+      <property>length</property>
+      <value Unit="[ft_us]" UNIT="[FT_US]" value="6">6</value>
+   </unit>
+   <unit Code="[fur_us]" CODE="[FUR_US]" isMetric="no" class="us-lengths">
+      <name>furlong</name>
+      <property>length</property>
+      <value Unit="[rd_us]" UNIT="[RD_US]" value="40">40</value>
+   </unit>
+   <unit Code="[mi_us]" CODE="[MI_US]" isMetric="no" class="us-lengths">
+      <name>mile</name>
+      <property>length</property>
+      <value Unit="[fur_us]" UNIT="[FUR_US]" value="8">8</value>
+   </unit>
+   <unit Code="[acr_us]" CODE="[ACR_US]" isMetric="no" class="us-lengths">
+      <name>acre</name>
+      <property>area</property>
+      <value Unit="[rd_us]2" UNIT="[RD_US]2" value="160">160</value>
+   </unit>
+   <unit Code="[srd_us]" CODE="[SRD_US]" isMetric="no" class="us-lengths">
+      <name>square rod</name>
+      <property>area</property>
+      <value Unit="[rd_us]2" UNIT="[RD_US]2" value="1">1</value>
+   </unit>
+   <unit Code="[smi_us]" CODE="[SMI_US]" isMetric="no" class="us-lengths">
+      <name>square mile</name>
+      <property>area</property>
+      <value Unit="[mi_us]2" UNIT="[MI_US]2" value="1">1</value>
+   </unit>
+   <unit Code="[sct]" CODE="[SCT]" isMetric="no" class="us-lengths">
+      <name>section</name>
+      <property>area</property>
+      <value Unit="[mi_us]2" UNIT="[MI_US]2" value="1">1</value>
+   </unit>
+   <unit Code="[twp]" CODE="[TWP]" isMetric="no" class="us-lengths">
+      <name>township</name>
+      <property>area</property>
+      <value Unit="[sct]" UNIT="[SCT]" value="36">36</value>
+   </unit>
+   <unit Code="[mil_us]" CODE="[MIL_US]" isMetric="no" class="us-lengths">
+      <name>mil</name>
+      <property>length</property>
+      <value Unit="[in_us]" UNIT="[IN_US]" value="1e-3">1 &#215; 10<sup>-3</sup>
+      </value>
+   </unit>
+   <unit Code="[in_br]" CODE="[IN_BR]" isMetric="no" class="brit-length">
+      <name>inch</name>
+      <property>length</property>
+      <value Unit="cm" UNIT="CM" value="2.539998">2.539998</value>
+   </unit>
+   <unit Code="[ft_br]" CODE="[FT_BR]" isMetric="no" class="brit-length">
+      <name>foot</name>
+      <property>length</property>
+      <value Unit="[in_br]" UNIT="[IN_BR]" value="12">12</value>
+   </unit>
+   <unit Code="[rd_br]" CODE="[RD_BR]" isMetric="no" class="brit-length">
+      <name>rod</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="16.5">16.5</value>
+   </unit>
+   <unit Code="[ch_br]" CODE="[CH_BR]" isMetric="no" class="brit-length">
+      <name>Gunter's chain</name>
+      <property>length</property>
+      <value Unit="[rd_br]" UNIT="[RD_BR]" value="4">4</value>
+   </unit>
+   <unit Code="[lk_br]" CODE="[LK_BR]" isMetric="no" class="brit-length">
+      <name>link for Gunter's chain</name>
+      <property>length</property>
+      <value Unit="[ch_br]/100" UNIT="[CH_BR]/100" value="1">1</value>
+   </unit>
+   <unit Code="[fth_br]" CODE="[FTH_BR]" isMetric="no" class="brit-length">
+      <name>fathom</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="6">6</value>
+   </unit>
+   <unit Code="[pc_br]" CODE="[PC_BR]" isMetric="no" class="brit-length">
+      <name>pace</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="2.5">2.5</value>
+   </unit>
+   <unit Code="[yd_br]" CODE="[YD_BR]" isMetric="no" class="brit-length">
+      <name>yard</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="3">3</value>
+   </unit>
+   <unit Code="[mi_br]" CODE="[MI_BR]" isMetric="no" class="brit-length">
+      <name>mile</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="5280">5280</value>
+   </unit>
+   <unit Code="[nmi_br]" CODE="[NMI_BR]" isMetric="no" class="brit-length">
+      <name>nautical mile</name>
+      <property>length</property>
+      <value Unit="[ft_br]" UNIT="[FT_BR]" value="6080">6080</value>
+   </unit>
+   <unit Code="[kn_br]" CODE="[KN_BR]" isMetric="no" class="brit-length">
+      <name>knot</name>
+      <property>velocity</property>
+      <value Unit="[nmi_br]/h" UNIT="[NMI_BR]/H" value="1">1</value>
+   </unit>
+   <unit Code="[acr_br]" CODE="[ACR_BR]" isMetric="no" class="brit-length">
+      <name>acre</name>
+      <property>area</property>
+      <value Unit="[yd_br]2" UNIT="[YD_BR]2" value="4840">4840</value>
+   </unit>
+   <unit Code="[gal_us]" CODE="[GAL_US]" isMetric="no" class="us-volumes">
+      <name>Queen&#160;Anne's wine gallon</name>
+      <property>fluid volume</property>
+      <value Unit="[in_i]3" UNIT="[IN_I]3" value="231">231</value>
+   </unit>
+   <unit Code="[bbl_us]" CODE="[BBL_US]" isMetric="no" class="us-volumes">
+      <name>barrel</name>
+      <property>fluid volume</property>
+      <value Unit="[gal_us]" UNIT="[GAL_US]" value="42">42</value>
+   </unit>
+   <unit Code="[qt_us]" CODE="[QT_US]" isMetric="no" class="us-volumes">
+      <name>quart</name>
+      <property>fluid volume</property>
+      <value Unit="[gal_us]/4" UNIT="[GAL_US]/4" value="1">1</value>
+   </unit>
+   <unit Code="[pt_us]" CODE="[PT_US]" isMetric="no" class="us-volumes">
+      <name>pint</name>
+      <property>fluid volume</property>
+      <value Unit="[qt_us]/2" UNIT="[QT_US]/2" value="1">1</value>
+   </unit>
+   <unit Code="[gil_us]" CODE="[GIL_US]" isMetric="no" class="us-volumes">
+      <name>gill</name>
+      <property>fluid volume</property>
+      <value Unit="[pt_us]/4" UNIT="[PT_US]/4" value="1">1</value>
+   </unit>
+   <unit Code="[foz_us]" CODE="[FOZ_US]" isMetric="no" class="us-volumes">
+      <name>fluid ounce</name>
+      <printSymbol>oz fl</printSymbol>
+      <property>fluid volume</property>
+      <value Unit="[gil_us]/4" UNIT="[GIL_US]/4" value="1">1</value>
+   </unit>
+   <unit Code="[fdr_us]" CODE="[FDR_US]" isMetric="no" class="us-volumes">
+      <name>fluid dram</name>
+      <property>fluid volume</property>
+      <value Unit="[foz_us]/8" UNIT="[FOZ_US]/8" value="1">1</value>
+   </unit>
+   <unit Code="[min_us]" CODE="[MIN_US]" isMetric="no" class="us-volumes">
+      <name>minim</name>
+      <property>fluid volume</property>
+      <value Unit="[fdr_us]/60" UNIT="[FDR_US]/60" value="1">1</value>
+   </unit>
+   <unit Code="[crd_us]" CODE="[CRD_US]" isMetric="no" class="us-volumes">
+      <name>cord</name>
+      <property>fluid volume</property>
+      <value Unit="[ft_i]3" UNIT="[FT_I]3" value="128">128</value>
+   </unit>
+   <unit Code="[bu_us]" CODE="[BU_US]" isMetric="no" class="us-volumes">
+      <name>bushel</name>
+      <property>dry volume</property>
+      <value Unit="[in_i]3" UNIT="[IN_I]3" value="2150.42">2150.42</value>
+   </unit>
+   <unit Code="[gal_wi]" CODE="[GAL_WI]" isMetric="no" class="us-volumes">
+      <name>historical winchester gallon</name>
+      <property>dry volume</property>
+      <value Unit="[bu_us]/8" UNIT="[BU_US]/8" value="1">1</value>
+   </unit>
+   <unit Code="[pk_us]" CODE="[PK_US]" isMetric="no" class="us-volumes">
+      <name>peck</name>
+      <property>dry volume</property>
+      <value Unit="[bu_us]/4" UNIT="[BU_US]/4" value="1">1</value>
+   </unit>
+   <unit Code="[dqt_us]" CODE="[DQT_US]" isMetric="no" class="us-volumes">
+      <name>dry quart</name>
+      <property>dry volume</property>
+      <value Unit="[pk_us]/8" UNIT="[PK_US]/8" value="1">1</value>
+   </unit>
+   <unit Code="[dpt_us]" CODE="[DPT_US]" isMetric="no" class="us-volumes">
+      <name>dry pint</name>
+      <property>dry volume</property>
+      <value Unit="[dqt_us]/2" UNIT="[DQT_US]/2" value="1">1</value>
+   </unit>
+   <unit Code="[tbs_us]" CODE="[TBS_US]" isMetric="no" class="us-volumes">
+      <name>tablespoon</name>
+      <property>volume</property>
+      <value Unit="[foz_us]/2" UNIT="[FOZ_US]/2" value="1">1</value>
+   </unit>
+   <unit Code="[tsp_us]" CODE="[TSP_US]" isMetric="no" class="us-volumes">
+      <name>teaspoon</name>
+      <property>volume</property>
+      <value Unit="[tbs_us]/3" UNIT="[TBS_US]/3" value="1">1</value>
+   </unit>
+   <unit Code="[cup_us]" CODE="[CUP_US]" isMetric="no" class="us-volumes">
+      <name>cup</name>
+      <property>volume</property>
+      <value Unit="[tbs_us]" UNIT="[TBS_US]" value="16">16</value>
+   </unit>
+   <unit Code="[foz_m]" CODE="[FOZ_M]" isMetric="no" class="us-volumes">
+      <name>metric fluid ounce</name>
+      <printSymbol>oz fl</printSymbol>
+      <property>fluid volume</property>
+      <value Unit="mL" UNIT="ML" value="30">30</value>
+   </unit>
+   <unit Code="[cup_m]" CODE="[CUP_M]" isMetric="no" class="us-volumes">
+      <name>metric cup</name>
+      <property>volume</property>
+      <value Unit="mL" UNIT="ML" value="240">240</value>
+   </unit>
+   <unit Code="[tsp_m]" CODE="[TSP_M]" isMetric="no" class="us-volumes">
+      <name>metric teaspoon</name>
+      <property>volume</property>
+      <value Unit="mL" UNIT="mL" value="5">5</value>
+   </unit>
+   <unit Code="[tbs_m]" CODE="[TBS_M]" isMetric="no" class="us-volumes">
+      <name>metric tablespoon</name>
+      <property>volume</property>
+      <value Unit="mL" UNIT="mL" value="15">15</value>
+   </unit>
+   <unit Code="[gal_br]" CODE="[GAL_BR]" isMetric="no" class="brit-volumes">
+      <name>gallon</name>
+      <property>volume</property>
+      <value Unit="l" UNIT="L" value="4.54609">4.54609</value>
+   </unit>
+   <unit Code="[pk_br]" CODE="[PK_BR]" isMetric="no" class="brit-volumes">
+      <name>peck</name>
+      <property>volume</property>
+      <value Unit="[gal_br]" UNIT="[GAL_BR]" value="2">2</value>
+   </unit>
+   <unit Code="[bu_br]" CODE="[BU_BR]" isMetric="no" class="brit-volumes">
+      <name>bushel</name>
+      <property>volume</property>
+      <value Unit="[pk_br]" UNIT="[PK_BR]" value="4">4</value>
+   </unit>
+   <unit Code="[qt_br]" CODE="[QT_BR]" isMetric="no" class="brit-volumes">
+      <name>quart</name>
+      <property>volume</property>
+      <value Unit="[gal_br]/4" UNIT="[GAL_BR]/4" value="1">1</value>
+   </unit>
+   <unit Code="[pt_br]" CODE="[PT_BR]" isMetric="no" class="brit-volumes">
+      <name>pint</name>
+      <property>volume</property>
+      <value Unit="[qt_br]/2" UNIT="[QT_BR]/2" value="1">1</value>
+   </unit>
+   <unit Code="[gil_br]" CODE="[GIL_BR]" isMetric="no" class="brit-volumes">
+      <name>gill</name>
+      <property>volume</property>
+      <value Unit="[pt_br]/4" UNIT="[PT_BR]/4" value="1">1</value>
+   </unit>
+   <unit Code="[foz_br]" CODE="[FOZ_BR]" isMetric="no" class="brit-volumes">
+      <name>fluid ounce</name>
+      <property>volume</property>
+      <value Unit="[gil_br]/5" UNIT="[GIL_BR]/5" value="1">1</value>
+   </unit>
+   <unit Code="[fdr_br]" CODE="[FDR_BR]" isMetric="no" class="brit-volumes">
+      <name>fluid dram</name>
+      <property>volume</property>
+      <value Unit="[foz_br]/8" UNIT="[FOZ_BR]/8" value="1">1</value>
+   </unit>
+   <unit Code="[min_br]" CODE="[MIN_BR]" isMetric="no" class="brit-volumes">
+      <name>minim</name>
+      <property>volume</property>
+      <value Unit="[fdr_br]/60" UNIT="[FDR_BR]/60" value="1">1</value>
+   </unit>
+   <unit Code="[gr]" CODE="[GR]" isMetric="no" class="avoirdupois">
+      <name>grain</name>
+      <property>mass</property>
+      <value Unit="mg" UNIT="MG" value="64.79891">64.79891</value>
+   </unit>
+   <unit Code="[lb_av]" CODE="[LB_AV]" isMetric="no" class="avoirdupois">
+      <name>pound</name>
+      <printSymbol>lb</printSymbol>
+      <property>mass</property>
+      <value Unit="[gr]" UNIT="[GR]" value="7000">7000</value>
+   </unit>
+   <unit Code="[oz_av]" CODE="[OZ_AV]" isMetric="no" class="avoirdupois">
+      <name>ounce</name>
+      <printSymbol>oz</printSymbol>
+      <property>mass</property>
+      <value Unit="[lb_av]/16" UNIT="[LB_AV]/16" value="1">1</value>
+   </unit>
+   <unit Code="[dr_av]" CODE="[DR_AV]" isMetric="no" class="avoirdupois">
+      <name>dram</name>
+      <property>mass</property>
+      <value Unit="[oz_av]/16" UNIT="[OZ_AV]/16" value="1">1</value>
+   </unit>
+   <unit Code="[scwt_av]" CODE="[SCWT_AV]" isMetric="no" class="avoirdupois">
+      <name>short hundredweight</name>
+      <name>U.S. hundredweight</name>
+      <property>mass</property>
+      <value Unit="[lb_av]" UNIT="[LB_AV]" value="100">100</value>
+   </unit>
+   <unit Code="[lcwt_av]" CODE="[LCWT_AV]" isMetric="no" class="avoirdupois">
+      <name>long hunderdweight</name>
+      <name>British hundredweight</name>
+      <property>mass</property>
+      <value Unit="[lb_av]" UNIT="[LB_AV]" value="112">112</value>
+   </unit>
+   <unit Code="[ston_av]" CODE="[STON_AV]" isMetric="no" class="avoirdupois">
+      <name>short ton</name>
+      <name>U.S. ton</name>
+      <property>mass</property>
+      <value Unit="[scwt_av]" UNIT="[SCWT_AV]" value="20">20</value>
+   </unit>
+   <unit Code="[lton_av]" CODE="[LTON_AV]" isMetric="no" class="avoirdupois">
+      <name>long ton</name>
+      <name>British ton</name>
+      <property>mass</property>
+      <value Unit="[lcwt_av]" UNIT="[LCWT_AV]" value="20">20</value>
+   </unit>
+   <unit Code="[stone_av]" CODE="[STONE_AV]" isMetric="no" class="avoirdupois">
+      <name>stone</name>
+      <name>British stone</name>
+      <property>mass</property>
+      <value Unit="[lb_av]" UNIT="[LB_AV]" value="14">14</value>
+   </unit>
+   <unit Code="[pwt_tr]" CODE="[PWT_TR]" isMetric="no" class="troy">
+      <name>pennyweight</name>
+      <property>mass</property>
+      <value Unit="[gr]" UNIT="[GR]" value="24">24</value>
+   </unit>
+   <unit Code="[oz_tr]" CODE="[OZ_TR]" isMetric="no" class="troy">
+      <name>ounce</name>
+      <property>mass</property>
+      <value Unit="[pwt_tr]" UNIT="[PWT_TR]" value="20">20</value>
+   </unit>
+   <unit Code="[lb_tr]" CODE="[LB_TR]" isMetric="no" class="troy">
+      <name>pound</name>
+      <property>mass</property>
+      <value Unit="[oz_tr]" UNIT="[OZ_TR]" value="12">12</value>
+   </unit>
+   <unit Code="[sc_ap]" CODE="[SC_AP]" isMetric="no" class="apoth">
+      <name>scruple</name>
+      <property>mass</property>
+      <value Unit="[gr]" UNIT="[GR]" value="20">20</value>
+   </unit>
+   <unit Code="[dr_ap]" CODE="[DR_AP]" isMetric="no" class="apoth">
+      <name>dram</name>
+      <name>drachm</name>
+      <property>mass</property>
+      <value Unit="[sc_ap]" UNIT="[SC_AP]" value="3">3</value>
+   </unit>
+   <unit Code="[oz_ap]" CODE="[OZ_AP]" isMetric="no" class="apoth">
+      <name>ounce</name>
+      <property>mass</property>
+      <value Unit="[dr_ap]" UNIT="[DR_AP]" value="8">8</value>
+   </unit>
+   <unit Code="[lb_ap]" CODE="[LB_AP]" isMetric="no" class="apoth">
+      <name>pound</name>
+      <property>mass</property>
+      <value Unit="[oz_ap]" UNIT="[OZ_AP]" value="12">12</value>
+   </unit>
+   <unit Code="[oz_m]" CODE="[OZ_M]" isMetric="no" class="apoth">
+      <name>metric ounce</name>
+      <property>mass</property>
+      <value Unit="g" UNIT="g" value="28">28</value>
+   </unit>
+   <unit Code="[lne]" CODE="[LNE]" isMetric="no" class="typeset">
+      <name>line</name>
+      <property>length</property>
+      <value Unit="[in_i]/12" UNIT="[IN_I]/12" value="1">1</value>
+   </unit>
+   <unit Code="[pnt]" CODE="[PNT]" isMetric="no" class="typeset">
+      <name>point</name>
+      <property>length</property>
+      <value Unit="[lne]/6" UNIT="[LNE]/6" value="1">1</value>
+   </unit>
+   <unit Code="[pca]" CODE="[PCA]" isMetric="no" class="typeset">
+      <name>pica</name>
+      <property>length</property>
+      <value Unit="[pnt]" UNIT="[PNT]" value="12">12</value>
+   </unit>
+   <unit Code="[pnt_pr]" CODE="[PNT_PR]" isMetric="no" class="typeset">
+      <name>Printer's point</name>
+      <property>length</property>
+      <value Unit="[in_i]" UNIT="[IN_I]" value="0.013837">0.013837</value>
+   </unit>
+   <unit Code="[pca_pr]" CODE="[PCA_PR]" isMetric="no" class="typeset">
+      <name>Printer's pica</name>
+      <property>length</property>
+      <value Unit="[pnt_pr]" UNIT="[PNT_PR]" value="12">12</value>
+   </unit>
+   <unit Code="[pied]" CODE="[PIED]" isMetric="no" class="typeset">
+      <name>pied</name>
+      <name>French foot</name>
+      <property>length</property>
+      <value Unit="cm" UNIT="CM" value="32.48">32.48</value>
+   </unit>
+   <unit Code="[pouce]" CODE="[POUCE]" isMetric="no" class="typeset">
+      <name>pouce</name>
+      <name>French inch</name>
+      <property>length</property>
+      <value Unit="[pied]/12" UNIT="[PIED]/12" value="1">1</value>
+   </unit>
+   <unit Code="[ligne]" CODE="[LIGNE]" isMetric="no" class="typeset">
+      <name>ligne</name>
+      <name>French line</name>
+      <property>length</property>
+      <value Unit="[pouce]/12" UNIT="[POUCE]/12" value="1">1</value>
+   </unit>
+   <unit Code="[didot]" CODE="[DIDOT]" isMetric="no" class="typeset">
+      <name>didot</name>
+      <name>Didot's point</name>
+      <property>length</property>
+      <value Unit="[ligne]/6" UNIT="[LIGNE]/6" value="1">1</value>
+   </unit>
+   <unit Code="[cicero]" CODE="[CICERO]" isMetric="no" class="typeset">
+      <name>cicero</name>
+      <name>Didot's pica</name>
+      <property>length</property>
+      <value Unit="[didot]" UNIT="[DIDOT]" value="12">12</value>
+   </unit>
+   <unit Code="[degF]" CODE="[DEGF]" isMetric="no" isSpecial="yes" class="heat">
+      <name>degree Fahrenheit</name>
+      <printSymbol>&#176;F</printSymbol>
+      <property>temperature</property>
+      <value Unit="degf(5 K/9)" UNIT="DEGF(5 K/9)">
+         <function name="degF" value="5" Unit="K/9"/>
+      </value>
+   </unit>
+   <unit Code="[degR]" CODE="[degR]" isMetric="no" class="heat">
+      <name>degree Rankine</name>
+      <printSymbol>&#176;R</printSymbol>
+      <property>temperature</property>
+      <value value="5" Unit="K/9" UNIT="K/9">5</value>
+   </unit>
+   <unit Code="[degRe]" CODE="[degRe]" isMetric="no" isSpecial="yes" class="heat">
+      <name>degree R&#233;aumur</name>
+      <printSymbol>&#176;R&#233;</printSymbol>
+      <property>temperature</property>
+      <value Unit="degre(5 K/4)" UNIT="DEGRE(5 K/4)">
+         <function name="degRe" value="5" Unit="K/4"/>
+      </value>
+   </unit>
+   <unit Code="cal_[15]" CODE="CAL_[15]" isMetric="yes" class="heat">
+      <name>calorie at 15&#160;&#176;C</name>
+      <printSymbol>cal<sub>15&#176;C</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="J" UNIT="J" value="4.18580">4.18580</value>
+   </unit>
+   <unit Code="cal_[20]" CODE="CAL_[20]" isMetric="yes" class="heat">
+      <name>calorie at 20&#160;&#176;C</name>
+      <printSymbol>cal<sub>20&#176;C</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="J" UNIT="J" value="4.18190">4.18190</value>
+   </unit>
+   <unit Code="cal_m" CODE="CAL_M" isMetric="yes" class="heat">
+      <name>mean calorie</name>
+      <printSymbol>cal<sub>m</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="J" UNIT="J" value="4.19002">4.19002</value>
+   </unit>
+   <unit Code="cal_IT" CODE="CAL_IT" isMetric="yes" class="heat">
+      <name>international table calorie</name>
+      <printSymbol>cal<sub>IT</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="J" UNIT="J" value="4.1868">4.1868</value>
+   </unit>
+   <unit Code="cal_th" CODE="CAL_TH" isMetric="yes" class="heat">
+      <name>thermochemical calorie</name>
+      <printSymbol>cal<sub>th</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="J" UNIT="J" value="4.184">4.184</value>
+   </unit>
+   <unit Code="cal" CODE="CAL" isMetric="yes" class="heat">
+      <name>calorie</name>
+      <printSymbol>cal</printSymbol>
+      <property>energy</property>
+      <value Unit="cal_th" UNIT="CAL_TH" value="1">1</value>
+   </unit>
+   <unit Code="[Cal]" CODE="[CAL]" isMetric="no" class="heat">
+      <name>nutrition label Calories</name>
+      <printSymbol>Cal</printSymbol>
+      <property>energy</property>
+      <value Unit="kcal_th" UNIT="KCAL_TH" value="1">1</value>
+   </unit>
+   <unit Code="[Btu_39]" CODE="[BTU_39]" isMetric="no" class="heat">
+      <name>British thermal unit at 39&#160;&#176;F</name>
+      <printSymbol>Btu<sub>39&#176;F</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.05967">1.05967</value>
+   </unit>
+   <unit Code="[Btu_59]" CODE="[BTU_59]" isMetric="no" class="heat">
+      <name>British thermal unit at 59&#160;&#176;F</name>
+      <printSymbol>Btu<sub>59&#176;F</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.05480">1.05480</value>
+   </unit>
+   <unit Code="[Btu_60]" CODE="[BTU_60]" isMetric="no" class="heat">
+      <name>British thermal unit at 60&#160;&#176;F</name>
+      <printSymbol>Btu<sub>60&#176;F</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.05468">1.05468</value>
+   </unit>
+   <unit Code="[Btu_m]" CODE="[BTU_M]" isMetric="no" class="heat">
+      <name>mean British thermal unit</name>
+      <printSymbol>Btu<sub>m</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.05587">1.05587</value>
+   </unit>
+   <unit Code="[Btu_IT]" CODE="[BTU_IT]" isMetric="no" class="heat">
+      <name>international table British thermal unit</name>
+      <printSymbol>Btu<sub>IT</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.05505585262">1.05505585262</value>
+   </unit>
+   <unit Code="[Btu_th]" CODE="[BTU_TH]" isMetric="no" class="heat">
+      <name>thermochemical British thermal unit</name>
+      <printSymbol>Btu<sub>th</sub>
+      </printSymbol>
+      <property>energy</property>
+      <value Unit="kJ" UNIT="kJ" value="1.054350">1.054350</value>
+   </unit>
+   <unit Code="[Btu]" CODE="[BTU]" isMetric="no" class="heat">
+      <name>British thermal unit</name>
+      <printSymbol>btu</printSymbol>
+      <property>energy</property>
+      <value Unit="[Btu_th]" UNIT="[BTU_TH]" value="1">1</value>
+   </unit>
+   <unit Code="[HP]" CODE="[HP]" isMetric="no" class="heat">
+      <name>horsepower</name>
+      <property>power</property>
+      <value Unit="[ft_i].[lbf_av]/s" UNIT="[FT_I].[LBF_AV]/S" value="550">550</value>
+   </unit>
+   <unit Code="tex" CODE="TEX" isMetric="yes" class="heat">
+      <name>tex</name>
+      <printSymbol>tex</printSymbol>
+      <property>linear mass density (of textile thread)</property>
+      <value value="1" Unit="g/km" UNIT="G/KM">1</value>
+   </unit>
+   <unit Code="[den]" CODE="[DEN]" isMetric="no" class="heat">
+      <name>Denier</name>
+      <printSymbol>den</printSymbol>
+      <property>linear mass density (of textile thread)</property>
+      <value value="1" Unit="g/9/km" UNIT="G/9/KM">1</value>
+   </unit>
+   <unit Code="m[H2O]" CODE="M[H2O]" isMetric="yes" class="clinical">
+      <name>meter of water column</name>
+      <printSymbol>m&#160;H<sub>
+            <r>2</r>
+         </sub>O</printSymbol>
+      <property>pressure</property>
+      <value Unit="kPa" UNIT="KPAL" value="980665e-5">9.80665</value>
+   </unit>
+   <unit Code="m[Hg]" CODE="M[HG]" isMetric="yes" class="clinical">
+      <name>meter of mercury column</name>
+      <printSymbol>m&#160;Hg</printSymbol>
+      <property>pressure</property>
+      <value Unit="kPa" UNIT="KPAL" value="133.3220">133.3220</value>
+   </unit>
+   <unit Code="[in_i'H2O]" CODE="[IN_I'H2O]" isMetric="no" class="clinical">
+      <name>inch of water column</name>
+      <printSymbol>in&#160;H<sub>
+            <r>2</r>
+         </sub>O</printSymbol>
+      <property>pressure</property>
+      <value Unit="m[H2O].[in_i]/m" UNIT="M[H2O].[IN_I]/M" value="1">1</value>
+   </unit>
+   <unit Code="[in_i'Hg]" CODE="[IN_I'HG]" isMetric="no" class="clinical">
+      <name>inch of mercury column</name>
+      <printSymbol>in&#160;Hg</printSymbol>
+      <property>pressure</property>
+      <value Unit="m[Hg].[in_i]/m" UNIT="M[HG].[IN_I]/M" value="1">1</value>
+   </unit>
+   <unit Code="[PRU]" CODE="[PRU]" isMetric="no" class="clinical">
+      <name>peripheral vascular resistance unit</name>
+      <printSymbol>P.R.U.</printSymbol>
+      <property>fluid resistance</property>
+      <value Unit="mm[Hg].s/ml" UNIT="MM[HG].S/ML" value="1">1</value>
+   </unit>
+   <unit Code="[wood'U]" CODE="[WOOD'U]" isMetric="no" class="clinical">
+      <name>Wood unit</name>
+      <printSymbol>Wood U.</printSymbol>
+      <property>fluid resistance</property>
+      <value Unit="mm[Hg].min/L" UNIT="MM[HG].MIN/L" value="1">1</value>
+   </unit>
+   <unit Code="[diop]" CODE="[DIOP]" isMetric="no" class="clinical">
+      <name>diopter</name>
+      <printSymbol>dpt</printSymbol>
+      <property>refraction of a lens</property>
+      <value Unit="/m" UNIT="/M" value="1">1</value>
+   </unit>
+   <unit Code="[p'diop]" CODE="[P'DIOP]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>prism diopter</name>
+      <printSymbol>PD</printSymbol>
+      <property>refraction of a prism</property>
+      <value Unit="100tan(1 rad)" UNIT="100TAN(1 RAD)">
+         <function name="tanTimes100" value="1" Unit="rad"/>
+      </value>
+   </unit>
+   <unit Code="%[slope]" CODE="%[SLOPE]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>percent of slope</name>
+      <printSymbol>%</printSymbol>
+      <property>slope</property>
+      <value Unit="100tan(1 rad)" UNIT="100TAN(1 RAD)">
+         <function name="100tan" value="1" Unit="deg"/>
+      </value>
+   </unit>
+   <unit Code="[mesh_i]" CODE="[MESH_I]" isMetric="no" class="clinical">
+      <name>mesh</name>
+      <property>lineic number</property>
+      <value Unit="/[in_i]" UNIT="/[IN_I]" value="1">1</value>
+   </unit>
+   <unit Code="[Ch]" CODE="[CH]" isMetric="no" class="clinical">
+      <name>Charri&#232;re</name>
+      <name>french</name>
+      <printSymbol>Ch</printSymbol>
+      <property>gauge of catheters</property>
+      <value Unit="mm/3" UNIT="MM/3" value="1">1</value>
+   </unit>
+   <unit Code="[drp]" CODE="[DRP]" isMetric="no" class="clinical">
+      <name>drop</name>
+      <printSymbol>drp</printSymbol>
+      <property>volume</property>
+      <value Unit="ml/20" UNIT="ML/20" value="1">1</value>
+   </unit>
+   <unit Code="[hnsf'U]" CODE="[HNSF'U]" isMetric="no" class="clinical">
+      <name>Hounsfield unit</name>
+      <printSymbol>HF</printSymbol>
+      <property>x-ray attenuation</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[MET]" CODE="[MET]" isMetric="no" class="clinical">
+      <name>metabolic equivalent</name>
+      <printSymbol>MET</printSymbol>
+      <property>metabolic cost of physical activity</property>
+      <value Unit="mL/min/kg" UNIT="ML/MIN/KG" value="3.5">3.5</value>
+   </unit>
+   <unit Code="[hp'_X]" CODE="[HP'_X]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>homeopathic potency of decimal series (retired)</name>
+      <printSymbol>X</printSymbol>
+      <property>homeopathic potency (retired)</property>
+      <value Unit="hpX(1 1)" UNIT="HPX(1 1)">
+         <function name="hpX" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="[hp'_C]" CODE="[HP'_C]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>homeopathic potency of centesimal series (retired)</name>
+      <printSymbol>C</printSymbol>
+      <property>homeopathic potency (retired)</property>
+      <value Unit="hpC(1 1)" UNIT="HPC(1 1)">
+         <function name="hpC" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="[hp'_M]" CODE="[HP'_M]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>homeopathic potency of millesimal series (retired)</name>
+      <printSymbol>M</printSymbol>
+      <property>homeopathic potency (retired)</property>
+      <value Unit="hpM(1 1)" UNIT="HPM(1 1)">
+         <function name="hpM" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="[hp'_Q]" CODE="[HP'_Q]" isMetric="no" isSpecial="yes" class="clinical">
+      <name>homeopathic potency of quintamillesimal series (retired)</name>
+      <printSymbol>Q</printSymbol>
+      <property>homeopathic potency (retired)</property>
+      <value Unit="hpQ(1 1)" UNIT="HPQ(1 1)">
+         <function name="hpQ" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="[hp_X]" CODE="[HP_X]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of decimal hahnemannian series</name>
+      <printSymbol>X</printSymbol>
+      <property>homeopathic potency (Hahnemann)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[hp_C]" CODE="[HP_C]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of centesimal hahnemannian series</name>
+      <printSymbol>C</printSymbol>
+      <property>homeopathic potency (Hahnemann)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[hp_M]" CODE="[HP_M]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of millesimal hahnemannian series</name>
+      <printSymbol>M</printSymbol>
+      <property>homeopathic potency (Hahnemann)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[hp_Q]" CODE="[HP_Q]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of quintamillesimal hahnemannian series</name>
+      <printSymbol>Q</printSymbol>
+      <property>homeopathic potency (Hahnemann)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[kp_X]" CODE="[KP_X]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of decimal korsakovian series</name>
+      <printSymbol>X</printSymbol>
+      <property>homeopathic potency (Korsakov)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[kp_C]" CODE="[KP_C]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of centesimal korsakovian series</name>
+      <printSymbol>C</printSymbol>
+      <property>homeopathic potency (Korsakov)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[kp_M]" CODE="[KP_M]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of millesimal korsakovian series</name>
+      <printSymbol>M</printSymbol>
+      <property>homeopathic potency (Korsakov)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[kp_Q]" CODE="[KP_Q]" isMetric="no" isArbitrary="yes" class="clinical">
+      <name>homeopathic potency of quintamillesimal korsakovian series</name>
+      <printSymbol>Q</printSymbol>
+      <property>homeopathic potency (Korsakov)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="eq" CODE="EQ" isMetric="yes" class="chemical">
+      <name>equivalents</name>
+      <printSymbol>eq</printSymbol>
+      <property>amount of substance</property>
+      <value Unit="mol" UNIT="MOL" value="1">1</value>
+   </unit>
+   <unit Code="osm" CODE="OSM" isMetric="yes" class="chemical">
+      <name>osmole</name>
+      <printSymbol>osm</printSymbol>
+      <property>amount of substance (dissolved particles)</property>
+      <value Unit="mol" UNIT="MOL" value="1">1</value>
+   </unit>
+   <unit Code="[pH]" CODE="[PH]" isMetric="no" isSpecial="yes" class="chemical">
+      <name>pH</name>
+      <printSymbol>pH</printSymbol>
+      <property>acidity</property>
+      <value Unit="pH(1 mol/l)" UNIT="PH(1 MOL/L)">
+         <function name="pH" value="1" Unit="mol/l"/>
+      </value>
+   </unit>
+   <unit Code="g%" CODE="G%" isMetric="yes" class="chemical">
+      <name>gram percent</name>
+      <printSymbol>g%</printSymbol>
+      <property>mass concentration</property>
+      <value Unit="g/dl" UNIT="G/DL" value="1">1</value>
+   </unit>
+   <unit Code="[S]" CODE="[S]" isMetric="no" class="chemical">
+      <name>Svedberg unit</name>
+      <printSymbol>S</printSymbol>
+      <property>sedimentation coefficient</property>
+      <value Unit="10*-13.s" UNIT="10*-13.S" value="1">1</value>
+   </unit>
+   <unit Code="[HPF]" CODE="[HPF]" isMetric="no" class="chemical">
+      <name>high power field</name>
+      <printSymbol>HPF</printSymbol>
+      <property>view area in microscope</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[LPF]" CODE="[LPF]" isMetric="no" class="chemical">
+      <name>low power field</name>
+      <printSymbol>LPF</printSymbol>
+      <property>view area in microscope</property>
+      <value Unit="1" UNIT="1" value="100">100</value>
+   </unit>
+   <unit Code="kat" CODE="KAT" isMetric="yes" class="chemical">
+      <name>katal</name>
+      <printSymbol>kat</printSymbol>
+      <property>catalytic activity</property>
+      <value Unit="mol/s" UNIT="MOL/S" value="1">1</value>
+   </unit>
+   <unit Code="U" CODE="U" isMetric="yes" class="chemical">
+      <name>Unit</name>
+      <printSymbol>U</printSymbol>
+      <property>catalytic activity</property>
+      <value Unit="umol/min" UNIT="UMOL/MIN" value="1">1</value>
+   </unit>
+   <unit Code="[iU]" CODE="[IU]" isMetric="yes" isArbitrary="yes" class="chemical">
+      <name>international unit</name>
+      <printSymbol>IU</printSymbol>
+      <property>arbitrary</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[IU]" CODE="[IU]" isMetric="yes" isArbitrary="yes" class="chemical">
+      <name>international unit</name>
+      <printSymbol>i.U.</printSymbol>
+      <property>arbitrary</property>
+      <value Unit="[iU]" UNIT="[IU]" value="1">1</value>
+   </unit>
+   <unit Code="[arb'U]" CODE="[ARB'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>arbitary unit</name>
+      <printSymbol>arb. U</printSymbol>
+      <property>arbitrary</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[USP'U]" CODE="[USP'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>United States Pharmacopeia unit</name>
+      <printSymbol>U.S.P.</printSymbol>
+      <property>arbitrary</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[GPL'U]" CODE="[GPL'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>GPL unit</name>
+      <property>biologic activity of anticardiolipin IgG</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[MPL'U]" CODE="[MPL'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>MPL unit</name>
+      <property>biologic activity of anticardiolipin IgM</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[APL'U]" CODE="[APL'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>APL unit</name>
+      <property>biologic activity of anticardiolipin IgA</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[beth'U]" CODE="[BETH'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>Bethesda unit</name>
+      <property>biologic activity of factor VIII inhibitor</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[anti'Xa'U]" CODE="[ANTI'XA'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>anti factor Xa unit</name>
+      <property>biologic activity of factor Xa inhibitor (heparin)</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[todd'U]" CODE="[TODD'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>Todd unit</name>
+      <property>biologic activity antistreptolysin O</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[dye'U]" CODE="[DYE'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>Dye unit</name>
+      <property>biologic activity of amylase</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[smgy'U]" CODE="[SMGY'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>Somogyi unit</name>
+      <property>biologic activity of amylase</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[bdsk'U]" CODE="[BDSK'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>Bodansky unit</name>
+      <property>biologic activity of phosphatase</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[ka'U]" CODE="[KA'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>King-Armstrong unit</name>
+      <property>biologic activity of phosphatase</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[knk'U]" CODE="[KNK'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>Kunkel unit</name>
+      <property>arbitrary biologic activity</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[mclg'U]" CODE="[MCLG'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>Mac Lagan unit</name>
+      <property>arbitrary biologic activity</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[tb'U]" CODE="[TB'U]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>tuberculin unit</name>
+      <property>biologic activity of tuberculin</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[CCID_50]" CODE="[CCID_50]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>50% cell culture infectious dose</name>
+      <printSymbol>CCID<sub>50</sub>
+      </printSymbol>
+      <property>biologic activity (infectivity) of an infectious agent preparation</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[TCID_50]" CODE="[TCID_50]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>50% tissue culture infectious dose</name>
+      <printSymbol>TCID<sub>50</sub>
+      </printSymbol>
+      <property>biologic activity (infectivity) of an infectious agent preparation</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[EID_50]" CODE="[EID_50]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>50% embryo infectious dose</name>
+      <printSymbol>EID<sub>50</sub>
+      </printSymbol>
+      <property>biologic activity (infectivity) of an infectious agent preparation</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[PFU]" CODE="[PFU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>plaque forming units</name>
+      <printSymbol>PFU</printSymbol>
+      <property>amount of an infectious agent</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[FFU]" CODE="[FFU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>focus forming units</name>
+      <printSymbol>FFU</printSymbol>
+      <property>amount of an infectious agent</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[CFU]" CODE="[CFU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>colony forming units</name>
+      <printSymbol>CFU</printSymbol>
+      <property>amount of a proliferating organism</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[IR]" CODE="[IR]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>index of reactivity</name>
+      <printSymbol>IR</printSymbol>
+      <property>amount of an allergen callibrated through in-vivo testing using the Stallergenes&#174; method.</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[BAU]" CODE="[BAU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>bioequivalent allergen unit</name>
+      <printSymbol>BAU</printSymbol>
+      <property>amount of an allergen callibrated through in-vivo testing based on the ID50EAL method of (intradermal dilution for 50mm sum of erythema diameters</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[AU]" CODE="[AU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>allergen unit</name>
+      <printSymbol>AU</printSymbol>
+      <property>procedure defined amount of an allergen using some reference standard</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[Amb'a'1'U]" CODE="[AMB'A'1'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>allergen unit for Ambrosia artemisiifolia</name>
+      <printSymbol>Amb a 1 U</printSymbol>
+      <property>procedure defined amount of the major allergen of ragweed.</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[PNU]" CODE="[PNU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>protein nitrogen unit</name>
+      <printSymbol>PNU</printSymbol>
+      <property>procedure defined amount of a protein substance</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[Lf]" CODE="[LF]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>Limit of flocculation</name>
+      <printSymbol>Lf</printSymbol>
+      <property>procedure defined amount of an antigen substance</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[D'ag'U]" CODE="[D'AG'U]" isMetric="no" isArbitrary="yes"
+         class="chemical">
+      <name>D-antigen unit</name>
+      <printSymbol/>
+      <property>procedure defined amount of a poliomyelitis d-antigen substance</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[FEU]" CODE="[FEU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>fibrinogen equivalent unit</name>
+      <printSymbol/>
+      <property>amount of fibrinogen broken down into the measured d-dimers</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[ELU]" CODE="[ELU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>ELISA unit</name>
+      <printSymbol/>
+      <property>arbitrary ELISA unit</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="[EU]" CODE="[EU]" isMetric="no" isArbitrary="yes" class="chemical">
+      <name>Ehrlich unit</name>
+      <printSymbol/>
+      <property>Ehrlich unit</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="Np" CODE="NEP" isMetric="yes" isSpecial="yes" class="levels">
+      <name>neper</name>
+      <printSymbol>Np</printSymbol>
+      <property>level</property>
+      <value Unit="ln(1 1)" UNIT="LN(1 1)">
+         <function name="ln" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="B" CODE="B" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel</name>
+      <printSymbol>B</printSymbol>
+      <property>level</property>
+      <value Unit="lg(1 1)" UNIT="LG(1 1)">
+         <function name="lg" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="B[SPL]" CODE="B[SPL]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel sound pressure</name>
+      <printSymbol>B(SPL)</printSymbol>
+      <property>pressure level</property>
+      <value Unit="2lg(2 10*-5.Pa)" UNIT="2LG(2 10*-5.PAL)">
+         <function name="lgTimes2" value="2" Unit="10*-5.Pa"/>
+      </value>
+   </unit>
+   <unit Code="B[V]" CODE="B[V]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel volt</name>
+      <printSymbol>B(V)</printSymbol>
+      <property>electric potential level</property>
+      <value Unit="2lg(1 V)" UNIT="2LG(1 V)">
+         <function name="lgTimes2" value="1" Unit="V"/>
+      </value>
+   </unit>
+   <unit Code="B[mV]" CODE="B[MV]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel millivolt</name>
+      <printSymbol>B(mV)</printSymbol>
+      <property>electric potential level</property>
+      <value Unit="2lg(1 mV)" UNIT="2LG(1 MV)">
+         <function name="lgTimes2" value="1" Unit="mV"/>
+      </value>
+   </unit>
+   <unit Code="B[uV]" CODE="B[UV]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel microvolt</name>
+      <printSymbol>B(&#956;V)</printSymbol>
+      <property>electric potential level</property>
+      <value Unit="2lg(1 uV)" UNIT="2LG(1 UV)">
+         <function name="lgTimes2" value="1" Unit="uV"/>
+      </value>
+   </unit>
+   <unit Code="B[10.nV]" CODE="B[10.NV]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel 10 nanovolt</name>
+      <printSymbol>B(10 nV)</printSymbol>
+      <property>electric potential level</property>
+      <value Unit="2lg(10 nV)" UNIT="2LG(10 NV)">
+         <function name="lgTimes2" value="10" Unit="nV"/>
+      </value>
+   </unit>
+   <unit Code="B[W]" CODE="B[W]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel watt</name>
+      <printSymbol>B(W)</printSymbol>
+      <property>power level</property>
+      <value Unit="lg(1 W)" UNIT="LG(1 W)">
+         <function name="lg" value="1" Unit="W"/>
+      </value>
+   </unit>
+   <unit Code="B[kW]" CODE="B[KW]" isMetric="yes" isSpecial="yes" class="levels">
+      <name>bel kilowatt</name>
+      <printSymbol>B(kW)</printSymbol>
+      <property>power level</property>
+      <value Unit="lg(1 kW)" UNIT="LG(1 KW)">
+         <function name="lg" value="1" Unit="kW"/>
+      </value>
+   </unit>
+   <unit Code="st" CODE="STR" isMetric="yes" class="misc">
+      <name>stere</name>
+      <printSymbol>st</printSymbol>
+      <property>volume</property>
+      <value Unit="m3" UNIT="M3" value="1">1</value>
+   </unit>
+   <unit Code="Ao" CODE="AO" isMetric="no" class="misc">
+      <name>&#197;ngstr&#246;m</name>
+      <printSymbol>&#197;</printSymbol>
+      <property>length</property>
+      <value Unit="nm" UNIT="NM" value="0.1">0.1</value>
+   </unit>
+   <unit Code="b" CODE="BRN" isMetric="no" class="misc">
+      <name>barn</name>
+      <printSymbol>b</printSymbol>
+      <property>action area</property>
+      <value Unit="fm2" UNIT="FM2" value="100">100</value>
+   </unit>
+   <unit Code="att" CODE="ATT" isMetric="no" class="misc">
+      <name>technical atmosphere</name>
+      <printSymbol>at</printSymbol>
+      <property>pressure</property>
+      <value Unit="kgf/cm2" UNIT="KGF/CM2" value="1">1</value>
+   </unit>
+   <unit Code="mho" CODE="MHO" isMetric="yes" class="misc">
+      <name>mho</name>
+      <printSymbol>mho</printSymbol>
+      <property>electric conductance</property>
+      <value Unit="S" UNIT="S" value="1">1</value>
+   </unit>
+   <unit Code="[psi]" CODE="[PSI]" isMetric="no" class="misc">
+      <name>pound per sqare inch</name>
+      <printSymbol>psi</printSymbol>
+      <property>pressure</property>
+      <value Unit="[lbf_av]/[in_i]2" UNIT="[LBF_AV]/[IN_I]2" value="1">1</value>
+   </unit>
+   <unit Code="circ" CODE="CIRC" isMetric="no" class="misc">
+      <name>circle</name>
+      <printSymbol>circ</printSymbol>
+      <property>plane angle</property>
+      <value Unit="[pi].rad" UNIT="[PI].RAD" value="2">2</value>
+   </unit>
+   <unit Code="sph" CODE="SPH" isMetric="no" class="misc">
+      <name>spere</name>
+      <printSymbol>sph</printSymbol>
+      <property>solid angle</property>
+      <value Unit="[pi].sr" UNIT="[PI].SR" value="4">4</value>
+   </unit>
+   <unit Code="[car_m]" CODE="[CAR_M]" isMetric="no" class="misc">
+      <name>metric carat</name>
+      <printSymbol>ct<sub>m</sub>
+      </printSymbol>
+      <property>mass</property>
+      <value Unit="g" UNIT="G" value="2e-1">0.2</value>
+   </unit>
+   <unit Code="[car_Au]" CODE="[CAR_AU]" isMetric="no" class="misc">
+      <name>carat of gold alloys</name>
+      <printSymbol>ct<sub>
+            <r>Au</r>
+         </sub>
+      </printSymbol>
+      <property>mass fraction</property>
+      <value Unit="/24" UNIT="/24" value="1">1</value>
+   </unit>
+   <unit Code="[smoot]" CODE="[SMOOT]" isMetric="no" class="misc">
+      <name>Smoot</name>
+      <printSymbol/>
+      <property>length</property>
+      <value Unit="[in_i]" UNIT="[IN_I]" value="67">67</value>
+   </unit>
+   <unit Code="[m/s2/Hz^(1/2)]" CODE="[M/S2/HZ^(1/2)]" isMetric="no" isSpecial="yes"
+         class="misc">
+      <name>meter per square seconds per square root of hertz</name>
+      <printSymbol/>
+      <property>amplitude spectral density</property>
+      <value Unit="sqrt(1 m2/s4/Hz)" UNIT="SQRT(1 M2/S4/HZ)">
+         <function name="sqrt" value="1" Unit="m2/s4/Hz"/>
+      </value>
+   </unit>
+   <unit Code="bit_s" CODE="BIT_S" isMetric="no" isSpecial="yes" class="infotech">
+      <name>bit</name>
+      <printSymbol>bit<sub>s</sub>
+      </printSymbol>
+      <property>amount of information</property>
+      <value Unit="ld(1 1)" UNIT="ld(1 1)">
+         <function name="ld" value="1" Unit="1"/>
+      </value>
+   </unit>
+   <unit Code="bit" CODE="BIT" isMetric="yes" class="infotech">
+      <name>bit</name>
+      <printSymbol>bit</printSymbol>
+      <property>amount of information</property>
+      <value Unit="1" UNIT="1" value="1">1</value>
+   </unit>
+   <unit Code="By" CODE="BY" isMetric="yes" class="infotech">
+      <name>byte</name>
+      <printSymbol>B</printSymbol>
+      <property>amount of information</property>
+      <value Unit="bit" UNIT="bit" value="8">8</value>
+   </unit>
+   <unit Code="Bd" CODE="BD" isMetric="yes" class="infotech">
+      <name>baud</name>
+      <printSymbol>Bd</printSymbol>
+      <property>signal transmission rate</property>
+      <value Unit="/s" UNIT="/s" value="1">1</value>
+   </unit>
+   <prefix Code="Ki" CODE="KIB">
+      <name>kibi</name>
+      <printSymbol>Ki</printSymbol>
+      <value value="1024">1024</value>
+   </prefix>
+   <prefix Code="Mi" CODE="MIB">
+      <name>mebi</name>
+      <printSymbol>Mi</printSymbol>
+      <value value="1048576">1048576</value>
+   </prefix>
+   <prefix Code="Gi" CODE="GIB">
+      <name>gibi</name>
+      <printSymbol>Gi</printSymbol>
+      <value value="1073741824">1073741824</value>
+   </prefix>
+   <prefix Code="Ti" CODE="TIB">
+      <name>tebi</name>
+      <printSymbol>Ti</printSymbol>
+      <value value="1099511627776">1099511627776</value>
+   </prefix>
+</root>
