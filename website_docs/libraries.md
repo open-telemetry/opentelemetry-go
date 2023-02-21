@@ -76,7 +76,7 @@ func main() {
 }
 ```
 
-Assuming that you have a `Tracer` and [exporter]({{< relref "exporting_data" >}}) configured, this code will:
+Assuming that you have a `Tracer` and [exporter]({{< relref "exporters" >}}) configured, this code will:
 
 * Start an HTTP server on port `3030`
 * Automatically generate a span for each inbound HTTP request to `/hello-instrumented`
@@ -86,7 +86,8 @@ Connecting manual instrumentation you write in your app with instrumentation gen
 
 ## Available packages
 
-A full list of instrumentation libraries available can be found in the [OpenTelemetry registry](/registry/?language=go&component=instrumentation).
+A full list of instrumentation libraries available can be found in the
+[OpenTelemetry registry](/ecosystem/registry/?language=go&component=instrumentation).
 
 ## Next steps
 

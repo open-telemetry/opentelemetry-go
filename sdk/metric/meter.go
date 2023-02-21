@@ -43,18 +43,13 @@ type meter struct {
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
-	var viewCache cache[string, instrumentID]
-
-	// Passing nil as the ac parameter to newInstrumentCache will have each
-	// create its own aggregator cache.
-	ic := newInstrumentCache[int64](nil, &viewCache)
-	fc := newInstrumentCache[float64](nil, &viewCache)
+	var viewCache cache[string, streamID]
 
 	return &meter{
 		scope:     s,
 		pipes:     p,
-		int64IP:   newInstProvider(s, p, ic),
-		float64IP: newInstProvider(s, p, fc),
+		int64IP:   newInstProvider[int64](s, p, &viewCache),
+		float64IP: newInstProvider[float64](s, p, &viewCache),
 	}
 }
 
@@ -375,8 +370,8 @@ type instProvider[N int64 | float64] struct {
 	resolve resolver[N]
 }
 
-func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c instrumentCache[N]) *instProvider[N] {
-	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver(p, c)}
+func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c *cache[string, streamID]) *instProvider[N] {
+	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver[N](p, c)}
 }
 
 func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Unit) ([]internal.Aggregator[N], error) {

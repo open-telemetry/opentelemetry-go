@@ -46,8 +46,8 @@ func newResource() *resource.Resource {
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("fib"),
-			semconv.ServiceVersionKey.String("v0.1.0"),
+			semconv.ServiceName("fib"),
+			semconv.ServiceVersion("v0.1.0"),
 			attribute.String("environment", "demo"),
 		),
 	)

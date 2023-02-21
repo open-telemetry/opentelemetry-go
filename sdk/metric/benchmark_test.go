@@ -16,10 +16,12 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func benchCounter(b *testing.B, views ...View) (context.Context, Reader, instrument.Int64Counter) {
@@ -91,7 +93,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		_, _ = rdr.Collect(ctx)
+		_ = rdr.Collect(ctx, nil)
 	}
 }
 
@@ -102,6 +104,46 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
-		_, _ = rdr.Collect(ctx)
+		_ = rdr.Collect(ctx, nil)
+	}
+}
+
+func BenchmarkCollectHistograms(b *testing.B) {
+	b.Run("1", benchCollectHistograms(1))
+	b.Run("5", benchCollectHistograms(5))
+	b.Run("10", benchCollectHistograms(10))
+	b.Run("25", benchCollectHistograms(25))
+}
+
+func benchCollectHistograms(count int) func(*testing.B) {
+	ctx := context.Background()
+	r := NewManualReader()
+	mtr := NewMeterProvider(
+		WithReader(r),
+	).Meter("sdk/metric/bench/histogram")
+
+	for i := 0; i < count; i++ {
+		name := fmt.Sprintf("fake data %d", i)
+		h, _ := mtr.Int64Histogram(name)
+
+		h.Record(ctx, 1)
+	}
+
+	// Store bechmark results in a closure to prevent the compiler from
+	// inlining and skipping the function.
+	var (
+		collectedMetrics metricdata.ResourceMetrics
+	)
+
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			_ = r.Collect(ctx, &collectedMetrics)
+			if len(collectedMetrics.ScopeMetrics[0].Metrics) != count {
+				b.Fatalf("got %d metrics, want %d", len(collectedMetrics.ScopeMetrics[0].Metrics), count)
+			}
+		}
 	}
 }

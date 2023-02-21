@@ -324,8 +324,8 @@ func newResource() *resource.Resource {
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("fib"),
-			semconv.ServiceVersionKey.String("v0.1.0"),
+			semconv.ServiceName("fib"),
+			semconv.ServiceVersion("v0.1.0"),
 			attribute.String("environment", "demo"),
 		),
 	)
@@ -546,10 +546,11 @@ start adding OpenTelemetry Go to your projects at this point. Go instrument your
 code!
 
 For more information about instrumenting your code and things you can do with
-spans, refer to the [Instrumenting]({{< relref "manual" >}})
-documentation. Likewise, advanced topics about processing and exporting
-telemetry data can be found in the [Processing and Exporting Data]({{< relref
-"exporting_data" >}}) documentation.
+spans, refer to the [manual instrumentation](/docs/instrumentation/go/manual/)
+documentation.
+
+You'll also want to configure an appropriate exporter to [export your telemetry
+data](/docs/instrumentation/go/exporters) to one or more telemetry backends.
 
 [`go.opentelemetry.io/otel/trace`]: https://pkg.go.dev/go.opentelemetry.io/otel/trace
 [`go.opentelemetry.io/otel/sdk`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk

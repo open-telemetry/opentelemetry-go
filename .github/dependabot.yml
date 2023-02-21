@@ -11,7 +11,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /
+    directory: /example/zipkin
     labels:
       - dependencies
       - docker
@@ -48,6 +48,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /bridge/opentracing
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /bridge/opentracing/test
     labels:
       - dependencies
       - go
