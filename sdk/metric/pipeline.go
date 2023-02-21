@@ -167,6 +167,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 				j++
 			}
 		}
+		rm.ScopeMetrics[i].Metrics = rm.ScopeMetrics[i].Metrics[:j]
 		if len(rm.ScopeMetrics[i].Metrics) > 0 {
 			rm.ScopeMetrics[i].Scope = scope
 			i++
