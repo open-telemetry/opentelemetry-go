@@ -94,7 +94,7 @@ func (u Unit) String() string {
 
 // MarshalText encodes the code of u into a textual form.
 func (u Unit) MarshalText() ([]byte, error) {
-	return []byte(u.code), nil
+	return []byte(u.Code()), nil
 }
 
 // UnmarshalText decodes the text into a Unit.
