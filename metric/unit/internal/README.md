@@ -11,4 +11,4 @@ From this directory, run the following:
 go run .
 ```
 
-[ucum-org]: https://github.com/ucum-org/ucum/blob/RELEASE_2.0/ucum-essence.xml.
+[ucum-org]: https://github.com/ucum-org/ucum/blob/6a3d157f659a3c08c812f77ab2a2aac1664267c8/ucum-essence.xml
