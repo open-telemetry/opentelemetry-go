@@ -472,7 +472,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 
 			tt.fn(t, m)
 
-			rm, err := rdr.Collect(context.Background())
+			rm := metricdata.ResourceMetrics{}
+			err := rdr.Collect(context.Background(), &rm)
 			assert.NoError(t, err)
 
 			require.Len(t, rm.ScopeMetrics, 1)
@@ -566,7 +567,7 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 
 	var got metricdata.ResourceMetrics
 	assert.NotPanics(t, func() {
-		got, err = rdr.Collect(context.Background())
+		err = rdr.Collect(context.Background(), &got)
 	})
 
 	assert.NoError(t, err)
@@ -660,7 +661,8 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
 	assert.NoError(t, err)
 
-	got, err := rdr.Collect(context.Background())
+	got := metricdata.ResourceMetrics{}
+	err = rdr.Collect(context.Background(), &got)
 	assert.NoError(t, err)
 	assert.Lenf(t, l.messages, 0, "Warnings and errors logged:\n%s", l)
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
@@ -772,7 +774,8 @@ func TestMetersProvideScope(t *testing.T) {
 		},
 	}
 
-	got, err := rdr.Collect(context.Background())
+	got := metricdata.ResourceMetrics{}
+	err = rdr.Collect(context.Background(), &got)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
@@ -816,14 +819,14 @@ func TestUnregisterUnregisters(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	_, err = r.Collect(ctx)
+	err = r.Collect(ctx, &metricdata.ResourceMetrics{})
 	require.NoError(t, err)
 	assert.True(t, called, "callback not called for registered callback")
 
 	called = false
 	require.NoError(t, reg.Unregister(), "unregister")
 
-	_, err = r.Collect(ctx)
+	err = r.Collect(ctx, &metricdata.ResourceMetrics{})
 	require.NoError(t, err)
 	assert.False(t, called, "callback called for unregistered callback")
 }
@@ -869,7 +872,8 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	data, err := r.Collect(context.Background())
+	data := metricdata.ResourceMetrics{}
+	err = r.Collect(context.Background(), &data)
 	require.NoError(t, err)
 
 	assert.False(t, called, "callback called for all drop instruments")
@@ -1238,7 +1242,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				).Meter("TestAttributeFilter")
 				require.NoError(t, tt.register(t, mtr))
 
-				m, err := rdr.Collect(context.Background())
+				m := metricdata.ResourceMetrics{}
+				err := rdr.Collect(context.Background(), &m)
 				assert.NoError(t, err)
 
 				require.Len(t, m.ScopeMetrics, 1)
@@ -1331,7 +1336,8 @@ func TestAsynchronousExample(t *testing.T) {
 
 		collect := func(t *testing.T) {
 			t.Helper()
-			got, err := reader.Collect(context.Background())
+			got := metricdata.ResourceMetrics{}
+			err := reader.Collect(context.Background(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
