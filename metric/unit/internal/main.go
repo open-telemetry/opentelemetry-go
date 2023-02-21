@@ -27,6 +27,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// File path to UCUM specification XML.
 const specification = "./specification/2.1/ucum-essence.xml"
 
 // Only units listed here are rendered.
@@ -38,6 +39,29 @@ var unitAllowList = map[string]bool{
 	"watt":           true,
 	"volt":           true,
 	"degree Celsius": true,
+}
+
+// renderManifest si the mapping from source template to target Go file.
+var renderManifest = []struct {
+	Source *template.Template
+	Dest   string
+}{
+	{
+		Source: parseTmpl("./prefix.tmpl"),
+		Dest:   "../prefix.go",
+	},
+	{
+		Source: parseTmpl("./prefix_test.tmpl"),
+		Dest:   "../prefix_test.go",
+	},
+	{
+		Source: parseTmpl("./base.tmpl"),
+		Dest:   "../base.go",
+	},
+	{
+		Source: parseTmpl("./metric.tmpl"),
+		Dest:   "../metric.go",
+	},
 }
 
 var funcMap = template.FuncMap{
@@ -61,28 +85,6 @@ func parseTmpl(src string) *template.Template {
 	return template.Must(
 		template.New(name).Funcs(funcMap).ParseFiles(src),
 	)
-}
-
-var renderManifest = []struct {
-	Source *template.Template
-	Dest   string
-}{
-	{
-		Source: parseTmpl("./prefix.tmpl"),
-		Dest:   "../prefix.go",
-	},
-	{
-		Source: parseTmpl("./prefix_test.tmpl"),
-		Dest:   "../prefix_test.go",
-	},
-	{
-		Source: parseTmpl("./base.tmpl"),
-		Dest:   "../base.go",
-	},
-	{
-		Source: parseTmpl("./metric.tmpl"),
-		Dest:   "../metric.go",
-	},
 }
 
 type UnparsedElementMap map[string][]string
@@ -201,44 +203,4 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	/*
-		for _, elem := range root.Prefixes {
-			name := strings.Title(elem.Name)
-			fmt.Printf(
-				prefixFuncStr,
-				name,
-				elem.Value.Value,
-				name,
-				elem.CaseSensitiveCode,
-				elem.PrintSymbol,
-			)
-		}
-		fmt.Println("var (")
-		for _, elem := range root.BaseUnits {
-			name := strings.Title(elem.Name)
-			fmt.Printf(
-				baseUnitFuncStr,
-				name,
-				elem.Property,
-				name,
-				elem.CaseSensitiveCode,
-				elem.PrintSymbol,
-			)
-		}
-		fmt.Println(")")
-	*/
-
-	/*
-		for _, elem := range root.Units {
-			fmt.Printf(
-				"Unit{%q, %q, %q, %q, %q}\n",
-				elem.Name,
-				elem.CaseSensitiveCode,
-				elem.CaseInsensitiveCode,
-				elem.PrintSymbol,
-				elem.Property,
-			)
-		}
-	*/
 }
