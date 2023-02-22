@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"sync"
 	"testing"
 	"time"
 
@@ -224,4 +225,34 @@ func TestRetryNotEnabled(t *testing.T) {
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
 		return assert.AnError
 	}), assert.AnError)
+}
+
+func TestConcurrentRetry(t *testing.T) {
+	ev := func(error) (bool, time.Duration) { return true, 0 }
+	reqFunc := Config{
+		Enabled: true,
+	}.RequestFunc(ev)
+
+	var wg sync.WaitGroup
+	ctx := context.Background()
+
+	for i := 1; i < 5; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			var done bool
+			assert.NoError(t, reqFunc(ctx, func(context.Context) error {
+				if !done {
+					done = true
+					return assert.AnError
+				}
+
+				return nil
+			}))
+		}()
+	}
+
+	wg.Wait()
 }

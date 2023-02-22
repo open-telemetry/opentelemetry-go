@@ -31,15 +31,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
+- The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
 
 ### Changed
 
 - [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
+- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
 
 ### Fixed
 
 - Ensure `go.opentelemetry.io/otel` does not use generics. (#3723, #3725)
+- Multi-reader `MeterProvider`s now export metrics for all readers, instead of just the first reader. (#3720, #3724)
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
+- Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
+- Data race issue in OTLP exporter retry mechanism. (#3756)
 
 ## [1.13.0/0.36.0] 2023-02-07
 

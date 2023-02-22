@@ -93,7 +93,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cntr.Add(ctx, 1, attribute.Int("K", 1))
 
-		_, _ = rdr.Collect(ctx)
+		_ = rdr.Collect(ctx, nil)
 	}
 }
 
@@ -104,7 +104,7 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 		for j := 0; j < 10; j++ {
 			cntr.Add(ctx, 1, attribute.Int("K", j))
 		}
-		_, _ = rdr.Collect(ctx)
+		_ = rdr.Collect(ctx, nil)
 	}
 }
 
@@ -140,7 +140,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			collectedMetrics, _ = r.Collect(ctx)
+			_ = r.Collect(ctx, &collectedMetrics)
 			if len(collectedMetrics.ScopeMetrics[0].Metrics) != count {
 				b.Fatalf("got %d metrics, want %d", len(collectedMetrics.ScopeMetrics[0].Metrics), count)
 			}

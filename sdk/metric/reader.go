@@ -65,8 +65,9 @@ type Reader interface {
 	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
-	// the SDK. An error is returned if this is called after Shutdown.
-	Collect(context.Context) (metricdata.ResourceMetrics, error)
+	// the SDK and stores it in out. An error is returned if this is called
+	// after Shutdown or if out is nil.
+	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
 	//

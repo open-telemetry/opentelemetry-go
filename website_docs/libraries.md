@@ -76,7 +76,7 @@ func main() {
 }
 ```
 
-Assuming that you have a `Tracer` and [exporter]({{< relref "exporting_data" >}}) configured, this code will:
+Assuming that you have a `Tracer` and [exporter]({{< relref "exporters" >}}) configured, this code will:
 
 * Start an HTTP server on port `3030`
 * Automatically generate a span for each inbound HTTP request to `/hello-instrumented`
