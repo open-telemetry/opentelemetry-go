@@ -86,7 +86,7 @@ func TestTimeoutEnvAndOption(t *testing.T) {
 	t.Setenv(envTimeout, "999")
 	opts := []PeriodicReaderOption{WithTimeout(want)}
 	got := newPeriodicReaderConfig(opts).timeout
-	assert.Equal(t, want, got, "option should have precendance over env var")
+	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
 func TestWithInterval(t *testing.T) {
@@ -146,7 +146,7 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	t.Setenv(envInterval, "999")
 	opts := []PeriodicReaderOption{WithInterval(want)}
 	got := newPeriodicReaderConfig(opts).interval
-	assert.Equal(t, want, got, "option should have precendance over env var")
+	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
 type fnExporter struct {
