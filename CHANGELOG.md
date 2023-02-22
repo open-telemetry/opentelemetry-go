@@ -32,6 +32,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelStatusDescription` -> `OTelStatusDescription`
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
+- The following environment variables are supported. (#3763)
+  - `OTEL_METRIC_EXPORT_INTERVAL`
+  - `OTEL_METRIC_EXPORT_TIMEOUT`
 
 ### Changed
 
