@@ -23,10 +23,11 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
-var versionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
-	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
-	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
+// regex taken from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
+	`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 func TestVersionSemver(t *testing.T) {
 	v := otel.Version()
