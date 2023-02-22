@@ -43,7 +43,7 @@ func envPositiveDuration(key string, defaultValue time.Duration) time.Duration {
 		return defaultValue
 	}
 	if d <= 0 {
-		global.Error(err, "non-positive duration", "environment variable", key, "value", v)
+		global.Error(errNonPositiveDuration, "non-positive duration", "environment variable", key, "value", v)
 		return defaultValue
 	}
 	return time.Duration(d) * time.Millisecond
