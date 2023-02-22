@@ -44,8 +44,8 @@ type periodicReaderConfig struct {
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: defaultInterval,
-		timeout:  defaultTimeout,
+		interval: envPositiveDuration(envInterval, defaultInterval),
+		timeout:  envPositiveDuration(envTimeout, defaultTimeout),
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
