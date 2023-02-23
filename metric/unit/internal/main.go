@@ -41,7 +41,7 @@ var unitAllowList = map[string]bool{
 	"degree Celsius": true,
 }
 
-// renderManifest si the mapping from source template to target Go file.
+// renderManifest is the mapping from source template to target Go file.
 var renderManifest = []struct {
 	Source *template.Template
 	Dest   string
