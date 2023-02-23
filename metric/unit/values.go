@@ -18,8 +18,27 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 // Base units.
 var (
-{{- range .BaseUnits }}
-	// {{ .Name | Title }} is a base-unit representing {{ .Property }}.
-	{{ .Name | Title }} = Unit{code: "{{ .CaseSensitiveCode }}"}
-{{ end -}}
+	// Second is a base-unit representing time.
+	Second = Unit{code: "s"}
+)
+
+// Metric units.
+var (
+	// Hertz is a metric unit representing frequency.
+	Hertz = Unit{code: "Hz"}
+
+	// Watt is a metric unit representing power.
+	Watt = Unit{code: "W"}
+
+	// Volt is a metric unit representing electric potential.
+	Volt = Unit{code: "V"}
+
+	// DegreeCelsius is a metric unit representing temperature.
+	DegreeCelsius = Unit{code: "Cel"}
+
+	// Bit is a metric unit representing amount of information.
+	Bit = Unit{code: "bit"}
+
+	// Byte is a metric unit representing amount of information.
+	Byte = Unit{code: "By"}
 )

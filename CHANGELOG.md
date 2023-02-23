@@ -43,7 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - All prefixes are now defined as their own functions.
   - `Milliseconds` is replaced by the new function call `Milli(Second)`.
   - `Bytes` is replaced by the new `Unit` variable `Byte`.
-  - The following units were added: `Hertz`, `Watt`, `Volt`, `DegreeCelsius`, `Bit`, `Baud`.
+  - The following units were added: `Hertz`, `Watt`, `Volt`, `DegreeCelsius`, `Bit`, `Byte`, and `Second`.
 
 ### Fixed
 

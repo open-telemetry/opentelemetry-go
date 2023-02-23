@@ -16,6 +16,14 @@
 
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 
+// Base units.
+var (
+{{- range AllowedBaseUnits . }}
+	// {{ .Name | Title }} is a base-unit representing {{ .Property }}.
+	{{ .Name | Title }} = Unit{code: "{{ .CaseSensitiveCode }}"}
+{{ end -}}
+)
+
 // Metric units.
 var (
 {{- range AllowedMetricUnits . }}

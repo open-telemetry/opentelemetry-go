@@ -32,9 +32,9 @@ const specification = "./specification/2.1/ucum-essence.xml"
 
 // Only units listed here are rendered.
 var unitAllowList = map[string]bool{
+	"second":         true,
 	"bit":            true,
 	"byte":           true,
-	"baud":           true,
 	"hertz":          true,
 	"watt":           true,
 	"volt":           true,
@@ -55,12 +55,8 @@ var renderManifest = []struct {
 		Dest:   "../prefix_test.go",
 	},
 	{
-		Source: parseTmpl("./base.tmpl"),
-		Dest:   "../base.go",
-	},
-	{
-		Source: parseTmpl("./metric.tmpl"),
-		Dest:   "../metric.go",
+		Source: parseTmpl("./values.tmpl"),
+		Dest:   "../values.go",
 	},
 }
 
@@ -68,6 +64,15 @@ var funcMap = template.FuncMap{
 	"Title": func(s string) string {
 		caser := cases.Title(language.AmericanEnglish)
 		return strings.ReplaceAll(caser.String(s), " ", "")
+	},
+	"AllowedBaseUnits": func(r *Root) []BaseUnit {
+		var allowed []BaseUnit
+		for _, u := range r.BaseUnits {
+			if _, ok := unitAllowList[u.Name]; ok {
+				allowed = append(allowed, u)
+			}
+		}
+		return allowed
 	},
 	"AllowedMetricUnits": func(r *Root) []Unit {
 		var allowed []Unit

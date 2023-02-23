@@ -211,7 +211,7 @@ func TestNewViewMatch(t *testing.T) {
 			notMatches: []Instrument{
 				{},
 				{Unit: unit.Dimensionless},
-				{Unit: unit.Kelvin},
+				{Unit: unit.Hertz},
 			},
 		},
 		{
