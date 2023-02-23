@@ -17,73 +17,73 @@
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 // Yotta returns a copy of u with a prefix representing a value of 1e24.
-func Yotta(u Unit) Unit { return u.withPrefix(prefix{code: "Y"}) }
+func Yotta(u Unit) Unit { return u.withPrefix("Y") }
 
 // Zetta returns a copy of u with a prefix representing a value of 1e21.
-func Zetta(u Unit) Unit { return u.withPrefix(prefix{code: "Z"}) }
+func Zetta(u Unit) Unit { return u.withPrefix("Z") }
 
 // Exa returns a copy of u with a prefix representing a value of 1e18.
-func Exa(u Unit) Unit { return u.withPrefix(prefix{code: "E"}) }
+func Exa(u Unit) Unit { return u.withPrefix("E") }
 
 // Peta returns a copy of u with a prefix representing a value of 1e15.
-func Peta(u Unit) Unit { return u.withPrefix(prefix{code: "P"}) }
+func Peta(u Unit) Unit { return u.withPrefix("P") }
 
 // Tera returns a copy of u with a prefix representing a value of 1e12.
-func Tera(u Unit) Unit { return u.withPrefix(prefix{code: "T"}) }
+func Tera(u Unit) Unit { return u.withPrefix("T") }
 
 // Giga returns a copy of u with a prefix representing a value of 1e9.
-func Giga(u Unit) Unit { return u.withPrefix(prefix{code: "G"}) }
+func Giga(u Unit) Unit { return u.withPrefix("G") }
 
 // Mega returns a copy of u with a prefix representing a value of 1e6.
-func Mega(u Unit) Unit { return u.withPrefix(prefix{code: "M"}) }
+func Mega(u Unit) Unit { return u.withPrefix("M") }
 
 // Kilo returns a copy of u with a prefix representing a value of 1e3.
-func Kilo(u Unit) Unit { return u.withPrefix(prefix{code: "k"}) }
+func Kilo(u Unit) Unit { return u.withPrefix("k") }
 
 // Hecto returns a copy of u with a prefix representing a value of 1e2.
-func Hecto(u Unit) Unit { return u.withPrefix(prefix{code: "h"}) }
+func Hecto(u Unit) Unit { return u.withPrefix("h") }
 
 // Deka returns a copy of u with a prefix representing a value of 1e1.
-func Deka(u Unit) Unit { return u.withPrefix(prefix{code: "da"}) }
+func Deka(u Unit) Unit { return u.withPrefix("da") }
 
 // Deci returns a copy of u with a prefix representing a value of 1e-1.
-func Deci(u Unit) Unit { return u.withPrefix(prefix{code: "d"}) }
+func Deci(u Unit) Unit { return u.withPrefix("d") }
 
 // Centi returns a copy of u with a prefix representing a value of 1e-2.
-func Centi(u Unit) Unit { return u.withPrefix(prefix{code: "c"}) }
+func Centi(u Unit) Unit { return u.withPrefix("c") }
 
 // Milli returns a copy of u with a prefix representing a value of 1e-3.
-func Milli(u Unit) Unit { return u.withPrefix(prefix{code: "m"}) }
+func Milli(u Unit) Unit { return u.withPrefix("m") }
 
 // Micro returns a copy of u with a prefix representing a value of 1e-6.
-func Micro(u Unit) Unit { return u.withPrefix(prefix{code: "u"}) }
+func Micro(u Unit) Unit { return u.withPrefix("u") }
 
 // Nano returns a copy of u with a prefix representing a value of 1e-9.
-func Nano(u Unit) Unit { return u.withPrefix(prefix{code: "n"}) }
+func Nano(u Unit) Unit { return u.withPrefix("n") }
 
 // Pico returns a copy of u with a prefix representing a value of 1e-12.
-func Pico(u Unit) Unit { return u.withPrefix(prefix{code: "p"}) }
+func Pico(u Unit) Unit { return u.withPrefix("p") }
 
 // Femto returns a copy of u with a prefix representing a value of 1e-15.
-func Femto(u Unit) Unit { return u.withPrefix(prefix{code: "f"}) }
+func Femto(u Unit) Unit { return u.withPrefix("f") }
 
 // Atto returns a copy of u with a prefix representing a value of 1e-18.
-func Atto(u Unit) Unit { return u.withPrefix(prefix{code: "a"}) }
+func Atto(u Unit) Unit { return u.withPrefix("a") }
 
 // Zepto returns a copy of u with a prefix representing a value of 1e-21.
-func Zepto(u Unit) Unit { return u.withPrefix(prefix{code: "z"}) }
+func Zepto(u Unit) Unit { return u.withPrefix("z") }
 
 // Yocto returns a copy of u with a prefix representing a value of 1e-24.
-func Yocto(u Unit) Unit { return u.withPrefix(prefix{code: "y"}) }
+func Yocto(u Unit) Unit { return u.withPrefix("y") }
 
 // Kibi returns a copy of u with a prefix representing a value of 1024.
-func Kibi(u Unit) Unit { return u.withPrefix(prefix{code: "Ki"}) }
+func Kibi(u Unit) Unit { return u.withPrefix("Ki") }
 
 // Mebi returns a copy of u with a prefix representing a value of 1048576.
-func Mebi(u Unit) Unit { return u.withPrefix(prefix{code: "Mi"}) }
+func Mebi(u Unit) Unit { return u.withPrefix("Mi") }
 
 // Gibi returns a copy of u with a prefix representing a value of 1073741824.
-func Gibi(u Unit) Unit { return u.withPrefix(prefix{code: "Gi"}) }
+func Gibi(u Unit) Unit { return u.withPrefix("Gi") }
 
 // Tebi returns a copy of u with a prefix representing a value of 1099511627776.
-func Tebi(u Unit) Unit { return u.withPrefix(prefix{code: "Ti"}) }
+func Tebi(u Unit) Unit { return u.withPrefix("Ti") }

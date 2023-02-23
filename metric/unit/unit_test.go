@@ -24,13 +24,13 @@ import (
 
 const code = "custom code"
 
-var hella = prefix{code: "hella"}
+var hella prefix = "hella"
 
 func TestNew(t *testing.T) {
 	u := New(code)
 	u = u.withPrefix(hella)
 
-	assert.Equal(t, hella.code+code, u.String(), "unit code")
+	assert.Equal(t, string(hella)+code, u.String(), "unit code")
 }
 
 func TestUnitJSONMarshalling(t *testing.T) {
@@ -38,7 +38,7 @@ func TestUnitJSONMarshalling(t *testing.T) {
 	orig = orig.withPrefix(hella)
 	got, err := json.Marshal(orig)
 	require.NoError(t, err)
-	require.Equal(t, `"`+hella.code+code+`"`, string(got))
+	require.Equal(t, `"`+string(hella)+code+`"`, string(got))
 
 	decoded := new(Unit)
 	require.NoError(t, json.Unmarshal([]byte(`"`+code+`"`), decoded))

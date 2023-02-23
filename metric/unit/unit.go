@@ -17,11 +17,9 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 // Dimensionless is the UCUM dimensionless unit 1.
 var Dimensionless = Unit{code: "1"}
 
-// prefix is a numerical modifier of a unit quantity.
-type prefix struct {
-	// code is the case-sensitive UCUM unit code.
-	code string
-}
+// prefix is a numerical modifier of a unit quantity. Its value is the
+// case-sensitive UCUM prefix code.
+type prefix string
 
 // Unit is a determinate standard quantity of measurement.
 type Unit struct {
@@ -43,7 +41,7 @@ func (u Unit) withPrefix(p prefix) Unit {
 
 // String returns the string encoding of the UCUM unit defining u.
 func (u Unit) String() string {
-	return u.prefix.code + u.code
+	return string(u.prefix) + u.code
 }
 
 // MarshalText encodes the code of u into a textual form.
