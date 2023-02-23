@@ -1,8 +1,8 @@
 ---
 title: Go
 description: >-
-  <img width="35" src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/32x32/Golang_SDK.svg" alt="Go"></img>
-  A language-specific implementation of OpenTelemetry in Go.
+  <img width="35" src="/img/logos/32x32/Golang_SDK.svg" alt="Go"></img> A
+  language-specific implementation of OpenTelemetry in Go.
 aliases: [/golang, /golang/metrics, /golang/tracing]
 cascade:
   github_repo: &repo https://github.com/open-telemetry/opentelemetry-go

@@ -211,46 +211,22 @@ func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
 	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
-	tests := []struct {
-		options  []TracerOption
-		expected TracerConfig
-	}{
-		{
-			// No non-zero-values should be set.
-			[]TracerOption{},
-			TracerConfig{},
-		},
-		{
-			[]TracerOption{
-				WithInstrumentationVersion(v1),
-			},
-			TracerConfig{
-				instrumentationVersion: v1,
-			},
-		},
-		{
-			[]TracerOption{
-				// Multiple calls should overwrite.
-				WithInstrumentationVersion(v1),
-				WithInstrumentationVersion(v2),
-			},
-			TracerConfig{
-				instrumentationVersion: v2,
-			},
-		},
-		{
-			[]TracerOption{
-				WithSchemaURL(schemaURL),
-			},
-			TracerConfig{
-				schemaURL: schemaURL,
-			},
-		},
-	}
-	for _, test := range tests {
-		config := NewTracerConfig(test.options...)
-		assert.Equal(t, test.expected, config)
-	}
+	attrs := attribute.NewSet(
+		attribute.String("user", "alice"),
+		attribute.Bool("admin", true),
+	)
+
+	c := NewTracerConfig(
+		// Multiple calls should overwrite.
+		WithInstrumentationVersion(v1),
+		WithInstrumentationVersion(v2),
+		WithSchemaURL(schemaURL),
+		WithInstrumentationAttributes(attrs.ToSlice()...),
+	)
+
+	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
+	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
 // Save benchmark results to a file level var to avoid the compiler optimizing
