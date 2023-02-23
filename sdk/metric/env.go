@@ -30,9 +30,9 @@ const (
 	envTimeout = "OTEL_METRIC_EXPORT_TIMEOUT"
 )
 
-// envPositiveDuration returns an environment variable's value as duration in milliseconds if it is exists,
+// envDuration returns an environment variable's value as duration in milliseconds if it is exists,
 // or the defaultValue if not or the value is not valid.
-func envPositiveDuration(key string, defaultValue time.Duration) time.Duration {
+func envDuration(key string, defaultValue time.Duration) time.Duration {
 	v := os.Getenv(key)
 	if v == "" {
 		return defaultValue
