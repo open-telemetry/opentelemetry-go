@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryName` -> `OTelLibraryName`
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
+- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
 
