@@ -23,146 +23,122 @@ import (
 )
 
 func TestYotta(t *testing.T) {
-	u := Yotta(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Y1", u.Code(), "code")
-	assert.Equal(t, "Y1", u.String(), "print symbol")
+	u := Yotta(New("1"))
+	assert.Equal(t, "Y1", u.String(), "code")
 }
 
 func TestZetta(t *testing.T) {
-	u := Zetta(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Z1", u.Code(), "code")
-	assert.Equal(t, "Z1", u.String(), "print symbol")
+	u := Zetta(New("1"))
+	assert.Equal(t, "Z1", u.String(), "code")
 }
 
 func TestExa(t *testing.T) {
-	u := Exa(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "E1", u.Code(), "code")
-	assert.Equal(t, "E1", u.String(), "print symbol")
+	u := Exa(New("1"))
+	assert.Equal(t, "E1", u.String(), "code")
 }
 
 func TestPeta(t *testing.T) {
-	u := Peta(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "P1", u.Code(), "code")
-	assert.Equal(t, "P1", u.String(), "print symbol")
+	u := Peta(New("1"))
+	assert.Equal(t, "P1", u.String(), "code")
 }
 
 func TestTera(t *testing.T) {
-	u := Tera(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "T1", u.Code(), "code")
-	assert.Equal(t, "T1", u.String(), "print symbol")
+	u := Tera(New("1"))
+	assert.Equal(t, "T1", u.String(), "code")
 }
 
 func TestGiga(t *testing.T) {
-	u := Giga(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "G1", u.Code(), "code")
-	assert.Equal(t, "G1", u.String(), "print symbol")
+	u := Giga(New("1"))
+	assert.Equal(t, "G1", u.String(), "code")
 }
 
 func TestMega(t *testing.T) {
-	u := Mega(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "M1", u.Code(), "code")
-	assert.Equal(t, "M1", u.String(), "print symbol")
+	u := Mega(New("1"))
+	assert.Equal(t, "M1", u.String(), "code")
 }
 
 func TestKilo(t *testing.T) {
-	u := Kilo(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "k1", u.Code(), "code")
-	assert.Equal(t, "k1", u.String(), "print symbol")
+	u := Kilo(New("1"))
+	assert.Equal(t, "k1", u.String(), "code")
 }
 
 func TestHecto(t *testing.T) {
-	u := Hecto(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "h1", u.Code(), "code")
-	assert.Equal(t, "h1", u.String(), "print symbol")
+	u := Hecto(New("1"))
+	assert.Equal(t, "h1", u.String(), "code")
 }
 
 func TestDeka(t *testing.T) {
-	u := Deka(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "da1", u.Code(), "code")
-	assert.Equal(t, "da1", u.String(), "print symbol")
+	u := Deka(New("1"))
+	assert.Equal(t, "da1", u.String(), "code")
 }
 
 func TestDeci(t *testing.T) {
-	u := Deci(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "d1", u.Code(), "code")
-	assert.Equal(t, "d1", u.String(), "print symbol")
+	u := Deci(New("1"))
+	assert.Equal(t, "d1", u.String(), "code")
 }
 
 func TestCenti(t *testing.T) {
-	u := Centi(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "c1", u.Code(), "code")
-	assert.Equal(t, "c1", u.String(), "print symbol")
+	u := Centi(New("1"))
+	assert.Equal(t, "c1", u.String(), "code")
 }
 
 func TestMilli(t *testing.T) {
-	u := Milli(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "m1", u.Code(), "code")
-	assert.Equal(t, "m1", u.String(), "print symbol")
+	u := Milli(New("1"))
+	assert.Equal(t, "m1", u.String(), "code")
 }
 
 func TestMicro(t *testing.T) {
-	u := Micro(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "u1", u.Code(), "code")
-	assert.Equal(t, "μ1", u.String(), "print symbol")
+	u := Micro(New("1"))
+	assert.Equal(t, "u1", u.String(), "code")
 }
 
 func TestNano(t *testing.T) {
-	u := Nano(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "n1", u.Code(), "code")
-	assert.Equal(t, "n1", u.String(), "print symbol")
+	u := Nano(New("1"))
+	assert.Equal(t, "n1", u.String(), "code")
 }
 
 func TestPico(t *testing.T) {
-	u := Pico(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "p1", u.Code(), "code")
-	assert.Equal(t, "p1", u.String(), "print symbol")
+	u := Pico(New("1"))
+	assert.Equal(t, "p1", u.String(), "code")
 }
 
 func TestFemto(t *testing.T) {
-	u := Femto(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "f1", u.Code(), "code")
-	assert.Equal(t, "f1", u.String(), "print symbol")
+	u := Femto(New("1"))
+	assert.Equal(t, "f1", u.String(), "code")
 }
 
 func TestAtto(t *testing.T) {
-	u := Atto(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "a1", u.Code(), "code")
-	assert.Equal(t, "a1", u.String(), "print symbol")
+	u := Atto(New("1"))
+	assert.Equal(t, "a1", u.String(), "code")
 }
 
 func TestZepto(t *testing.T) {
-	u := Zepto(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "z1", u.Code(), "code")
-	assert.Equal(t, "z1", u.String(), "print symbol")
+	u := Zepto(New("1"))
+	assert.Equal(t, "z1", u.String(), "code")
 }
 
 func TestYocto(t *testing.T) {
-	u := Yocto(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "y1", u.Code(), "code")
-	assert.Equal(t, "y1", u.String(), "print symbol")
+	u := Yocto(New("1"))
+	assert.Equal(t, "y1", u.String(), "code")
 }
 
 func TestKibi(t *testing.T) {
-	u := Kibi(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Ki1", u.Code(), "code")
-	assert.Equal(t, "Ki1", u.String(), "print symbol")
+	u := Kibi(New("1"))
+	assert.Equal(t, "Ki1", u.String(), "code")
 }
 
 func TestMebi(t *testing.T) {
-	u := Mebi(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Mi1", u.Code(), "code")
-	assert.Equal(t, "Mi1", u.String(), "print symbol")
+	u := Mebi(New("1"))
+	assert.Equal(t, "Mi1", u.String(), "code")
 }
 
 func TestGibi(t *testing.T) {
-	u := Gibi(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Gi1", u.Code(), "code")
-	assert.Equal(t, "Gi1", u.String(), "print symbol")
+	u := Gibi(New("1"))
+	assert.Equal(t, "Gi1", u.String(), "code")
 }
 
 func TestTebi(t *testing.T) {
-	u := Tebi(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "Ti1", u.Code(), "code")
-	assert.Equal(t, "Ti1", u.String(), "print symbol")
+	u := Tebi(New("1"))
+	assert.Equal(t, "Ti1", u.String(), "code")
 }
 

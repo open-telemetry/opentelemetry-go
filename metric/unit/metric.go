@@ -19,23 +19,23 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 // Metric units.
 var (
 	// Hertz is a metric unit representing frequency.
-	Hertz = Unit{code: "Hz", symbol: "Hz"}
+	Hertz = Unit{code: "Hz"}
 
 	// Watt is a metric unit representing power.
-	Watt = Unit{code: "W", symbol: "W"}
+	Watt = Unit{code: "W"}
 
 	// Volt is a metric unit representing electric potential.
-	Volt = Unit{code: "V", symbol: "V"}
+	Volt = Unit{code: "V"}
 
 	// DegreeCelsius is a metric unit representing temperature.
-	DegreeCelsius = Unit{code: "Cel", symbol: "°C"}
+	DegreeCelsius = Unit{code: "Cel"}
 
 	// Bit is a metric unit representing amount of information.
-	Bit = Unit{code: "bit", symbol: "bit"}
+	Bit = Unit{code: "bit"}
 
 	// Byte is a metric unit representing amount of information.
-	Byte = Unit{code: "By", symbol: "B"}
+	Byte = Unit{code: "By"}
 
 	// Baud is a metric unit representing signal transmission rate.
-	Baud = Unit{code: "Bd", symbol: "Bd"}
+	Baud = Unit{code: "Bd"}
 )

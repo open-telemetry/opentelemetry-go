@@ -19,23 +19,23 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 // Base units.
 var (
 	// Meter is a base-unit representing length.
-	Meter = Unit{code: "m", symbol: "m"}
+	Meter = Unit{code: "m"}
 
 	// Second is a base-unit representing time.
-	Second = Unit{code: "s", symbol: "s"}
+	Second = Unit{code: "s"}
 
 	// Gram is a base-unit representing mass.
-	Gram = Unit{code: "g", symbol: "g"}
+	Gram = Unit{code: "g"}
 
 	// Radian is a base-unit representing plane angle.
-	Radian = Unit{code: "rad", symbol: "rad"}
+	Radian = Unit{code: "rad"}
 
 	// Kelvin is a base-unit representing temperature.
-	Kelvin = Unit{code: "K", symbol: "K"}
+	Kelvin = Unit{code: "K"}
 
 	// Coulomb is a base-unit representing electric charge.
-	Coulomb = Unit{code: "C", symbol: "C"}
+	Coulomb = Unit{code: "C"}
 
 	// Candela is a base-unit representing luminous intensity.
-	Candela = Unit{code: "cd", symbol: "cd"}
+	Candela = Unit{code: "cd"}
 )

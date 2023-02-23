@@ -20,6 +20,6 @@ package unit // import "go.opentelemetry.io/otel/metric/unit"
 var (
 {{- range .BaseUnits }}
 	// {{ .Name | Title }} is a base-unit representing {{ .Property }}.
-	{{ .Name | Title }} = Unit{code: "{{ .CaseSensitiveCode }}", symbol: "{{ .PrintSymbol }}"}
+	{{ .Name | Title }} = Unit{code: "{{ .CaseSensitiveCode }}"}
 {{ end -}}
 )

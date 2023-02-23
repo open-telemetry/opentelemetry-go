@@ -17,5 +17,5 @@
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 {{ range .Prefixes }}
 // {{ .Name | Title }} returns a copy of u with a prefix representing a value of {{ .Value.Value }}.
-func {{ .Name | Title }}(u Unit) Unit { return u.withPrefix(prefix{code: "{{ .CaseSensitiveCode }}", symbol: "{{ .PrintSymbol }}"}) }
+func {{ .Name | Title }}(u Unit) Unit { return u.withPrefix(prefix{code: "{{ .CaseSensitiveCode }}"}) }
 {{ end -}}

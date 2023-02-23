@@ -23,8 +23,7 @@ import (
 )
 {{ range .Prefixes }}
 func Test{{ .Name | Title }}(t *testing.T) {
-	u := {{ .Name | Title }}(New("1", WithPrintSymbol("1")))
-	assert.Equal(t, "{{ .CaseSensitiveCode }}1", u.Code(), "code")
-	assert.Equal(t, "{{ .PrintSymbol }}1", u.String(), "print symbol")
+	u := {{ .Name | Title }}(New("1"))
+	assert.Equal(t, "{{ .CaseSensitiveCode }}1", u.String(), "code")
 }
 {{ end }}

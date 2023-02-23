@@ -22,37 +22,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	code   = "custom code"
-	symbol = "custom print symbol"
-)
+const code = "custom code"
 
-var hella = prefix{code: "hella", symbol: "🤘"}
-
-func TestPrefix(t *testing.T) {
-	p := prefix{code: code, symbol: symbol}
-	assert.Equal(t, code, p.Code(), "prefix code")
-	assert.Equal(t, symbol, p.String(), "prefix symbol")
-}
+var hella = prefix{code: "hella"}
 
 func TestNew(t *testing.T) {
 	u := New(code)
 	u = u.withPrefix(hella)
 
-	assert.Equal(t, hella.code+code, u.Code(), "unit code")
-	assert.Equal(t, hella.code+code, u.String(), "unit code as symbol")
-}
-
-func TestNewWithPrintSymbol(t *testing.T) {
-	u := New(code, WithPrintSymbol(symbol))
-	u = u.withPrefix(hella)
-
-	assert.Equal(t, hella.code+code, u.Code(), "unit code")
-	assert.Equal(t, hella.symbol+symbol, u.String(), "unit symbol")
+	assert.Equal(t, hella.code+code, u.String(), "unit code")
 }
 
 func TestUnitJSONMarshalling(t *testing.T) {
-	orig := New(code, WithPrintSymbol(symbol))
+	orig := New(code)
 	orig = orig.withPrefix(hella)
 	got, err := json.Marshal(orig)
 	require.NoError(t, err)
@@ -60,5 +42,5 @@ func TestUnitJSONMarshalling(t *testing.T) {
 
 	decoded := new(Unit)
 	require.NoError(t, json.Unmarshal([]byte(`"`+code+`"`), decoded))
-	assert.Equal(t, code, decoded.Code())
+	assert.Equal(t, code, decoded.String())
 }
