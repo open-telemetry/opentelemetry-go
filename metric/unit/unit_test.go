@@ -15,32 +15,17 @@
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-const code = "custom code"
-
-var hella prefix = "hella"
-
 func TestNew(t *testing.T) {
+	const code = "custom code"
 	u := New(code)
+
+	const hella = "hella"
 	u = u.withPrefix(hella)
 
-	assert.Equal(t, string(hella)+code, u.String(), "unit code")
-}
-
-func TestUnitJSONMarshalling(t *testing.T) {
-	orig := New(code)
-	orig = orig.withPrefix(hella)
-	got, err := json.Marshal(orig)
-	require.NoError(t, err)
-	require.Equal(t, `"`+string(hella)+code+`"`, string(got))
-
-	decoded := new(Unit)
-	require.NoError(t, json.Unmarshal([]byte(`"`+code+`"`), decoded))
-	assert.Equal(t, code, decoded.String())
+	assert.Equal(t, hella+code, u.String(), "unit code")
 }

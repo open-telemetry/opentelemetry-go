@@ -43,14 +43,3 @@ func (u Unit) withPrefix(p prefix) Unit {
 func (u Unit) String() string {
 	return string(u.prefix) + u.code
 }
-
-// MarshalText encodes the code of u into a textual form.
-func (u Unit) MarshalText() ([]byte, error) {
-	return []byte(u.String()), nil
-}
-
-// UnmarshalText decodes the text into a Unit.
-func (u *Unit) UnmarshalText(text []byte) error {
-	u.code = string(text)
-	return nil
-}
