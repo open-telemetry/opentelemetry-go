@@ -15,11 +15,22 @@
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 // Unit is a determinate standard quantity of measurement.
-type Unit string
+type Unit struct {
+	string
+}
 
 // Units defined by OpenTelemetry.
 const (
-	Dimensionless Unit = "1"
-	Bytes         Unit = "By"
-	Milliseconds  Unit = "ms"
+	Dimensionless = "1"
+	Bytes         = "By"
+	Milliseconds  = "ms"
 )
+
+// New returns a new Unit with the given string.
+func New(s string) Unit {
+	return Unit{s}
+}
+
+func (u Unit) String() string {
+	return u.string
+}

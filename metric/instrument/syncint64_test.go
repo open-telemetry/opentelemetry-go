@@ -24,12 +24,14 @@ import (
 
 func TestInt64Options(t *testing.T) {
 	const (
-		token  int64 = 43
-		desc         = "Instrument description."
-		uBytes       = unit.Bytes
+		token int64 = 43
+		desc        = "Instrument description."
+	)
+	var (
+		uBytes = unit.Bytes
 	)
 
 	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
 	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	assert.Equal(t, uBytes, got.Unit().String(), "unit")
 }

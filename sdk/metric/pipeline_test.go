@@ -48,7 +48,7 @@ func TestEmptyPipeline(t *testing.T) {
 	assert.Nil(t, output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", unit.New(unit.Dimensionless), testSumAggregator{}}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -72,7 +72,7 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", unit.New(unit.Dimensionless), testSumAggregator{}}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -114,7 +114,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", unit.Dimensionless, testSumAggregator{}}
+			sync := instrumentSync{name, "desc", unit.New(unit.Dimensionless), testSumAggregator{}}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
@@ -137,7 +137,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		Name:        "requests",
 		Description: "count of requests received",
 		Kind:        InstrumentKindCounter,
-		Unit:        unit.Dimensionless,
+		Unit:        unit.New(unit.Dimensionless),
 	}
 	return func(t *testing.T) {
 		reader := NewManualReader()
@@ -176,7 +176,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				metricdatatest.AssertEqual(t, metricdata.Metrics{
 					Name:        inst.Name,
 					Description: inst.Description,
-					Unit:        unit.Dimensionless,
+					Unit:        unit.New(unit.Dimensionless),
 					Data: metricdata.Sum[N]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,

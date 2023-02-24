@@ -211,7 +211,7 @@ var testScopeMetricsA = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake data",
 		Description: "Data used to test a reader",
-		Unit:        unit.Dimensionless,
+		Unit:        unit.New(unit.Dimensionless),
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 			IsMonotonic: true,
@@ -230,7 +230,7 @@ var testScopeMetricsB = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake scope data",
 		Description: "Data used to test a Producer reader",
-		Unit:        unit.Milliseconds,
+		Unit:        unit.New(unit.Milliseconds),
 		Data: metricdata.Gauge[int64]{
 			DataPoints: []metricdata.DataPoint[int64]{{
 				Attributes: attribute.NewSet(attribute.String("user", "ben")),

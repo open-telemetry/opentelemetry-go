@@ -27,9 +27,11 @@ import (
 
 func TestFloat64ObserverOptions(t *testing.T) {
 	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = unit.Bytes
+		token float64 = 43
+		desc          = "Instrument description."
+	)
+	var (
+		uBytes = unit.Bytes
 	)
 
 	got := NewFloat64ObserverConfig(
@@ -41,7 +43,7 @@ func TestFloat64ObserverOptions(t *testing.T) {
 		}),
 	)
 	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	assert.Equal(t, uBytes, got.Unit().String(), "unit")
 
 	// Functions are not comparable.
 	cBacks := got.Callbacks()

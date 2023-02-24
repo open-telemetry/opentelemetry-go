@@ -206,11 +206,11 @@ func convertAttrs(keys []ocmetricdata.LabelKey, values []ocmetricdata.LabelValue
 func convertUnit(u ocmetricdata.Unit) unit.Unit {
 	switch u {
 	case ocmetricdata.UnitDimensionless:
-		return unit.Dimensionless
+		return unit.New(unit.Dimensionless)
 	case ocmetricdata.UnitBytes:
-		return unit.Bytes
+		return unit.New(unit.Bytes)
 	case ocmetricdata.UnitMilliseconds:
-		return unit.Milliseconds
+		return unit.New(unit.Milliseconds)
 	}
-	return unit.Unit(string(u))
+	return unit.New(string(u))
 }

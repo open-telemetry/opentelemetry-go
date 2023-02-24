@@ -175,19 +175,19 @@ var (
 	metricsA = metricdata.Metrics{
 		Name:        "A",
 		Description: "A desc",
-		Unit:        unit.Dimensionless,
+		Unit:        unit.New(unit.Dimensionless),
 		Data:        sumInt64A,
 	}
 	metricsB = metricdata.Metrics{
 		Name:        "B",
 		Description: "B desc",
-		Unit:        unit.Bytes,
+		Unit:        unit.New(unit.Bytes),
 		Data:        gaugeFloat64B,
 	}
 	metricsC = metricdata.Metrics{
 		Name:        "A",
 		Description: "A desc",
-		Unit:        unit.Dimensionless,
+		Unit:        unit.New(unit.Dimensionless),
 		Data:        sumInt64C,
 	}
 

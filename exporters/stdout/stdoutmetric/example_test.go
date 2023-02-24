@@ -47,7 +47,7 @@ var (
 					{
 						Name:        "requests",
 						Description: "Number of requests received",
-						Unit:        unit.Dimensionless,
+						Unit:        unit.New(unit.Dimensionless),
 						Data: metricdata.Sum[int64]{
 							IsMonotonic: true,
 							Temporality: metricdata.DeltaTemporality,
@@ -64,7 +64,7 @@ var (
 					{
 						Name:        "latency",
 						Description: "Time spend processing received requests",
-						Unit:        unit.Milliseconds,
+						Unit:        unit.New(unit.Milliseconds),
 						Data: metricdata.Histogram{
 							Temporality: metricdata.DeltaTemporality,
 							DataPoints: []metricdata.HistogramDataPoint{
@@ -83,7 +83,7 @@ var (
 					{
 						Name:        "temperature",
 						Description: "CPU global temperature",
-						Unit:        unit.Unit("cel(1 K)"),
+						Unit:        unit.New("cel(1 K)"),
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{

@@ -214,7 +214,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
-					Unit:        unit.Dimensionless,
+					Unit:        unit.New(unit.Dimensionless),
 					Data: metricdata.Histogram{
 						DataPoints: []metricdata.HistogramDataPoint{
 							{
@@ -252,7 +252,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-a",
 					Description: "an int testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        unit.New(unit.Bytes),
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
@@ -281,7 +281,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-b",
 					Description: "a float testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        unit.New(unit.Bytes),
 					Data: metricdata.Gauge[float64]{
 						DataPoints: []metricdata.DataPoint[float64]{
 							{
@@ -310,7 +310,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-a",
 					Description: "an int testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        unit.New(unit.Milliseconds),
 					Data: metricdata.Sum[int64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -341,7 +341,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-b",
 					Description: "a float testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        unit.New(unit.Milliseconds),
 					Data: metricdata.Sum[float64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -387,7 +387,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
-					Unit:        unit.Dimensionless,
+					Unit:        unit.New(unit.Dimensionless),
 					Data: metricdata.Histogram{
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints:  []metricdata.HistogramDataPoint{},
@@ -410,7 +410,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/sum-a",
 					Description: "a testing sum",
-					Unit:        unit.Dimensionless,
+					Unit:        unit.New(unit.Dimensionless),
 					Data: metricdata.Sum[float64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -434,7 +434,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/gauge-a",
 					Description: "a testing gauge",
-					Unit:        unit.Dimensionless,
+					Unit:        unit.New(unit.Dimensionless),
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{},
 					},
@@ -592,15 +592,15 @@ func TestConvertUnits(t *testing.T) {
 	}, {
 		desc:     "dimensionless",
 		input:    ocmetricdata.UnitDimensionless,
-		expected: unit.Dimensionless,
+		expected: unit.New(unit.Dimensionless),
 	}, {
 		desc:     "milliseconds",
 		input:    ocmetricdata.UnitMilliseconds,
-		expected: unit.Milliseconds,
+		expected: unit.New(unit.Milliseconds),
 	}, {
 		desc:     "bytes",
 		input:    ocmetricdata.UnitBytes,
-		expected: unit.Bytes,
+		expected: unit.New(unit.Bytes),
 	},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

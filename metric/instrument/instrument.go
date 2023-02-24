@@ -87,4 +87,4 @@ func (o unitOpt) applyInt64Observer(c Int64ObserverConfig) Int64ObserverConfig {
 }
 
 // WithUnit sets the instrument unit.
-func WithUnit(u unit.Unit) Option { return unitOpt(u) }
+func WithUnit(u string) Option { return unitOpt(unit.New(u)) }
