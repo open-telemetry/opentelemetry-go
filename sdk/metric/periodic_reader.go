@@ -44,8 +44,8 @@ type periodicReaderConfig struct {
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: defaultInterval,
-		timeout:  defaultTimeout,
+		interval: envDuration(envInterval, defaultInterval),
+		timeout:  envDuration(envTimeout, defaultTimeout),
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -69,6 +69,9 @@ func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) perio
 // WithTimeout configures the time a PeriodicReader waits for an export to
 // complete before canceling it.
 //
+// This option overrides any value set for the
+// OTEL_METRIC_EXPORT_TIMEOUT environment variable.
+//
 // If this option is not used or d is less than or equal to zero, 30 seconds
 // is used as the default.
 func WithTimeout(d time.Duration) PeriodicReaderOption {
@@ -83,6 +86,9 @@ func WithTimeout(d time.Duration) PeriodicReaderOption {
 
 // WithInterval configures the intervening time between exports for a
 // PeriodicReader.
+//
+// This option overrides any value set for the
+// OTEL_METRIC_EXPORT_INTERVAL environment variable.
 //
 // If this option is not used or d is less than or equal to zero, 60 seconds
 // is used as the default.

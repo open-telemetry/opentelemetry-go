@@ -72,6 +72,10 @@ func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 	}
 }
 
+func (c *bridgeSpanContext) IsSampled() bool {
+	return c.otelSpanContext.IsSampled()
+}
+
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
 	m, err := baggage.NewMember(crk, value)
