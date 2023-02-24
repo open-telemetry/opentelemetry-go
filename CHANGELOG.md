@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Compatibility Note
+
 This release is the last to support go 1.18. The next release will require go 1.19.
 
 ### Added
