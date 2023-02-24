@@ -312,10 +312,10 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 
 		if ph != nil { // Reader was registered.
 			// Flush pending telemetry.
-			var m metricdata.ResourceMetrics
-			err = r.collect(ctx, ph, &m)
+			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
+			err = r.collect(ctx, ph, m)
 			if err == nil {
-				err = r.export(ctx, m)
+				err = r.export(ctx, *m)
 			}
 		}
 
