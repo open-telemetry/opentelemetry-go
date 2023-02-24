@@ -22,14 +22,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 func TestInt64ObserverOptions(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
-		uBytes       = unit.Bytes
+		uBytes       = "By"
 	)
 
 	got := NewInt64ObserverConfig(
