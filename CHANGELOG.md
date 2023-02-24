@@ -37,6 +37,9 @@ This release is the last to support go 1.18. The next release will require go 1.
 - Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
+- The following environment variables are supported by the `Reader`s in `go.opentelemetry.io/otel/sdk/metric`. (#3763)
+  - `OTEL_METRIC_EXPORT_INTERVAL`
+  - `OTEL_METRIC_EXPORT_TIMEOUT`
 
 ### Changed
 
