@@ -31,7 +31,7 @@ const (
 )
 
 // envDuration returns an environment variable's value as duration in milliseconds if it is exists,
-// or the defaultValue if not or the value is not valid.
+// or the defaultValue if the environment variable is not defined or the value is not valid.
 func envDuration(key string, defaultValue time.Duration) time.Duration {
 	v := os.Getenv(key)
 	if v == "" {
