@@ -48,15 +48,27 @@ var hc = &HTTPConv{
 func TestHTTPClientResponse(t *testing.T) {
 	const stat, n = 201, 397
 	resp := &http.Response{
+		Proto:         "HTTP/1.1",
 		StatusCode:    stat,
 		ContentLength: n,
 	}
 	got := hc.ClientResponse(resp)
-	assert.Equal(t, 2, cap(got), "slice capacity")
+	assert.Equal(t, 3, cap(got), "slice capacity")
 	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.String("http.flavor", "1.1"),
 		attribute.Key("http.status_code").Int(stat),
 		attribute.Key("http.response_content_length").Int(n),
 	}, got)
+}
+
+func TestClientResponseRequired(t *testing.T) {
+	resp := new(http.Response)
+	var got []attribute.KeyValue
+	assert.NotPanics(t, func() { got = hc.ClientResponse(resp) })
+	want := []attribute.KeyValue{
+		attribute.String("http.flavor", ""),
+	}
+	assert.Equal(t, want, got)
 }
 
 func TestHTTPSClientRequest(t *testing.T) {
@@ -76,7 +88,6 @@ func TestHTTPSClientRequest(t *testing.T) {
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 		},
@@ -111,7 +122,6 @@ func TestHTTPClientRequest(t *testing.T) {
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 			attribute.Int("net.peer.port", 8080),
@@ -129,7 +139,6 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	assert.NotPanics(t, func() { got = hc.ClientRequest(req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
-		attribute.String("http.flavor", ""),
 		attribute.String("http.url", ""),
 		attribute.String("net.peer.name", ""),
 	}

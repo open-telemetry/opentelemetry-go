@@ -44,8 +44,9 @@ type HTTPConv struct {
 }
 
 // ClientResponse returns attributes for an HTTP response received by a client
-// from a server. The following attributes are returned if the related values
-// are defined in resp: "http.status.code", "http.response_content_length".
+// from a server. The following attributes are always returned: "http.flavor".
+// The following attributes are returned if the related values are defined in
+// resp: "http.status.code", "http.response_content_length".
 //
 // This does not add all OpenTelemetry required attributes for an HTTP event,
 // it assumes ClientRequest was used to create the span with a complete set of
@@ -54,7 +55,7 @@ type HTTPConv struct {
 //
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
 func (c *HTTPConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
-	var n int
+	n := 1 // proto
 	if resp.StatusCode > 0 {
 		n++
 	}
@@ -63,6 +64,7 @@ func (c *HTTPConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	}
 
 	attrs := make([]attribute.KeyValue, 0, n)
+	attrs = append(attrs, c.proto(resp.Proto))
 	if resp.StatusCode > 0 {
 		attrs = append(attrs, c.HTTPStatusCodeKey.Int(resp.StatusCode))
 	}
@@ -73,12 +75,12 @@ func (c *HTTPConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 }
 
 // ClientRequest returns attributes for an HTTP request made by a client. The
-// following attributes are always returned: "http.url", "http.flavor",
-// "http.method", "net.peer.name". The following attributes are returned if the
-// related values are defined in req: "net.peer.port", "http.user_agent",
+// following attributes are always returned: "http.url", "http.method",
+// "net.peer.name". The following attributes are returned if the related
+// values are defined in req: "net.peer.port", "http.user_agent",
 // "http.request_content_length", "enduser.id".
 func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
-	n := 3 // URL, peer name, proto, and method.
+	n := 3 // URL, peer name, and method.
 	var h string
 	if req.URL != nil {
 		h = req.URL.Host
@@ -102,7 +104,6 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.proto(req.Proto))
 
 	var u string
 	if req.URL != nil {
