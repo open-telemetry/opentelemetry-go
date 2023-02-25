@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
 - Data race issue in OTLP exporter retry mechanism. (#3756)
+- Fill `http.flavor` with the actual Proto to be used when throwing HTTP Request from client using `net/http`. (#3778)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
