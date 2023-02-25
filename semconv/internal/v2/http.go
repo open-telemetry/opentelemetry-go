@@ -255,7 +255,7 @@ func (c *HTTPConv) proto(proto string) attribute.KeyValue {
 		return c.HTTPFlavorKey.String("1.0")
 	case "HTTP/1.1":
 		return c.HTTPFlavorKey.String("1.1")
-	case "HTTP/2":
+	case "HTTP/2", "HTTP/2.0":
 		return c.HTTPFlavorKey.String("2.0")
 	case "HTTP/3":
 		return c.HTTPFlavorKey.String("3.0")

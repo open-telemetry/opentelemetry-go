@@ -239,6 +239,7 @@ func TestProto(t *testing.T) {
 		"HTTP/1.0": "1.0",
 		"HTTP/1.1": "1.1",
 		"HTTP/2":   "2.0",
+		"HTTP/2.0": "2.0",
 		"HTTP/3":   "3.0",
 		"SPDY":     "SPDY",
 		"QUIC":     "QUIC",
