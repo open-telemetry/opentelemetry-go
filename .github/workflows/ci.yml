@@ -112,7 +112,7 @@ jobs:
           name: opentelemetry-go-test-output
           path: ${{ env.TEST_RESULTS }}
 
-  compatibility-test:
+  compatibility-matrix:
     strategy:
       matrix:
         go-version: ["1.20", 1.19, 1.18]
@@ -150,3 +150,19 @@ jobs:
         env:
           GOARCH: ${{ matrix.arch }}
         run: make test-short
+
+  test-compatibility:
+    runs-on: ubuntu-latest
+    needs: [compatibility-matrix]
+    steps:
+      - name: Print result
+        run: echo ${{ needs.compatibility-matrix.result }}
+      - name: Interpret result
+        run: |
+          if [[ success == ${{ needs.compatibility-matrix.result }} ]]
+          then
+            echo "All matrix jobs passed!"
+          else
+            echo "One or more matrix jobs failed."
+            false
+          fi
