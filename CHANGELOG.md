@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
 - The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
-- Restructure compatibility testing.
+- Restructure compatibility testing. (#3779)
 
 ### Fixed
 
