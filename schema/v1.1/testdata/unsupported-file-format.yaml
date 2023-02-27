@@ -6,5 +6,6 @@ versions:
     all:
       changes:
         - rename_attributes:
-            k8s.cluster.name: kubernetes.cluster.name
+            attribute_map:
+              k8s.cluster.name: kubernetes.cluster.name
   1.0.0:

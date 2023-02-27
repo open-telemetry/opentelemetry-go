@@ -40,27 +40,29 @@ func TestParseSchemaFile(t *testing.T) {
 					All: ast10.Attributes{
 						Changes: []ast10.AttributeChange{
 							{
-								RenameAttributes: &ast10.AttributeMap{
-									"k8s.cluster.name":     "kubernetes.cluster.name",
-									"k8s.namespace.name":   "kubernetes.namespace.name",
-									"k8s.node.name":        "kubernetes.node.name",
-									"k8s.node.uid":         "kubernetes.node.uid",
-									"k8s.pod.name":         "kubernetes.pod.name",
-									"k8s.pod.uid":          "kubernetes.pod.uid",
-									"k8s.container.name":   "kubernetes.container.name",
-									"k8s.replicaset.name":  "kubernetes.replicaset.name",
-									"k8s.replicaset.uid":   "kubernetes.replicaset.uid",
-									"k8s.cronjob.name":     "kubernetes.cronjob.name",
-									"k8s.cronjob.uid":      "kubernetes.cronjob.uid",
-									"k8s.job.name":         "kubernetes.job.name",
-									"k8s.job.uid":          "kubernetes.job.uid",
-									"k8s.statefulset.name": "kubernetes.statefulset.name",
-									"k8s.statefulset.uid":  "kubernetes.statefulset.uid",
-									"k8s.daemonset.name":   "kubernetes.daemonset.name",
-									"k8s.daemonset.uid":    "kubernetes.daemonset.uid",
-									"k8s.deployment.name":  "kubernetes.deployment.name",
-									"k8s.deployment.uid":   "kubernetes.deployment.uid",
-									"service.namespace":    "service.namespace.name",
+								RenameAttributes: &ast10.RenameAttributes{
+									AttributeMap: ast10.AttributeMap{
+										"k8s.cluster.name":     "kubernetes.cluster.name",
+										"k8s.namespace.name":   "kubernetes.namespace.name",
+										"k8s.node.name":        "kubernetes.node.name",
+										"k8s.node.uid":         "kubernetes.node.uid",
+										"k8s.pod.name":         "kubernetes.pod.name",
+										"k8s.pod.uid":          "kubernetes.pod.uid",
+										"k8s.container.name":   "kubernetes.container.name",
+										"k8s.replicaset.name":  "kubernetes.replicaset.name",
+										"k8s.replicaset.uid":   "kubernetes.replicaset.uid",
+										"k8s.cronjob.name":     "kubernetes.cronjob.name",
+										"k8s.cronjob.uid":      "kubernetes.cronjob.uid",
+										"k8s.job.name":         "kubernetes.job.name",
+										"k8s.job.uid":          "kubernetes.job.uid",
+										"k8s.statefulset.name": "kubernetes.statefulset.name",
+										"k8s.statefulset.uid":  "kubernetes.statefulset.uid",
+										"k8s.daemonset.name":   "kubernetes.daemonset.name",
+										"k8s.daemonset.uid":    "kubernetes.daemonset.uid",
+										"k8s.deployment.name":  "kubernetes.deployment.name",
+										"k8s.deployment.uid":   "kubernetes.deployment.uid",
+										"service.namespace":    "service.namespace.name",
+									},
 								},
 							},
 						},
@@ -69,8 +71,10 @@ func TestParseSchemaFile(t *testing.T) {
 					Resources: ast10.Attributes{
 						Changes: []ast10.AttributeChange{
 							{
-								RenameAttributes: &ast10.AttributeMap{
-									"telemetry.auto.version": "telemetry.auto_instr.version",
+								RenameAttributes: &ast10.RenameAttributes{
+									AttributeMap: ast10.AttributeMap{
+										"telemetry.auto.version": "telemetry.auto_instr.version",
+									},
 								},
 							},
 						},
