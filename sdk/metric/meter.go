@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
@@ -374,7 +373,7 @@ func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c 
 	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver[N](p, c)}
 }
 
-func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Unit) ([]internal.Aggregator[N], error) {
+func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc, u string) ([]internal.Aggregator[N], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -386,14 +385,14 @@ func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Un
 }
 
 // lookup returns the resolved instrumentImpl.
-func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*instrumentImpl[N], error) {
+func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc, u string) (*instrumentImpl[N], error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
 type int64ObservProvider struct{ *instProvider[int64] }
 
-func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (int64Observable, error) {
+func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (int64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
 }
@@ -424,7 +423,7 @@ func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
 
 type float64ObservProvider struct{ *instProvider[float64] }
 
-func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (float64Observable, error) {
+func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (float64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
 }

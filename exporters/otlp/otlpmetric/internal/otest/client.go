@@ -27,7 +27,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
-	"go.opentelemetry.io/otel/metric/unit"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -118,31 +117,31 @@ var (
 		{
 			Name:        "int64-gauge",
 			Description: "Gauge with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: gaugeInt64},
 		},
 		{
 			Name:        "float64-gauge",
 			Description: "Gauge with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: gaugeFloat64},
 		},
 		{
 			Name:        "int64-sum",
 			Description: "Sum with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Sum{Sum: sumInt64},
 		},
 		{
 			Name:        "float64-sum",
 			Description: "Sum with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Sum{Sum: sumFloat64},
 		},
 		{
 			Name:        "histogram",
 			Description: "Histogram",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Histogram{Histogram: hist},
 		},
 	}
