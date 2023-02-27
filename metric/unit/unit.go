@@ -15,6 +15,8 @@
 package unit // import "go.opentelemetry.io/otel/metric/unit"
 
 // Unit is a determinate standard quantity of measurement.
+//
+// Deprecated: This will be removed in the next release.
 type Unit string
 
 // Units defined by OpenTelemetry.
