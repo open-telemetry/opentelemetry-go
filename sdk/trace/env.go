@@ -22,11 +22,11 @@ const (
 	// batchSpanProcessorExportTimeoutKey is the maximum allowed time to
 	// export data (i.e. 3000).
 	batchSpanProcessorExportTimeoutKey = "OTEL_BSP_EXPORT_TIMEOUT"
-	// BatchSpanProcessorMaxQueueSizeKey is the maximum queue size (i.e. 2048).
+	// batchSpanProcessorMaxQueueSizeKey is the maximum queue size (i.e. 2048).
 	batchSpanProcessorMaxQueueSizeKey = "OTEL_BSP_MAX_QUEUE_SIZE"
-	// BatchSpanProcessorMaxExportBatchSizeKey is the maximum batch size (i.e.
+	// batchSpanProcessorMaxExportBatchSizeKey is the maximum batch size (i.e.
 	// 512). Note: it must be less than or equal to
-	// EnvBatchSpanProcessorMaxQueueSize.
+	// BatchSpanProcessorMaxQueueSize.
 	batchSpanProcessorMaxExportBatchSizeKey = "OTEL_BSP_MAX_EXPORT_BATCH_SIZE"
 
 	// attributeValueLengthKey is the maximum allowed attribute value size.
