@@ -34,6 +34,10 @@ var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
 // reader has been Shutdown once.
 var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
 
+// errNonPositiveDuration is logged when an environmental variable
+// has non-positive value.
+var errNonPositiveDuration = fmt.Errorf("non-positive duration")
+
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
 // Reader, since the SDK initiates ForceFlush and Shutdown

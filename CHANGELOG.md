@@ -30,8 +30,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `OtelLibraryName` -> `OTelLibraryName`
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
+- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
+- The following environment variables are supported by the `Reader`s in `go.opentelemetry.io/otel/sdk/metric`. (#3763)
+  - `OTEL_METRIC_EXPORT_INTERVAL`
+  - `OTEL_METRIC_EXPORT_TIMEOUT`
 
 ### Changed
 
@@ -45,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
 - Data race issue in OTLP exporter retry mechanism. (#3756)
+- Fixes wrapping a nil error in some cases (#????)
 
 ## [1.13.0/0.36.0] 2023-02-07
 
