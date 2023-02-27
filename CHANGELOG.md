@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/otel/metric/unit` package is removed. (#TBD)
+
 ## [1.14.0/0.37.0/0.0.4] 2023-02-27
 
 This release is the last to support [Go 1.18].
