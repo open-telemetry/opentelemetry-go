@@ -18,15 +18,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 func TestInt64Options(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
-		uBytes       = unit.Bytes
+		uBytes       = "By"
 	)
 
 	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
