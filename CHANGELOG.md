@@ -8,12 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-This release is the last to support Go 1.18.
-The next release will require at least Go 1.19.
+## [1.14.0/0.37.0/0.0.4] 2023-02-27
+
+This release is the last to support [Go 1.18].
+The next release will require at least [Go 1.19].
 
 ### Added
 
-- Semantic conventions of the `event` type are now generated. (#3697)
 - The `event` type semantic conventions are added to `go.opentelemetry.io/otel/semconv/v1.17.0`. (#3697)
 - Support [Go 1.20]. (#3693)
 - The `go.opentelemetry.io/otel/semconv/v1.18.0` package.
@@ -33,17 +34,19 @@ The next release will require at least Go 1.19.
     - `OtelLibraryName` -> `OTelLibraryName`
     - `OtelLibraryVersion` -> `OTelLibraryVersion`
     - `OtelStatusDescription` -> `OTelStatusDescription`
-- Add `bridgetSpanContext.IsSampled` to `go.opentelemetry.io/otel/bridget/opentracing` to expose whether span is sampled or not. (#3570)
+- A `IsSampled` method is added to the `SpanContext` implementation in `go.opentelemetry.io/otel/bridge/opentracing` to expose the span sampled state.
+  See the [README](./bridge/opentracing/README.md) for more information. (#3570)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/metric`. (#3738)
 - The `WithInstrumentationAttributes` option to `go.opentelemetry.io/otel/trace`. (#3739)
-- The following environment variables are supported by the `Reader`s in `go.opentelemetry.io/otel/sdk/metric`. (#3763)
-  - `OTEL_METRIC_EXPORT_INTERVAL`
-  - `OTEL_METRIC_EXPORT_TIMEOUT`
+- The following environment variables are supported by the periodic `Reader` in `go.opentelemetry.io/otel/sdk/metric`. (#3763)
+  - `OTEL_METRIC_EXPORT_INTERVAL` sets the time between collections and exports.
+  - `OTEL_METRIC_EXPORT_TIMEOUT` sets the timeout an export is attempted.
 
 ### Changed
 
-- [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
-- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
+- Fall-back to `TextMapCarrier` when it's not `HttpHeader`s in `go.opentelemetry.io/otel/bridge/opentracing`. (#3679)
+- The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into.
+  This change is made to enable memory reuse by SDK users. (#3732)
 - The `WithUnit` option in `go.opentelemetry.io/otel/sdk/metric/instrument` is updated to accept a `string` for the unit value. (#3776)
 
 ### Fixed
@@ -52,9 +55,9 @@ The next release will require at least Go 1.19.
 - Multi-reader `MeterProvider`s now export metrics for all readers, instead of just the first reader. (#3720, #3724)
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/otel/example/prometheus`. (#3733)
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
-- Data race issue in OTLP exporter retry mechanism. (#3756)
-- Fixes wrapping a nil error in some cases (#????)
-- Fix incorrect "all" and "resource" definition for Schema File (#3777)
+- Data race issue in OTLP exporter retry mechanism. (#3755, #3756)
+- Wrapping empty errors when exporting in `go.opentelemetry.io/otel/sdk/metric`. (#3698, #3772)
+- Incorrect "all" and "resource" definition for schema files in `go.opentelemetry.io/otel/schema/v1.1`. (#3777)
 
 ### Deprecated
 
@@ -2299,7 +2302,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.14.0...HEAD
+[1.14.0/0.37.0/0.0.4]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.14.0
 [1.13.0/0.36.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.13.0
 [1.12.0/0.35.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.12.0
 [1.11.2/0.34.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.2
@@ -2361,3 +2365,5 @@ It contains api and sdk for trace and meter.
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
 
 [Go 1.20]: https://go.dev/doc/go1.20
+[Go 1.19]: https://go.dev/doc/go1.19
+[Go 1.18]: https://go.dev/doc/go1.18
