@@ -155,14 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [compatibility-test]
     steps:
-      - name: Print result
-        run: echo ${{ needs.compatibility-test.result }}
-      - name: Interpret result
+      - name: Test if compatibility-test passed
         run: |
-          if [[ success == ${{ needs.compatibility-test.result }} ]]
-          then
-            echo "All matrix jobs passed!"
-          else
-            echo "One or more matrix jobs failed."
-            false
-          fi
+          echo ${{ needs.compatibility-test.result }}
+          test ${{ needs.compatibility-test.result }} == "success"
