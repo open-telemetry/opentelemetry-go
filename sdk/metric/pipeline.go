@@ -550,6 +550,9 @@ func (m *multierror) errorOrNil() error {
 	if len(m.errors) == 0 {
 		return nil
 	}
+	if m.wrapped == nil {
+		return errors.New(strings.Join(m.errors, "; "))
+	}
 	return fmt.Errorf("%w: %s", m.wrapped, strings.Join(m.errors, "; "))
 }
 
