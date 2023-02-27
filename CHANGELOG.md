@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support Go 1.18.
+The next release will require at least Go 1.19.
+
 ### Added
 
 - Semantic conventions of the `event` type are now generated. (#3697)
