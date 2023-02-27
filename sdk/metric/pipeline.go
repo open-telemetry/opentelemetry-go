@@ -133,7 +133,8 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 			errs.append(err)
 		}
 		if err := ctx.Err(); err != nil {
-			*rm = metricdata.ResourceMetrics{}
+			rm.Resource = nil
+			rm.ScopeMetrics = rm.ScopeMetrics[:0]
 			return err
 		}
 	}
