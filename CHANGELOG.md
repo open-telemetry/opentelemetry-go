@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
 - Data race issue in OTLP exporter retry mechanism. (#3756)
 - Fixes wrapping a nil error in some cases (#????)
+- Fix incorrect "all" and "resource" definition for Schema File (#3777)
 
 ### Deprecated
 
