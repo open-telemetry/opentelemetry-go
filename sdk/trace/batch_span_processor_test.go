@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -238,8 +237,8 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			wantBatchCount: 1,
 			genNumSpans:    2053,
 			envs: map[string]string{
-				env.BatchSpanProcessorMaxQueueSizeKey:       "5000",
-				env.BatchSpanProcessorMaxExportBatchSizeKey: "5000",
+				sdktrace.BatchSpanProcessorMaxQueueSizeKey:       "5000",
+				sdktrace.BatchSpanProcessorMaxExportBatchSizeKey: "5000",
 			},
 		},
 		{
@@ -248,8 +247,8 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			wantBatchCount: 4,
 			genNumSpans:    2053,
 			envs: map[string]string{
-				env.BatchSpanProcessorMaxQueueSizeKey:       "5000",
-				env.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
+				sdktrace.BatchSpanProcessorMaxQueueSizeKey:       "5000",
+				sdktrace.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
 			},
 		},
 		{
@@ -258,17 +257,17 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			wantBatchCount: 42,
 			genNumSpans:    2053,
 			envs: map[string]string{
-				env.BatchSpanProcessorMaxQueueSizeKey:       "50",
-				env.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
+				sdktrace.BatchSpanProcessorMaxQueueSizeKey:       "50",
+				sdktrace.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
 			},
 		},
 	}
 
 	envStore := ottest.NewEnvStore()
-	envStore.Record(env.BatchSpanProcessorScheduleDelayKey)
-	envStore.Record(env.BatchSpanProcessorExportTimeoutKey)
-	envStore.Record(env.BatchSpanProcessorMaxQueueSizeKey)
-	envStore.Record(env.BatchSpanProcessorMaxExportBatchSizeKey)
+	envStore.Record(sdktrace.BatchSpanProcessorScheduleDelayKey)
+	envStore.Record(sdktrace.BatchSpanProcessorExportTimeoutKey)
+	envStore.Record(sdktrace.BatchSpanProcessorMaxQueueSizeKey)
+	envStore.Record(sdktrace.BatchSpanProcessorMaxExportBatchSizeKey)
 
 	defer func() {
 		require.NoError(t, envStore.Restore())

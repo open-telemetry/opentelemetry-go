@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package trace
 
-// Environment variable names.
+// Workaround so that batch_span_processor_test.go has access to constants.
+
 const (
-	// The time interval (in milliseconds) between the start of two export attempts.
-	envInterval = "OTEL_METRIC_EXPORT_INTERVAL"
-	// Maximum allowed time (in milliseconds) to export data.
-	envTimeout = "OTEL_METRIC_EXPORT_TIMEOUT"
+	BatchSpanProcessorScheduleDelayKey      = batchSpanProcessorScheduleDelayKey
+	BatchSpanProcessorExportTimeoutKey      = batchSpanProcessorExportTimeoutKey
+	BatchSpanProcessorMaxQueueSizeKey       = batchSpanProcessorMaxQueueSizeKey
+	BatchSpanProcessorMaxExportBatchSizeKey = batchSpanProcessorMaxExportBatchSizeKey
 )

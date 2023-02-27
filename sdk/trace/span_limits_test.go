@@ -24,19 +24,18 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestSettingSpanLimits(t *testing.T) {
 	envLimits := func(val string) map[string]string {
 		return map[string]string{
-			env.SpanAttributeValueLengthKey: val,
-			env.SpanEventCountKey:           val,
-			env.SpanAttributeCountKey:       val,
-			env.SpanLinkCountKey:            val,
-			env.SpanEventAttributeCountKey:  val,
-			env.SpanLinkAttributeCountKey:   val,
+			spanAttributeValueLengthKey: val,
+			spanEventCountKey:           val,
+			spanAttributeCountKey:       val,
+			spanLinkCountKey:            val,
+			spanEventAttributeCountKey:  val,
+			spanLinkAttributeCountKey:   val,
 		}
 	}
 

@@ -14,10 +14,6 @@
 
 package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
-import (
-	"os"
-)
-
 // Environment variable names.
 const (
 	// Hostname for the Jaeger agent, part of address where exporter sends spans
@@ -34,11 +30,3 @@ const (
 	// Password to send as part of "Basic" authentication to the collector endpoint.
 	envPassword = "OTEL_EXPORTER_JAEGER_PASSWORD"
 )
-
-// envOr returns an env variable's value if it is exists or the default if not.
-func envOr(key, defaultValue string) string {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		return v
-	}
-	return defaultValue
-}

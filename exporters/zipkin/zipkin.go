@@ -28,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 
+	"go.opentelemetry.io/otel/internal/env"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -93,7 +94,7 @@ func WithClient(client *http.Client) Option {
 func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	if collectorURL == "" {
 		// Use endpoint from env var or default collector URL.
-		collectorURL = envOr(envEndpoint, defaultCollectorURL)
+		collectorURL = env.String(defaultCollectorURL, envEndpoint)
 	}
 	u, err := url.Parse(collectorURL)
 	if err != nil {

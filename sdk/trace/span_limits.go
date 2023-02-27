@@ -14,7 +14,7 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
-import "go.opentelemetry.io/otel/sdk/internal/env"
+import "go.opentelemetry.io/otel/internal/env"
 
 const (
 	// DefaultAttributeValueLengthLimit is the default maximum allowed
@@ -115,11 +115,11 @@ type SpanLimits struct {
 // • AttributePerLinkCountLimit: OTEL_LINK_ATTRIBUTE_COUNT_LIMIT (default: 128)
 func NewSpanLimits() SpanLimits {
 	return SpanLimits{
-		AttributeValueLengthLimit:   env.SpanAttributeValueLength(DefaultAttributeValueLengthLimit),
-		AttributeCountLimit:         env.SpanAttributeCount(DefaultAttributeCountLimit),
-		EventCountLimit:             env.SpanEventCount(DefaultEventCountLimit),
-		LinkCountLimit:              env.SpanLinkCount(DefaultLinkCountLimit),
-		AttributePerEventCountLimit: env.SpanEventAttributeCount(DefaultAttributePerEventCountLimit),
-		AttributePerLinkCountLimit:  env.SpanLinkAttributeCount(DefaultAttributePerLinkCountLimit),
+		AttributeValueLengthLimit:   env.Int(DefaultAttributeValueLengthLimit, spanAttributeValueLengthKey, attributeValueLengthKey),
+		AttributeCountLimit:         env.Int(DefaultAttributeCountLimit, spanAttributeCountKey, attributeCountKey),
+		EventCountLimit:             env.Int(DefaultEventCountLimit, spanEventCountKey),
+		LinkCountLimit:              env.Int(DefaultLinkCountLimit, spanLinkCountKey),
+		AttributePerEventCountLimit: env.Int(DefaultAttributePerEventCountLimit, spanEventAttributeCountKey),
+		AttributePerLinkCountLimit:  env.Int(DefaultAttributePerLinkCountLimit, spanLinkAttributeCountKey),
 	}
 }

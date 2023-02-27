@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/env"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -44,8 +45,8 @@ type periodicReaderConfig struct {
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: envDuration(envInterval, defaultInterval),
-		timeout:  envDuration(envTimeout, defaultTimeout),
+		interval: env.Duration(defaultInterval, envInterval),
+		timeout:  env.Duration(defaultTimeout, envTimeout),
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)

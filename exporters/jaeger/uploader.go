@@ -28,6 +28,7 @@ import (
 
 	gen "go.opentelemetry.io/otel/exporters/jaeger/internal/gen-go/jaeger"
 	"go.opentelemetry.io/otel/exporters/jaeger/internal/third_party/thrift/lib/go/thrift"
+	"go.opentelemetry.io/otel/internal/env"
 )
 
 // batchUploader send a batch of spans to Jaeger.
@@ -61,8 +62,8 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 		cfg := agentEndpointConfig{
 			agentClientUDPParams{
 				AttemptReconnecting: true,
-				Host:                envOr(envAgentHost, "localhost"),
-				Port:                envOr(envAgentPort, "6831"),
+				Host:                env.String("localhost", envAgentHost),
+				Port:                env.String("6831", envAgentPort),
 			},
 		}
 		for _, opt := range options {
@@ -169,9 +170,9 @@ func WithMaxPacketSize(size int) AgentEndpointOption {
 func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	return endpointOptionFunc(func() (batchUploader, error) {
 		cfg := collectorEndpointConfig{
-			endpoint:   envOr(envEndpoint, "http://localhost:14268/api/traces"),
-			username:   envOr(envUser, ""),
-			password:   envOr(envPassword, ""),
+			endpoint:   env.String("http://localhost:14268/api/traces", envEndpoint),
+			username:   env.String("", envUser),
+			password:   env.String("", envPassword),
 			httpClient: http.DefaultClient,
 		}
 

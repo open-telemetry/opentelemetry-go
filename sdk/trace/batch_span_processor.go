@@ -22,16 +22,16 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/env"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // Defaults for BatchSpanProcessorOptions.
 const (
 	DefaultMaxQueueSize       = 2048
-	DefaultScheduleDelay      = 5000
-	DefaultExportTimeout      = 30000
+	DefaultScheduleDelay      = 5000 * time.Millisecond
+	DefaultExportTimeout      = 30000 * time.Millisecond
 	DefaultMaxExportBatchSize = 512
 )
 
@@ -93,8 +93,8 @@ var _ SpanProcessor = (*batchSpanProcessor)(nil)
 //
 // If the exporter is nil, the span processor will preform no action.
 func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorOption) SpanProcessor {
-	maxQueueSize := env.BatchSpanProcessorMaxQueueSize(DefaultMaxQueueSize)
-	maxExportBatchSize := env.BatchSpanProcessorMaxExportBatchSize(DefaultMaxExportBatchSize)
+	maxQueueSize := env.Int(DefaultMaxQueueSize, batchSpanProcessorMaxQueueSizeKey)
+	maxExportBatchSize := env.Int(DefaultMaxExportBatchSize, batchSpanProcessorMaxExportBatchSizeKey)
 
 	if maxExportBatchSize > maxQueueSize {
 		if DefaultMaxExportBatchSize > maxQueueSize {
@@ -105,8 +105,8 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}
 
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
-		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
+		BatchTimeout:       env.Duration(DefaultScheduleDelay, batchSpanProcessorScheduleDelayKey),
+		ExportTimeout:      env.Duration(DefaultExportTimeout, batchSpanProcessorExportTimeoutKey),
 		MaxQueueSize:       maxQueueSize,
 		MaxExportBatchSize: maxExportBatchSize,
 	}
