@@ -14,7 +14,6 @@
 
 // Package unit provides units.
 //
-// This package is currently in a pre-GA phase. Backwards incompatible changes
-// may be introduced in subsequent minor version releases as we work to track
-// the evolving OpenTelemetry specification and user feedback.
+// Deprecated: This package will be removed in the next release. Use the
+// equivalent unit string instead.
 package unit // import "go.opentelemetry.io/otel/metric/unit"
