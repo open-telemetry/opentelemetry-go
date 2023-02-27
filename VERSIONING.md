@@ -126,6 +126,12 @@ is designed so the following goals can be achieved.
       stable release except for a stable release of the contrib repository.
 * GitHub releases will be made for all releases.
 * Go modules will be made available at Go package mirrors.
+* This repository's modules are only guaranteed to be compatible with
+  modules released from the same commit. For example,
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.11.1` is not
+  compatible with `go.opentelemetry.io/otel v1.11.2`.
+  Tracked under:
+  [#3548](https://github.com/open-telemetry/opentelemetry-go/issues/3548).
 
 ## Example Versioning Lifecycle
 
