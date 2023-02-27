@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -309,10 +308,10 @@ func sanitizeRune(r rune) rune {
 	return '_'
 }
 
-var unitSuffixes = map[unit.Unit]string{
-	unit.Dimensionless: "_ratio",
-	unit.Bytes:         "_bytes",
-	unit.Milliseconds:  "_milliseconds",
+var unitSuffixes = map[string]string{
+	"1":  "_ratio",
+	"By": "_bytes",
+	"ms": "_milliseconds",
 }
 
 // getName returns the sanitized name, including unit suffix.

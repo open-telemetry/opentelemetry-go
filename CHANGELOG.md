@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - [bridge/ot] Fall-back to TextMap carrier when it's not ot.HttpHeaders. (#3679)
 - The `Collect` method of the `"go.opentelemetry.io/otel/sdk/metric".Reader` interface is updated to accept the `metricdata.ResourceMetrics` value the collection will be made into. This change is made to enable memory reuse by SDK users. (#3732)
+- The `WithUnit` option in `go.opentelemetry.io/otel/sdk/metric/instrument` is updated to accept a `string` for the unit value. (#3776)
 
 ### Fixed
 
@@ -50,6 +51,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not silently drop unknown schema data with `Parse` in  `go.opentelemetry.io/otel/schema/v1.1`. (#3743)
 - Data race issue in OTLP exporter retry mechanism. (#3756)
 - Handle empty environment variable as it they were not set. (#3805)
+- Fixes wrapping a nil error in some cases (#3772)
+
+### Deprecated
+
+- The `go.opentelemetry.io/otel/metric/unit` package is deprecated.
+  Use the equivalent unit string instead. (#3776)
+  - Use `"1"` instead of `unit.Dimensionless`
+  - Use `"By"` instead of `unit.Bytes`
+  - Use `"ms"` instead of `unit.Milliseconds`
 
 ## [1.13.0/0.36.0] 2023-02-07
 
