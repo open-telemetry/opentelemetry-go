@@ -15,6 +15,8 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 // Environment variable names.
+// Some of these constants are exposed to tests in env_test.go
+// in order to avoid cyclic references.
 const (
 	// batchSpanProcessorScheduleDelayKey is the delay interval between two
 	// consecutive exports (i.e. 5000).
