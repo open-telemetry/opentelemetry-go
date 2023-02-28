@@ -48,4 +48,6 @@ testing structures.
 	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 */
+
+// Deprecated: This package was removed, some functionality is found in sdk/trace/tracetest.
 package oteltest // import "go.opentelemetry.io/otel/oteltest"

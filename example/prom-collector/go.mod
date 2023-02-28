@@ -1,3 +1,4 @@
+// Deprecated: example removed.  Use the prometheus example instead.
 module go.opentelemetry.io/otel/example/prom-collector
 
 go 1.14
