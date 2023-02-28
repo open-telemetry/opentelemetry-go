@@ -34,6 +34,10 @@ var ErrReaderNotRegistered = fmt.Errorf("reader is not registered")
 // reader has been Shutdown once.
 var ErrReaderShutdown = fmt.Errorf("reader is shutdown")
 
+// errNonPositiveDuration is logged when an environmental variable
+// has non-positive value.
+var errNonPositiveDuration = fmt.Errorf("non-positive duration")
+
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
 // Reader, since the SDK initiates ForceFlush and Shutdown
@@ -65,8 +69,9 @@ type Reader interface {
 	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
-	// the SDK. An error is returned if this is called after Shutdown.
-	Collect(context.Context) (metricdata.ResourceMetrics, error)
+	// the SDK and stores it in out. An error is returned if this is called
+	// after Shutdown or if out is nil.
+	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
 	//

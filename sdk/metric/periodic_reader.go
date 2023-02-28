@@ -16,6 +16,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -43,8 +44,8 @@ type periodicReaderConfig struct {
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: defaultInterval,
-		timeout:  defaultTimeout,
+		interval: envDuration(envInterval, defaultInterval),
+		timeout:  envDuration(envTimeout, defaultTimeout),
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -68,6 +69,9 @@ func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) perio
 // WithTimeout configures the time a PeriodicReader waits for an export to
 // complete before canceling it.
 //
+// This option overrides any value set for the
+// OTEL_METRIC_EXPORT_TIMEOUT environment variable.
+//
 // If this option is not used or d is less than or equal to zero, 30 seconds
 // is used as the default.
 func WithTimeout(d time.Duration) PeriodicReaderOption {
@@ -82,6 +86,9 @@ func WithTimeout(d time.Duration) PeriodicReaderOption {
 
 // WithInterval configures the intervening time between exports for a
 // PeriodicReader.
+//
+// This option overrides any value set for the
+// OTEL_METRIC_EXPORT_INTERVAL environment variable.
 //
 // If this option is not used or d is less than or equal to zero, 60 seconds
 // is used as the default.
@@ -206,21 +213,29 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
-	m, err := r.Collect(ctx)
+	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
+	rm := metricdata.ResourceMetrics{}
+	err := r.Collect(ctx, &rm)
 	if err == nil {
-		err = r.export(ctx, m)
+		err = r.export(ctx, rm)
 	}
 	return err
 }
 
 // Collect gathers and returns all metric data related to the Reader from
-// the SDK and other Producers. The returned metric data is not exported
-// to the configured exporter, it is left to the caller to handle that if
-// desired.
+// the SDK and other Producers and stores the result in rm. The returned metric
+// data is not exported to the configured exporter, it is left to the caller to
+// handle that if desired.
 //
-// An error is returned if this is called after Shutdown.
-func (r *periodicReader) Collect(ctx context.Context) (metricdata.ResourceMetrics, error) {
-	return r.collect(ctx, r.sdkProducer.Load())
+// An error is returned if this is called after Shutdown. An error is return if rm is nil.
+func (r *periodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	if rm == nil {
+		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
+	}
+	// TODO (#3047): When collect is updated to accept output as param, pass rm.
+	rmTemp, err := r.collect(ctx, r.sdkProducer.Load())
+	*rm = rmTemp
+	return err
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.

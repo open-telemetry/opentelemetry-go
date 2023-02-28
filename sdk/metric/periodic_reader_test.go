@@ -41,6 +41,54 @@ func TestWithTimeout(t *testing.T) {
 	assert.Equal(t, defaultTimeout, test(time.Duration(-1)), "invalid timeout should use default")
 }
 
+func TestTimeoutEnvVar(t *testing.T) {
+	testCases := []struct {
+		v    string
+		want time.Duration
+	}{
+		{
+			// empty value
+			"",
+			defaultTimeout,
+		},
+		{
+			// positive value
+			"1",
+			time.Millisecond,
+		},
+		{
+			// non-positive value
+			"0",
+			defaultTimeout,
+		},
+		{
+			// value with unit (not supported)
+			"1ms",
+			defaultTimeout,
+		},
+		{
+			// NaN
+			"abc",
+			defaultTimeout,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.v, func(t *testing.T) {
+			t.Setenv(envTimeout, tc.v)
+			got := newPeriodicReaderConfig(nil).timeout
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestTimeoutEnvAndOption(t *testing.T) {
+	want := 5 * time.Millisecond
+	t.Setenv(envTimeout, "999")
+	opts := []PeriodicReaderOption{WithTimeout(want)}
+	got := newPeriodicReaderConfig(opts).timeout
+	assert.Equal(t, want, got, "option should have precedence over env var")
+}
+
 func TestWithInterval(t *testing.T) {
 	test := func(d time.Duration) time.Duration {
 		opts := []PeriodicReaderOption{WithInterval(d)}
@@ -51,6 +99,54 @@ func TestWithInterval(t *testing.T) {
 	assert.Equal(t, defaultInterval, newPeriodicReaderConfig(nil).interval)
 	assert.Equal(t, defaultInterval, test(time.Duration(0)), "invalid interval should use default")
 	assert.Equal(t, defaultInterval, test(time.Duration(-1)), "invalid interval should use default")
+}
+
+func TestIntervalEnvVar(t *testing.T) {
+	testCases := []struct {
+		v    string
+		want time.Duration
+	}{
+		{
+			// empty value
+			"",
+			defaultInterval,
+		},
+		{
+			// positive value
+			"1",
+			time.Millisecond,
+		},
+		{
+			// non-positive value
+			"0",
+			defaultInterval,
+		},
+		{
+			// value with unit (not supported)
+			"1ms",
+			defaultInterval,
+		},
+		{
+			// NaN
+			"abc",
+			defaultInterval,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.v, func(t *testing.T) {
+			t.Setenv(envInterval, tc.v)
+			got := newPeriodicReaderConfig(nil).interval
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestIntervalEnvAndOption(t *testing.T) {
+	want := 5 * time.Millisecond
+	t.Setenv(envInterval, "999")
+	opts := []PeriodicReaderOption{WithInterval(want)}
+	got := newPeriodicReaderConfig(opts).interval
+	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
 type fnExporter struct {

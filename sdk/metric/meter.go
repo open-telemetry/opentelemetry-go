@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
@@ -43,18 +42,13 @@ type meter struct {
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
-	var viewCache cache[string, instrumentID]
-
-	// Passing nil as the ac parameter to newInstrumentCache will have each
-	// create its own aggregator cache.
-	ic := newInstrumentCache[int64](nil, &viewCache)
-	fc := newInstrumentCache[float64](nil, &viewCache)
+	var viewCache cache[string, streamID]
 
 	return &meter{
 		scope:     s,
 		pipes:     p,
-		int64IP:   newInstProvider(s, p, ic),
-		float64IP: newInstProvider(s, p, fc),
+		int64IP:   newInstProvider[int64](s, p, &viewCache),
+		float64IP: newInstProvider[float64](s, p, &viewCache),
 	}
 }
 
@@ -375,11 +369,11 @@ type instProvider[N int64 | float64] struct {
 	resolve resolver[N]
 }
 
-func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c instrumentCache[N]) *instProvider[N] {
-	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver(p, c)}
+func newInstProvider[N int64 | float64](s instrumentation.Scope, p pipelines, c *cache[string, streamID]) *instProvider[N] {
+	return &instProvider[N]{scope: s, pipes: p, resolve: newResolver[N](p, c)}
 }
 
-func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Unit) ([]internal.Aggregator[N], error) {
+func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc, u string) ([]internal.Aggregator[N], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -391,14 +385,14 @@ func (p *instProvider[N]) aggs(kind InstrumentKind, name, desc string, u unit.Un
 }
 
 // lookup returns the resolved instrumentImpl.
-func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (*instrumentImpl[N], error) {
+func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc, u string) (*instrumentImpl[N], error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
 type int64ObservProvider struct{ *instProvider[int64] }
 
-func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (int64Observable, error) {
+func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (int64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
 }
@@ -429,7 +423,7 @@ func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
 
 type float64ObservProvider struct{ *instProvider[float64] }
 
-func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc string, u unit.Unit) (float64Observable, error) {
+func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (float64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
 	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
 }

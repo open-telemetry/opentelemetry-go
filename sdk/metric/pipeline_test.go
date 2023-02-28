@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -48,7 +47,7 @@ func TestEmptyPipeline(t *testing.T) {
 	assert.Nil(t, output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -72,7 +71,7 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", unit.Dimensionless, testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -114,7 +113,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", unit.Dimensionless, testSumAggregator{}}
+			sync := instrumentSync{name, "desc", "1", testSumAggregator{}}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
@@ -137,7 +136,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		Name:        "requests",
 		Description: "count of requests received",
 		Kind:        InstrumentKindCounter,
-		Unit:        unit.Dimensionless,
+		Unit:        "1",
 	}
 	return func(t *testing.T) {
 		reader := NewManualReader()
@@ -159,8 +158,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				c := newInstrumentCache[N](nil, nil)
-				i := newInserter(test.pipe, c)
+				var c cache[string, streamID]
+				i := newInserter[N](test.pipe, &c)
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
@@ -176,7 +175,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				metricdatatest.AssertEqual(t, metricdata.Metrics{
 					Name:        inst.Name,
 					Description: inst.Description,
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Data: metricdata.Sum[N]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,

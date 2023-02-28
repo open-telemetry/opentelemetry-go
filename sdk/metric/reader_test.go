@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -53,13 +52,14 @@ func (ts *readerTestSuite) TearDownTest() {
 }
 
 func (ts *readerTestSuite) TestErrorForNotRegistered() {
-	_, err := ts.Reader.Collect(context.Background())
+	err := ts.Reader.Collect(context.Background(), &metricdata.ResourceMetrics{})
 	ts.ErrorIs(err, ErrReaderNotRegistered)
 }
 
 func (ts *readerTestSuite) TestSDKProducer() {
 	ts.Reader.register(testSDKProducer{})
-	m, err := ts.Reader.Collect(context.Background())
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(context.Background(), &m)
 	ts.NoError(err)
 	ts.Equal(testResourceMetricsA, m)
 }
@@ -67,7 +67,8 @@ func (ts *readerTestSuite) TestSDKProducer() {
 func (ts *readerTestSuite) TestExternalProducer() {
 	ts.Reader.register(testSDKProducer{})
 	ts.Reader.RegisterProducer(testExternalProducer{})
-	m, err := ts.Reader.Collect(context.Background())
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(context.Background(), &m)
 	ts.NoError(err)
 	ts.Equal(testResourceMetricsAB, m)
 }
@@ -78,7 +79,8 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 	ts.Reader.RegisterProducer(testExternalProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 
-	m, err := ts.Reader.Collect(ctx)
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(ctx, &m)
 	ts.ErrorIs(err, ErrReaderShutdown)
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
@@ -113,7 +115,7 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 	// This should be ignored.
 	ts.Reader.register(p1)
 
-	_, err := ts.Reader.Collect(context.Background())
+	err := ts.Reader.Collect(context.Background(), &metricdata.ResourceMetrics{})
 	ts.Equal(assert.AnError, err)
 }
 
@@ -134,7 +136,8 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 		},
 	)
 
-	m, err := ts.Reader.Collect(context.Background())
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(context.Background(), &m)
 	ts.Equal(assert.AnError, err)
 	ts.Equal(testResourceMetricsAB, m)
 }
@@ -146,7 +149,8 @@ func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 		}})
 	ts.Reader.RegisterProducer(testExternalProducer{})
 
-	m, err := ts.Reader.Collect(context.Background())
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(context.Background(), &m)
 	ts.Equal(assert.AnError, err)
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
@@ -165,7 +169,7 @@ func (ts *readerTestSuite) TestMethodConcurrency() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = ts.Reader.Collect(ctx)
+			_ = ts.Reader.Collect(ctx, nil)
 		}()
 
 		wg.Add(1)
@@ -190,9 +194,15 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 	ts.Reader.register(testSDKProducer{})
 	ts.Reader.RegisterProducer(testExternalProducer{})
 
-	m, err := ts.Reader.Collect(ctx)
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(ctx, &m)
 	ts.ErrorIs(err, ErrReaderShutdown)
 	ts.Equal(metricdata.ResourceMetrics{}, m)
+}
+
+func (ts *readerTestSuite) TestCollectNilResourceMetricError() {
+	ctx := context.Background()
+	ts.Assert().Error(ts.Reader.Collect(ctx, nil))
 }
 
 var testScopeMetricsA = metricdata.ScopeMetrics{
@@ -200,7 +210,7 @@ var testScopeMetricsA = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake data",
 		Description: "Data used to test a reader",
-		Unit:        unit.Dimensionless,
+		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 			IsMonotonic: true,
@@ -219,7 +229,7 @@ var testScopeMetricsB = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake scope data",
 		Description: "Data used to test a Producer reader",
-		Unit:        unit.Milliseconds,
+		Unit:        "ms",
 		Data: metricdata.Gauge[int64]{
 			DataPoints: []metricdata.DataPoint[int64]{{
 				Attributes: attribute.NewSet(attribute.String("user", "ben")),
@@ -279,7 +289,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			collectedMetrics, err = r.Collect(ctx)
+			err = r.Collect(ctx, &collectedMetrics)
 			assert.Equalf(b, testResourceMetricsA, collectedMetrics, "unexpected Collect response: (%#v, %v)", collectedMetrics, err)
 		}
 	}

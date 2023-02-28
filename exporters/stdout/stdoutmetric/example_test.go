@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -47,7 +46,7 @@ var (
 					{
 						Name:        "requests",
 						Description: "Number of requests received",
-						Unit:        unit.Dimensionless,
+						Unit:        "1",
 						Data: metricdata.Sum[int64]{
 							IsMonotonic: true,
 							Temporality: metricdata.DeltaTemporality,
@@ -64,7 +63,7 @@ var (
 					{
 						Name:        "latency",
 						Description: "Time spend processing received requests",
-						Unit:        unit.Milliseconds,
+						Unit:        "ms",
 						Data: metricdata.Histogram{
 							Temporality: metricdata.DeltaTemporality,
 							DataPoints: []metricdata.HistogramDataPoint{
@@ -83,7 +82,7 @@ var (
 					{
 						Name:        "temperature",
 						Description: "CPU global temperature",
-						Unit:        unit.Unit("cel(1 K)"),
+						Unit:        "cel(1 K)",
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{

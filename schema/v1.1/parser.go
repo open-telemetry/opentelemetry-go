@@ -43,6 +43,7 @@ func ParseFile(schemaFilePath string) (*ast.Schema, error) {
 func Parse(schemaFileContent io.Reader) (*ast.Schema, error) {
 	var ts ast.Schema
 	d := yaml.NewDecoder(schemaFileContent)
+	d.SetStrict(true) // Do not silently drop unknown fields.
 	err := d.Decode(&ts)
 	if err != nil {
 		return nil, err

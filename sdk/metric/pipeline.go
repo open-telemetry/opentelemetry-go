@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -48,7 +47,7 @@ type aggregator interface {
 type instrumentSync struct {
 	name        string
 	description string
-	unit        unit.Unit
+	unit        string
 	aggregator  aggregator
 }
 
@@ -179,12 +178,32 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 // inserter facilitates inserting of new instruments from a single scope into a
 // pipeline.
 type inserter[N int64 | float64] struct {
-	cache    instrumentCache[N]
+	// aggregators is a cache that holds Aggregators inserted into the
+	// underlying reader pipeline. This cache ensures no duplicate Aggregators
+	// are inserted into the reader pipeline and if a new request during an
+	// instrument creation asks for the same Aggregator the same instance is
+	// returned.
+	aggregators *cache[streamID, aggVal[N]]
+
+	// views is a cache that holds instrument identifiers for all the
+	// instruments a Meter has created, it is provided from the Meter that owns
+	// this inserter. This cache ensures during the creation of instruments
+	// with the same name but different options (e.g. description, unit) a
+	// warning message is logged.
+	views *cache[string, streamID]
+
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline, c instrumentCache[N]) *inserter[N] {
-	return &inserter[N]{cache: c, pipeline: p}
+func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *inserter[N] {
+	if vc == nil {
+		vc = &cache[string, streamID]{}
+	}
+	return &inserter[N]{
+		aggregators: &cache[streamID, aggVal[N]]{},
+		views:       vc,
+		pipeline:    p,
+	}
 }
 
 // Instrument inserts the instrument inst with instUnit into a pipeline. All
@@ -261,6 +280,12 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]internal.Aggregator[N], err
 	return aggs, errs.errorOrNil()
 }
 
+// aggVal is the cached value in an aggregators cache.
+type aggVal[N int64 | float64] struct {
+	Aggregator internal.Aggregator[N]
+	Err        error
+}
+
 // cachedAggregator returns the appropriate Aggregator for an instrument
 // configuration. If the exact instrument has been created within the
 // inst.Scope, that Aggregator instance will be returned. Otherwise, a new
@@ -288,17 +313,17 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		)
 	}
 
-	id := i.instrumentID(kind, stream)
+	id := i.streamID(kind, stream)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
-	return i.cache.LookupAggregator(id, func() (internal.Aggregator[N], error) {
+	cv := i.aggregators.Lookup(id, func() aggVal[N] {
 		agg, err := i.aggregator(stream.Aggregation, kind, id.Temporality, id.Monotonic)
 		if err != nil {
-			return nil, err
+			return aggVal[N]{nil, err}
 		}
 		if agg == nil { // Drop aggregator.
-			return nil, nil
+			return aggVal[N]{nil, nil}
 		}
 		if stream.AttributeFilter != nil {
 			agg = internal.NewFilter(agg, stream.AttributeFilter)
@@ -310,15 +335,16 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 			unit:        stream.Unit,
 			aggregator:  agg,
 		})
-		return agg, err
+		return aggVal[N]{agg, err}
 	})
+	return cv.Aggregator, cv.Err
 }
 
 // logConflict validates if an instrument with the same name as id has already
 // been created. If that instrument conflicts with id, a warning is logged.
-func (i *inserter[N]) logConflict(id instrumentID) {
-	existing, unique := i.cache.Unique(id)
-	if unique {
+func (i *inserter[N]) logConflict(id streamID) {
+	existing := i.views.Lookup(id.Name, func() streamID { return id })
+	if id == existing {
 		return
 	}
 
@@ -334,9 +360,9 @@ func (i *inserter[N]) logConflict(id instrumentID) {
 	)
 }
 
-func (i *inserter[N]) instrumentID(kind InstrumentKind, stream Stream) instrumentID {
+func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
 	var zero N
-	id := instrumentID{
+	id := streamID{
 		Name:        stream.Name,
 		Description: stream.Description,
 		Unit:        stream.Unit,
@@ -491,10 +517,10 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, c instrumentCache[N]) resolver[N] {
+func newResolver[N int64 | float64](p pipelines, vc *cache[string, streamID]) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
-		in[i] = newInserter(p[i], c)
+		in[i] = newInserter[N](p[i], vc)
 	}
 	return resolver[N]{in}
 }
@@ -523,6 +549,9 @@ type multierror struct {
 func (m *multierror) errorOrNil() error {
 	if len(m.errors) == 0 {
 		return nil
+	}
+	if m.wrapped == nil {
+		return errors.New(strings.Join(m.errors, "; "))
 	}
 	return fmt.Errorf("%w: %s", m.wrapped, strings.Join(m.errors, "; "))
 }

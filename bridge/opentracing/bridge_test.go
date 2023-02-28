@@ -26,6 +26,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -200,6 +201,8 @@ type textMapCarrier struct {
 	m map[string]string
 }
 
+var _ propagation.TextMapCarrier = (*textMapCarrier)(nil)
+
 func newTextCarrier() *textMapCarrier {
 	return &textMapCarrier{m: map[string]string{}}
 }
@@ -252,6 +255,10 @@ func newTestTextMapWriter(m *map[string]string) *testTextMapWriter {
 
 func (t *testTextMapWriter) Set(key, val string) {
 	(*t.m)[key] = val
+}
+
+type samplable interface {
+	IsSampled() bool
 }
 
 func TestBridgeTracer_ExtractAndInject(t *testing.T) {
@@ -358,6 +365,10 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 				if tc.extractErr == nil {
 					bsc, ok := spanContext.(*bridgeSpanContext)
 					assert.True(t, ok)
+					require.NotNil(t, bsc)
+					require.NotNil(t, bsc.otelSpanContext)
+					require.NotNil(t, bsc.otelSpanContext.SpanID())
+					require.NotNil(t, bsc.otelSpanContext.TraceID())
 
 					assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
 					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
@@ -500,6 +511,38 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 
 			s := b.StartSpan(tc.name, tc.opt...)
 			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind, tc.expected)
+		})
+	}
+}
+
+func TestBridge_SpanContext_IsSampled(t *testing.T) {
+	testCases := []struct {
+		name     string
+		flags    trace.TraceFlags
+		expected bool
+	}{
+		{
+			name:     "not sampled",
+			flags:    0,
+			expected: false,
+		},
+		{
+			name:     "sampled",
+			flags:    trace.FlagsSampled,
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := internal.NewMockTracer()
+			tracer.TraceFlags = tc.flags
+
+			b, _ := NewTracerPair(tracer)
+			s := b.StartSpan("abc")
+			sc := s.Context()
+
+			assert.Equal(t, tc.expected, sc.(samplable).IsSampled())
 		})
 	}
 }
