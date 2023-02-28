@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support global `MeterProvider` in `go.opentelemetry.io/otel`. (#3818)
   - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
-  - Use `MeterProivder` for a global `metric.MeterProvider`.
+  - Use `GetMeterProivder` for a global `metric.MeterProvider`.
   - Use `SetMeterProivder` to set the global `metric.MeterProvider`.
 
 ### Deprecated

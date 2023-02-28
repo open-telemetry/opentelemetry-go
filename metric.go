@@ -32,20 +32,20 @@ import (
 // instruments it has created or will create, are recreated automatically from
 // the new MeterProvider.
 //
-// This is short for MeterProvider().Meter(name).
+// This is short for GetMeterProvider().Meter(name).
 func Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
-	return MeterProvider().Meter(name, opts...)
+	return GetMeterProvider().Meter(name, opts...)
 }
 
-// MeterProvider returns the registered global meter provider.
+// GetMeterProvider returns the registered global meter provider.
 //
-// If no global MeterProvider has been registered, a No-op MeterProvider
-// implementation is returned. When a global MeterProvider is registered for
-// the first time, the returned MeterProvider, and all the Meters it has
+// If no global GetMeterProvider has been registered, a No-op GetMeterProvider
+// implementation is returned. When a global GetMeterProvider is registered for
+// the first time, the returned GetMeterProvider, and all the Meters it has
 // created or will create, are recreated automatically from the new
-// MeterProvider.
-func MeterProvider() metric.MeterProvider {
+// GetMeterProvider.
+func GetMeterProvider() metric.MeterProvider {
 	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
 	return global.MeterProvider()
 }
