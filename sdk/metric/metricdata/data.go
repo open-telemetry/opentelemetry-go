@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -47,7 +46,7 @@ type Metrics struct {
 	// Description is the description of the Instrument, which can be used in documentation.
 	Description string
 	// Unit is the unit in which the Instrument reports.
-	Unit unit.Unit
+	Unit string
 	// Data is the aggregated data from an Instrument.
 	Data Aggregation
 }

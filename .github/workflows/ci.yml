@@ -150,3 +150,12 @@ jobs:
         env:
           GOARCH: ${{ matrix.arch }}
         run: make test-short
+
+  test-compatibility:
+    runs-on: ubuntu-latest
+    needs: [compatibility-test]
+    steps:
+      - name: Test if compatibility-test passed
+        run: |
+          echo ${{ needs.compatibility-test.result }}
+          test ${{ needs.compatibility-test.result }} == "success"

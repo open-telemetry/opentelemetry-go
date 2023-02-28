@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
@@ -37,7 +36,7 @@ var (
 		Name:        "foo",
 		Description: "foo desc",
 		Kind:        InstrumentKindCounter,
-		Unit:        unit.Bytes,
+		Unit:        "By",
 		Scope: instrumentation.Scope{
 			Name:      "TestNewViewMatch",
 			Version:   "v0.1.0",
@@ -206,12 +205,12 @@ func TestNewViewMatch(t *testing.T) {
 		},
 		{
 			name:     "Unit",
-			criteria: Instrument{Unit: unit.Bytes},
-			matches:  []Instrument{{Unit: unit.Bytes}, completeIP},
+			criteria: Instrument{Unit: "By"},
+			matches:  []Instrument{{Unit: "By"}, completeIP},
 			notMatches: []Instrument{
 				{},
-				{Unit: unit.Dimensionless},
-				{Unit: unit.Unit("K")},
+				{Unit: "1"},
+				{Unit: "K"},
 			},
 		},
 		{
@@ -278,49 +277,49 @@ func TestNewViewMatch(t *testing.T) {
 					Name:        "Wrong Name",
 					Description: "foo desc",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "Wrong Description",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
 					Kind:        InstrumentKindObservableUpDownCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Scope:       scope("TestNewViewMatch", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("Wrong Scope Name", "v0.1.0", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("TestNewViewMatch", "v1.4.3", schemaURL),
 				},
 				{
 					Name:        "foo",
 					Description: "foo desc",
 					Kind:        InstrumentKindCounter,
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Scope:       scope("TestNewViewMatch", "v0.1.0", "https://go.dev"),
 				},
 			},
@@ -384,12 +383,12 @@ func TestNewViewReplace(t *testing.T) {
 		},
 		{
 			name: "Unit",
-			mask: Stream{Unit: unit.Dimensionless},
+			mask: Stream{Unit: "1"},
 			want: func(i Instrument) Stream {
 				return Stream{
 					Name:        i.Name,
 					Description: i.Description,
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 				}
 			},
 		},
@@ -410,14 +409,14 @@ func TestNewViewReplace(t *testing.T) {
 			mask: Stream{
 				Name:        alt,
 				Description: alt,
-				Unit:        unit.Dimensionless,
+				Unit:        "1",
 				Aggregation: aggregation.LastValue{},
 			},
 			want: func(i Instrument) Stream {
 				return Stream{
 					Name:        alt,
 					Description: alt,
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Aggregation: aggregation.LastValue{},
 				}
 			},
@@ -490,7 +489,7 @@ func ExampleNewView() {
 	stream, _ := view(Instrument{
 		Name:        "latency",
 		Description: "request latency",
-		Unit:        unit.Milliseconds,
+		Unit:        "ms",
 		Kind:        InstrumentKindCounter,
 		Scope: instrumentation.Scope{
 			Name:      "http",
@@ -537,7 +536,7 @@ func ExampleNewView_wildcard() {
 	// name suffix of ".ms".
 	view := NewView(
 		Instrument{Name: "*.ms"},
-		Stream{Unit: unit.Milliseconds},
+		Stream{Unit: "ms"},
 	)
 
 	// The created view can then be registered with the OpenTelemetry metric
@@ -546,7 +545,7 @@ func ExampleNewView_wildcard() {
 
 	stream, _ := view(Instrument{
 		Name: "computation.time.ms",
-		Unit: unit.Dimensionless,
+		Unit: "1",
 	})
 	fmt.Println("name:", stream.Name)
 	fmt.Println("unit:", stream.Unit)
@@ -573,9 +572,9 @@ func ExampleView() {
 			return s, false
 		}
 		switch i.Unit {
-		case unit.Milliseconds:
+		case "ms":
 			s.Name += ".ms"
-		case unit.Bytes:
+		case "By":
 			s.Name += ".byte"
 		default:
 			return s, false
@@ -589,13 +588,13 @@ func ExampleView() {
 
 	stream, _ := view(Instrument{
 		Name: "computation.time.ms",
-		Unit: unit.Milliseconds,
+		Unit: "ms",
 	})
 	fmt.Println("name:", stream.Name)
 
 	stream, _ = view(Instrument{
 		Name: "heap.size",
-		Unit: unit.Bytes,
+		Unit: "By",
 	})
 	fmt.Println("name:", stream.Name)
 	// Output:

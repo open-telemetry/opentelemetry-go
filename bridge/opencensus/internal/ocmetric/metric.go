@@ -21,7 +21,6 @@ import (
 	ocmetricdata "go.opencensus.io/metric/metricdata"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -52,7 +51,7 @@ func ConvertMetrics(ocmetrics []*ocmetricdata.Metric) ([]metricdata.Metrics, err
 		otelMetrics = append(otelMetrics, metricdata.Metrics{
 			Name:        ocm.Descriptor.Name,
 			Description: ocm.Descriptor.Description,
-			Unit:        convertUnit(ocm.Descriptor.Unit),
+			Unit:        string(ocm.Descriptor.Unit),
 			Data:        agg,
 		})
 	}
@@ -200,17 +199,4 @@ func convertAttrs(keys []ocmetricdata.LabelKey, values []ocmetricdata.LabelValue
 		})
 	}
 	return attribute.NewSet(attrs...), nil
-}
-
-// convertUnit converts from the OpenCensus unit to OpenTelemetry unit.
-func convertUnit(u ocmetricdata.Unit) unit.Unit {
-	switch u {
-	case ocmetricdata.UnitDimensionless:
-		return unit.Dimensionless
-	case ocmetricdata.UnitBytes:
-		return unit.Bytes
-	case ocmetricdata.UnitMilliseconds:
-		return unit.Milliseconds
-	}
-	return unit.Unit(string(u))
 }

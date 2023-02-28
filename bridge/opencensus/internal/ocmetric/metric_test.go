@@ -22,7 +22,6 @@ import (
 	ocmetricdata "go.opencensus.io/metric/metricdata"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -214,7 +213,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Data: metricdata.Histogram{
 						DataPoints: []metricdata.HistogramDataPoint{
 							{
@@ -252,7 +251,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-a",
 					Description: "an int testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
@@ -281,7 +280,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/gauge-b",
 					Description: "a float testing gauge",
-					Unit:        unit.Bytes,
+					Unit:        "By",
 					Data: metricdata.Gauge[float64]{
 						DataPoints: []metricdata.DataPoint[float64]{
 							{
@@ -310,7 +309,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-a",
 					Description: "an int testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        "ms",
 					Data: metricdata.Sum[int64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -341,7 +340,7 @@ func TestConvertMetrics(t *testing.T) {
 				}, {
 					Name:        "foo.com/sum-b",
 					Description: "a float testing sum",
-					Unit:        unit.Milliseconds,
+					Unit:        "ms",
 					Data: metricdata.Sum[float64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -387,7 +386,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Data: metricdata.Histogram{
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints:  []metricdata.HistogramDataPoint{},
@@ -410,7 +409,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/sum-a",
 					Description: "a testing sum",
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Data: metricdata.Sum[float64]{
 						IsMonotonic: true,
 						Temporality: metricdata.CumulativeTemporality,
@@ -434,7 +433,7 @@ func TestConvertMetrics(t *testing.T) {
 				{
 					Name:        "foo.com/gauge-a",
 					Description: "a testing gauge",
-					Unit:        unit.Dimensionless,
+					Unit:        "1",
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{},
 					},
@@ -576,38 +575,6 @@ func TestConvertMetrics(t *testing.T) {
 			metricdatatest.AssertEqual[metricdata.ScopeMetrics](t,
 				metricdata.ScopeMetrics{Metrics: tc.expected},
 				metricdata.ScopeMetrics{Metrics: output})
-		})
-	}
-}
-
-func TestConvertUnits(t *testing.T) {
-	var noUnit unit.Unit
-	for _, tc := range []struct {
-		desc     string
-		input    ocmetricdata.Unit
-		expected unit.Unit
-	}{{
-		desc:     "unspecified unit",
-		expected: noUnit,
-	}, {
-		desc:     "dimensionless",
-		input:    ocmetricdata.UnitDimensionless,
-		expected: unit.Dimensionless,
-	}, {
-		desc:     "milliseconds",
-		input:    ocmetricdata.UnitMilliseconds,
-		expected: unit.Milliseconds,
-	}, {
-		desc:     "bytes",
-		input:    ocmetricdata.UnitBytes,
-		expected: unit.Bytes,
-	},
-	} {
-		t.Run(tc.desc, func(t *testing.T) {
-			output := convertUnit(tc.input)
-			if output != tc.expected {
-				t.Errorf("convertUnit(%v) = %q, want %q", tc.input, output, tc.expected)
-			}
 		})
 	}
 }
