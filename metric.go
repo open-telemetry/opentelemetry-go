@@ -16,6 +16,7 @@ package otel // import "go.opentelemetry.io/otel"
 
 import (
 	"go.opentelemetry.io/otel/metric"
+	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
 	"go.opentelemetry.io/otel/metric/global"
 )
 
@@ -33,6 +34,7 @@ import (
 //
 // This is short for MeterProvider().Meter(name).
 func Meter(name string, opts ...metric.MeterOption) metric.Meter {
+	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
 	return MeterProvider().Meter(name, opts...)
 }
 
@@ -44,10 +46,12 @@ func Meter(name string, opts ...metric.MeterOption) metric.Meter {
 // created or will create, are recreated automatically from the new
 // MeterProvider.
 func MeterProvider() metric.MeterProvider {
+	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
 	return global.MeterProvider()
 }
 
 // SetMeterProvider registers mp as the global MeterProvider.
 func SetMeterProvider(mp metric.MeterProvider) {
+	// nolint: staticcheck  // Temporary, while metric/global is deprecated.
 	global.SetMeterProvider(mp)
 }
