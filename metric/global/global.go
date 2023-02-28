@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package global provides a global MeterProvider for OpenTelemetry.
+//
+// Deprecated: Use go.opentelemetry.io/otel instead.
 package global // import "go.opentelemetry.io/otel/metric/global"
 
 import (
@@ -26,17 +29,23 @@ import (
 // empty, then a implementation defined default name will be used instead.
 //
 // This is short for MeterProvider().Meter(name).
+//
+// Deprecated: Use Meter from go.opentelemetry.io/otel instead.
 func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
 	return MeterProvider().Meter(instrumentationName, opts...)
 }
 
 // MeterProvider returns the registered global meter provider.
 // If none is registered then a No-op MeterProvider is returned.
+//
+// Deprecated: Use MeterProvider from go.opentelemetry.io/otel instead.
 func MeterProvider() metric.MeterProvider {
 	return global.MeterProvider()
 }
 
 // SetMeterProvider registers `mp` as the global meter provider.
+//
+// Deprecated: Use SetMeterProvider from go.opentelemetry.io/otel instead.
 func SetMeterProvider(mp metric.MeterProvider) {
 	global.SetMeterProvider(mp)
 }
