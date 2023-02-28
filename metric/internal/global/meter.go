@@ -19,7 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
+	oGlob "go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -334,7 +334,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 
 	reg, err := m.RegisterCallback(c.function, insts...)
 	if err != nil {
-		otel.Handle(err)
+		oGlob.GetErrorHandler().Handle(err)
 	}
 
 	c.unreg = reg.Unregister
