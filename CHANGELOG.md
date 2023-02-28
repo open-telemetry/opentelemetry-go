@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Handle empty environment variable as it they were not set. (#3764)
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/unit` package is removed. (#3814)
