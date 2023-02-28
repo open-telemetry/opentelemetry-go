@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 //nolint:govet // Meter doesn't register for go vet
@@ -33,7 +32,7 @@ func ExampleMeter_synchronous() {
 
 	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
-		instrument.WithUnit(unit.Milliseconds))
+		instrument.WithUnit("ms"))
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -54,7 +53,7 @@ func ExampleMeter_asynchronous_single() {
 
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
 			// Do the real work here to get the real disk usage. For example,
 			//

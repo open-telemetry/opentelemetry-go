@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -175,19 +174,19 @@ var (
 	metricsA = metricdata.Metrics{
 		Name:        "A",
 		Description: "A desc",
-		Unit:        unit.Dimensionless,
+		Unit:        "1",
 		Data:        sumInt64A,
 	}
 	metricsB = metricdata.Metrics{
 		Name:        "B",
 		Description: "B desc",
-		Unit:        unit.Bytes,
+		Unit:        "By",
 		Data:        gaugeFloat64B,
 	}
 	metricsC = metricdata.Metrics{
 		Name:        "A",
 		Description: "A desc",
-		Unit:        unit.Dimensionless,
+		Unit:        "1",
 		Data:        sumInt64C,
 	}
 

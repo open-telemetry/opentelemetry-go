@@ -52,5 +52,5 @@ type Attributes struct {
 
 // AttributeChange corresponds to a section representing attribute changes.
 type AttributeChange struct {
-	RenameAttributes *AttributeMap `yaml:"rename_attributes"`
+	RenameAttributes *RenameAttributes `yaml:"rename_attributes"`
 }
