@@ -42,5 +42,5 @@ func (r *hostIDReaderLinux) read() (string, error) {
 }
 
 var platformHostIDReader hostIDReader = &hostIDReaderLinux{
-	readFile: readFile
+	readFile: readFile,
 }
