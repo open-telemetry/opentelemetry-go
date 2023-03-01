@@ -2,14 +2,6 @@ module repro
 
 go 1.20
 
-replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../exporters/otlp/otlpmetric/otlpmetricgrpc
-
-replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../exporters/stdout/stdoutmetric
-
-replace go.opentelemetry.io/otel/metric => ../metric
-
-replace go.opentelemetry.io/otel/sdk/metric => ../sdk/metric
-
 require (
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.40.0
@@ -41,3 +33,21 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/otel/sdk => ../sdk
+
+replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../exporters/otlp/internal/retry
+
+replace go.opentelemetry.io/otel => ../
+
+replace go.opentelemetry.io/otel/trace => ../trace
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../exporters/otlp/otlpmetric
+
+replace go.opentelemetry.io/otel/metric => ../metric
+
+replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../exporters/otlp/otlpmetric/otlpmetricgrpc
+
+replace go.opentelemetry.io/otel/sdk/metric => ../sdk/metric
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdoutmetric => ../exporters/stdout/stdoutmetric
