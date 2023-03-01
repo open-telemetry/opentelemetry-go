@@ -27,7 +27,7 @@ type hostIDReaderLinux struct {
 }
 
 // read attempts to read the machine-id from /etc/machine-id followed by
-// /var/lib/dbus/machine-id. If neither location yields an id an error will
+// /var/lib/dbus/machine-id. If neither location yields an ID an error will
 // be returned.
 func (r *hostIDReaderLinux) read() (string, error) {
 	if result, err := r.readFile("/etc/machine-id"); err == nil {

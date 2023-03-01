@@ -71,7 +71,7 @@ func WithHost() Option {
 	return WithDetectors(host{})
 }
 
-// WithHostID adds a host id attribute to the configured resource
+// WithHostID adds host ID information to the configured resource.
 func WithHostID() Option {
 	return WithDetectors(hostIDDetector{})
 }
