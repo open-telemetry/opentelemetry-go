@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support global `MeterProvider` in `go.opentelemetry.io/otel`. (#3818)
+  - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
+  - Use `GetMeterProivder` for a global `metric.MeterProvider`.
+  - Use `SetMeterProivder` to set the global `metric.MeterProvider`.
+
 ### Changed
 
 - Dropped compatibility testing for [Go 1.18].
@@ -16,6 +23,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Handle empty environment variable as it they were not set. (#3764)
+
+### Deprecated
+
+- The `go.opentelemetry.io/otel/metric/global` package is deprecated.
+  Use `go.opentelemetry.io/otel` instead. (#3818)
 
 ### Removed
 
