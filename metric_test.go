@@ -12,31 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetrichttp_test
+package otel // import "go.opentelemetry.io/otel"
 
 import (
-	"context"
+	"testing"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/sdk/metric"
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/metric"
 )
 
-func Example() {
-	ctx := context.Background()
-	exp, err := otlpmetrichttp.New(ctx)
-	if err != nil {
-		panic(err)
-	}
+type testMeterProvider struct{}
 
-	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(exp)))
-	defer func() {
-		if err := meterProvider.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
-	otel.SetMeterProvider(meterProvider)
+var _ metric.MeterProvider = &testMeterProvider{}
 
-	// From here, the meterProvider can be used by instrumentation to collect
-	// telemetry.
+func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+	return metric.NewNoopMeterProvider().Meter("")
+}
+
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := metric.NewNoopMeterProvider()
+	SetMeterProvider(&p1)
+	SetMeterProvider(p2)
+
+	got := GetMeterProvider()
+	assert.Equal(t, p2, got)
 }
