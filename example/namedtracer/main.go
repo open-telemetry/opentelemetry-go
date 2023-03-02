@@ -20,11 +20,13 @@ import (
 	"log"
 
 	"github.com/go-logr/stdr"
+	"golang.org/x/exp/slog"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/example/namedtracer/foo"
+	"go.opentelemetry.io/otel/example/namedtracer/slogotel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	otellog "go.opentelemetry.io/otel/log"
@@ -68,6 +70,10 @@ func initLogger() error {
 		sdklog.WithLogRecordProcessor(bsp),
 	)
 	//otel.SetTracerProvider(tp)
+
+	// Configure all slog logs to also go via Otel Logs Bridge API
+	slog.SetDefault(slog.New(slogotel.NewOtelSlogHandler(lp.Logger("namedtracer"))))
+
 	return nil
 }
 

@@ -17,6 +17,8 @@ package foo // import "go.opentelemetry.io/otel/example/namedtracer/foo"
 import (
 	"context"
 
+	"golang.org/x/exp/slog"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
@@ -40,7 +42,12 @@ func SubOperation(ctx context.Context, logger log.Logger) error {
 	span.SetAttributes(lemonsKey.String("five"))
 	span.AddEvent("Sub span event")
 
+	// Log via Otel Logger API
 	logger.Emit(ctx, log.WithAttributes(attribute.String("operation", "suboperation")))
+
+	// Log via slog API. Note this will correctly output Span Context (traceid,spanid) in the final output
+	// if Otel slog Handler is used.
+	slog.InfoCtx(ctx, "Otel logs via slog and with context!", "source", "slog")
 
 	return nil
 }
