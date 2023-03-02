@@ -75,12 +75,12 @@ func (c *HTTPConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 }
 
 // ClientRequest returns attributes for an HTTP request made by a client. The
-// following attributes are always returned: "http.url", "http.method",
-// "net.peer.name". The following attributes are returned if the related
-// values are defined in req: "net.peer.port", "http.user_agent",
+// following attributes are always returned: "http.url", "http.flavor",
+// "http.method", "net.peer.name". The following attributes are returned if the
+// related values are defined in req: "net.peer.port", "http.user_agent",
 // "http.request_content_length", "enduser.id".
 func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
-	n := 3 // URL, peer name, and method.
+	n := 3 // URL, peer name, proto, and method.
 	var h string
 	if req.URL != nil {
 		h = req.URL.Host
@@ -104,6 +104,7 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.method(req.Method))
+	attrs = append(attrs, c.proto(req.Proto))
 
 	var u string
 	if req.URL != nil {

@@ -61,7 +61,7 @@ func TestHTTPClientResponse(t *testing.T) {
 	}, got)
 }
 
-func TestClientResponseRequired(t *testing.T) {
+func TestHTTPClientResponseRequired(t *testing.T) {
 	resp := new(http.Response)
 	var got []attribute.KeyValue
 	assert.NotPanics(t, func() { got = hc.ClientResponse(resp) })
@@ -88,6 +88,7 @@ func TestHTTPSClientRequest(t *testing.T) {
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
+			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 		},
@@ -122,6 +123,7 @@ func TestHTTPClientRequest(t *testing.T) {
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
+			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 			attribute.Int("net.peer.port", 8080),
@@ -139,6 +141,7 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	assert.NotPanics(t, func() { got = hc.ClientRequest(req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
+		attribute.String("http.flavor", ""),
 		attribute.String("http.url", ""),
 		attribute.String("net.peer.name", ""),
 	}
