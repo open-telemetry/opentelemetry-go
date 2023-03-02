@@ -100,10 +100,13 @@ var (
 )
 
 func Example() {
-	// Print with a JSON encoder that indents with two spaces.
+	// Init a JSON encoder that indents with two spaces.
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
+
+	// Print with a JSON encoder that redact timestamp to a zero value
+	encIt := stdoutmetric.NewEncoderIgnoreTimestamp(enc)
+	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(encIt))
 	if err != nil {
 		panic(err)
 	}
@@ -116,10 +119,132 @@ func Example() {
 
 	ctx := context.Background()
 	// This is where the sdk would be used to create a Meter and from that
-	// instruments that would make measurments of your code. To simulate that
+	// instruments that would make measurements of your code. To simulate that
 	// behavior, call export directly with mocked data.
 	_ = exp.Export(ctx, mockData)
 
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)
+
+	//Output:
+	// {
+	//   "Resource": [
+	//     {
+	//       "Key": "service.name",
+	//       "Value": {
+	//         "Type": "STRING",
+	//         "Value": "stdoutmetric-example"
+	//       }
+	//     }
+	//   ],
+	//   "ScopeMetrics": [
+	//     {
+	//       "Scope": {
+	//         "Name": "example",
+	//         "Version": "v0.0.1",
+	//         "SchemaURL": ""
+	//       },
+	//       "Metrics": [
+	//         {
+	//           "Name": "requests",
+	//           "Description": "Number of requests received",
+	//           "Unit": "1",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 5
+	//               }
+	//             ],
+	//             "Temporality": "DeltaTemporality",
+	//             "IsMonotonic": true
+	//           }
+	//         },
+	//         {
+	//           "Name": "latency",
+	//           "Description": "Time spend processing received requests",
+	//           "Unit": "ms",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Count": 10,
+	//                 "Bounds": [
+	//                   1,
+	//                   5,
+	//                   10
+	//                 ],
+	//                 "BucketCounts": [
+	//                   1,
+	//                   3,
+	//                   6,
+	//                   0
+	//                 ],
+	//                 "Min": {},
+	//                 "Max": {},
+	//                 "Sum": 57
+	//               }
+	//             ],
+	//             "Temporality": "DeltaTemporality"
+	//           }
+	//         },
+	//         {
+	//           "Name": "temperature",
+	//           "Description": "CPU global temperature",
+	//           "Unit": "cel(1 K)",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 32.4
+	//               }
+	//             ]
+	//           }
+	//         }
+	//       ]
+	//     }
+	//   ]
+	// }
+	// {
+	//   "Resource": [
+	//     {
+	//       "Key": "service.name",
+	//       "Value": {
+	//         "Type": "STRING",
+	//         "Value": "stdoutmetric-example"
+	//       }
+	//     }
+	//   ],
+	//   "ScopeMetrics": []
+	// }
 }
