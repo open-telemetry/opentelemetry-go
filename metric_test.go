@@ -12,14 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package unit // import "go.opentelemetry.io/otel/metric/unit"
+package otel // import "go.opentelemetry.io/otel"
 
-// Unit is a determinate standard quantity of measurement.
-type Unit string
+import (
+	"testing"
 
-// Units defined by OpenTelemetry.
-const (
-	Dimensionless Unit = "1"
-	Bytes         Unit = "By"
-	Milliseconds  Unit = "ms"
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/metric"
 )
+
+type testMeterProvider struct{}
+
+var _ metric.MeterProvider = &testMeterProvider{}
+
+func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+	return metric.NewNoopMeterProvider().Meter("")
+}
+
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := metric.NewNoopMeterProvider()
+	SetMeterProvider(&p1)
+	SetMeterProvider(p2)
+
+	got := GetMeterProvider()
+	assert.Equal(t, p2, got)
+}

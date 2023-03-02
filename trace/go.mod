@@ -6,8 +6,8 @@ replace go.opentelemetry.io/otel => ../
 
 require (
 	github.com/google/go-cmp v0.5.9
-	github.com/stretchr/testify v1.8.1
-	go.opentelemetry.io/otel v1.13.0
+	github.com/stretchr/testify v1.8.2
+	go.opentelemetry.io/otel v1.14.0
 )
 
 require (
@@ -15,3 +15,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/otel/metric => ../metric

@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -48,7 +47,7 @@ type aggregator interface {
 type instrumentSync struct {
 	name        string
 	description string
-	unit        unit.Unit
+	unit        string
 	aggregator  aggregator
 }
 
@@ -550,6 +549,9 @@ type multierror struct {
 func (m *multierror) errorOrNil() error {
 	if len(m.errors) == 0 {
 		return nil
+	}
+	if m.wrapped == nil {
+		return errors.New(strings.Join(m.errors, "; "))
 	}
 	return fmt.Errorf("%w: %s", m.wrapped, strings.Join(m.errors, "; "))
 }
