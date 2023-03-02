@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package httpconv provides OpenTelemetry HTTP semantic convetions for tracing
-// telemetry.
+// Package httpconv provides OpenTelemetry HTTP semantic conventions for
+// tracing telemetry.
 package httpconv // import "go.opentelemetry.io/otel/semconv/v1.18.0/httpconv"
 
 import (

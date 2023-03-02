@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package netconv provides OpenTelemetry network semantic convetions for
+// Package netconv provides OpenTelemetry network semantic conventions for
 // tracing telemetry.
 package netconv // import "go.opentelemetry.io/otel/semconv/v1.16.0/netconv"
 
