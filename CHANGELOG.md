@@ -20,6 +20,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Security
 
+## [0.20.1] - 2023-03-02
+
+### Deprecated
+
+- The module `example/prom-collector`  has been deprecated and is removed in later versions. 
+- The module `exporters/otlp` has be deprecated and is removed in later versions.
+- The module `exporters/stdout` has be deprecated and is removed in later versions.
+- The module `exporters/trace/jaeger` has be deprecated and is removed in later versions.
+- The module `exporters/trace/zipkin` has be deprecated and is removed in later versions.
+- The module `oteltest` has be deprecated and is removed in later versions.
+
 ## [0.20.0] - 2021-04-23
 
 ### Added
