@@ -32,8 +32,11 @@ func BenchmarkInstrument(b *testing.B) {
 	}
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
-		agg := internal.NewLastValue[int64]()
-		inst := instrumentImpl[int64]{aggregators: []internal.Aggregator[int64]{agg}}
+		inst := instrumentImpl[int64]{aggregators: []internal.Aggregator[int64]{
+			internal.NewLastValue[int64](),
+			internal.NewCumulativeSum[int64](true),
+			internal.NewDeltaSum[int64](true),
+		}}
 		ctx := context.Background()
 
 		b.ReportAllocs()
@@ -44,8 +47,11 @@ func BenchmarkInstrument(b *testing.B) {
 	})
 
 	b.Run("observable/observe", func(b *testing.B) {
-		agg := internal.NewLastValue[int64]()
-		o := observable[int64]{aggregators: []internal.Aggregator[int64]{agg}}
+		o := observable[int64]{aggregators: []internal.Aggregator[int64]{
+			internal.NewLastValue[int64](),
+			internal.NewCumulativeSum[int64](true),
+			internal.NewDeltaSum[int64](true),
+		}}
 
 		b.ReportAllocs()
 		b.ResetTimer()
