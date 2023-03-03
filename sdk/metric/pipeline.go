@@ -146,7 +146,8 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
-			*rm = metricdata.ResourceMetrics{}
+			rm.Resource = nil
+			rm.ScopeMetrics = rm.ScopeMetrics[:0]
 			return err
 		}
 	}
