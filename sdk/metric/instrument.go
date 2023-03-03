@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -31,6 +32,10 @@ var (
 	zeroInstrumentKind InstrumentKind
 	zeroScope          instrumentation.Scope
 )
+
+var sortables = sync.Pool{
+	New: func() any { return new(attribute.Sortable) },
+}
 
 // InstrumentKind is the identifier of a group of instruments that all
 // performing the same function.
@@ -194,8 +199,11 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 	if err := ctx.Err(); err != nil {
 		return
 	}
+	s := sortables.Get().(*attribute.Sortable)
+	aSet := attribute.NewSetWithSortable(attrs, s)
+	sortables.Put(s)
 	for _, agg := range i.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
+		agg.Aggregate(val, aSet)
 	}
 }
 
@@ -261,7 +269,9 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 	for _, agg := range o.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
+		s := sortables.Get().(*attribute.Sortable)
+		agg.Aggregate(val, attribute.NewSetWithSortable(attrs, s))
+		sortables.Put(s)
 	}
 }
 
