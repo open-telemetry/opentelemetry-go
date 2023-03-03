@@ -64,8 +64,8 @@ var (
 		},
 	}
 
-	// sortables is an attribute package level pool of Sortables used to create
-	// Sets with a user does not provide one.
+	// sortables is a pool of Sortables used to create Sets with a user does
+	// not provide one.
 	sortables = sync.Pool{
 		New: func() interface{} { return new(Sortable) },
 	}
