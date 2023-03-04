@@ -16,9 +16,12 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -32,6 +35,8 @@ type exporter struct {
 
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
+
+	redactTimestamps bool
 }
 
 // New returns a configured metric exporter.
@@ -43,6 +48,7 @@ func New(options ...Option) (metric.Exporter, error) {
 	exp := &exporter{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
+		redactTimestamps:    cfg.redactTimestamps,
 	}
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
@@ -64,7 +70,9 @@ func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) 
 	default:
 		// Context is still valid, continue.
 	}
-
+	if e.redactTimestamps {
+		data = redactTimestamps(data)
+	}
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
 
@@ -80,4 +88,46 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 		})
 	})
 	return ctx.Err()
+}
+
+func redactTimestamps(orig metricdata.ResourceMetrics) metricdata.ResourceMetrics {
+	for i, sm := range orig.ScopeMetrics {
+		for j, m := range sm.Metrics {
+			switch agg := m.Data.(type) {
+			case metricdata.Sum[float64]:
+				for index := range agg.DataPoints {
+					agg.DataPoints[index].StartTime = time.Time{}
+					agg.DataPoints[index].Time = time.Time{}
+				}
+				orig.ScopeMetrics[i].Metrics[j].Data = agg
+			case metricdata.Sum[int64]:
+				for index := range agg.DataPoints {
+					agg.DataPoints[index].StartTime = time.Time{}
+					agg.DataPoints[index].Time = time.Time{}
+				}
+				orig.ScopeMetrics[i].Metrics[j].Data = agg
+			case metricdata.Gauge[float64]:
+				for index := range agg.DataPoints {
+					agg.DataPoints[index].StartTime = time.Time{}
+					agg.DataPoints[index].Time = time.Time{}
+				}
+				orig.ScopeMetrics[i].Metrics[j].Data = agg
+			case metricdata.Gauge[int64]:
+				for index := range agg.DataPoints {
+					agg.DataPoints[index].StartTime = time.Time{}
+					agg.DataPoints[index].Time = time.Time{}
+				}
+				orig.ScopeMetrics[i].Metrics[j].Data = agg
+			case metricdata.Histogram:
+				for index := range agg.DataPoints {
+					agg.DataPoints[index].StartTime = time.Time{}
+					agg.DataPoints[index].Time = time.Time{}
+				}
+				orig.ScopeMetrics[i].Metrics[j].Data = agg
+			default:
+				global.Debug("unknown aggregation type", "type", fmt.Sprintf("%T", agg))
+			}
+		}
+	}
+	return orig
 }

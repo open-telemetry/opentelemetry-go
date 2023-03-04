@@ -100,13 +100,14 @@ var (
 )
 
 func Example() {
-	// Init a JSON encoder that indents with two spaces.
+	// Print with a JSON encoder that indents with two spaces.
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 
-	// Print with a JSON encoder that redact timestamp to a zero value
-	encIt := stdoutmetric.NewEncoderIgnoreTimestamp(enc)
-	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(encIt))
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithEncoder(enc),
+		stdoutmetric.WithoutTimestamps(),
+	)
 	if err != nil {
 		panic(err)
 	}
