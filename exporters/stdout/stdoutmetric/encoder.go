@@ -15,11 +15,7 @@
 package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
-	"encoding/json"
 	"errors"
-	"time"
-
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // Encoder encodes and outputs OpenTelemetry metric data-types as human
@@ -44,60 +40,3 @@ type shutdownEncoder struct{}
 var errShutdown = errors.New("exporter shutdown")
 
 func (shutdownEncoder) Encode(any) error { return errShutdown }
-
-type encoderIgnoreTimestamp struct {
-	encoder Encoder
-}
-
-// NewEncoderIgnoreTimestamp return encoderIgnoreTimestamp which wrap a Encoder,
-// It redact timestamp to a zero value before Encode .
-func NewEncoderIgnoreTimestamp(encoder *json.Encoder) Encoder {
-	return &encoderIgnoreTimestamp{
-		encoder: encoder,
-	}
-}
-
-// Encode redact timestamp to a zero value before Encode .
-func (e *encoderIgnoreTimestamp) Encode(v any) error {
-	rm := v.(metricdata.ResourceMetrics)
-	for i, sm := range rm.ScopeMetrics {
-		for j, m := range sm.Metrics {
-			switch v := m.Data.(type) {
-			case metricdata.Sum[float64]:
-				for k := range v.DataPoints {
-					v.DataPoints[k].StartTime = time.Time{}
-					v.DataPoints[k].Time = time.Time{}
-				}
-				rm.ScopeMetrics[i].Metrics[j].Data = v
-			case metricdata.Sum[int64]:
-				for k := range v.DataPoints {
-					v.DataPoints[k].StartTime = time.Time{}
-					v.DataPoints[k].Time = time.Time{}
-				}
-				rm.ScopeMetrics[i].Metrics[j].Data = v
-			case metricdata.Gauge[float64]:
-				for k := range v.DataPoints {
-					v.DataPoints[k].StartTime = time.Time{}
-					v.DataPoints[k].Time = time.Time{}
-				}
-				rm.ScopeMetrics[i].Metrics[j].Data = v
-			case metricdata.Gauge[int64]:
-				for k := range v.DataPoints {
-					v.DataPoints[k].StartTime = time.Time{}
-					v.DataPoints[k].Time = time.Time{}
-				}
-				rm.ScopeMetrics[i].Metrics[j].Data = v
-			case metricdata.Histogram:
-				for k := range v.DataPoints {
-					v.DataPoints[k].StartTime = time.Time{}
-					v.DataPoints[k].Time = time.Time{}
-				}
-				rm.ScopeMetrics[i].Metrics[j].Data = v
-			default:
-				panic("invalid Aggregation")
-			}
-		}
-	}
-
-	return e.encoder.Encode(v)
-}
