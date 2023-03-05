@@ -31,6 +31,7 @@ This release drops the compatibility guarantee of [Go 1.18].
 ### Fixed
 
 - Handle empty environment variable as it they were not set. (#3764)
+- Clarify the `httpconv` and `netconv` packages in `go.opentelemetry.io/otel/semconv/*` provide tracing semantic conventions. (#3823)
 
 ### Deprecated
 
