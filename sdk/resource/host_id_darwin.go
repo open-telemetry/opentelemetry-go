@@ -14,39 +14,6 @@
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-import (
-	"errors"
-	"strings"
-)
-
-// hostIDReaderDarwin implements hostIDReader
-type hostIDReaderDarwin struct {
-	execCommand commandExecutor
-}
-
-// read executes `ioreg -rd1 -c "IOPlatformExpertDevice"` and parses host id
-// from the IOPlatformUUID line. If the command fails or the uuid cannot be
-// parsed an error will be returned.
-func (r *hostIDReaderDarwin) read() (string, error) {
-	result, err := r.execCommand("ioreg", "-rd1", "-c", "IOPlatformExpertDevice")
-	if err != nil {
-		return "", err
-	}
-
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "IOPlatformUUID") {
-			parts := strings.Split(line, " = ")
-			if len(parts) == 2 {
-				return strings.Trim(parts[1], "\""), nil
-			}
-			break
-		}
-	}
-
-	return "", errors.New("could not parse IOPlatformUUID")
-}
-
 var platformHostIDReader hostIDReader = &hostIDReaderDarwin{
 	execCommand: execCommand,
 }

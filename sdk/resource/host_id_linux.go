@@ -17,30 +17,6 @@
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-import (
-	"errors"
-	"strings"
-)
-
-type hostIDReaderLinux struct {
-	readFile fileReader
-}
-
-// read attempts to read the machine-id from /etc/machine-id followed by
-// /var/lib/dbus/machine-id. If neither location yields an ID an error will
-// be returned.
-func (r *hostIDReaderLinux) read() (string, error) {
-	if result, err := r.readFile("/etc/machine-id"); err == nil {
-		return strings.TrimSpace(result), nil
-	}
-
-	if result, err := r.readFile("/var/lib/dbus/machine-id"); err == nil {
-		return strings.TrimSpace(result), nil
-	}
-
-	return "", errors.New("host id not found in: /etc/machine-id or /var/lib/dbus/machine-id")
-}
-
 var platformHostIDReader hostIDReader = &hostIDReaderLinux{
 	readFile: readFile,
 }

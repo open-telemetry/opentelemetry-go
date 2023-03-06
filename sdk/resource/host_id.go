@@ -16,8 +16,10 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
+	"strings"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
@@ -42,7 +44,6 @@ type hostIDReader interface {
 
 type fileReader func(string) (string, error)
 
-// nolint:unused // commandExecutor is used on darwin and BSD, but excluded on linux where the lint job runs
 type commandExecutor func(string, ...string) (string, error)
 
 func readFile(filename string) (string, error) {
@@ -54,7 +55,7 @@ func readFile(filename string) (string, error) {
 	return string(b), nil
 }
 
-// nolint:unused // execCommand is used on darwin and BSD, but excluded on linux where the lint job runs
+// nolint: unused  // This is used by the hostReaderBSD, gated by build tags.
 func execCommand(name string, arg ...string) (string, error) {
 	cmd := exec.Command(name, arg...)
 	b, err := cmd.Output()
@@ -63,6 +64,74 @@ func execCommand(name string, arg ...string) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+// hostIDReaderBSD implements hostIDReader.
+type hostIDReaderBSD struct {
+	execCommand commandExecutor
+	readFile    fileReader
+}
+
+// read attempts to read the machine-id from /etc/hostid. If not found it will
+// execute `kenv -q smbios.system.uuid`. If neither location yields an id an
+// error will be returned.
+func (r *hostIDReaderBSD) read() (string, error) {
+	if result, err := r.readFile("/etc/hostid"); err == nil {
+		return strings.TrimSpace(result), nil
+	}
+
+	if result, err := r.execCommand("kenv", "-q", "smbios.system.uuid"); err == nil {
+		return strings.TrimSpace(result), nil
+	}
+
+	return "", errors.New("host id not found in: /etc/hostid or kenv")
+}
+
+// hostIDReaderDarwin implements hostIDReader.
+type hostIDReaderDarwin struct {
+	execCommand commandExecutor
+}
+
+// read executes `ioreg -rd1 -c "IOPlatformExpertDevice"` and parses host id
+// from the IOPlatformUUID line. If the command fails or the uuid cannot be
+// parsed an error will be returned.
+func (r *hostIDReaderDarwin) read() (string, error) {
+	result, err := r.execCommand("ioreg", "-rd1", "-c", "IOPlatformExpertDevice")
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "IOPlatformUUID") {
+			parts := strings.Split(line, " = ")
+			if len(parts) == 2 {
+				return strings.Trim(parts[1], "\""), nil
+			}
+			break
+		}
+	}
+
+	return "", errors.New("could not parse IOPlatformUUID")
+}
+
+type hostIDReaderLinux struct {
+	readFile fileReader
+}
+
+// read attempts to read the machine-id from /etc/machine-id followed by
+// /var/lib/dbus/machine-id. If neither location yields an ID an error will
+// be returned.
+func (r *hostIDReaderLinux) read() (string, error) {
+	if result, err := r.readFile("/etc/machine-id"); err == nil {
+		return strings.TrimSpace(result), nil
+	}
+
+	if result, err := r.readFile("/var/lib/dbus/machine-id"); err == nil {
+		return strings.TrimSpace(result), nil
+	}
+
+	return "", errors.New("host id not found in: /etc/machine-id or /var/lib/dbus/machine-id")
 }
 
 type hostIDDetector struct{}

@@ -12,17 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build dragonfly || freebsd || netbsd || openbsd || solaris
-// +build dragonfly freebsd netbsd openbsd solaris
-
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+package resource_test
 
 import (
 	"errors"
-	"strings"
+
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var platformHostIDReader hostIDReader = &hostIDReaderBSD{
-	execCommand: execCommand,
-	readFile:    readFile,
+func mockHostIDProvider() {
+	resource.SetHostIDProvider(
+		func() (string, error) { return "f2c668b579780554f70f72a063dc0864", nil },
+	)
+}
+
+func mockHostIDProviderWithError() {
+	resource.SetHostIDProvider(
+		func() (string, error) { return "", errors.New("not found") },
+	)
+}
+
+func restoreHostIDProvider() {
+	resource.SetDefaultHostIDProvider()
 }
