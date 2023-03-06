@@ -71,8 +71,11 @@ $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 GOJQ = $(TOOLS)/gojq
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
+GOCPY = $(TOOLS)/gocpy
+$(TOOLS)/gocpy: PACKAGE=go.opentelemetry.io/otel/internal/shared/gocpy
+
 .PHONY: tools
-tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
+tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(GOCPY) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
 
 # Build
 
@@ -80,7 +83,7 @@ tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STR
 
 generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
 generate/%: DIR=$*
-generate/%: | $(STRINGER) $(PORTO)
+generate/%: | $(STRINGER) $(GOCPY) $(PORTO)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .

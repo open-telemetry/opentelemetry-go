@@ -13,6 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.6.0
 	go.opentelemetry.io/build-tools/multimod v0.6.0
 	go.opentelemetry.io/build-tools/semconvgen v0.6.0
+	go.opentelemetry.io/otel/internal/shared v0.0.0-00010101000000-000000000000
 	golang.org/x/tools v0.6.0
 )
 
@@ -61,6 +62,8 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.4.0 // indirect
 	github.com/go-git/go-git/v5 v5.5.2 // indirect
+	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.0.3 // indirect
 	github.com/go-toolsmith/astequal v1.1.0 // indirect
@@ -186,6 +189,8 @@ require (
 	github.com/yeya24/promlinter v0.2.0 // indirect
 	gitlab.com/bosi/decorder v0.2.3 // indirect
 	go.opentelemetry.io/build-tools v0.6.0 // indirect
+	go.opentelemetry.io/otel v1.15.0-rc.1 // indirect
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
@@ -208,3 +213,11 @@ require (
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
 	mvdan.cc/unparam v0.0.0-20221223090309-7455f1af531d // indirect
 )
+
+replace go.opentelemetry.io/otel/metric => ../../metric
+
+replace go.opentelemetry.io/otel/trace => ../../trace
+
+replace go.opentelemetry.io/otel => ../..
+
+replace go.opentelemetry.io/otel/internal/shared => ../../internal/shared

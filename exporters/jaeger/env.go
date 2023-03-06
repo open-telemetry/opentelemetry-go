@@ -14,6 +14,8 @@
 
 package jaeger // import "go.opentelemetry.io/otel/exporters/jaeger"
 
+//go:generate gocpy -src=../../internal/shared/env.go -pkg=jaeger -dest=env_shared.go
+
 // Environment variable names.
 const (
 	// Hostname for the Jaeger agent, part of address where exporter sends spans

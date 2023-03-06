@@ -28,5 +28,6 @@ import (
 	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/multimod"
 	_ "go.opentelemetry.io/build-tools/semconvgen"
+	_ "go.opentelemetry.io/otel/internal/shared"
 	_ "golang.org/x/tools/cmd/stringer"
 )
