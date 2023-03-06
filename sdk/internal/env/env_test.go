@@ -96,6 +96,7 @@ func TestEnvParse(t *testing.T) {
 		envVal    = 2500
 		envValStr = "2500"
 		invalid   = "localhost"
+		empty     = ""
 	)
 
 	for _, tc := range testCases {
@@ -113,6 +114,9 @@ func TestEnvParse(t *testing.T) {
 
 					require.NoError(t, os.Setenv(key, invalid))
 					assert.Equal(t, defVal, tc.f(defVal), "invalid value")
+
+					require.NoError(t, os.Setenv(key, empty))
+					assert.Equal(t, defVal, tc.f(defVal), "empty value")
 				})
 			}
 		})

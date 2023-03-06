@@ -12,8 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package unit provides units.
-//
-// Deprecated: This package will be removed in the next release. Use the
-// equivalent unit string instead.
-package unit // import "go.opentelemetry.io/otel/metric/unit"
+package otel // import "go.opentelemetry.io/otel"
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/metric"
+)
+
+type testMeterProvider struct{}
+
+var _ metric.MeterProvider = &testMeterProvider{}
+
+func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+	return metric.NewNoopMeterProvider().Meter("")
+}
+
+func TestMultipleGlobalMeterProvider(t *testing.T) {
+	p1 := testMeterProvider{}
+	p2 := metric.NewNoopMeterProvider()
+	SetMeterProvider(&p1)
+	SetMeterProvider(p2)
+
+	got := GetMeterProvider()
+	assert.Equal(t, p2, got)
+}
