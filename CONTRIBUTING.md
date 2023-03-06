@@ -498,6 +498,16 @@ functionality should be added, each one will need their own super-set
 interfaces and will duplicate the pattern. For this reason, the simple targeted
 interface that defines the specific functionality should be preferred.
 
+### Shared code
+
+See [`internal/shared`](internal/shared/README.md) for guidance
+regarding sharing common, non-exported code across multiple Go modules.
+
+For sharing code between packages used in one Go Module,
+simply create
+[an `internal` package](https://go.dev/doc/go1.4#internalpackages)
+inside the module.
+
 ## Approvers and Maintainers
 
 Approvers:

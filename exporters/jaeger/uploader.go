@@ -61,8 +61,8 @@ func WithAgentEndpoint(options ...AgentEndpointOption) EndpointOption {
 		cfg := agentEndpointConfig{
 			agentClientUDPParams{
 				AttemptReconnecting: true,
-				Host:                envOr(envAgentHost, "localhost"),
-				Port:                envOr(envAgentPort, "6831"),
+				Host:                envString("localhost", envAgentHost),
+				Port:                envString("6831", envAgentPort),
 			},
 		}
 		for _, opt := range options {
@@ -169,9 +169,9 @@ func WithMaxPacketSize(size int) AgentEndpointOption {
 func WithCollectorEndpoint(options ...CollectorEndpointOption) EndpointOption {
 	return endpointOptionFunc(func() (batchUploader, error) {
 		cfg := collectorEndpointConfig{
-			endpoint:   envOr(envEndpoint, "http://localhost:14268/api/traces"),
-			username:   envOr(envUser, ""),
-			password:   envOr(envPassword, ""),
+			endpoint:   envString("http://localhost:14268/api/traces", envEndpoint),
+			username:   envString("", envUser),
+			password:   envString("", envPassword),
 			httpClient: http.DefaultClient,
 		}
 

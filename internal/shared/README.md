@@ -3,8 +3,11 @@
 This directory contains internal code
 that is shared between modules.
 
-It also contains the application
-used for copying the shared code to the modules.
+It also contains the application used for copying
+the shared code to the different Go modules.
+
+[`gen.go`](gen.go) contains `go:generate` directives
+which copies the shared code into multiple packages.
 
 **Warning**.
 This module should not be published.
