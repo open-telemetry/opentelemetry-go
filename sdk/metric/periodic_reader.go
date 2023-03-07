@@ -323,6 +323,7 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 			if err == nil {
 				err = r.export(ctx, *m)
 			}
+			r.rmPool.Put(m)
 		}
 
 		sErr := r.exporter.Shutdown(ctx)
