@@ -28,6 +28,7 @@ func mockHostIDProvider() {
 
 func mockHostIDProviderWithError() {
 	resource.SetHostIDProvider(
+		// TODO: After #3844 merges, return assert.AnError and update tests in `resource_test.go`.
 		func() (string, error) { return "", errors.New("not found") },
 	)
 }
