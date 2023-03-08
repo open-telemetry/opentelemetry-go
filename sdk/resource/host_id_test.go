@@ -41,6 +41,14 @@ var (
 	}
 )
 
+func SetDefaultHostIDProvider() {
+	SetHostIDProvider(defaultHostIDProvider)
+}
+
+func SetHostIDProvider(hostIDProvider hostIDProvider) {
+	hostID = hostIDProvider
+}
+
 func TestHostIDReaderBSD(t *testing.T) {
 	tt := []struct {
 		name            string

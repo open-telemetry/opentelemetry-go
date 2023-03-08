@@ -30,14 +30,6 @@ var defaultHostIDProvider hostIDProvider = platformHostIDReader.read
 
 var hostID = defaultHostIDProvider
 
-func setDefaultHostIDProvider() {
-	setHostIDProvider(defaultHostIDProvider)
-}
-
-func setHostIDProvider(hostIDProvider hostIDProvider) {
-	hostID = hostIDProvider
-}
-
 type hostIDReader interface {
 	read() (string, error)
 }
