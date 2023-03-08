@@ -195,8 +195,8 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 		return
 	}
 	// Do not use single attribute.Sortable and attribute.NewSetWithSortable, this
-	// method needs to be concurrent safe. Let the attribute package pool
-	// handle allocations of the Sortable.
+	// method needs to be concurrent safe. Let the sync.Pool
+	// in the attribute package handle allocations of the Sortable.
 	s := attribute.NewSet(attrs...)
 	for _, agg := range i.aggregators {
 		agg.Aggregate(val, s)
