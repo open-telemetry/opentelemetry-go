@@ -452,6 +452,25 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestNewWrapedError(t *testing.T) {
+	localErr := errors.New("local error")
+	_, err := resource.New(
+		context.Background(),
+		resource.WithDetectors(
+			resource.StringDetector("", "", func() (string, error) {
+				return "", localErr
+			}),
+			resource.StringDetector("", "", func() (string, error) {
+				return "", assert.AnError
+			}),
+		),
+	)
+
+	assert.ErrorIs(t, err, localErr)
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, errors.New("false positive error"))
+}
+
 func TestWithOSType(t *testing.T) {
 	mockRuntimeProviders()
 	t.Cleanup(restoreAttributesProviders)
