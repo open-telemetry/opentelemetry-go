@@ -140,8 +140,8 @@ func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggrega
 		}
 	default:
 		global.Debug("unknown aggregation type", "type", fmt.Sprintf("%T", a))
+		return orig
 	}
-	return orig
 }
 
 func redactHistogramTimestamps(hdp []metricdata.HistogramDataPoint) []metricdata.HistogramDataPoint {
