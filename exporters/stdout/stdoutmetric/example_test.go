@@ -64,9 +64,9 @@ var (
 						Name:        "latency",
 						Description: "Time spend processing received requests",
 						Unit:        "ms",
-						Data: metricdata.Histogram{
+						Data: metricdata.Histogram[float64]{
 							Temporality: metricdata.DeltaTemporality,
-							DataPoints: []metricdata.HistogramDataPoint{
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes:   attribute.NewSet(attribute.String("server", "central")),
 									StartTime:    now,
