@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace // import "go.opentelemetry.io/otel/sdk/metric"
+package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 // version is the current release version of the metric SDK in use.
 func version() string {
