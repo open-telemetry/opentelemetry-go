@@ -52,10 +52,11 @@ func Detect(ctx context.Context, detectors ...Detector) (*Resource, error) {
 
 // detect runs all detectors using ctx and merges the result into res. This
 // assumes res is allocated and not nil, it will panic otherwise.
-func detect(ctx context.Context, res *Resource, detectors []Detector) (err error) {
+func detect(ctx context.Context, res *Resource, detectors []Detector) error {
 	var (
 		r    *Resource
 		errs detectErrs
+		err  error
 	)
 
 	for _, detector := range detectors {
@@ -76,7 +77,10 @@ func detect(ctx context.Context, res *Resource, detectors []Detector) (err error
 		*res = *r
 	}
 
-	return errs.asError()
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
 }
 
 type detectErrs []error
@@ -103,11 +107,4 @@ func (e detectErrs) Unwrap() error {
 
 func (e detectErrs) Is(target error) bool {
 	return len(e) != 0 && errors.Is(e[0], target)
-}
-
-func (e detectErrs) asError() error {
-	if len(e) == 0 {
-		return nil
-	}
-	return e
 }
