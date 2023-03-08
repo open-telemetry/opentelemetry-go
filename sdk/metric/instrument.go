@@ -194,9 +194,9 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 	if err := ctx.Err(); err != nil {
 		return
 	}
-	// Do not use single attribute.Sortable and attribute.NewSetWithSortable, this
-	// method needs to be concurrent safe. Let the sync.Pool
-	// in the attribute package handle allocations of the Sortable.
+	// Do not use single attribute.Sortable and attribute.NewSetWithSortable,
+	// this method needs to be concurrent safe. Let the sync.Pool in the
+	// attribute package handle allocations of the Sortable.
 	s := attribute.NewSet(attrs...)
 	for _, agg := range i.aggregators {
 		agg.Aggregate(val, s)
@@ -264,9 +264,9 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
-	// Do not use single attribute.Sortable and attribute.NewSetWithSortable, this
-	// method needs to be concurrent safe. Let the attribute package pool
-	// handle allocations of the Sortable.
+	// Do not use single attribute.Sortable and attribute.NewSetWithSortable,
+	// this method needs to be concurrent safe. Let the sync.Pool in the
+	// attribute package handle allocations of the Sortable.
 	s := attribute.NewSet(attrs...)
 	for _, agg := range o.aggregators {
 		agg.Aggregate(val, s)
