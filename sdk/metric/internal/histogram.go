@@ -141,12 +141,12 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	h := metricdata.Histogram{
+	h := metricdata.Histogram[N]{
 		Temporality: metricdata.DeltaTemporality,
-		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+		DataPoints:  make([]metricdata.HistogramDataPoint[N], 0, len(s.values)),
 	}
 	for a, b := range s.values {
-		hdp := metricdata.HistogramDataPoint{
+		hdp := metricdata.HistogramDataPoint[N]{
 			Attributes:   a,
 			StartTime:    s.start,
 			Time:         t,
@@ -204,9 +204,9 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
 	copy(bounds, s.bounds)
-	h := metricdata.Histogram{
+	h := metricdata.Histogram[N]{
 		Temporality: metricdata.CumulativeTemporality,
-		DataPoints:  make([]metricdata.HistogramDataPoint, 0, len(s.values)),
+		DataPoints:  make([]metricdata.HistogramDataPoint[N], 0, len(s.values)),
 	}
 	for a, b := range s.values {
 		// The HistogramDataPoint field values returned need to be copies of
@@ -217,7 +217,7 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 		counts := make([]uint64, len(b.counts))
 		copy(counts, b.counts)
 
-		hdp := metricdata.HistogramDataPoint{
+		hdp := metricdata.HistogramDataPoint[N]{
 			Attributes:   a,
 			StartTime:    s.start,
 			Time:         t,
