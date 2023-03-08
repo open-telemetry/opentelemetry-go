@@ -498,6 +498,7 @@ func TestWithHostIDError(t *testing.T) {
 	)
 
 	require.Error(t, err)
+	assert.True(t, errors.Is(err, assert.AnError))
 	require.EqualValues(t, map[string]string{}, toMap(res))
 }
 

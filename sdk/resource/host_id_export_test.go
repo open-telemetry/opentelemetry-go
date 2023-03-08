@@ -15,7 +15,7 @@
 package resource_test
 
 import (
-	"errors"
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -28,8 +28,7 @@ func mockHostIDProvider() {
 
 func mockHostIDProviderWithError() {
 	resource.SetHostIDProvider(
-		// TODO: After #3844 merges, return assert.AnError and update tests in `resource_test.go`.
-		func() (string, error) { return "", errors.New("not found") },
+		func() (string, error) { return "", assert.AnError },
 	)
 }
 
