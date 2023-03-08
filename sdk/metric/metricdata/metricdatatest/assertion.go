@@ -30,14 +30,18 @@ type Datatypes interface {
 		metricdata.DataPoint[int64] |
 		metricdata.Gauge[float64] |
 		metricdata.Gauge[int64] |
-		metricdata.Histogram |
-		metricdata.HistogramDataPoint |
+		metricdata.Histogram[float64] |
+		metricdata.Histogram[int64] |
+		metricdata.HistogramDataPoint[float64] |
+		metricdata.HistogramDataPoint[int64] |
 		metricdata.Extrema |
 		metricdata.Metrics |
 		metricdata.ResourceMetrics |
 		metricdata.ScopeMetrics |
 		metricdata.Sum[float64] |
-		metricdata.Sum[int64]
+		metricdata.Sum[int64] |
+		metricdata.Exemplar[float64] |
+		metricdata.Exemplar[int64]
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -45,6 +49,7 @@ type Datatypes interface {
 
 type config struct {
 	ignoreTimestamp bool
+	ignoreExemplars bool
 }
 
 // Option allows for fine grain control over how AssertEqual operates.
@@ -66,6 +71,14 @@ func IgnoreTimestamp() Option {
 	})
 }
 
+// IgnoreExemplars disables checking if Exemplars are different.
+func IgnoreExemplars() Option {
+	return fnOption(func(cfg config) config {
+		cfg.ignoreExemplars = true
+		return cfg
+	})
+}
+
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
 func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) bool {
@@ -81,6 +94,10 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 
 	var r []string
 	switch e := interface{}(expected).(type) {
+	case metricdata.Exemplar[int64]:
+		r = equalExemplars(e, aIface.(metricdata.Exemplar[int64]), cfg)
+	case metricdata.Exemplar[float64]:
+		r = equalExemplars(e, aIface.(metricdata.Exemplar[float64]), cfg)
 	case metricdata.DataPoint[int64]:
 		r = equalDataPoints(e, aIface.(metricdata.DataPoint[int64]), cfg)
 	case metricdata.DataPoint[float64]:
@@ -89,10 +106,14 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalGauges(e, aIface.(metricdata.Gauge[int64]), cfg)
 	case metricdata.Gauge[float64]:
 		r = equalGauges(e, aIface.(metricdata.Gauge[float64]), cfg)
-	case metricdata.Histogram:
-		r = equalHistograms(e, aIface.(metricdata.Histogram), cfg)
-	case metricdata.HistogramDataPoint:
-		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint), cfg)
+	case metricdata.Histogram[float64]:
+		r = equalHistograms(e, aIface.(metricdata.Histogram[float64]), cfg)
+	case metricdata.Histogram[int64]:
+		r = equalHistograms(e, aIface.(metricdata.Histogram[int64]), cfg)
+	case metricdata.HistogramDataPoint[float64]:
+		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint[float64]), cfg)
+	case metricdata.HistogramDataPoint[int64]:
+		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint[int64]), cfg)
 	case metricdata.Extrema:
 		r = equalExtrema(e, aIface.(metricdata.Extrema), cfg)
 	case metricdata.Metrics:
@@ -141,6 +162,10 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 	var reasons []string
 
 	switch e := interface{}(actual).(type) {
+	case metricdata.Exemplar[int64]:
+		reasons = hasAttributesExemplars(e, attrs...)
+	case metricdata.Exemplar[float64]:
+		reasons = hasAttributesExemplars(e, attrs...)
 	case metricdata.DataPoint[int64]:
 		reasons = hasAttributesDataPoints(e, attrs...)
 	case metricdata.DataPoint[float64]:
@@ -153,11 +178,15 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesSum(e, attrs...)
 	case metricdata.Sum[float64]:
 		reasons = hasAttributesSum(e, attrs...)
-	case metricdata.HistogramDataPoint:
+	case metricdata.HistogramDataPoint[int64]:
+		reasons = hasAttributesHistogramDataPoints(e, attrs...)
+	case metricdata.HistogramDataPoint[float64]:
 		reasons = hasAttributesHistogramDataPoints(e, attrs...)
 	case metricdata.Extrema:
 		// Nothing to check.
-	case metricdata.Histogram:
+	case metricdata.Histogram[int64]:
+		reasons = hasAttributesHistogram(e, attrs...)
+	case metricdata.Histogram[float64]:
 		reasons = hasAttributesHistogram(e, attrs...)
 	case metricdata.Metrics:
 		reasons = hasAttributesMetrics(e, attrs...)
