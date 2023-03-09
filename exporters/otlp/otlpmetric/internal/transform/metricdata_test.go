@@ -365,7 +365,7 @@ func TestTransformations(t *testing.T) {
 	require.Equal(t, pbScopeMetrics, sm)
 
 	// Resource Metrics.
-	rm, err := ResourceMetrics(otelResourceMetrics)
+	rm, err := ResourceMetrics(&otelResourceMetrics)
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbResourceMetrics, rm)
