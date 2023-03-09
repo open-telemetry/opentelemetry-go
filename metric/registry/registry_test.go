@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/registry"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 )
 
 type (

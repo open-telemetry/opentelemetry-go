@@ -21,4 +21,6 @@ changes may be introduced in subsequent minor version releases as we
 work to track the evolving OpenTelemetry specification and user
 feedback.
 */
+//
+// Deprecated: This package was moved to exporters/otlp/otlptrace/otlphttp and exporters/otlp/otlpmetric/otlphttp.
 package otlphttp // import "go.opentelemetry.io/otel/exporters/otlp/otlphttp"

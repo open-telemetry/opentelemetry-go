@@ -32,9 +32,9 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc" // nolint:staticcheck  // otlpgrpc is deprecated
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 )

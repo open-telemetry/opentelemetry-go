@@ -79,12 +79,12 @@ func NewExportPipeline(exportOpts []Option, pushOpts []controller.Option) (*sdkt
 //
 // Typically this is called as:
 //
-// 	pipeline, err := stdout.InstallNewPipeline(stdout.Config{...})
-// 	if err != nil {
-// 		...
-// 	}
-// 	defer pipeline.Stop()
-// 	... Done
+//	pipeline, err := stdout.InstallNewPipeline(stdout.Config{...})
+//	if err != nil {
+//		...
+//	}
+//	defer pipeline.Stop()
+//	... Done
 func InstallNewPipeline(exportOpts []Option, pushOpts []controller.Option) (*sdktrace.TracerProvider, *controller.Controller, error) {
 	tracerProvider, controller, err := NewExportPipeline(exportOpts, pushOpts)
 	if err != nil {

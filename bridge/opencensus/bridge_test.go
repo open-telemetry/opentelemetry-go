@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opencensus/utils"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 	"go.opentelemetry.io/otel/trace"
 )
 

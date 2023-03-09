@@ -68,10 +68,10 @@ var _ trace.TracerProvider = &TracerProvider{}
 // NewTracerProvider returns a new and configured TracerProvider.
 //
 // By default the returned TracerProvider is configured with:
-//  - a ParentBased(AlwaysSample) Sampler
-//  - a random number IDGenerator
-//  - the resource.Default() Resource
-//  - the default SpanLimits.
+//   - a ParentBased(AlwaysSample) Sampler
+//   - a random number IDGenerator
+//   - the resource.Default() Resource
+//   - the default SpanLimits.
 //
 // The passed opts are used to override these default values and configure the
 // returned TracerProvider appropriately.

@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 	"go.opentelemetry.io/otel/trace"
 )
 

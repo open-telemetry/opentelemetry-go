@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 )
 
 func TestTextMapPropagatorDelegation(t *testing.T) {

@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 )
 
 var Must = metric.Must

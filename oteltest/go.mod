@@ -1,3 +1,4 @@
+// Deprecated: Use sdk/trace/tracetest instead.
 module go.opentelemetry.io/otel/oteltest
 
 go 1.14

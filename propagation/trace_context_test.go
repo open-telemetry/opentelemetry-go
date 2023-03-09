@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/oteltest" // nolint:staticcheck  // oteltest is deprecated
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )

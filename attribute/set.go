@@ -291,9 +291,9 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 // Note that methods are defined on `*Set`, although this returns `Set`.
 // Callers can avoid memory allocations by:
 //
-// - allocating a `Sortable` for use as a temporary in this method
-// - allocating a `Set` for storing the return value of this
-//   constructor.
+//   - allocating a `Sortable` for use as a temporary in this method
+//   - allocating a `Set` for storing the return value of this
+//     constructor.
 //
 // The result maintains a cache of encoded labels, by attribute.EncoderID.
 // This value should not be copied after its first use.

@@ -28,33 +28,33 @@ collecting high cardinality metric data.
 For example, to compose a push controller with a reducer and a basic
 metric processor:
 
-type someFilter struct{
-        // configuration for this filter
-        // ...
-}
+	type someFilter struct{
+	        // configuration for this filter
+	        // ...
+	}
 
-func (someFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
-        return func(label kv.KeyValue) bool {
-                // return true to keep this label, false to drop this label
-                // ...
-        }
-}
+	func (someFilter) LabelFilterFor(_ *metric.Descriptor) attribute.Filter {
+	        return func(label kv.KeyValue) bool {
+	                // return true to keep this label, false to drop this label
+	                // ...
+	        }
+	}
 
-func setupMetrics(exporter export.Exporter) (stop func()) {
-        basicProcessor := basic.New(
-                simple.NewWithExactDistribution(),
-                exporter,
-        )
+	func setupMetrics(exporter export.Exporter) (stop func()) {
+	        basicProcessor := basic.New(
+	                simple.NewWithExactDistribution(),
+	                exporter,
+	        )
 
-        reducerProcessor := reducer.New(someFilter{...}, basicProcessor)
+	        reducerProcessor := reducer.New(someFilter{...}, basicProcessor)
 
-        pusher := push.New(
-                reducerProcessor,
-                exporter,
-                pushOpts...,
-        )
-        pusher.Start()
-        global.SetMeterProvider(pusher.Provider())
-        return pusher.Stop
+	        pusher := push.New(
+	                reducerProcessor,
+	                exporter,
+	                pushOpts...,
+	        )
+	        pusher.Start()
+	        global.SetMeterProvider(pusher.Provider())
+	        return pusher.Stop
 */
 package reducer // import "go.opentelemetry.io/otel/sdk/metric/processor/reducer"

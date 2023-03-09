@@ -173,18 +173,19 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 		NeverSample().Description())
 
 	if sampler.Description() != expectedDescription {
-		t.Error(fmt.Sprintf("Sampler description should be %s, got '%s' instead",
+		t.Errorf("Sampler description should be %s, got '%s' instead",
 			expectedDescription,
 			sampler.Description(),
-		))
+		)
 	}
 
 }
 
 // TraceIDRatioBased sampler requirements state
-//  "A TraceIDRatioBased sampler with a given sampling rate MUST also sample
-//   all traces that any TraceIDRatioBased sampler with a lower sampling rate
-//   would sample."
+//
+//	"A TraceIDRatioBased sampler with a given sampling rate MUST also sample
+//	 all traces that any TraceIDRatioBased sampler with a lower sampling rate
+//	 would sample."
 func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 	const (
 		numSamplers = 1000

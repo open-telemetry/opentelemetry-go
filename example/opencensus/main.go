@@ -31,7 +31,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout" // nolint: staticcheck  // stdout is deprecated
 	otmetricexport "go.opentelemetry.io/otel/sdk/export/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )

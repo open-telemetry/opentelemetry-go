@@ -36,9 +36,12 @@ func Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter 
 // forwards the Meter interface to the first registered Meter.
 //
 // Use the meter provider to create a named meter. E.g.
-//     meter := global.MeterProvider().Meter("example.com/foo")
+//
+//	meter := global.MeterProvider().Meter("example.com/foo")
+//
 // or
-//     meter := global.Meter("example.com/foo")
+//
+//	meter := global.Meter("example.com/foo")
 func GetMeterProvider() metric.MeterProvider {
 	return global.MeterProvider()
 }
