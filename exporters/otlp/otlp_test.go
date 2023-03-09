@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
 	"go.opentelemetry.io/otel/exporters/otlp/internal/transform"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"

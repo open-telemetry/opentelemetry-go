@@ -23,8 +23,8 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp"          // nolint:staticcheck  // otlp is deprecated
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc" // nolint:staticcheck  // otlpgrpc is deprecated
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"

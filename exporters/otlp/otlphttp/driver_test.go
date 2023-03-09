@@ -27,7 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
-	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlphttp" // nolint:staticcheck  // otlphttp is deprecated
 )
 
 const (

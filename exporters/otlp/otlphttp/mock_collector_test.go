@@ -34,7 +34,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlptest"
-	"go.opentelemetry.io/otel/exporters/otlp/otlphttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlphttp" // nolint:staticcheck  // otlphttp is deprecated
 	collectormetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
