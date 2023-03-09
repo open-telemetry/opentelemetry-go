@@ -1,4 +1,4 @@
-// Deprecated: use exporters/stdout/stdouttrace or exporters/stdout/stdoutmetric instead.
+// Deprecated: Use exporters/stdout/stdouttrace or exporters/stdout/stdoutmetric instead.
 module go.opentelemetry.io/otel/exporters/stdout
 
 go 1.14

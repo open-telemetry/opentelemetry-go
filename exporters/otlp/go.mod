@@ -1,4 +1,4 @@
-// Deprecated: use exporters/otlp/otlptrace or exporters/otlp/otlpmetric instead.
+// Deprecated: Use exporters/otlp/otlptrace or exporters/otlp/otlpmetric instead.
 module go.opentelemetry.io/otel/exporters/otlp
 
 go 1.14
