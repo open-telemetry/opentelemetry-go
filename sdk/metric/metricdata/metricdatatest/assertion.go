@@ -52,6 +52,14 @@ type config struct {
 	ignoreExemplars bool
 }
 
+func newConfig(opts []Option) config {
+	var cfg config
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
+	}
+	return cfg
+}
+
 // Option allows for fine grain control over how AssertEqual operates.
 type Option interface {
 	apply(cfg config) config
@@ -84,10 +92,7 @@ func IgnoreExemplars() Option {
 func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) bool {
 	t.Helper()
 
-	cfg := config{}
-	for _, opt := range opts {
-		cfg = opt.apply(cfg)
-	}
+	cfg := newConfig(opts)
 
 	// Generic types cannot be type asserted. Use an interface instead.
 	aIface := interface{}(actual)
@@ -143,11 +148,7 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
 
-	cfg := config{}
-	for _, opt := range opts {
-		cfg = opt.apply(cfg)
-	}
-
+	cfg := newConfig(opts)
 	if r := equalAggregations(expected, actual, cfg); len(r) > 0 {
 		t.Error(r)
 		return false

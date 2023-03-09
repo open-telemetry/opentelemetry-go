@@ -330,7 +330,7 @@ func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, config{})
+		r := f(a, b, newConfig(nil))
 		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
@@ -340,7 +340,19 @@ func testDatatypeIgnoreTime[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, config{ignoreTimestamp: true})
+		c := newConfig([]Option{IgnoreTimestamp()})
+		r := f(a, b, c)
+		assert.Len(t, r, 0, "unexpected inequality")
+	}
+}
+
+func testDatatypeIgnoreExemplars[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
+	return func(t *testing.T) {
+		AssertEqual(t, a, a)
+		AssertEqual(t, b, b)
+
+		c := newConfig([]Option{IgnoreExemplars()})
+		r := f(a, b, c)
 		assert.Len(t, r, 0, "unexpected inequality")
 	}
 }
@@ -381,6 +393,24 @@ func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("Extrema", testDatatypeIgnoreTime(minA, minC, equalExtrema))
 	t.Run("ExemplarInt64", testDatatypeIgnoreTime(exemplarInt64A, exemplarInt64C, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatypeIgnoreTime(exemplarFloat64A, exemplarFloat64C, equalExemplars[float64]))
+}
+
+func TestAssertEqualIgnoreExemplars(t *testing.T) {
+	hdpInt64 := histogramDataPointInt64A
+	hdpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
+	t.Run("HistogramDataPointInt64", testDatatypeIgnoreExemplars(histogramDataPointInt64A, hdpInt64, equalHistogramDataPoints[int64]))
+
+	hdpFloat64 := histogramDataPointFloat64A
+	hdpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
+	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreExemplars(histogramDataPointFloat64A, hdpFloat64, equalHistogramDataPoints[float64]))
+
+	dpInt64 := dataPointInt64A
+	dpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
+	t.Run("DataPointInt64", testDatatypeIgnoreExemplars(dataPointInt64A, dpInt64, equalDataPoints[int64]))
+
+	dpFloat64 := dataPointFloat64A
+	dpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
+	t.Run("DataPointFloat64", testDatatypeIgnoreExemplars(dataPointFloat64A, dpFloat64, equalDataPoints[float64]))
 }
 
 type unknownAggregation struct {
