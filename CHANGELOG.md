@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `WithoutTimestamps` option to `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` to sets all timestamps to zero. (#3828)
+
 ### Changed
 
 - Avoid creating new objects on all calls to `WithDeferredSetup` and `SkipContextSetup` in OpenTracing bridge. (#3833)
@@ -27,7 +31,6 @@ This release drops the compatibility guarantee of [Go 1.18].
 
 ### Added
 
-- The `WithoutTimestamps` option to `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` to sets all timestamps to zero. (#3828)
 - Support global `MeterProvider` in `go.opentelemetry.io/otel`. (#3818)
   - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
   - Use `GetMeterProivder` for a global `metric.MeterProvider`.
