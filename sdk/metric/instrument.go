@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -29,7 +28,6 @@ import (
 )
 
 var (
-	zeroUnit           unit.Unit
 	zeroInstrumentKind InstrumentKind
 	zeroScope          instrumentation.Scope
 )
@@ -76,7 +74,7 @@ type Instrument struct {
 	// Kind defines the functional group of the instrument.
 	Kind InstrumentKind
 	// Unit is the unit of measurement recorded by the instrument.
-	Unit unit.Unit
+	Unit string
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
 
@@ -89,7 +87,7 @@ func (i Instrument) empty() bool {
 	return i.Name == "" &&
 		i.Description == "" &&
 		i.Kind == zeroInstrumentKind &&
-		i.Unit == zeroUnit &&
+		i.Unit == "" &&
 		i.Scope == zeroScope
 }
 
@@ -125,7 +123,7 @@ func (i Instrument) matchesKind(other Instrument) bool {
 // matchesUnit returns true if the Unit of i is its zero-value or it equals the
 // Unit of other, otherwise false.
 func (i Instrument) matchesUnit(other Instrument) bool {
-	return i.Unit == zeroUnit || i.Unit == other.Unit
+	return i.Unit == "" || i.Unit == other.Unit
 }
 
 // matchesScope returns true if the Scope of i is its zero-value or it equals
@@ -143,7 +141,7 @@ type Stream struct {
 	// Description describes the purpose of the data.
 	Description string
 	// Unit is the unit of measurement recorded.
-	Unit unit.Unit
+	Unit string
 	// Aggregation the stream uses for an instrument.
 	Aggregation aggregation.Aggregation
 	// AttributeFilter applied to all attributes recorded for an instrument.
@@ -157,7 +155,7 @@ type streamID struct {
 	// Description is the description of the stream.
 	Description string
 	// Unit is the unit of the stream.
-	Unit unit.Unit
+	Unit string
 	// Aggregation is the aggregation data type of the stream.
 	Aggregation string
 	// Monotonic is the monotonicity of an instruments data type. This field is
@@ -206,7 +204,7 @@ type observablID[N int64 | float64] struct {
 	name        string
 	description string
 	kind        InstrumentKind
-	unit        unit.Unit
+	unit        string
 	scope       instrumentation.Scope
 }
 
@@ -219,9 +217,9 @@ var _ instrument.Float64ObservableCounter = float64Observable{}
 var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
 var _ instrument.Float64ObservableGauge = float64Observable{}
 
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[float64]) float64Observable {
+func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable[float64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 
@@ -234,9 +232,9 @@ var _ instrument.Int64ObservableCounter = int64Observable{}
 var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
 var _ instrument.Int64ObservableGauge = int64Observable{}
 
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[int64]) int64Observable {
+func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable[int64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 
@@ -247,7 +245,7 @@ type observable[N int64 | float64] struct {
 	aggregators []internal.Aggregator[N]
 }
 
-func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc string, u unit.Unit, agg []internal.Aggregator[N]) *observable[N] {
+func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[N]) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,

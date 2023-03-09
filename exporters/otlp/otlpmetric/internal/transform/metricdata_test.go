@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -188,49 +187,49 @@ var (
 		{
 			Name:        "int64-gauge",
 			Description: "Gauge with int64 values",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelGaugeInt64,
 		},
 		{
 			Name:        "float64-gauge",
 			Description: "Gauge with float64 values",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelGaugeFloat64,
 		},
 		{
 			Name:        "int64-sum",
 			Description: "Sum with int64 values",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelSumInt64,
 		},
 		{
 			Name:        "float64-sum",
 			Description: "Sum with float64 values",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelSumFloat64,
 		},
 		{
 			Name:        "invalid-sum",
 			Description: "Sum with invalid temporality",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelSumInvalid,
 		},
 		{
 			Name:        "histogram",
 			Description: "Histogram",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelHist,
 		},
 		{
 			Name:        "invalid-histogram",
 			Description: "Invalid histogram",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        otelHistInvalid,
 		},
 		{
 			Name:        "unknown",
 			Description: "Unknown aggregation",
-			Unit:        unit.Dimensionless,
+			Unit:        "1",
 			Data:        unknownAgg,
 		},
 	}
@@ -239,31 +238,31 @@ var (
 		{
 			Name:        "int64-gauge",
 			Description: "Gauge with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeInt64},
 		},
 		{
 			Name:        "float64-gauge",
 			Description: "Gauge with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeFloat64},
 		},
 		{
 			Name:        "int64-sum",
 			Description: "Sum with int64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Sum{Sum: pbSumInt64},
 		},
 		{
 			Name:        "float64-sum",
 			Description: "Sum with float64 values",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Sum{Sum: pbSumFloat64},
 		},
 		{
 			Name:        "histogram",
 			Description: "Histogram",
-			Unit:        string(unit.Dimensionless),
+			Unit:        "1",
 			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
 		},
 	}

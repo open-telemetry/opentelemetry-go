@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -213,7 +212,7 @@ var testScopeMetricsA = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake data",
 		Description: "Data used to test a reader",
-		Unit:        unit.Dimensionless,
+		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 			IsMonotonic: true,
@@ -232,7 +231,7 @@ var testScopeMetricsB = metricdata.ScopeMetrics{
 	Metrics: []metricdata.Metrics{{
 		Name:        "fake scope data",
 		Description: "Data used to test a Producer reader",
-		Unit:        unit.Milliseconds,
+		Unit:        "ms",
 		Data: metricdata.Gauge[int64]{
 			DataPoints: []metricdata.DataPoint[int64]{{
 				Attributes: attribute.NewSet(attribute.String("user", "ben")),
