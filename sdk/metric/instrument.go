@@ -219,7 +219,7 @@ var _ instrument.Float64ObservableGauge = float64Observable{}
 
 func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable[float64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 
@@ -234,7 +234,7 @@ var _ instrument.Int64ObservableGauge = int64Observable{}
 
 func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable[int64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 

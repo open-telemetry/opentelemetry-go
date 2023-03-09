@@ -135,7 +135,7 @@ func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBu
 }
 
 func TestHistogramImmutableBounds(t *testing.T) {
-	t.Run("Delta", testHistImmutableBounds[int64](
+	t.Run("Delta", testHistImmutableBounds(
 		NewDeltaHistogram[int64],
 		func(a Aggregator[int64]) []float64 {
 			deltaH := a.(*deltaHistogram[int64])
@@ -143,7 +143,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 		},
 	))
 
-	t.Run("Cumulative", testHistImmutableBounds[int64](
+	t.Run("Cumulative", testHistImmutableBounds(
 		NewCumulativeHistogram[int64],
 		func(a Aggregator[int64]) []float64 {
 			cumuH := a.(*cumulativeHistogram[int64])
