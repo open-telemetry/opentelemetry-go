@@ -76,7 +76,7 @@ func TestLastValueUpdate(t *testing.T) {
 
 		var last number.Number
 		for i := 0; i < count; i++ {
-			x := profile.Random(rand.Intn(1)*2 - 1)
+			x := profile.Random(rand.Intn(1)*2 - 1) // nolint: staticcheck  // Do not fix code being removed
 			last = x
 			aggregatortest.CheckedUpdate(t, agg, x, record)
 		}

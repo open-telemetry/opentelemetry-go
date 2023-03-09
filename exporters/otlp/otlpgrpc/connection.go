@@ -24,7 +24,7 @@ import (
 
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 
 	"google.golang.org/grpc"

@@ -39,15 +39,15 @@ and naturally define a rate.
 
 The synchronous instrument names are:
 
-  Counter:           additive, monotonic
-  UpDownCounter:     additive
-  ValueRecorder:     grouping
+	Counter:           additive, monotonic
+	UpDownCounter:     additive
+	ValueRecorder:     grouping
 
 and the asynchronous instruments are:
 
-  SumObserver:       additive, monotonic
-  UpDownSumObserver: additive
-  ValueObserver:     grouping
+	SumObserver:       additive, monotonic
+	UpDownSumObserver: additive
+	ValueObserver:     grouping
 
 All instruments are provided with support for either float64 or int64 input
 values.

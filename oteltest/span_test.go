@@ -536,9 +536,9 @@ func TestSpan(t *testing.T) {
 				e.Expect(ok).ToBeTrue()
 
 				subject.SetStatus(codes.Ok, "Ok")
-				subject.SetStatus(status, "Yo!")
+				subject.SetStatus(status, "Yo!") // nolint: govet  // Do not fix removed code.
 
-				e.Expect(subject.StatusCode()).ToEqual(status)
+				e.Expect(subject.StatusCode()).ToEqual(status) // nolint: govet  // Do not fix removed code.
 				e.Expect(subject.StatusMessage()).ToEqual("Yo!")
 			})
 
@@ -557,7 +557,7 @@ func TestSpan(t *testing.T) {
 
 				subject.SetStatus(originalStatus, "OK")
 				subject.End()
-				subject.SetStatus(status, fmt.Sprint(status))
+				subject.SetStatus(status, fmt.Sprint(status)) // nolint: govet  // Do not fix removed code.
 
 				e.Expect(subject.StatusCode()).ToEqual(originalStatus)
 				e.Expect(subject.StatusMessage()).ToEqual("OK")

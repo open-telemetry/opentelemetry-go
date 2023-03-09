@@ -14,6 +14,7 @@
 
 // This test is too large for the race detector.  This SDK uses no locks
 // that the race detector would help with, anyway.
+//go:build !race
 // +build !race
 
 package metric

@@ -560,16 +560,16 @@ type Event struct {
 //
 // For example, a Link is used in the following situations:
 //
-//   1. Batch Processing: A batch of operations may contain operations
-//      associated with one or more traces/spans. Since there can only be one
-//      parent SpanContext, a Link is used to keep reference to the
-//      SpanContext of all operations in the batch.
-//   2. Public Endpoint: A SpanContext for an in incoming client request on a
-//      public endpoint should be considered untrusted. In such a case, a new
-//      trace with its own identity and sampling decision needs to be created,
-//      but this new trace needs to be related to the original trace in some
-//      form. A Link is used to keep reference to the original SpanContext and
-//      track the relationship.
+//  1. Batch Processing: A batch of operations may contain operations
+//     associated with one or more traces/spans. Since there can only be one
+//     parent SpanContext, a Link is used to keep reference to the
+//     SpanContext of all operations in the batch.
+//  2. Public Endpoint: A SpanContext for an in incoming client request on a
+//     public endpoint should be considered untrusted. In such a case, a new
+//     trace with its own identity and sampling decision needs to be created,
+//     but this new trace needs to be related to the original trace in some
+//     form. A Link is used to keep reference to the original SpanContext and
+//     track the relationship.
 type Link struct {
 	// SpanContext of the linked Span.
 	SpanContext

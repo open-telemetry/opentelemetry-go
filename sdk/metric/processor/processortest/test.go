@@ -95,9 +95,9 @@ type (
 // NewProcessor returns a new testing Processor implementation.
 // Verify expected outputs using Values(), e.g.:
 //
-//     require.EqualValues(t, map[string]float64{
-//         "counter.sum/A=1,B=2/R=V": 100,
-//     }, processor.Values())
+//	require.EqualValues(t, map[string]float64{
+//	    "counter.sum/A=1,B=2/R=V": 100,
+//	}, processor.Values())
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.
@@ -312,9 +312,9 @@ func (o *Output) AddAccumulation(acc export.Accumulation) error {
 // NewExporter returns a new testing Exporter implementation.
 // Verify exporter outputs using Values(), e.g.,:
 //
-//     require.EqualValues(t, map[string]float64{
-//         "counter.sum/A=1,B=2/R=V": 100,
-//     }, exporter.Values())
+//	require.EqualValues(t, map[string]float64{
+//	    "counter.sum/A=1,B=2/R=V": 100,
+//	}, exporter.Values())
 //
 // Where in the example A=1,B=2 is the encoded labels and R=V is the
 // encoded resource value.

@@ -134,7 +134,7 @@ func (ssr *SpanRecorder) Started() []*Span {
 	ssr.startedMu.RLock()
 	defer ssr.startedMu.RUnlock()
 	started := make([]*Span, len(ssr.started))
-	for i := range ssr.started {
+	for i := range ssr.started { // nolint: gosimple  // Do not fix removed code.
 		started[i] = ssr.started[i]
 	}
 	return started
@@ -145,7 +145,7 @@ func (ssr *SpanRecorder) Completed() []*Span {
 	ssr.doneMu.RLock()
 	defer ssr.doneMu.RUnlock()
 	done := make([]*Span, len(ssr.done))
-	for i := range ssr.done {
+	for i := range ssr.done { // nolint: gosimple  // Do not fix removed code.
 		done[i] = ssr.done[i]
 	}
 	return done

@@ -18,7 +18,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp" // nolint:staticcheck  // otlp is deprecated
 	"go.opentelemetry.io/otel/exporters/otlp/internal/otlpconfig"
 )
 
