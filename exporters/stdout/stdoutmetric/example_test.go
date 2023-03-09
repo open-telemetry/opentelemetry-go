@@ -153,7 +153,7 @@ func Example() {
 	// This is where the sdk would be used to create a Meter and from that
 	// instruments that would make measurements of your code. To simulate that
 	// behavior, call export directly with mocked data.
-	_ = exp.Export(ctx, mockData)
+	_ = exp.Export(ctx, &mockData)
 
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)

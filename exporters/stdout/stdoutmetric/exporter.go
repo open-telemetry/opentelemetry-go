@@ -62,7 +62,7 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation 
 	return e.aggregationSelector(k)
 }
 
-func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) error {
+func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
 	select {
 	case <-ctx.Done():
 		// Don't do anything if the context has already timed out.
@@ -71,7 +71,7 @@ func (e *exporter) Export(ctx context.Context, data metricdata.ResourceMetrics) 
 		// Context is still valid, continue.
 	}
 	if e.redactTimestamps {
-		data = redactTimestamps(data)
+		redactTimestamps(data)
 	}
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
@@ -90,26 +90,17 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func redactTimestamps(orig metricdata.ResourceMetrics) metricdata.ResourceMetrics {
-	rm := metricdata.ResourceMetrics{
-		Resource:     orig.Resource,
-		ScopeMetrics: make([]metricdata.ScopeMetrics, len(orig.ScopeMetrics)),
-	}
+func redactTimestamps(orig *metricdata.ResourceMetrics) {
 	for i, sm := range orig.ScopeMetrics {
-		rm.ScopeMetrics[i] = metricdata.ScopeMetrics{
-			Scope:   sm.Scope,
-			Metrics: make([]metricdata.Metrics, len(sm.Metrics)),
-		}
-		for j, m := range sm.Metrics {
-			rm.ScopeMetrics[i].Metrics[j] = metricdata.Metrics{
-				Name:        m.Name,
-				Description: m.Description,
-				Unit:        m.Unit,
-				Data:        redactAggregationTimestamps(m.Data),
-			}
+		metrics := sm.Metrics
+		for j, m := range metrics {
+			data := m.Data
+			orig.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(data)
 		}
 	}
-	return rm
+	if orig.ScopeMetrics == nil {
+		orig.ScopeMetrics = []metricdata.ScopeMetrics{}
+	}
 }
 
 var (

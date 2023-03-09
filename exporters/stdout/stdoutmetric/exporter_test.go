@@ -84,7 +84,7 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 		require.NoError(t, err)
 		return func(ctx context.Context) error {
 			var data metricdata.ResourceMetrics
-			return exp.Export(ctx, data)
+			return exp.Export(ctx, &data)
 		}
 	}))
 }
@@ -97,7 +97,7 @@ func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NoError(t, exp.Shutdown(ctx))
-	assert.EqualError(t, exp.Export(ctx, data), "exporter shutdown")
+	assert.EqualError(t, exp.Export(ctx, &data), "exporter shutdown")
 }
 
 func deltaSelector(metric.InstrumentKind) metricdata.Temporality {
