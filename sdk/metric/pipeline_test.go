@@ -42,7 +42,8 @@ func (testSumAggregator) Aggregation() metricdata.Aggregation {
 func TestEmptyPipeline(t *testing.T) {
 	pipe := &pipeline{}
 
-	output, err := pipe.produce(context.Background())
+	output := metricdata.ResourceMetrics{}
+	err := pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Nil(t, output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
@@ -56,7 +57,7 @@ func TestEmptyPipeline(t *testing.T) {
 		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
-	output, err = pipe.produce(context.Background())
+	err = pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Nil(t, output.Resource)
 	require.Len(t, output.ScopeMetrics, 1)
@@ -66,7 +67,8 @@ func TestEmptyPipeline(t *testing.T) {
 func TestNewPipeline(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 
-	output, err := pipe.produce(context.Background())
+	output := metricdata.ResourceMetrics{}
+	err := pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
@@ -80,7 +82,7 @@ func TestNewPipeline(t *testing.T) {
 		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
-	output, err = pipe.produce(context.Background())
+	err = pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	require.Len(t, output.ScopeMetrics, 1)
@@ -91,7 +93,8 @@ func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
 	pipe := newPipeline(res, nil, nil)
 
-	output, err := pipe.produce(context.Background())
+	output := metricdata.ResourceMetrics{}
+	err := pipe.produce(context.Background(), &output)
 	assert.NoError(t, err)
 	assert.Equal(t, res, output.Resource)
 }
@@ -99,6 +102,7 @@ func TestPipelineUsesResource(t *testing.T) {
 func TestPipelineConcurrency(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 	ctx := context.Background()
+	var output metricdata.ResourceMetrics
 
 	var wg sync.WaitGroup
 	const threads = 2
@@ -106,7 +110,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = pipe.produce(ctx)
+			_ = pipe.produce(ctx, &output)
 		}()
 
 		wg.Add(1)
@@ -167,7 +171,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 					a.Aggregate(1, *attribute.EmptySet())
 				}
 
-				out, err := test.pipe.produce(context.Background())
+				out := metricdata.ResourceMetrics{}
+				err = test.pipe.produce(context.Background(), &out)
 				require.NoError(t, err)
 				require.Len(t, out.ScopeMetrics, 1, "Aggregator not registered with pipeline")
 				sm := out.ScopeMetrics[0]
