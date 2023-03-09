@@ -61,6 +61,23 @@ var (
 						},
 					},
 					{
+						Name:        "system.cpu.time",
+						Description: "Accumulated CPU time spent",
+						Unit:        "s",
+						Data: metricdata.Sum[float64]{
+							IsMonotonic: true,
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("state", "user")),
+									StartTime:  now,
+									Time:       now.Add(1 * time.Second),
+									Value:      0.5,
+								},
+							},
+						},
+					},
+					{
 						Name:        "latency",
 						Description: "Time spend processing received requests",
 						Unit:        "ms",
@@ -75,6 +92,20 @@ var (
 									Bounds:       []float64{1, 5, 10},
 									BucketCounts: []uint64{1, 3, 6, 0},
 									Sum:          57,
+								},
+							},
+						},
+					},
+					{
+						Name:        "system.memory.usage",
+						Description: "Memory usage",
+						Unit:        "By",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("state", "used")),
+									Time:       now.Add(1 * time.Second),
+									Value:      100,
 								},
 							},
 						},
@@ -172,6 +203,31 @@ func Example() {
 	//           }
 	//         },
 	//         {
+	//           "Name": "system.cpu.time",
+	//           "Description": "Accumulated CPU time spent",
+	//           "Unit": "s",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "state",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "user"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 0.5
+	//               }
+	//             ],
+	//             "Temporality": "CumulativeTemporality",
+	//             "IsMonotonic": true
+	//           }
+	//         },
+	//         {
 	//           "Name": "latency",
 	//           "Description": "Time spend processing received requests",
 	//           "Unit": "ms",
@@ -207,6 +263,29 @@ func Example() {
 	//               }
 	//             ],
 	//             "Temporality": "DeltaTemporality"
+	//           }
+	//         },
+	//         {
+	//           "Name": "system.memory.usage",
+	//           "Description": "Memory usage",
+	//           "Unit": "By",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "state",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "used"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 100
+	//               }
+	//             ]
 	//           }
 	//         },
 	//         {

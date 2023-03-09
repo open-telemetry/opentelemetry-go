@@ -16,6 +16,7 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -111,6 +112,10 @@ func redactTimestamps(orig metricdata.ResourceMetrics) metricdata.ResourceMetric
 	return rm
 }
 
+var (
+	errUnknownAggType = errors.New("unknown aggregation type")
+)
+
 func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggregation {
 	switch a := orig.(type) {
 	case metricdata.Sum[float64]:
@@ -139,7 +144,7 @@ func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggrega
 			DataPoints:  redactHistogramTimestamps(a.DataPoints),
 		}
 	default:
-		global.Debug("unknown aggregation type", "type", fmt.Sprintf("%T", a))
+		global.Error(errUnknownAggType, fmt.Sprintf("%T", a))
 		return orig
 	}
 }
