@@ -993,15 +993,15 @@ with major version 0.
 
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
   - The following status codes are defined as transient errors:
-      | gRPC Status Code | Description |
-      | ---------------- | ----------- |
-      | 1  | Cancelled |
-      | 4  | Deadline Exceeded |
-      | 8  | Resource Exhausted |
-      | 10 | Aborted |
-      | 10 | Out of Range |
-      | 14 | Unavailable |
-      | 15 | Data Loss |
+      | gRPC Status Code | Description        |
+      | ---------------- | ------------------ |
+      | 1                | Cancelled          |
+      | 4                | Deadline Exceeded  |
+      | 8                | Resource Exhausted |
+      | 10               | Aborted            |
+      | 10               | Out of Range       |
+      | 14               | Unavailable        |
+      | 15               | Data Loss          |
 - Added `Status` type to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - Added `SpanStub` type and its associated functions to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
