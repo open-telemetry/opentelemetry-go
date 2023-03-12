@@ -6,11 +6,11 @@ require (
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.15.0-rc.1
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.15.0-rc.1
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.15.0-rc.1
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.14.0
 	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 	go.opentelemetry.io/proto/otlp v0.19.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.29.0
 )
 
 require (
