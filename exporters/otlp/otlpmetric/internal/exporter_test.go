@@ -60,7 +60,7 @@ func TestExporterClientConcurrency(t *testing.T) {
 	const goroutines = 5
 
 	exp := New(&client{})
-	rm := metricdata.ResourceMetrics{}
+	rm := new(metricdata.ResourceMetrics)
 	ctx := context.Background()
 
 	done := make(chan struct{})
@@ -70,13 +70,13 @@ func TestExporterClientConcurrency(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			assert.NoError(t, exp.Export(ctx, &rm))
+			assert.NoError(t, exp.Export(ctx, rm))
 			assert.NoError(t, exp.ForceFlush(ctx))
 			// Ensure some work is done before shutting down.
 			first <- struct{}{}
 
 			for {
-				_ = exp.Export(ctx, &rm)
+				_ = exp.Export(ctx, rm)
 				_ = exp.ForceFlush(ctx)
 
 				select {
