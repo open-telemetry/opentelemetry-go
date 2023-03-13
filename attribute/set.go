@@ -228,8 +228,9 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 		return empty(), nil
 	}
 	srt := sortables.Get().(*Sortable)
-	defer func() { sortables.Put(srt) }()
-	return NewSetWithSortableFiltered(kvs, srt, filter)
+	s, filtered := NewSetWithSortableFiltered(kvs, srt, filter)
+	sortables.Put(srt)
+	return s, filtered
 }
 
 // NewSetWithSortableFiltered returns a new Set.
