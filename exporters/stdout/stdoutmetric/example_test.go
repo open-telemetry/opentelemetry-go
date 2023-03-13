@@ -61,6 +61,23 @@ var (
 						},
 					},
 					{
+						Name:        "system.cpu.time",
+						Description: "Accumulated CPU time spent",
+						Unit:        "s",
+						Data: metricdata.Sum[float64]{
+							IsMonotonic: true,
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("state", "user")),
+									StartTime:  now,
+									Time:       now.Add(1 * time.Second),
+									Value:      0.5,
+								},
+							},
+						},
+					},
+					{
 						Name:        "latency",
 						Description: "Time spend processing received requests",
 						Unit:        "ms",
@@ -75,6 +92,20 @@ var (
 									Bounds:       []float64{1, 5, 10},
 									BucketCounts: []uint64{1, 3, 6, 0},
 									Sum:          57,
+								},
+							},
+						},
+					},
+					{
+						Name:        "system.memory.usage",
+						Description: "Memory usage",
+						Unit:        "By",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("state", "used")),
+									Time:       now.Add(1 * time.Second),
+									Value:      100,
 								},
 							},
 						},
@@ -103,7 +134,11 @@ func Example() {
 	// Print with a JSON encoder that indents with two spaces.
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(enc))
+
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithEncoder(enc),
+		stdoutmetric.WithoutTimestamps(),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -116,10 +151,180 @@ func Example() {
 
 	ctx := context.Background()
 	// This is where the sdk would be used to create a Meter and from that
-	// instruments that would make measurments of your code. To simulate that
+	// instruments that would make measurements of your code. To simulate that
 	// behavior, call export directly with mocked data.
 	_ = exp.Export(ctx, mockData)
 
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)
+
+	//Output:
+	// {
+	//   "Resource": [
+	//     {
+	//       "Key": "service.name",
+	//       "Value": {
+	//         "Type": "STRING",
+	//         "Value": "stdoutmetric-example"
+	//       }
+	//     }
+	//   ],
+	//   "ScopeMetrics": [
+	//     {
+	//       "Scope": {
+	//         "Name": "example",
+	//         "Version": "v0.0.1",
+	//         "SchemaURL": ""
+	//       },
+	//       "Metrics": [
+	//         {
+	//           "Name": "requests",
+	//           "Description": "Number of requests received",
+	//           "Unit": "1",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 5
+	//               }
+	//             ],
+	//             "Temporality": "DeltaTemporality",
+	//             "IsMonotonic": true
+	//           }
+	//         },
+	//         {
+	//           "Name": "system.cpu.time",
+	//           "Description": "Accumulated CPU time spent",
+	//           "Unit": "s",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "state",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "user"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 0.5
+	//               }
+	//             ],
+	//             "Temporality": "CumulativeTemporality",
+	//             "IsMonotonic": true
+	//           }
+	//         },
+	//         {
+	//           "Name": "latency",
+	//           "Description": "Time spend processing received requests",
+	//           "Unit": "ms",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Count": 10,
+	//                 "Bounds": [
+	//                   1,
+	//                   5,
+	//                   10
+	//                 ],
+	//                 "BucketCounts": [
+	//                   1,
+	//                   3,
+	//                   6,
+	//                   0
+	//                 ],
+	//                 "Min": {},
+	//                 "Max": {},
+	//                 "Sum": 57
+	//               }
+	//             ],
+	//             "Temporality": "DeltaTemporality"
+	//           }
+	//         },
+	//         {
+	//           "Name": "system.memory.usage",
+	//           "Description": "Memory usage",
+	//           "Unit": "By",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "state",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "used"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 100
+	//               }
+	//             ]
+	//           }
+	//         },
+	//         {
+	//           "Name": "temperature",
+	//           "Description": "CPU global temperature",
+	//           "Unit": "cel(1 K)",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Value": 32.4
+	//               }
+	//             ]
+	//           }
+	//         }
+	//       ]
+	//     }
+	//   ]
+	// }
+	// {
+	//   "Resource": [
+	//     {
+	//       "Key": "service.name",
+	//       "Value": {
+	//         "Type": "STRING",
+	//         "Value": "stdoutmetric-example"
+	//       }
+	//     }
+	//   ],
+	//   "ScopeMetrics": []
+	// }
 }

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sort"
+	"sync"
 )
 
 type (
@@ -61,6 +62,12 @@ var (
 		equivalent: Distinct{
 			iface: [0]KeyValue{},
 		},
+	}
+
+	// sortables is a pool of Sortables used to create Sets with a user does
+	// not provide one.
+	sortables = sync.Pool{
+		New: func() interface{} { return new(Sortable) },
 	}
 )
 
@@ -191,7 +198,9 @@ func NewSet(kvs ...KeyValue) Set {
 	if len(kvs) == 0 {
 		return empty()
 	}
-	s, _ := NewSetWithSortableFiltered(kvs, new(Sortable), nil)
+	srt := sortables.Get().(*Sortable)
+	s, _ := NewSetWithSortableFiltered(kvs, srt, nil)
+	sortables.Put(srt)
 	return s
 }
 
@@ -218,7 +227,10 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	if len(kvs) == 0 {
 		return empty(), nil
 	}
-	return NewSetWithSortableFiltered(kvs, new(Sortable), filter)
+	srt := sortables.Get().(*Sortable)
+	s, filtered := NewSetWithSortableFiltered(kvs, srt, filter)
+	sortables.Put(srt)
+	return s, filtered
 }
 
 // NewSetWithSortableFiltered returns a new Set.
