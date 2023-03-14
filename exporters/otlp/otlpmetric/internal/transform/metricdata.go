@@ -175,7 +175,7 @@ func Histogram[N int64 | float64](h metricdata.Histogram[N]) (*mpb.Metric_Histog
 func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint[N]) []*mpb.HistogramDataPoint {
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
-		sum := dPt.Sum
+		sum := float64(dPt.Sum)
 		hdp := &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
@@ -186,10 +186,12 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 			ExplicitBounds:    dPt.Bounds,
 		}
 		if v, ok := dPt.Min.Value(); ok {
-			hdp.Min = &v
+			vF64 := float64(v)
+			hdp.Min = &vF64
 		}
 		if v, ok := dPt.Max.Value(); ok {
-			hdp.Max = &v
+			vF64 := float64(v)
+			hdp.Max = &vF64
 		}
 		out = append(out, hdp)
 	}

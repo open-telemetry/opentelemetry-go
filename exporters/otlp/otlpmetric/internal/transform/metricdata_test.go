@@ -59,9 +59,9 @@ var (
 		Count:        30,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 30, 0},
-		Min:          metricdata.NewExtrema(minA),
-		Max:          metricdata.NewExtrema(maxA),
-		Sum:          sumA,
+		Min:          metricdata.NewExtrema(int64(minA)),
+		Max:          metricdata.NewExtrema(int64(maxA)),
+		Sum:          int64(sumA),
 	}, {
 		Attributes:   bob,
 		StartTime:    start,
@@ -69,9 +69,9 @@ var (
 		Count:        3,
 		Bounds:       []float64{1, 5},
 		BucketCounts: []uint64{0, 1, 2},
-		Min:          metricdata.NewExtrema(minB),
-		Max:          metricdata.NewExtrema(maxB),
-		Sum:          sumB,
+		Min:          metricdata.NewExtrema(int64(minB)),
+		Max:          metricdata.NewExtrema(int64(maxB)),
+		Sum:          int64(sumB),
 	}}
 	otelHDPFloat64 = []metricdata.HistogramDataPoint[float64]{{
 		Attributes:   alice,
