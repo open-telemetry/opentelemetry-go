@@ -325,6 +325,6 @@ func Example() {
 	//       }
 	//     }
 	//   ],
-	//   "ScopeMetrics": []
+	//   "ScopeMetrics": null
 	// }
 }

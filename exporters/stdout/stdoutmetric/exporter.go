@@ -98,9 +98,6 @@ func redactTimestamps(orig *metricdata.ResourceMetrics) {
 			orig.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(data)
 		}
 	}
-	if orig.ScopeMetrics == nil {
-		orig.ScopeMetrics = []metricdata.ScopeMetrics{}
-	}
 }
 
 var (
