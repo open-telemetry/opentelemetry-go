@@ -155,7 +155,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		for _, m := range scopeMetrics.Metrics {
 			switch v := m.Data.(type) {
-			case metricdata.Histogram:
+			case metricdata.Histogram[int64]:
+				addHistogramMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
+			case metricdata.Histogram[float64]:
 				addHistogramMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
 			case metricdata.Sum[int64]:
 				addSumMetric(ch, v, m, keys, values, c.getName(m), c.metricFamilies)
@@ -170,7 +172,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func addHistogramMetric(ch chan<- prometheus.Metric, histogram metricdata.Histogram, m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
+func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	drop, help := validateMetrics(name, m.Description, dto.MetricType_HISTOGRAM.Enum(), mfs)
 	if drop {

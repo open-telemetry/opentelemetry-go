@@ -127,8 +127,8 @@ func convertNumberDataPoints[N int64 | float64](labelKeys []ocmetricdata.LabelKe
 
 // convertHistogram converts OpenCensus Distribution timeseries to an
 // OpenTelemetry Histogram aggregation.
-func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Histogram, error) {
-	points := make([]metricdata.HistogramDataPoint, 0, len(ts))
+func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Histogram[float64], error) {
+	points := make([]metricdata.HistogramDataPoint[float64], 0, len(ts))
 	var errInfo []string
 	for _, t := range ts {
 		attrs, err := convertAttrs(labelKeys, t.LabelValues)
@@ -152,7 +152,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				continue
 			}
 			// TODO: handle exemplars
-			points = append(points, metricdata.HistogramDataPoint{
+			points = append(points, metricdata.HistogramDataPoint[float64]{
 				Attributes:   attrs,
 				StartTime:    t.StartTime,
 				Time:         p.Time,
@@ -167,7 +167,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 	if len(errInfo) > 0 {
 		aggregatedError = fmt.Errorf("%w: %v", errHistogramDataPoint, errInfo)
 	}
-	return metricdata.Histogram{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, aggregatedError
+	return metricdata.Histogram[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, aggregatedError
 }
 
 // convertBucketCounts converts from OpenCensus bucket counts to slice of uint64.

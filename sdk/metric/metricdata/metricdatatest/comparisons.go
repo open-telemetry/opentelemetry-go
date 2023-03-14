@@ -131,8 +131,14 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, "Sum[float64] not equal:")
 			reasons = append(reasons, r...)
 		}
-	case metricdata.Histogram:
-		r := equalHistograms(v, b.(metricdata.Histogram), cfg)
+	case metricdata.Histogram[int64]:
+		r := equalHistograms(v, b.(metricdata.Histogram[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Histogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Histogram[float64]:
+		r := equalHistograms(v, b.(metricdata.Histogram[float64]), cfg)
 		if len(r) > 0 {
 			reasons = append(reasons, "Histogram not equal:")
 			reasons = append(reasons, r...)
@@ -195,7 +201,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func equalHistograms(a, b metricdata.Histogram, cfg config) (reasons []string) {
+func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config) (reasons []string) {
 	if a.Temporality != b.Temporality {
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
@@ -203,7 +209,7 @@ func equalHistograms(a, b metricdata.Histogram, cfg config) (reasons []string) {
 	r := compareDiff(diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.HistogramDataPoint) bool {
+		func(a, b metricdata.HistogramDataPoint[N]) bool {
 			r := equalHistogramDataPoints(a, b, cfg)
 			return len(r) == 0
 		},
@@ -237,12 +243,26 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 	if a.Value != b.Value {
 		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
 	}
+
+	if !cfg.ignoreExemplars {
+		r := compareDiff(diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(a, b metricdata.Exemplar[N]) bool {
+				r := equalExemplars(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+		}
+	}
 	return reasons
 }
 
 // equalHistogramDataPoints returns reasons HistogramDataPoints are not equal.
 // If they are equal, the returned reasons will be empty.
-func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint, cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -275,6 +295,19 @@ func equalHistogramDataPoints(a, b metricdata.HistogramDataPoint, cfg config) (r
 	}
 	if a.Sum != b.Sum {
 		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+	}
+	if !cfg.ignoreExemplars {
+		r := compareDiff(diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(a, b metricdata.Exemplar[N]) bool {
+				r := equalExemplars(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+		}
 	}
 	return reasons
 }
@@ -310,6 +343,82 @@ func eqExtrema(a, b metricdata.Extrema) bool {
 		return aOk == bOk
 	}
 	return aV == bV
+}
+
+func equalKeyValue(a, b []attribute.KeyValue) bool {
+	// Comparison of []attribute.KeyValue as a comparable requires Go >= 1.20.
+	// To support Go < 1.20 use this function instead.
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v.Key != b[i].Key {
+			return false
+		}
+		if v.Value.Type() != b[i].Value.Type() {
+			return false
+		}
+		switch v.Value.Type() {
+		case attribute.BOOL:
+			if v.Value.AsBool() != b[i].Value.AsBool() {
+				return false
+			}
+		case attribute.INT64:
+			if v.Value.AsInt64() != b[i].Value.AsInt64() {
+				return false
+			}
+		case attribute.FLOAT64:
+			if v.Value.AsFloat64() != b[i].Value.AsFloat64() {
+				return false
+			}
+		case attribute.STRING:
+			if v.Value.AsString() != b[i].Value.AsString() {
+				return false
+			}
+		case attribute.BOOLSLICE:
+			if ok := equalSlices(v.Value.AsBoolSlice(), b[i].Value.AsBoolSlice()); !ok {
+				return false
+			}
+		case attribute.INT64SLICE:
+			if ok := equalSlices(v.Value.AsInt64Slice(), b[i].Value.AsInt64Slice()); !ok {
+				return false
+			}
+		case attribute.FLOAT64SLICE:
+			if ok := equalSlices(v.Value.AsFloat64Slice(), b[i].Value.AsFloat64Slice()); !ok {
+				return false
+			}
+		case attribute.STRINGSLICE:
+			if ok := equalSlices(v.Value.AsStringSlice(), b[i].Value.AsStringSlice()); !ok {
+				return false
+			}
+		default:
+			// We control all types passed to this, panic to signal developers
+			// early they changed things in an incompatible way.
+			panic(fmt.Sprintf("unknown attribute value type: %s", v.Value.Type()))
+		}
+	}
+	return true
+}
+
+func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) (reasons []string) {
+	if !equalKeyValue(a.FilteredAttributes, b.FilteredAttributes) {
+		reasons = append(reasons, notEqualStr("FilteredAttributes", a.FilteredAttributes, b.FilteredAttributes))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if a.Value != b.Value {
+		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	}
+	if !equalSlices(a.SpanID, b.SpanID) {
+		reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))
+	}
+	if !equalSlices(a.TraceID, b.TraceID) {
+		reasons = append(reasons, notEqualStr("TraceID", a.TraceID, b.TraceID))
+	}
+	return reasons
 }
 
 func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
@@ -372,6 +481,21 @@ func missingAttrStr(name string) string {
 	return fmt.Sprintf("missing attribute %s", name)
 }
 
+func hasAttributesExemplars[T int64 | float64](exemplar metricdata.Exemplar[T], attrs ...attribute.KeyValue) (reasons []string) {
+	s := attribute.NewSet(exemplar.FilteredAttributes...)
+	for _, attr := range attrs {
+		val, ok := s.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+		}
+	}
+	return reasons
+}
+
 func hasAttributesDataPoints[T int64 | float64](dp metricdata.DataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
@@ -408,7 +532,7 @@ func hasAttributesSum[T int64 | float64](sum metricdata.Sum[T], attrs ...attribu
 	return reasons
 }
 
-func hasAttributesHistogramDataPoints(dp metricdata.HistogramDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesHistogramDataPoints[T int64 | float64](dp metricdata.HistogramDataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
 		if !ok {
@@ -422,7 +546,7 @@ func hasAttributesHistogramDataPoints(dp metricdata.HistogramDataPoint, attrs ..
 	return reasons
 }
 
-func hasAttributesHistogram(histogram metricdata.Histogram, attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesHistogram[T int64 | float64](histogram metricdata.Histogram[T], attrs ...attribute.KeyValue) (reasons []string) {
 	for n, dp := range histogram.DataPoints {
 		reas := hasAttributesHistogramDataPoints(dp, attrs...)
 		if len(reas) > 0 {
@@ -443,7 +567,9 @@ func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.Key
 		reasons = hasAttributesSum(agg, attrs...)
 	case metricdata.Sum[float64]:
 		reasons = hasAttributesSum(agg, attrs...)
-	case metricdata.Histogram:
+	case metricdata.Histogram[int64]:
+		reasons = hasAttributesHistogram(agg, attrs...)
+	case metricdata.Histogram[float64]:
 		reasons = hasAttributesHistogram(agg, attrs...)
 	default:
 		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
