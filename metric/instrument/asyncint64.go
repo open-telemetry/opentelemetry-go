@@ -24,9 +24,9 @@ import (
 // int64 measurements once per collection cycle. Observations of these
 // instruments are only made within a callback.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Int64Observable interface {
-	Asynchronous
+	Observable
 
 	int64Observable()
 }
@@ -36,27 +36,39 @@ type Int64Observable interface {
 // only made within a callback for this instrument. The value observed is
 // assumed the to be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Int64ObservableCounter interface{ Int64Observable }
+// Warning: Methods may be added to this interface in minor releases.
+type Int64ObservableCounter interface {
+	Int64Observable
+
+	int64ObservableCounter()
+}
 
 // Int64ObservableUpDownCounter is an instrument used to asynchronously record
 // int64 measurements once per collection cycle. Observations are only made
 // within a callback for this instrument. The value observed is assumed the to
 // be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Int64ObservableUpDownCounter interface{ Int64Observable }
+// Warning: Methods may be added to this interface in minor releases.
+type Int64ObservableUpDownCounter interface {
+	Int64Observable
+
+	int64ObservableUpDownCounter()
+}
 
 // Int64ObservableGauge is an instrument used to asynchronously record
 // instantaneous int64 measurements once per collection cycle. Observations are
 // only made within a callback for this instrument.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Int64ObservableGauge interface{ Int64Observable }
+// Warning: Methods may be added to this interface in minor releases.
+type Int64ObservableGauge interface {
+	Int64Observable
+
+	int64ObservableGauge()
+}
 
 // Int64Observer is a recorder of int64 measurements.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Int64Observer interface {
 	Observe(value int64, attributes ...attribute.KeyValue)
 }

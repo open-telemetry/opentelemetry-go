@@ -22,34 +22,34 @@ import (
 
 // Float64Counter is an instrument that records increasing float64 values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Float64Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	float64Counter()
 }
 
 // Float64UpDownCounter is an instrument that records increasing or decreasing
 // float64 values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Float64UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	float64UpDownCounter()
 }
 
 // Float64Histogram is an instrument that records a distribution of float64
 // values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Float64Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	float64Histogram()
 }
 
 // Float64Config contains options for Asynchronous instruments that
@@ -59,7 +59,7 @@ type Float64Config struct {
 	unit        string
 }
 
-// Float64Config contains options for Synchronous instruments that record
+// Float64Config contains options for synchronous instruments that record
 // float64 values.
 func NewFloat64Config(opts ...Float64Option) Float64Config {
 	var config Float64Config

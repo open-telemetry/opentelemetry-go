@@ -14,19 +14,9 @@
 
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
-// Asynchronous instruments are instruments that are updated within a Callback.
-// If an instrument is observed outside of it's callback it should be an error.
-//
-// This interface is used as a grouping mechanism.
-type Asynchronous interface {
-	asynchronous()
-}
-
-// Synchronous instruments are updated in line with application code.
-//
-// This interface is used as a grouping mechanism.
-type Synchronous interface {
-	synchronous()
+// Observable instruments are instruments that are updated within a Callback.
+type Observable interface {
+	observable()
 }
 
 // Option applies options to all instruments.

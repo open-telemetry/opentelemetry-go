@@ -22,37 +22,37 @@ import (
 
 // Int64Counter is an instrument that records increasing int64 values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Int64Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	int64Counter()
 }
 
 // Int64UpDownCounter is an instrument that records increasing or decreasing
 // int64 values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Int64UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	int64UpDownCounter()
 }
 
 // Int64Histogram is an instrument that records a distribution of int64
 // values.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Int64Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
-	Synchronous
+	int64Histogram()
 }
 
-// Int64Config contains options for Synchronous instruments that record int64
+// Int64Config contains options for synchronous instruments that record int64
 // values.
 type Int64Config struct {
 	description string

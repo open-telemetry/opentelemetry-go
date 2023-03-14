@@ -170,7 +170,12 @@ type streamID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Synchronous
+	instrument.Float64Counter
+	instrument.Float64UpDownCounter
+	instrument.Float64Histogram
+	instrument.Int64Counter
+	instrument.Int64UpDownCounter
+	instrument.Int64Histogram
 
 	aggregators []internal.Aggregator[N]
 }
@@ -212,38 +217,8 @@ type observablID[N int64 | float64] struct {
 	scope       instrumentation.Scope
 }
 
-type float64Observable struct {
-	instrument.Float64Observable
-	*observable[float64]
-}
-
-var _ instrument.Float64ObservableCounter = float64Observable{}
-var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
-var _ instrument.Float64ObservableGauge = float64Observable{}
-
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
-	return float64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
-	}
-}
-
-type int64Observable struct {
-	instrument.Int64Observable
-	*observable[int64]
-}
-
-var _ instrument.Int64ObservableCounter = int64Observable{}
-var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
-var _ instrument.Int64ObservableGauge = int64Observable{}
-
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
-	return int64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
-	}
-}
-
 type observable[N int64 | float64] struct {
-	instrument.Asynchronous
+	instrument.Observable
 	observablID[N]
 
 	aggregators []internal.Aggregator[N]

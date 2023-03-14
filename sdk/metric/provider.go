@@ -26,6 +26,8 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
+	metric.MeterProvider
+
 	pipes  pipelines
 	meters cache[instrumentation.Scope, *meter]
 

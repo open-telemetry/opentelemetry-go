@@ -24,8 +24,10 @@ import (
 // MeterProvider provides access to named Meter instances, for instrumenting
 // an application or library.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type MeterProvider interface {
+	meterProvider()
+
 	// Meter creates an instance of a `Meter` interface. The name must be the
 	// name of the library providing instrumentation. This name may be the same
 	// as the instrumented code only if that code provides built-in
@@ -36,8 +38,10 @@ type MeterProvider interface {
 
 // Meter provides access to instrument instances for recording metrics.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Meter interface {
+	meter()
+
 	// Int64Counter returns a new instrument identified by name and configured
 	// with options. The instrument is used to synchronously record increasing
 	// int64 measurements during a computational operation.
@@ -103,7 +107,7 @@ type Meter interface {
 	//
 	// If no instruments are passed, f should not be registered nor called
 	// during collection.
-	RegisterCallback(f Callback, instruments ...instrument.Asynchronous) (Registration, error)
+	RegisterCallback(f Callback, instruments ...instrument.Observable) (Registration, error)
 }
 
 // Callback is a function registered with a Meter that makes observations for
@@ -121,7 +125,11 @@ type Meter interface {
 type Callback func(context.Context, Observer) error
 
 // Observer records measurements for multiple instruments in a Callback.
+//
+// Warning: Methods may be added to this interface in minor releases.
 type Observer interface {
+	observer()
+
 	// ObserveFloat64 records the float64 value with attributes for obsrv.
 	ObserveFloat64(obsrv instrument.Float64Observable, value float64, attributes ...attribute.KeyValue)
 	// ObserveInt64 records the int64 value with attributes for obsrv.
@@ -130,7 +138,11 @@ type Observer interface {
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
+//
+// Warning: Methods may be added to this interface in minor releases.
 type Registration interface {
+	registration()
+
 	// Unregister removes the callback registration from a Meter.
 	//
 	// This method needs to be idempotent and concurrent safe.

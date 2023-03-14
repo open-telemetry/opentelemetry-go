@@ -489,7 +489,7 @@ func TestRegisterNonSDKObserverErrors(t *testing.T) {
 	mp := NewMeterProvider(WithReader(rdr))
 	meter := mp.Meter("scope")
 
-	type obsrv struct{ instrument.Asynchronous }
+	type obsrv struct{ instrument.Observable }
 	o := obsrv{}
 
 	_, err := meter.RegisterCallback(

@@ -26,7 +26,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observable interface {
-	Asynchronous
+	Observable
 
 	float64Observable()
 }
@@ -37,7 +37,11 @@ type Float64Observable interface {
 // assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableCounter interface{ Float64Observable }
+type Float64ObservableCounter interface {
+	Float64Observable
+
+	float64ObservableCounter()
+}
 
 // Float64ObservableUpDownCounter is an instrument used to asynchronously
 // record float64 measurements once per collection cycle. Observations are only
@@ -45,14 +49,22 @@ type Float64ObservableCounter interface{ Float64Observable }
 // the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableUpDownCounter interface{ Float64Observable }
+type Float64ObservableUpDownCounter interface {
+	Float64Observable
+
+	float64ObservableUpDownCounter()
+}
 
 // Float64ObservableGauge is an instrument used to asynchronously record
 // instantaneous float64 measurements once per collection cycle. Observations
 // are only made within a callback for this instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableGauge interface{ Float64Observable }
+type Float64ObservableGauge interface {
+	Float64Observable
+
+	float64ObservableGauge()
+}
 
 // Float64Observer is a recorder of float64 measurements.
 //

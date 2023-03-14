@@ -503,13 +503,16 @@ func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 	for i, pipe := range p {
 		unregs[i] = pipe.addMultiCallback(c)
 	}
-	return unregisterFuncs(unregs)
+	return unregisterFuncs{unregFunc: unregs}
 }
 
-type unregisterFuncs []func()
+type unregisterFuncs struct {
+	metric.Registration
+	unregFunc []func()
+}
 
 func (u unregisterFuncs) Unregister() error {
-	for _, f := range u {
+	for _, f := range u.unregFunc {
 		f()
 	}
 	return nil

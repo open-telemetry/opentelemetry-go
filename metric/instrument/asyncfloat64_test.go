@@ -52,7 +52,7 @@ func TestFloat64ObserverOptions(t *testing.T) {
 }
 
 type float64Observer struct {
-	Asynchronous
+	Float64Observer
 	got float64
 }
 

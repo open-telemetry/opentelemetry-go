@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
@@ -36,7 +37,7 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(noop.NewMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -53,7 +54,7 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(noop.NewMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -141,36 +142,38 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	})
 }
 
-type testCountingFloatInstrument struct {
+type floatInst struct {
 	count int
 
-	instrument.Float64Observable
-	instrument.Synchronous
+	instrument.Float64Counter
+	instrument.Float64UpDownCounter
+	instrument.Float64Histogram
 }
 
-func (i *testCountingFloatInstrument) observe() {
+func (i *floatInst) observe() {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Add(context.Context, float64, ...attribute.KeyValue) {
+func (i *floatInst) Add(context.Context, float64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attribute.KeyValue) {
+func (i *floatInst) Record(context.Context, float64, ...attribute.KeyValue) {
 	i.count++
 }
 
-type testCountingIntInstrument struct {
+type intInst struct {
 	count int
 
-	instrument.Int64Observable
-	instrument.Synchronous
+	instrument.Int64Counter
+	instrument.Int64UpDownCounter
+	instrument.Int64Histogram
 }
 
-func (i *testCountingIntInstrument) observe() {
+func (i *intInst) observe() {
 	i.count++
 }
-func (i *testCountingIntInstrument) Add(context.Context, int64, ...attribute.KeyValue) {
+func (i *intInst) Add(context.Context, int64, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *testCountingIntInstrument) Record(context.Context, int64, ...attribute.KeyValue) {
+func (i *intInst) Record(context.Context, int64, ...attribute.KeyValue) {
 	i.count++
 }
