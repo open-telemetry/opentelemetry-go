@@ -6,7 +6,7 @@ OpenTelemetry
 repo for information on this and other language SIGs.
 
 See the [public meeting
-notes](https://docs.google.com/document/d/1A63zSWX0x2CyCK_LoNhmQC4rqhLpYXJzXbEPDUQ2n6w/edit#heading=h.9tngw7jdwd6b)
+notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iVvf-42tOBpu2VBBLYnh73GJuITGJTTU/edit)
 for a summary description of past meetings. To request edit access,
 join the meeting or get in touch on
 [Slack](https://cloud-native.slack.com/archives/C01NPAXACKT).

@@ -214,8 +214,8 @@ func TestConvertMetrics(t *testing.T) {
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
 					Unit:        "1",
-					Data: metricdata.Histogram{
-						DataPoints: []metricdata.HistogramDataPoint{
+					Data: metricdata.Histogram[float64]{
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
 							{
 								Attributes: attribute.NewSet(attribute.KeyValue{
 									Key:   attribute.Key("a"),
@@ -387,9 +387,9 @@ func TestConvertMetrics(t *testing.T) {
 					Name:        "foo.com/histogram-a",
 					Description: "a testing histogram",
 					Unit:        "1",
-					Data: metricdata.Histogram{
+					Data: metricdata.Histogram[float64]{
 						Temporality: metricdata.CumulativeTemporality,
-						DataPoints:  []metricdata.HistogramDataPoint{},
+						DataPoints:  []metricdata.HistogramDataPoint[float64]{},
 					},
 				},
 			},
