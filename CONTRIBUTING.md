@@ -528,7 +528,7 @@ interface that defines the specific functionality should be preferred.
 
 ## Approvers and Maintainers
 
-Approvers:
+### Approvers
 
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
@@ -538,13 +538,13 @@ Approvers:
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 
-Maintainers:
+### Maintainers
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
-Emeritus:
+### Emeritus
 
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 
@@ -553,5 +553,5 @@ Emeritus:
 See the [community membership document in OpenTelemetry community
 repo](https://github.com/open-telemetry/community/blob/main/community-membership.md).
 
-[Approver]: https://github.com/orgs/open-telemetry/teams/go-approvers
-[Maintainer]: https://github.com/orgs/open-telemetry/teams/go-maintainers
+[Approver]: #approvers
+[Maintainer]: #maintainers
