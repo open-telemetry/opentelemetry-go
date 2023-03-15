@@ -202,8 +202,6 @@ type sfCounter struct {
 	opts []instrument.Float64Option
 
 	delegate atomic.Value //instrument.Float64Counter
-
-	instrument.Synchronous
 }
 
 var _ instrument.Float64Counter = (*sfCounter)(nil)
@@ -228,8 +226,6 @@ type sfUpDownCounter struct {
 	opts []instrument.Float64Option
 
 	delegate atomic.Value //instrument.Float64UpDownCounter
-
-	instrument.Synchronous
 }
 
 var _ instrument.Float64UpDownCounter = (*sfUpDownCounter)(nil)
@@ -254,8 +250,6 @@ type sfHistogram struct {
 	opts []instrument.Float64Option
 
 	delegate atomic.Value //instrument.Float64Histogram
-
-	instrument.Synchronous
 }
 
 var _ instrument.Float64Histogram = (*sfHistogram)(nil)
@@ -280,8 +274,6 @@ type siCounter struct {
 	opts []instrument.Int64Option
 
 	delegate atomic.Value //instrument.Int64Counter
-
-	instrument.Synchronous
 }
 
 var _ instrument.Int64Counter = (*siCounter)(nil)
@@ -306,8 +298,6 @@ type siUpDownCounter struct {
 	opts []instrument.Int64Option
 
 	delegate atomic.Value //instrument.Int64UpDownCounter
-
-	instrument.Synchronous
 }
 
 var _ instrument.Int64UpDownCounter = (*siUpDownCounter)(nil)
@@ -332,8 +322,6 @@ type siHistogram struct {
 	opts []instrument.Int64Option
 
 	delegate atomic.Value //instrument.Int64Histogram
-
-	instrument.Synchronous
 }
 
 var _ instrument.Int64Histogram = (*siHistogram)(nil)

@@ -170,8 +170,6 @@ type streamID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Synchronous
-
 	aggregators []internal.Aggregator[N]
 }
 

@@ -22,13 +22,6 @@ type Asynchronous interface {
 	asynchronous()
 }
 
-// Synchronous instruments are updated in line with application code.
-//
-// This interface is used as a grouping mechanism.
-type Synchronous interface {
-	synchronous()
-}
-
 // Option applies options to all instruments.
 type Option interface {
 	Float64ObserverOption

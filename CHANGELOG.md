@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/global` package is removed. (#3829)
+- The unneeded `Synchronous` interface in `go.opentelemetry.io/otel/metric/instrument` was removed. (TBD)
 
 ## [1.15.0-rc.1/0.38.0-rc.1] 2023-03-01
 

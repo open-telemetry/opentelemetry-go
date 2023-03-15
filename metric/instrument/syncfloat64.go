@@ -26,8 +26,6 @@ import (
 type Float64Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Float64UpDownCounter is an instrument that records increasing or decreasing
@@ -37,8 +35,6 @@ type Float64Counter interface {
 type Float64UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Float64Histogram is an instrument that records a distribution of float64
@@ -48,8 +44,6 @@ type Float64UpDownCounter interface {
 type Float64Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Float64Config contains options for Asynchronous instruments that

@@ -116,9 +116,7 @@ var (
 	_ instrument.Int64ObservableGauge         = nonrecordingAsyncInt64Instrument{}
 )
 
-type nonrecordingSyncFloat64Instrument struct {
-	instrument.Synchronous
-}
+type nonrecordingSyncFloat64Instrument struct{}
 
 var (
 	_ instrument.Float64Counter       = nonrecordingSyncFloat64Instrument{}
@@ -129,9 +127,7 @@ var (
 func (nonrecordingSyncFloat64Instrument) Add(context.Context, float64, ...attribute.KeyValue)    {}
 func (nonrecordingSyncFloat64Instrument) Record(context.Context, float64, ...attribute.KeyValue) {}
 
-type nonrecordingSyncInt64Instrument struct {
-	instrument.Synchronous
-}
+type nonrecordingSyncInt64Instrument struct{}
 
 var (
 	_ instrument.Int64Counter       = nonrecordingSyncInt64Instrument{}

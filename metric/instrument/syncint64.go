@@ -26,8 +26,6 @@ import (
 type Int64Counter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Int64UpDownCounter is an instrument that records increasing or decreasing
@@ -37,8 +35,6 @@ type Int64Counter interface {
 type Int64UpDownCounter interface {
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Int64Histogram is an instrument that records a distribution of int64
@@ -48,8 +44,6 @@ type Int64UpDownCounter interface {
 type Int64Histogram interface {
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
-
-	Synchronous
 }
 
 // Int64Config contains options for Synchronous instruments that record int64
