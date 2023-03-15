@@ -46,7 +46,7 @@ type Float64Histogram interface {
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 }
 
-// Float64Config contains options for Asynchronous instruments that
+// Float64Config contains options for Observable instruments that
 // observe float64 values.
 type Float64Config struct {
 	description string

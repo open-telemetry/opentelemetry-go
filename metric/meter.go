@@ -103,7 +103,7 @@ type Meter interface {
 	//
 	// If no instruments are passed, f should not be registered nor called
 	// during collection.
-	RegisterCallback(f Callback, instruments ...instrument.Asynchronous) (Registration, error)
+	RegisterCallback(f Callback, instruments ...instrument.Observable) (Registration, error)
 }
 
 // Callback is a function registered with a Meter that makes observations for
