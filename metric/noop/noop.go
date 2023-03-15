@@ -53,7 +53,7 @@ var (
 type MeterProvider struct{ metric.MeterProvider }
 
 // NewMeterProvider returns a MeterProvider that does not record any telemetry.
-func NewMeterProvider() metric.MeterProvider {
+func NewMeterProvider() MeterProvider {
 	return MeterProvider{}
 }
 
