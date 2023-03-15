@@ -21,6 +21,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Avoid creating new objects on all calls to `WithDeferredSetup` and `SkipContextSetup` in OpenTracing bridge. (#3833)
 - The `New` and `Detect` functions from `go.opentelemetry.io/otel/sdk/resource` return errors that wrap underlying errors instead of just containing the underlying error strings. (#3844)
 - Both the `Histogram` and `HistogramDataPoint` are redefined with a generic argument of `[N int64 | float64]` in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#3849)
+- Rename `Int64ObserverOption` to `Int64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
+- Rename `Int64ObserverConfig` to `Int64ObservableConfig` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
+- Rename `NewInt64ObserverConfig` to `NewInt64ObservableConfig` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
+- Rename `Float64ObserverOption` to `Float64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
+- Rename `Float64ObserverConfig` to `Float64ObservableConfig` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
+- Rename `NewFloat64ObserverConfig` to `NewFloat64ObservableConfig` in `go.opentelemetry.io/otel/metric/instrument`. (#3891)
 
 ### Removed
 

@@ -77,18 +77,18 @@ type Float64Observer interface {
 // The function needs to be concurrent safe.
 type Float64Callback func(context.Context, Float64Observer) error
 
-// Float64ObserverConfig contains options for Asynchronous instruments that
+// Float64ObservableConfig contains options for Asynchronous instruments that
 // observe float64 values.
-type Float64ObserverConfig struct {
+type Float64ObservableConfig struct {
 	description string
 	unit        string
 	callbacks   []Float64Callback
 }
 
-// NewFloat64ObserverConfig returns a new Float64ObserverConfig with all opts
-// applied.
-func NewFloat64ObserverConfig(opts ...Float64ObserverOption) Float64ObserverConfig {
-	var config Float64ObserverConfig
+// NewFloat64ObservableConfig returns a new Float64ObservableConfig with all
+// opts applied.
+func NewFloat64ObservableConfig(opts ...Float64ObservableOption) Float64ObservableConfig {
+	var config Float64ObservableConfig
 	for _, o := range opts {
 		config = o.applyFloat64Observer(config)
 	}
@@ -96,34 +96,34 @@ func NewFloat64ObserverConfig(opts ...Float64ObserverOption) Float64ObserverConf
 }
 
 // Description returns the Config description.
-func (c Float64ObserverConfig) Description() string {
+func (c Float64ObservableConfig) Description() string {
 	return c.description
 }
 
 // Unit returns the Config unit.
-func (c Float64ObserverConfig) Unit() string {
+func (c Float64ObservableConfig) Unit() string {
 	return c.unit
 }
 
 // Callbacks returns the Config callbacks.
-func (c Float64ObserverConfig) Callbacks() []Float64Callback {
+func (c Float64ObservableConfig) Callbacks() []Float64Callback {
 	return c.callbacks
 }
 
-// Float64ObserverOption applies options to float64 Observer instruments.
-type Float64ObserverOption interface {
-	applyFloat64Observer(Float64ObserverConfig) Float64ObserverConfig
+// Float64ObservableOption applies options to float64 Observer instruments.
+type Float64ObservableOption interface {
+	applyFloat64Observer(Float64ObservableConfig) Float64ObservableConfig
 }
 
-type float64ObserverOptionFunc func(Float64ObserverConfig) Float64ObserverConfig
+type float64ObserverOptionFunc func(Float64ObservableConfig) Float64ObservableConfig
 
-func (fn float64ObserverOptionFunc) applyFloat64Observer(cfg Float64ObserverConfig) Float64ObserverConfig {
+func (fn float64ObserverOptionFunc) applyFloat64Observer(cfg Float64ObservableConfig) Float64ObservableConfig {
 	return fn(cfg)
 }
 
 // WithFloat64Callback adds callback to be called for an instrument.
-func WithFloat64Callback(callback Float64Callback) Float64ObserverOption {
-	return float64ObserverOptionFunc(func(cfg Float64ObserverConfig) Float64ObserverConfig {
+func WithFloat64Callback(callback Float64Callback) Float64ObservableOption {
+	return float64ObserverOptionFunc(func(cfg Float64ObservableConfig) Float64ObservableConfig {
 		cfg.callbacks = append(cfg.callbacks, callback)
 		return cfg
 	})

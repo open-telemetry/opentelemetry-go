@@ -32,7 +32,7 @@ type afCounter struct {
 	instrument.Float64Observable
 
 	name string
-	opts []instrument.Float64ObserverOption
+	opts []instrument.Float64ObservableOption
 
 	delegate atomic.Value //instrument.Float64ObservableCounter
 }
@@ -60,7 +60,7 @@ type afUpDownCounter struct {
 	instrument.Float64Observable
 
 	name string
-	opts []instrument.Float64ObserverOption
+	opts []instrument.Float64ObservableOption
 
 	delegate atomic.Value //instrument.Float64ObservableUpDownCounter
 }
@@ -88,7 +88,7 @@ type afGauge struct {
 	instrument.Float64Observable
 
 	name string
-	opts []instrument.Float64ObserverOption
+	opts []instrument.Float64ObservableOption
 
 	delegate atomic.Value //instrument.Float64ObservableGauge
 }
@@ -116,7 +116,7 @@ type aiCounter struct {
 	instrument.Int64Observable
 
 	name string
-	opts []instrument.Int64ObserverOption
+	opts []instrument.Int64ObservableOption
 
 	delegate atomic.Value //instrument.Int64ObservableCounter
 }
@@ -144,7 +144,7 @@ type aiUpDownCounter struct {
 	instrument.Int64Observable
 
 	name string
-	opts []instrument.Int64ObserverOption
+	opts []instrument.Int64ObservableOption
 
 	delegate atomic.Value //instrument.Int64ObservableUpDownCounter
 }
@@ -172,7 +172,7 @@ type aiGauge struct {
 	instrument.Int64Observable
 
 	name string
-	opts []instrument.Int64ObserverOption
+	opts []instrument.Int64ObservableOption
 
 	delegate atomic.Value //instrument.Int64ObservableGauge
 }

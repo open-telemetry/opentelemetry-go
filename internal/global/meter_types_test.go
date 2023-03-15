@@ -67,17 +67,17 @@ func (m *testMeter) Int64Histogram(name string, options ...instrument.Int64Optio
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error) {
+func (m *testMeter) Int64ObservableCounter(name string, options ...instrument.Int64ObservableOption) (instrument.Int64ObservableCounter, error) {
 	m.aiCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error) {
+func (m *testMeter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObservableOption) (instrument.Int64ObservableUpDownCounter, error) {
 	m.aiUDCount++
 	return &testCountingIntInstrument{}, nil
 }
 
-func (m *testMeter) Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
+func (m *testMeter) Int64ObservableGauge(name string, options ...instrument.Int64ObservableOption) (instrument.Int64ObservableGauge, error) {
 	m.aiGauge++
 	return &testCountingIntInstrument{}, nil
 }
@@ -97,17 +97,17 @@ func (m *testMeter) Float64Histogram(name string, options ...instrument.Float64O
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error) {
+func (m *testMeter) Float64ObservableCounter(name string, options ...instrument.Float64ObservableOption) (instrument.Float64ObservableCounter, error) {
 	m.afCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error) {
+func (m *testMeter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObservableOption) (instrument.Float64ObservableUpDownCounter, error) {
 	m.afUDCount++
 	return &testCountingFloatInstrument{}, nil
 }
 
-func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error) {
+func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Float64ObservableOption) (instrument.Float64ObservableGauge, error) {
 	m.afGauge++
 	return &testCountingFloatInstrument{}, nil
 }

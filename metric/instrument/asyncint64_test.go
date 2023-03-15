@@ -24,14 +24,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestInt64ObserverOptions(t *testing.T) {
+func TestInt64ObservableOptions(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
 		uBytes       = "By"
 	)
 
-	got := NewInt64ObserverConfig(
+	got := NewInt64ObservableConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
 		WithInt64Callback(func(_ context.Context, obsrv Int64Observer) error {

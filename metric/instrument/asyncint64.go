@@ -77,18 +77,18 @@ type Int64Observer interface {
 // The function needs to be concurrent safe.
 type Int64Callback func(context.Context, Int64Observer) error
 
-// Int64ObserverConfig contains options for Asynchronous instruments that
+// Int64ObservableConfig contains options for Asynchronous instruments that
 // observe int64 values.
-type Int64ObserverConfig struct {
+type Int64ObservableConfig struct {
 	description string
 	unit        string
 	callbacks   []Int64Callback
 }
 
-// NewInt64ObserverConfig returns a new Int64ObserverConfig with all opts
+// NewInt64ObservableConfig returns a new Int64ObservableConfig with all opts
 // applied.
-func NewInt64ObserverConfig(opts ...Int64ObserverOption) Int64ObserverConfig {
-	var config Int64ObserverConfig
+func NewInt64ObservableConfig(opts ...Int64ObservableOption) Int64ObservableConfig {
+	var config Int64ObservableConfig
 	for _, o := range opts {
 		config = o.applyInt64Observer(config)
 	}
@@ -96,34 +96,34 @@ func NewInt64ObserverConfig(opts ...Int64ObserverOption) Int64ObserverConfig {
 }
 
 // Description returns the Config description.
-func (c Int64ObserverConfig) Description() string {
+func (c Int64ObservableConfig) Description() string {
 	return c.description
 }
 
 // Unit returns the Config unit.
-func (c Int64ObserverConfig) Unit() string {
+func (c Int64ObservableConfig) Unit() string {
 	return c.unit
 }
 
 // Callbacks returns the Config callbacks.
-func (c Int64ObserverConfig) Callbacks() []Int64Callback {
+func (c Int64ObservableConfig) Callbacks() []Int64Callback {
 	return c.callbacks
 }
 
-// Int64ObserverOption applies options to int64 Observer instruments.
-type Int64ObserverOption interface {
-	applyInt64Observer(Int64ObserverConfig) Int64ObserverConfig
+// Int64ObservableOption applies options to int64 Observer instruments.
+type Int64ObservableOption interface {
+	applyInt64Observer(Int64ObservableConfig) Int64ObservableConfig
 }
 
-type int64ObserverOptionFunc func(Int64ObserverConfig) Int64ObserverConfig
+type int64ObserverOptionFunc func(Int64ObservableConfig) Int64ObservableConfig
 
-func (fn int64ObserverOptionFunc) applyInt64Observer(cfg Int64ObserverConfig) Int64ObserverConfig {
+func (fn int64ObserverOptionFunc) applyInt64Observer(cfg Int64ObservableConfig) Int64ObservableConfig {
 	return fn(cfg)
 }
 
 // WithInt64Callback adds callback to be called for an instrument.
-func WithInt64Callback(callback Int64Callback) Int64ObserverOption {
-	return int64ObserverOptionFunc(func(cfg Int64ObserverConfig) Int64ObserverConfig {
+func WithInt64Callback(callback Int64Callback) Int64ObservableOption {
+	return int64ObserverOptionFunc(func(cfg Int64ObservableConfig) Int64ObservableConfig {
 		cfg.callbacks = append(cfg.callbacks, callback)
 		return cfg
 	})

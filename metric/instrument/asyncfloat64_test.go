@@ -24,14 +24,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestFloat64ObserverOptions(t *testing.T) {
+func TestFloat64ObservableOptions(t *testing.T) {
 	const (
 		token  float64 = 43
 		desc           = "Instrument description."
 		uBytes         = "By"
 	)
 
-	got := NewFloat64ObserverConfig(
+	got := NewFloat64ObservableConfig(
 		WithDescription(desc),
 		WithUnit(uBytes),
 		WithFloat64Callback(func(ctx context.Context, obsrv Float64Observer) error {

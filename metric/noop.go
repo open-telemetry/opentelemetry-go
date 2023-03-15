@@ -51,15 +51,15 @@ func (noopMeter) Int64Histogram(string, ...instrument.Int64Option) (instrument.I
 	return nonrecordingSyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error) {
+func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObservableOption) (instrument.Int64ObservableCounter, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error) {
+func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObservableOption) (instrument.Int64ObservableUpDownCounter, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
+func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObservableOption) (instrument.Int64ObservableGauge, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
@@ -75,15 +75,15 @@ func (noopMeter) Float64Histogram(string, ...instrument.Float64Option) (instrume
 	return nonrecordingSyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error) {
+func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObservableOption) (instrument.Float64ObservableCounter, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error) {
+func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObservableOption) (instrument.Float64ObservableUpDownCounter, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error) {
+func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObservableOption) (instrument.Float64ObservableGauge, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 

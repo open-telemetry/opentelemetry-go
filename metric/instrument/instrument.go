@@ -31,8 +31,8 @@ type Synchronous interface {
 
 // Option applies options to all instruments.
 type Option interface {
-	Float64ObserverOption
-	Int64ObserverOption
+	Float64ObservableOption
+	Int64ObservableOption
 	Float64Option
 	Int64Option
 }
@@ -49,12 +49,12 @@ func (o descOpt) applyInt64(c Int64Config) Int64Config {
 	return c
 }
 
-func (o descOpt) applyFloat64Observer(c Float64ObserverConfig) Float64ObserverConfig {
+func (o descOpt) applyFloat64Observer(c Float64ObservableConfig) Float64ObservableConfig {
 	c.description = string(o)
 	return c
 }
 
-func (o descOpt) applyInt64Observer(c Int64ObserverConfig) Int64ObserverConfig {
+func (o descOpt) applyInt64Observer(c Int64ObservableConfig) Int64ObservableConfig {
 	c.description = string(o)
 	return c
 }
@@ -74,12 +74,12 @@ func (o unitOpt) applyInt64(c Int64Config) Int64Config {
 	return c
 }
 
-func (o unitOpt) applyFloat64Observer(c Float64ObserverConfig) Float64ObserverConfig {
+func (o unitOpt) applyFloat64Observer(c Float64ObservableConfig) Float64ObservableConfig {
 	c.unit = string(o)
 	return c
 }
 
-func (o unitOpt) applyInt64Observer(c Int64ObserverConfig) Int64ObserverConfig {
+func (o unitOpt) applyInt64Observer(c Int64ObservableConfig) Int64ObservableConfig {
 	c.unit = string(o)
 	return c
 }
