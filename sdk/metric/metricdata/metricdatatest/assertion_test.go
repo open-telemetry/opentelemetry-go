@@ -30,53 +30,110 @@ var (
 	attrA = attribute.NewSet(attribute.Bool("A", true))
 	attrB = attribute.NewSet(attribute.Bool("B", true))
 
+	fltrAttrA = []attribute.KeyValue{attribute.Bool("filter A", true)}
+	fltrAttrB = []attribute.KeyValue{attribute.Bool("filter B", true)}
+
 	startA = time.Now()
 	startB = startA.Add(time.Millisecond)
 	endA   = startA.Add(time.Second)
 	endB   = startB.Add(time.Second)
+
+	spanIDA  = []byte{0, 0, 0, 0, 0, 0, 0, 1}
+	spanIDB  = []byte{0, 0, 0, 0, 0, 0, 0, 2}
+	traceIDA = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	traceIDB = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+
+	exemplarInt64A = metricdata.Exemplar[int64]{
+		FilteredAttributes: fltrAttrA,
+		Time:               endA,
+		Value:              -10,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
+	exemplarFloat64A = metricdata.Exemplar[float64]{
+		FilteredAttributes: fltrAttrA,
+		Time:               endA,
+		Value:              -10.0,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
+	exemplarInt64B = metricdata.Exemplar[int64]{
+		FilteredAttributes: fltrAttrB,
+		Time:               endB,
+		Value:              12,
+		SpanID:             spanIDB,
+		TraceID:            traceIDB,
+	}
+	exemplarFloat64B = metricdata.Exemplar[float64]{
+		FilteredAttributes: fltrAttrB,
+		Time:               endB,
+		Value:              12.0,
+		SpanID:             spanIDB,
+		TraceID:            traceIDB,
+	}
+	exemplarInt64C = metricdata.Exemplar[int64]{
+		FilteredAttributes: fltrAttrA,
+		Time:               endB,
+		Value:              -10,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
+	exemplarFloat64C = metricdata.Exemplar[float64]{
+		FilteredAttributes: fltrAttrA,
+		Time:               endB,
+		Value:              -10.0,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
 
 	dataPointInt64A = metricdata.DataPoint[int64]{
 		Attributes: attrA,
 		StartTime:  startA,
 		Time:       endA,
 		Value:      -1,
+		Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64A},
 	}
 	dataPointFloat64A = metricdata.DataPoint[float64]{
 		Attributes: attrA,
 		StartTime:  startA,
 		Time:       endA,
 		Value:      -1.0,
+		Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64A},
 	}
 	dataPointInt64B = metricdata.DataPoint[int64]{
 		Attributes: attrB,
 		StartTime:  startB,
 		Time:       endB,
 		Value:      2,
+		Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64B},
 	}
 	dataPointFloat64B = metricdata.DataPoint[float64]{
 		Attributes: attrB,
 		StartTime:  startB,
 		Time:       endB,
 		Value:      2.0,
+		Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64B},
 	}
 	dataPointInt64C = metricdata.DataPoint[int64]{
 		Attributes: attrA,
 		StartTime:  startB,
 		Time:       endB,
 		Value:      -1,
+		Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64C},
 	}
 	dataPointFloat64C = metricdata.DataPoint[float64]{
 		Attributes: attrA,
 		StartTime:  startB,
 		Time:       endB,
 		Value:      -1.0,
+		Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
 	minA       = metricdata.NewExtrema(-1.)
 	minB, maxB = metricdata.NewExtrema(3.), metricdata.NewExtrema(99.)
 	minC       = metricdata.NewExtrema(-1.)
 
-	histogramDataPointA = metricdata.HistogramDataPoint{
+	histogramDataPointInt64A = metricdata.HistogramDataPoint[int64]{
 		Attributes:   attrA,
 		StartTime:    startA,
 		Time:         endA,
@@ -85,8 +142,20 @@ var (
 		BucketCounts: []uint64{1, 1},
 		Min:          minA,
 		Sum:          2,
+		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64A},
 	}
-	histogramDataPointB = metricdata.HistogramDataPoint{
+	histogramDataPointFloat64A = metricdata.HistogramDataPoint[float64]{
+		Attributes:   attrA,
+		StartTime:    startA,
+		Time:         endA,
+		Count:        2,
+		Bounds:       []float64{0, 10},
+		BucketCounts: []uint64{1, 1},
+		Min:          minA,
+		Sum:          2,
+		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64A},
+	}
+	histogramDataPointInt64B = metricdata.HistogramDataPoint[int64]{
 		Attributes:   attrB,
 		StartTime:    startB,
 		Time:         endB,
@@ -96,8 +165,21 @@ var (
 		Max:          maxB,
 		Min:          minB,
 		Sum:          3,
+		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64B},
 	}
-	histogramDataPointC = metricdata.HistogramDataPoint{
+	histogramDataPointFloat64B = metricdata.HistogramDataPoint[float64]{
+		Attributes:   attrB,
+		StartTime:    startB,
+		Time:         endB,
+		Count:        3,
+		Bounds:       []float64{0, 10, 100},
+		BucketCounts: []uint64{1, 1, 1},
+		Max:          maxB,
+		Min:          minB,
+		Sum:          3,
+		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64B},
+	}
+	histogramDataPointInt64C = metricdata.HistogramDataPoint[int64]{
 		Attributes:   attrA,
 		StartTime:    startB,
 		Time:         endB,
@@ -106,6 +188,18 @@ var (
 		BucketCounts: []uint64{1, 1},
 		Min:          minC,
 		Sum:          2,
+		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64C},
+	}
+	histogramDataPointFloat64C = metricdata.HistogramDataPoint[float64]{
+		Attributes:   attrA,
+		StartTime:    startB,
+		Time:         endB,
+		Count:        2,
+		Bounds:       []float64{0, 10},
+		BucketCounts: []uint64{1, 1},
+		Min:          minC,
+		Sum:          2,
+		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
 	gaugeInt64A = metricdata.Gauge[int64]{
@@ -158,17 +252,29 @@ var (
 		DataPoints:  []metricdata.DataPoint[float64]{dataPointFloat64C},
 	}
 
-	histogramA = metricdata.Histogram{
+	histogramInt64A = metricdata.Histogram[int64]{
 		Temporality: metricdata.CumulativeTemporality,
-		DataPoints:  []metricdata.HistogramDataPoint{histogramDataPointA},
+		DataPoints:  []metricdata.HistogramDataPoint[int64]{histogramDataPointInt64A},
 	}
-	histogramB = metricdata.Histogram{
+	histogramFloat64A = metricdata.Histogram[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint[float64]{histogramDataPointFloat64A},
+	}
+	histogramInt64B = metricdata.Histogram[int64]{
 		Temporality: metricdata.DeltaTemporality,
-		DataPoints:  []metricdata.HistogramDataPoint{histogramDataPointB},
+		DataPoints:  []metricdata.HistogramDataPoint[int64]{histogramDataPointInt64B},
 	}
-	histogramC = metricdata.Histogram{
+	histogramFloat64B = metricdata.Histogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint[float64]{histogramDataPointFloat64B},
+	}
+	histogramInt64C = metricdata.Histogram[int64]{
 		Temporality: metricdata.CumulativeTemporality,
-		DataPoints:  []metricdata.HistogramDataPoint{histogramDataPointC},
+		DataPoints:  []metricdata.HistogramDataPoint[int64]{histogramDataPointInt64C},
+	}
+	histogramFloat64C = metricdata.Histogram[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint[float64]{histogramDataPointFloat64C},
 	}
 
 	metricsA = metricdata.Metrics{
@@ -224,7 +330,7 @@ func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, config{})
+		r := f(a, b, newConfig(nil))
 		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
 	}
 }
@@ -234,8 +340,20 @@ func testDatatypeIgnoreTime[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T
 		AssertEqual(t, a, a)
 		AssertEqual(t, b, b)
 
-		r := f(a, b, config{ignoreTimestamp: true})
-		assert.Equalf(t, len(r), 0, "%v == %v", a, b)
+		c := newConfig([]Option{IgnoreTimestamp()})
+		r := f(a, b, c)
+		assert.Len(t, r, 0, "unexpected inequality")
+	}
+}
+
+func testDatatypeIgnoreExemplars[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
+	return func(t *testing.T) {
+		AssertEqual(t, a, a)
+		AssertEqual(t, b, b)
+
+		c := newConfig([]Option{IgnoreExemplars()})
+		r := f(a, b, c)
+		assert.Len(t, r, 0, "unexpected inequality")
 	}
 }
 
@@ -243,30 +361,56 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("ResourceMetrics", testDatatype(resourceMetricsA, resourceMetricsB, equalResourceMetrics))
 	t.Run("ScopeMetrics", testDatatype(scopeMetricsA, scopeMetricsB, equalScopeMetrics))
 	t.Run("Metrics", testDatatype(metricsA, metricsB, equalMetrics))
-	t.Run("Histogram", testDatatype(histogramA, histogramB, equalHistograms))
+	t.Run("HistogramInt64", testDatatype(histogramInt64A, histogramInt64B, equalHistograms[int64]))
+	t.Run("HistogramFloat64", testDatatype(histogramFloat64A, histogramFloat64B, equalHistograms[float64]))
 	t.Run("SumInt64", testDatatype(sumInt64A, sumInt64B, equalSums[int64]))
 	t.Run("SumFloat64", testDatatype(sumFloat64A, sumFloat64B, equalSums[float64]))
 	t.Run("GaugeInt64", testDatatype(gaugeInt64A, gaugeInt64B, equalGauges[int64]))
 	t.Run("GaugeFloat64", testDatatype(gaugeFloat64A, gaugeFloat64B, equalGauges[float64]))
-	t.Run("HistogramDataPoint", testDatatype(histogramDataPointA, histogramDataPointB, equalHistogramDataPoints))
+	t.Run("HistogramDataPointInt64", testDatatype(histogramDataPointInt64A, histogramDataPointInt64B, equalHistogramDataPoints[int64]))
+	t.Run("HistogramDataPointFloat64", testDatatype(histogramDataPointFloat64A, histogramDataPointFloat64B, equalHistogramDataPoints[float64]))
 	t.Run("DataPointInt64", testDatatype(dataPointInt64A, dataPointInt64B, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatype(dataPointFloat64A, dataPointFloat64B, equalDataPoints[float64]))
 	t.Run("Extrema", testDatatype(minA, minB, equalExtrema))
+	t.Run("ExemplarInt64", testDatatype(exemplarInt64A, exemplarInt64B, equalExemplars[int64]))
+	t.Run("ExemplarFloat64", testDatatype(exemplarFloat64A, exemplarFloat64B, equalExemplars[float64]))
 }
 
 func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("ResourceMetrics", testDatatypeIgnoreTime(resourceMetricsA, resourceMetricsC, equalResourceMetrics))
 	t.Run("ScopeMetrics", testDatatypeIgnoreTime(scopeMetricsA, scopeMetricsC, equalScopeMetrics))
 	t.Run("Metrics", testDatatypeIgnoreTime(metricsA, metricsC, equalMetrics))
-	t.Run("Histogram", testDatatypeIgnoreTime(histogramA, histogramC, equalHistograms))
+	t.Run("HistogramInt64", testDatatypeIgnoreTime(histogramInt64A, histogramInt64C, equalHistograms[int64]))
+	t.Run("HistogramFloat64", testDatatypeIgnoreTime(histogramFloat64A, histogramFloat64C, equalHistograms[float64]))
 	t.Run("SumInt64", testDatatypeIgnoreTime(sumInt64A, sumInt64C, equalSums[int64]))
 	t.Run("SumFloat64", testDatatypeIgnoreTime(sumFloat64A, sumFloat64C, equalSums[float64]))
 	t.Run("GaugeInt64", testDatatypeIgnoreTime(gaugeInt64A, gaugeInt64C, equalGauges[int64]))
 	t.Run("GaugeFloat64", testDatatypeIgnoreTime(gaugeFloat64A, gaugeFloat64C, equalGauges[float64]))
-	t.Run("HistogramDataPoint", testDatatypeIgnoreTime(histogramDataPointA, histogramDataPointC, equalHistogramDataPoints))
+	t.Run("HistogramDataPointInt64", testDatatypeIgnoreTime(histogramDataPointInt64A, histogramDataPointInt64C, equalHistogramDataPoints[int64]))
+	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreTime(histogramDataPointFloat64A, histogramDataPointFloat64C, equalHistogramDataPoints[float64]))
 	t.Run("DataPointInt64", testDatatypeIgnoreTime(dataPointInt64A, dataPointInt64C, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatypeIgnoreTime(dataPointFloat64A, dataPointFloat64C, equalDataPoints[float64]))
 	t.Run("Extrema", testDatatypeIgnoreTime(minA, minC, equalExtrema))
+	t.Run("ExemplarInt64", testDatatypeIgnoreTime(exemplarInt64A, exemplarInt64C, equalExemplars[int64]))
+	t.Run("ExemplarFloat64", testDatatypeIgnoreTime(exemplarFloat64A, exemplarFloat64C, equalExemplars[float64]))
+}
+
+func TestAssertEqualIgnoreExemplars(t *testing.T) {
+	hdpInt64 := histogramDataPointInt64A
+	hdpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
+	t.Run("HistogramDataPointInt64", testDatatypeIgnoreExemplars(histogramDataPointInt64A, hdpInt64, equalHistogramDataPoints[int64]))
+
+	hdpFloat64 := histogramDataPointFloat64A
+	hdpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
+	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreExemplars(histogramDataPointFloat64A, hdpFloat64, equalHistogramDataPoints[float64]))
+
+	dpInt64 := dataPointInt64A
+	dpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
+	t.Run("DataPointInt64", testDatatypeIgnoreExemplars(dataPointInt64A, dpInt64, equalDataPoints[int64]))
+
+	dpFloat64 := dataPointFloat64A
+	dpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
+	t.Run("DataPointFloat64", testDatatypeIgnoreExemplars(dataPointFloat64A, dpFloat64, equalDataPoints[float64]))
 }
 
 type unknownAggregation struct {
@@ -279,7 +423,8 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, sumFloat64A, sumFloat64A)
 	AssertAggregationsEqual(t, gaugeInt64A, gaugeInt64A)
 	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64A)
-	AssertAggregationsEqual(t, histogramA, histogramA)
+	AssertAggregationsEqual(t, histogramInt64A, histogramInt64A)
+	AssertAggregationsEqual(t, histogramFloat64A, histogramFloat64A)
 
 	r := equalAggregations(sumInt64A, nil, config{})
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
@@ -291,46 +436,56 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
 	r = equalAggregations(sumInt64A, sumInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64B)
+	assert.Greaterf(t, len(r), 0, "sums should not be equal: %v == %v", sumInt64A, sumInt64B)
 
 	r = equalAggregations(sumInt64A, sumInt64C, config{ignoreTimestamp: true})
-	assert.Equalf(t, len(r), 0, "%v == %v", sumInt64A, sumInt64C)
+	assert.Len(t, r, 0, "sums should be equal: %v", r)
 
 	r = equalAggregations(sumFloat64A, sumFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64B)
+	assert.Greaterf(t, len(r), 0, "sums should not be equal: %v == %v", sumFloat64A, sumFloat64B)
 
 	r = equalAggregations(sumFloat64A, sumFloat64C, config{ignoreTimestamp: true})
-	assert.Equalf(t, len(r), 0, "%v == %v", sumFloat64A, sumFloat64C)
+	assert.Len(t, r, 0, "sums should be equal: %v", r)
 
 	r = equalAggregations(gaugeInt64A, gaugeInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64B)
+	assert.Greaterf(t, len(r), 0, "gauges should not be equal: %v == %v", gaugeInt64A, gaugeInt64B)
 
 	r = equalAggregations(gaugeInt64A, gaugeInt64C, config{ignoreTimestamp: true})
-	assert.Equalf(t, len(r), 0, "%v == %v", gaugeInt64A, gaugeInt64C)
+	assert.Len(t, r, 0, "gauges should be equal: %v", r)
 
 	r = equalAggregations(gaugeFloat64A, gaugeFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64B)
+	assert.Greaterf(t, len(r), 0, "gauges should not be equal: %v == %v", gaugeFloat64A, gaugeFloat64B)
 
 	r = equalAggregations(gaugeFloat64A, gaugeFloat64C, config{ignoreTimestamp: true})
-	assert.Equalf(t, len(r), 0, "%v == %v", gaugeFloat64A, gaugeFloat64C)
+	assert.Len(t, r, 0, "gauges should be equal: %v", r)
 
-	r = equalAggregations(histogramA, histogramB, config{})
-	assert.Greaterf(t, len(r), 0, "%v == %v", histogramA, histogramB)
+	r = equalAggregations(histogramInt64A, histogramInt64B, config{})
+	assert.Greaterf(t, len(r), 0, "histograms should not be equal: %v == %v", histogramInt64A, histogramInt64B)
 
-	r = equalAggregations(histogramA, histogramC, config{ignoreTimestamp: true})
-	assert.Equalf(t, len(r), 0, "%v == %v", histogramA, histogramC)
+	r = equalAggregations(histogramInt64A, histogramInt64C, config{ignoreTimestamp: true})
+	assert.Len(t, r, 0, "histograms should be equal: %v", r)
+
+	r = equalAggregations(histogramFloat64A, histogramFloat64B, config{})
+	assert.Greaterf(t, len(r), 0, "histograms should not be equal: %v == %v", histogramFloat64A, histogramFloat64B)
+
+	r = equalAggregations(histogramFloat64A, histogramFloat64C, config{ignoreTimestamp: true})
+	assert.Len(t, r, 0, "histograms should be equal: %v", r)
 }
 
 func TestAssertAttributes(t *testing.T) {
 	AssertHasAttributes(t, minA, attribute.Bool("A", true)) // No-op, always pass.
+	AssertHasAttributes(t, exemplarInt64A, attribute.Bool("filter A", true))
+	AssertHasAttributes(t, exemplarFloat64A, attribute.Bool("filter A", true))
 	AssertHasAttributes(t, dataPointInt64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, dataPointFloat64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, gaugeInt64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, gaugeFloat64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, sumInt64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, sumFloat64A, attribute.Bool("A", true))
-	AssertHasAttributes(t, histogramDataPointA, attribute.Bool("A", true))
-	AssertHasAttributes(t, histogramA, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramDataPointInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramDataPointFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, histogramFloat64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, metricsA, attribute.Bool("A", true))
 	AssertHasAttributes(t, scopeMetricsA, attribute.Bool("A", true))
 	AssertHasAttributes(t, resourceMetricsA, attribute.Bool("A", true))
@@ -343,8 +498,10 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Equal(t, len(r), 0, "sumInt64A has A=True")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", true))
 	assert.Equal(t, len(r), 0, "sumFloat64A has A=True")
-	r = hasAttributesAggregation(histogramA, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "histogramA has A=True")
+	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "histogramInt64A has A=True")
+	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "histogramFloat64A has A=True")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", false))
 	assert.Greater(t, len(r), 0, "gaugeInt64A does not have A=False")
@@ -354,8 +511,10 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Greater(t, len(r), 0, "sumInt64A does not have A=False")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", false))
 	assert.Greater(t, len(r), 0, "sumFloat64A does not have A=False")
-	r = hasAttributesAggregation(histogramA, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "histogramA does not have A=False")
+	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "histogramInt64A does not have A=False")
+	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "histogramFloat64A does not have A=False")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("B", true))
 	assert.Greater(t, len(r), 0, "gaugeInt64A does not have Attribute B")
@@ -365,22 +524,26 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Greater(t, len(r), 0, "sumInt64A does not have Attribute B")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("B", true))
 	assert.Greater(t, len(r), 0, "sumFloat64A does not have Attribute B")
-	r = hasAttributesAggregation(histogramA, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "histogramA does not have Attribute B")
+	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "histogramIntA does not have Attribute B")
+	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "histogramFloatA does not have Attribute B")
 }
 
 func TestAssertAttributesFail(t *testing.T) {
 	fakeT := &testing.T{}
 	assert.False(t, AssertHasAttributes(fakeT, dataPointInt64A, attribute.Bool("A", false)))
 	assert.False(t, AssertHasAttributes(fakeT, dataPointFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, exemplarInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, exemplarFloat64A, attribute.Bool("B", true)))
 	assert.False(t, AssertHasAttributes(fakeT, gaugeInt64A, attribute.Bool("A", false)))
 	assert.False(t, AssertHasAttributes(fakeT, gaugeFloat64A, attribute.Bool("B", true)))
 	assert.False(t, AssertHasAttributes(fakeT, sumInt64A, attribute.Bool("A", false)))
 	assert.False(t, AssertHasAttributes(fakeT, sumFloat64A, attribute.Bool("B", true)))
-	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointA, attribute.Bool("A", false)))
-	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointA, attribute.Bool("B", true)))
-	assert.False(t, AssertHasAttributes(fakeT, histogramA, attribute.Bool("A", false)))
-	assert.False(t, AssertHasAttributes(fakeT, histogramA, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramDataPointFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, histogramFloat64A, attribute.Bool("B", true)))
 	assert.False(t, AssertHasAttributes(fakeT, metricsA, attribute.Bool("A", false)))
 	assert.False(t, AssertHasAttributes(fakeT, metricsA, attribute.Bool("B", true)))
 	assert.False(t, AssertHasAttributes(fakeT, resourceMetricsA, attribute.Bool("A", false)))
