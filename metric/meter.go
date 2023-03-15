@@ -24,7 +24,11 @@ import (
 // MeterProvider provides access to named Meter instances, for instrumenting
 // an application or library.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the MeterProvider in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type MeterProvider interface {
 	meterProvider()
 
@@ -38,7 +42,11 @@ type MeterProvider interface {
 
 // Meter provides access to instrument instances for recording metrics.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Meter in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Meter interface {
 	meter()
 
@@ -126,7 +134,11 @@ type Callback func(context.Context, Observer) error
 
 // Observer records measurements for multiple instruments in a Callback.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Observer in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Observer interface {
 	observer()
 
@@ -139,7 +151,11 @@ type Observer interface {
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Registration in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Registration interface {
 	registration()
 

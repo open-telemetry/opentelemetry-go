@@ -15,6 +15,8 @@
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 // Observable instruments are instruments that are updated within a Callback.
+//
+// Warning: Methods may be added to this interface in minor releases.
 type Observable interface {
 	observable()
 }

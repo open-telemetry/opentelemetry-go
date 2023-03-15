@@ -36,7 +36,11 @@ type Int64Observable interface {
 // only made within a callback for this instrument. The value observed is
 // assumed the to be the cumulative sum of the count.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Int64ObservableCounter in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Int64ObservableCounter interface {
 	Int64Observable
 
@@ -48,7 +52,11 @@ type Int64ObservableCounter interface {
 // within a callback for this instrument. The value observed is assumed the to
 // be the cumulative sum of the count.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Int64ObservableUpDownCounter in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Int64ObservableUpDownCounter interface {
 	Int64Observable
 
@@ -59,7 +67,11 @@ type Int64ObservableUpDownCounter interface {
 // instantaneous int64 measurements once per collection cycle. Observations are
 // only made within a callback for this instrument.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Int64ObservableGauge in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Int64ObservableGauge interface {
 	Int64Observable
 
@@ -68,8 +80,14 @@ type Int64ObservableGauge interface {
 
 // Int64Observer is a recorder of int64 measurements.
 //
-// Warning: Methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Int64Observer in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Int64Observer interface {
+	int64Observer()
+
 	Observe(value int64, attributes ...attribute.KeyValue)
 }
 

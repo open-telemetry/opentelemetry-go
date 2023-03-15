@@ -24,7 +24,7 @@ import (
 // record float64 measurements once per collection cycle. Observations of
 // these instruments are only made within a callback.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Float64Observable interface {
 	Observable
 
@@ -36,7 +36,11 @@ type Float64Observable interface {
 // only made within a callback for this instrument. The value observed is
 // assumed the to be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Float64ObservableCounter in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Float64ObservableCounter interface {
 	Float64Observable
 
@@ -48,7 +52,11 @@ type Float64ObservableCounter interface {
 // made within a callback for this instrument. The value observed is assumed
 // the to be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Float64ObservableUpDownCounter in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Float64ObservableUpDownCounter interface {
 	Float64Observable
 
@@ -59,7 +67,11 @@ type Float64ObservableUpDownCounter interface {
 // instantaneous float64 measurements once per collection cycle. Observations
 // are only made within a callback for this instrument.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Float64ObservableGauge in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Float64ObservableGauge interface {
 	Float64Observable
 
@@ -68,8 +80,14 @@ type Float64ObservableGauge interface {
 
 // Float64Observer is a recorder of float64 measurements.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. Embed
+// this interface in your implementation if you want it to panic for
+// unimplemented methods. Otherwise, the Float64Observer in
+// go.opentelemetry.io/otel/metric/noop can be embedded if you want no
+// operation to be performed for unimplemented methods.
 type Float64Observer interface {
+	float64Observer()
+
 	Observe(value float64, attributes ...attribute.KeyValue)
 }
 

@@ -36,6 +36,10 @@ func TestImplementationNoPanics(t *testing.T) {
 		reflect.ValueOf(Meter{}),
 		reflect.TypeOf((*metric.Meter)(nil)).Elem(),
 	))
+	t.Run("Observer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Observer{}),
+		reflect.TypeOf((*metric.Observer)(nil)).Elem(),
+	))
 	t.Run("Registration", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Registration{}),
 		reflect.TypeOf((*metric.Registration)(nil)).Elem(),
@@ -87,6 +91,14 @@ func TestImplementationNoPanics(t *testing.T) {
 	t.Run("Float64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableUpDownCounter{}),
 		reflect.TypeOf((*instrument.Float64ObservableUpDownCounter)(nil)).Elem(),
+	))
+	t.Run("Int64Observer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Int64Observer{}),
+		reflect.TypeOf((*instrument.Int64Observer)(nil)).Elem(),
+	))
+	t.Run("Float64Observer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Float64Observer{}),
+		reflect.TypeOf((*instrument.Float64Observer)(nil)).Elem(),
 	))
 }
 

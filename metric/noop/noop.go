@@ -35,6 +35,8 @@ var (
 
 	_ metric.MeterProvider                      = MeterProvider{}
 	_ metric.Meter                              = Meter{}
+	_ metric.Observer                           = Observer{}
+	_ metric.Registration                       = Registration{}
 	_ instrument.Int64Counter                   = Int64Counter{}
 	_ instrument.Float64Counter                 = Float64Counter{}
 	_ instrument.Int64UpDownCounter             = Int64UpDownCounter{}
@@ -47,6 +49,8 @@ var (
 	_ instrument.Float64ObservableGauge         = Float64ObservableGauge{}
 	_ instrument.Int64ObservableUpDownCounter   = Int64ObservableUpDownCounter{}
 	_ instrument.Float64ObservableUpDownCounter = Float64ObservableUpDownCounter{}
+	_ instrument.Int64Observer                  = Int64Observer{}
+	_ instrument.Float64Observer                = Float64Observer{}
 )
 
 // MeterProvider is an OpenTelemetry No-Op MeterProvider.
@@ -140,6 +144,18 @@ func (Meter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption)
 // RegisterCallback performs no operation.
 func (Meter) RegisterCallback(metric.Callback, ...instrument.Observable) (metric.Registration, error) {
 	return Registration{}, nil
+}
+
+// Observer acts as a recorder of measurements for multiple instruments in a
+// Callback, it performing no operation.
+type Observer struct{ metric.Observer }
+
+// ObserveFloat64 performs no operation.
+func (Observer) ObserveFloat64(instrument.Float64Observable, float64, ...attribute.KeyValue) {
+}
+
+// ObserveInt64 performs no operation.
+func (Observer) ObserveInt64(instrument.Int64Observable, int64, ...attribute.KeyValue) {
 }
 
 // Registration is the registration of a Callback with a No-Op Meter.
@@ -239,3 +255,16 @@ type Int64ObservableUpDownCounter struct {
 type Float64ObservableUpDownCounter struct {
 	instrument.Float64ObservableUpDownCounter
 }
+
+// Int64Observer is a recorder of int64 measurements that performs no operation.
+type Int64Observer struct{ instrument.Int64Observer }
+
+// Observe performs no operation.
+func (Int64Observer) Observe(int64, ...attribute.KeyValue) {}
+
+// Float64Observer is a recorder of float64 measurements that performs no
+// operation.
+type Float64Observer struct{ instrument.Float64Observer }
+
+// Observe performs no operation.
+func (Float64Observer) Observe(float64, ...attribute.KeyValue) {}
