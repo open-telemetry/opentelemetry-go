@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -129,6 +130,15 @@ func TestImplementationNoPanics(t *testing.T) {
 	t.Run("Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(newObserver()),
 		reflect.TypeOf((*metric.Observer)(nil)).Elem(),
+	))
+
+	t.Run("Int64Observer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(int64Observer{observe: func(int64, []attribute.KeyValue) {}}),
+		reflect.TypeOf((*instrument.Int64Observer)(nil)).Elem(),
+	))
+	t.Run("Float64Observer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(float64Observer{observe: func(float64, []attribute.KeyValue) {}}),
+		reflect.TypeOf((*instrument.Float64Observer)(nil)).Elem(),
 	))
 }
 
