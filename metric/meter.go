@@ -31,7 +31,7 @@ type MeterProvider interface {
 	// A Meter should be scoped at most to a single package. The name needs to
 	// be unique in this scope so it does not collide with other names used by
 	// an application, nor other applications. To achieve this, the import path
-	// of the instrumentation pacakge is recommended to be used as name.
+	// of the instrumentation package is recommended to be used as name.
 	//
 	// If the name is empty, then an implementation defined default name will
 	// be used instead.
