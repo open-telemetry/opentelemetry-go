@@ -85,7 +85,7 @@ func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.
 	if len(otelmetrics) == 0 {
 		return nil
 	}
-	return e.base.Export(ctx, metricdata.ResourceMetrics{
+	return e.base.Export(ctx, &metricdata.ResourceMetrics{
 		Resource: e.res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{

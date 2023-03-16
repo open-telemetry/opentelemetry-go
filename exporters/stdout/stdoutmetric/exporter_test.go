@@ -83,7 +83,7 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
 		return func(ctx context.Context) error {
-			var data metricdata.ResourceMetrics
+			data := new(metricdata.ResourceMetrics)
 			return exp.Export(ctx, data)
 		}
 	}))
@@ -91,7 +91,7 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 
 func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	var (
-		data     metricdata.ResourceMetrics
+		data     = new(metricdata.ResourceMetrics)
 		ctx      = context.Background()
 		exp, err = stdoutmetric.New(testEncoderOption())
 	)

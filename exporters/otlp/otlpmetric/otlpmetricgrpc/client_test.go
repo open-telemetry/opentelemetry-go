@@ -165,7 +165,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
 		t.Cleanup(coll.Shutdown)
 		ctx := context.Background()
-		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
@@ -187,7 +187,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(coll.Shutdown)
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		err := exp.Export(ctx, metricdata.ResourceMetrics{})
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
 	})
 
@@ -197,7 +197,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc(nil, WithDialOption(grpc.WithUserAgent(customerUserAgent)))
 		t.Cleanup(coll.Shutdown)
 		ctx := context.Background()
-		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
