@@ -22,15 +22,19 @@ import (
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
-// an application or library.
+// an application or package.
 //
 // Warning: methods may be added to this interface in minor releases.
 type MeterProvider interface {
-	// Meter creates an instance of a `Meter` interface. The name must be the
-	// name of the library providing instrumentation. This name may be the same
-	// as the instrumented code only if that code provides built-in
-	// instrumentation. If the name is empty, then a implementation defined
-	// default name will be used instead.
+	// Meter returns a new [Meter] with the provided name and configuration.
+	//
+	// A [Meter] should be scoped at most to a single package. The name needs
+	// to be unique in this scope so it does not collide with other names used
+	// by an application, nor other applications. To achieve this, the import
+	// path of the instrumentation pacakge is recommended to be used as name.
+	//
+	// If the name is empty, then an implementation defined default name will
+	// be used instead.
 	Meter(name string, opts ...MeterOption) Meter
 }
 

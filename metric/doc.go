@@ -13,11 +13,23 @@
 // limitations under the License.
 
 /*
-Package metric provides an implementation of the metrics part of the
-OpenTelemetry API.
+Package metric provides the OpenTelemetry API used to measure metrics about
+source code operation.
 
-This package is currently in a pre-GA phase. Backwards incompatible changes
-may be introduced in subsequent minor version releases as we work to track the
-evolving OpenTelemetry specification and user feedback.
+This API is separate from its implementations to allow for the reusability of
+the instrumentation built from it. See [go.opentelemetry.io/otel/sdk/metric]
+for the official OpenTelemetry implementation of this API.
+
+All measurements made with this package are made via instruments. These
+instruments are created by a [Meter] which itself is created by a
+[MeterProvider]. Applications need to accept a [MeterProvider] implementation
+as a starting point when instrumenting. This can be done directly, or by using
+the OpenTelemetry global MeterProvider via [GetMeterProvider]. Using an
+appropriately named [Meter] from the accepted [MeterProvider], instrumentation
+can then be built from the [Meter]'s instruments. See
+[go.opentelemetry.io/otel/metric/instrument] for documentation on each
+instrument and its intended use.
+
+[GetMeterProvider]: https://pkg.go.dev/go.opentelemetry.io/otel#GetMeterProvider
 */
 package metric // import "go.opentelemetry.io/otel/metric"
