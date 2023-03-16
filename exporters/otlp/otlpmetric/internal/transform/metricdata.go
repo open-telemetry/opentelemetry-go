@@ -95,7 +95,9 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 		out.Data, err = Sum[int64](a)
 	case metricdata.Sum[float64]:
 		out.Data, err = Sum[float64](a)
-	case metricdata.Histogram:
+	case metricdata.Histogram[int64]:
+		out.Data, err = Histogram(a)
+	case metricdata.Histogram[float64]:
 		out.Data, err = Histogram(a)
 	default:
 		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
@@ -155,7 +157,7 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 // Histogram returns an OTLP Metric_Histogram generated from h. An error is
 // returned with a partial Metric_Histogram if the temporality of h is
 // unknown.
-func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
+func Histogram[N int64 | float64](h metricdata.Histogram[N]) (*mpb.Metric_Histogram, error) {
 	t, err := Temporality(h.Temporality)
 	if err != nil {
 		return nil, err
@@ -170,7 +172,7 @@ func Histogram(h metricdata.Histogram) (*mpb.Metric_Histogram, error) {
 
 // HistogramDataPoints returns a slice of OTLP HistogramDataPoint generated
 // from dPts.
-func HistogramDataPoints(dPts []metricdata.HistogramDataPoint) []*mpb.HistogramDataPoint {
+func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint[N]) []*mpb.HistogramDataPoint {
 	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		sum := dPt.Sum

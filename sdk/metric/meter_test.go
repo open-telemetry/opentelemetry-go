@@ -382,9 +382,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
-				Data: metricdata.Histogram{
+				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint{
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
 						{
 							Attributes:   attribute.Set{},
 							Count:        1,
@@ -446,9 +446,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
-				Data: metricdata.Histogram{
+				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes:   attribute.Set{},
 							Count:        1,
@@ -1124,8 +1124,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sfhistogram",
-				Data: metricdata.Histogram{
-					DataPoints: []metricdata.HistogramDataPoint{
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
@@ -1206,8 +1206,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sihistogram",
-				Data: metricdata.Histogram{
-					DataPoints: []metricdata.HistogramDataPoint{
+				Data: metricdata.Histogram[int64]{
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
 						{
 							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},

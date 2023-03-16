@@ -126,8 +126,13 @@ func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggrega
 		return metricdata.Gauge[int64]{
 			DataPoints: redactDataPointTimestamps(a.DataPoints),
 		}
-	case metricdata.Histogram:
-		return metricdata.Histogram{
+	case metricdata.Histogram[int64]:
+		return metricdata.Histogram[int64]{
+			Temporality: a.Temporality,
+			DataPoints:  redactHistogramTimestamps(a.DataPoints),
+		}
+	case metricdata.Histogram[float64]:
+		return metricdata.Histogram[float64]{
 			Temporality: a.Temporality,
 			DataPoints:  redactHistogramTimestamps(a.DataPoints),
 		}
@@ -137,10 +142,10 @@ func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggrega
 	}
 }
 
-func redactHistogramTimestamps(hdp []metricdata.HistogramDataPoint) []metricdata.HistogramDataPoint {
-	out := make([]metricdata.HistogramDataPoint, len(hdp))
+func redactHistogramTimestamps[T int64 | float64](hdp []metricdata.HistogramDataPoint[T]) []metricdata.HistogramDataPoint[T] {
+	out := make([]metricdata.HistogramDataPoint[T], len(hdp))
 	for i, dp := range hdp {
-		out[i] = metricdata.HistogramDataPoint{
+		out[i] = metricdata.HistogramDataPoint[T]{
 			Attributes:   dp.Attributes,
 			Count:        dp.Count,
 			Sum:          dp.Sum,
