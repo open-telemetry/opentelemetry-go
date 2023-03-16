@@ -41,56 +41,56 @@ type Meter interface {
 	// Int64Counter returns a new instrument identified by name and configured
 	// with options. The instrument is used to synchronously record increasing
 	// int64 measurements during a computational operation.
-	Int64Counter(name string, options ...instrument.Int64Option) (instrument.Int64Counter, error)
+	Int64Counter(name string, options ...instrument.Int64CounterOption) (instrument.Int64Counter, error)
 	// Int64UpDownCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// int64 measurements during a computational operation.
-	Int64UpDownCounter(name string, options ...instrument.Int64Option) (instrument.Int64UpDownCounter, error)
+	Int64UpDownCounter(name string, options ...instrument.Int64UpDownCounterOption) (instrument.Int64UpDownCounter, error)
 	// Int64Histogram returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// the distribution of int64 measurements during a computational operation.
-	Int64Histogram(name string, options ...instrument.Int64Option) (instrument.Int64Histogram, error)
+	Int64Histogram(name string, options ...instrument.Int64HistogramOption) (instrument.Int64Histogram, error)
 	// Int64ObservableCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// increasing int64 measurements once per a measurement collection cycle.
-	Int64ObservableCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error)
+	Int64ObservableCounter(name string, options ...instrument.Int64ObservableCounterOption) (instrument.Int64ObservableCounter, error)
 	// Int64ObservableUpDownCounter returns a new instrument identified by name
 	// and configured with options. The instrument is used to asynchronously
 	// record int64 measurements once per a measurement collection cycle.
-	Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error)
+	Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObservableUpDownCounterOption) (instrument.Int64ObservableUpDownCounter, error)
 	// Int64ObservableGauge returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// instantaneous int64 measurements once per a measurement collection
 	// cycle.
-	Int64ObservableGauge(name string, options ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error)
+	Int64ObservableGauge(name string, options ...instrument.Int64ObservableGaugeOption) (instrument.Int64ObservableGauge, error)
 
 	// Float64Counter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// increasing float64 measurements during a computational operation.
-	Float64Counter(name string, options ...instrument.Float64Option) (instrument.Float64Counter, error)
+	Float64Counter(name string, options ...instrument.Float64CounterOption) (instrument.Float64Counter, error)
 	// Float64UpDownCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// float64 measurements during a computational operation.
-	Float64UpDownCounter(name string, options ...instrument.Float64Option) (instrument.Float64UpDownCounter, error)
+	Float64UpDownCounter(name string, options ...instrument.Float64UpDownCounterOption) (instrument.Float64UpDownCounter, error)
 	// Float64Histogram returns a new instrument identified by name and
 	// configured with options. The instrument is used to synchronously record
 	// the distribution of float64 measurements during a computational
 	// operation.
-	Float64Histogram(name string, options ...instrument.Float64Option) (instrument.Float64Histogram, error)
+	Float64Histogram(name string, options ...instrument.Float64HistogramOption) (instrument.Float64Histogram, error)
 	// Float64ObservableCounter returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// increasing float64 measurements once per a measurement collection cycle.
-	Float64ObservableCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error)
+	Float64ObservableCounter(name string, options ...instrument.Float64ObservableCounterOption) (instrument.Float64ObservableCounter, error)
 	// Float64ObservableUpDownCounter returns a new instrument identified by
 	// name and configured with options. The instrument is used to
 	// asynchronously record float64 measurements once per a measurement
 	// collection cycle.
-	Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error)
+	Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObservableUpDownCounterOption) (instrument.Float64ObservableUpDownCounter, error)
 	// Float64ObservableGauge returns a new instrument identified by name and
 	// configured with options. The instrument is used to asynchronously record
 	// instantaneous float64 measurements once per a measurement collection
 	// cycle.
-	Float64ObservableGauge(name string, options ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error)
+	Float64ObservableGauge(name string, options ...instrument.Float64ObservableGaugeOption) (instrument.Float64ObservableGauge, error)
 
 	// RegisterCallback registers f to be called during the collection of a
 	// measurement cycle.

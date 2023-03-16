@@ -24,31 +24,62 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestInt64ObserverOptions(t *testing.T) {
+func TestInt64ObservableConfiguration(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
 		uBytes       = "By"
 	)
 
-	got := NewInt64ObserverConfig(
-		WithDescription(desc),
-		WithUnit(uBytes),
-		WithInt64Callback(func(_ context.Context, obsrv Int64Observer) error {
-			obsrv.Observe(token)
-			return nil
-		}),
-	)
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	run := func(got int64ObservableConfig) func(*testing.T) {
+		return func(t *testing.T) {
+			assert.Equal(t, desc, got.Description(), "description")
+			assert.Equal(t, uBytes, got.Unit(), "unit")
 
-	// Functions are not comparable.
-	cBacks := got.Callbacks()
-	require.Len(t, cBacks, 1, "callbacks")
-	o := &int64Observer{}
-	err := cBacks[0](context.Background(), o)
-	require.NoError(t, err)
-	assert.Equal(t, token, o.got, "callback not set")
+			// Functions are not comparable.
+			cBacks := got.Callbacks()
+			require.Len(t, cBacks, 1, "callbacks")
+			o := &int64Observer{}
+			err := cBacks[0](context.Background(), o)
+			require.NoError(t, err)
+			assert.Equal(t, token, o.got, "callback not set")
+		}
+	}
+
+	cback := func(ctx context.Context, obsrv Int64Observer) error {
+		obsrv.Observe(token)
+		return nil
+	}
+
+	t.Run("Int64ObservableCounter", run(
+		NewInt64ObservableCounterConfig(
+			WithDescription(desc),
+			WithUnit(uBytes),
+			WithInt64Callback(cback),
+		),
+	))
+
+	t.Run("Int64ObservableUpDownCounter", run(
+		NewInt64ObservableUpDownCounterConfig(
+			WithDescription(desc),
+			WithUnit(uBytes),
+			WithInt64Callback(cback),
+		),
+	))
+
+	t.Run("Int64ObservableGauge", run(
+		NewInt64ObservableGaugeConfig(
+			WithDescription(desc),
+			WithUnit(uBytes),
+			WithInt64Callback(cback),
+		),
+	))
+}
+
+type int64ObservableConfig interface {
+	Description() string
+	Unit() string
+	Callbacks() []Int64Callback
 }
 
 type int64Observer struct {

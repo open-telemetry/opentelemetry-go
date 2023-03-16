@@ -30,6 +30,38 @@ type Float64Counter interface {
 	Synchronous
 }
 
+// Float64CounterConfig contains options for synchronous counter instruments that
+// record int64 values.
+type Float64CounterConfig struct {
+	description string
+	unit        string
+}
+
+// NewFloat64CounterConfig returns a new Float64CounterConfig with all opts
+// applied.
+func NewFloat64CounterConfig(opts ...Float64CounterOption) Float64CounterConfig {
+	var config Float64CounterConfig
+	for _, o := range opts {
+		config = o.applyFloat64Counter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64CounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64CounterConfig) Unit() string {
+	return c.unit
+}
+
+// Float64CounterOption applies options to a Float64CounterConfig.
+type Float64CounterOption interface {
+	applyFloat64Counter(Float64CounterConfig) Float64CounterConfig
+}
+
 // Float64UpDownCounter is an instrument that records increasing or decreasing
 // float64 values.
 //
@@ -39,6 +71,38 @@ type Float64UpDownCounter interface {
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
 
 	Synchronous
+}
+
+// Float64UpDownCounterConfig contains options for synchronous counter
+// instruments that record int64 values.
+type Float64UpDownCounterConfig struct {
+	description string
+	unit        string
+}
+
+// NewFloat64UpDownCounterConfig returns a new Float64UpDownCounterConfig with
+// all opts applied.
+func NewFloat64UpDownCounterConfig(opts ...Float64UpDownCounterOption) Float64UpDownCounterConfig {
+	var config Float64UpDownCounterConfig
+	for _, o := range opts {
+		config = o.applyFloat64UpDownCounter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64UpDownCounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64UpDownCounterConfig) Unit() string {
+	return c.unit
+}
+
+// Float64UpDownCounterOption applies options to a Float64UpDownCounterConfig.
+type Float64UpDownCounterOption interface {
+	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
 
 // Float64Histogram is an instrument that records a distribution of float64
@@ -52,34 +116,34 @@ type Float64Histogram interface {
 	Synchronous
 }
 
-// Float64Config contains options for Asynchronous instruments that
-// observe float64 values.
-type Float64Config struct {
+// Float64HistogramConfig contains options for synchronous counter instruments
+// that record int64 values.
+type Float64HistogramConfig struct {
 	description string
 	unit        string
 }
 
-// Float64Config contains options for Synchronous instruments that record
-// float64 values.
-func NewFloat64Config(opts ...Float64Option) Float64Config {
-	var config Float64Config
+// NewFloat64HistogramConfig returns a new Float64HistogramConfig with all opts
+// applied.
+func NewFloat64HistogramConfig(opts ...Float64HistogramOption) Float64HistogramConfig {
+	var config Float64HistogramConfig
 	for _, o := range opts {
-		config = o.applyFloat64(config)
+		config = o.applyFloat64Histogram(config)
 	}
 	return config
 }
 
-// Description returns the Config description.
-func (c Float64Config) Description() string {
+// Description returns the configured description.
+func (c Float64HistogramConfig) Description() string {
 	return c.description
 }
 
-// Unit returns the Config unit.
-func (c Float64Config) Unit() string {
+// Unit returns the configured unit.
+func (c Float64HistogramConfig) Unit() string {
 	return c.unit
 }
 
-// Float64Option applies options to synchronous float64 instruments.
-type Float64Option interface {
-	applyFloat64(Float64Config) Float64Config
+// Float64HistogramOption applies options to a Float64HistogramConfig.
+type Float64HistogramOption interface {
+	applyFloat64Histogram(Float64HistogramConfig) Float64HistogramConfig
 }

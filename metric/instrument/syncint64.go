@@ -30,6 +30,38 @@ type Int64Counter interface {
 	Synchronous
 }
 
+// Int64CounterConfig contains options for synchronous counter instruments that
+// record int64 values.
+type Int64CounterConfig struct {
+	description string
+	unit        string
+}
+
+// NewInt64CounterConfig returns a new Int64CounterConfig with all opts
+// applied.
+func NewInt64CounterConfig(opts ...Int64CounterOption) Int64CounterConfig {
+	var config Int64CounterConfig
+	for _, o := range opts {
+		config = o.applyInt64Counter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Int64CounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Int64CounterConfig) Unit() string {
+	return c.unit
+}
+
+// Int64CounterOption applies options to a Int64CounterConfig.
+type Int64CounterOption interface {
+	applyInt64Counter(Int64CounterConfig) Int64CounterConfig
+}
+
 // Int64UpDownCounter is an instrument that records increasing or decreasing
 // int64 values.
 //
@@ -39,6 +71,38 @@ type Int64UpDownCounter interface {
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
 
 	Synchronous
+}
+
+// Int64UpDownCounterConfig contains options for synchronous counter
+// instruments that record int64 values.
+type Int64UpDownCounterConfig struct {
+	description string
+	unit        string
+}
+
+// NewInt64UpDownCounterConfig returns a new Int64UpDownCounterConfig with all
+// opts applied.
+func NewInt64UpDownCounterConfig(opts ...Int64UpDownCounterOption) Int64UpDownCounterConfig {
+	var config Int64UpDownCounterConfig
+	for _, o := range opts {
+		config = o.applyInt64UpDownCounter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Int64UpDownCounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Int64UpDownCounterConfig) Unit() string {
+	return c.unit
+}
+
+// Int64UpDownCounterOption applies options to a Int64UpDownCounterConfig.
+type Int64UpDownCounterOption interface {
+	applyInt64UpDownCounter(Int64UpDownCounterConfig) Int64UpDownCounterConfig
 }
 
 // Int64Histogram is an instrument that records a distribution of int64
@@ -52,34 +116,34 @@ type Int64Histogram interface {
 	Synchronous
 }
 
-// Int64Config contains options for Synchronous instruments that record int64
-// values.
-type Int64Config struct {
+// Int64HistogramConfig contains options for synchronous counter instruments
+// that record int64 values.
+type Int64HistogramConfig struct {
 	description string
 	unit        string
 }
 
-// NewInt64Config returns a new Int64Config with all opts
+// NewInt64HistogramConfig returns a new Int64HistogramConfig with all opts
 // applied.
-func NewInt64Config(opts ...Int64Option) Int64Config {
-	var config Int64Config
+func NewInt64HistogramConfig(opts ...Int64HistogramOption) Int64HistogramConfig {
+	var config Int64HistogramConfig
 	for _, o := range opts {
-		config = o.applyInt64(config)
+		config = o.applyInt64Histogram(config)
 	}
 	return config
 }
 
-// Description returns the Config description.
-func (c Int64Config) Description() string {
+// Description returns the configured description.
+func (c Int64HistogramConfig) Description() string {
 	return c.description
 }
 
-// Unit returns the Config unit.
-func (c Int64Config) Unit() string {
+// Unit returns the configured unit.
+func (c Int64HistogramConfig) Unit() string {
 	return c.unit
 }
 
-// Int64Option applies options to synchronous int64 instruments.
-type Int64Option interface {
-	applyInt64(Int64Config) Int64Config
+// Int64HistogramOption applies options to a Int64HistogramConfig.
+type Int64HistogramOption interface {
+	applyInt64Histogram(Int64HistogramConfig) Int64HistogramConfig
 }
