@@ -22,18 +22,18 @@ synchronous, and int64 or float64.
 
 All synchronous instruments ([Int64Counter], [Int64UpDownCounter],
 [Int64Histogram], [Float64Counter], [Float64UpDownCounter], [Float64Histogram])
-are used to measure the operation and performance of code during the code
-execution. These instruments are only used when the code they instrument is
-run.
+are used to measure the operation and performance of source code during the
+source code execution. These instruments only make measurements when the sourec
+code they instrument is run.
 
 All asynchronous instruments ([Int64ObservableCounter],
 [Int64ObservableUpDownCounter], [Int64ObservableGauge],
 [Float64ObservableCounter], [Float64ObservableUpDownCounter],
 [Float64ObservableGauge]) are used to measure metrics outside of the execution
-of code. They are said to make "observations" via a callback function called
-once every measurement collection cycle.
+of source code. They are said to make "observations" via a callback function
+called once every measurement collection cycle.
 
-Each instrument is grouped by the value type it measures. Either int64 or
+Each instrument is also grouped by the value type it measures. Either int64 or
 float64. The value being measured will dictate which instrument in these
 categories to use.
 
