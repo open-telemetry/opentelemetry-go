@@ -37,7 +37,7 @@ type Int64CounterConfig struct {
 	unit        string
 }
 
-// NewInt64CounterConfig returns a new Int64CounterConfig with all opts
+// NewInt64CounterConfig returns a new [Int64CounterConfig] with all opts
 // applied.
 func NewInt64CounterConfig(opts ...Int64CounterOption) Int64CounterConfig {
 	var config Int64CounterConfig
@@ -57,7 +57,8 @@ func (c Int64CounterConfig) Unit() string {
 	return c.unit
 }
 
-// Int64CounterOption applies options to a Int64CounterConfig.
+// Int64CounterOption applies options to a [Int64CounterConfig]. See [Option]
+// for other options that can be used as an Int64CounterOption.
 type Int64CounterOption interface {
 	applyInt64Counter(Int64CounterConfig) Int64CounterConfig
 }
@@ -80,8 +81,8 @@ type Int64UpDownCounterConfig struct {
 	unit        string
 }
 
-// NewInt64UpDownCounterConfig returns a new Int64UpDownCounterConfig with all
-// opts applied.
+// NewInt64UpDownCounterConfig returns a new [Int64UpDownCounterConfig] with
+// all opts applied.
 func NewInt64UpDownCounterConfig(opts ...Int64UpDownCounterOption) Int64UpDownCounterConfig {
 	var config Int64UpDownCounterConfig
 	for _, o := range opts {
@@ -100,7 +101,9 @@ func (c Int64UpDownCounterConfig) Unit() string {
 	return c.unit
 }
 
-// Int64UpDownCounterOption applies options to a Int64UpDownCounterConfig.
+// Int64UpDownCounterOption applies options to a [Int64UpDownCounterConfig].
+// See [Option] for other options that can be used as an
+// Int64UpDownCounterOption.
 type Int64UpDownCounterOption interface {
 	applyInt64UpDownCounter(Int64UpDownCounterConfig) Int64UpDownCounterConfig
 }
@@ -123,7 +126,7 @@ type Int64HistogramConfig struct {
 	unit        string
 }
 
-// NewInt64HistogramConfig returns a new Int64HistogramConfig with all opts
+// NewInt64HistogramConfig returns a new [Int64HistogramConfig] with all opts
 // applied.
 func NewInt64HistogramConfig(opts ...Int64HistogramOption) Int64HistogramConfig {
 	var config Int64HistogramConfig
@@ -143,7 +146,8 @@ func (c Int64HistogramConfig) Unit() string {
 	return c.unit
 }
 
-// Int64HistogramOption applies options to a Int64HistogramConfig.
+// Int64HistogramOption applies options to a [Int64HistogramConfig]. See
+// [Option] for other options that can be used as an Int64HistogramOption.
 type Int64HistogramOption interface {
 	applyInt64Histogram(Int64HistogramConfig) Int64HistogramConfig
 }

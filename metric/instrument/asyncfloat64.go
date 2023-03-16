@@ -48,7 +48,7 @@ type Float64ObservableCounterConfig struct {
 }
 
 // NewFloat64ObservableCounterConfig returns a new
-// Float64ObservableCounterConfig with all opts applied.
+// [Float64ObservableCounterConfig] with all opts applied.
 func NewFloat64ObservableCounterConfig(opts ...Float64ObservableCounterOption) Float64ObservableCounterConfig {
 	var config Float64ObservableCounterConfig
 	for _, o := range opts {
@@ -73,7 +73,8 @@ func (c Float64ObservableCounterConfig) Callbacks() []Float64Callback {
 }
 
 // Float64ObservableCounterOption applies options to a
-// Float64ObservableCounterConfig.
+// [Float64ObservableCounterConfig]. See [Float64ObservableOption] and [Option]
+// for other options that can be used as a Float64ObservableCounterOption.
 type Float64ObservableCounterOption interface {
 	applyFloat64ObservableCounter(Float64ObservableCounterConfig) Float64ObservableCounterConfig
 }
@@ -95,7 +96,7 @@ type Float64ObservableUpDownCounterConfig struct {
 }
 
 // NewFloat64ObservableUpDownCounterConfig returns a new
-// Float64ObservableUpDownCounterConfig with all opts applied.
+// [Float64ObservableUpDownCounterConfig] with all opts applied.
 func NewFloat64ObservableUpDownCounterConfig(opts ...Float64ObservableUpDownCounterOption) Float64ObservableUpDownCounterConfig {
 	var config Float64ObservableUpDownCounterConfig
 	for _, o := range opts {
@@ -120,7 +121,9 @@ func (c Float64ObservableUpDownCounterConfig) Callbacks() []Float64Callback {
 }
 
 // Float64ObservableUpDownCounterOption applies options to a
-// Float64ObservableUpDownCounterConfig.
+// [Float64ObservableUpDownCounterConfig]. See [Float64ObservableOption] and
+// [Option] for other options that can be used as a
+// Float64ObservableUpDownCounterOption.
 type Float64ObservableUpDownCounterOption interface {
 	applyFloat64ObservableUpDownCounter(Float64ObservableUpDownCounterConfig) Float64ObservableUpDownCounterConfig
 }
@@ -140,7 +143,7 @@ type Float64ObservableGaugeConfig struct {
 	callbacks   []Float64Callback
 }
 
-// NewFloat64ObservableGaugeConfig returns a new Float64ObservableGaugeConfig
+// NewFloat64ObservableGaugeConfig returns a new [Float64ObservableGaugeConfig]
 // with all opts applied.
 func NewFloat64ObservableGaugeConfig(opts ...Float64ObservableGaugeOption) Float64ObservableGaugeConfig {
 	var config Float64ObservableGaugeConfig
@@ -166,7 +169,9 @@ func (c Float64ObservableGaugeConfig) Callbacks() []Float64Callback {
 }
 
 // Float64ObservableGaugeOption applies options to a
-// Float64ObservableGaugeConfig.
+// [Float64ObservableGaugeConfig]. See [Float64ObservableOption] and
+// [Option] for other options that can be used as a
+// Float64ObservableGaugeOption.
 type Float64ObservableGaugeOption interface {
 	applyFloat64ObservableGauge(Float64ObservableGaugeConfig) Float64ObservableGaugeConfig
 }

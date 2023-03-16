@@ -47,7 +47,7 @@ type Int64ObservableCounterConfig struct {
 	callbacks   []Int64Callback
 }
 
-// NewInt64ObservableCounterConfig returns a new Int64ObservableCounterConfig
+// NewInt64ObservableCounterConfig returns a new [Int64ObservableCounterConfig]
 // with all opts applied.
 func NewInt64ObservableCounterConfig(opts ...Int64ObservableCounterOption) Int64ObservableCounterConfig {
 	var config Int64ObservableCounterConfig
@@ -73,7 +73,8 @@ func (c Int64ObservableCounterConfig) Callbacks() []Int64Callback {
 }
 
 // Int64ObservableCounterOption applies options to a
-// Int64ObservableCounterConfig.
+// [Int64ObservableCounterConfig]. See [Int64ObservableOption] and [Option] for
+// other options that can be used as an Int64ObservableCounterOption.
 type Int64ObservableCounterOption interface {
 	applyInt64ObservableCounter(Int64ObservableCounterConfig) Int64ObservableCounterConfig
 }
@@ -95,7 +96,7 @@ type Int64ObservableUpDownCounterConfig struct {
 }
 
 // NewInt64ObservableUpDownCounterConfig returns a new
-// Int64ObservableUpDownCounterConfig with all opts applied.
+// [Int64ObservableUpDownCounterConfig] with all opts applied.
 func NewInt64ObservableUpDownCounterConfig(opts ...Int64ObservableUpDownCounterOption) Int64ObservableUpDownCounterConfig {
 	var config Int64ObservableUpDownCounterConfig
 	for _, o := range opts {
@@ -120,7 +121,9 @@ func (c Int64ObservableUpDownCounterConfig) Callbacks() []Int64Callback {
 }
 
 // Int64ObservableUpDownCounterOption applies options to a
-// Int64ObservableUpDownCounterConfig.
+// [Int64ObservableUpDownCounterConfig]. See [Int64ObservableOption] and
+// [Option] for other options that can be used as an
+// Int64ObservableUpDownCounterOption.
 type Int64ObservableUpDownCounterOption interface {
 	applyInt64ObservableUpDownCounter(Int64ObservableUpDownCounterConfig) Int64ObservableUpDownCounterConfig
 }
@@ -140,8 +143,8 @@ type Int64ObservableGaugeConfig struct {
 	callbacks   []Int64Callback
 }
 
-// NewInt64ObservableGaugeConfig returns a new Int64ObservableGaugeConfig with
-// all opts applied.
+// NewInt64ObservableGaugeConfig returns a new [Int64ObservableGaugeConfig]
+// with all opts applied.
 func NewInt64ObservableGaugeConfig(opts ...Int64ObservableGaugeOption) Int64ObservableGaugeConfig {
 	var config Int64ObservableGaugeConfig
 	for _, o := range opts {
@@ -165,7 +168,9 @@ func (c Int64ObservableGaugeConfig) Callbacks() []Int64Callback {
 	return c.callbacks
 }
 
-// Int64ObservableGaugeOption applies options to a Int64ObservableGaugeConfig.
+// Int64ObservableGaugeOption applies options to a
+// [Int64ObservableGaugeConfig]. See [Int64ObservableOption] and [Option] for
+// other options that can be used as an Int64ObservableGaugeOption.
 type Int64ObservableGaugeOption interface {
 	applyInt64ObservableGauge(Int64ObservableGaugeConfig) Int64ObservableGaugeConfig
 }
@@ -177,10 +182,9 @@ type Int64Observer interface {
 	Observe(value int64, attributes ...attribute.KeyValue)
 }
 
-// Int64Callback is a function registered with a Meter that makes
-// observations for a Int64Observerable instrument it is registered with.
-// Calls to the Int64Observer record measurement values for the
-// Int64Observable.
+// Int64Callback is a function registered with a Meter that makes observations
+// for an Int64Observerable instrument it is registered with. Calls to the
+// Int64Observer record measurement values for the Int64Observable.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.

@@ -37,7 +37,7 @@ type Float64CounterConfig struct {
 	unit        string
 }
 
-// NewFloat64CounterConfig returns a new Float64CounterConfig with all opts
+// NewFloat64CounterConfig returns a new [Float64CounterConfig] with all opts
 // applied.
 func NewFloat64CounterConfig(opts ...Float64CounterOption) Float64CounterConfig {
 	var config Float64CounterConfig
@@ -57,7 +57,8 @@ func (c Float64CounterConfig) Unit() string {
 	return c.unit
 }
 
-// Float64CounterOption applies options to a Float64CounterConfig.
+// Float64CounterOption applies options to a [Float64CounterConfig]. See
+// [Option] for other options that can be used as a Float64CounterOption.
 type Float64CounterOption interface {
 	applyFloat64Counter(Float64CounterConfig) Float64CounterConfig
 }
@@ -80,8 +81,8 @@ type Float64UpDownCounterConfig struct {
 	unit        string
 }
 
-// NewFloat64UpDownCounterConfig returns a new Float64UpDownCounterConfig with
-// all opts applied.
+// NewFloat64UpDownCounterConfig returns a new [Float64UpDownCounterConfig]
+// with all opts applied.
 func NewFloat64UpDownCounterConfig(opts ...Float64UpDownCounterOption) Float64UpDownCounterConfig {
 	var config Float64UpDownCounterConfig
 	for _, o := range opts {
@@ -100,7 +101,10 @@ func (c Float64UpDownCounterConfig) Unit() string {
 	return c.unit
 }
 
-// Float64UpDownCounterOption applies options to a Float64UpDownCounterConfig.
+// Float64UpDownCounterOption applies options to a
+// [Float64UpDownCounterConfig]. See [Option] for other options that can be
+// used as a Float64UpDownCounterOption.
+
 type Float64UpDownCounterOption interface {
 	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
@@ -123,8 +127,8 @@ type Float64HistogramConfig struct {
 	unit        string
 }
 
-// NewFloat64HistogramConfig returns a new Float64HistogramConfig with all opts
-// applied.
+// NewFloat64HistogramConfig returns a new [Float64HistogramConfig] with all
+// opts applied.
 func NewFloat64HistogramConfig(opts ...Float64HistogramOption) Float64HistogramConfig {
 	var config Float64HistogramConfig
 	for _, o := range opts {
@@ -143,7 +147,8 @@ func (c Float64HistogramConfig) Unit() string {
 	return c.unit
 }
 
-// Float64HistogramOption applies options to a Float64HistogramConfig.
+// Float64HistogramOption applies options to a [Float64HistogramConfig]. See
+// [Option] for other options that can be used as a Float64HistogramOption.
 type Float64HistogramOption interface {
 	applyFloat64Histogram(Float64HistogramConfig) Float64HistogramConfig
 }
