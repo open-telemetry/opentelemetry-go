@@ -193,8 +193,8 @@ type Int64Observer interface {
 // The function needs to be concurrent safe.
 type Int64Callback func(context.Context, Int64Observer) error
 
-// Int64ObserverOption applies options to int64 Observer instruments.
-type Int64ObserverOption interface {
+// Int64ObservableOption applies options to int64 Observer instruments.
+type Int64ObservableOption interface {
 	Int64ObservableCounterOption
 	Int64ObservableUpDownCounterOption
 	Int64ObservableGaugeOption
@@ -220,6 +220,6 @@ func (o int64CallbackOpt) applyInt64ObservableGauge(cfg Int64ObservableGaugeConf
 }
 
 // WithInt64Callback adds callback to be called for an instrument.
-func WithInt64Callback(callback Int64Callback) Int64ObserverOption {
+func WithInt64Callback(callback Int64Callback) Int64ObservableOption {
 	return int64CallbackOpt{callback}
 }

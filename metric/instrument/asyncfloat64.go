@@ -194,8 +194,8 @@ type Float64Observer interface {
 // The function needs to be concurrent safe.
 type Float64Callback func(context.Context, Float64Observer) error
 
-// Float64ObserverOption applies options to float64 Observer instruments.
-type Float64ObserverOption interface {
+// Float64ObservableOption applies options to float64 Observer instruments.
+type Float64ObservableOption interface {
 	Float64ObservableCounterOption
 	Float64ObservableUpDownCounterOption
 	Float64ObservableGaugeOption
@@ -221,6 +221,6 @@ func (o float64CallbackOpt) applyFloat64ObservableGauge(cfg Float64ObservableGau
 }
 
 // WithFloat64Callback adds callback to be called for an instrument.
-func WithFloat64Callback(callback Float64Callback) Float64ObserverOption {
+func WithFloat64Callback(callback Float64Callback) Float64ObservableOption {
 	return float64CallbackOpt{callback}
 }
