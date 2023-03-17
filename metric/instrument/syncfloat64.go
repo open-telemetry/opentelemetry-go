@@ -104,7 +104,6 @@ func (c Float64UpDownCounterConfig) Unit() string {
 // Float64UpDownCounterOption applies options to a
 // [Float64UpDownCounterConfig]. See [Option] for other options that can be
 // used as a Float64UpDownCounterOption.
-
 type Float64UpDownCounterOption interface {
 	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
