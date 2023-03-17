@@ -345,7 +345,7 @@ var (
 		},
 	}
 
-	otelResourceMetrics = metricdata.ResourceMetrics{
+	otelResourceMetrics = &metricdata.ResourceMetrics{
 		Resource:     otelRes,
 		ScopeMetrics: otelScopeMetrics,
 	}

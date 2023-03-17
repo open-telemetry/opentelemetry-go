@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
-go 1.18
+go 1.19
 
 require (
 	github.com/google/go-cmp v0.5.9
@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.1
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.29.0
+	google.golang.org/protobuf v1.29.1
 )
 
 require (
