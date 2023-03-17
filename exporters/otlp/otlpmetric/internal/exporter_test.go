@@ -60,7 +60,7 @@ func TestExporterClientConcurrency(t *testing.T) {
 	const goroutines = 5
 
 	exp := New(&client{})
-	rm := metricdata.ResourceMetrics{}
+	rm := new(metricdata.ResourceMetrics)
 	ctx := context.Background()
 
 	done := make(chan struct{})

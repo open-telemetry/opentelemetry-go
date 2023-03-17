@@ -70,7 +70,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
@@ -94,7 +94,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		err := exp.Export(ctx, metricdata.ResourceMetrics{})
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
 	})
 
@@ -103,7 +103,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -133,7 +133,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}), "failed retry")
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
 	})
 
@@ -144,7 +144,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -155,7 +155,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -166,7 +166,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -176,7 +176,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		require.NoError(t, exp.Export(ctx, metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
