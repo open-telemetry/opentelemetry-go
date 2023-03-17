@@ -50,7 +50,7 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation 
 }
 
 // Export transforms and transmits metric data to an OTLP receiver.
-func (e *exporter) Export(ctx context.Context, rm metricdata.ResourceMetrics) error {
+func (e *exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()

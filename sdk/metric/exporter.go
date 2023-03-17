@@ -49,7 +49,7 @@ type Exporter interface {
 	// The passed ResourceMetrics may be reused when the call completes. If an
 	// exporter needs to hold this data after it returns, it needs to make a
 	// copy.
-	Export(context.Context, metricdata.ResourceMetrics) error
+	Export(context.Context, *metricdata.ResourceMetrics) error
 
 	// ForceFlush flushes any metric data held by an exporter.
 	//

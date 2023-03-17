@@ -223,7 +223,7 @@ func (r *periodicReader) collectAndExport(ctx context.Context) error {
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
 	if err == nil {
-		err = r.export(ctx, *rm)
+		err = r.export(ctx, rm)
 	}
 	r.rmPool.Put(rm)
 	return err
@@ -275,7 +275,7 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 }
 
 // export exports metric data m using r's exporter.
-func (r *periodicReader) export(ctx context.Context, m metricdata.ResourceMetrics) error {
+func (r *periodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
 	c, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	return r.exporter.Export(c, m)
@@ -321,7 +321,7 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			err = r.collect(ctx, ph, m)
 			if err == nil {
-				err = r.export(ctx, *m)
+				err = r.export(ctx, m)
 			}
 			r.rmPool.Put(m)
 		}

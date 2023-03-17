@@ -26,7 +26,7 @@ import (
 // ResourceMetrics returns an OTLP ResourceMetrics generated from rm. If rm
 // contains invalid ScopeMetrics, an error will be returned along with an OTLP
 // ResourceMetrics that contains partial OTLP ScopeMetrics.
-func ResourceMetrics(rm metricdata.ResourceMetrics) (*mpb.ResourceMetrics, error) {
+func ResourceMetrics(rm *metricdata.ResourceMetrics) (*mpb.ResourceMetrics, error) {
 	sms, err := ScopeMetrics(rm.ScopeMetrics)
 	return &mpb.ResourceMetrics{
 		Resource: &rpb.Resource{

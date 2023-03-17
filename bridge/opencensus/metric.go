@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.18
-// +build go1.18
-
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
@@ -88,7 +85,7 @@ func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.
 	if len(otelmetrics) == 0 {
 		return nil
 	}
-	return e.base.Export(ctx, metricdata.ResourceMetrics{
+	return e.base.Export(ctx, &metricdata.ResourceMetrics{
 		Resource: e.res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
