@@ -26,6 +26,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/puzpuzpuz/xsync"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -65,8 +66,10 @@ type collector struct {
 	disableScopeInfo     bool
 	createTargetInfoOnce sync.Once
 	scopeInfos           map[instrumentation.Scope]prometheus.Metric
-	metricFamilies       map[string]*dto.MetricFamily
+	metricFamilies       mfMap
 }
+
+type mfMap = *xsync.MapOf[string, *dto.MetricFamily]
 
 // prometheus counters MUST have a _total suffix:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.14.0/specification/metrics/data-model.md#sums-1
@@ -87,7 +90,7 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutUnits:      cfg.withoutUnits,
 		disableScopeInfo:  cfg.disableScopeInfo,
 		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
-		metricFamilies:    make(map[string]*dto.MetricFamily),
+		metricFamilies:    xsync.NewMapOf[*dto.MetricFamily](),
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -172,7 +175,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
+func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs mfMap) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	drop, help := validateMetrics(name, m.Description, dto.MetricType_HISTOGRAM.Enum(), mfs)
 	if drop {
@@ -202,7 +205,7 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 	}
 }
 
-func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
+func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs mfMap) {
 	valueType := prometheus.CounterValue
 	metricType := dto.MetricType_COUNTER
 	if !sum.IsMonotonic {
@@ -235,7 +238,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	}
 }
 
-func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs map[string]*dto.MetricFamily) {
+func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string, mfs mfMap) {
 	drop, help := validateMetrics(name, m.Description, dto.MetricType_GAUGE.Enum(), mfs)
 	if drop {
 		return
@@ -381,14 +384,14 @@ func sanitizeName(n string) string {
 	return b.String()
 }
 
-func validateMetrics(name, description string, metricType *dto.MetricType, mfs map[string]*dto.MetricFamily) (drop bool, help string) {
-	emf, exist := mfs[name]
-	if !exist {
-		mfs[name] = &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String(description),
-			Type: metricType,
-		}
+func validateMetrics(name, description string, metricType *dto.MetricType, mfs mfMap) (drop bool, help string) {
+	emf, loaded := mfs.LoadOrStore(name, &dto.MetricFamily{
+		Name: proto.String(name),
+		Help: proto.String(description),
+		Type: metricType,
+	})
+
+	if !loaded {
 		return false, ""
 	}
 	if emf.GetType() != *metricType {

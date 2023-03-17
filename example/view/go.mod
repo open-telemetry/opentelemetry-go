@@ -21,6 +21,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/puzpuzpuz/xsync v1.5.2 // indirect
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/protobuf v1.29.1 // indirect
