@@ -120,6 +120,10 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) Reade
 		flushCh:  make(chan chan error),
 		cancel:   cancel,
 		done:     make(chan struct{}),
+		rmPool: sync.Pool{
+			New: func() interface{} {
+				return &metricdata.ResourceMetrics{}
+			}},
 	}
 	r.externalProducers.Store([]Producer{})
 
@@ -147,6 +151,8 @@ type periodicReader struct {
 	done         chan struct{}
 	cancel       context.CancelFunc
 	shutdownOnce sync.Once
+
+	rmPool sync.Pool
 }
 
 // Compile time check the periodicReader implements Reader and is comparable.
@@ -214,11 +220,12 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
-	rm := metricdata.ResourceMetrics{}
-	err := r.Collect(ctx, &rm)
+	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
+	err := r.Collect(ctx, rm)
 	if err == nil {
 		err = r.export(ctx, rm)
 	}
+	r.rmPool.Put(rm)
 	return err
 }
 
@@ -233,15 +240,13 @@ func (r *periodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
 	}
 	// TODO (#3047): When collect is updated to accept output as param, pass rm.
-	rmTemp, err := r.collect(ctx, r.sdkProducer.Load())
-	*rm = rmTemp
-	return err
+	return r.collect(ctx, r.sdkProducer.Load(), rm)
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.
-func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata.ResourceMetrics, error) {
+func (r *periodicReader) collect(ctx context.Context, p interface{}, rm *metricdata.ResourceMetrics) error {
 	if p == nil {
-		return metricdata.ResourceMetrics{}, ErrReaderNotRegistered
+		return ErrReaderNotRegistered
 	}
 
 	ph, ok := p.(produceHolder)
@@ -251,12 +256,12 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err := fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return metricdata.ResourceMetrics{}, err
+		return err
 	}
 
-	rm, err := ph.produce(ctx)
+	err := ph.produce(ctx, rm)
 	if err != nil {
-		return metricdata.ResourceMetrics{}, err
+		return err
 	}
 	var errs []error
 	for _, producer := range r.externalProducers.Load().([]Producer) {
@@ -266,11 +271,11 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}) (metricdata
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
-	return rm, unifyErrors(errs)
+	return unifyErrors(errs)
 }
 
 // export exports metric data m using r's exporter.
-func (r *periodicReader) export(ctx context.Context, m metricdata.ResourceMetrics) error {
+func (r *periodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
 	c, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	return r.exporter.Export(c, m)
@@ -313,11 +318,12 @@ func (r *periodicReader) Shutdown(ctx context.Context) error {
 
 		if ph != nil { // Reader was registered.
 			// Flush pending telemetry.
-			var m metricdata.ResourceMetrics
-			m, err = r.collect(ctx, ph)
+			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
+			err = r.collect(ctx, ph, m)
 			if err == nil {
 				err = r.export(ctx, m)
 			}
+			r.rmPool.Put(m)
 		}
 
 		sErr := r.exporter.Shutdown(ctx)
