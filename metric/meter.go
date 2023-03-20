@@ -29,7 +29,7 @@ type MeterProvider interface {
 	// Meter returns a new Meter with the provided name and configuration.
 	//
 	// A Meter should be scoped at most to a single package. The name needs to
-	// be unique in this scope so it does not collide with other names used by
+	// be unique so it does not collide with other names used by
 	// an application, nor other applications. To achieve this, the import path
 	// of the instrumentation package is recommended to be used as name.
 	//
