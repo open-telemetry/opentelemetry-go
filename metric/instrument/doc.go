@@ -41,7 +41,7 @@ Outside of these two broad categories, instruments are described by the
 function they are designed to serve. All Counters ([Int64Counter],
 [Float64Counter], [Int64ObservableCounter], [Float64ObservableCounter]) are
 designed to measure values that never decrease in value, but instead only
-incrementally increase in value. UpDownCounters ( [Int64UpDownCounter],
+incrementally increase in value. UpDownCounters ([Int64UpDownCounter],
 [Float64UpDownCounter], [Int64ObservableUpDownCounter],
 [Float64ObservableUpDownCounter]) on the other hand, are designed to measure
 values that will incrementally increase or decrease. When more information
