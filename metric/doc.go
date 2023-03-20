@@ -16,9 +16,9 @@
 Package metric provides the OpenTelemetry API used to measure metrics about
 source code operation.
 
-This API is separate from its implementations to allow for the reusability of
-the instrumentation built from it. See [go.opentelemetry.io/otel/sdk/metric]
-for the official OpenTelemetry implementation of this API.
+This API is separate from its implementation so the instrumentation built from
+it is reusable. See [go.opentelemetry.io/otel/sdk/metric] for the official
+OpenTelemetry implementation of this API.
 
 All measurements made with this package are made via instruments. These
 instruments are created by a [Meter] which itself is created by a
