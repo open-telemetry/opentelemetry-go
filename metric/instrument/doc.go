@@ -23,7 +23,7 @@ synchronous, and int64 or float64.
 All synchronous instruments ([Int64Counter], [Int64UpDownCounter],
 [Int64Histogram], [Float64Counter], [Float64UpDownCounter], [Float64Histogram])
 are used to measure the operation and performance of source code during the
-source code execution. These instruments only make measurements when the sourec
+source code execution. These instruments only make measurements when the source
 code they instrument is run.
 
 All asynchronous instruments ([Int64ObservableCounter],
