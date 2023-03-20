@@ -44,7 +44,7 @@ designed to measure values that never decrease in value, but instead only
 incrementally increase in value. UpDownCounters ([Int64UpDownCounter],
 [Float64UpDownCounter], [Int64ObservableUpDownCounter],
 [Float64ObservableUpDownCounter]) on the other hand, are designed to measure
-values that will incrementally increase or decrease. When more information
+values that can increase and decrease. When more information
 needs to be conveyed about all the synchronous measurement made during a
 collection cycle, a Histogram ([Int64Histogram], [Float64Histogram]) should be
 used. Finally, when just the last measurement needs to be conveyed about an
