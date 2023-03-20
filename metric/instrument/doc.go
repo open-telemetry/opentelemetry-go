@@ -47,7 +47,7 @@ incrementally increase in value. UpDownCounters ([Int64UpDownCounter],
 values that will incrementally increase or decrease. When more information
 needs to be conveyed about all the synchronous measurement made during a
 collection cycle, a Histogram ([Int64Histogram], [Float64Histogram]) should be
-used. And finally, when just the last measurement needs to be conveyed about an
+used. Finally, when just the last measurement needs to be conveyed about an
 asynchronous measurement, a Gauge ([Int64ObservableGauge],
 [Float64ObservableGauge]) should be used.
 
