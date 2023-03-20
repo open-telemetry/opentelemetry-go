@@ -170,8 +170,6 @@ type streamID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Synchronous
-
 	aggregators []internal.Aggregator[N]
 }
 
@@ -194,8 +192,12 @@ func (i *instrumentImpl[N]) aggregate(ctx context.Context, val N, attrs []attrib
 	if err := ctx.Err(); err != nil {
 		return
 	}
+	// Do not use single attribute.Sortable and attribute.NewSetWithSortable,
+	// this method needs to be concurrent safe. Let the sync.Pool in the
+	// attribute package handle allocations of the Sortable.
+	s := attribute.NewSet(attrs...)
 	for _, agg := range i.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
+		agg.Aggregate(val, s)
 	}
 }
 
@@ -219,7 +221,7 @@ var _ instrument.Float64ObservableGauge = float64Observable{}
 
 func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable[float64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 
@@ -234,12 +236,12 @@ var _ instrument.Int64ObservableGauge = int64Observable{}
 
 func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable[int64](scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
 }
 
 type observable[N int64 | float64] struct {
-	instrument.Asynchronous
+	instrument.Observable
 	observablID[N]
 
 	aggregators []internal.Aggregator[N]
@@ -260,8 +262,12 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
+	// Do not use single attribute.Sortable and attribute.NewSetWithSortable,
+	// this method needs to be concurrent safe. Let the sync.Pool in the
+	// attribute package handle allocations of the Sortable.
+	s := attribute.NewSet(attrs...)
 	for _, agg := range o.aggregators {
-		agg.Aggregate(val, attribute.NewSet(attrs...))
+		agg.Aggregate(val, s)
 	}
 }
 

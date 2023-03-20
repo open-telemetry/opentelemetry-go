@@ -209,7 +209,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 // returned if other instrument are provided.
 //
 // The returned Registration can be used to unregister f.
-func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
+func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observable) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a observer if not needed.
 		return noopRegister{}, nil
@@ -220,7 +220,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 	for _, inst := range insts {
 		// Unwrap any global.
 		if u, ok := inst.(interface {
-			Unwrap() instrument.Asynchronous
+			Unwrap() instrument.Observable
 		}); ok {
 			inst = u.Unwrap()
 		}
@@ -298,7 +298,7 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ..
 	case float64Observable:
 		oImpl = conv
 	case interface {
-		Unwrap() instrument.Asynchronous
+		Unwrap() instrument.Observable
 	}:
 		// Unwrap any global.
 		async := conv.Unwrap()
@@ -330,7 +330,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attri
 	case int64Observable:
 		oImpl = conv
 	case interface {
-		Unwrap() instrument.Asynchronous
+		Unwrap() instrument.Observable
 	}:
 		// Unwrap any global.
 		async := conv.Unwrap()

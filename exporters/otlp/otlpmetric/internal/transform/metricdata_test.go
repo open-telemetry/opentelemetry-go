@@ -52,7 +52,28 @@ var (
 
 	minA, maxA, sumA = 2.0, 4.0, 90.0
 	minB, maxB, sumB = 4.0, 150.0, 234.0
-	otelHDP          = []metricdata.HistogramDataPoint{{
+	otelHDPInt64     = []metricdata.HistogramDataPoint[int64]{{
+		Attributes:   alice,
+		StartTime:    start,
+		Time:         end,
+		Count:        30,
+		Bounds:       []float64{1, 5},
+		BucketCounts: []uint64{0, 30, 0},
+		Min:          metricdata.NewExtrema(minA),
+		Max:          metricdata.NewExtrema(maxA),
+		Sum:          sumA,
+	}, {
+		Attributes:   bob,
+		StartTime:    start,
+		Time:         end,
+		Count:        3,
+		Bounds:       []float64{1, 5},
+		BucketCounts: []uint64{0, 1, 2},
+		Min:          metricdata.NewExtrema(minB),
+		Max:          metricdata.NewExtrema(maxB),
+		Sum:          sumB,
+	}}
+	otelHDPFloat64 = []metricdata.HistogramDataPoint[float64]{{
 		Attributes:   alice,
 		StartTime:    start,
 		Time:         end,
@@ -96,14 +117,18 @@ var (
 		Max:               &maxB,
 	}}
 
-	otelHist = metricdata.Histogram{
+	otelHistInt64 = metricdata.Histogram[int64]{
 		Temporality: metricdata.DeltaTemporality,
-		DataPoints:  otelHDP,
+		DataPoints:  otelHDPInt64,
+	}
+	otelHistFloat64 = metricdata.Histogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelHDPFloat64,
 	}
 	invalidTemporality metricdata.Temporality
-	otelHistInvalid    = metricdata.Histogram{
+	otelHistInvalid    = metricdata.Histogram[int64]{
 		Temporality: invalidTemporality,
-		DataPoints:  otelHDP,
+		DataPoints:  otelHDPInt64,
 	}
 
 	pbHist = &mpb.Histogram{
@@ -215,10 +240,16 @@ var (
 			Data:        otelSumInvalid,
 		},
 		{
-			Name:        "histogram",
+			Name:        "int64-histogram",
 			Description: "Histogram",
 			Unit:        "1",
-			Data:        otelHist,
+			Data:        otelHistInt64,
+		},
+		{
+			Name:        "float64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        otelHistFloat64,
 		},
 		{
 			Name:        "invalid-histogram",
@@ -260,7 +291,13 @@ var (
 			Data:        &mpb.Metric_Sum{Sum: pbSumFloat64},
 		},
 		{
-			Name:        "histogram",
+			Name:        "int64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+		},
+		{
+			Name:        "float64-histogram",
 			Description: "Histogram",
 			Unit:        "1",
 			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
@@ -308,7 +345,7 @@ var (
 		},
 	}
 
-	otelResourceMetrics = metricdata.ResourceMetrics{
+	otelResourceMetrics = &metricdata.ResourceMetrics{
 		Resource:     otelRes,
 		ScopeMetrics: otelScopeMetrics,
 	}
@@ -327,12 +364,16 @@ func TestTransformations(t *testing.T) {
 	// errors deep inside the structs).
 
 	// DataPoint types.
-	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDP))
+	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPInt64))
+	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPFloat64))
 	assert.Equal(t, pbDPtsInt64, DataPoints[int64](otelDPtsInt64))
 	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
 
 	// Aggregations.
-	h, err := Histogram(otelHist)
+	h, err := Histogram(otelHistInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	h, err = Histogram(otelHistFloat64)
 	assert.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
 	h, err = Histogram(otelHistInvalid)

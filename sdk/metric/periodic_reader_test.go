@@ -152,7 +152,7 @@ func TestIntervalEnvAndOption(t *testing.T) {
 type fnExporter struct {
 	temporalityFunc TemporalitySelector
 	aggregationFunc AggregationSelector
-	exportFunc      func(context.Context, metricdata.ResourceMetrics) error
+	exportFunc      func(context.Context, *metricdata.ResourceMetrics) error
 	flushFunc       func(context.Context) error
 	shutdownFunc    func(context.Context) error
 }
@@ -173,7 +173,7 @@ func (e *fnExporter) Aggregation(k InstrumentKind) aggregation.Aggregation {
 	return DefaultAggregationSelector(k)
 }
 
-func (e *fnExporter) Export(ctx context.Context, m metricdata.ResourceMetrics) error {
+func (e *fnExporter) Export(ctx context.Context, m *metricdata.ResourceMetrics) error {
 	if e.exportFunc != nil {
 		return e.exportFunc(ctx, m)
 	}
@@ -204,7 +204,7 @@ func (ts *periodicReaderTestSuite) SetupTest() {
 	ts.readerTestSuite.SetupTest()
 
 	e := &fnExporter{
-		exportFunc:   func(context.Context, metricdata.ResourceMetrics) error { return assert.AnError },
+		exportFunc:   func(context.Context, *metricdata.ResourceMetrics) error { return assert.AnError },
 		flushFunc:    func(context.Context) error { return assert.AnError },
 		shutdownFunc: func(context.Context) error { return assert.AnError },
 	}
@@ -282,9 +282,9 @@ func TestPeriodicReaderRun(t *testing.T) {
 	otel.SetErrorHandler(eh)
 
 	exp := &fnExporter{
-		exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 			// The testSDKProducer produces testResourceMetricsAB.
-			assert.Equal(t, testResourceMetricsAB, m)
+			assert.Equal(t, testResourceMetricsAB, *m)
 			return assert.AnError
 		},
 	}
@@ -307,9 +307,9 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	expFunc := func(t *testing.T) (exp Exporter, called *bool) {
 		called = new(bool)
 		return &fnExporter{
-			exportFunc: func(_ context.Context, m metricdata.ResourceMetrics) error {
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 				// The testSDKProducer produces testResourceMetricsA.
-				assert.Equal(t, testResourceMetricsAB, m)
+				assert.Equal(t, testResourceMetricsAB, *m)
 				*called = true
 				return assert.AnError
 			},

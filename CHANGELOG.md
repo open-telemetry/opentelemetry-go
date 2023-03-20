@@ -11,15 +11,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `WithHostID` option to `go.opentelemetry.io/otel/sdk/resource`. (#3812)
+- The `WithoutTimestamps` option to `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` to sets all timestamps to zero. (#3828)
+- The new `Exemplar` type is added to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
+  Both the `DataPoint` and `HistogramDataPoint` types from that package have a new field of `Exemplars` containing the sampled exemplars for their timeseries. (#3849)
 
 ### Changed
 
+- Optimize memory allocation when creation a new `Set` using `NewSet` or `NewSetWithFiltered` in `go.opentelemetry.io/otel/attribute`. (#3832)
+- Optimize memory allocation when creation new metric instruments in `go.opentelemetry.io/otel/sdk/metric`. (#3832)
 - Avoid creating new objects on all calls to `WithDeferredSetup` and `SkipContextSetup` in OpenTracing bridge. (#3833)
 - The `New` and `Detect` functions from `go.opentelemetry.io/otel/sdk/resource` return errors that wrap underlying errors instead of just containing the underlying error strings. (#3844)
+- Both the `Histogram` and `HistogramDataPoint` are redefined with a generic argument of `[N int64 | float64]` in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#3849)
+- The metric `Export` interface from `go.opentelemetry.io/otel/sdk/metric` accepts a `*ResourceMetrics` instead of `ResourceMetrics`. (#3853)
+- Rename `Asynchronous` to `Observable` in `go.opentelemetry.io/otel/metric/instrument`. (#3892)
 
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/global` package is removed. (#3829)
+- The unneeded `Synchronous` interface in `go.opentelemetry.io/otel/metric/instrument` was removed. (#3892)
 
 ## [1.15.0-rc.1/0.38.0-rc.1] 2023-03-01
 
