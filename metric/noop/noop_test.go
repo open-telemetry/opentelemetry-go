@@ -28,6 +28,8 @@ import (
 )
 
 func TestImplementationNoPanics(t *testing.T) {
+	// Check that if type has an embedded interface and that interface has
+	// methods added to it than the No-Op implementation implements them.
 	t.Run("MeterProvider", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(MeterProvider{}),
 		reflect.TypeOf((*metric.MeterProvider)(nil)).Elem(),
