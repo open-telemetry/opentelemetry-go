@@ -142,7 +142,7 @@ func (Meter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption)
 }
 
 // RegisterCallback performs no operation.
-func (Meter) RegisterCallback(metric.Callback, ...instrument.Asynchronous) (metric.Registration, error) {
+func (Meter) RegisterCallback(metric.Callback, ...instrument.Observable) (metric.Registration, error) {
 	return Registration{}, nil
 }
 
@@ -168,42 +168,42 @@ func (Registration) Unregister() error { return nil }
 
 // Int64Counter is an OpenTelemetry Counter used to record int64 measurements.
 // It produces no telemetry.
-type Int64Counter struct{ instrument.Synchronous }
+type Int64Counter struct{}
 
 // Add performs no operation.
 func (Int64Counter) Add(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
-type Float64Counter struct{ instrument.Synchronous }
+type Float64Counter struct{}
 
 // Add performs no operation.
 func (Float64Counter) Add(context.Context, float64, ...attribute.KeyValue) {}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
-type Int64UpDownCounter struct{ instrument.Synchronous }
+type Int64UpDownCounter struct{}
 
 // Add performs no operation.
 func (Int64UpDownCounter) Add(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
-type Float64UpDownCounter struct{ instrument.Synchronous }
+type Float64UpDownCounter struct{}
 
 // Add performs no operation.
 func (Float64UpDownCounter) Add(context.Context, float64, ...attribute.KeyValue) {}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
-type Int64Histogram struct{ instrument.Synchronous }
+type Int64Histogram struct{}
 
 // Record performs no operation.
 func (Int64Histogram) Record(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
-type Float64Histogram struct{ instrument.Synchronous }
+type Float64Histogram struct{}
 
 // Record performs no operation.
 func (Float64Histogram) Record(context.Context, float64, ...attribute.KeyValue) {}

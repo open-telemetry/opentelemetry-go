@@ -170,8 +170,6 @@ type streamID struct {
 }
 
 type instrumentImpl[N int64 | float64] struct {
-	instrument.Synchronous
-
 	aggregators []internal.Aggregator[N]
 }
 
@@ -243,7 +241,7 @@ func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, 
 }
 
 type observable[N int64 | float64] struct {
-	instrument.Asynchronous
+	instrument.Observable
 	observablID[N]
 
 	aggregators []internal.Aggregator[N]
