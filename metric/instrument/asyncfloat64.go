@@ -26,7 +26,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observable interface {
-	Asynchronous
+	Observable
 
 	float64Observable()
 }

@@ -396,7 +396,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 	case aggregation.Sum:
 		switch kind {
 		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
-			// Asynchronous counters and up-down-counters are defined to record
+			// Observable counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 			switch temporality {

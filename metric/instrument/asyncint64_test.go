@@ -83,7 +83,7 @@ type int64ObservableConfig interface {
 }
 
 type int64Observer struct {
-	Asynchronous
+	Observable
 	got int64
 }
 

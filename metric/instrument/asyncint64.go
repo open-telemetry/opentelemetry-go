@@ -26,7 +26,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Observable interface {
-	Asynchronous
+	Observable
 
 	int64Observable()
 }

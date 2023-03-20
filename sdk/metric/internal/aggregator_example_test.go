@@ -86,8 +86,6 @@ func (p *meter) Int64Histogram(string, ...instrument.Int64HistogramOption) (inst
 // inst is a generalized int64 synchronous counter, up-down counter, and
 // histogram used for demonstration purposes only.
 type inst struct {
-	instrument.Synchronous
-
 	aggregateFunc func(int64, attribute.Set)
 }
 

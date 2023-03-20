@@ -83,7 +83,7 @@ type float64ObservableConfig interface {
 }
 
 type float64Observer struct {
-	Asynchronous
+	Observable
 	got float64
 }
 

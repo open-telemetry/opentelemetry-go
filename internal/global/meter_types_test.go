@@ -113,7 +113,7 @@ func (m *testMeter) Float64ObservableGauge(name string, options ...instrument.Fl
 }
 
 // RegisterCallback captures the function that will be called during Collect.
-func (m *testMeter) RegisterCallback(f metric.Callback, i ...instrument.Asynchronous) (metric.Registration, error) {
+func (m *testMeter) RegisterCallback(f metric.Callback, i ...instrument.Observable) (metric.Registration, error) {
 	m.callbacks = append(m.callbacks, f)
 	return testReg{
 		f: func(idx int) func() {
