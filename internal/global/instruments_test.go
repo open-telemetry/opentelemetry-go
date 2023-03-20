@@ -145,7 +145,6 @@ type testCountingFloatInstrument struct {
 	count int
 
 	instrument.Float64Observable
-	instrument.Synchronous
 }
 
 func (i *testCountingFloatInstrument) observe() {
@@ -162,7 +161,6 @@ type testCountingIntInstrument struct {
 	count int
 
 	instrument.Int64Observable
-	instrument.Synchronous
 }
 
 func (i *testCountingIntInstrument) observe() {

@@ -26,7 +26,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Observable interface {
-	Asynchronous
+	Observable
 
 	int64Observable()
 }
@@ -77,7 +77,7 @@ type Int64Observer interface {
 // The function needs to be concurrent safe.
 type Int64Callback func(context.Context, Int64Observer) error
 
-// Int64ObserverConfig contains options for Asynchronous instruments that
+// Int64ObserverConfig contains options for Observable instruments that
 // observe int64 values.
 type Int64ObserverConfig struct {
 	description string

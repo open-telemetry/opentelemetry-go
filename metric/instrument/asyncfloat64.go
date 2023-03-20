@@ -26,7 +26,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observable interface {
-	Asynchronous
+	Observable
 
 	float64Observable()
 }
@@ -77,7 +77,7 @@ type Float64Observer interface {
 // The function needs to be concurrent safe.
 type Float64Callback func(context.Context, Float64Observer) error
 
-// Float64ObserverConfig contains options for Asynchronous instruments that
+// Float64ObserverConfig contains options for Observable instruments that
 // observe float64 values.
 type Float64ObserverConfig struct {
 	description string
