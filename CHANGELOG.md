@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithoutTimestamps` option to `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` to sets all timestamps to zero. (#3828)
 - The new `Exemplar` type is added to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
   Both the `DataPoint` and `HistogramDataPoint` types from that package have a new field of `Exemplars` containing the sampled exemplars for their timeseries. (#3849)
-- The internal logging changes the verbosity level of info to `V(4)`, the verbosity level of debug to `V(8)`, and introduces a warning level equal to `V(1)`. (#3900)
+- The internal logging introduces a warning level verbosity equal to `V(1)`. (#3900)
 
 ### Changed
 
@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Both the `Histogram` and `HistogramDataPoint` are redefined with a generic argument of `[N int64 | float64]` in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#3849)
 - The metric `Export` interface from `go.opentelemetry.io/otel/sdk/metric` accepts a `*ResourceMetrics` instead of `ResourceMetrics`. (#3853)
 - Rename `Asynchronous` to `Observable` in `go.opentelemetry.io/otel/metric/instrument`. (#3892)
+- The internal logging changes the verbosity level of info to `V(4)`, the verbosity level of debug to `V(8)`. (#3900)
 
 ### Removed
 
