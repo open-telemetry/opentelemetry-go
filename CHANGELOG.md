@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The new `Exemplar` type is added to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
   Both the `DataPoint` and `HistogramDataPoint` types from that package have a new field of `Exemplars` containing the sampled exemplars for their timeseries. (#3849)
 - Configuration for each metric instrument in `go.opentelemetry.io/otel/sdk/metric/instrument`. (#3895)
+- The internal logging introduces a warning level verbosity equal to `V(1)`. (#3900)
 
 ### Changed
 
@@ -29,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `NewNoopMeter` is replaced with `noop.NewMeterProvider().Meter("")`
 - Rename `Int64ObserverOption` to `Int64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
 - Rename `Float64ObserverOption` to `Float64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
+- The internal logging changes the verbosity level of info to `V(4)`, the verbosity level of debug to `V(8)`. (#3900)
 
 ### Removed
 
