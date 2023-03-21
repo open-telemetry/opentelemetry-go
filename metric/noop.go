@@ -39,51 +39,51 @@ func NewNoopMeter() Meter {
 
 type noopMeter struct{}
 
-func (noopMeter) Int64Counter(string, ...instrument.Int64Option) (instrument.Int64Counter, error) {
+func (noopMeter) Int64Counter(string, ...instrument.Int64CounterOption) (instrument.Int64Counter, error) {
 	return nonrecordingSyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64UpDownCounter(string, ...instrument.Int64Option) (instrument.Int64UpDownCounter, error) {
+func (noopMeter) Int64UpDownCounter(string, ...instrument.Int64UpDownCounterOption) (instrument.Int64UpDownCounter, error) {
 	return nonrecordingSyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64Histogram(string, ...instrument.Int64Option) (instrument.Int64Histogram, error) {
+func (noopMeter) Int64Histogram(string, ...instrument.Int64HistogramOption) (instrument.Int64Histogram, error) {
 	return nonrecordingSyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableCounter, error) {
+func (noopMeter) Int64ObservableCounter(string, ...instrument.Int64ObservableCounterOption) (instrument.Int64ObservableCounter, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableUpDownCounter, error) {
+func (noopMeter) Int64ObservableUpDownCounter(string, ...instrument.Int64ObservableUpDownCounterOption) (instrument.Int64ObservableUpDownCounter, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObserverOption) (instrument.Int64ObservableGauge, error) {
+func (noopMeter) Int64ObservableGauge(string, ...instrument.Int64ObservableGaugeOption) (instrument.Int64ObservableGauge, error) {
 	return nonrecordingAsyncInt64Instrument{}, nil
 }
 
-func (noopMeter) Float64Counter(string, ...instrument.Float64Option) (instrument.Float64Counter, error) {
+func (noopMeter) Float64Counter(string, ...instrument.Float64CounterOption) (instrument.Float64Counter, error) {
 	return nonrecordingSyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64UpDownCounter(string, ...instrument.Float64Option) (instrument.Float64UpDownCounter, error) {
+func (noopMeter) Float64UpDownCounter(string, ...instrument.Float64UpDownCounterOption) (instrument.Float64UpDownCounter, error) {
 	return nonrecordingSyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64Histogram(string, ...instrument.Float64Option) (instrument.Float64Histogram, error) {
+func (noopMeter) Float64Histogram(string, ...instrument.Float64HistogramOption) (instrument.Float64Histogram, error) {
 	return nonrecordingSyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableCounter, error) {
+func (noopMeter) Float64ObservableCounter(string, ...instrument.Float64ObservableCounterOption) (instrument.Float64ObservableCounter, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableUpDownCounter, error) {
+func (noopMeter) Float64ObservableUpDownCounter(string, ...instrument.Float64ObservableUpDownCounterOption) (instrument.Float64ObservableUpDownCounter, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 
-func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObserverOption) (instrument.Float64ObservableGauge, error) {
+func (noopMeter) Float64ObservableGauge(string, ...instrument.Float64ObservableGaugeOption) (instrument.Float64ObservableGauge, error) {
 	return nonrecordingAsyncFloat64Instrument{}, nil
 }
 

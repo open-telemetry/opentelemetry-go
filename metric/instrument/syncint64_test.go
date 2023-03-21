@@ -20,14 +20,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInt64Options(t *testing.T) {
+func TestInt64Configuration(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
 		uBytes       = "By"
 	)
 
-	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	run := func(got int64Config) func(*testing.T) {
+		return func(t *testing.T) {
+			assert.Equal(t, desc, got.Description(), "description")
+			assert.Equal(t, uBytes, got.Unit(), "unit")
+		}
+	}
+
+	t.Run("Int64Counter", run(
+		NewInt64CounterConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+
+	t.Run("Int64UpDownCounter", run(
+		NewInt64UpDownCounterConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+
+	t.Run("Int64Histogram", run(
+		NewInt64HistogramConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+}
+
+type int64Config interface {
+	Description() string
+	Unit() string
 }
