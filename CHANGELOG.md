@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithoutTimestamps` option to `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` to sets all timestamps to zero. (#3828)
 - The new `Exemplar` type is added to `go.opentelemetry.io/otel/sdk/metric/metricdata`.
   Both the `DataPoint` and `HistogramDataPoint` types from that package have a new field of `Exemplars` containing the sampled exemplars for their timeseries. (#3849)
+- Configuration for each metric instrument in `go.opentelemetry.io/otel/sdk/metric/instrument`. (#3895)
 
 ### Changed
 
@@ -26,11 +27,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3893)
   - `NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
   - `NewNoopMeter` is replaced with `noop.NewMeterProvider().Meter("")`
+- Rename `Int64ObserverOption` to `Int64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
+- Rename `Float64ObserverOption` to `Float64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
 
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/global` package is removed. (#3829)
 - The unneeded `Synchronous` interface in `go.opentelemetry.io/otel/metric/instrument` was removed. (#3892)
+- The `Float64ObserverConfig` and `NewFloat64ObserverConfig` in `go.opentelemetry.io/otel/sdk/metric/instrument`.
+  Use the added `float64` instrument configuration instead. (#3895)
+- The `Int64ObserverConfig` and `NewInt64ObserverConfig` in `go.opentelemetry.io/otel/sdk/metric/instrument`.
+  Use the added `int64` instrument configuration instead. (#3895)
 
 ## [1.15.0-rc.1/0.38.0-rc.1] 2023-03-01
 
