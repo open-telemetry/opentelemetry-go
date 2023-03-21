@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/embed"
 )
 
 // Float64Observable describes a set of instruments used asynchronously to
@@ -37,7 +38,11 @@ type Float64Observable interface {
 // assumed the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableCounter interface{ Float64Observable }
+type Float64ObservableCounter interface {
+	embed.Instrument
+
+	Float64Observable
+}
 
 // Float64ObservableCounterConfig contains options for asynchronous counter
 // instruments that record int64 values.
@@ -85,7 +90,11 @@ type Float64ObservableCounterOption interface {
 // the to be the cumulative sum of the count.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableUpDownCounter interface{ Float64Observable }
+type Float64ObservableUpDownCounter interface {
+	embed.Instrument
+
+	Float64Observable
+}
 
 // Float64ObservableUpDownCounterConfig contains options for asynchronous
 // counter instruments that record int64 values.
@@ -133,7 +142,11 @@ type Float64ObservableUpDownCounterOption interface {
 // are only made within a callback for this instrument.
 //
 // Warning: methods may be added to this interface in minor releases.
-type Float64ObservableGauge interface{ Float64Observable }
+type Float64ObservableGauge interface {
+	embed.Instrument
+
+	Float64Observable
+}
 
 // Float64ObservableGaugeConfig contains options for asynchronous counter
 // instruments that record int64 values.
@@ -180,6 +193,8 @@ type Float64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observer interface {
+	embed.Observer
+
 	Observe(value float64, attributes ...attribute.KeyValue)
 }
 
