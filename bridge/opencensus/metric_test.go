@@ -278,9 +278,9 @@ type fakeExporter struct {
 	err  error
 }
 
-func (f *fakeExporter) Export(ctx context.Context, data metricdata.ResourceMetrics) error {
+func (f *fakeExporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
 	if f.err == nil {
-		f.data = &data
+		f.data = data
 	}
 	return f.err
 }

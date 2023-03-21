@@ -121,7 +121,7 @@ func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
-func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, error) {
+func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -132,7 +132,9 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 			errs.append(err)
 		}
 		if err := ctx.Err(); err != nil {
-			return metricdata.ResourceMetrics{}, err
+			rm.Resource = nil
+			rm.ScopeMetrics = rm.ScopeMetrics[:0]
+			return err
 		}
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
@@ -143,36 +145,39 @@ func (p *pipeline) produce(ctx context.Context) (metricdata.ResourceMetrics, err
 		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
-			return metricdata.ResourceMetrics{}, err
+			rm.Resource = nil
+			rm.ScopeMetrics = rm.ScopeMetrics[:0]
+			return err
 		}
 	}
 
-	sm := make([]metricdata.ScopeMetrics, 0, len(p.aggregations))
+	rm.Resource = p.resource
+	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
+
+	i := 0
 	for scope, instruments := range p.aggregations {
-		metrics := make([]metricdata.Metrics, 0, len(instruments))
+		rm.ScopeMetrics[i].Metrics = internal.ReuseSlice(rm.ScopeMetrics[i].Metrics, len(instruments))
+		j := 0
 		for _, inst := range instruments {
 			data := inst.aggregator.Aggregation()
 			if data != nil {
-				metrics = append(metrics, metricdata.Metrics{
-					Name:        inst.name,
-					Description: inst.description,
-					Unit:        inst.unit,
-					Data:        data,
-				})
+				rm.ScopeMetrics[i].Metrics[j].Name = inst.name
+				rm.ScopeMetrics[i].Metrics[j].Description = inst.description
+				rm.ScopeMetrics[i].Metrics[j].Unit = inst.unit
+				rm.ScopeMetrics[i].Metrics[j].Data = data
+				j++
 			}
 		}
-		if len(metrics) > 0 {
-			sm = append(sm, metricdata.ScopeMetrics{
-				Scope:   scope,
-				Metrics: metrics,
-			})
+		rm.ScopeMetrics[i].Metrics = rm.ScopeMetrics[i].Metrics[:j]
+		if len(rm.ScopeMetrics[i].Metrics) > 0 {
+			rm.ScopeMetrics[i].Scope = scope
+			i++
 		}
 	}
 
-	return metricdata.ResourceMetrics{
-		Resource:     p.resource,
-		ScopeMetrics: sm,
-	}, errs.errorOrNil()
+	rm.ScopeMetrics = rm.ScopeMetrics[:i]
+
+	return errs.errorOrNil()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -391,7 +396,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 	case aggregation.Sum:
 		switch kind {
 		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
-			// Asynchronous counters and up-down-counters are defined to record
+			// Observable counters and up-down-counters are defined to record
 			// the absolute value of the count:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 			switch temporality {

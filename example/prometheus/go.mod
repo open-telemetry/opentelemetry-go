@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/prometheus
 
-go 1.18
+go 1.19
 
 require (
 	github.com/prometheus/client_golang v1.14.0
@@ -23,7 +23,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.15.0-rc.1 // indirect
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
 	golang.org/x/sys v0.6.0 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../..
