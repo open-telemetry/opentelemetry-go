@@ -20,14 +20,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFloat64Options(t *testing.T) {
+func TestFloat64Configuration(t *testing.T) {
 	const (
 		token  float64 = 43
 		desc           = "Instrument description."
 		uBytes         = "By"
 	)
 
-	got := NewFloat64Config(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	run := func(got float64Config) func(*testing.T) {
+		return func(t *testing.T) {
+			assert.Equal(t, desc, got.Description(), "description")
+			assert.Equal(t, uBytes, got.Unit(), "unit")
+		}
+	}
+
+	t.Run("Float64Counter", run(
+		NewFloat64CounterConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+
+	t.Run("Float64UpDownCounter", run(
+		NewFloat64UpDownCounterConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+
+	t.Run("Float64Histogram", run(
+		NewFloat64HistogramConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
+}
+
+type float64Config interface {
+	Description() string
+	Unit() string
 }
