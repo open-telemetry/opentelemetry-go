@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func TestMeterProviderRace(t *testing.T) {
@@ -41,7 +42,7 @@ func TestMeterProviderRace(t *testing.T) {
 		}
 	}()
 
-	mp.setDelegate(metric.NewNoopMeterProvider())
+	mp.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
@@ -84,7 +85,7 @@ func TestMeterRace(t *testing.T) {
 	}()
 
 	wg.Wait()
-	mtr.setDelegate(metric.NewNoopMeterProvider())
+	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
@@ -113,7 +114,7 @@ func TestUnregisterRace(t *testing.T) {
 	_ = reg.Unregister()
 
 	wg.Wait()
-	mtr.setDelegate(metric.NewNoopMeterProvider())
+	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
