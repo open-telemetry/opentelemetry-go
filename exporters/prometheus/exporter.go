@@ -59,13 +59,14 @@ var _ metric.Reader = &Exporter{}
 type collector struct {
 	reader metric.Reader
 
+	withoutUnits     bool
+	disableScopeInfo bool
+
+	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
-	withoutUnits      bool
 	targetInfo        prometheus.Metric
-	disableScopeInfo  bool
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
 	metricFamilies    map[string]*dto.MetricFamily
-	mu                sync.RWMutex
 }
 
 // prometheus counters MUST have a _total suffix:
