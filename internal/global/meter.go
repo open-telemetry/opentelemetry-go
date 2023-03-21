@@ -269,7 +269,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float6
 }
 
 // RegisterCallback captures the function that will be called during Collect.
-func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchronous) (metric.Registration, error) {
+func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observable) (metric.Registration, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		insts = unwrapInstruments(insts)
 		return del.RegisterCallback(f, insts...)
@@ -290,11 +290,11 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Asynchro
 }
 
 type wrapped interface {
-	unwrap() instrument.Asynchronous
+	unwrap() instrument.Observable
 }
 
-func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Asynchronous {
-	out := make([]instrument.Asynchronous, 0, len(instruments))
+func unwrapInstruments(instruments []instrument.Observable) []instrument.Observable {
+	out := make([]instrument.Observable, 0, len(instruments))
 
 	for _, inst := range instruments {
 		if in, ok := inst.(wrapped); ok {
@@ -308,7 +308,7 @@ func unwrapInstruments(instruments []instrument.Asynchronous) []instrument.Async
 }
 
 type registration struct {
-	instruments []instrument.Asynchronous
+	instruments []instrument.Observable
 	function    metric.Callback
 
 	unreg   func() error

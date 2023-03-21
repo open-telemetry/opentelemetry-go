@@ -52,7 +52,7 @@ func TestInt64ObserverOptions(t *testing.T) {
 }
 
 type int64Observer struct {
-	Asynchronous
+	Observable
 	got int64
 }
 
