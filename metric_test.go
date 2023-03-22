@@ -20,10 +20,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-type testMeterProvider struct{}
+type testMeterProvider struct{ embedded.MeterProvider }
 
 var _ metric.MeterProvider = &testMeterProvider{}
 
