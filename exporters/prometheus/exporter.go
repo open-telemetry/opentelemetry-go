@@ -123,17 +123,20 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	c.mu.Lock()
-	if c.targetInfo == nil && !c.disableTargetInfo {
-		targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
-		if err != nil {
-			// If the target info metric is invalid, disable sending it.
-			otel.Handle(err)
-			c.disableTargetInfo = true
+	func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
+		if c.targetInfo == nil && !c.disableTargetInfo {
+			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+			if err != nil {
+				// If the target info metric is invalid, disable sending it.
+				otel.Handle(err)
+				c.disableTargetInfo = true
+			}
+			c.targetInfo = targetInfo
 		}
-		c.targetInfo = targetInfo
-	}
-	c.mu.Unlock()
+	}()
 
 	if !c.disableTargetInfo {
 		ch <- c.targetInfo
@@ -143,18 +146,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		var keys, values [2]string
 
 		if !c.disableScopeInfo {
-			c.mu.Lock()
-			scopeInfo, ok := c.scopeInfos[scopeMetrics.Scope]
-			if !ok {
-				scopeInfo, err = createScopeInfoMetric(scopeMetrics.Scope)
-				if err != nil {
-					otel.Handle(err)
-				}
-				c.scopeInfos[scopeMetrics.Scope] = scopeInfo
-			}
-			c.mu.Unlock()
+			func() {
+				c.mu.Lock()
+				defer c.mu.Unlock()
 
-			ch <- scopeInfo
+				scopeInfo, ok := c.scopeInfos[scopeMetrics.Scope]
+				if !ok {
+					scopeInfo, err = createScopeInfoMetric(scopeMetrics.Scope)
+					if err != nil {
+						otel.Handle(err)
+					}
+					c.scopeInfos[scopeMetrics.Scope] = scopeInfo
+				}
+				ch <- scopeInfo
+			}()
+
 			keys = scopeInfoKeys
 			values = [2]string{scopeMetrics.Scope.Name, scopeMetrics.Scope.Version}
 		}
