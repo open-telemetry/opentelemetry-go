@@ -4,10 +4,10 @@ go 1.19
 
 require (
 	github.com/prometheus/client_golang v1.14.0
-	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel v1.15.0-rc.2
 	go.opentelemetry.io/otel/exporters/prometheus v0.38.0-rc.1
-	go.opentelemetry.io/otel/metric v1.15.0-rc.1
-	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
+	go.opentelemetry.io/otel/metric v1.15.0-rc.2
+	go.opentelemetry.io/otel/sdk v1.15.0-rc.2
 	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.1
 )
 
@@ -21,7 +21,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
+	go.opentelemetry.io/otel/trace v1.15.0-rc.2 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
