@@ -62,7 +62,7 @@ type collector struct {
 	withoutUnits     bool
 	disableScopeInfo bool
 
-	mu                sync.Mutex // mu protects all members below from the concurrent access.
+	mu                sync.RWMutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
@@ -124,18 +124,23 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	func() {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-
-		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
-			if err != nil {
-				// If the target info metric is invalid, disable sending it.
-				otel.Handle(err)
-				c.disableTargetInfo = true
-			}
-			c.targetInfo = targetInfo
+		c.mu.RLock()
+		if c.targetInfo != nil || c.disableTargetInfo {
+			c.mu.RUnlock()
+			return
 		}
+		c.mu.RUnlock()
+
+		targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+		if err != nil {
+			otel.Handle(err)
+		}
+
+		c.mu.Lock()
+		// If the target info metric is invalid, disable sending it.
+		c.disableTargetInfo = (err != nil)
+		c.targetInfo = targetInfo
+		c.mu.Unlock()
 	}()
 
 	if !c.disableTargetInfo {
@@ -146,20 +151,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		var keys, values [2]string
 
 		if !c.disableScopeInfo {
-			func() {
-				c.mu.Lock()
-				defer c.mu.Unlock()
+			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
+			if err != nil {
+				otel.Handle(err)
+				continue
+			}
 
-				scopeInfo, ok := c.scopeInfos[scopeMetrics.Scope]
-				if !ok {
-					scopeInfo, err = createScopeInfoMetric(scopeMetrics.Scope)
-					if err != nil {
-						otel.Handle(err)
-					}
-					c.scopeInfos[scopeMetrics.Scope] = scopeInfo
-				}
-				ch <- scopeInfo
-			}()
+			ch <- scopeInfo
 
 			keys = scopeInfoKeys
 			values = [2]string{scopeMetrics.Scope.Name, scopeMetrics.Scope.Version}
@@ -400,10 +398,34 @@ func (c *collector) metricTypeAndName(m metricdata.Metrics) (*dto.MetricType, st
 	return nil, ""
 }
 
-func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
+func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, error) {
+	c.mu.RLock()
+	scopeInfo, ok := c.scopeInfos[scope]
+	c.mu.RUnlock()
+
+	if ok {
+		return scopeInfo, nil
+	}
+
+	scopeInfo, err := createScopeInfoMetric(scope)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
+	}
+
 	c.mu.Lock()
+	c.scopeInfos[scope] = scopeInfo
+	c.mu.Unlock()
+
+	return scopeInfo, nil
+}
+
+func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
+	c.mu.RLock()
 	emf, exist := c.metricFamilies[name]
+	c.mu.RUnlock()
+
 	if !exist {
+		c.mu.Lock()
 		c.metricFamilies[name] = &dto.MetricFamily{
 			Name: proto.String(name),
 			Help: proto.String(description),
@@ -412,7 +434,6 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 		c.mu.Unlock()
 		return false, ""
 	}
-	c.mu.Unlock()
 
 	if emf.GetType() != *metricType {
 		global.Error(
