@@ -25,7 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Panic in Prometheus exporter on concurrent `Collect`. (#3899)
+- Fix a race condition in `go.opentelemetry.io/otel/exporters/metric/prometheus` that could cause a panic. (#3899)
 
 ### Removed
 
