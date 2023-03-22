@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embed"
+	"go.opentelemetry.io/otel/metric/embedded"
 )
 
 // Float64Observable describes a set of instruments used asynchronously to
@@ -39,7 +39,7 @@ type Float64Observable interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableCounter interface {
-	embed.Instrument
+	embedded.Instrument
 
 	Float64Observable
 }
@@ -91,7 +91,7 @@ type Float64ObservableCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableUpDownCounter interface {
-	embed.Instrument
+	embedded.Instrument
 
 	Float64Observable
 }
@@ -143,7 +143,7 @@ type Float64ObservableUpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableGauge interface {
-	embed.Instrument
+	embedded.Instrument
 
 	Float64Observable
 }
@@ -193,7 +193,7 @@ type Float64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observer interface {
-	embed.Observer
+	embedded.Observer
 
 	Observe(value float64, attributes ...attribute.KeyValue)
 }

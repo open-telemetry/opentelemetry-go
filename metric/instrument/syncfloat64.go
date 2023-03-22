@@ -18,14 +18,14 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embed"
+	"go.opentelemetry.io/otel/metric/embedded"
 )
 
 // Float64Counter is an instrument that records increasing float64 values.
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Counter interface {
-	embed.Instrument
+	embedded.Instrument
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -69,7 +69,7 @@ type Float64CounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64UpDownCounter interface {
-	embed.Instrument
+	embedded.Instrument
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -114,7 +114,7 @@ type Float64UpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Histogram interface {
-	embed.Instrument
+	embedded.Instrument
 
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
