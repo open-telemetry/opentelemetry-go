@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -153,7 +152,7 @@ func TestSetMeterProvider(t *testing.T) {
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
 		ResetForTest(t)
 
-		SetMeterProvider(noop.NewMeterProvider())
+		SetMeterProvider(metric.NewNoopMeterProvider())
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
@@ -166,7 +165,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		mp := MeterProvider()
 
-		SetMeterProvider(noop.NewMeterProvider())
+		SetMeterProvider(metric.NewNoopMeterProvider())
 
 		dmp := mp.(*meterProvider)
 
