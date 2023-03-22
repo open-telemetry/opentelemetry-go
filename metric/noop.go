@@ -32,11 +32,6 @@ func (noopMeterProvider) Meter(string, ...MeterOption) Meter {
 	return noopMeter{}
 }
 
-// NewNoopMeter creates a Meter that does not record any metrics.
-func NewNoopMeter() Meter {
-	return noopMeter{}
-}
-
 type noopMeter struct{}
 
 func (noopMeter) Int64Counter(string, ...instrument.Int64CounterOption) (instrument.Int64Counter, error) {

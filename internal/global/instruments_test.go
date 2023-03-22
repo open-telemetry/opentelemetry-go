@@ -36,7 +36,7 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -53,7 +53,7 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 

@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the added `float64` instrument configuration instead. (#3895)
 - The `Int64ObserverConfig` and `NewInt64ObserverConfig` in `go.opentelemetry.io/otel/sdk/metric/instrument`.
   Use the added `int64` instrument configuration instead. (#3895)
+- Remove `NewNoopMeter` from `go.opentelemetry.io/otel/metric`, use `NewMeterProvider.Meter("")` instead. (#3893)
 
 ## [1.15.0-rc.1/0.38.0-rc.1] 2023-03-01
 
