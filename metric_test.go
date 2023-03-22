@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
 )
 
 type testMeterProvider struct{}
@@ -28,12 +27,12 @@ type testMeterProvider struct{}
 var _ metric.MeterProvider = &testMeterProvider{}
 
 func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return noop.NewMeterProvider().Meter("")
+	return metric.NewNoopMeterProvider().Meter("")
 }
 
 func TestMultipleGlobalMeterProvider(t *testing.T) {
 	p1 := testMeterProvider{}
-	p2 := noop.NewMeterProvider()
+	p2 := metric.NewNoopMeterProvider()
 	SetMeterProvider(&p1)
 	SetMeterProvider(p2)
 
