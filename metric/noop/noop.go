@@ -169,42 +169,42 @@ func (Registration) Unregister() error { return nil }
 
 // Int64Counter is an OpenTelemetry Counter used to record int64 measurements.
 // It produces no telemetry.
-type Int64Counter struct{ embedded.Instrument }
+type Int64Counter struct{ embedded.Int64Counter }
 
 // Add performs no operation.
 func (Int64Counter) Add(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
-type Float64Counter struct{ embedded.Instrument }
+type Float64Counter struct{ embedded.Float64Counter }
 
 // Add performs no operation.
 func (Float64Counter) Add(context.Context, float64, ...attribute.KeyValue) {}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
-type Int64UpDownCounter struct{ embedded.Instrument }
+type Int64UpDownCounter struct{ embedded.Int64UpDownCounter }
 
 // Add performs no operation.
 func (Int64UpDownCounter) Add(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
-type Float64UpDownCounter struct{ embedded.Instrument }
+type Float64UpDownCounter struct{ embedded.Float64UpDownCounter }
 
 // Add performs no operation.
 func (Float64UpDownCounter) Add(context.Context, float64, ...attribute.KeyValue) {}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
-type Int64Histogram struct{ embedded.Instrument }
+type Int64Histogram struct{ embedded.Int64Histogram }
 
 // Record performs no operation.
 func (Int64Histogram) Record(context.Context, int64, ...attribute.KeyValue) {}
 
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
-type Float64Histogram struct{ embedded.Instrument }
+type Float64Histogram struct{ embedded.Float64Histogram }
 
 // Record performs no operation.
 func (Float64Histogram) Record(context.Context, float64, ...attribute.KeyValue) {}
@@ -212,54 +212,54 @@ func (Float64Histogram) Record(context.Context, float64, ...attribute.KeyValue) 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.
 type Int64ObservableCounter struct {
-	embedded.Instrument
+	embedded.Int64ObservableCounter
 	instrument.Int64Observable
 }
 
 // Float64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64ObservableCounter struct {
-	embedded.Instrument
+	embedded.Float64ObservableCounter
 	instrument.Float64Observable
 }
 
 // Int64ObservableGauge is an OpenTelemetry ObservableGauge used to record
 // int64 measurements. It produces no telemetry.
 type Int64ObservableGauge struct {
-	embedded.Instrument
+	embedded.Int64ObservableGauge
 	instrument.Int64Observable
 }
 
 // Float64ObservableGauge is an OpenTelemetry ObservableGauge used to record
 // float64 measurements. It produces no telemetry.
 type Float64ObservableGauge struct {
-	embedded.Instrument
+	embedded.Float64ObservableGauge
 	instrument.Float64Observable
 }
 
 // Int64ObservableUpDownCounter is an OpenTelemetry ObservableUpDownCounter
 // used to record int64 measurements. It produces no telemetry.
 type Int64ObservableUpDownCounter struct {
-	embedded.Instrument
+	embedded.Int64ObservableUpDownCounter
 	instrument.Int64Observable
 }
 
 // Float64ObservableUpDownCounter is an OpenTelemetry ObservableUpDownCounter
 // used to record float64 measurements. It produces no telemetry.
 type Float64ObservableUpDownCounter struct {
-	embedded.Instrument
+	embedded.Float64ObservableUpDownCounter
 	instrument.Float64Observable
 }
 
 // Int64Observer is a recorder of int64 measurements that performs no operation.
-type Int64Observer struct{ embedded.Observer }
+type Int64Observer struct{ embedded.Int64Observer }
 
 // Observe performs no operation.
 func (Int64Observer) Observe(int64, ...attribute.KeyValue) {}
 
 // Float64Observer is a recorder of float64 measurements that performs no
 // operation.
-type Float64Observer struct{ embedded.Observer }
+type Float64Observer struct{ embedded.Float64Observer }
 
 // Observe performs no operation.
 func (Float64Observer) Observe(float64, ...attribute.KeyValue) {}

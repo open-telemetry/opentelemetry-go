@@ -25,7 +25,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Counter interface {
-	embedded.Instrument
+	embedded.Int64Counter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
@@ -69,7 +69,7 @@ type Int64CounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64UpDownCounter interface {
-	embedded.Instrument
+	embedded.Int64UpDownCounter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
@@ -114,7 +114,7 @@ type Int64UpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Histogram interface {
-	embedded.Instrument
+	embedded.Int64Histogram
 
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)

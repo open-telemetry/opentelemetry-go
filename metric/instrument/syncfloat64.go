@@ -25,7 +25,7 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Counter interface {
-	embedded.Instrument
+	embedded.Float64Counter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -69,7 +69,7 @@ type Float64CounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64UpDownCounter interface {
-	embedded.Instrument
+	embedded.Float64UpDownCounter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
@@ -114,7 +114,7 @@ type Float64UpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Histogram interface {
-	embedded.Instrument
+	embedded.Float64Histogram
 
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)

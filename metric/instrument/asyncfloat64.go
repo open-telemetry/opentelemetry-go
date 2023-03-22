@@ -39,7 +39,7 @@ type Float64Observable interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableCounter interface {
-	embedded.Instrument
+	embedded.Float64ObservableCounter
 
 	Float64Observable
 }
@@ -91,7 +91,7 @@ type Float64ObservableCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableUpDownCounter interface {
-	embedded.Instrument
+	embedded.Float64ObservableUpDownCounter
 
 	Float64Observable
 }
@@ -143,7 +143,7 @@ type Float64ObservableUpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64ObservableGauge interface {
-	embedded.Instrument
+	embedded.Float64ObservableGauge
 
 	Float64Observable
 }
@@ -193,7 +193,7 @@ type Float64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observer interface {
-	embedded.Observer
+	embedded.Float64Observer
 
 	Observe(value float64, attributes ...attribute.KeyValue)
 }
