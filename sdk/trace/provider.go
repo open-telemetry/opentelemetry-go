@@ -237,14 +237,13 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 // Shutdown shuts down TracerProvider. All registered span processors are shut down
 // in the order they were registered and any held computational resources are released.
 func (p *TracerProvider) Shutdown(ctx context.Context) error {
-	spss := p.spanProcessors.Load().(spanProcessorStates)
-	if len(spss) == 0 {
-		return nil
-	}
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if p.isShutdown {
+		return nil
+	}
 	p.isShutdown = true
+	spss := p.spanProcessors.Load().(spanProcessorStates)
 
 	var retErr error
 	for _, sps := range spss {

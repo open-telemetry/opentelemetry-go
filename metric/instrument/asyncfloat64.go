@@ -47,6 +47,46 @@ type Float64ObservableCounter interface {
 	float64ObservableCounter()
 }
 
+// Float64ObservableCounterConfig contains options for asynchronous counter
+// instruments that record int64 values.
+type Float64ObservableCounterConfig struct {
+	description string
+	unit        string
+	callbacks   []Float64Callback
+}
+
+// NewFloat64ObservableCounterConfig returns a new
+// [Float64ObservableCounterConfig] with all opts applied.
+func NewFloat64ObservableCounterConfig(opts ...Float64ObservableCounterOption) Float64ObservableCounterConfig {
+	var config Float64ObservableCounterConfig
+	for _, o := range opts {
+		config = o.applyFloat64ObservableCounter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64ObservableCounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64ObservableCounterConfig) Unit() string {
+	return c.unit
+}
+
+// Callbacks returns the configured callbacks.
+func (c Float64ObservableCounterConfig) Callbacks() []Float64Callback {
+	return c.callbacks
+}
+
+// Float64ObservableCounterOption applies options to a
+// [Float64ObservableCounterConfig]. See [Float64ObservableOption] and [Option]
+// for other options that can be used as a Float64ObservableCounterOption.
+type Float64ObservableCounterOption interface {
+	applyFloat64ObservableCounter(Float64ObservableCounterConfig) Float64ObservableCounterConfig
+}
+
 // Float64ObservableUpDownCounter is an instrument used to asynchronously
 // record float64 measurements once per collection cycle. Observations are only
 // made within a callback for this instrument. The value observed is assumed
@@ -63,6 +103,47 @@ type Float64ObservableUpDownCounter interface {
 	float64ObservableUpDownCounter()
 }
 
+// Float64ObservableUpDownCounterConfig contains options for asynchronous
+// counter instruments that record int64 values.
+type Float64ObservableUpDownCounterConfig struct {
+	description string
+	unit        string
+	callbacks   []Float64Callback
+}
+
+// NewFloat64ObservableUpDownCounterConfig returns a new
+// [Float64ObservableUpDownCounterConfig] with all opts applied.
+func NewFloat64ObservableUpDownCounterConfig(opts ...Float64ObservableUpDownCounterOption) Float64ObservableUpDownCounterConfig {
+	var config Float64ObservableUpDownCounterConfig
+	for _, o := range opts {
+		config = o.applyFloat64ObservableUpDownCounter(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64ObservableUpDownCounterConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64ObservableUpDownCounterConfig) Unit() string {
+	return c.unit
+}
+
+// Callbacks returns the configured callbacks.
+func (c Float64ObservableUpDownCounterConfig) Callbacks() []Float64Callback {
+	return c.callbacks
+}
+
+// Float64ObservableUpDownCounterOption applies options to a
+// [Float64ObservableUpDownCounterConfig]. See [Float64ObservableOption] and
+// [Option] for other options that can be used as a
+// Float64ObservableUpDownCounterOption.
+type Float64ObservableUpDownCounterOption interface {
+	applyFloat64ObservableUpDownCounter(Float64ObservableUpDownCounterConfig) Float64ObservableUpDownCounterConfig
+}
+
 // Float64ObservableGauge is an instrument used to asynchronously record
 // instantaneous float64 measurements once per collection cycle. Observations
 // are only made within a callback for this instrument.
@@ -76,6 +157,47 @@ type Float64ObservableGauge interface {
 	Float64Observable
 
 	float64ObservableGauge()
+}
+
+// Float64ObservableGaugeConfig contains options for asynchronous counter
+// instruments that record int64 values.
+type Float64ObservableGaugeConfig struct {
+	description string
+	unit        string
+	callbacks   []Float64Callback
+}
+
+// NewFloat64ObservableGaugeConfig returns a new [Float64ObservableGaugeConfig]
+// with all opts applied.
+func NewFloat64ObservableGaugeConfig(opts ...Float64ObservableGaugeOption) Float64ObservableGaugeConfig {
+	var config Float64ObservableGaugeConfig
+	for _, o := range opts {
+		config = o.applyFloat64ObservableGauge(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64ObservableGaugeConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64ObservableGaugeConfig) Unit() string {
+	return c.unit
+}
+
+// Callbacks returns the configured callbacks.
+func (c Float64ObservableGaugeConfig) Callbacks() []Float64Callback {
+	return c.callbacks
+}
+
+// Float64ObservableGaugeOption applies options to a
+// [Float64ObservableGaugeConfig]. See [Float64ObservableOption] and
+// [Option] for other options that can be used as a
+// Float64ObservableGaugeOption.
+type Float64ObservableGaugeOption interface {
+	applyFloat64ObservableGauge(Float64ObservableGaugeConfig) Float64ObservableGaugeConfig
 }
 
 // Float64Observer is a recorder of float64 measurements.
@@ -107,54 +229,33 @@ type Float64Observer interface {
 // The function needs to be concurrent safe.
 type Float64Callback func(context.Context, Float64Observer) error
 
-// Float64ObserverConfig contains options for Asynchronous instruments that
-// observe float64 values.
-type Float64ObserverConfig struct {
-	description string
-	unit        string
-	callbacks   []Float64Callback
+// Float64ObservableOption applies options to float64 Observer instruments.
+type Float64ObservableOption interface {
+	Float64ObservableCounterOption
+	Float64ObservableUpDownCounterOption
+	Float64ObservableGaugeOption
 }
 
-// NewFloat64ObserverConfig returns a new Float64ObserverConfig with all opts
-// applied.
-func NewFloat64ObserverConfig(opts ...Float64ObserverOption) Float64ObserverConfig {
-	var config Float64ObserverConfig
-	for _, o := range opts {
-		config = o.applyFloat64Observer(config)
-	}
-	return config
+type float64CallbackOpt struct {
+	cback Float64Callback
 }
 
-// Description returns the Config description.
-func (c Float64ObserverConfig) Description() string {
-	return c.description
+func (o float64CallbackOpt) applyFloat64ObservableCounter(cfg Float64ObservableCounterConfig) Float64ObservableCounterConfig {
+	cfg.callbacks = append(cfg.callbacks, o.cback)
+	return cfg
 }
 
-// Unit returns the Config unit.
-func (c Float64ObserverConfig) Unit() string {
-	return c.unit
+func (o float64CallbackOpt) applyFloat64ObservableUpDownCounter(cfg Float64ObservableUpDownCounterConfig) Float64ObservableUpDownCounterConfig {
+	cfg.callbacks = append(cfg.callbacks, o.cback)
+	return cfg
 }
 
-// Callbacks returns the Config callbacks.
-func (c Float64ObserverConfig) Callbacks() []Float64Callback {
-	return c.callbacks
-}
-
-// Float64ObserverOption applies options to float64 Observer instruments.
-type Float64ObserverOption interface {
-	applyFloat64Observer(Float64ObserverConfig) Float64ObserverConfig
-}
-
-type float64ObserverOptionFunc func(Float64ObserverConfig) Float64ObserverConfig
-
-func (fn float64ObserverOptionFunc) applyFloat64Observer(cfg Float64ObserverConfig) Float64ObserverConfig {
-	return fn(cfg)
+func (o float64CallbackOpt) applyFloat64ObservableGauge(cfg Float64ObservableGaugeConfig) Float64ObservableGaugeConfig {
+	cfg.callbacks = append(cfg.callbacks, o.cback)
+	return cfg
 }
 
 // WithFloat64Callback adds callback to be called for an instrument.
-func WithFloat64Callback(callback Float64Callback) Float64ObserverOption {
-	return float64ObserverOptionFunc(func(cfg Float64ObserverConfig) Float64ObserverConfig {
-		cfg.callbacks = append(cfg.callbacks, callback)
-		return cfg
-	})
+func WithFloat64Callback(callback Float64Callback) Float64ObservableOption {
+	return float64CallbackOpt{callback}
 }

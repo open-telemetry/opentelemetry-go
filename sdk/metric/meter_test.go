@@ -1254,7 +1254,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	}
 }
 
-func TestAsynchronousExample(t *testing.T) {
+func TestObservableExample(t *testing.T) {
 	// This example can be found:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/8b91585e6175dd52b51e1d60bea105041225e35d/specification/metrics/supplementary-guidelines.md#asynchronous-example
 	var (
@@ -1277,7 +1277,7 @@ func TestAsynchronousExample(t *testing.T) {
 		const (
 			instName       = "pageFaults"
 			filteredStream = "filteredPageFaults"
-			scopeName      = "AsynchronousExample"
+			scopeName      = "ObservableExample"
 		)
 
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
