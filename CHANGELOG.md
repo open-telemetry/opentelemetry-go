@@ -33,6 +33,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `Float64ObserverOption` to `Float64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
 - The internal logging changes the verbosity level of info to `V(4)`, the verbosity level of debug to `V(8)`. (#3900)
 
+### Fixed
+
+- `TracerProvider` consistently doesn't allow to register a `SpanProcessor` after shutdown. (#3845)
+
 ### Removed
 
 - The deprecated `go.opentelemetry.io/otel/metric/global` package is removed. (#3829)
