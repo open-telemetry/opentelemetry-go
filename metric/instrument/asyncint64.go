@@ -179,6 +179,7 @@ type Int64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Observer interface {
+	// Observe records the int64 value with attributes.
 	Observe(value int64, attributes ...attribute.KeyValue)
 }
 
