@@ -124,23 +124,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	func() {
-		c.mu.RLock()
-		if c.targetInfo != nil || c.disableTargetInfo {
-			c.mu.RUnlock()
-			return
-		}
-		c.mu.RUnlock()
-
-		targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
-		if err != nil {
-			otel.Handle(err)
-		}
-
 		c.mu.Lock()
-		// If the target info metric is invalid, disable sending it.
-		c.disableTargetInfo = (err != nil)
-		c.targetInfo = targetInfo
-		c.mu.Unlock()
+		defer c.mu.Unlock()
+
+		if c.targetInfo == nil && !c.disableTargetInfo {
+			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+			if err != nil {
+				// If the target info metric is invalid, disable sending it.
+				otel.Handle(err)
+				c.disableTargetInfo = true
+				return
+			}
+
+			c.targetInfo = targetInfo
+		}
+
 	}()
 
 	if !c.disableTargetInfo {
