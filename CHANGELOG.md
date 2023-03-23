@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-22
+## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
 This is a release candidate for the v1.15.0/v0.38.0 release.
 That release will include the `v1` release of the OpenTelemetry Go metric API and will provide stability guarantees of that API.
