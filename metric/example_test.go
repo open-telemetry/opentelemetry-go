@@ -27,6 +27,7 @@ import (
 )
 
 func ExampleMeter_synchronous() {
+	// Create a histogram using the global MeterProvider.
 	workDuration, err := otel.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
 		instrument.WithUnit("ms"))
