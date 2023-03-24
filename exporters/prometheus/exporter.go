@@ -124,21 +124,27 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	func() {
+		var err error
+		var targetInfo prometheus.Metric
+
 		c.mu.Lock()
-		defer c.mu.Unlock()
+		defer func() {
+			c.mu.Unlock()
+			if err != nil {
+				otel.Handle(err)
+			}
+		}()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+			targetInfo, err = createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
 			if err != nil {
 				// If the target info metric is invalid, disable sending it.
-				otel.Handle(err)
 				c.disableTargetInfo = true
 				return
 			}
 
 			c.targetInfo = targetInfo
 		}
-
 	}()
 
 	if !c.disableTargetInfo {
