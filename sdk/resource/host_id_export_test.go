@@ -12,9 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package resource_test
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "1.15.0-rc.2"
+import (
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+func mockHostIDProvider() {
+	resource.SetHostIDProvider(
+		func() (string, error) { return "f2c668b579780554f70f72a063dc0864", nil },
+	)
+}
+
+func mockHostIDProviderWithError() {
+	resource.SetHostIDProvider(
+		func() (string, error) { return "", assert.AnError },
+	)
+}
+
+func restoreHostIDProvider() {
+	resource.SetDefaultHostIDProvider()
 }

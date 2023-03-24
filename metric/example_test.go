@@ -20,17 +20,15 @@ import (
 	"runtime"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
-//nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_synchronous() {
-	// In a library or program this would be provided by otel.GetMeterProvider().
-	meterProvider := metric.NewNoopMeterProvider()
-
-	workDuration, err := meterProvider.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
+	// Create a histogram using the global MeterProvider.
+	workDuration, err := otel.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
 		instrument.WithUnit("ms"))
 	if err != nil {
@@ -45,11 +43,8 @@ func ExampleMeter_synchronous() {
 	workDuration.Record(ctx, time.Since(startTime).Milliseconds())
 }
 
-//nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_asynchronous_single() {
-	// In a library or program this would be provided by otel.GetMeterProvider().
-	meterProvider := metric.NewNoopMeterProvider()
-	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
+	meter := otel.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
@@ -78,10 +73,8 @@ func ExampleMeter_asynchronous_single() {
 	}
 }
 
-//nolint:govet // Meter doesn't register for go vet
 func ExampleMeter_asynchronous_multiple() {
-	meterProvider := metric.NewNoopMeterProvider()
-	meter := meterProvider.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
+	meter := otel.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
 	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
@@ -104,7 +97,6 @@ func ExampleMeter_asynchronous_multiple() {
 		heapAlloc,
 		gcCount,
 	)
-
 	if err != nil {
 		fmt.Println("Failed to register callback")
 		panic(err)

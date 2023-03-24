@@ -12,9 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+//go:build windows
+// +build windows
 
-// Version is the current release version of OpenTelemetry in use.
-func Version() string {
-	return "1.15.0-rc.2"
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestReader(t *testing.T) {
+	reader := &hostIDReaderWindows{}
+	result, err := reader.read()
+
+	require.NoError(t, err)
+	require.NotEmpty(t, result)
 }

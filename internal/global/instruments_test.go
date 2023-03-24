@@ -36,7 +36,7 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -53,7 +53,7 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeter())
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -145,7 +145,6 @@ type testCountingFloatInstrument struct {
 	count int
 
 	instrument.Float64Observable
-	instrument.Synchronous
 }
 
 func (i *testCountingFloatInstrument) observe() {
@@ -162,7 +161,6 @@ type testCountingIntInstrument struct {
 	count int
 
 	instrument.Int64Observable
-	instrument.Synchronous
 }
 
 func (i *testCountingIntInstrument) observe() {
