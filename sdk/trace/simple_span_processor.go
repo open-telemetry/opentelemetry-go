@@ -44,7 +44,7 @@ func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	ssp := &simpleSpanProcessor{
 		exporter: exporter,
 	}
-	global.Info("SimpleSpanProcessor is not recommended for production use, consider using BatchSpanProcessor instead.")
+	global.Warn("SimpleSpanProcessor is not recommended for production use, consider using BatchSpanProcessor instead.")
 
 	return ssp
 }
