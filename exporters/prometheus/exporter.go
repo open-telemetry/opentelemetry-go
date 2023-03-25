@@ -403,10 +403,10 @@ func (c *collector) metricTypeAndName(m metricdata.Metrics) (*dto.MetricType, st
 }
 
 func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, error) {
-	c.mu.RLock()
-	scopeInfo, ok := c.scopeInfos[scope]
-	c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
+	scopeInfo, ok := c.scopeInfos[scope]
 	if ok {
 		return scopeInfo, nil
 	}
@@ -416,9 +416,7 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
 	}
 
-	c.mu.Lock()
 	c.scopeInfos[scope] = scopeInfo
-	c.mu.Unlock()
 
 	return scopeInfo, nil
 }
