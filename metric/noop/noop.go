@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package noop provides an implementation of the OpenTelemetry API that
+// Package noop provides an implementation of the OpenTelemetry metric API that
 // produces no telemetry and minimizes used computation resources.
 //
-// The API implementation can be used to effectively disable OpenTelemetry. It
-// can also be used as the embedded structs of other OpenTelemetry
-// implementations. These alternate implementation that embed this noop
-// implementation will default to no-action instead of panicking when methods
-// are added to the OpenTelemetry API interfaces.
+// Using this package to implement the OpenTelemetry metric API will
+// effectively disable OpenTelemetry.
+//
+// This implementation can be embedded in other implementations of the
+// OpenTelemetry metric API. Doing so will mean the implementation defaults to
+// no operation for methods it does not implement.
 package noop // import "go.opentelemetry.io/otel/metric/noop"
 
 import (
