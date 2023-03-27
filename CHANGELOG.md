@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `go.opentelemetry.io/otel/metric/embedded` package. (#3916)
+
+### Changed
+
+- Update all exported interfaces from `go.opentelemetry.io/otel/metric` to embed their corresponding interface from `go.opentelemetry.io/otel/metric/embedded`.
+  This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
+
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
 This is a release candidate for the v1.15.0/v0.38.0 release.
