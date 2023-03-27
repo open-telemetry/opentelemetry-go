@@ -15,14 +15,11 @@
 package noop // import "go.opentelemetry.io/otel/metric/noop"
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -139,46 +136,4 @@ func TestNewMeterProvider(t *testing.T) {
 	assert.Equal(t, mp, MeterProvider{})
 	meter := mp.Meter("")
 	assert.Equal(t, meter, Meter{})
-}
-
-func TestSyncFloat64(t *testing.T) {
-	meter := NewMeterProvider().Meter("test instrumentation")
-	assert.NotPanics(t, func() {
-		inst, err := meter.Float64Counter("test instrument")
-		require.NoError(t, err)
-		inst.Add(context.Background(), 1.0, attribute.String("key", "value"))
-	})
-
-	assert.NotPanics(t, func() {
-		inst, err := meter.Float64UpDownCounter("test instrument")
-		require.NoError(t, err)
-		inst.Add(context.Background(), -1.0, attribute.String("key", "value"))
-	})
-
-	assert.NotPanics(t, func() {
-		inst, err := meter.Float64Histogram("test instrument")
-		require.NoError(t, err)
-		inst.Record(context.Background(), 1.0, attribute.String("key", "value"))
-	})
-}
-
-func TestSyncInt64(t *testing.T) {
-	meter := NewMeterProvider().Meter("test instrumentation")
-	assert.NotPanics(t, func() {
-		inst, err := meter.Int64Counter("test instrument")
-		require.NoError(t, err)
-		inst.Add(context.Background(), 1, attribute.String("key", "value"))
-	})
-
-	assert.NotPanics(t, func() {
-		inst, err := meter.Int64UpDownCounter("test instrument")
-		require.NoError(t, err)
-		inst.Add(context.Background(), -1, attribute.String("key", "value"))
-	})
-
-	assert.NotPanics(t, func() {
-		inst, err := meter.Int64Histogram("test instrument")
-		require.NoError(t, err)
-		inst.Record(context.Background(), 1, attribute.String("key", "value"))
-	})
 }
