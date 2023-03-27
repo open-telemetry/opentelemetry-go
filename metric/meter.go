@@ -25,7 +25,9 @@ import (
 // MeterProvider provides access to named Meter instances, for instrumenting
 // an application or package.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type MeterProvider interface {
 	embedded.MeterProvider
 
@@ -43,7 +45,9 @@ type MeterProvider interface {
 
 // Meter provides access to instrument instances for recording metrics.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Meter interface {
 	embedded.Meter
 
@@ -130,6 +134,10 @@ type Meter interface {
 type Callback func(context.Context, Observer) error
 
 // Observer records measurements for multiple instruments in a Callback.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Observer interface {
 	embedded.Observer
 
@@ -141,6 +149,10 @@ type Observer interface {
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Registration interface {
 	embedded.Registration
 
