@@ -195,6 +195,7 @@ type Float64ObservableGaugeOption interface {
 type Float64Observer interface {
 	embedded.Float64Observer
 
+	// Observe records the float64 value with attributes.
 	Observe(value float64, attributes ...attribute.KeyValue)
 }
 

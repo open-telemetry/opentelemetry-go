@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
@@ -38,7 +37,7 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 		}
 	}()
 
-	setDelegate(noop.NewMeterProvider().Meter(""))
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -55,7 +54,7 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 		}
 	}()
 
-	setDelegate(noop.NewMeterProvider().Meter(""))
+	setDelegate(metric.NewNoopMeterProvider().Meter(""))
 	close(finish)
 }
 

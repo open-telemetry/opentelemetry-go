@@ -75,7 +75,7 @@ func (cfg tracerProviderConfig) MarshalLog() interface{} {
 type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer
-	spanProcessors atomic.Value
+	spanProcessors atomic.Pointer[spanProcessorStates]
 	isShutdown     bool
 
 	// These fields are not protected by the lock mu. They are assumed to be
@@ -123,7 +123,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
 	}
-	tp.spanProcessors.Store(spss)
+	tp.spanProcessors.Store(&spss)
 
 	return tp
 }
@@ -168,9 +168,9 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 		return
 	}
 	newSPS := spanProcessorStates{}
-	newSPS = append(newSPS, p.spanProcessors.Load().(spanProcessorStates)...)
+	newSPS = append(newSPS, *(p.spanProcessors.Load())...)
 	newSPS = append(newSPS, newSpanProcessorState(sp))
-	p.spanProcessors.Store(newSPS)
+	p.spanProcessors.Store(&newSPS)
 }
 
 // UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors.
@@ -180,7 +180,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown {
 		return
 	}
-	old := p.spanProcessors.Load().(spanProcessorStates)
+	old := *(p.spanProcessors.Load())
 	if len(old) == 0 {
 		return
 	}
@@ -209,13 +209,13 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	spss[len(spss)-1] = nil
 	spss = spss[:len(spss)-1]
 
-	p.spanProcessors.Store(spss)
+	p.spanProcessors.Store(&spss)
 }
 
 // ForceFlush immediately exports all spans that have not yet been exported for
 // all the registered span processors.
 func (p *TracerProvider) ForceFlush(ctx context.Context) error {
-	spss := p.spanProcessors.Load().(spanProcessorStates)
+	spss := *(p.spanProcessors.Load())
 	if len(spss) == 0 {
 		return nil
 	}
@@ -237,14 +237,13 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 // Shutdown shuts down TracerProvider. All registered span processors are shut down
 // in the order they were registered and any held computational resources are released.
 func (p *TracerProvider) Shutdown(ctx context.Context) error {
-	spss := p.spanProcessors.Load().(spanProcessorStates)
-	if len(spss) == 0 {
-		return nil
-	}
-
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if p.isShutdown {
+		return nil
+	}
 	p.isShutdown = true
+	spss := *(p.spanProcessors.Load())
 
 	var retErr error
 	for _, sps := range spss {
@@ -267,7 +266,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 			}
 		}
 	}
-	p.spanProcessors.Store(spanProcessorStates{})
+	p.spanProcessors.Store(&spanProcessorStates{})
 	return retErr
 }
 

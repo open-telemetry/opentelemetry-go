@@ -50,6 +50,7 @@ func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	stp := NewTracerProvider()
 	assert.NoError(t, stp.ForceFlush(context.Background()))
 	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.True(t, stp.isShutdown)
 }
 
 func TestShutdownTraceProvider(t *testing.T) {
@@ -60,6 +61,7 @@ func TestShutdownTraceProvider(t *testing.T) {
 	assert.NoError(t, stp.ForceFlush(context.Background()))
 	assert.True(t, sp.flushed, "error ForceFlush basicSpanProcessor")
 	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.True(t, stp.isShutdown)
 	assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
 }
 
@@ -74,6 +76,7 @@ func TestFailedProcessorShutdown(t *testing.T) {
 	err := stp.Shutdown(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, err, spErr)
+	assert.True(t, stp.isShutdown)
 }
 
 func TestFailedProcessorsShutdown(t *testing.T) {
@@ -94,6 +97,7 @@ func TestFailedProcessorsShutdown(t *testing.T) {
 	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
 	assert.True(t, sp1.closed)
 	assert.True(t, sp2.closed)
+	assert.True(t, stp.isShutdown)
 }
 
 func TestFailedProcessorShutdownInUnregister(t *testing.T) {
@@ -110,6 +114,7 @@ func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 
 	err := stp.Shutdown(context.Background())
 	assert.NoError(t, err)
+	assert.True(t, stp.isShutdown)
 }
 
 func TestSchemaURL(t *testing.T) {
@@ -120,6 +125,32 @@ func TestSchemaURL(t *testing.T) {
 	// Verify that the SchemaURL of the constructed Tracer is correctly populated.
 	tracerStruct := tracerIface.(*tracer)
 	assert.EqualValues(t, schemaURL, tracerStruct.instrumentationScope.SchemaURL)
+}
+
+func TestRegisterAfterShutdownWithoutProcessors(t *testing.T) {
+	stp := NewTracerProvider()
+	err := stp.Shutdown(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, stp.isShutdown)
+
+	sp := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp) // no-op
+	assert.Empty(t, stp.spanProcessors.Load())
+}
+
+func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+
+	stp.RegisterSpanProcessor(sp1)
+	err := stp.Shutdown(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, stp.isShutdown)
+	assert.Empty(t, stp.spanProcessors.Load())
+
+	sp2 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp2) // no-op
+	assert.Empty(t, stp.spanProcessors.Load())
 }
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {

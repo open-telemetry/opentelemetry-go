@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
+
+This is a release candidate for the v1.15.0/v0.38.0 release.
+That release will include the `v1` release of the OpenTelemetry Go metric API and will provide stability guarantees of that API.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - The `WithHostID` option to `go.opentelemetry.io/otel/sdk/resource`. (#3812)
@@ -16,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Both the `DataPoint` and `HistogramDataPoint` types from that package have a new field of `Exemplars` containing the sampled exemplars for their timeseries. (#3849)
 - Configuration for each metric instrument in `go.opentelemetry.io/otel/sdk/metric/instrument`. (#3895)
 - The internal logging introduces a warning level verbosity equal to `V(1)`. (#3900)
+- Added a log message warning about usage of `SimpleSpanProcessor` in production environments. (#3854)
 
 ### Changed
 
@@ -26,12 +33,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Both the `Histogram` and `HistogramDataPoint` are redefined with a generic argument of `[N int64 | float64]` in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#3849)
 - The metric `Export` interface from `go.opentelemetry.io/otel/sdk/metric` accepts a `*ResourceMetrics` instead of `ResourceMetrics`. (#3853)
 - Rename `Asynchronous` to `Observable` in `go.opentelemetry.io/otel/metric/instrument`. (#3892)
-- Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3893)
-  - `NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
-  - `NewNoopMeter` is replaced with `noop.NewMeterProvider().Meter("")`
 - Rename `Int64ObserverOption` to `Int64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
 - Rename `Float64ObserverOption` to `Float64ObservableOption` in `go.opentelemetry.io/otel/metric/instrument`. (#3895)
 - The internal logging changes the verbosity level of info to `V(4)`, the verbosity level of debug to `V(8)`. (#3900)
+
+### Fixed
+
+- `TracerProvider` consistently doesn't allow to register a `SpanProcessor` after shutdown. (#3845)
 
 ### Removed
 
@@ -41,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use the added `float64` instrument configuration instead. (#3895)
 - The `Int64ObserverConfig` and `NewInt64ObserverConfig` in `go.opentelemetry.io/otel/sdk/metric/instrument`.
   Use the added `int64` instrument configuration instead. (#3895)
+- The `NewNoopMeter` function in `go.opentelemetry.io/otel/metric`, use `NewMeterProvider().Meter("")` instead. (#3893)
 
 ## [1.15.0-rc.1/0.38.0-rc.1] 2023-03-01
 
@@ -2370,7 +2379,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.15.0-rc.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.15.0-rc.2...HEAD
+[1.15.0-rc.2/0.38.0-rc.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0-rc.2
 [1.15.0-rc.1/0.38.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0-rc.1
 [1.14.0/0.37.0/0.0.4]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.14.0
 [1.13.0/0.36.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.13.0

@@ -194,6 +194,7 @@ type Int64ObservableGaugeOption interface {
 type Int64Observer interface {
 	embedded.Int64Observer
 
+	// Observe records the int64 value with attributes.
 	Observe(value int64, attributes ...attribute.KeyValue)
 }
 
