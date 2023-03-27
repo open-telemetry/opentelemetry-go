@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
-  - `NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
+  - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
