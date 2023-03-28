@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource/internal/schema"
 )
 
 // Resource describes an entity about which identifying information
@@ -127,6 +128,62 @@ func (r *Resource) SchemaURL() string {
 	return r.schemaURL
 }
 
+// WithSchemaURL returns a copy of r with the schema URL set to url and all
+// attributes transformed based on the associated schema. If the schema
+// transformation fails, or url is empty, an error is returned.
+func (r *Resource) WithSchemaURL(ctx context.Context, url string) (*Resource, error) {
+	return r.withSchemaURL(ctx, schema.NewRegistry(nil), url)
+}
+
+func (r *Resource) withSchemaURL(ctx context.Context, reg *schema.Registry, url string) (*Resource, error) {
+	if url == "" {
+		return nil, errors.New(`invalid schema url: ""`)
+	}
+
+	if r == nil || r.attrs.Len() == 0 {
+		return NewWithAttributes(url), nil
+	}
+
+	if r.schemaURL == url {
+		// Resources are immutable, just return the ptr to the same value.
+		return r, nil
+	}
+
+	comp, err := schema.CompareVersions(r.schemaURL, url)
+	if err != nil {
+		return nil, err
+	}
+	switch comp {
+	case schema.EqualTo:
+		// Resources are immutable, just return the ptr to the same value.
+		return r, nil
+	case schema.LessThan:
+		s, err := reg.Get(ctx, url)
+		if err != nil {
+			return nil, err
+		}
+		attrs := r.Attributes()
+		err = schema.Upgrade(s, attrs)
+		if err != nil {
+			return nil, err
+		}
+		return NewWithAttributes(url, attrs...), nil
+	case schema.GreaterThan:
+		s, err := reg.Get(ctx, r.schemaURL)
+		if err != nil {
+			return nil, err
+		}
+		attrs := r.Attributes()
+		err = schema.Downgrade(s, url, attrs)
+		if err != nil {
+			return nil, err
+		}
+		return NewWithAttributes(url, attrs...), nil
+	default:
+		panic("unknown schema URL comparison")
+	}
+}
+
 // Iter returns an iterator of the Resource attributes.
 // This is ideal to use if you do not want a copy of the attributes.
 func (r *Resource) Iter() attribute.Iterator {
@@ -189,6 +246,31 @@ func Merge(a, b *Resource) (*Resource, error) {
 		combine = append(combine, mi.Attribute())
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
+	return merged, nil
+}
+
+// MergeAt creates a new resource by combining resources at the target
+// schemaURL version.
+//
+// If there are common keys between resources the latter resource will
+// overwrite the former.
+//
+// Any of the resources not already at schemaURL version will be appropriately
+// upgraded or downgraded to match the version. An error is returned if this is
+// not possible.
+func MergeAt(ctx context.Context, schemaURL string, resources ...*Resource) (*Resource, error) {
+	reg := schema.NewRegistry(nil)
+	merged := NewWithAttributes(schemaURL)
+	for _, r := range resources {
+		versioned, err := r.withSchemaURL(ctx, reg, schemaURL)
+		if err != nil {
+			return nil, err
+		}
+		merged, err = Merge(merged, versioned)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return merged, nil
 }
 

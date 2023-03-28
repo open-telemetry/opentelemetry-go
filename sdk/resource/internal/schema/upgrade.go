@@ -25,9 +25,9 @@ import (
 	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
-// Upgrade upgrades attrs in place using schema.
+// Upgrade upgrades attrs in place with schema.
 func Upgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
-	vers, err := versions(schema, false)
+	vers, err := versions(schema, nil, false)
 	if err != nil {
 		return fmt.Errorf("upgrade error: %w", err)
 	}
@@ -52,9 +52,14 @@ func Upgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
 	return nil
 }
 
-// Downgrade downgrade attrs in place using schema.
-func Downgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
-	vers, err := versions(schema, true)
+// Downgrade downgrade attrs to the schema version of url in place with schema.
+func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error {
+	min, err := version(url)
+	if err != nil {
+		return fmt.Errorf("downgrade error: %w", err)
+	}
+
+	vers, err := versions(schema, min, true)
 	if err != nil {
 		return fmt.Errorf("downgrade error: %w", err)
 	}
@@ -79,7 +84,8 @@ func Downgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
 	return nil
 }
 
-func versions(schema *ast.Schema, reverse bool) ([]types.TelemetryVersion, error) {
+// versions returns the sorted versions contained in schema.
+func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.TelemetryVersion, error) {
 	// The transformations specified in each version are applied one by one.
 	// Order the versions to ensure correct application.
 	versions := make([]*semver.Version, 0, len(schema.Versions))
@@ -99,6 +105,9 @@ func versions(schema *ast.Schema, reverse bool) ([]types.TelemetryVersion, error
 
 	out := make([]types.TelemetryVersion, len(versions))
 	for i := range versions {
+		if min != nil && min.GreaterThan(versions[i]) {
+			continue
+		}
 		out[i] = types.TelemetryVersion(versions[i].String())
 	}
 	return out, nil
