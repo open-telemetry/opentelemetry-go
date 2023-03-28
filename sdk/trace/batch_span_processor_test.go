@@ -19,18 +19,23 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"regexp"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
-
+	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/internal/env"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -313,19 +318,8 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 	}
 }
 
-type stuckExporter struct {
-	testBatchExporter
-}
-
-// ExportSpans waits for ctx to expire and returns that error.
-func (e *stuckExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
-	<-ctx.Done()
-	e.err = ctx.Err()
-	return ctx.Err()
-}
-
 func TestBatchSpanProcessorExportTimeout(t *testing.T) {
-	exp := new(stuckExporter)
+	exp := newBlockingExporter()
 	bsp := sdktrace.NewBatchSpanProcessor(
 		exp,
 		// Set a non-zero export timeout so a deadline is set.
@@ -472,6 +466,99 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 		t.Errorf("Batches %v\n", te.sizes)
 	}
 	assert.NoError(t, err)
+}
+
+// blockingExporter will block on ExportSpans until one of the following happens:
+// a) The context is Canceled.
+// b) unblock() is called.
+// c) The exporter is ShutDown().
+type blockingExporter struct {
+	testBatchExporter
+	block chan struct{}
+	close sync.Once
+}
+
+func newBlockingExporter() *blockingExporter {
+	return &blockingExporter{block: make(chan struct{})}
+}
+
+func (e *blockingExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
+	select {
+	case <-e.block:
+	case <-ctx.Done():
+		e.err = ctx.Err()
+		return ctx.Err()
+	}
+	return nil
+}
+func (e *blockingExporter) Shutdown(_ context.Context) error {
+	e.close.Do(func() {
+		close(e.block)
+	})
+	return nil
+}
+func (e *blockingExporter) unblock() {
+	select {
+	case e.block <- struct{}{}:
+	default:
+	}
+}
+
+type matchingLogger struct {
+	// This can be an atomic.Bool when we drop 1.18 support
+	_found atomic.Value
+	regex  *regexp.Regexp
+}
+
+func (l *matchingLogger) Logger() logr.Logger {
+	l._found.Store(false)
+	return funcr.New(func(prefix, args string) {
+		if l.regex.MatchString(args) {
+			l._found.Store(true)
+		}
+	}, funcr.Options{Verbosity: 10})
+}
+
+func (l *matchingLogger) found() bool {
+	return l._found.Load().(bool)
+}
+
+func TestBatchSpanProcessorLogsWarningOnNewDropSpans(t *testing.T) {
+	tLog := &matchingLogger{regex: regexp.MustCompile(`"msg"="dropped spans" "total"=\d+ "this_batch"=\d+`)}
+	otel.SetLogger(tLog.Logger())
+
+	te := newBlockingExporter()
+	tp := basicTracerProvider(t)
+	option := testOption{
+		name: "default BatchSpanProcessorOptions",
+		o: []sdktrace.BatchSpanProcessorOption{
+			sdktrace.WithMaxQueueSize(0),
+			sdktrace.WithMaxExportBatchSize(1),
+		},
+		genNumSpans: 100,
+	}
+	ssp := sdktrace.NewBatchSpanProcessor(te, option.o...)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+
+	assert.Eventually(t, func() bool {
+		generateSpan(t, tr, option)
+		te.unblock()
+
+		return tLog.found()
+	}, time.Second, time.Millisecond)
+
+	// We shut down the exporter to clear any blocked ExportSpans().
+	// If we don't shut down the exporter first the SpanProcessor will block waiting for Exports to complete.
+	_ = te.Shutdown(context.Background())
+	_ = ssp.Shutdown(context.Background())
+
+	// Reset the global logger so other tests are not impacted
+	logger := stdr.New(log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile))
+	otel.SetLogger(logger)
 }
 
 func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {

@@ -309,6 +309,7 @@ The next release will require at least [Go 1.19].
 
 ### Added
 
+- The `BatchSpanProcessor` from `go.opentelemetry.io/otel/sdk/trace` logs the spans dropped in a batch every export with verbosity `1`. (#3289)
 - The `WithView` `Option` is added to the `go.opentelemetry.io/otel/sdk/metric` package.
    This option is used to configure the view(s) a `MeterProvider` will use for all `Reader`s that are registered with it. (#3387)
 - Add Instrumentation Scope and Version as info metric and label in Prometheus exporter.

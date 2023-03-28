@@ -75,8 +75,9 @@ type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
-	queue   chan ReadOnlySpan
-	dropped uint32
+	queue           chan ReadOnlySpan
+	dropped         uint32
+	reportedDropped uint32
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -265,7 +266,15 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 	}
 
 	if l := len(bsp.batch); l > 0 {
-		global.Debug("exporting spans", "count", len(bsp.batch), "total_dropped", atomic.LoadUint32(&bsp.dropped))
+		global.Debug("exporting spans", "count", len(bsp.batch))
+
+		dropped := atomic.LoadUint32(&bsp.dropped)
+		reportedDropped := atomic.SwapUint32(&bsp.reportedDropped, dropped)
+		if dropped > reportedDropped {
+			droppedThisBatch := dropped - reportedDropped
+			global.Info("dropped spans", "total", dropped, "this_batch", droppedThisBatch)
+		}
+
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 
 		// A new batch is always created after exporting, even if the batch failed to be exported.
