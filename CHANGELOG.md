@@ -13,6 +13,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
 
+### Fixed
+
+- `TracerProvider` allows calling `Tracer()` while it's shutting down.
+  It used to deadlock. (#3924)
+
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
 This is a release candidate for the v1.15.0/v0.38.0 release.
