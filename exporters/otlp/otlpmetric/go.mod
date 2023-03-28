@@ -42,3 +42,5 @@ replace go.opentelemetry.io/otel/sdk => ../../../sdk
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../internal/retry
 
 replace go.opentelemetry.io/otel/trace => ../../../trace
+
+replace go.opentelemetry.io/otel/schema => ../../../schema
