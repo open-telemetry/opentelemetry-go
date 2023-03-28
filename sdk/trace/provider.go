@@ -120,7 +120,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	global.Info("TracerProvider created", "config", o)
 
-	spss := spanProcessorStates{}
+	spss := make(spanProcessorStates, 0, len(o.processors))
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
 	}
@@ -192,8 +192,10 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown.Load() {
 		return
 	}
-	newSPS := spanProcessorStates{}
-	newSPS = append(newSPS, *(p.spanProcessors.Load())...)
+
+	current := *(p.spanProcessors.Load())
+	newSPS := make(spanProcessorStates, 0, len(current)+1)
+	newSPS = append(newSPS, current...)
 	newSPS = append(newSPS, newSpanProcessorState(sp))
 	p.spanProcessors.Store(&newSPS)
 }
@@ -214,8 +216,8 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	if len(old) == 0 {
 		return
 	}
-	spss := spanProcessorStates{}
-	spss = append(spss, old...)
+	spss := make(spanProcessorStates, len(old))
+	copy(spss, old)
 
 	// stop the span processor if it is started and remove it from the list
 	var stopOnce *spanProcessorState
