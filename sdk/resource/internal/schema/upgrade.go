@@ -54,9 +54,13 @@ func Upgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
 
 // Downgrade downgrade attrs to the schema version of url in place with schema.
 func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error {
-	min, err := version(url)
-	if err != nil {
-		return fmt.Errorf("downgrade error: %w", err)
+	var min *semver.Version
+	if url != "" {
+		var err error
+		min, err = version(url)
+		if err != nil {
+			return fmt.Errorf("downgrade error: %w", err)
+		}
 	}
 
 	vers, err := versions(schema, min, true)
@@ -71,12 +75,16 @@ func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error
 			return fmt.Errorf("downgrade error: version parsing: %s", v)
 		}
 		f := a.UnrenameFunc()
-		for _, c := range vDef.Resources.Changes {
+		changes := vDef.Resources.Changes
+		for i := len(changes) - 1; i >= 0; i-- {
+			c := changes[i]
 			forEach(c.RenameAttributes.AttributeMap, f)
 		}
 		// Downgraing means all transformations in section "all" always are
 		// applied after the resource section is resolved.
-		for _, c := range vDef.All.Changes {
+		changes = vDef.All.Changes
+		for i := len(changes) - 1; i >= 0; i-- {
+			c := changes[i]
 			forEach(c.RenameAttributes.AttributeMap, f)
 		}
 	}

@@ -47,7 +47,7 @@ var schema = &ast.Schema{
 				Changes: []ast10.SpansChange{
 					{
 						RenameAttributes: &ast10.AttributeMapForSpans{
-							AttributeMap: ast10.AttributeMap{"foo": "v1.2.0"},
+							AttributeMap: ast10.AttributeMap{"qux": "v1.2.0"},
 						},
 					},
 				},
@@ -68,12 +68,12 @@ var schema = &ast.Schema{
 					// These are expected to be applied in order.
 					{
 						RenameAttributes: &ast10.RenameAttributes{
-							AttributeMap: ast10.AttributeMap{"bar": "foo"},
+							AttributeMap: ast10.AttributeMap{"bar": "baz"},
 						},
 					},
 					{
 						RenameAttributes: &ast10.RenameAttributes{
-							AttributeMap: ast10.AttributeMap{"foo": "baz"},
+							AttributeMap: ast10.AttributeMap{"baz": "qux"},
 						},
 					},
 				},
@@ -93,7 +93,7 @@ func v0Attr() []attribute.KeyValue {
 
 func v3Attr() []attribute.KeyValue {
 	return []attribute.KeyValue{
-		attribute.Bool("baz", true),
+		attribute.Bool("qux", true),
 		attribute.Bool("untouched", true),
 	}
 }
@@ -107,7 +107,7 @@ func TestUpgrade(t *testing.T) {
 
 func TestDowngrade(t *testing.T) {
 	attr := v3Attr()
-	err := Downgrade(schema, attr)
+	err := Downgrade(schema, "https://opentelemetry.io/schemas/0.9.0", attr)
 	require.NoError(t, err)
 
 	assert.Equal(t, v0Attr(), attr)
