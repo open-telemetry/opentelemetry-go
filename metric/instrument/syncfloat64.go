@@ -25,7 +25,7 @@ import (
 // Warning: methods may be added to this interface in minor releases.
 type Float64Counter interface {
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Add(ctx context.Context, incr float64, attrs attribute.Set)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -67,7 +67,7 @@ type Float64CounterOption interface {
 // Warning: methods may be added to this interface in minor releases.
 type Float64UpDownCounter interface {
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Add(ctx context.Context, incr float64, attrs attribute.Set)
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -110,7 +110,7 @@ type Float64UpDownCounterOption interface {
 // Warning: methods may be added to this interface in minor releases.
 type Float64Histogram interface {
 	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Record(ctx context.Context, incr float64, attrs attribute.Set)
 }
 
 // Float64HistogramConfig contains options for synchronous counter instruments

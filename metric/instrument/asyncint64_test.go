@@ -47,7 +47,7 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 	}
 
 	cback := func(ctx context.Context, obsrv Int64Observer) error {
-		obsrv.Observe(token)
+		obsrv.Observe(token, *attribute.EmptySet())
 		return nil
 	}
 
@@ -87,6 +87,6 @@ type int64Observer struct {
 	got int64
 }
 
-func (o *int64Observer) Observe(v int64, _ ...attribute.KeyValue) {
+func (o *int64Observer) Observe(v int64, _ attribute.Set) {
 	o.got = v
 }
