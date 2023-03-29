@@ -34,9 +34,14 @@ instrument and its intended use.
 
 This package does not conform to the standard Go versioning policy, all of its
 interfaces may have methods added to them without a package major version bump.
-So an implementation author is not surprised by this fact, the API is designed
-to require a default behavior be defined for unimplemented interface methods.
-There are three behavior choices:
+This non-standard API evolution could surprise an uninformed implementation
+author. They could unknowingly build their implementation in a way that would
+result in a runtime panic for their users that update to the new API.
+
+The API is designed to help inform an instrumentation author about this
+non-standard API evolution. It requires them to choose a default behavior for
+unimplemented interface methods. There are three behavior choices they can
+make:
 
   - Compilation failure
   - Panic
