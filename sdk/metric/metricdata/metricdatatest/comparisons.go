@@ -328,14 +328,14 @@ func equalSlices[T comparable](a, b []T) bool {
 	return true
 }
 
-func equalExtrema(a, b metricdata.Extrema, _ config) (reasons []string) {
+func equalExtrema[N int64 | float64](a, b metricdata.Extrema[N], _ config) (reasons []string) {
 	if !eqExtrema(a, b) {
 		reasons = append(reasons, notEqualStr("Extrema", a, b))
 	}
 	return reasons
 }
 
-func eqExtrema(a, b metricdata.Extrema) bool {
+func eqExtrema[N int64 | float64](a, b metricdata.Extrema[N]) bool {
 	aV, aOk := a.Value()
 	bV, bOk := b.Value()
 

@@ -193,7 +193,7 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		m, err := prometheus.NewConstHistogram(desc, dp.Count, dp.Sum, buckets, values...)
+		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
 			continue
