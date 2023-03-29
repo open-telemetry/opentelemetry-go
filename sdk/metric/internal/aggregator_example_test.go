@@ -89,8 +89,8 @@ type inst struct {
 	aggregateFunc func(int64, attribute.Set)
 }
 
-func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}
-func (inst) Record(context.Context, int64, ...attribute.KeyValue) {}
+func (inst) Add(context.Context, int64, attribute.Set)    {}
+func (inst) Record(context.Context, int64, attribute.Set) {}
 
 func Example() {
 	m := meter{}

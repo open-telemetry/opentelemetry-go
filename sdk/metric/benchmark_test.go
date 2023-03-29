@@ -38,23 +38,28 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1)
+		cntr.Add(ctx, 1, *attribute.EmptySet())
 	}
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
+	s := attribute.NewSet(attribute.String("K", "V"))
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.String("K", "V"))
+		cntr.Add(ctx, 1, s)
 	}
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
+	s := attribute.NewSet(
+		attribute.String("", "V"),
+		attribute.String("K", "V"),
+	)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.String("", "V"), attribute.String("K", "V"))
+		cntr.Add(ctx, 1, s)
 	}
 }
 
@@ -62,7 +67,8 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("K", i))
+		s := attribute.NewSet(attribute.Int("K", i))
+		cntr.Add(ctx, 1, s)
 	}
 }
 
@@ -70,7 +76,11 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("", i), attribute.Int("K", i))
+		s := attribute.NewSet(
+			attribute.Int("", i),
+			attribute.Int("K", i),
+		)
+		cntr.Add(ctx, 1, s)
 	}
 }
 
@@ -83,15 +93,20 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	))
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("L", i), attribute.Int("K", i))
+		s := attribute.NewSet(
+			attribute.Int("L", i),
+			attribute.Int("K", i),
+		)
+		cntr.Add(ctx, 1, s)
 	}
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
+	s := attribute.NewSet(attribute.Int("K", 1))
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("K", 1))
+		cntr.Add(ctx, 1, s)
 
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -102,7 +117,8 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
-			cntr.Add(ctx, 1, attribute.Int("K", j))
+			s := attribute.NewSet(attribute.Int("K", j))
+			cntr.Add(ctx, 1, s)
 		}
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -126,7 +142,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 		name := fmt.Sprintf("fake data %d", i)
 		h, _ := mtr.Int64Histogram(name)
 
-		h.Record(ctx, 1)
+		h.Record(ctx, 1, *attribute.EmptySet())
 	}
 
 	// Store bechmark results in a closure to prevent the compiler from
