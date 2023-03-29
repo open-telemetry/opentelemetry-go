@@ -22,12 +22,18 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// Comparison is the result of comparing two things.
 type Comparison uint8
 
 const (
+	// invalidComparison is an invalid comparison, it should not be used.
 	invalidComparison Comparison = iota
+
+	// EqualTo is used to indicate two things are equal.
 	EqualTo
+	// GreaterThan is used to indicate one thing is greater than another.
 	GreaterThan
+	// LessThan is used to indicate one thing is less than another.
 	LessThan
 )
 
