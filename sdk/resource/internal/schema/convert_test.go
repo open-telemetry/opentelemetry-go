@@ -114,3 +114,12 @@ func TestDowngrade(t *testing.T) {
 
 	assert.Equal(t, v0Attr(), attr)
 }
+
+func TestInvalidTelemetryVersion(t *testing.T) {
+	s := &ast.Schema{
+		Versions: map[types.TelemetryVersion]ast.VersionDef{"invalid": {}},
+	}
+	err := Upgrade(s, nil)
+	var target *errTelemetryVer
+	assert.ErrorAs(t, err, &target)
+}

@@ -92,6 +92,15 @@ func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error
 	return nil
 }
 
+type errTelemetryVer struct {
+	ver types.TelemetryVersion
+	err error
+}
+
+func (e *errTelemetryVer) Error() string {
+	return fmt.Sprintf("telemetry version %q: %s", e.ver, e.err)
+}
+
 // versions returns the sorted versions contained in schema.
 func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.TelemetryVersion, error) {
 	// The transformations specified in each version are applied one by one.
@@ -100,7 +109,7 @@ func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.Te
 	for telV := range schema.Versions {
 		v, err := semver.NewVersion(string(telV))
 		if err != nil {
-			return nil, fmt.Errorf("telemetry version %q: %w", telV, err)
+			return nil, &errTelemetryVer{ver: telV, err: err}
 		}
 		versions = append(versions, v)
 	}
