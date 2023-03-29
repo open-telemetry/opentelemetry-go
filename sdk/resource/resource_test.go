@@ -27,9 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
@@ -227,7 +227,7 @@ func TestDefault(t *testing.T) {
 		"default service.name should include executable name")
 
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
-	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(otel.Version()))
+	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
 }
 
@@ -370,7 +370,7 @@ func TestNew(t *testing.T) {
 			resourceValues: map[string]string{
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.language": "go",
-				"telemetry.sdk.version":  otel.Version(),
+				"telemetry.sdk.version":  sdk.Version(),
 			},
 			schemaURL: semconv.SchemaURL,
 		},
