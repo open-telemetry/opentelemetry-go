@@ -38,9 +38,6 @@ var (
 	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
 	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 
-	monoIncr    = setMap{alice: 1, bob: 10, carol: 2}
-	nonMonoIncr = setMap{alice: 1, bob: -1, carol: 2}
-
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)
 	staticNowFunc = func() time.Time { return staticTime }
@@ -52,8 +49,16 @@ var (
 	}
 )
 
+func monoIncr[N int64 | float64]() setMap[N] {
+	return setMap[N]{alice: 1, bob: 10, carol: 2}
+}
+
+func nonMonoIncr[N int64 | float64]() setMap[N] {
+	return setMap[N]{alice: 1, bob: -1, carol: 2}
+}
+
 // setMap maps attribute sets to a number.
-type setMap map[attribute.Set]int
+type setMap[N int64 | float64] map[attribute.Set]N
 
 // expectFunc is a function that returns an Aggregation of expected values for
 // a cycle that contains m measurements (total across all goroutines). Each
@@ -79,7 +84,7 @@ type aggregatorTester[N int64 | float64] struct {
 	CycleN int
 }
 
-func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap, eFunc expectFunc) func(*testing.T) {
+func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap[N], eFunc expectFunc) func(*testing.T) {
 	m := at.MeasurementN * at.GoroutineN
 	return func(t *testing.T) {
 		t.Run("Comparable", func(t *testing.T) {

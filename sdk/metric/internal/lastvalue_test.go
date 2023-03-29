@@ -37,7 +37,7 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 		CycleN:       defaultCycles,
 	}
 
-	eFunc := func(increments setMap) expectFunc {
+	eFunc := func(increments setMap[N]) expectFunc {
 		data := make([]metricdata.DataPoint[N], 0, len(increments))
 		for a, v := range increments {
 			point := metricdata.DataPoint[N]{Attributes: a, Time: now(), Value: N(v)}
@@ -46,7 +46,7 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 		gauge := metricdata.Gauge[N]{DataPoints: data}
 		return func(int) metricdata.Aggregation { return gauge }
 	}
-	incr := monoIncr
+	incr := monoIncr[N]()
 	return tester.Run(NewLastValue[N](), incr, eFunc(incr))
 }
 
