@@ -72,7 +72,7 @@ func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error
 	for _, v := range vers {
 		vDef, ok := schema.Versions[v]
 		if !ok {
-			return fmt.Errorf("downgrade error: version parsing: %s", v)
+			return fmt.Errorf("downgrade error: version parsing: %q", v)
 		}
 		f := a.UnrenameFunc()
 		changes := vDef.Resources.Changes
@@ -111,12 +111,12 @@ func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.Te
 	}
 	sort.Sort(sIface)
 
-	out := make([]types.TelemetryVersion, len(versions))
-	for i := range versions {
-		if min != nil && min.GreaterThan(versions[i]) {
+	out := make([]types.TelemetryVersion, 0, len(versions))
+	for _, v := range versions {
+		if min != nil && min.GreaterThan(v) {
 			continue
 		}
-		out[i] = types.TelemetryVersion(versions[i].String())
+		out = append(out, types.TelemetryVersion(v.String()))
 	}
 	return out, nil
 }

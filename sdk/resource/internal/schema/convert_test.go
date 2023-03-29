@@ -81,6 +81,8 @@ var schema = &ast.Schema{
 		},
 		// Handle empty
 		"1.0.0": {},
+		"0.9.0": {},
+		"0.8.0": {},
 	},
 }
 
