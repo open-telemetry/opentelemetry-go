@@ -44,7 +44,7 @@ func (c *cache) lookup(key string, f func() (*ast.Schema, error)) (*ast.Schema, 
 	if err != nil {
 		return nil, err
 	}
-	c.data = map[string]*ast.Schema{key: s}
+	c.data[key] = s
 	return s, nil
 }
 
