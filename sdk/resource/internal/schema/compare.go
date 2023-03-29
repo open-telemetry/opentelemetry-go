@@ -31,17 +31,26 @@ const (
 	LessThan
 )
 
+type errInvalidVer struct {
+	ver string
+	err error
+}
+
+func (e *errInvalidVer) Error() string {
+	return fmt.Sprintf("invalid version for %q: %s", e.ver, e.err)
+}
+
 // CompareVersions compares schema URL versions and returns the Comparison of a
 // vs b (i.e. a is [comparison value] b).
 func CompareVersions(a, b string) (Comparison, error) {
 	aVer, err := version(a)
 	if err != nil {
-		return invalidComparison, fmt.Errorf("invalid version for %q: %w", a, err)
+		return invalidComparison, &errInvalidVer{ver: a, err: err}
 	}
 
 	bVer, err := version(b)
 	if err != nil {
-		return invalidComparison, fmt.Errorf("invalid version for %q: %w", b, err)
+		return invalidComparison, &errInvalidVer{ver: b, err: err}
 	}
 
 	switch aVer.Compare(bVer) {
@@ -52,7 +61,8 @@ func CompareVersions(a, b string) (Comparison, error) {
 	case 1:
 		return GreaterThan, nil
 	default:
-		return invalidComparison, fmt.Errorf("unable to compare versions: %s, %s", aVer, bVer)
+		msg := fmt.Sprintf("unknown comparison: %q, %q", aVer, bVer)
+		panic(msg)
 	}
 }
 
