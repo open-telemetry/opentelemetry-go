@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
+
 	"go.opentelemetry.io/otel/attribute"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
@@ -102,7 +103,7 @@ func (e *errTelemetryVer) Error() string {
 }
 
 // versions returns the sorted versions contained in schema.
-func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.TelemetryVersion, error) {
+func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.TelemetryVersion, error) { // nolint:revive  // reverse controls a reversal.
 	// The transformations specified in each version are applied one by one.
 	// Order the versions to ensure correct application.
 	versions := make([]*semver.Version, 0, len(schema.Versions))
