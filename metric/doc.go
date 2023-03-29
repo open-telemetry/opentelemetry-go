@@ -43,7 +43,7 @@ There are three behavior choices:
   - Default to another implementation
 
 All interfaces in this API embed a corresponding interface from
-[go.opentelemetry.io/otel/metric/embedded]. If an author want the default
+[go.opentelemetry.io/otel/metric/embedded]. If an author wants the default
 behavior of their implementations to be a compilation failure, signaling to
 their users they need to update to the latest version of that implementation,
 they need to embed the corresponding interface from

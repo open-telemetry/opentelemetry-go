@@ -32,7 +32,7 @@ package embedded // import "go.opentelemetry.io/otel/metric/embedded"
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [MeterProvider]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#MeterProvider
+// [MeterProvider]: go.opentelemetry.io/otel/metric.MeterProvider
 type MeterProvider interface{ meterProvider() }
 
 // Meter is embedded in the OpenTelemetry metric API [Meter].
