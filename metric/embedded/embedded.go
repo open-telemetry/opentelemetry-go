@@ -42,7 +42,7 @@ type MeterProvider interface{ meterProvider() }
 // latest implementation, when the [Meter] interface is extended (which is
 // something that can happen without a major version bump of the API package).
 //
-// [Meter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter
+// [Meter]: go.opentelemetry.io/otel/metric.Meter
 type Meter interface{ meter() }
 
 // Float64Observer is embedded in the OpenTelemetry metric API
@@ -54,7 +54,7 @@ type Meter interface{ meter() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Float64Observer]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64Observer
+// [Float64Observer]: go.opentelemetry.io/otel/metric.Float64Observer
 type Float64Observer interface{ float64Observer() }
 
 // Int64Observer is embedded in the OpenTelemetry metric API [Int64Observer].
@@ -65,7 +65,7 @@ type Float64Observer interface{ float64Observer() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Int64Observer]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64Observer
+// [Int64Observer]: go.opentelemetry.io/otel/metric.Int64Observer
 type Int64Observer interface{ int64Observer() }
 
 // Observer is embedded in the OpenTelemetry metric API [Observer].
@@ -76,7 +76,7 @@ type Int64Observer interface{ int64Observer() }
 // is something that can happen without a major version bump of the API
 // package).
 //
-// [Observer]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Observer
+// [Observer]: go.opentelemetry.io/otel/metric.Observer
 type Observer interface{ observer() }
 
 // Registration is embedded in the OpenTelemetry metric API [Registration].
@@ -87,7 +87,7 @@ type Observer interface{ observer() }
 // (which is something that can happen without a major version bump of the API
 // package).
 //
-// [Registration]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Registration
+// [Registration]: go.opentelemetry.io/otel/metric.Registration
 type Registration interface{ registration() }
 
 // Float64Counter is embedded in the OpenTelemetry metric API [Float64Counter].
@@ -98,7 +98,7 @@ type Registration interface{ registration() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Float64Counter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64Counter
+// [Float64Counter]: go.opentelemetry.io/otel/metric.Float64Counter
 type Float64Counter interface{ float64Counter() }
 
 // Float64Histogram is embedded in the OpenTelemetry metric API
@@ -110,7 +110,7 @@ type Float64Counter interface{ float64Counter() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Float64Histogram]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64Histogram
+// [Float64Histogram]: go.opentelemetry.io/otel/metric.Float64Histogram
 type Float64Histogram interface{ float64Histogram() }
 
 // Float64ObservableCounter is embedded in the OpenTelemetry metric API
@@ -122,7 +122,7 @@ type Float64Histogram interface{ float64Histogram() }
 // [Float64ObservableCounter] interface is extended (which is something that
 // can happen without a major version bump of the API package).
 //
-// [Float64ObservableCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64ObservableCounter
+// [Float64ObservableCounter]: go.opentelemetry.io/otel/metric.Float64ObservableCounter
 type Float64ObservableCounter interface{ float64ObservableCounter() }
 
 // Float64ObservableGauge is embedded in the OpenTelemetry metric API
@@ -134,7 +134,7 @@ type Float64ObservableCounter interface{ float64ObservableCounter() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Float64ObservableGauge]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64ObservableGauge
+// [Float64ObservableGauge]: go.opentelemetry.io/otel/metric.Float64ObservableGauge
 type Float64ObservableGauge interface{ float64ObservableGauge() }
 
 // Float64ObservableUpDownCounter is embedded in the OpenTelemetry metric API
@@ -147,7 +147,7 @@ type Float64ObservableGauge interface{ float64ObservableGauge() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Float64ObservableUpDownCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64ObservableUpDownCounter
+// [Float64ObservableUpDownCounter]: go.opentelemetry.io/otel/metric.Float64ObservableUpDownCounter
 type Float64ObservableUpDownCounter interface{ float64ObservableUpDownCounter() }
 
 // Float64UpDownCounter is embedded in the OpenTelemetry metric API
@@ -159,7 +159,7 @@ type Float64ObservableUpDownCounter interface{ float64ObservableUpDownCounter() 
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Float64UpDownCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64UpDownCounter
+// [Float64UpDownCounter]: go.opentelemetry.io/otel/metric.Float64UpDownCounter
 type Float64UpDownCounter interface{ float64UpDownCounter() }
 
 // Int64Counter is embedded in the OpenTelemetry metric API [Int64Counter].
@@ -170,7 +170,7 @@ type Float64UpDownCounter interface{ float64UpDownCounter() }
 // (which is something that can happen without a major version bump of the API
 // package).
 //
-// [Int64Counter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64Counter
+// [Int64Counter]: go.opentelemetry.io/otel/metric.Int64Counter
 type Int64Counter interface{ int64Counter() }
 
 // Int64Histogram is embedded in the OpenTelemetry metric API [Int64Histogram].
@@ -181,7 +181,7 @@ type Int64Counter interface{ int64Counter() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Int64Histogram]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64Histogram
+// [Int64Histogram]: go.opentelemetry.io/otel/metric.Int64Histogram
 type Int64Histogram interface{ int64Histogram() }
 
 // Int64ObservableCounter is embedded in the OpenTelemetry metric API
@@ -193,7 +193,7 @@ type Int64Histogram interface{ int64Histogram() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Int64ObservableCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64ObservableCounter
+// [Int64ObservableCounter]: go.opentelemetry.io/otel/metric.Int64ObservableCounter
 type Int64ObservableCounter interface{ int64ObservableCounter() }
 
 // Int64ObservableGauge is embedded in the OpenTelemetry metric API
@@ -205,7 +205,7 @@ type Int64ObservableCounter interface{ int64ObservableCounter() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Int64ObservableGauge]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64ObservableGauge
+// [Int64ObservableGauge]: go.opentelemetry.io/otel/metric.Int64ObservableGauge
 type Int64ObservableGauge interface{ int64ObservableGauge() }
 
 // Int64ObservableUpDownCounter is embedded in the OpenTelemetry metric API
@@ -217,7 +217,7 @@ type Int64ObservableGauge interface{ int64ObservableGauge() }
 // [Int64ObservableUpDownCounter] interface is extended (which is something
 // that can happen without a major version bump of the API package).
 //
-// [Int64ObservableUpDownCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64ObservableUpDownCounter
+// [Int64ObservableUpDownCounter]: go.opentelemetry.io/otel/metric.Int64ObservableUpDownCounter
 type Int64ObservableUpDownCounter interface{ int64ObservableUpDownCounter() }
 
 // Int64UpDownCounter is embedded in the OpenTelemetry metric API
@@ -229,5 +229,5 @@ type Int64ObservableUpDownCounter interface{ int64ObservableUpDownCounter() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Int64UpDownCounter]: https://pkg.go.dev/go.opentelemetry.io/otel/metric#Int64UpDownCounter
+// [Int64UpDownCounter]: go.opentelemetry.io/otel/metric.Int64UpDownCounter
 type Int64UpDownCounter interface{ int64UpDownCounter() }
