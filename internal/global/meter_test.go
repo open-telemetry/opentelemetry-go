@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -134,7 +135,7 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float
 	assert.NoError(t, err)
 
 	_, err = m.RegisterCallback(func(ctx context.Context, obs metric.Observer) error {
-		obs.ObserveFloat64(afcounter, 3)
+		obs.ObserveFloat64(afcounter, 3, *attribute.EmptySet())
 		return nil
 	}, afcounter)
 	require.NoError(t, err)
@@ -191,7 +192,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, meter)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(context.Background(), 5, *attribute.EmptySet())
 
 	testCollect(t, meter) // This is a hacky way to emulate a read from an exporter
 
@@ -240,7 +241,7 @@ func TestMeterDelegatesCalls(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, m)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(context.Background(), 5, *attribute.EmptySet())
 
 	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
 
@@ -283,7 +284,7 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, m)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(context.Background(), 5, *attribute.EmptySet())
 
 	mp := &testMeterProvider{}
 
