@@ -88,6 +88,11 @@ an author who want to default to silently dropping the call can use
 		// ...
 	}
 
+It is strongly recommended that authors only embed
+[go.opentelemetry.io/otel/metric/noop] if they choose this default behavior.
+That implementation is the only one OpenTelemetry authors can guarantee will
+fully implement all the API interfaces when a user updates their API.
+
 [GetMeterProvider]: https://pkg.go.dev/go.opentelemetry.io/otel#GetMeterProvider
 */
 package metric // import "go.opentelemetry.io/otel/metric"
