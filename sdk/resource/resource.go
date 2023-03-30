@@ -131,6 +131,9 @@ func (r *Resource) SchemaURL() string {
 // WithSchemaURL returns a copy of r with the schema URL set to url and all
 // attributes transformed based on the associated schema. If the schema
 // transformation fails, or url is empty, an error is returned.
+//
+// Warning: This will fetch url and then parse the response. It is the callers
+// responsibility to ensure the request will return a safe schema definition.
 func (r *Resource) WithSchemaURL(ctx context.Context, url string) (*Resource, error) {
 	return r.withSchemaURL(ctx, schema.NewRegistry(nil), url)
 }
@@ -258,6 +261,10 @@ func Merge(a, b *Resource) (*Resource, error) {
 // Any of the resources not already at schemaURL version will be appropriately
 // upgraded or downgraded to match the version. An error is returned if this is
 // not possible.
+//
+// Warning: This will fetch schemaURL and all the schema URLs of resources and
+// then parse the response. It is the callers responsibility to ensure these
+// URLs will return safe schema definitions.
 func MergeAt(ctx context.Context, schemaURL string, resources ...*Resource) (*Resource, error) {
 	reg := schema.NewRegistry(nil)
 	merged := NewWithAttributes(schemaURL)
