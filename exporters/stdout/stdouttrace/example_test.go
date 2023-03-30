@@ -56,11 +56,18 @@ func multiply(ctx context.Context, x, y int64) int64 {
 	return x * y
 }
 
-func Resource() *resource.Resource {
-	return resource.NewWithAttributes(
+func Resource(ctx context.Context) (*resource.Resource, error) {
+	return resource.MergeAt(
+		ctx,
+		// Unify all resources to use this schema version.
 		semconv.SchemaURL,
-		semconv.ServiceName("stdout-example"),
-		semconv.ServiceVersion("0.0.1"),
+		// Use OTel defaults as base and overwrite with our service info.
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("stdout-example"),
+			semconv.ServiceVersion("0.0.1"),
+		),
 	)
 }
 
@@ -70,9 +77,14 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
 		return nil, fmt.Errorf("creating stdout exporter: %w", err)
 	}
 
+	res, err := Resource(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("creating resource: %w", err)
+	}
+
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(Resource()),
+		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(tracerProvider)
 

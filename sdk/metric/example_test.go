@@ -32,11 +32,21 @@ func Example() {
 
 	// See the go.opentelemetry.io/otel/sdk/resource package for more
 	// information about how to create and use Resources.
-	res := resource.NewWithAttributes(
+	res, err := resource.MergeAt(
+		context.Background(),
+		// Unify all resources to use this schema version.
 		semconv.SchemaURL,
-		semconv.ServiceName("my-service"),
-		semconv.ServiceVersion("v0.1.0"),
+		// Use OTel defaults as base and overwrite with our service info.
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("my-service"),
+			semconv.ServiceVersion("v0.1.0"),
+		),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
