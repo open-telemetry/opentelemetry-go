@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `Version` function to `go.opentelemetry.io/otel/sdk` to return the SDK version. (#3949)
+
 ### Changed
 
 - The `Extrema` in `go.opentelemetry.io/otel/sdk/metric/metricdata` is redefined with a generic argument of `[N int64 | float64]`. (#3870)
@@ -18,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `TracerProvider` allows calling `Tracer()` while it's shutting down.
   It used to deadlock. (#3924)
+- Use the SDK version for the Telemetry SDK resource detector in `go.opentelemetry.io/otel/sdk/resource`. (#3949)
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
