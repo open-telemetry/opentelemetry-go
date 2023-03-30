@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `MergeAt` function is added to `go.opentelemetry.io/otel/sdk/resource`.
   This function merges a group of `Resource`s into one `Resource` that uses the specified OpenTelemetry semantic convention schema version.
   All the passed `Resource`s are either upgraded or downgraded using OpenTelemetry semantic convention schema depending on their relative version. (#3944)
+- The `Version` function to `go.opentelemetry.io/otel/sdk` to return the SDK version. (#3949)
 
 ### Changed
 
@@ -26,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `TracerProvider` allows calling `Tracer()` while it's shutting down.
   It used to deadlock. (#3924)
+- Use the SDK version for the Telemetry SDK resource detector in `go.opentelemetry.io/otel/sdk/resource`. (#3949)
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
