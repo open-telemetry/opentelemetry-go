@@ -17,6 +17,7 @@ package trace_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -148,6 +149,36 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 
 	stop <- struct{}{}
 	<-done
+}
+
+func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
+	exporter := &testExporter{}
+	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(ssp)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		_, span := tp.Tracer("test").Start(context.Background(), "A")
+		defer span.End()
+		wg.Done()
+	}()
+
+	go func() {
+		_, span := tp.Tracer("test").Start(context.Background(), "A")
+		defer span.End()
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if err := ssp.Shutdown(context.Background()); err != nil {
+		t.Errorf("shutting the SimpleSpanProcessor down: %v", err)
+	}
+	if !exporter.shutdown {
+		t.Error("SimpleSpanProcessor.Shutdown did not shut down exporter")
+	}
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {

@@ -54,8 +54,8 @@ func (ssp *simpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 
 // OnEnd immediately exports a ReadOnlySpan.
 func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
-	ssp.exporterMu.RLock()
-	defer ssp.exporterMu.RUnlock()
+	ssp.exporterMu.Lock()
+	defer ssp.exporterMu.Unlock()
 
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
 		if err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s}); err != nil {
