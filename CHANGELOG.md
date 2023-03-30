@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `WithSchemaURL` method is added to the `Resource` in `go.opentelemetry.io/otel/sdk/resource`.
+  This method is used to return a copy of the `Resource` upgraded or downgraded to the specified OpenTelemetry semantic convention schema version. (#3944)
+- The `MergeAt` function is added to `go.opentelemetry.io/otel/sdk/resource`.
+  This function merges a group of `Resource`s into one `Resource` that uses the specified OpenTelemetry semantic convention schema version.
+  All the passed `Resource`s are either upgraded or downgraded using OpenTelemetry semantic convention schema depending on their relative version. (#3944)
+
 ### Changed
 
 - The `Extrema` in `go.opentelemetry.io/otel/sdk/metric/metricdata` is redefined with a generic argument of `[N int64 | float64]`. (#3870)
