@@ -209,7 +209,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 		return request{Request: r}, err
 	}
 
-	r.Header.Set("User-Agent", internal.GetUserAgentHeader())
+	r.Header.Set("User-Agent", otlptrace.GetUserAgentHeader())
 
 	for k, v := range d.cfg.Headers {
 		r.Header.Set(k, v)
