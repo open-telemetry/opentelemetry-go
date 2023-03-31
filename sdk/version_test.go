@@ -12,17 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal // import "go.opentelemetry.io/otel/sdk/internal"
+package sdk_test
 
-import "time"
+import (
+	"regexp"
+	"testing"
 
-// MonotonicEndTime returns the end time at present
-// but offset from start, monotonically.
-//
-// The monotonic clock is used in subtractions hence
-// the duration since start added back to start gives
-// end as a monotonic time.
-// See https://golang.org/pkg/time/#hdr-Monotonic_Clocks
-func MonotonicEndTime(start time.Time) time.Time {
-	return start.Add(time.Since(start))
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel"
+)
+
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+var versionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
+	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
+	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
+
+func TestVersionSemver(t *testing.T) {
+	v := otel.Version()
+	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }
