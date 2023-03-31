@@ -180,11 +180,19 @@ var _ instrument.Int64Counter = (*instrumentImpl[int64])(nil)
 var _ instrument.Int64UpDownCounter = (*instrumentImpl[int64])(nil)
 var _ instrument.Int64Histogram = (*instrumentImpl[int64])(nil)
 
-func (i *instrumentImpl[N]) Add(ctx context.Context, val N, attrs attribute.Set) {
+func (i *instrumentImpl[N]) Add(ctx context.Context, val N) {
+	i.aggregate(ctx, val, *attribute.EmptySet())
+}
+
+func (i *instrumentImpl[N]) AddWithAttributes(ctx context.Context, val N, attrs attribute.Set) {
 	i.aggregate(ctx, val, attrs)
 }
 
-func (i *instrumentImpl[N]) Record(ctx context.Context, val N, attrs attribute.Set) {
+func (i *instrumentImpl[N]) Record(ctx context.Context, val N) {
+	i.aggregate(ctx, val, *attribute.EmptySet())
+}
+
+func (i *instrumentImpl[N]) RecordWithAttributes(ctx context.Context, val N, attrs attribute.Set) {
 	i.aggregate(ctx, val, attrs)
 }
 

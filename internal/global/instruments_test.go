@@ -24,7 +24,13 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-func testFloat64Race(interact func(context.Context, float64, attribute.Set), setDelegate func(metric.Meter)) {
+func testFloat64Race(interact func(context.Context, float64), setDelegate func(metric.Meter)) {
+	testFloat64RaceWithAttributes(func(ctx context.Context, f float64, s attribute.Set) {
+		interact(ctx, f)
+	}, setDelegate)
+}
+
+func testFloat64RaceWithAttributes(interact func(context.Context, float64, attribute.Set), setDelegate func(metric.Meter)) {
 	finish := make(chan struct{})
 	go func() {
 		for {
@@ -41,7 +47,13 @@ func testFloat64Race(interact func(context.Context, float64, attribute.Set), set
 	close(finish)
 }
 
-func testInt64Race(interact func(context.Context, int64, attribute.Set), setDelegate func(metric.Meter)) {
+func testInt64Race(interact func(context.Context, int64), setDelegate func(metric.Meter)) {
+	testInt64RaceWithAttributes(func(ctx context.Context, i int64, s attribute.Set) {
+		interact(ctx, i)
+	}, setDelegate)
+}
+
+func testInt64RaceWithAttributes(interact func(context.Context, int64, attribute.Set), setDelegate func(metric.Meter)) {
 	finish := make(chan struct{})
 	go func() {
 		for {
@@ -63,19 +75,19 @@ func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &afCounter{}
-			f := func(context.Context, float64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &afUpDownCounter{}
-			f := func(context.Context, float64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &afGauge{}
-			f := func(context.Context, float64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 	})
@@ -85,19 +97,19 @@ func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &aiCounter{}
-			f := func(context.Context, int64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &aiUpDownCounter{}
-			f := func(context.Context, int64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &aiGauge{}
-			f := func(context.Context, int64, attribute.Set) { _ = delegate.Unwrap() }
+			f := func(context.Context, int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 	})
@@ -109,16 +121,19 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &sfCounter{}
 			testFloat64Race(delegate.Add, delegate.setDelegate)
+			testFloat64RaceWithAttributes(delegate.AddWithAttributes, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &sfUpDownCounter{}
 			testFloat64Race(delegate.Add, delegate.setDelegate)
+			testFloat64RaceWithAttributes(delegate.AddWithAttributes, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
 			delegate := &sfHistogram{}
 			testFloat64Race(delegate.Record, delegate.setDelegate)
+			testFloat64RaceWithAttributes(delegate.RecordWithAttributes, delegate.setDelegate)
 		})
 	})
 
@@ -128,16 +143,19 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &siCounter{}
 			testInt64Race(delegate.Add, delegate.setDelegate)
+			testInt64RaceWithAttributes(delegate.AddWithAttributes, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &siUpDownCounter{}
 			testInt64Race(delegate.Add, delegate.setDelegate)
+			testInt64RaceWithAttributes(delegate.AddWithAttributes, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
 			delegate := &siHistogram{}
 			testInt64Race(delegate.Record, delegate.setDelegate)
+			testInt64RaceWithAttributes(delegate.RecordWithAttributes, delegate.setDelegate)
 		})
 	})
 }
@@ -151,10 +169,16 @@ type testCountingFloatInstrument struct {
 func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Add(context.Context, float64, attribute.Set) {
+func (i *testCountingFloatInstrument) Add(context.Context, float64) {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Record(context.Context, float64, attribute.Set) {
+func (i *testCountingFloatInstrument) AddWithAttributes(context.Context, float64, attribute.Set) {
+	i.count++
+}
+func (i *testCountingFloatInstrument) Record(context.Context, float64) {
+	i.count++
+}
+func (i *testCountingFloatInstrument) RecordWithAttributes(context.Context, float64, attribute.Set) {
 	i.count++
 }
 
@@ -167,9 +191,15 @@ type testCountingIntInstrument struct {
 func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
-func (i *testCountingIntInstrument) Add(context.Context, int64, attribute.Set) {
+func (i *testCountingIntInstrument) Add(context.Context, int64) {
 	i.count++
 }
-func (i *testCountingIntInstrument) Record(context.Context, int64, attribute.Set) {
+func (i *testCountingIntInstrument) AddWithAttributes(context.Context, int64, attribute.Set) {
+	i.count++
+}
+func (i *testCountingIntInstrument) Record(context.Context, int64) {
+	i.count++
+}
+func (i *testCountingIntInstrument) RecordWithAttributes(context.Context, int64, attribute.Set) {
 	i.count++
 }

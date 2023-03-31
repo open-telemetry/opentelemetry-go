@@ -292,7 +292,11 @@ var (
 	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
-func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a attribute.Set) {
+func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64) {
+	r.ObserveFloat64WithAttributes(o, v, *attribute.EmptySet())
+}
+
+func (r observer) ObserveFloat64WithAttributes(o instrument.Float64Observable, v float64, a attribute.Set) {
 	var oImpl float64Observable
 	switch conv := o.(type) {
 	case float64Observable:
@@ -324,7 +328,11 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a at
 	oImpl.observe(v, a)
 }
 
-func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a attribute.Set) {
+func (r observer) ObserveInt64(o instrument.Int64Observable, v int64) {
+	r.ObserveInt64WithAttributes(o, v, *attribute.EmptySet())
+}
+
+func (r observer) ObserveInt64WithAttributes(o instrument.Int64Observable, v int64, a attribute.Set) {
 	var oImpl int64Observable
 	switch conv := o.(type) {
 	case int64Observable:
@@ -417,7 +425,11 @@ type int64Observer struct {
 	int64Observable
 }
 
-func (o int64Observer) Observe(val int64, attrs attribute.Set) {
+func (o int64Observer) Observe(val int64) {
+	o.observe(val, *attribute.EmptySet())
+}
+
+func (o int64Observer) ObserveWithAttributes(val int64, attrs attribute.Set) {
 	o.observe(val, attrs)
 }
 
@@ -448,6 +460,10 @@ type float64Observer struct {
 	float64Observable
 }
 
-func (o float64Observer) Observe(val float64, attrs attribute.Set) {
+func (o float64Observer) Observe(val float64) {
+	o.observe(val, *attribute.EmptySet())
+}
+
+func (o float64Observer) ObserveWithAttributes(val float64, attrs attribute.Set) {
 	o.observe(val, attrs)
 }

@@ -38,7 +38,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, *attribute.EmptySet())
+		cntr.Add(ctx, 1)
 	}
 }
 
@@ -47,7 +47,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 	}
 }
 
@@ -59,7 +59,7 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 	}
 }
 
@@ -68,7 +68,7 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		s := attribute.NewSet(attribute.Int("K", i))
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 	}
 }
 
@@ -80,7 +80,7 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 			attribute.Int("", i),
 			attribute.Int("K", i),
 		)
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 	}
 }
 
@@ -97,7 +97,7 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 			attribute.Int("L", i),
 			attribute.Int("K", i),
 		)
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 	}
 }
 
@@ -106,7 +106,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, s)
+		cntr.AddWithAttributes(ctx, 1, s)
 
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -118,7 +118,7 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
 			s := attribute.NewSet(attribute.Int("K", j))
-			cntr.Add(ctx, 1, s)
+			cntr.AddWithAttributes(ctx, 1, s)
 		}
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -142,7 +142,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 		name := fmt.Sprintf("fake data %d", i)
 		h, _ := mtr.Int64Histogram(name)
 
-		h.Record(ctx, 1, *attribute.EmptySet())
+		h.Record(ctx, 1)
 	}
 
 	// Store bechmark results in a closure to prevent the compiler from

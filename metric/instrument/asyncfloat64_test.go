@@ -47,7 +47,7 @@ func TestFloat64ObservableConfiguration(t *testing.T) {
 	}
 
 	cback := func(ctx context.Context, obsrv Float64Observer) error {
-		obsrv.Observe(token, *attribute.EmptySet())
+		obsrv.Observe(token)
 		return nil
 	}
 
@@ -87,6 +87,10 @@ type float64Observer struct {
 	got float64
 }
 
-func (o *float64Observer) Observe(v float64, _ attribute.Set) {
+func (o *float64Observer) Observe(v float64) {
+	o.ObserveWithAttributes(v, *attribute.EmptySet())
+}
+
+func (o *float64Observer) ObserveWithAttributes(v float64, _ attribute.Set) {
 	o.got = v
 }

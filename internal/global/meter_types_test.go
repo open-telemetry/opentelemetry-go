@@ -148,14 +148,22 @@ type observationRecorder struct {
 	ctx context.Context
 }
 
-func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64, attr attribute.Set) {
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64) {
+	o.ObserveFloat64WithAttributes(i, value, *attribute.EmptySet())
+}
+
+func (o observationRecorder) ObserveFloat64WithAttributes(i instrument.Float64Observable, value float64, attr attribute.Set) {
 	iImpl, ok := i.(*testCountingFloatInstrument)
 	if ok {
 		iImpl.observe()
 	}
 }
 
-func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64, attr attribute.Set) {
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64) {
+	o.ObserveInt64WithAttributes(i, value, *attribute.EmptySet())
+}
+
+func (o observationRecorder) ObserveInt64WithAttributes(i instrument.Int64Observable, value int64, attr attribute.Set) {
 	iImpl, ok := i.(*testCountingIntInstrument)
 	if ok {
 		iImpl.observe()

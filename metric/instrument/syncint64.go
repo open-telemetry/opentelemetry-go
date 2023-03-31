@@ -24,8 +24,11 @@ import (
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Counter interface {
-	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, attrs attribute.Set)
+	// Add records the incr change to the counter.
+	Add(ctx context.Context, incr int64)
+
+	// AddWithAttributes records the incr change to the counter with attrs.
+	AddWithAttributes(ctx context.Context, incr int64, attrs attribute.Set)
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -66,8 +69,11 @@ type Int64CounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64UpDownCounter interface {
-	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, attrs attribute.Set)
+	// Add records the incr change to the counter.
+	Add(ctx context.Context, incr int64)
+
+	// AddWithAttributes records the incr change to the counter with attrs.
+	AddWithAttributes(ctx context.Context, incr int64, attrs attribute.Set)
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -109,8 +115,11 @@ type Int64UpDownCounterOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Histogram interface {
-	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr int64, attrs attribute.Set)
+	// Record records val for the histogram.
+	Record(ctx context.Context, val int64)
+
+	// RecordWithAttributes records val with attrs for the histogram.
+	RecordWithAttributes(ctx context.Context, val int64, attrs attribute.Set)
 }
 
 // Int64HistogramConfig contains options for synchronous counter instruments

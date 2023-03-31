@@ -73,16 +73,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	counter.Add(ctx, 5, attrs)
+	counter.AddWithAttributes(ctx, 5, attrs)
 
 	histogram, err := meter.Float64Histogram("custom_histogram", instrument.WithDescription("a histogram with custom buckets and rename"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	histogram.Record(ctx, 136, attrs)
-	histogram.Record(ctx, 64, attrs)
-	histogram.Record(ctx, 701, attrs)
-	histogram.Record(ctx, 830, attrs)
+	histogram.RecordWithAttributes(ctx, 136, attrs)
+	histogram.RecordWithAttributes(ctx, 64, attrs)
+	histogram.RecordWithAttributes(ctx, 701, attrs)
+	histogram.RecordWithAttributes(ctx, 830, attrs)
 
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()

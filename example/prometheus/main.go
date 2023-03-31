@@ -60,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	counter.Add(ctx, 5, attrs)
+	counter.AddWithAttributes(ctx, 5, attrs)
 
 	gauge, err := meter.Float64ObservableGauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
@@ -68,7 +68,7 @@ func main() {
 	}
 	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rng.Float64()*(90.) // [-10, 100)
-		o.ObserveFloat64(gauge, n, attrs)
+		o.ObserveFloat64WithAttributes(gauge, n, attrs)
 		return nil
 	}, gauge)
 	if err != nil {
@@ -80,10 +80,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	histogram.Record(ctx, 23, attrs)
-	histogram.Record(ctx, 7, attrs)
-	histogram.Record(ctx, 101, attrs)
-	histogram.Record(ctx, 105, attrs)
+	histogram.RecordWithAttributes(ctx, 23, attrs)
+	histogram.RecordWithAttributes(ctx, 7, attrs)
+	histogram.RecordWithAttributes(ctx, 101, attrs)
+	histogram.RecordWithAttributes(ctx, 105, attrs)
 
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()

@@ -180,8 +180,11 @@ type Float64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Float64Observer interface {
-	// Observe records the float64 value with attributes.
-	Observe(value float64, attributes attribute.Set)
+	// Observe records the float64 value.
+	Observe(value float64)
+
+	// ObserveWithAttributes records the float64 value with attributes.
+	ObserveWithAttributes(value float64, attributes attribute.Set)
 }
 
 // Float64Callback is a function registered with a Meter that makes

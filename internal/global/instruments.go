@@ -215,9 +215,13 @@ func (i *sfCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *sfCounter) Add(ctx context.Context, incr float64, attrs attribute.Set) {
+func (i *sfCounter) Add(ctx context.Context, incr float64) {
+	i.AddWithAttributes(ctx, incr, *attribute.EmptySet())
+}
+
+func (i *sfCounter) AddWithAttributes(ctx context.Context, incr float64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Counter).Add(ctx, incr, attrs)
+		ctr.(instrument.Float64Counter).AddWithAttributes(ctx, incr, attrs)
 	}
 }
 
@@ -239,9 +243,13 @@ func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs attribute.Set) {
+func (i *sfUpDownCounter) Add(ctx context.Context, incr float64) {
+	i.AddWithAttributes(ctx, incr, *attribute.EmptySet())
+}
+
+func (i *sfUpDownCounter) AddWithAttributes(ctx context.Context, incr float64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64UpDownCounter).Add(ctx, incr, attrs)
+		ctr.(instrument.Float64UpDownCounter).AddWithAttributes(ctx, incr, attrs)
 	}
 }
 
@@ -263,9 +271,13 @@ func (i *sfHistogram) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *sfHistogram) Record(ctx context.Context, x float64, attrs attribute.Set) {
+func (i *sfHistogram) Record(ctx context.Context, x float64) {
+	i.RecordWithAttributes(ctx, x, *attribute.EmptySet())
+}
+
+func (i *sfHistogram) RecordWithAttributes(ctx context.Context, x float64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Histogram).Record(ctx, x, attrs)
+		ctr.(instrument.Float64Histogram).RecordWithAttributes(ctx, x, attrs)
 	}
 }
 
@@ -287,9 +299,13 @@ func (i *siCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *siCounter) Add(ctx context.Context, x int64, attrs attribute.Set) {
+func (i *siCounter) Add(ctx context.Context, x int64) {
+	i.AddWithAttributes(ctx, x, *attribute.EmptySet())
+}
+
+func (i *siCounter) AddWithAttributes(ctx context.Context, x int64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Counter).Add(ctx, x, attrs)
+		ctr.(instrument.Int64Counter).AddWithAttributes(ctx, x, attrs)
 	}
 }
 
@@ -311,9 +327,13 @@ func (i *siUpDownCounter) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs attribute.Set) {
+func (i *siUpDownCounter) Add(ctx context.Context, x int64) {
+	i.AddWithAttributes(ctx, x, *attribute.EmptySet())
+}
+
+func (i *siUpDownCounter) AddWithAttributes(ctx context.Context, x int64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64UpDownCounter).Add(ctx, x, attrs)
+		ctr.(instrument.Int64UpDownCounter).AddWithAttributes(ctx, x, attrs)
 	}
 }
 
@@ -335,8 +355,12 @@ func (i *siHistogram) setDelegate(m metric.Meter) {
 	i.delegate.Store(ctr)
 }
 
-func (i *siHistogram) Record(ctx context.Context, x int64, attrs attribute.Set) {
+func (i *siHistogram) Record(ctx context.Context, x int64) {
+	i.RecordWithAttributes(ctx, x, *attribute.EmptySet())
+}
+
+func (i *siHistogram) RecordWithAttributes(ctx context.Context, x int64, attrs attribute.Set) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Histogram).Record(ctx, x, attrs)
+		ctr.(instrument.Int64Histogram).RecordWithAttributes(ctx, x, attrs)
 	}
 }

@@ -40,7 +40,7 @@ func ExampleMeter_synchronous() {
 	ctx := context.Background()
 	// Do work
 	// ...
-	workDuration.Record(ctx, time.Since(startTime).Milliseconds(), *attribute.EmptySet())
+	workDuration.Record(ctx, time.Since(startTime).Milliseconds())
 }
 
 func ExampleMeter_asynchronous_single() {
@@ -64,7 +64,7 @@ func ExampleMeter_asynchronous_single() {
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
 			attrs := attribute.NewSet(attribute.Int("disk.id", 3))
-			obsrv.Observe(int64(usage), attrs)
+			obsrv.ObserveWithAttributes(int64(usage), attrs)
 			return nil
 		}),
 	)
@@ -88,8 +88,8 @@ func ExampleMeter_asynchronous_multiple() {
 			// This call does work
 			runtime.ReadMemStats(memStats)
 
-			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc), *attribute.EmptySet())
-			o.ObserveInt64(gcCount, int64(memStats.NumGC), *attribute.EmptySet())
+			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
+			o.ObserveInt64(gcCount, int64(memStats.NumGC))
 
 			// This function synchronously records the pauses
 			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])

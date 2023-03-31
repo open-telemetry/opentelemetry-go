@@ -152,11 +152,19 @@ func (Meter) RegisterCallback(metric.Callback, ...instrument.Observable) (metric
 type Observer struct{}
 
 // ObserveFloat64 performs no operation.
-func (Observer) ObserveFloat64(instrument.Float64Observable, float64, attribute.Set) {
+func (Observer) ObserveFloat64(instrument.Float64Observable, float64) {
+}
+
+// ObserveFloat64WithAttributes performs no operation.
+func (Observer) ObserveFloat64WithAttributes(instrument.Float64Observable, float64, attribute.Set) {
 }
 
 // ObserveInt64 performs no operation.
-func (Observer) ObserveInt64(instrument.Int64Observable, int64, attribute.Set) {
+func (Observer) ObserveInt64(instrument.Int64Observable, int64) {
+}
+
+// ObserveInt64WithAttributes performs no operation.
+func (Observer) ObserveInt64WithAttributes(instrument.Int64Observable, int64, attribute.Set) {
 }
 
 // Registration is the registration of a Callback with a No-Op Meter.
@@ -172,42 +180,60 @@ func (Registration) Unregister() error { return nil }
 type Int64Counter struct{}
 
 // Add performs no operation.
-func (Int64Counter) Add(context.Context, int64, attribute.Set) {}
+func (Int64Counter) Add(context.Context, int64) {}
+
+// Add performs no operation.
+func (Int64Counter) AddWithAttributes(context.Context, int64, attribute.Set) {}
 
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
 type Float64Counter struct{}
 
 // Add performs no operation.
-func (Float64Counter) Add(context.Context, float64, attribute.Set) {}
+func (Float64Counter) Add(context.Context, float64) {}
+
+// AddWithAttributes performs no operation.
+func (Float64Counter) AddWithAttributes(context.Context, float64, attribute.Set) {}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
 type Int64UpDownCounter struct{}
 
 // Add performs no operation.
-func (Int64UpDownCounter) Add(context.Context, int64, attribute.Set) {}
+func (Int64UpDownCounter) Add(context.Context, int64) {}
+
+// AddWithAttributes performs no operation.
+func (Int64UpDownCounter) AddWithAttributes(context.Context, int64, attribute.Set) {}
 
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64UpDownCounter struct{}
 
 // Add performs no operation.
-func (Float64UpDownCounter) Add(context.Context, float64, attribute.Set) {}
+func (Float64UpDownCounter) Add(context.Context, float64) {}
+
+// AddWithAttributes performs no operation.
+func (Float64UpDownCounter) AddWithAttributes(context.Context, float64, attribute.Set) {}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
 type Int64Histogram struct{}
 
 // Record performs no operation.
-func (Int64Histogram) Record(context.Context, int64, attribute.Set) {}
+func (Int64Histogram) Record(context.Context, int64) {}
+
+// RecordWithAttributes performs no operation.
+func (Int64Histogram) RecordWithAttributes(context.Context, int64, attribute.Set) {}
 
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
 type Float64Histogram struct{}
 
 // Record performs no operation.
-func (Float64Histogram) Record(context.Context, float64, attribute.Set) {}
+func (Float64Histogram) Record(context.Context, float64) {}
+
+// RecordWithAttributes performs no operation.
+func (Float64Histogram) RecordWithAttributes(context.Context, float64, attribute.Set) {}
 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.
@@ -237,11 +263,17 @@ type Float64ObservableUpDownCounter struct{ instrument.Float64Observable }
 type Int64Observer struct{}
 
 // Observe performs no operation.
-func (Int64Observer) Observe(int64, attribute.Set) {}
+func (Int64Observer) Observe(int64) {}
+
+// ObserveWithAttributes performs no operation.
+func (Int64Observer) ObserveWithAttributes(int64, attribute.Set) {}
 
 // Float64Observer is a recorder of float64 measurements that performs no
 // operation.
 type Float64Observer struct{}
 
 // Observe performs no operation.
-func (Float64Observer) Observe(float64, attribute.Set) {}
+func (Float64Observer) Observe(float64) {}
+
+// Observe performs no operation.
+func (Float64Observer) ObserveWithAttributes(float64, attribute.Set) {}

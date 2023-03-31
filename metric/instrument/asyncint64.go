@@ -179,8 +179,11 @@ type Int64ObservableGaugeOption interface {
 //
 // Warning: methods may be added to this interface in minor releases.
 type Int64Observer interface {
-	// Observe records the int64 value with attributes.
-	Observe(value int64, attributes attribute.Set)
+	// Observe records the int64 value.
+	Observe(value int64)
+
+	// ObserveWithAttributes records the int64 value with attributes.
+	ObserveWithAttributes(value int64, attributes attribute.Set)
 }
 
 // Int64Callback is a function registered with a Meter that makes observations

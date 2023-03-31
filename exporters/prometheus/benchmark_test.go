@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -37,7 +36,7 @@ func benchmarkCollect(b *testing.B, n int) {
 	for i := 0; i < n; i++ {
 		counter, err := meter.Float64Counter(fmt.Sprintf("foo_%d", i))
 		require.NoError(b, err)
-		counter.Add(ctx, float64(i), *attribute.EmptySet())
+		counter.Add(ctx, float64(i))
 	}
 
 	b.ReportAllocs()
