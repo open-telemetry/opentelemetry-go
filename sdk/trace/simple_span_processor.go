@@ -25,7 +25,7 @@ import (
 // simpleSpanProcessor is a SpanProcessor that synchronously sends all
 // completed Spans to a trace.Exporter immediately.
 type simpleSpanProcessor struct {
-	exporterMu sync.RWMutex
+	exporterMu sync.Mutex
 	exporter   SpanExporter
 	stopOnce   sync.Once
 }

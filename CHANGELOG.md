@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `TracerProvider` allows calling `Tracer()` while it's shutting down.
   It used to deadlock. (#3924)
+- Data race in `exporters/jaeger` when calling `End()` on spans from concurrent goroutines. (#3951)
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 

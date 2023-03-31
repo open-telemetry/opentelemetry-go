@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -159,26 +160,20 @@ func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() {
-		_, span := tp.Tracer("test").Start(context.Background(), "A")
-		defer span.End()
-		wg.Done()
-	}()
 
-	go func() {
-		_, span := tp.Tracer("test").Start(context.Background(), "A")
+	span := func(spanName string) {
+		defer wg.Done()
+		_, span := tp.Tracer("test").Start(context.Background(), spanName)
 		defer span.End()
-		wg.Done()
-	}()
+	}
+
+	go span("test-span-1")
+	go span("test-span-2")
 
 	wg.Wait()
 
-	if err := ssp.Shutdown(context.Background()); err != nil {
-		t.Errorf("shutting the SimpleSpanProcessor down: %v", err)
-	}
-	if !exporter.shutdown {
-		t.Error("SimpleSpanProcessor.Shutdown did not shut down exporter")
-	}
+	assert.NoError(t, ssp.Shutdown(context.Background()))
+	assert.True(t, exporter.shutdown)
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
