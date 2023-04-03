@@ -18,14 +18,19 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
 // an application or package.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type MeterProvider interface {
+	embedded.MeterProvider
+
 	// Meter returns a new Meter with the provided name and configuration.
 	//
 	// A Meter should be scoped at most to a single package. The name needs to
@@ -40,8 +45,12 @@ type MeterProvider interface {
 
 // Meter provides access to instrument instances for recording metrics.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Meter interface {
+	embedded.Meter
+
 	// Int64Counter returns a new instrument identified by name and configured
 	// with options. The instrument is used to synchronously record increasing
 	// int64 measurements during a computational operation.
@@ -125,7 +134,13 @@ type Meter interface {
 type Callback func(context.Context, Observer) error
 
 // Observer records measurements for multiple instruments in a Callback.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Observer interface {
+	embedded.Observer
+
 	// ObserveFloat64 records the float64 value with attributes for obsrv.
 	ObserveFloat64(obsrv instrument.Float64Observable, value float64, attributes ...attribute.KeyValue)
 	// ObserveInt64 records the int64 value with attributes for obsrv.
@@ -134,7 +149,13 @@ type Observer interface {
 
 // Registration is an token representing the unique registration of a callback
 // for a set of instruments with a Meter.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Registration interface {
+	embedded.Registration
+
 	// Unregister removes the callback registration from a Meter.
 	//
 	// This method needs to be idempotent and concurrent safe.
