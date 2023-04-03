@@ -174,7 +174,7 @@ func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
 	wg.Wait()
 
 	assert.NoError(t, ssp.Shutdown(context.Background()))
-	assert.True(t, exporter.shutdown)
+	assert.True(t, exporter.shutdown, "exporter shutdown")
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
