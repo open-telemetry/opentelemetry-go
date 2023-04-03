@@ -19,10 +19,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 type testMeterProvider struct {
+	embedded.MeterProvider
+
 	count int
 }
 
@@ -33,6 +36,8 @@ func (p *testMeterProvider) Meter(name string, opts ...metric.MeterOption) metri
 }
 
 type testMeter struct {
+	embedded.Meter
+
 	afCount   int
 	afUDCount int
 	afGauge   int
@@ -123,6 +128,8 @@ func (m *testMeter) RegisterCallback(f metric.Callback, i ...instrument.Observab
 }
 
 type testReg struct {
+	embedded.Registration
+
 	f func()
 }
 
@@ -134,7 +141,7 @@ func (r testReg) Unregister() error {
 // This enables async collection.
 func (m *testMeter) collect() {
 	ctx := context.Background()
-	o := observationRecorder{ctx}
+	o := observationRecorder{ctx: ctx}
 	for _, f := range m.callbacks {
 		if f == nil {
 			// Unregister.
@@ -145,6 +152,8 @@ func (m *testMeter) collect() {
 }
 
 type observationRecorder struct {
+	embedded.Observer
+
 	ctx context.Context
 }
 

@@ -18,13 +18,14 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/embedded"
 )
 
 // Float64Observable describes a set of instruments used asynchronously to
 // record float64 measurements once per collection cycle. Observations of
 // these instruments are only made within a callback.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases.
 type Float64Observable interface {
 	Observable
 
@@ -36,8 +37,15 @@ type Float64Observable interface {
 // only made within a callback for this instrument. The value observed is
 // assumed the to be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Float64ObservableCounter interface{ Float64Observable }
+// Warning: Methods may be added to this interface in minor releases. See
+// [go.opentelemetry.io/otel/metric] package documentation on API
+// implementation for information on how to set default behavior for
+// unimplemented methods.
+type Float64ObservableCounter interface {
+	embedded.Float64ObservableCounter
+
+	Float64Observable
+}
 
 // Float64ObservableCounterConfig contains options for asynchronous counter
 // instruments that record int64 values.
@@ -84,8 +92,15 @@ type Float64ObservableCounterOption interface {
 // made within a callback for this instrument. The value observed is assumed
 // the to be the cumulative sum of the count.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Float64ObservableUpDownCounter interface{ Float64Observable }
+// Warning: Methods may be added to this interface in minor releases. See
+// [go.opentelemetry.io/otel/metric] package documentation on API
+// implementation for information on how to set default behavior for
+// unimplemented methods.
+type Float64ObservableUpDownCounter interface {
+	embedded.Float64ObservableUpDownCounter
+
+	Float64Observable
+}
 
 // Float64ObservableUpDownCounterConfig contains options for asynchronous
 // counter instruments that record int64 values.
@@ -132,8 +147,15 @@ type Float64ObservableUpDownCounterOption interface {
 // instantaneous float64 measurements once per collection cycle. Observations
 // are only made within a callback for this instrument.
 //
-// Warning: methods may be added to this interface in minor releases.
-type Float64ObservableGauge interface{ Float64Observable }
+// Warning: Methods may be added to this interface in minor releases. See
+// [go.opentelemetry.io/otel/metric] package documentation on API
+// implementation for information on how to set default behavior for
+// unimplemented methods.
+type Float64ObservableGauge interface {
+	embedded.Float64ObservableGauge
+
+	Float64Observable
+}
 
 // Float64ObservableGaugeConfig contains options for asynchronous counter
 // instruments that record int64 values.
@@ -178,8 +200,13 @@ type Float64ObservableGaugeOption interface {
 
 // Float64Observer is a recorder of float64 measurements.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// [go.opentelemetry.io/otel/metric] package documentation on API
+// implementation for information on how to set default behavior for
+// unimplemented methods.
 type Float64Observer interface {
+	embedded.Float64Observer
+
 	// Observe records the float64 value with attributes.
 	Observe(value float64, attributes attribute.Set)
 }
