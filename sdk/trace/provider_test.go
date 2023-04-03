@@ -80,6 +80,57 @@ func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	assert.True(t, stp.isShutdown.Load())
 }
 
+func TestUnregisterFirst(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	sp3 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+	stp.RegisterSpanProcessor(sp3)
+
+	stp.UnregisterSpanProcessor(sp1)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp2, sps[0].sp)
+	assert.Same(t, sp3, sps[1].sp)
+}
+
+func TestUnregisterMiddle(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	sp3 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+	stp.RegisterSpanProcessor(sp3)
+
+	stp.UnregisterSpanProcessor(sp2)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp3, sps[1].sp)
+}
+
+func TestUnregisterLast(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	sp3 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+	stp.RegisterSpanProcessor(sp3)
+
+	stp.UnregisterSpanProcessor(sp3)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp2, sps[1].sp)
+}
+
 func TestShutdownTraceProvider(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &basicSpanProcessor{}
@@ -162,7 +213,7 @@ func TestRegisterAfterShutdownWithoutProcessors(t *testing.T) {
 
 	sp := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp) // no-op
-	assert.Empty(t, stp.spanProcessors.Load())
+	assert.Empty(t, stp.getSpanProcessors())
 }
 
 func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
@@ -173,11 +224,11 @@ func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
 	err := stp.Shutdown(context.Background())
 	assert.NoError(t, err)
 	assert.True(t, stp.isShutdown.Load())
-	assert.Empty(t, stp.spanProcessors.Load())
+	assert.Empty(t, stp.getSpanProcessors())
 
 	sp2 := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp2) // no-op
-	assert.Empty(t, stp.spanProcessors.Load())
+	assert.Empty(t, stp.getSpanProcessors())
 }
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
