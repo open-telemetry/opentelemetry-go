@@ -120,7 +120,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	global.Info("TracerProvider created", "config", o)
 
-	spss := spanProcessorStates{}
+	spss := make(spanProcessorStates, 0, len(o.processors))
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
 	}
@@ -192,8 +192,10 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown.Load() {
 		return
 	}
-	newSPS := spanProcessorStates{}
-	newSPS = append(newSPS, *(p.spanProcessors.Load())...)
+
+	current := p.getSpanProcessors()
+	newSPS := make(spanProcessorStates, 0, len(current)+1)
+	newSPS = append(newSPS, current...)
 	newSPS = append(newSPS, newSpanProcessorState(sp))
 	p.spanProcessors.Store(&newSPS)
 }
@@ -210,12 +212,12 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown.Load() {
 		return
 	}
-	old := *(p.spanProcessors.Load())
+	old := p.getSpanProcessors()
 	if len(old) == 0 {
 		return
 	}
-	spss := spanProcessorStates{}
-	spss = append(spss, old...)
+	spss := make(spanProcessorStates, len(old))
+	copy(spss, old)
 
 	// stop the span processor if it is started and remove it from the list
 	var stopOnce *spanProcessorState
@@ -245,7 +247,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 // ForceFlush immediately exports all spans that have not yet been exported for
 // all the registered span processors.
 func (p *TracerProvider) ForceFlush(ctx context.Context) error {
-	spss := *(p.spanProcessors.Load())
+	spss := p.getSpanProcessors()
 	if len(spss) == 0 {
 		return nil
 	}
@@ -278,10 +280,9 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
 		return nil
 	}
-	spss := *(p.spanProcessors.Load())
 
 	var retErr error
-	for _, sps := range spss {
+	for _, sps := range p.getSpanProcessors() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -303,6 +304,10 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
 	return retErr
+}
+
+func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
+	return *(p.spanProcessors.Load())
 }
 
 // TracerProviderOption configures a TracerProvider.
