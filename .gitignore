@@ -7,6 +7,7 @@ Thumbs.db
 *.iml
 *.so
 coverage.*
+go.work
 
 gen/
 
