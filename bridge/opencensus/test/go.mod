@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	go.opentelemetry.io/otel/metric v1.15.0-rc.2 // indirect
