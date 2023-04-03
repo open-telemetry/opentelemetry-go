@@ -168,8 +168,10 @@ func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
 		span.End()
 	}
 
-	go span("test-span-1")
-	go span("test-span-2")
+	assert.NotPanics(t, func() {
+		go span("test-span-1")
+		go span("test-span-2")
+	})
 
 	wg.Wait()
 
