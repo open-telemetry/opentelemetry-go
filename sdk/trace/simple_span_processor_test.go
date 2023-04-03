@@ -165,7 +165,7 @@ func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
 	span := func(spanName string) {
 		defer wg.Done()
 		_, span := tp.Tracer("test").Start(context.Background(), spanName)
-		defer span.End()
+		span.End()
 	}
 
 	go span("test-span-1")
