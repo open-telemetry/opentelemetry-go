@@ -410,7 +410,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	sps := *(s.tracer.provider.spanProcessors.Load())
+	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
 		return
 	}
