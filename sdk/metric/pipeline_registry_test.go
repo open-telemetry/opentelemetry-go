@@ -199,11 +199,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			wantLen:  2,
 		},
 		{
-			name:    "reader with invalid aggregation should error",
-			reader:  NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:   []View{defaultView},
-			inst:    instruments[InstrumentKindCounter],
-			wantErr: errCreatingAggregators,
+			name:     "reader with default aggregation should figure out default",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
+			views:    []View{defaultView},
+			inst:     instruments[InstrumentKindCounter],
+			wantKind: internal.NewCumulativeSum[N](true),
+			wantLen:  1,
 		},
 		{
 			name:    "view with invalid aggregation should error",
