@@ -547,7 +547,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 	}
 }
 
-func TestBridge_SpanContext_TraceID(t *testing.T) {
+func TestBridge_SpanContext_TraceID_SpanID(t *testing.T) {
 	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
