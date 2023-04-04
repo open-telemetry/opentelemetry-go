@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -109,7 +108,7 @@ func newClient(opts ...Option) (ominternal.Client, error) {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", otlpmetric.GetUserAgentHeader())
+	req.Header.Set("User-Agent", ominternal.GetUserAgentHeader())
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
 		for k, v := range cfg.Metrics.Headers {

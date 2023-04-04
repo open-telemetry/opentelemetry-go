@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpmetric_test
+package internal
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 )
 
 func TestGetUserAgentHeader(t *testing.T) {
-	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", otlpmetric.GetUserAgentHeader())
+	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", GetUserAgentHeader())
 }

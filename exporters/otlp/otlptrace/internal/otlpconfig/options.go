@@ -27,7 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	otinternal "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
 )
 
 const (
@@ -98,7 +98,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			Timeout:     DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
-		DialOptions: []grpc.DialOption{grpc.WithUserAgent(otlptrace.GetUserAgentHeader())},
+		DialOptions: []grpc.DialOption{grpc.WithUserAgent(otinternal.GetUserAgentHeader())},
 	}
 	cfg = ApplyGRPCEnvConfigs(cfg)
 	for _, opt := range opts {
