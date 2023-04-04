@@ -15,9 +15,11 @@
 package attribute_test
 
 import (
+	"reflect"
 	"regexp"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -187,4 +189,39 @@ func TestLookup(t *testing.T) {
 
 	_, has = set.Value("D")
 	require.False(t, has)
+}
+
+func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
+	rType := reflect.TypeOf((*attribute.Set)(nil))
+	rVal := reflect.ValueOf(&attribute.Set{})
+	for n := 0; n < rType.NumMethod(); n++ {
+		mType := rType.Method(n)
+		if !mType.IsExported() {
+			t.Logf("ignoring unexported %s", mType.Name)
+			continue
+		}
+		t.Run(mType.Name, func(t *testing.T) {
+			m := rVal.MethodByName(mType.Name)
+			if !m.IsValid() {
+				t.Errorf("unknown method: %s", mType.Name)
+			}
+			assert.NotPanics(t, func() { _ = m.Call(args(mType)) })
+		})
+	}
+}
+
+func args(m reflect.Method) []reflect.Value {
+	numIn := m.Type.NumIn() - 1 // Do not include the receiver arg.
+	if numIn <= 0 {
+		return nil
+	}
+	if m.Type.IsVariadic() {
+		numIn--
+	}
+	out := make([]reflect.Value, numIn)
+	for i := range out {
+		aType := m.Type.In(i + 1) // Skip receiver arg.
+		out[i] = reflect.New(aType).Elem()
+	}
+	return out
 }
