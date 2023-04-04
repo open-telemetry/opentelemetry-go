@@ -125,6 +125,7 @@ func WithoutScopeInfo() Option {
 // have special behavior based on their name.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
+		ns = sanitizeName(ns)
 		if !strings.HasSuffix(ns, "_") {
 			// namespace and metric names should be separated with an underscore,
 			// adds a trailing underscore if there is not one already.
