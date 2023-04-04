@@ -14,7 +14,7 @@
 
 package otlptrace // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 
-// Version is the current release version of the OpenTelemetry OTLP trace client in use.
+// Version is the current release version of the OpenTelemetry OTLP trace exporter in use.
 func Version() string {
 	return "1.15.0-rc.2"
 }
