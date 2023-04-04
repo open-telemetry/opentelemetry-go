@@ -76,10 +76,12 @@ func (c *bridgeSpanContext) IsSampled() bool {
 	return c.otelSpanContext.IsSampled()
 }
 
+// TraceID returns TraceID of underlying span
 func (c *bridgeSpanContext) TraceID() trace.TraceID {
 	return c.otelSpanContext.TraceID()
 }
 
+// SpanID returns SpanID of underlying span
 func (c *bridgeSpanContext) SpanID() trace.SpanID {
 	return c.otelSpanContext.SpanID()
 }

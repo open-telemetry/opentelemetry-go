@@ -261,6 +261,14 @@ type samplable interface {
 	IsSampled() bool
 }
 
+type traceId interface {
+	TraceID() trace.TraceID
+}
+
+type spanId interface {
+	SpanID() trace.SpanID
+}
+
 func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
@@ -576,11 +584,8 @@ func TestBridge_SpanContext_TraceID_SpanID(t *testing.T) {
 			spanContext, err := bridge.Extract(ot.TextMap, tmc)
 			assert.NoError(t, err)
 
-			bsc, ok := spanContext.(*bridgeSpanContext)
-			assert.True(t, ok)
-
-			assert.Equal(t, spanID.String(), bsc.SpanID().String())
-			assert.Equal(t, traceID.String(), bsc.TraceID().String())
+			assert.Equal(t, spanID.String(), spanContext.(spanId).SpanID().String())
+			assert.Equal(t, traceID.String(), spanContext.(traceId).TraceID().String())
 		})
 	}
 }

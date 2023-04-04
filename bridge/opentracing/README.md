@@ -57,3 +57,33 @@ if s, ok := sc.(samplable); ok && s.IsSampled() {
 	// Do something with sc knowing it is sampled.
 }
 ```
+
+### `SpanContext.TraceID`
+
+Return the underlying OpenTelemetry `Span.TraceID` value by converting a `bridgeSpanContext`.
+
+```go
+type traceId interface {
+	TraceID() bool
+}
+
+var sc opentracing.SpanContext = ...
+if s, ok := sc.(traceId); ok {
+	// Use TraceID by s.TraceID()
+}
+```
+
+### `SpanContext.SpanID`
+
+Return the underlying OpenTelemetry `Span.SpanID` value by converting a `bridgeSpanContext`.
+
+```go
+type spanId interface {
+	SpanID() bool
+}
+
+var sc opentracing.SpanContext = ...
+if s, ok := sc.(spanId); ok {
+	// Use SpanID by s.SpanID()
+}
+```
