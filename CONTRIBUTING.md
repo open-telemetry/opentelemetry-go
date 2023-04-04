@@ -470,7 +470,32 @@ doumentation are allowed to be extended with additional methods.
 
 > Warning: methods may be added to this interface in minor releases.
 
+These interfaces are defined by the OpenTelemetry specification and will be
+updated as the specification evolves.
+
 Otherwise, stable interfaces MUST NOT be modified.
+
+#### How to Change Specification Interfaces
+
+When an API change must be made, we will update the SDK with the new method one
+release before the API change. This will allow the SDK one version before the
+API change to work seemlessly with the new API.
+
+If an incompatible version of the SDK is used with the new API the application
+will fail to compile.
+
+#### How Not to Change Specification Interfaces
+
+We have explored using a v2 of the API to change interfaces and found that there
+was no way to introduce a v2 and have it seamlessly work with the v1 of the API.
+Problems happened libraries that upgraded to v2 when an application did not
+would not produce any telemetry.
+
+More detail of the approaches considered and their limitations can be found in
+the [Use a V2 API to evolve interfaces](https://github.com/open-telemetry/opentelemetry-go/issues/3920)
+issue.
+
+#### How to Change Other Interfaces
 
 If new functionality is needed for an interface that cannot be changed it MUST
 be added by including an additional interface. That added interface can be a
