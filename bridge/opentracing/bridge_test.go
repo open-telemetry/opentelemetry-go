@@ -546,3 +546,41 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 		})
 	}
 }
+
+func TestBridge_SpanContext_TraceID(t *testing.T) {
+	bridge := NewBridgeTracer()
+	bridge.SetTextMapPropagator(new(testTextMapPropagator))
+
+	tmc := newTextCarrier()
+
+	testCases := []struct {
+		name    string
+		traceID trace.TraceID
+		spanID  trace.SpanID
+	}{
+		{
+			name:    "support for getting spanID and traceID",
+			traceID: [16]byte{byte(1)},
+			spanID:  [8]byte{byte(2)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := bridge.Inject(newBridgeSpanContext(trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: tc.traceID,
+				SpanID:  tc.spanID,
+			}), nil), ot.TextMap, tmc)
+			assert.NoError(t, err)
+
+			spanContext, err := bridge.Extract(ot.TextMap, tmc)
+			assert.NoError(t, err)
+
+			bsc, ok := spanContext.(*bridgeSpanContext)
+			assert.True(t, ok)
+
+			assert.Equal(t, spanID.String(), bsc.SpanID().String())
+			assert.Equal(t, traceID.String(), bsc.TraceID().String())
+		})
+	}
+}

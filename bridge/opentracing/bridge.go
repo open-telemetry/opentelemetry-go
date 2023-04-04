@@ -76,6 +76,14 @@ func (c *bridgeSpanContext) IsSampled() bool {
 	return c.otelSpanContext.IsSampled()
 }
 
+func (c *bridgeSpanContext) TraceID() trace.TraceID {
+	return c.otelSpanContext.TraceID()
+}
+
+func (c *bridgeSpanContext) SpanID() trace.SpanID {
+	return c.otelSpanContext.SpanID()
+}
+
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	crk := http.CanonicalHeaderKey(restrictedKey)
 	m, err := baggage.NewMember(crk, value)
