@@ -66,6 +66,7 @@ type collector struct {
 	createTargetInfoOnce sync.Once
 	scopeInfos           map[instrumentation.Scope]prometheus.Metric
 	metricFamilies       map[string]*dto.MetricFamily
+	namespace            string
 }
 
 // prometheus counters MUST have a _total suffix:
@@ -88,6 +89,7 @@ func New(opts ...Option) (*Exporter, error) {
 		disableScopeInfo:  cfg.disableScopeInfo,
 		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
 		metricFamilies:    make(map[string]*dto.MetricFamily),
+		namespace:         cfg.namespace,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -316,9 +318,12 @@ var unitSuffixes = map[string]string{
 	"ms": "_milliseconds",
 }
 
-// getName returns the sanitized name, including unit suffix.
+// getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics) string {
 	name := sanitizeName(m.Name)
+	if c.namespace != "" {
+		name = c.namespace + name
+	}
 	if c.withoutUnits {
 		return name
 	}
