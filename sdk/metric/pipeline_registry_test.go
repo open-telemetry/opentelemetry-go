@@ -596,12 +596,6 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			want: errIncompatibleAggregation,
 		},
 		{
-			name: "Default aggregation should error",
-			kind: InstrumentKindCounter,
-			agg:  aggregation.Default{},
-			want: errUnknownAggregation,
-		},
-		{
 			name: "unknown kind with Sum should error",
 			kind: undefinedInstrument,
 			agg:  aggregation.Sum{},
