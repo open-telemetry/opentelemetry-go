@@ -14,6 +14,8 @@
 
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
+import "go.opentelemetry.io/otel/attribute"
+
 // Observable is used as a grouping mechanism for all instruments that are
 // updated within a Callback.
 type Observable interface {
@@ -166,3 +168,211 @@ func (o unitOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 
 // WithUnit sets the instrument unit.
 func WithUnit(u string) Option { return unitOpt(u) }
+
+// Int64AddOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a Int64AddOption.
+type Int64AddOption interface {
+	applyInt64Add(Int64AddConfig) Int64AddConfig
+}
+
+// Int64AddConfig contains options for an int64 addition measurement.
+type Int64AddConfig struct {
+	attrs attribute.Set
+}
+
+// NewInt64AddConfig returns a new [Int64AddConfig] with all opts applied.
+func NewInt64AddConfig(opts ...Int64AddOption) Int64AddConfig {
+	var config Int64AddConfig
+	for _, o := range opts {
+		config = o.applyInt64Add(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Int64AddConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// Float64AddOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a
+// Float64AddOption.
+type Float64AddOption interface {
+	applyFloat64Add(Float64AddConfig) Float64AddConfig
+}
+
+// Float64AddConfig contains options for an float64 addition measurement.
+type Float64AddConfig struct {
+	attrs attribute.Set
+}
+
+// NewFloat64AddConfig returns a new [Float64AddConfig] with all opts applied.
+func NewFloat64AddConfig(opts ...Float64AddOption) Float64AddConfig {
+	var config Float64AddConfig
+	for _, o := range opts {
+		config = o.applyFloat64Add(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Float64AddConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// Int64RecordOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a
+// Int64RecordOption.
+type Int64RecordOption interface {
+	applyInt64Record(Int64RecordConfig) Int64RecordConfig
+}
+
+// Int64RecordConfig contains options for an int64 recorded measurement.
+type Int64RecordConfig struct {
+	attrs attribute.Set
+}
+
+// NewInt64RecordConfig returns a new [Int64RecordConfig] with all opts
+// applied.
+func NewInt64RecordConfig(opts ...Int64RecordOption) Int64RecordConfig {
+	var config Int64RecordConfig
+	for _, o := range opts {
+		config = o.applyInt64Record(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Int64RecordConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// Float64RecordOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a
+// Float64RecordOption.
+type Float64RecordOption interface {
+	applyFloat64Record(Float64RecordConfig) Float64RecordConfig
+}
+
+// Float64RecordConfig contains options for an float64 recorded measurement.
+type Float64RecordConfig struct {
+	attrs attribute.Set
+}
+
+// NewFloat64RecordConfig returns a new [Float64RecordConfig] with all opts
+// applied.
+func NewFloat64RecordConfig(opts ...Float64RecordOption) Float64RecordConfig {
+	var config Float64RecordConfig
+	for _, o := range opts {
+		config = o.applyFloat64Record(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Float64RecordConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// Int64ObserveOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a
+// Int64ObserveOption.
+type Int64ObserveOption interface {
+	applyInt64Observe(Int64ObserveConfig) Int64ObserveConfig
+}
+
+// Int64ObserveConfig contains options for an int64 observed measurement.
+type Int64ObserveConfig struct {
+	attrs attribute.Set
+}
+
+// NewInt64ObserveConfig returns a new [Int64ObserveConfig] with all opts
+// applied.
+func NewInt64ObserveConfig(opts ...Int64ObserveOption) Int64ObserveConfig {
+	var config Int64ObserveConfig
+	for _, o := range opts {
+		config = o.applyInt64Observe(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Int64ObserveConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// Float64ObserveOption applies options to an addition measurement. See
+// [MeasurementOption] for other options that can be used as a
+// Float64ObserveOption.
+type Float64ObserveOption interface {
+	applyFloat64Observe(Float64ObserveConfig) Float64ObserveConfig
+}
+
+// Float64ObserveConfig contains options for an float64 observed measurement.
+type Float64ObserveConfig struct {
+	attrs attribute.Set
+}
+
+// NewFloat64ObserveConfig returns a new [Float64ObserveConfig] with all opts
+// applied.
+func NewFloat64ObserveConfig(opts ...Float64ObserveOption) Float64ObserveConfig {
+	var config Float64ObserveConfig
+	for _, o := range opts {
+		config = o.applyFloat64Observe(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c Float64ObserveConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// MeasurementOption applies options to all instrument measurement.
+type MeasurementOption interface {
+	Int64AddOption
+	Float64AddOption
+	Int64RecordOption
+	Float64RecordOption
+	Int64ObserveOption
+	Float64ObserveOption
+}
+
+type attrOpt struct {
+	set attribute.Set
+}
+
+func (o attrOpt) applyInt64Add(c Int64AddConfig) Int64AddConfig {
+	c.attrs = o.set
+	return c
+}
+
+func (o attrOpt) applyFloat64Add(c Float64AddConfig) Float64AddConfig {
+	c.attrs = o.set
+	return c
+}
+
+func (o attrOpt) applyInt64Record(c Int64RecordConfig) Int64RecordConfig {
+	c.attrs = o.set
+	return c
+}
+
+func (o attrOpt) applyFloat64Record(c Float64RecordConfig) Float64RecordConfig {
+	c.attrs = o.set
+	return c
+}
+
+func (o attrOpt) applyInt64Observe(c Int64ObserveConfig) Int64ObserveConfig {
+	c.attrs = o.set
+	return c
+}
+
+func (o attrOpt) applyFloat64Observe(c Float64ObserveConfig) Float64ObserveConfig {
+	c.attrs = o.set
+	return c
+}
+
+// WithAttributes sets the attributes a measurement is made with.
+func WithAttributes(attributes attribute.Set) MeasurementOption {
+	return attrOpt{set: attributes}
+}

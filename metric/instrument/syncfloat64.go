@@ -17,7 +17,6 @@ package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -31,7 +30,7 @@ type Float64Counter interface {
 	embedded.Float64Counter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Add(ctx context.Context, incr float64, opts ...Float64AddOption)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -78,7 +77,7 @@ type Float64UpDownCounter interface {
 	embedded.Float64UpDownCounter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Add(ctx context.Context, incr float64, opts ...Float64AddOption)
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -126,7 +125,7 @@ type Float64Histogram interface {
 	embedded.Float64Histogram
 
 	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr float64, attrs ...attribute.KeyValue)
+	Record(ctx context.Context, incr float64, opts ...Float64RecordOption)
 }
 
 // Float64HistogramConfig contains options for synchronous counter instruments

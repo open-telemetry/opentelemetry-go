@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -89,6 +88,6 @@ type int64Observer struct {
 	got int64
 }
 
-func (o *int64Observer) Observe(v int64, _ ...attribute.KeyValue) {
+func (o *int64Observer) Observe(v int64, _ ...Int64ObserveOption) {
 	o.got = v
 }
