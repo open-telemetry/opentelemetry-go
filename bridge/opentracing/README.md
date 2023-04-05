@@ -43,25 +43,11 @@ When you have started an OpenTracing Span, make sure the OpenTelemetry knows abo
 
 The bridge functionality can be extended beyond the OpenTracing API.
 
-### `SpanContext.IsSampled`
-
-Return the underlying OpenTelemetry [`Span.IsSampled`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext.IsSampled) value by converting a `bridgeSpanContext`.
-
-```go
-type samplable interface {
-	IsSampled() bool
-}
-
-var sc opentracing.SpanContext = ...
-if s, ok := sc.(samplable); ok && s.IsSampled() {
-	// Do something with sc knowing it is sampled.
-}
-```
-
-Any `SpanContext` method can be accessed as following:
+Any [`SpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext) method can be accessed as following:
 
 ```go
 type spanContextProvider interface {
+	IsSampled() bool
 	TraceID() trace.TraceID
 	SpanID() trace.SpanID
 	TraceFlags() trace.TraceFlags
@@ -76,22 +62,3 @@ if s, ok := sc.(spanContextProvider); ok {
 	...
 }
 ```
-
-Here is the list of available methods on `SpanContext` that can be accessed as above:
-
-- `IsValid() bool`
-- `IsRemote() bool`
-- `WithRemote(remote bool) SpanContext`
-- `TraceID() TraceID`
-- `HasTraceID() bool`
-- `WithTraceID(traceID TraceID) SpanContext`
-- `SpanID() SpanID`
-- `HasSpanID() bool`
-- `WithSpanID(spanID SpanID) SpanContext`
-- `TraceFlags() TraceFlags`
-- `IsSampled() bool`
-- `WithTraceFlags(flags TraceFlags) SpanContext`
-- `TraceState() TraceState`
-- `WithTraceState(state TraceState) SpanContext`
-- `Equal(other SpanContext) bool`
-- `MarshalJSON() ([]byte, error)`
