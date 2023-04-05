@@ -17,7 +17,6 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -157,14 +156,14 @@ type observationRecorder struct {
 	ctx context.Context
 }
 
-func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveFloat64(i instrument.Float64Observable, value float64, _ ...instrument.Float64ObserveOption) {
 	iImpl, ok := i.(*testCountingFloatInstrument)
 	if ok {
 		iImpl.observe()
 	}
 }
 
-func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64, attr ...attribute.KeyValue) {
+func (o observationRecorder) ObserveInt64(i instrument.Int64Observable, value int64, _ ...instrument.Int64ObserveOption) {
 	iImpl, ok := i.(*testCountingIntInstrument)
 	if ok {
 		iImpl.observe()
