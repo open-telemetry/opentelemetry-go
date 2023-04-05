@@ -64,25 +64,26 @@ func main() {
 	// Start the prometheus HTTP server and pass the exporter Collector to it
 	go serveMetrics()
 
-	attrs := []attribute.KeyValue{
+	attrs := attribute.NewSet(
 		attribute.Key("A").String("B"),
 		attribute.Key("C").String("D"),
-	}
+	)
+	opt := instrument.WithAttributes(attrs)
 
 	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	counter.Add(ctx, 5, attrs...)
+	counter.Add(ctx, 5, opt)
 
 	histogram, err := meter.Float64Histogram("custom_histogram", instrument.WithDescription("a histogram with custom buckets and rename"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	histogram.Record(ctx, 136, attrs...)
-	histogram.Record(ctx, 64, attrs...)
-	histogram.Record(ctx, 701, attrs...)
-	histogram.Record(ctx, 830, attrs...)
+	histogram.Record(ctx, 136, opt)
+	histogram.Record(ctx, 64, opt)
+	histogram.Record(ctx, 701, opt)
+	histogram.Record(ctx, 830, opt)
 
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()

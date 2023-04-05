@@ -50,17 +50,18 @@ func main() {
 	// Start the prometheus HTTP server and pass the exporter Collector to it
 	go serveMetrics()
 
-	attrs := []attribute.KeyValue{
+	attrs := attribute.NewSet(
 		attribute.Key("A").String("B"),
 		attribute.Key("C").String("D"),
-	}
+	)
+	opt := instrument.WithAttributes(attrs)
 
 	// This is the equivalent of prometheus.NewCounterVec
 	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	counter.Add(ctx, 5, attrs...)
+	counter.Add(ctx, 5, opt)
 
 	gauge, err := meter.Float64ObservableGauge("bar", instrument.WithDescription("a fun little gauge"))
 	if err != nil {
@@ -68,7 +69,7 @@ func main() {
 	}
 	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
 		n := -10. + rng.Float64()*(90.) // [-10, 100)
-		o.ObserveFloat64(gauge, n, attrs...)
+		o.ObserveFloat64(gauge, n, opt)
 		return nil
 	}, gauge)
 	if err != nil {
@@ -80,10 +81,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	histogram.Record(ctx, 23, attrs...)
-	histogram.Record(ctx, 7, attrs...)
-	histogram.Record(ctx, 101, attrs...)
-	histogram.Record(ctx, 105, attrs...)
+	histogram.Record(ctx, 23, opt)
+	histogram.Record(ctx, 7, opt)
+	histogram.Record(ctx, 101, opt)
+	histogram.Record(ctx, 105, opt)
 
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()
