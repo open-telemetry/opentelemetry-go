@@ -20,7 +20,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
-- Promoted all the methods from `otel.SpanContext` to `bridgeSpanContext` by embedding `otel.SpanContext` in `bridgeSpanContext`. (#3966)
+- Add all the methods from `"go.opentelemetry.io/otel/trace".SpanContext`
+  to `bridgeSpanContext` by embedding `otel.SpanContext` in `bridgeSpanContext`. (#3966)
 
 ### Fixed
 

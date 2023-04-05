@@ -43,7 +43,7 @@ When you have started an OpenTracing Span, make sure the OpenTelemetry knows abo
 
 The bridge functionality can be extended beyond the OpenTracing API.
 
-Any [`SpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext) method can be accessed as following:
+Any [`trace.SpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext) method can be accessed as following:
 
 ```go
 type spanContextProvider interface {
