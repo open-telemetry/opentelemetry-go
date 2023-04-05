@@ -43,18 +43,23 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
+	s := attribute.NewSet(attribute.String("K", "V"))
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.String("K", "V"))
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 	}
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
+	s := attribute.NewSet(
+		attribute.String("", "V"),
+		attribute.String("K", "V"),
+	)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.String("", "V"), attribute.String("K", "V"))
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 	}
 }
 
@@ -62,7 +67,8 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("K", i))
+		s := attribute.NewSet(attribute.Int("K", i))
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 	}
 }
 
@@ -70,7 +76,11 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("", i), attribute.Int("K", i))
+		s := attribute.NewSet(
+			attribute.Int("", i),
+			attribute.Int("K", i),
+		)
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 	}
 }
 
@@ -83,15 +93,20 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	))
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("L", i), attribute.Int("K", i))
+		s := attribute.NewSet(
+			attribute.Int("L", i),
+			attribute.Int("K", i),
+		)
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 	}
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
+	s := attribute.NewSet(attribute.Int("K", 1))
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, attribute.Int("K", 1))
+		cntr.Add(ctx, 1, instrument.WithAttributes(s))
 
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -102,7 +117,8 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
-			cntr.Add(ctx, 1, attribute.Int("K", j))
+			s := attribute.NewSet(attribute.Int("K", j))
+			cntr.Add(ctx, 1, instrument.WithAttributes(s))
 		}
 		_ = rdr.Collect(ctx, nil)
 	}
