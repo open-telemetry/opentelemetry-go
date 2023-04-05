@@ -25,14 +25,19 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
-func TestFloat64ObservableConfiguration(t *testing.T) {
+func TestObservableConfiguration(t *testing.T) {
+	t.Run("Int64", testObservableConfiguration[int64]())
+	t.Run("Float64", testObservableConfiguration[float64]())
+}
+
+func testObservableConfiguration[N int64 | float64]() func(t *testing.T) {
 	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = "By"
+		token  = 43
+		desc   = "Instrument description."
+		uBytes = "By"
 	)
 
-	run := func(got float64ObservableConfig) func(*testing.T) {
+	run := func(got observableConfig[N]) func(*testing.T) {
 		return func(t *testing.T) {
 			assert.Equal(t, desc, got.Description(), "description")
 			assert.Equal(t, uBytes, got.Unit(), "unit")
@@ -40,55 +45,56 @@ func TestFloat64ObservableConfiguration(t *testing.T) {
 			// Functions are not comparable.
 			cBacks := got.Callbacks()
 			require.Len(t, cBacks, 1, "callbacks")
-			o := &float64Observer{}
+			o := &observer[N]{}
 			err := cBacks[0](context.Background(), o)
 			require.NoError(t, err)
-			assert.Equal(t, token, o.got, "callback not set")
+			assert.Equal(t, N(token), o.got, "callback not set")
 		}
 	}
 
-	cback := func(ctx context.Context, obsrv Float64Observer) error {
+	cback := func(_ context.Context, obsrv ObserverT[N]) error {
 		obsrv.Observe(token)
 		return nil
 	}
 
-	t.Run("Float64ObservableCounter", run(
-		NewFloat64ObservableCounterConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithFloat64Callback(cback),
-		),
-	))
+	return func(t *testing.T) {
+		t.Run("ObservableCounter", run(
+			NewObservableCounterConfig[N](
+				WithDescription[N](desc),
+				WithUnit[N](uBytes),
+				WithCallback(cback),
+			),
+		))
 
-	t.Run("Float64ObservableUpDownCounter", run(
-		NewFloat64ObservableUpDownCounterConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithFloat64Callback(cback),
-		),
-	))
+		t.Run("ObservableUpDownCounter", run(
+			NewObservableUpDownCounterConfig[N](
+				WithDescription[N](desc),
+				WithUnit[N](uBytes),
+				WithCallback(cback),
+			),
+		))
 
-	t.Run("Float64ObservableGauge", run(
-		NewFloat64ObservableGaugeConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithFloat64Callback(cback),
-		),
-	))
+		t.Run("ObservableGauge", run(
+			NewObservableGaugeConfig[N](
+				WithDescription[N](desc),
+				WithUnit[N](uBytes),
+				WithCallback(cback),
+			),
+		))
+	}
 }
 
-type float64ObservableConfig interface {
+type observableConfig[N int64 | float64] interface {
 	Description() string
 	Unit() string
-	Callbacks() []Float64Callback
+	Callbacks() []Callback[N]
 }
 
-type float64Observer struct {
-	embedded.Float64Observer
-	Observable
-	got float64
+type observer[N int64 | float64] struct {
+	embedded.ObserverT[N]
+	got N
 }
 
-func (o *float64Observer) Observe(v float64, _ ...attribute.KeyValue) {
+func (o *observer[N]) Observe(v N, _ ...attribute.KeyValue) {
 	o.got = v
 }

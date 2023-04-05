@@ -21,33 +21,40 @@ import (
 )
 
 func TestInt64Configuration(t *testing.T) {
+	t.Run("Int64", testConfiguration[int64]())
+	t.Run("Float64", testConfiguration[float64]())
+}
+
+func testConfiguration[N int64 | float64]() func(t *testing.T) {
 	const (
 		token  int64 = 43
 		desc         = "Instrument description."
 		uBytes       = "By"
 	)
 
-	run := func(got int64Config) func(*testing.T) {
+	run := func(got config) func(*testing.T) {
 		return func(t *testing.T) {
 			assert.Equal(t, desc, got.Description(), "description")
 			assert.Equal(t, uBytes, got.Unit(), "unit")
 		}
 	}
 
-	t.Run("Int64Counter", run(
-		NewInt64CounterConfig(WithDescription(desc), WithUnit(uBytes)),
-	))
+	return func(t *testing.T) {
+		t.Run("Counter", run(
+			NewCounterConfig[N](WithDescription[N](desc), WithUnit[N](uBytes)),
+		))
 
-	t.Run("Int64UpDownCounter", run(
-		NewInt64UpDownCounterConfig(WithDescription(desc), WithUnit(uBytes)),
-	))
+		t.Run("UpDownCounter", run(
+			NewUpDownCounterConfig[N](WithDescription[N](desc), WithUnit[N](uBytes)),
+		))
 
-	t.Run("Int64Histogram", run(
-		NewInt64HistogramConfig(WithDescription(desc), WithUnit(uBytes)),
-	))
+		t.Run("Histogram", run(
+			NewHistogramConfig[N](WithDescription[N](desc), WithUnit[N](uBytes)),
+		))
+	}
 }
 
-type int64Config interface {
+type config interface {
 	Description() string
 	Unit() string
 }
