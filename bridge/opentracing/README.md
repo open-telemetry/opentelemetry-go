@@ -58,32 +58,40 @@ if s, ok := sc.(samplable); ok && s.IsSampled() {
 }
 ```
 
-### `SpanContext.TraceID`
-
-Return the underlying OpenTelemetry `Span.TraceID` value by converting a `bridgeSpanContext`.
+Any `SpanContext` method can be accessed as following:
 
 ```go
-type traceId interface {
-	TraceID() bool
+type spanContextProvider interface {
+	TraceID() trace.TraceID
+	SpanID() trace.SpanID
+	TraceFlags() trace.TraceFlags
+	... // any other available method can be added here to access it
 }
 
 var sc opentracing.SpanContext = ...
-if s, ok := sc.(traceId); ok {
+if s, ok := sc.(spanContextProvider); ok {
 	// Use TraceID by s.TraceID()
-}
-```
-
-### `SpanContext.SpanID`
-
-Return the underlying OpenTelemetry `Span.SpanID` value by converting a `bridgeSpanContext`.
-
-```go
-type spanId interface {
-	SpanID() bool
-}
-
-var sc opentracing.SpanContext = ...
-if s, ok := sc.(spanId); ok {
 	// Use SpanID by s.SpanID()
+	// Use TraceFlags by s.TraceFlags()
+	...
 }
 ```
+
+Here is the list of available methods on `SpanContext` that can be accessed as above:
+
+- `IsValid() bool`
+- `IsRemote() bool`
+- `WithRemote(remote bool) SpanContext`
+- `TraceID() TraceID`
+- `HasTraceID() bool`
+- `WithTraceID(traceID TraceID) SpanContext`
+- `SpanID() SpanID`
+- `HasSpanID() bool`
+- `WithSpanID(spanID SpanID) SpanContext`
+- `TraceFlags() TraceFlags`
+- `IsSampled() bool`
+- `WithTraceFlags(flags TraceFlags) SpanContext`
+- `TraceState() TraceState`
+- `WithTraceState(state TraceState) SpanContext`
+- `Equal(other SpanContext) bool`
+- `MarshalJSON() ([]byte, error)`

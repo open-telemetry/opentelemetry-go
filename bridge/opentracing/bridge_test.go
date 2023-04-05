@@ -261,14 +261,6 @@ type samplable interface {
 	IsSampled() bool
 }
 
-type traceId interface {
-	TraceID() trace.TraceID
-}
-
-type spanId interface {
-	SpanID() trace.SpanID
-}
-
 func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
@@ -374,12 +366,12 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 					bsc, ok := spanContext.(*bridgeSpanContext)
 					assert.True(t, ok)
 					require.NotNil(t, bsc)
-					require.NotNil(t, bsc.otelSpanContext)
-					require.NotNil(t, bsc.otelSpanContext.SpanID())
-					require.NotNil(t, bsc.otelSpanContext.TraceID())
+					require.NotNil(t, bsc.SpanContext)
+					require.NotNil(t, bsc.SpanID())
+					require.NotNil(t, bsc.TraceID())
 
-					assert.Equal(t, spanID.String(), bsc.otelSpanContext.SpanID().String())
-					assert.Equal(t, traceID.String(), bsc.otelSpanContext.TraceID().String())
+					assert.Equal(t, spanID.String(), bsc.SpanID().String())
+					assert.Equal(t, traceID.String(), bsc.TraceID().String())
 				}
 			}
 		})
@@ -555,11 +547,18 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 	}
 }
 
-func TestBridge_SpanContext_TraceID_SpanID(t *testing.T) {
+func TestBridge_SpanContext_Promoted_Methods(t *testing.T) {
 	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
+
+	type spanContextProvider interface {
+		HasTraceID() bool
+		TraceID() trace.TraceID
+		HasSpanID() bool
+		SpanID() trace.SpanID
+	}
 
 	testCases := []struct {
 		name    string
@@ -584,8 +583,12 @@ func TestBridge_SpanContext_TraceID_SpanID(t *testing.T) {
 			spanContext, err := bridge.Extract(ot.TextMap, tmc)
 			assert.NoError(t, err)
 
-			assert.Equal(t, spanID.String(), spanContext.(spanId).SpanID().String())
-			assert.Equal(t, traceID.String(), spanContext.(traceId).TraceID().String())
+			assert.NotPanics(t, func() {
+				assert.Equal(t, spanID.String(), spanContext.(spanContextProvider).SpanID().String())
+				assert.Equal(t, traceID.String(), spanContext.(spanContextProvider).TraceID().String())
+				assert.True(t, spanContext.(spanContextProvider).HasSpanID())
+				assert.True(t, spanContext.(spanContextProvider).HasTraceID())
+			})
 		})
 	}
 }

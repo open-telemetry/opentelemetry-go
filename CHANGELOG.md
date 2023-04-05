@@ -12,7 +12,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/otel/metric/embedded` package. (#3916)
 - The `Version` function to `go.opentelemetry.io/otel/sdk` to return the SDK version. (#3949)
-- Methods `bridgeSpanContext.TraceID` and `bridgeSpanContext.SpanID` to `go.opentelemetry.io/otel/bridget/opentracing` to expose traceID and spanID for a span. (#3966)
 
 ### Changed
 
@@ -21,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
+- Promoted all the methods from `otel.SpanContext` to `bridgeSpanContext` by embedding `otel.SpanContext` in `bridgeSpanContext`. (#3966)
 
 ### Fixed
 
