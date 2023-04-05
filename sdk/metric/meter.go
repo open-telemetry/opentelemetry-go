@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -32,6 +33,8 @@ import (
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
+	embedded.Meter
+
 	scope instrumentation.Scope
 	pipes pipelines
 
@@ -264,6 +267,8 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observab
 }
 
 type observer struct {
+	embedded.Observer
+
 	float64 map[observablID[float64]]struct{}
 	int64   map[observablID[int64]]struct{}
 }
@@ -356,7 +361,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attri
 	oImpl.observe(v, a)
 }
 
-type noopRegister struct{}
+type noopRegister struct{ embedded.Registration }
 
 func (noopRegister) Unregister() error {
 	return nil
@@ -409,11 +414,12 @@ func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []in
 }
 
 func (p int64ObservProvider) callback(i int64Observable, f instrument.Int64Callback) func(context.Context) error {
-	inst := int64Observer{i}
+	inst := int64Observer{int64Observable: i}
 	return func(ctx context.Context) error { return f(ctx, inst) }
 }
 
 type int64Observer struct {
+	embedded.Int64Observer
 	int64Observable
 }
 
@@ -440,11 +446,12 @@ func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks 
 }
 
 func (p float64ObservProvider) callback(i float64Observable, f instrument.Float64Callback) func(context.Context) error {
-	inst := float64Observer{i}
+	inst := float64Observer{float64Observable: i}
 	return func(ctx context.Context) error { return f(ctx, inst) }
 }
 
 type float64Observer struct {
+	embedded.Float64Observer
 	float64Observable
 }
 
