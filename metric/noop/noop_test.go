@@ -43,61 +43,61 @@ func TestImplementationNoPanics(t *testing.T) {
 		reflect.ValueOf(Registration{}),
 		reflect.TypeOf((*metric.Registration)(nil)).Elem(),
 	))
-	t.Run("Int64Counter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64Counter{}),
-		reflect.TypeOf((*instrument.Int64Counter)(nil)).Elem(),
+	t.Run("Counter[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Counter[int64]{}),
+		reflect.TypeOf((*instrument.Counter[int64])(nil)).Elem(),
 	))
-	t.Run("Float64Counter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64Counter{}),
-		reflect.TypeOf((*instrument.Float64Counter)(nil)).Elem(),
+	t.Run("Counter[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Counter[float64]{}),
+		reflect.TypeOf((*instrument.Counter[float64])(nil)).Elem(),
 	))
-	t.Run("Int64UpDownCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64UpDownCounter{}),
-		reflect.TypeOf((*instrument.Int64UpDownCounter)(nil)).Elem(),
+	t.Run("UpDownCounter[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(UpDownCounter[int64]{}),
+		reflect.TypeOf((*instrument.UpDownCounter[int64])(nil)).Elem(),
 	))
-	t.Run("Float64UpDownCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64UpDownCounter{}),
-		reflect.TypeOf((*instrument.Float64UpDownCounter)(nil)).Elem(),
+	t.Run("UpDownCounter[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(UpDownCounter[float64]{}),
+		reflect.TypeOf((*instrument.UpDownCounter[float64])(nil)).Elem(),
 	))
-	t.Run("Int64Histogram", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64Histogram{}),
-		reflect.TypeOf((*instrument.Int64Histogram)(nil)).Elem(),
+	t.Run("Histogram[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Histogram[int64]{}),
+		reflect.TypeOf((*instrument.Histogram[int64])(nil)).Elem(),
 	))
-	t.Run("Float64Histogram", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64Histogram{}),
-		reflect.TypeOf((*instrument.Float64Histogram)(nil)).Elem(),
+	t.Run("Histogram[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Histogram[float64]{}),
+		reflect.TypeOf((*instrument.Histogram[float64])(nil)).Elem(),
 	))
-	t.Run("Int64ObservableCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64ObservableCounter{}),
-		reflect.TypeOf((*instrument.Int64ObservableCounter)(nil)).Elem(),
+	t.Run("ObservableCounter[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableCounter[int64]{}),
+		reflect.TypeOf((*instrument.ObservableCounter[int64])(nil)).Elem(),
 	))
-	t.Run("Float64ObservableCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64ObservableCounter{}),
-		reflect.TypeOf((*instrument.Float64ObservableCounter)(nil)).Elem(),
+	t.Run("ObservableCounter[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableCounter[float64]{}),
+		reflect.TypeOf((*instrument.ObservableCounter[float64])(nil)).Elem(),
 	))
-	t.Run("Int64ObservableGauge", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64ObservableGauge{}),
-		reflect.TypeOf((*instrument.Int64ObservableGauge)(nil)).Elem(),
+	t.Run("ObservableGauge[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableGauge[int64]{}),
+		reflect.TypeOf((*instrument.ObservableGauge[int64])(nil)).Elem(),
 	))
-	t.Run("Float64ObservableGauge", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64ObservableGauge{}),
-		reflect.TypeOf((*instrument.Float64ObservableGauge)(nil)).Elem(),
+	t.Run("ObservableGauge[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableGauge[float64]{}),
+		reflect.TypeOf((*instrument.ObservableGauge[float64])(nil)).Elem(),
 	))
-	t.Run("Int64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64ObservableUpDownCounter{}),
-		reflect.TypeOf((*instrument.Int64ObservableUpDownCounter)(nil)).Elem(),
+	t.Run("ObservableUpDownCounter[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableUpDownCounter[int64]{}),
+		reflect.TypeOf((*instrument.ObservableUpDownCounter[int64])(nil)).Elem(),
 	))
-	t.Run("Float64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64ObservableUpDownCounter{}),
-		reflect.TypeOf((*instrument.Float64ObservableUpDownCounter)(nil)).Elem(),
+	t.Run("ObservableUpDownCounter[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObservableUpDownCounter[float64]{}),
+		reflect.TypeOf((*instrument.ObservableUpDownCounter[float64])(nil)).Elem(),
 	))
-	t.Run("Int64Observer", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Int64Observer{}),
-		reflect.TypeOf((*instrument.Int64Observer)(nil)).Elem(),
+	t.Run("Observer[int64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObserverT[int64]{}),
+		reflect.TypeOf((*instrument.ObserverT[int64])(nil)).Elem(),
 	))
-	t.Run("Float64Observer", assertAllExportedMethodNoPanic(
-		reflect.ValueOf(Float64Observer{}),
-		reflect.TypeOf((*instrument.Float64Observer)(nil)).Elem(),
+	t.Run("Observer[float64]", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(ObserverT[float64]{}),
+		reflect.TypeOf((*instrument.ObserverT[float64])(nil)).Elem(),
 	))
 }
 
