@@ -390,6 +390,8 @@ func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
 // returned.
 func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKind, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
 	switch a := agg.(type) {
+	case aggregation.Default:
+		return i.aggregator(DefaultAggregationSelector(kind), kind, temporality, monotonic)
 	case aggregation.Drop:
 		return nil, nil
 	case aggregation.LastValue:
@@ -444,6 +446,8 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 // | Observable Gauge         | X    | X         |     |           |                       |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
+	case aggregation.Default:
+		return nil
 	case aggregation.ExplicitBucketHistogram:
 		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
 			return nil
