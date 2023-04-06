@@ -24,338 +24,115 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
+var (
+	_ unwrapper = (*observableCounter[int64])(nil)
+	_ unwrapper = (*observableCounter[float64])(nil)
+	_ unwrapper = (*observableUpDownCounter[int64])(nil)
+	_ unwrapper = (*observableUpDownCounter[float64])(nil)
+	_ unwrapper = (*observableGauge[int64])(nil)
+	_ unwrapper = (*observableGauge[float64])(nil)
+
+	_ instrument.Counter[int64]                   = (*counter[int64])(nil)
+	_ instrument.Counter[float64]                 = (*counter[float64])(nil)
+	_ instrument.UpDownCounter[int64]             = (*upDownCounter[int64])(nil)
+	_ instrument.UpDownCounter[float64]           = (*upDownCounter[float64])(nil)
+	_ instrument.Histogram[int64]                 = (*histogram[int64])(nil)
+	_ instrument.Histogram[float64]               = (*histogram[float64])(nil)
+	_ instrument.ObservableCounter[int64]         = (*observableCounter[int64])(nil)
+	_ instrument.ObservableCounter[float64]       = (*observableCounter[float64])(nil)
+	_ instrument.ObservableUpDownCounter[int64]   = (*observableUpDownCounter[int64])(nil)
+	_ instrument.ObservableUpDownCounter[float64] = (*observableUpDownCounter[float64])(nil)
+	_ instrument.ObservableGauge[int64]           = (*observableGauge[int64])(nil)
+	_ instrument.ObservableGauge[float64]         = (*observableGauge[float64])(nil)
+)
+
+type delegator struct {
+	delegate    atomic.Value
+	setDelegate func(metric.Meter) (any, error)
+}
+
+func (d *delegator) SetDelegate(m metric.Meter) error {
+	// Panic if setDelegate is nil to alert developer.
+	i, err := d.setDelegate(m)
+	if i != nil {
+		d.delegate.Store(i)
+	}
+	return err
+}
+
 // unwrapper unwraps to return the underlying instrument implementation.
 type unwrapper interface {
 	Unwrap() instrument.Observable
 }
 
-type afCounter struct {
-	embedded.Float64ObservableCounter
-	instrument.Float64Observable
-
-	name string
-	opts []instrument.Float64ObservableCounterOption
-
-	delegate atomic.Value //instrument.Float64ObservableCounter
+type observableCounter[N int64 | float64] struct {
+	embedded.ObservableCounter[N]
+	instrument.ObservableT[N]
+	delegator
 }
 
-var _ unwrapper = (*afCounter)(nil)
-var _ instrument.Float64ObservableCounter = (*afCounter)(nil)
-
-func (i *afCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *afCounter) Unwrap() instrument.Observable {
+func (i *observableCounter[N]) Unwrap() instrument.Observable {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Float64ObservableCounter)
+		return ctr.(instrument.ObservableCounter[N])
 	}
 	return nil
 }
 
-type afUpDownCounter struct {
-	embedded.Float64ObservableUpDownCounter
-	instrument.Float64Observable
-
-	name string
-	opts []instrument.Float64ObservableUpDownCounterOption
-
-	delegate atomic.Value //instrument.Float64ObservableUpDownCounter
+type observableUpDownCounter[N int64 | float64] struct {
+	embedded.ObservableUpDownCounter[N]
+	instrument.ObservableT[N]
+	delegator
 }
 
-var _ unwrapper = (*afUpDownCounter)(nil)
-var _ instrument.Float64ObservableUpDownCounter = (*afUpDownCounter)(nil)
-
-func (i *afUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableUpDownCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *afUpDownCounter) Unwrap() instrument.Observable {
+func (i *observableUpDownCounter[N]) Unwrap() instrument.Observable {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Float64ObservableUpDownCounter)
+		return ctr.(instrument.ObservableUpDownCounter[N])
 	}
 	return nil
 }
 
-type afGauge struct {
-	embedded.Float64ObservableGauge
-	instrument.Float64Observable
-
-	name string
-	opts []instrument.Float64ObservableGaugeOption
-
-	delegate atomic.Value //instrument.Float64ObservableGauge
+type observableGauge[N int64 | float64] struct {
+	embedded.ObservableGauge[N]
+	instrument.ObservableT[N]
+	delegator
 }
 
-var _ unwrapper = (*afGauge)(nil)
-var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
-
-func (i *afGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64ObservableGauge(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *afGauge) Unwrap() instrument.Observable {
+func (i *observableGauge[N]) Unwrap() instrument.Observable {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Float64ObservableGauge)
+		return ctr.(instrument.ObservableGauge[N])
 	}
 	return nil
 }
 
-type aiCounter struct {
-	embedded.Int64ObservableCounter
-	instrument.Int64Observable
-
-	name string
-	opts []instrument.Int64ObservableCounterOption
-
-	delegate atomic.Value //instrument.Int64ObservableCounter
+type counter[N int64 | float64] struct {
+	embedded.Counter[N]
+	delegator
 }
 
-var _ unwrapper = (*aiCounter)(nil)
-var _ instrument.Int64ObservableCounter = (*aiCounter)(nil)
-
-func (i *aiCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *aiCounter) Unwrap() instrument.Observable {
+func (i *counter[N]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Int64ObservableCounter)
+		ctr.(instrument.Counter[N]).Add(ctx, incr, attrs...)
 	}
-	return nil
 }
 
-type aiUpDownCounter struct {
-	embedded.Int64ObservableUpDownCounter
-	instrument.Int64Observable
-
-	name string
-	opts []instrument.Int64ObservableUpDownCounterOption
-
-	delegate atomic.Value //instrument.Int64ObservableUpDownCounter
+type upDownCounter[N int64 | float64] struct {
+	embedded.UpDownCounter[N]
+	delegator
 }
 
-var _ unwrapper = (*aiUpDownCounter)(nil)
-var _ instrument.Int64ObservableUpDownCounter = (*aiUpDownCounter)(nil)
-
-func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableUpDownCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *aiUpDownCounter) Unwrap() instrument.Observable {
+func (i *upDownCounter[N]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Int64ObservableUpDownCounter)
+		ctr.(instrument.UpDownCounter[N]).Add(ctx, incr, attrs...)
 	}
-	return nil
 }
 
-type aiGauge struct {
-	embedded.Int64ObservableGauge
-	instrument.Int64Observable
-
-	name string
-	opts []instrument.Int64ObservableGaugeOption
-
-	delegate atomic.Value //instrument.Int64ObservableGauge
+type histogram[N int64 | float64] struct {
+	embedded.Histogram[N]
+	delegator
 }
 
-var _ unwrapper = (*aiGauge)(nil)
-var _ instrument.Int64ObservableGauge = (*aiGauge)(nil)
-
-func (i *aiGauge) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64ObservableGauge(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *aiGauge) Unwrap() instrument.Observable {
+func (i *histogram[N]) Record(ctx context.Context, x N, attrs ...attribute.KeyValue) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		return ctr.(instrument.Int64ObservableGauge)
-	}
-	return nil
-}
-
-// Sync Instruments.
-type sfCounter struct {
-	embedded.Float64Counter
-
-	name string
-	opts []instrument.Float64CounterOption
-
-	delegate atomic.Value //instrument.Float64Counter
-}
-
-var _ instrument.Float64Counter = (*sfCounter)(nil)
-
-func (i *sfCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64Counter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Counter).Add(ctx, incr, attrs...)
-	}
-}
-
-type sfUpDownCounter struct {
-	embedded.Float64UpDownCounter
-
-	name string
-	opts []instrument.Float64UpDownCounterOption
-
-	delegate atomic.Value //instrument.Float64UpDownCounter
-}
-
-var _ instrument.Float64UpDownCounter = (*sfUpDownCounter)(nil)
-
-func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64UpDownCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64UpDownCounter).Add(ctx, incr, attrs...)
-	}
-}
-
-type sfHistogram struct {
-	embedded.Float64Histogram
-
-	name string
-	opts []instrument.Float64HistogramOption
-
-	delegate atomic.Value //instrument.Float64Histogram
-}
-
-var _ instrument.Float64Histogram = (*sfHistogram)(nil)
-
-func (i *sfHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.Float64Histogram(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Histogram).Record(ctx, x, attrs...)
-	}
-}
-
-type siCounter struct {
-	embedded.Int64Counter
-
-	name string
-	opts []instrument.Int64CounterOption
-
-	delegate atomic.Value //instrument.Int64Counter
-}
-
-var _ instrument.Int64Counter = (*siCounter)(nil)
-
-func (i *siCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64Counter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Counter).Add(ctx, x, attrs...)
-	}
-}
-
-type siUpDownCounter struct {
-	embedded.Int64UpDownCounter
-
-	name string
-	opts []instrument.Int64UpDownCounterOption
-
-	delegate atomic.Value //instrument.Int64UpDownCounter
-}
-
-var _ instrument.Int64UpDownCounter = (*siUpDownCounter)(nil)
-
-func (i *siUpDownCounter) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64UpDownCounter(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64UpDownCounter).Add(ctx, x, attrs...)
-	}
-}
-
-type siHistogram struct {
-	embedded.Int64Histogram
-
-	name string
-	opts []instrument.Int64HistogramOption
-
-	delegate atomic.Value //instrument.Int64Histogram
-}
-
-var _ instrument.Int64Histogram = (*siHistogram)(nil)
-
-func (i *siHistogram) setDelegate(m metric.Meter) {
-	ctr, err := m.Int64Histogram(i.name, i.opts...)
-	if err != nil {
-		GetErrorHandler().Handle(err)
-		return
-	}
-	i.delegate.Store(ctr)
-}
-
-func (i *siHistogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Histogram).Record(ctx, x, attrs...)
+		ctr.(instrument.Histogram[N]).Record(ctx, x, attrs...)
 	}
 }

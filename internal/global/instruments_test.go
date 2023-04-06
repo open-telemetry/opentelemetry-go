@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
@@ -25,11 +26,11 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
+func testRace[N int64 | float64](interact func(N), setDelegate func(metric.Meter) error) {
 	finish := make(chan struct{})
 	go func() {
 		for {
-			interact(context.Background(), 1)
+			interact(1)
 			select {
 			case <-finish:
 				return
@@ -42,147 +43,129 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 	close(finish)
 }
 
-func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
-	finish := make(chan struct{})
-	go func() {
-		for {
-			interact(context.Background(), 1)
-			select {
-			case <-finish:
-				return
-			default:
-			}
-		}
-	}()
+func TestInstrumentSetDelegateRace(t *testing.T) {
+	meter := meter{}
+	t.Run("Float64Counter", func(t *testing.T) {
+		i, err := meter.Float64Counter("")
+		require.NoError(t, err)
+		interact := func(v float64) { i.Add(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
 
-	setDelegate(noop.NewMeterProvider().Meter(""))
-	close(finish)
+	t.Run("Float64UpDownCounter", func(t *testing.T) {
+		i, err := meter.Float64UpDownCounter("")
+		require.NoError(t, err)
+		interact := func(v float64) { i.Add(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Float64Histogram", func(t *testing.T) {
+		i, err := meter.Float64Histogram("")
+		require.NoError(t, err)
+		interact := func(v float64) { i.Record(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Float64ObservableCounter", func(t *testing.T) {
+		i, err := meter.Float64ObservableCounter("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Float64ObservableUpDownCounter", func(t *testing.T) {
+		i, err := meter.Float64ObservableUpDownCounter("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Float64ObservableGauge", func(t *testing.T) {
+		i, err := meter.Float64ObservableGauge("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64Counter", func(t *testing.T) {
+		i, err := meter.Int64Counter("")
+		require.NoError(t, err)
+		interact := func(v int64) { i.Add(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64UpDownCounter", func(t *testing.T) {
+		i, err := meter.Int64UpDownCounter("")
+		require.NoError(t, err)
+		interact := func(v int64) { i.Add(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64Histogram", func(t *testing.T) {
+		i, err := meter.Int64Histogram("")
+		require.NoError(t, err)
+		interact := func(v int64) { i.Record(context.Background(), v) }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64ObservableCounter", func(t *testing.T) {
+		i, err := meter.Int64ObservableCounter("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64ObservableUpDownCounter", func(t *testing.T) {
+		i, err := meter.Int64ObservableUpDownCounter("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
+
+	t.Run("Int64ObservableGauge", func(t *testing.T) {
+		i, err := meter.Int64ObservableGauge("")
+		require.NoError(t, err)
+		require.Implements(t, (*unwrapper)(nil), i)
+		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
+		require.Implements(t, (*delegatedInstrument)(nil), i)
+		testRace(interact, i.(delegatedInstrument).SetDelegate)
+	})
 }
 
-func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
-	// Float64 Instruments
-	t.Run("Float64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &afCounter{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testFloat64Race(f, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &afUpDownCounter{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testFloat64Race(f, delegate.setDelegate)
-		})
-
-		t.Run("Gauge", func(t *testing.T) {
-			delegate := &afGauge{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testFloat64Race(f, delegate.setDelegate)
-		})
-	})
-
-	// Int64 Instruments
-
-	t.Run("Int64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &aiCounter{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testInt64Race(f, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &aiUpDownCounter{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testInt64Race(f, delegate.setDelegate)
-		})
-
-		t.Run("Gauge", func(t *testing.T) {
-			delegate := &aiGauge{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
-			testInt64Race(f, delegate.setDelegate)
-		})
-	})
-}
-
-func TestSyncInstrumentSetDelegateRace(t *testing.T) {
-	// Float64 Instruments
-	t.Run("Float64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &sfCounter{}
-			testFloat64Race(delegate.Add, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &sfUpDownCounter{}
-			testFloat64Race(delegate.Add, delegate.setDelegate)
-		})
-
-		t.Run("Histogram", func(t *testing.T) {
-			delegate := &sfHistogram{}
-			testFloat64Race(delegate.Record, delegate.setDelegate)
-		})
-	})
-
-	// Int64 Instruments
-
-	t.Run("Int64", func(t *testing.T) {
-		t.Run("Counter", func(t *testing.T) {
-			delegate := &siCounter{}
-			testInt64Race(delegate.Add, delegate.setDelegate)
-		})
-
-		t.Run("UpDownCounter", func(t *testing.T) {
-			delegate := &siUpDownCounter{}
-			testInt64Race(delegate.Add, delegate.setDelegate)
-		})
-
-		t.Run("Histogram", func(t *testing.T) {
-			delegate := &siHistogram{}
-			testInt64Race(delegate.Record, delegate.setDelegate)
-		})
-	})
-}
-
-type testCountingFloatInstrument struct {
+type testCountingInstrument[N int64 | float64] struct {
 	count int
 
-	instrument.Float64Observable
-	embedded.Float64Counter
-	embedded.Float64UpDownCounter
-	embedded.Float64Histogram
-	embedded.Float64ObservableCounter
-	embedded.Float64ObservableUpDownCounter
-	embedded.Float64ObservableGauge
+	instrument.ObservableT[N]
+	embedded.Counter[N]
+	embedded.UpDownCounter[N]
+	embedded.Histogram[N]
+	embedded.ObservableCounter[N]
+	embedded.ObservableUpDownCounter[N]
+	embedded.ObservableGauge[N]
 }
 
-func (i *testCountingFloatInstrument) observe() {
+func (i *testCountingInstrument[N]) observe() {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Add(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingInstrument[N]) Add(context.Context, N, ...attribute.KeyValue) {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attribute.KeyValue) {
-	i.count++
-}
-
-type testCountingIntInstrument struct {
-	count int
-
-	instrument.Int64Observable
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
-	embedded.Int64ObservableCounter
-	embedded.Int64ObservableUpDownCounter
-	embedded.Int64ObservableGauge
-}
-
-func (i *testCountingIntInstrument) observe() {
-	i.count++
-}
-func (i *testCountingIntInstrument) Add(context.Context, int64, ...attribute.KeyValue) {
-	i.count++
-}
-func (i *testCountingIntInstrument) Record(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingInstrument[N]) Record(context.Context, N, ...attribute.KeyValue) {
 	i.count++
 }
