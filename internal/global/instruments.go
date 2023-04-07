@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
@@ -46,20 +45,6 @@ var (
 	_ instrument.ObservableGauge[float64]         = (*observableGauge[float64])(nil)
 )
 
-type delegator struct {
-	delegate    atomic.Value
-	setDelegate func(metric.Meter) (any, error)
-}
-
-func (d *delegator) SetDelegate(m metric.Meter) error {
-	// Panic if setDelegate is nil to alert developer.
-	i, err := d.setDelegate(m)
-	if i != nil {
-		d.delegate.Store(i)
-	}
-	return err
-}
-
 // unwrapper unwraps to return the underlying instrument implementation.
 type unwrapper interface {
 	Unwrap() instrument.Observable
@@ -68,11 +53,14 @@ type unwrapper interface {
 type observableCounter[N int64 | float64] struct {
 	embedded.ObservableCounter[N]
 	instrument.ObservableT[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.ObservableCounterOption[N]
 }
 
 func (i *observableCounter[N]) Unwrap() instrument.Observable {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		return ctr.(instrument.ObservableCounter[N])
 	}
 	return nil
@@ -81,11 +69,14 @@ func (i *observableCounter[N]) Unwrap() instrument.Observable {
 type observableUpDownCounter[N int64 | float64] struct {
 	embedded.ObservableUpDownCounter[N]
 	instrument.ObservableT[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.ObservableUpDownCounterOption[N]
 }
 
 func (i *observableUpDownCounter[N]) Unwrap() instrument.Observable {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		return ctr.(instrument.ObservableUpDownCounter[N])
 	}
 	return nil
@@ -94,11 +85,14 @@ func (i *observableUpDownCounter[N]) Unwrap() instrument.Observable {
 type observableGauge[N int64 | float64] struct {
 	embedded.ObservableGauge[N]
 	instrument.ObservableT[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.ObservableGaugeOption[N]
 }
 
 func (i *observableGauge[N]) Unwrap() instrument.Observable {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		return ctr.(instrument.ObservableGauge[N])
 	}
 	return nil
@@ -106,33 +100,42 @@ func (i *observableGauge[N]) Unwrap() instrument.Observable {
 
 type counter[N int64 | float64] struct {
 	embedded.Counter[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.CounterOption[N]
 }
 
 func (i *counter[N]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		ctr.(instrument.Counter[N]).Add(ctx, incr, attrs...)
 	}
 }
 
 type upDownCounter[N int64 | float64] struct {
 	embedded.UpDownCounter[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.UpDownCounterOption[N]
 }
 
 func (i *upDownCounter[N]) Add(ctx context.Context, incr N, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		ctr.(instrument.UpDownCounter[N]).Add(ctx, incr, attrs...)
 	}
 }
 
 type histogram[N int64 | float64] struct {
 	embedded.Histogram[N]
-	delegator
+	atomic.Value
+
+	name string
+	opts []instrument.HistogramOption[N]
 }
 
 func (i *histogram[N]) Record(ctx context.Context, x N, attrs ...attribute.KeyValue) {
-	if ctr := i.delegate.Load(); ctr != nil {
+	if ctr := i.Load(); ctr != nil {
 		ctr.(instrument.Histogram[N]).Record(ctx, x, attrs...)
 	}
 }

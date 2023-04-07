@@ -16,6 +16,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"container/list"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -103,15 +104,15 @@ type meter struct {
 	opts []metric.MeterOption
 
 	mtx         sync.Mutex
-	instruments []delegatedInstrument
+	instruments []storer
 
 	registry list.List
 
 	delegate atomic.Value // metric.Meter
 }
 
-type delegatedInstrument interface {
-	SetDelegate(metric.Meter) error
+type storer interface {
+	Store(any)
 }
 
 // setDelegate configures m to delegate all Meter functionality to Meters
@@ -128,8 +129,43 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 	defer m.mtx.Unlock()
 
 	for _, inst := range m.instruments {
-		if err := inst.SetDelegate(meter); err != nil {
+		var (
+			d   any
+			err error
+		)
+		switch i := inst.(type) {
+		case *counter[float64]:
+			d, err = m.Float64Counter(i.name, i.opts...)
+		case *upDownCounter[float64]:
+			d, err = m.Float64UpDownCounter(i.name, i.opts...)
+		case *histogram[float64]:
+			d, err = m.Float64Histogram(i.name, i.opts...)
+		case *observableCounter[float64]:
+			d, err = m.Float64ObservableCounter(i.name, i.opts...)
+		case *observableUpDownCounter[float64]:
+			d, err = m.Float64ObservableUpDownCounter(i.name, i.opts...)
+		case *observableGauge[float64]:
+			d, err = m.Float64ObservableGauge(i.name, i.opts...)
+		case *counter[int64]:
+			d, err = m.Int64Counter(i.name, i.opts...)
+		case *upDownCounter[int64]:
+			d, err = m.Int64UpDownCounter(i.name, i.opts...)
+		case *histogram[int64]:
+			d, err = m.Int64Histogram(i.name, i.opts...)
+		case *observableCounter[int64]:
+			d, err = m.Int64ObservableCounter(i.name, i.opts...)
+		case *observableUpDownCounter[int64]:
+			d, err = m.Int64ObservableUpDownCounter(i.name, i.opts...)
+		case *observableGauge[int64]:
+			d, err = m.Int64ObservableGauge(i.name, i.opts...)
+		default:
+			err = fmt.Errorf("global delegation: unknown instrument: %T", inst)
+		}
+		if err != nil {
 			GetErrorHandler().Handle(err)
+		}
+		if d != nil {
+			inst.Store(d)
 		}
 	}
 
@@ -149,13 +185,7 @@ func (m *meter) Int64Counter(name string, options ...instrument.CounterOption[in
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &counter[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64Counter(name, options...)
-			},
-		},
-	}
+	i := &counter[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -166,13 +196,7 @@ func (m *meter) Int64UpDownCounter(name string, options ...instrument.UpDownCoun
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &upDownCounter[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64UpDownCounter(name, options...)
-			},
-		},
-	}
+	i := &upDownCounter[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -183,13 +207,7 @@ func (m *meter) Int64Histogram(name string, options ...instrument.HistogramOptio
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &histogram[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64Histogram(name, options...)
-			},
-		},
-	}
+	i := &histogram[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -200,13 +218,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...instrument.Observ
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableCounter[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64ObservableCounter(name, options...)
-			},
-		},
-	}
+	i := &observableCounter[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -217,13 +229,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableUpDownCounter[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64ObservableUpDownCounter(name, options...)
-			},
-		},
-	}
+	i := &observableUpDownCounter[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -234,13 +240,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...instrument.Observab
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableGauge[int64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Int64ObservableGauge(name, options...)
-			},
-		},
-	}
+	i := &observableGauge[int64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -251,13 +251,7 @@ func (m *meter) Float64Counter(name string, options ...instrument.CounterOption[
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &counter[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64Counter(name, options...)
-			},
-		},
-	}
+	i := &counter[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -268,13 +262,7 @@ func (m *meter) Float64UpDownCounter(name string, options ...instrument.UpDownCo
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &upDownCounter[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64UpDownCounter(name, options...)
-			},
-		},
-	}
+	i := &upDownCounter[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -285,13 +273,7 @@ func (m *meter) Float64Histogram(name string, options ...instrument.HistogramOpt
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &histogram[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64Histogram(name, options...)
-			},
-		},
-	}
+	i := &histogram[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -302,13 +284,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...instrument.Obse
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableCounter[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64ObservableCounter(name, options...)
-			},
-		},
-	}
+	i := &observableCounter[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -319,13 +295,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrumen
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableUpDownCounter[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64ObservableUpDownCounter(name, options...)
-			},
-		},
-	}
+	i := &observableUpDownCounter[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
@@ -336,13 +306,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...instrument.Observ
 	}
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	i := &observableGauge[float64]{
-		delegator: delegator{
-			setDelegate: func(m metric.Meter) (any, error) {
-				return m.Float64ObservableGauge(name, options...)
-			},
-		},
-	}
+	i := &observableGauge[float64]{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }
