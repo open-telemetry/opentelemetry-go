@@ -69,13 +69,13 @@ func main() {
 		attribute.Key("C").String("D"),
 	}
 
-	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
+	counter, err := meter.Float64Counter("foo", instrument.WithDescription[float64]("a simple counter"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	counter.Add(ctx, 5, attrs...)
 
-	histogram, err := meter.Float64Histogram("custom_histogram", instrument.WithDescription("a histogram with custom buckets and rename"))
+	histogram, err := meter.Float64Histogram("custom_histogram", instrument.WithDescription[float64]("a histogram with custom buckets and rename"))
 	if err != nil {
 		log.Fatal(err)
 	}
