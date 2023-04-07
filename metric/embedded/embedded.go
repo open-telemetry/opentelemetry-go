@@ -56,7 +56,7 @@ type Meter interface{ meter() }
 // [Observer]: go.opentelemetry.io/otel/metric.Observer
 type Observer interface{ observer() }
 
-// ObserverT is embedded in the OpenTelemetry metric API [ObserverT].
+// ObserverT is embedded in the OpenTelemetry instrument API [ObserverT].
 //
 // Embed this interface in your implementation of the [Observer] if you want
 // users to experience a compilation error, signaling they need to update to
@@ -64,7 +64,7 @@ type Observer interface{ observer() }
 // is something that can happen without a major version bump of the API
 // package).
 //
-// [Observer]: go.opentelemetry.io/otel/metric.Observer
+// [Observer]: go.opentelemetry.io/otel/metric/instrument.ObserverT
 type ObserverT[N int64 | float64] interface{ observerT() }
 
 // Registration is embedded in the OpenTelemetry metric API [Registration].
@@ -78,7 +78,7 @@ type ObserverT[N int64 | float64] interface{ observerT() }
 // [Registration]: go.opentelemetry.io/otel/metric.Registration
 type Registration interface{ registration() }
 
-// Counter is embedded in the OpenTelemetry metric API [Counter].
+// Counter is embedded in the OpenTelemetry instrument API [Counter].
 //
 // Embed this interface in your implementation of the [Counter] if you
 // want users to experience a compilation error, signaling they need to update
@@ -89,7 +89,7 @@ type Registration interface{ registration() }
 // [Counter]: go.opentelemetry.io/otel/metric.Counter
 type Counter[N int64 | float64] interface{ counter() }
 
-// Histogram is embedded in the OpenTelemetry metric API [Histogram].
+// Histogram is embedded in the OpenTelemetry instrument API [Histogram].
 //
 // Embed this interface in your implementation of the [Histogram] if you
 // want users to experience a compilation error, signaling they need to update
@@ -97,10 +97,10 @@ type Counter[N int64 | float64] interface{ counter() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 //
-// [Histogram]: go.opentelemetry.io/otel/metric.Histogram
+// [Histogram]: go.opentelemetry.io/otel/metric/instrument.Histogram
 type Histogram[N int64 | float64] interface{ histogram() }
 
-// ObservableCounter is embedded in the OpenTelemetry metric API
+// ObservableCounter is embedded in the OpenTelemetry instrument API
 // [ObservableCounter].
 //
 // Embed this interface in your implementation of the [ObservableCounter]
@@ -109,10 +109,10 @@ type Histogram[N int64 | float64] interface{ histogram() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [ObservableCounter]: go.opentelemetry.io/otel/metric.ObservableCounter
+// [ObservableCounter]: go.opentelemetry.io/otel/metric/instrument.ObservableCounter
 type ObservableCounter[N int64 | float64] interface{ observableCounter() }
 
-// ObservableGauge is embedded in the OpenTelemetry metric API
+// ObservableGauge is embedded in the OpenTelemetry instrument API
 // [ObservableGauge].
 //
 // Embed this interface in your implementation of the [ObservableGauge] if
@@ -121,10 +121,10 @@ type ObservableCounter[N int64 | float64] interface{ observableCounter() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [ObservableGauge]: go.opentelemetry.io/otel/metric.ObservableGauge
+// [ObservableGauge]: go.opentelemetry.io/otel/metric/instrument.ObservableGauge
 type ObservableGauge[N int64 | float64] interface{ observableGauge() }
 
-// ObservableUpDownCounter is embedded in the OpenTelemetry metric API
+// ObservableUpDownCounter is embedded in the OpenTelemetry instrument API
 // [ObservableUpDownCounter].
 //
 // Embed this interface in your implementation of the
@@ -133,10 +133,10 @@ type ObservableGauge[N int64 | float64] interface{ observableGauge() }
 // [ObservableUpDownCounter] interface is extended (which is something
 // that can happen without a major version bump of the API package).
 //
-// [ObservableUpDownCounter]: go.opentelemetry.io/otel/metric.ObservableUpDownCounter
+// [ObservableUpDownCounter]: go.opentelemetry.io/otel/metric/instrument.ObservableUpDownCounter
 type ObservableUpDownCounter[N int64 | float64] interface{ observableUpDownCounter() }
 
-// UpDownCounter is embedded in the OpenTelemetry metric API
+// UpDownCounter is embedded in the OpenTelemetry instrument API
 // [UpDownCounter].
 //
 // Embed this interface in your implementation of the [UpDownCounter] if
@@ -145,5 +145,5 @@ type ObservableUpDownCounter[N int64 | float64] interface{ observableUpDownCount
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [UpDownCounter]: go.opentelemetry.io/otel/metric.UpDownCounter
+// [UpDownCounter]: go.opentelemetry.io/otel/metric/instrument.UpDownCounter
 type UpDownCounter[N int64 | float64] interface{ upDownCounter() }
