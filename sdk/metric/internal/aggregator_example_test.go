@@ -31,7 +31,7 @@ type meter struct {
 	aggregations []metricdata.Aggregation
 }
 
-func (p *meter) Int64Counter(string, ...instrument.Int64CounterOption) (instrument.Int64Counter, error) {
+func (p *meter) Int64Counter(string, ...instrument.CounterOption[int64]) (instrument.Counter[int64], error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// counter. At this point the provider would determine the aggregation and
 	// temporality to used based on the Reader and View configuration. Assume
@@ -47,7 +47,7 @@ func (p *meter) Int64Counter(string, ...instrument.Int64CounterOption) (instrume
 	return count, nil
 }
 
-func (p *meter) Int64UpDownCounter(string, ...instrument.Int64UpDownCounterOption) (instrument.Int64UpDownCounter, error) {
+func (p *meter) Int64UpDownCounter(string, ...instrument.UpDownCounterOption[int64]) (instrument.UpDownCounter[int64], error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// up-down counter. At this point the provider would determine the
 	// aggregation and temporality to used based on the Reader and View
@@ -64,7 +64,7 @@ func (p *meter) Int64UpDownCounter(string, ...instrument.Int64UpDownCounterOptio
 	return upDownCount, nil
 }
 
-func (p *meter) Int64Histogram(string, ...instrument.Int64HistogramOption) (instrument.Int64Histogram, error) {
+func (p *meter) Int64Histogram(string, ...instrument.HistogramOption[int64]) (instrument.Histogram[int64], error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// histogram. At this point the provider would determine the aggregation
 	// and temporality to used based on the Reader and View configuration.
@@ -89,9 +89,9 @@ func (p *meter) Int64Histogram(string, ...instrument.Int64HistogramOption) (inst
 type inst struct {
 	aggregateFunc func(int64, attribute.Set)
 
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
+	embedded.Counter[int64]
+	embedded.UpDownCounter[int64]
+	embedded.Histogram[int64]
 }
 
 func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}

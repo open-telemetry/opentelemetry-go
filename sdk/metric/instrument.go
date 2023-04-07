@@ -173,20 +173,17 @@ type streamID struct {
 type instrumentImpl[N int64 | float64] struct {
 	aggregators []internal.Aggregator[N]
 
-	embedded.Float64Counter
-	embedded.Float64UpDownCounter
-	embedded.Float64Histogram
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
+	embedded.Counter[N]
+	embedded.UpDownCounter[N]
+	embedded.Histogram[N]
 }
 
-var _ instrument.Float64Counter = (*instrumentImpl[float64])(nil)
-var _ instrument.Float64UpDownCounter = (*instrumentImpl[float64])(nil)
-var _ instrument.Float64Histogram = (*instrumentImpl[float64])(nil)
-var _ instrument.Int64Counter = (*instrumentImpl[int64])(nil)
-var _ instrument.Int64UpDownCounter = (*instrumentImpl[int64])(nil)
-var _ instrument.Int64Histogram = (*instrumentImpl[int64])(nil)
+var _ instrument.Counter[float64] = (*instrumentImpl[float64])(nil)
+var _ instrument.UpDownCounter[float64] = (*instrumentImpl[float64])(nil)
+var _ instrument.Histogram[float64] = (*instrumentImpl[float64])(nil)
+var _ instrument.Counter[int64] = (*instrumentImpl[int64])(nil)
+var _ instrument.UpDownCounter[int64] = (*instrumentImpl[int64])(nil)
+var _ instrument.Histogram[int64] = (*instrumentImpl[int64])(nil)
 
 func (i *instrumentImpl[N]) Add(ctx context.Context, val N, attrs ...attribute.KeyValue) {
 	i.aggregate(ctx, val, attrs)
@@ -218,46 +215,11 @@ type observablID[N int64 | float64] struct {
 	scope       instrumentation.Scope
 }
 
-type float64Observable struct {
-	instrument.Float64Observable
-	*observable[float64]
-
-	embedded.Float64ObservableCounter
-	embedded.Float64ObservableUpDownCounter
-	embedded.Float64ObservableGauge
-}
-
-var _ instrument.Float64ObservableCounter = float64Observable{}
-var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
-var _ instrument.Float64ObservableGauge = float64Observable{}
-
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
-	return float64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
-	}
-}
-
-type int64Observable struct {
-	instrument.Int64Observable
-	*observable[int64]
-
-	embedded.Int64ObservableCounter
-	embedded.Int64ObservableUpDownCounter
-	embedded.Int64ObservableGauge
-}
-
-var _ instrument.Int64ObservableCounter = int64Observable{}
-var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
-var _ instrument.Int64ObservableGauge = int64Observable{}
-
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
-	return int64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
-	}
-}
-
 type observable[N int64 | float64] struct {
-	instrument.Observable
+	embedded.ObservableCounter[N]
+	embedded.ObservableUpDownCounter[N]
+	embedded.ObservableGauge[N]
+	instrument.ObservableT[N]
 	observablID[N]
 
 	aggregators []internal.Aggregator[N]

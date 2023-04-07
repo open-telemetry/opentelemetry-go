@@ -61,8 +61,8 @@ var _ metric.Meter = (*meter)(nil)
 // Int64Counter returns a new instrument identified by name and configured with
 // options. The instrument is used to synchronously record increasing int64
 // measurements during a computational operation.
-func (m *meter) Int64Counter(name string, options ...instrument.Int64CounterOption) (instrument.Int64Counter, error) {
-	cfg := instrument.NewInt64CounterConfig(options...)
+func (m *meter) Int64Counter(name string, options ...instrument.CounterOption[int64]) (instrument.Counter[int64], error) {
+	cfg := instrument.NewCounterConfig(options...)
 	const kind = InstrumentKindCounter
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -70,8 +70,8 @@ func (m *meter) Int64Counter(name string, options ...instrument.Int64CounterOpti
 // Int64UpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to synchronously record
 // int64 measurements during a computational operation.
-func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64UpDownCounterOption) (instrument.Int64UpDownCounter, error) {
-	cfg := instrument.NewInt64UpDownCounterConfig(options...)
+func (m *meter) Int64UpDownCounter(name string, options ...instrument.UpDownCounterOption[int64]) (instrument.UpDownCounter[int64], error) {
+	cfg := instrument.NewUpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -79,8 +79,8 @@ func (m *meter) Int64UpDownCounter(name string, options ...instrument.Int64UpDow
 // Int64Histogram returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record the
 // distribution of int64 measurements during a computational operation.
-func (m *meter) Int64Histogram(name string, options ...instrument.Int64HistogramOption) (instrument.Int64Histogram, error) {
-	cfg := instrument.NewInt64HistogramConfig(options...)
+func (m *meter) Int64Histogram(name string, options ...instrument.HistogramOption[int64]) (instrument.Histogram[int64], error) {
+	cfg := instrument.NewHistogramConfig(options...)
 	const kind = InstrumentKindHistogram
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -88,10 +88,10 @@ func (m *meter) Int64Histogram(name string, options ...instrument.Int64Histogram
 // Int64ObservableCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // increasing int64 measurements once per a measurement collection cycle.
-func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64ObservableCounterOption) (instrument.Int64ObservableCounter, error) {
-	cfg := instrument.NewInt64ObservableCounterConfig(options...)
+func (m *meter) Int64ObservableCounter(name string, options ...instrument.ObservableCounterOption[int64]) (instrument.ObservableCounter[int64], error) {
+	cfg := instrument.NewObservableCounterConfig(options...)
 	const kind = InstrumentKindObservableCounter
-	p := int64ObservProvider{m.int64IP}
+	p := observProvider[int64]{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -103,10 +103,10 @@ func (m *meter) Int64ObservableCounter(name string, options ...instrument.Int64O
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // int64 measurements once per a measurement collection cycle.
-func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.Int64ObservableUpDownCounterOption) (instrument.Int64ObservableUpDownCounter, error) {
-	cfg := instrument.NewInt64ObservableUpDownCounterConfig(options...)
+func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.ObservableUpDownCounterOption[int64]) (instrument.ObservableUpDownCounter[int64], error) {
+	cfg := instrument.NewObservableUpDownCounterConfig(options...)
 	const kind = InstrumentKindObservableUpDownCounter
-	p := int64ObservProvider{m.int64IP}
+	p := observProvider[int64]{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -118,10 +118,10 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...instrument.
 // Int64ObservableGauge returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // instantaneous int64 measurements once per a measurement collection cycle.
-func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64ObservableGaugeOption) (instrument.Int64ObservableGauge, error) {
-	cfg := instrument.NewInt64ObservableGaugeConfig(options...)
+func (m *meter) Int64ObservableGauge(name string, options ...instrument.ObservableGaugeOption[int64]) (instrument.ObservableGauge[int64], error) {
+	cfg := instrument.NewObservableGaugeConfig(options...)
 	const kind = InstrumentKindObservableGauge
-	p := int64ObservProvider{m.int64IP}
+	p := observProvider[int64]{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -133,8 +133,8 @@ func (m *meter) Int64ObservableGauge(name string, options ...instrument.Int64Obs
 // Float64Counter returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record increasing
 // float64 measurements during a computational operation.
-func (m *meter) Float64Counter(name string, options ...instrument.Float64CounterOption) (instrument.Float64Counter, error) {
-	cfg := instrument.NewFloat64CounterConfig(options...)
+func (m *meter) Float64Counter(name string, options ...instrument.CounterOption[float64]) (instrument.Counter[float64], error) {
+	cfg := instrument.NewCounterConfig(options...)
 	const kind = InstrumentKindCounter
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -142,8 +142,8 @@ func (m *meter) Float64Counter(name string, options ...instrument.Float64Counter
 // Float64UpDownCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to synchronously record
 // float64 measurements during a computational operation.
-func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64UpDownCounterOption) (instrument.Float64UpDownCounter, error) {
-	cfg := instrument.NewFloat64UpDownCounterConfig(options...)
+func (m *meter) Float64UpDownCounter(name string, options ...instrument.UpDownCounterOption[float64]) (instrument.UpDownCounter[float64], error) {
+	cfg := instrument.NewUpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -151,8 +151,8 @@ func (m *meter) Float64UpDownCounter(name string, options ...instrument.Float64U
 // Float64Histogram returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record the
 // distribution of float64 measurements during a computational operation.
-func (m *meter) Float64Histogram(name string, options ...instrument.Float64HistogramOption) (instrument.Float64Histogram, error) {
-	cfg := instrument.NewFloat64HistogramConfig(options...)
+func (m *meter) Float64Histogram(name string, options ...instrument.HistogramOption[float64]) (instrument.Histogram[float64], error) {
+	cfg := instrument.NewHistogramConfig(options...)
 	const kind = InstrumentKindHistogram
 	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
 }
@@ -160,10 +160,10 @@ func (m *meter) Float64Histogram(name string, options ...instrument.Float64Histo
 // Float64ObservableCounter returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // increasing float64 measurements once per a measurement collection cycle.
-func (m *meter) Float64ObservableCounter(name string, options ...instrument.Float64ObservableCounterOption) (instrument.Float64ObservableCounter, error) {
-	cfg := instrument.NewFloat64ObservableCounterConfig(options...)
+func (m *meter) Float64ObservableCounter(name string, options ...instrument.ObservableCounterOption[float64]) (instrument.ObservableCounter[float64], error) {
+	cfg := instrument.NewObservableCounterConfig(options...)
 	const kind = InstrumentKindObservableCounter
-	p := float64ObservProvider{m.float64IP}
+	p := observProvider[float64]{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -175,10 +175,10 @@ func (m *meter) Float64ObservableCounter(name string, options ...instrument.Floa
 // Float64ObservableUpDownCounter returns a new instrument identified by name
 // and configured with options. The instrument is used to asynchronously record
 // float64 measurements once per a measurement collection cycle.
-func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.Float64ObservableUpDownCounterOption) (instrument.Float64ObservableUpDownCounter, error) {
-	cfg := instrument.NewFloat64ObservableUpDownCounterConfig(options...)
+func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrument.ObservableUpDownCounterOption[float64]) (instrument.ObservableUpDownCounter[float64], error) {
+	cfg := instrument.NewObservableUpDownCounterConfig(options...)
 	const kind = InstrumentKindObservableUpDownCounter
-	p := float64ObservProvider{m.float64IP}
+	p := observProvider[float64]{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -190,10 +190,10 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...instrumen
 // Float64ObservableGauge returns a new instrument identified by name and
 // configured with options. The instrument is used to asynchronously record
 // instantaneous float64 measurements once per a measurement collection cycle.
-func (m *meter) Float64ObservableGauge(name string, options ...instrument.Float64ObservableGaugeOption) (instrument.Float64ObservableGauge, error) {
-	cfg := instrument.NewFloat64ObservableGaugeConfig(options...)
+func (m *meter) Float64ObservableGauge(name string, options ...instrument.ObservableGaugeOption[float64]) (instrument.ObservableGauge[float64], error) {
+	cfg := instrument.NewObservableGaugeConfig(options...)
 	const kind = InstrumentKindObservableGauge
-	p := float64ObservProvider{m.float64IP}
+	p := observProvider[float64]{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
 	if err != nil {
 		return nil, err
@@ -229,7 +229,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observab
 		}
 
 		switch o := inst.(type) {
-		case int64Observable:
+		case *observable[int64]:
 			if err := o.registerable(m.scope); err != nil {
 				if !errors.Is(err, errEmptyAgg) {
 					errs.append(err)
@@ -237,7 +237,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observab
 				continue
 			}
 			reg.registerInt64(o.observablID)
-		case float64Observable:
+		case *observable[float64]:
 			if err := o.registerable(m.scope); err != nil {
 				if !errors.Is(err, errEmptyAgg) {
 					errs.append(err)
@@ -247,7 +247,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...instrument.Observab
 			reg.registerFloat64(o.observablID)
 		default:
 			// Instrument external to the SDK.
-			return nil, fmt.Errorf("invalid observable: from different implementation")
+			return nil, fmt.Errorf("invalid observable: from different implementation: %T", inst)
 		}
 	}
 
@@ -297,10 +297,10 @@ var (
 	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
-func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ...attribute.KeyValue) {
-	var oImpl float64Observable
+func (r observer) ObserveFloat64(o instrument.ObservableT[float64], v float64, a ...attribute.KeyValue) {
+	var oImpl *observable[float64]
 	switch conv := o.(type) {
-	case float64Observable:
+	case *observable[float64]:
 		oImpl = conv
 	case interface {
 		Unwrap() instrument.Observable
@@ -308,7 +308,7 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ..
 		// Unwrap any global.
 		async := conv.Unwrap()
 		var ok bool
-		if oImpl, ok = async.(float64Observable); !ok {
+		if oImpl, ok = async.(*observable[float64]); !ok {
 			global.Error(errUnknownObserver, "failed to record asynchronous")
 			return
 		}
@@ -329,10 +329,10 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, a ..
 	oImpl.observe(v, a)
 }
 
-func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attribute.KeyValue) {
-	var oImpl int64Observable
+func (r observer) ObserveInt64(o instrument.ObservableT[int64], v int64, a ...attribute.KeyValue) {
+	var oImpl *observable[int64]
 	switch conv := o.(type) {
-	case int64Observable:
+	case *observable[int64]:
 		oImpl = conv
 	case interface {
 		Unwrap() instrument.Observable
@@ -340,7 +340,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, a ...attri
 		// Unwrap any global.
 		async := conv.Unwrap()
 		var ok bool
-		if oImpl, ok = async.(int64Observable); !ok {
+		if oImpl, ok = async.(*observable[int64]); !ok {
 			global.Error(errUnknownObserver, "failed to record asynchronous")
 			return
 		}
@@ -395,15 +395,17 @@ func (p *instProvider[N]) lookup(kind InstrumentKind, name, desc, u string) (*in
 	return &instrumentImpl[N]{aggregators: aggs}, err
 }
 
-type int64ObservProvider struct{ *instProvider[int64] }
-
-func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (int64Observable, error) {
-	aggs, err := p.aggs(kind, name, desc, u)
-	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
+type observProvider[N int64 | float64] struct {
+	*instProvider[N]
 }
 
-func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []instrument.Int64Callback) {
-	if inst.observable == nil || len(inst.aggregators) == 0 {
+func (p observProvider[N]) lookup(kind InstrumentKind, name, desc, u string) (*observable[N], error) {
+	aggs, err := p.aggs(kind, name, desc, u)
+	return newObservable(p.scope, kind, name, desc, u, aggs), err
+}
+
+func (p observProvider[N]) registerCallbacks(inst *observable[N], cBacks []instrument.Callback[N]) {
+	if len(inst.aggregators) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -413,48 +415,16 @@ func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []in
 	}
 }
 
-func (p int64ObservProvider) callback(i int64Observable, f instrument.Int64Callback) func(context.Context) error {
-	inst := int64Observer{int64Observable: i}
+func (p observProvider[N]) callback(i *observable[N], f instrument.Callback[N]) func(context.Context) error {
+	inst := observerT[N]{observable: i}
 	return func(ctx context.Context) error { return f(ctx, inst) }
 }
 
-type int64Observer struct {
-	embedded.Int64Observer
-	int64Observable
+type observerT[N int64 | float64] struct {
+	embedded.ObserverT[N]
+	*observable[N]
 }
 
-func (o int64Observer) Observe(val int64, attrs ...attribute.KeyValue) {
-	o.observe(val, attrs)
-}
-
-type float64ObservProvider struct{ *instProvider[float64] }
-
-func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (float64Observable, error) {
-	aggs, err := p.aggs(kind, name, desc, u)
-	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
-}
-
-func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks []instrument.Float64Callback) {
-	if inst.observable == nil || len(inst.aggregators) == 0 {
-		// Drop aggregator.
-		return
-	}
-
-	for _, cBack := range cBacks {
-		p.pipes.registerCallback(p.callback(inst, cBack))
-	}
-}
-
-func (p float64ObservProvider) callback(i float64Observable, f instrument.Float64Callback) func(context.Context) error {
-	inst := float64Observer{float64Observable: i}
-	return func(ctx context.Context) error { return f(ctx, inst) }
-}
-
-type float64Observer struct {
-	embedded.Float64Observer
-	float64Observable
-}
-
-func (o float64Observer) Observe(val float64, attrs ...attribute.KeyValue) {
+func (o observerT[N]) Observe(val N, attrs ...attribute.KeyValue) {
 	o.observe(val, attrs)
 }

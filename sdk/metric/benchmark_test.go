@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func benchCounter(b *testing.B, views ...View) (context.Context, Reader, instrument.Int64Counter) {
+func benchCounter(b *testing.B, views ...View) (context.Context, Reader, instrument.Counter[int64]) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
