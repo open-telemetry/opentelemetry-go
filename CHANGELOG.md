@@ -21,6 +21,37 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
+- The `go.opentelemetry.io/otel/metric/instrument` API is refactored to use generics. (#3973)
+  - `Counter[N]` replaces `Int64Counter` and `Float64Counter`
+  - `CounterConfig[N]` replaces `Int64CounterConfig` and `Float64CounterConfig`
+  - `CounterOption[N]` replaces `Int64CounterOption` and `Float64CounterOption`
+  - `NewCounterConfig[N]` replaces `NewInt64CounterConfig` and `NewFloat64CounterConfig`
+  - `UpDownCounter[N]` replaces `Int64UpDownCounter` and `Float64UpDownCounter`
+  - `UpDownCounterConfig[N]` replaces `Int64UpDownCounterConfig` and `Float64UpDownCounterConfig`
+  - `UpDownCounterOption[N]` replaces `Int64UpDownCounterOption` and `Float64UpDownCounterOption`
+  - `NewUpDownCounterConfig[N]` replaces `NewInt64UpDownCounterConfig` and `NewFloat64UpDownCounterConfig`
+  - `Histogram[N]` replaces `Int64Histogram` and `Float64Histogram`
+  - `HistogramConfig[N]` replaces `Int64HistogramConfig` and `Float64HistogramConfig`
+  - `HistogramOption[N]` replaces `Int64HistogramOption` and `Float64HistogramOption`
+  - `NewHistogramConfig[N]` replaces `NewInt64HistogramConfig` and `NewFloat64HistogramConfig`
+  - `ObservableCounter[N]` replaces `Int64ObservableCounter` and `Float64ObservableCounter`
+  - `ObservableCounterConfig[N]` replaces `Int64ObservableCounterConfig` and `Float64ObservableCounterConfig`
+  - `ObservableCounterOption[N]` replaces `Int64ObservableCounterOption` and `Float64ObservableCounterOption`
+  - `NewObservableCounterConfig[N]` replaces `NewInt64ObservableCounterConfig` and `NewFloat64ObservableCounterConfig`
+  - `ObservableUpDownCounter[N]` replaces `Int64ObservableUpDownCounter` and `Float64ObservableUpDownCounter`
+  - `ObservableUpDownCounterConfig[N]` replaces `Int64ObservableUpDownCounterConfig` and `Float64ObservableUpDownCounterConfig`
+  - `ObservableUpDownCounterOption[N]` replaces `Int64ObservableUpDownCounterOption` and `Float64ObservableUpDownCounterOption`
+  - `NewObservableUpDownCounterConfig[N]` replaces `NewInt64ObservableUpDownCounterConfig` and `NewFloat64ObservableUpDownCounterConfig`
+  - `ObservableGauge[N]` replaces `Int64ObservableGauge` and `Float64ObservableGauge`
+  - `ObservableGaugeConfig[N]` replaces `Int64ObservableGaugeConfig` and `Float64ObservableGaugeConfig`
+  - `ObservableGaugeOption[N]` replaces `Int64ObservableGaugeOption` and `Float64ObservableGaugeOption`
+  - `NewObservableGaugeConfig[N]` replaces `NewInt64ObservableGaugeConfig` and `NewFloat64ObservableGaugeConfig`
+  - `ObserverT[N]` replaces `Int64Observer` and `Float64Observer`
+  - `ObservableOption[N]` replaces `Int64ObservableOption` and `Float64ObservableOption`
+  - `WithCallback[N]` replaces `WithInt64Callback` and `WithFloat64Callback`
+  - `Option[N]` replaces `Option`
+  - `WithDescription[N]` replaces `WithDescription`
+  - `WithUnit[N]` replaces `WithUnit`
 
 ### Fixed
 
