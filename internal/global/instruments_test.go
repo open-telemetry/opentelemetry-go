@@ -18,7 +18,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
@@ -26,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-func testRace[N int64 | float64](interact func(N), setDelegate func(metric.Meter) error) {
+func testRace[N int64 | float64](t *testing.T, interact func(N), setDelegate func(metric.Meter) error) {
 	finish := make(chan struct{})
 	go func() {
 		for {
@@ -39,7 +41,7 @@ func testRace[N int64 | float64](interact func(N), setDelegate func(metric.Meter
 		}
 	}()
 
-	setDelegate(noop.NewMeterProvider().Meter(""))
+	assert.NoError(t, setDelegate(noop.NewMeterProvider().Meter("")))
 	close(finish)
 }
 
@@ -50,7 +52,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v float64) { i.Add(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Float64UpDownCounter", func(t *testing.T) {
@@ -58,7 +60,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v float64) { i.Add(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Float64Histogram", func(t *testing.T) {
@@ -66,7 +68,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v float64) { i.Record(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Float64ObservableCounter", func(t *testing.T) {
@@ -75,7 +77,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Float64ObservableUpDownCounter", func(t *testing.T) {
@@ -84,7 +86,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Float64ObservableGauge", func(t *testing.T) {
@@ -93,7 +95,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(float64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64Counter", func(t *testing.T) {
@@ -101,7 +103,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v int64) { i.Add(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64UpDownCounter", func(t *testing.T) {
@@ -109,7 +111,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v int64) { i.Add(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64Histogram", func(t *testing.T) {
@@ -117,7 +119,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.NoError(t, err)
 		interact := func(v int64) { i.Record(context.Background(), v) }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64ObservableCounter", func(t *testing.T) {
@@ -126,7 +128,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64ObservableUpDownCounter", func(t *testing.T) {
@@ -135,7 +137,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 
 	t.Run("Int64ObservableGauge", func(t *testing.T) {
@@ -144,7 +146,7 @@ func TestInstrumentSetDelegateRace(t *testing.T) {
 		require.Implements(t, (*unwrapper)(nil), i)
 		interact := func(int64) { _ = i.(unwrapper).Unwrap() }
 		require.Implements(t, (*delegatedInstrument)(nil), i)
-		testRace(interact, i.(delegatedInstrument).SetDelegate)
+		testRace(t, interact, i.(delegatedInstrument).SetDelegate)
 	})
 }
 

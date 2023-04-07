@@ -239,17 +239,17 @@ type callbackOpt[N int64 | float64] struct {
 	cback Callback[N]
 }
 
-func (o callbackOpt[N]) applyObservableCounter(cfg ObservableCounterConfig[N]) ObservableCounterConfig[N] {
+func (o callbackOpt[N]) applyObservableCounter(cfg ObservableCounterConfig[N]) ObservableCounterConfig[N] { // nolint: unused
 	cfg.callbacks = append(cfg.callbacks, o.cback)
 	return cfg
 }
 
-func (o callbackOpt[N]) applyObservableUpDownCounter(cfg ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] {
+func (o callbackOpt[N]) applyObservableUpDownCounter(cfg ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] { // nolint: unused
 	cfg.callbacks = append(cfg.callbacks, o.cback)
 	return cfg
 }
 
-func (o callbackOpt[N]) applyObservableGauge(cfg ObservableGaugeConfig[N]) ObservableGaugeConfig[N] {
+func (o callbackOpt[N]) applyObservableGauge(cfg ObservableGaugeConfig[N]) ObservableGaugeConfig[N] { // nolint: unused
 	cfg.callbacks = append(cfg.callbacks, o.cback)
 	return cfg
 }

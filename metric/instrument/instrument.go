@@ -28,32 +28,32 @@ type descOpt[N int64 | float64] struct {
 	description string
 }
 
-func (o descOpt[N]) applyCounter(c CounterConfig[N]) CounterConfig[N] {
+func (o descOpt[N]) applyCounter(c CounterConfig[N]) CounterConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
 
-func (o descOpt[N]) applyUpDownCounter(c UpDownCounterConfig[N]) UpDownCounterConfig[N] {
+func (o descOpt[N]) applyUpDownCounter(c UpDownCounterConfig[N]) UpDownCounterConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
 
-func (o descOpt[N]) applyHistogram(c HistogramConfig[N]) HistogramConfig[N] {
+func (o descOpt[N]) applyHistogram(c HistogramConfig[N]) HistogramConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
 
-func (o descOpt[N]) applyObservableCounter(c ObservableCounterConfig[N]) ObservableCounterConfig[N] {
+func (o descOpt[N]) applyObservableCounter(c ObservableCounterConfig[N]) ObservableCounterConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
 
-func (o descOpt[N]) applyObservableUpDownCounter(c ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] {
+func (o descOpt[N]) applyObservableUpDownCounter(c ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
 
-func (o descOpt[N]) applyObservableGauge(c ObservableGaugeConfig[N]) ObservableGaugeConfig[N] {
+func (o descOpt[N]) applyObservableGauge(c ObservableGaugeConfig[N]) ObservableGaugeConfig[N] { // nolint: unused
 	c.description = o.description
 	return c
 }
@@ -65,32 +65,32 @@ type unitOpt[N int64 | float64] struct {
 	unit string
 }
 
-func (o unitOpt[N]) applyCounter(c CounterConfig[N]) CounterConfig[N] {
+func (o unitOpt[N]) applyCounter(c CounterConfig[N]) CounterConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
 
-func (o unitOpt[N]) applyUpDownCounter(c UpDownCounterConfig[N]) UpDownCounterConfig[N] {
+func (o unitOpt[N]) applyUpDownCounter(c UpDownCounterConfig[N]) UpDownCounterConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
 
-func (o unitOpt[N]) applyHistogram(c HistogramConfig[N]) HistogramConfig[N] {
+func (o unitOpt[N]) applyHistogram(c HistogramConfig[N]) HistogramConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
 
-func (o unitOpt[N]) applyObservableCounter(c ObservableCounterConfig[N]) ObservableCounterConfig[N] {
+func (o unitOpt[N]) applyObservableCounter(c ObservableCounterConfig[N]) ObservableCounterConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
 
-func (o unitOpt[N]) applyObservableUpDownCounter(c ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] {
+func (o unitOpt[N]) applyObservableUpDownCounter(c ObservableUpDownCounterConfig[N]) ObservableUpDownCounterConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
 
-func (o unitOpt[N]) applyObservableGauge(c ObservableGaugeConfig[N]) ObservableGaugeConfig[N] {
+func (o unitOpt[N]) applyObservableGauge(c ObservableGaugeConfig[N]) ObservableGaugeConfig[N] { // nolint: unused
 	c.unit = o.unit
 	return c
 }
