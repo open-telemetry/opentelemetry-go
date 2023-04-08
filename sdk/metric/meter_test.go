@@ -499,7 +499,7 @@ func TestRegisterNonSDKObserverErrors(t *testing.T) {
 		t,
 		err,
 		"invalid observable: from different implementation",
-		"External instrument registred",
+		"External instrument registered",
 	)
 }
 
@@ -521,13 +521,13 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 		t,
 		err,
 		`invalid registration: observable "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 	assert.ErrorContains(
 		t,
 		err,
 		`invalid registration: observable "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 }
 

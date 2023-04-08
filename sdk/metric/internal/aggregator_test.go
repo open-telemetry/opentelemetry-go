@@ -70,7 +70,7 @@ type expectFunc func(m int) metricdata.Aggregation
 // made MeasurementN number of times. This will be done in GoroutineN number
 // of different goroutines. After the Aggregator has been asked to aggregate
 // all these measurements, it is validated using a passed expecterFunc. This
-// set of operation is a signle cycle, and the the aggregatorTester will run
+// set of operation is a single cycle, and the the aggregatorTester will run
 // CycleN number of cycles.
 type aggregatorTester[N int64 | float64] struct {
 	// GoroutineN is the number of goroutines aggregatorTester will use to run

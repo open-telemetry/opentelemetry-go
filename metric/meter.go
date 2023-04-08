@@ -121,7 +121,7 @@ type Meter interface {
 
 // Callback is a function registered with a Meter that makes observations for
 // the set of instruments it is registered with. The Observer parameter is used
-// to record measurment observations for these instruments.
+// to record measurement observations for these instruments.
 //
 // The function needs to complete in a finite amount of time and the deadline
 // of the passed context is expected to be honored.

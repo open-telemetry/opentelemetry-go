@@ -244,7 +244,7 @@ Meaning a `config` from one package should not be directly used by another. The
 one exception is the API packages.  The configs from the base API, eg.
 `go.opentelemetry.io/otel/trace.TracerConfig` and
 `go.opentelemetry.io/otel/metric.InstrumentConfig`, are intended to be consumed
-by the SDK therefor it is expected that these are exported.
+by the SDK therefore it is expected that these are exported.
 
 When a config is exported we want to maintain forward and backward
 compatibility, to achieve this no fields should be exported but should
@@ -262,12 +262,12 @@ func newConfig(options ...Option) config {
 	for _, option := range options {
 		config = option.apply(config)
 	}
-	// Preform any validation here.
+	// Perform any validation here.
 	return config
 }
 ```
 
-If validation of the `config` options is also preformed this can return an
+If validation of the `config` options is also performed this can return an
 error as well that is expected to be handled by the instantiation function
 or propagated to the user.
 
@@ -466,7 +466,7 @@ their parameters appropriately named.
 #### Interface Stability
 
 All exported stable interfaces that include the following warning in their
-doumentation are allowed to be extended with additional methods.
+documentation are allowed to be extended with additional methods.
 
 > Warning: methods may be added to this interface in minor releases.
 

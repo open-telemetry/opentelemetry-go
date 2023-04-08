@@ -447,7 +447,7 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // The limits will be used as-is. Zero or negative values will not be changed
 // to the default value like WithSpanLimits does. Setting a limit to zero will
 // effectively disable the related resource it limits and setting to a
-// negative value will mean that resource is unlimited. Consequentially, this
+// negative value will mean that resource is unlimited. Consequently, this
 // means that the zero-value SpanLimits will disable all span resources.
 // Because of this, limits should be constructed using NewSpanLimits and
 // updated accordingly.
