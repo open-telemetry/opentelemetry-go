@@ -18,7 +18,7 @@ require (
 require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	go.opentelemetry.io/otel/metric v1.15.0-rc.2 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
 )
 
 replace go.opentelemetry.io/otel/trace => ../../trace
