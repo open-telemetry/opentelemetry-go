@@ -325,7 +325,7 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, opts
 		)
 		return
 	}
-	c := instrument.NewFloat64ObserveConfig(opts...)
+	c := instrument.NewFloat64ObserveConfig(opts)
 	oImpl.observe(v, c.Attributes())
 }
 
@@ -358,7 +358,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, opts ...in
 		)
 		return
 	}
-	c := instrument.NewInt64ObserveConfig(opts...)
+	c := instrument.NewInt64ObserveConfig(opts)
 	oImpl.observe(v, c.Attributes())
 }
 
@@ -453,7 +453,7 @@ type int64Observer struct {
 }
 
 func (o int64Observer) Observe(val int64, opts ...instrument.Int64ObserveOption) {
-	c := instrument.NewInt64ObserveConfig(opts...)
+	c := instrument.NewInt64ObserveConfig(opts)
 	o.observe(val, c.Attributes())
 }
 
@@ -486,6 +486,6 @@ type float64Observer struct {
 }
 
 func (o float64Observer) Observe(val float64, opts ...instrument.Float64ObserveOption) {
-	c := instrument.NewFloat64ObserveConfig(opts...)
+	c := instrument.NewFloat64ObserveConfig(opts)
 	o.observe(val, c.Attributes())
 }

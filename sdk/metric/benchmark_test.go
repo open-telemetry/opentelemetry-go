@@ -43,48 +43,60 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
-	s := attribute.NewSet(attribute.String("K", "V"))
+	opt := []instrument.Int64AddOption{
+		instrument.WithAttributes(attribute.String("K", "V")),
+	}
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
+		cntr.Add(ctx, 1, opt...)
 	}
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
-	s := attribute.NewSet(
-		attribute.String("", "V"),
-		attribute.String("K", "V"),
-	)
+	opt := []instrument.Int64AddOption{
+		instrument.WithAttributes(
+			attribute.String("", "V"),
+			attribute.String("K", "V"),
+		),
+	}
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
+		cntr.Add(ctx, 1, opt...)
 	}
 }
 
 func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
+	attrs := make([]attribute.KeyValue, 1)
+	opt := make([]instrument.Int64AddOption, 1)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		s := attribute.NewSet(attribute.Int("K", i))
-		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
+		attrs[0] = attribute.Int("K", i)
+		s := attribute.NewSet(attrs...)
+		opt[0] = instrument.WithAttributeSet(s)
+		cntr.Add(ctx, 1, opt...)
 	}
 }
 
 func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
+	attrs := make([]attribute.KeyValue, 2)
+	opt := make([]instrument.Int64AddOption, 1)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		o := instrument.WithAttributes(
-			attribute.Int("", i),
-			attribute.Int("K", i),
-		)
-		cntr.Add(ctx, 1, o)
+		attrs[0] = attribute.Int("", i)
+		attrs[1] = attribute.Int("K", i)
+		s := attribute.NewSet(attrs...)
+		opt[0] = instrument.WithAttributeSet(s)
+		cntr.Add(ctx, 1, opt...)
 	}
 }
 
 func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
+	attrs := make([]attribute.KeyValue, 2)
+	opt := make([]instrument.Int64AddOption, 1)
 	ctx, _, cntr := benchCounter(b, NewView(
 		Instrument{Name: "*"},
 		Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
@@ -93,31 +105,38 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	))
 
 	for i := 0; i < b.N; i++ {
-		o := instrument.WithAttributes(
-			attribute.Int("L", i),
-			attribute.Int("K", i),
-		)
-		cntr.Add(ctx, 1, o)
+		attrs[0] = attribute.Int("L", i)
+		attrs[1] = attribute.Int("K", i)
+		s := attribute.NewSet(attrs...)
+		opt[0] = instrument.WithAttributeSet(s)
+		cntr.Add(ctx, 1, opt...)
 	}
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
-	s := attribute.NewSet(attribute.Int("K", 1))
+	opt := []instrument.Int64AddOption{
+		instrument.WithAttributes(attribute.Int("K", 1)),
+	}
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
+		cntr.Add(ctx, 1, opt...)
 
 		_ = rdr.Collect(ctx, nil)
 	}
 }
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
+	attrs := make([]attribute.KeyValue, 1)
+	opt := make([]instrument.Int64AddOption, 1)
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
-			cntr.Add(ctx, 1, instrument.WithAttributes(attribute.Int("K", j)))
+			attrs[0] = attribute.Int("K", j)
+			s := attribute.NewSet(attrs...)
+			opt[0] = instrument.WithAttributeSet(s)
+			cntr.Add(ctx, 1, opt...)
 		}
 		_ = rdr.Collect(ctx, nil)
 	}

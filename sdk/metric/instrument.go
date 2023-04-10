@@ -183,12 +183,12 @@ var _ instrument.Int64UpDownCounter = (*int64Inst)(nil)
 var _ instrument.Int64Histogram = (*int64Inst)(nil)
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...instrument.Int64AddOption) {
-	c := instrument.NewInt64AddConfig(opts...)
+	c := instrument.NewInt64AddConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...instrument.Int64RecordOption) {
-	c := instrument.NewInt64RecordConfig(opts...)
+	c := instrument.NewInt64RecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
@@ -214,12 +214,12 @@ var _ instrument.Float64UpDownCounter = (*float64Inst)(nil)
 var _ instrument.Float64Histogram = (*float64Inst)(nil)
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...instrument.Float64AddOption) {
-	c := instrument.NewFloat64AddConfig(opts...)
+	c := instrument.NewFloat64AddConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...instrument.Float64RecordOption) {
-	c := instrument.NewFloat64RecordConfig(opts...)
+	c := instrument.NewFloat64RecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 

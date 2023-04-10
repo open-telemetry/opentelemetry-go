@@ -15,6 +15,7 @@
 package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,13 +27,13 @@ type attrConf interface {
 	Attributes() attribute.Set
 }
 
-func TestWithAttributeSet(t *testing.T) {
+func TestConfigAttrs(t *testing.T) {
 	t.Run("Float64AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
 		opts := make([]Float64AddOption, len(mo))
 		for i := range mo {
 			opts[i] = mo[i].(Float64AddOption)
 		}
-		return NewFloat64AddConfig(opts...)
+		return NewFloat64AddConfig(opts)
 	}))
 
 	t.Run("Int64AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
@@ -40,7 +41,7 @@ func TestWithAttributeSet(t *testing.T) {
 		for i := range mo {
 			opts[i] = mo[i].(Int64AddOption)
 		}
-		return NewInt64AddConfig(opts...)
+		return NewInt64AddConfig(opts)
 	}))
 
 	t.Run("Float64RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
@@ -48,7 +49,7 @@ func TestWithAttributeSet(t *testing.T) {
 		for i := range mo {
 			opts[i] = mo[i].(Float64RecordOption)
 		}
-		return NewFloat64RecordConfig(opts...)
+		return NewFloat64RecordConfig(opts)
 	}))
 
 	t.Run("Int64RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
@@ -56,7 +57,7 @@ func TestWithAttributeSet(t *testing.T) {
 		for i := range mo {
 			opts[i] = mo[i].(Int64RecordOption)
 		}
-		return NewInt64RecordConfig(opts...)
+		return NewInt64RecordConfig(opts)
 	}))
 
 	t.Run("Float64ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
@@ -64,7 +65,7 @@ func TestWithAttributeSet(t *testing.T) {
 		for i := range mo {
 			opts[i] = mo[i].(Float64ObserveOption)
 		}
-		return NewFloat64ObserveConfig(opts...)
+		return NewFloat64ObserveConfig(opts)
 	}))
 
 	t.Run("Int64ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
@@ -72,7 +73,7 @@ func TestWithAttributeSet(t *testing.T) {
 		for i := range mo {
 			opts[i] = mo[i].(Int64ObserveOption)
 		}
-		return NewInt64ObserveConfig(opts...)
+		return NewInt64ObserveConfig(opts)
 	}))
 }
 
@@ -122,4 +123,54 @@ func testConfAttr(newConf func(...MeasurementOption) attrConf) func(t *testing.T
 			assert.Equal(t, alice, c.Attributes())
 		})
 	}
+}
+
+func TestWithAttributesRace(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("user", "Alice"),
+		attribute.Bool("admin", true),
+		attribute.String("user", "Bob"),
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Int64AddOption{WithAttributes(attrs...)}
+		_ = NewInt64AddConfig(opt)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Float64AddOption{WithAttributes(attrs...)}
+		_ = NewFloat64AddConfig(opt)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Int64RecordOption{WithAttributes(attrs...)}
+		_ = NewInt64RecordConfig(opt)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Float64RecordOption{WithAttributes(attrs...)}
+		_ = NewFloat64RecordConfig(opt)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Int64ObserveOption{WithAttributes(attrs...)}
+		_ = NewInt64ObserveConfig(opt)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []Float64ObserveOption{WithAttributes(attrs...)}
+		_ = NewFloat64ObserveConfig(opt)
+	}()
+
+	wg.Wait()
 }
