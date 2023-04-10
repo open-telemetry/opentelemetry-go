@@ -433,9 +433,18 @@ func WithAttributeSet(attributes attribute.Set) MeasurementOption {
 // WithAttributeSet converts attributes into an attribute Set and sets the Set
 // to be associated with a measurement. This is shorthand for:
 //
-//	WithAttributes(attribute.NewSet(attributes...))
+//	cp := make([]attribute.KeyValue, len(attributes))
+//	copy(cp, attributes)
+//	WithAttributes(attribute.NewSet(cp...))
 //
-// See [WithAttributeSet] for how multiple WithAttributes are merged.
+// [attribute.NewSet] may modify the passed attributes so this will make a copy of
+// attributes before creating a set in order to ensure this function is
+// concurrent safe. This makes this option function less optimized in
+// comparison to [WithAttributeSet]. That option function should be perfered
+// for performance sensitive code.
+//
+// See [WithAttributeSet] for information about how multiple WithAttributes are
+// merged.
 func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
 	cp := make([]attribute.KeyValue, len(attributes))
 	copy(cp, attributes)
