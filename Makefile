@@ -178,7 +178,7 @@ misspell: | $(MISSPELL)
 
 .PHONY: codespell
 codespell:
-	codespell -S "./.git/*,go.mod,go.sum,./semconv/*" -L ot,fo,te,collison -i2 -w
+	codespell -S "./.git/*,go.mod,go.sum,./semconv/*" -L ot,fo,te,collison,consequentially -i2 -w
 
 .PHONY: license-check
 license-check:

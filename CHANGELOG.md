@@ -580,7 +580,7 @@ of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911
 - The `LabelFilterSelector` interface from `go.opentelemetry.io/otel/sdk/metric/processor/reducer` is renamed to `AttributeFilterSelector`.
   The method included in the renamed interface also changed from `LabelFilterFor` to `AttributeFilterFor`. (#2790)
 - The `Metadata.Labels` method from the `go.opentelemetry.io/otel/sdk/metric/export` package is renamed to `Metadata.Attributes`.
-  Consequently, the `Record` type from the same package also has had the embedded method renamed. (#2790)
+  Consequentially, the `Record` type from the same package also has had the embedded method renamed. (#2790)
 
 ### Deprecated
 
@@ -696,7 +696,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
   This option replaces the `WithSpanLimits` option.
   Zero or negative values will not be changed to the default value like `WithSpanLimits` does.
   Setting a limit to zero will effectively disable the related resource it limits and setting to a negative value will mean that resource is unlimited.
-  Consequently, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
+  Consequentially, limits should be constructed using `NewSpanLimits` and updated accordingly. (#2637)
 
 ### Changed
 
@@ -2166,7 +2166,7 @@ There is still a possibility of breaking changes.
    This resulted in all subsequent releases not becoming the default latest.
    A consequence of this was that all `go get`s pulled in the incompatible `v0.1.0` release of that package when pulling in more recent packages from other otel packages.
    Renaming the `exporter` directory to `exporters` fixes this issue by renaming the package and therefore clearing any existing dependency tags.
-   Consequently, this action also renames *all* exporter packages. (#502)
+   Consequentially, this action also renames *all* exporter packages. (#502)
 
 ### Removed
 
