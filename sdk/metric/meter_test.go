@@ -169,7 +169,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	attrs := attribute.NewSet(attribute.String("name", "alice"))
-	opt := instrument.WithAttributes(attrs)
+	opt := instrument.WithAttributeSet(attrs)
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -886,11 +886,11 @@ func TestAttributeFilter(t *testing.T) {
 
 func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	fooBar := attribute.NewSet(attribute.String("foo", "bar"))
-	withFooBar := instrument.WithAttributes(fooBar)
+	withFooBar := instrument.WithAttributeSet(fooBar)
 	v1 := attribute.NewSet(attribute.String("foo", "bar"), attribute.Int("version", 1))
-	withV1 := instrument.WithAttributes(v1)
+	withV1 := instrument.WithAttributeSet(v1)
 	v2 := attribute.NewSet(attribute.String("foo", "bar"), attribute.Int("version", 2))
-	withV2 := instrument.WithAttributes(v2)
+	withV2 := instrument.WithAttributeSet(v2)
 	testcases := []struct {
 		name       string
 		register   func(t *testing.T, mtr metric.Meter) error
@@ -1275,7 +1275,7 @@ func TestObservableExample(t *testing.T) {
 		_, err := meter.Int64ObservableCounter(instName, instrument.WithInt64Callback(
 			func(_ context.Context, o instrument.Int64Observer) error {
 				for attrSet, val := range observations {
-					o.Observe(val, instrument.WithAttributes(attrSet))
+					o.Observe(val, instrument.WithAttributeSet(attrSet))
 				}
 				return nil
 			},

@@ -182,7 +182,7 @@ type Int64AddConfig struct {
 
 // NewInt64AddConfig returns a new [Int64AddConfig] with all opts applied.
 func NewInt64AddConfig(opts ...Int64AddOption) Int64AddConfig {
-	var config Int64AddConfig
+	config := Int64AddConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyInt64Add(config)
 	}
@@ -208,7 +208,7 @@ type Float64AddConfig struct {
 
 // NewFloat64AddConfig returns a new [Float64AddConfig] with all opts applied.
 func NewFloat64AddConfig(opts ...Float64AddOption) Float64AddConfig {
-	var config Float64AddConfig
+	config := Float64AddConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyFloat64Add(config)
 	}
@@ -235,7 +235,7 @@ type Int64RecordConfig struct {
 // NewInt64RecordConfig returns a new [Int64RecordConfig] with all opts
 // applied.
 func NewInt64RecordConfig(opts ...Int64RecordOption) Int64RecordConfig {
-	var config Int64RecordConfig
+	config := Int64RecordConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyInt64Record(config)
 	}
@@ -262,7 +262,7 @@ type Float64RecordConfig struct {
 // NewFloat64RecordConfig returns a new [Float64RecordConfig] with all opts
 // applied.
 func NewFloat64RecordConfig(opts ...Float64RecordOption) Float64RecordConfig {
-	var config Float64RecordConfig
+	config := Float64RecordConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyFloat64Record(config)
 	}
@@ -289,7 +289,7 @@ type Int64ObserveConfig struct {
 // NewInt64ObserveConfig returns a new [Int64ObserveConfig] with all opts
 // applied.
 func NewInt64ObserveConfig(opts ...Int64ObserveOption) Int64ObserveConfig {
-	var config Int64ObserveConfig
+	config := Int64ObserveConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyInt64Observe(config)
 	}
@@ -316,7 +316,7 @@ type Float64ObserveConfig struct {
 // NewFloat64ObserveConfig returns a new [Float64ObserveConfig] with all opts
 // applied.
 func NewFloat64ObserveConfig(opts ...Float64ObserveOption) Float64ObserveConfig {
-	var config Float64ObserveConfig
+	config := Float64ObserveConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
 		config = o.applyFloat64Observe(config)
 	}
@@ -342,37 +342,71 @@ type attrOpt struct {
 	set attribute.Set
 }
 
+// mergeSets returns the union of keys between a and b. Any duplicate keys will
+// use the value associated with b.
+func mergeSets(a, b attribute.Set) attribute.Set {
+	switch 0 {
+	case a.Len():
+		return b
+	case b.Len():
+		return a
+	}
+
+	// NewMergeIterator uses the first value for any duplicates.
+	iter := attribute.NewMergeIterator(&b, &a)
+	merged := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+	for iter.Next() {
+		merged = append(merged, iter.Attribute())
+	}
+	return attribute.NewSet(merged...)
+}
+
 func (o attrOpt) applyInt64Add(c Int64AddConfig) Int64AddConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
 func (o attrOpt) applyFloat64Add(c Float64AddConfig) Float64AddConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
 func (o attrOpt) applyInt64Record(c Int64RecordConfig) Int64RecordConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
 func (o attrOpt) applyFloat64Record(c Float64RecordConfig) Float64RecordConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
 func (o attrOpt) applyInt64Observe(c Int64ObserveConfig) Int64ObserveConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
 func (o attrOpt) applyFloat64Observe(c Float64ObserveConfig) Float64ObserveConfig {
-	c.attrs = o.set
+	c.attrs = mergeSets(c.attrs, o.set)
 	return c
 }
 
-// WithAttributes sets the attributes a measurement is made with.
-func WithAttributes(attributes attribute.Set) MeasurementOption {
+// WithAttributeSet sets the attribute Set associated with a measurement is
+// made with.
+//
+// If multiple WithAttributeSet or WithAttributes options are passed the
+// attributes will be merged together in the order they are passed. Attributes
+// with duplicate keys will use the last value passed.
+func WithAttributeSet(attributes attribute.Set) MeasurementOption {
 	return attrOpt{set: attributes}
+}
+
+// WithAttributeSet converts attributes into an attribute Set and sets the Set
+// to be associated with a measurement. This is shorthand for:
+//
+//	WithAttributes(attribute.NewSet(attributes...))
+//
+// See [WithAttributeSet] for how multiple WithAttributes are merged.
+func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
+	return attrOpt{set: attribute.NewSet(attributes...)}
 }

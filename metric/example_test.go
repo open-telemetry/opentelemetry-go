@@ -63,8 +63,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			s := attribute.NewSet(attribute.Int("disk.id", 3))
-			obsrv.Observe(int64(usage), instrument.WithAttributes(s))
+			obsrv.Observe(int64(usage), instrument.WithAttributes(attribute.Int("disk.id", 3)))
 			return nil
 		}),
 	)

@@ -47,7 +47,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
 	}
 }
 
@@ -59,7 +59,7 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
 	}
 }
 
@@ -68,7 +68,7 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		s := attribute.NewSet(attribute.Int("K", i))
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
 	}
 }
 
@@ -76,11 +76,11 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		s := attribute.NewSet(
+		o := instrument.WithAttributes(
 			attribute.Int("", i),
 			attribute.Int("K", i),
 		)
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, o)
 	}
 }
 
@@ -93,11 +93,11 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	))
 
 	for i := 0; i < b.N; i++ {
-		s := attribute.NewSet(
+		o := instrument.WithAttributes(
 			attribute.Int("L", i),
 			attribute.Int("K", i),
 		)
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, o)
 	}
 }
 
@@ -106,7 +106,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
-		cntr.Add(ctx, 1, instrument.WithAttributes(s))
+		cntr.Add(ctx, 1, instrument.WithAttributeSet(s))
 
 		_ = rdr.Collect(ctx, nil)
 	}
@@ -117,8 +117,7 @@ func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < 10; j++ {
-			s := attribute.NewSet(attribute.Int("K", j))
-			cntr.Add(ctx, 1, instrument.WithAttributes(s))
+			cntr.Add(ctx, 1, instrument.WithAttributes(attribute.Int("K", j)))
 		}
 		_ = rdr.Collect(ctx, nil)
 	}

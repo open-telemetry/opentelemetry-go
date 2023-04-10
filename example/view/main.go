@@ -64,11 +64,10 @@ func main() {
 	// Start the prometheus HTTP server and pass the exporter Collector to it
 	go serveMetrics()
 
-	attrs := attribute.NewSet(
+	opt := instrument.WithAttributes(
 		attribute.Key("A").String("B"),
 		attribute.Key("C").String("D"),
 	)
-	opt := instrument.WithAttributes(attrs)
 
 	counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 	if err != nil {

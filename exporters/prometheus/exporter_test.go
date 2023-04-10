@@ -46,13 +46,12 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "counter",
 			expectedFile: "testdata/counter.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Float64Counter(
 					"foo",
 					instrument.WithDescription("a simple counter"),
@@ -69,18 +68,17 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				)
-				counter.Add(ctx, 5, instrument.WithAttributes(attrs2))
+				counter.Add(ctx, 5, instrument.WithAttributeSet(attrs2))
 			},
 		},
 		{
 			name:         "gauge",
 			expectedFile: "testdata/gauge.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				gauge, err := meter.Float64UpDownCounter(
 					"bar",
 					instrument.WithDescription("a fun little gauge"),
@@ -95,11 +93,10 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				histogram, err := meter.Float64Histogram(
 					"histogram_baz",
 					instrument.WithDescription("a very nice histogram"),
@@ -117,7 +114,7 @@ func TestPrometheusExporter(t *testing.T) {
 			expectedFile: "testdata/sanitized_labels.txt",
 			options:      []Option{WithoutUnits()},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					// exact match, value should be overwritten
 					attribute.Key("A.B").String("X"),
 					attribute.Key("A.B").String("Q"),
@@ -126,7 +123,6 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C.D").String("Y"),
 					attribute.Key("C/D").String("Z"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Float64Counter(
 					"foo",
 					instrument.WithDescription("a sanitary counter"),
@@ -143,11 +139,10 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "invalid instruments are renamed",
 			expectedFile: "testdata/sanitized_names.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				// Valid.
 				gauge, err := meter.Float64UpDownCounter("bar", instrument.WithDescription("a fun little gauge"))
 				require.NoError(t, err)
@@ -173,13 +168,12 @@ func TestPrometheusExporter(t *testing.T) {
 			emptyResource: true,
 			expectedFile:  "testdata/empty_resource.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -195,13 +189,12 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 			expectedFile: "testdata/custom_resource.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -214,13 +207,12 @@ func TestPrometheusExporter(t *testing.T) {
 			options:      []Option{WithoutTargetInfo()},
 			expectedFile: "testdata/without_target_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -233,11 +225,10 @@ func TestPrometheusExporter(t *testing.T) {
 			options:      []Option{WithoutScopeInfo()},
 			expectedFile: "testdata/without_scope_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				gauge, err := meter.Int64UpDownCounter(
 					"bar",
 					instrument.WithDescription("a fun little gauge"),
@@ -253,11 +244,10 @@ func TestPrometheusExporter(t *testing.T) {
 			options:      []Option{WithoutScopeInfo(), WithoutTargetInfo()},
 			expectedFile: "testdata/without_scope_and_target_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := attribute.NewSet(
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				opt := instrument.WithAttributes(attrs)
 				counter, err := meter.Int64Counter(
 					"bar",
 					instrument.WithDescription("a fun little counter"),
@@ -275,17 +265,17 @@ func TestPrometheusExporter(t *testing.T) {
 				WithNamespace("test"),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				attrs := []attribute.KeyValue{
+				opt := instrument.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 					attribute.Key("E").Bool(true),
 					attribute.Key("F").Int(42),
-				}
+				)
 				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
 				require.NoError(t, err)
-				counter.Add(ctx, 5, attrs...)
-				counter.Add(ctx, 10.3, attrs...)
-				counter.Add(ctx, 9, attrs...)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
 			},
 		},
 	}
@@ -398,8 +388,7 @@ func TestMultiScopes(t *testing.T) {
 			instrument.WithUnit("ms"),
 			instrument.WithDescription("meter foo counter"))
 	assert.NoError(t, err)
-	s := attribute.NewSet(attribute.String("type", "foo"))
-	fooCounter.Add(ctx, 100, instrument.WithAttributes(s))
+	fooCounter.Add(ctx, 100, instrument.WithAttributes(attribute.String("type", "foo")))
 
 	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
 		Int64Counter(
@@ -407,8 +396,7 @@ func TestMultiScopes(t *testing.T) {
 			instrument.WithUnit("ms"),
 			instrument.WithDescription("meter bar counter"))
 	assert.NoError(t, err)
-	s = attribute.NewSet(attribute.String("type", "bar"))
-	barCounter.Add(ctx, 200, instrument.WithAttributes(s))
+	barCounter.Add(ctx, 200, instrument.WithAttributes(attribute.String("type", "bar")))
 
 	file, err := os.Open("testdata/multi_scopes.txt")
 	require.NoError(t, err)
@@ -420,11 +408,11 @@ func TestMultiScopes(t *testing.T) {
 
 func TestDuplicateMetrics(t *testing.T) {
 	ab := attribute.NewSet(attribute.String("A", "B"))
-	withAB := instrument.WithAttributes(ab)
+	withAB := instrument.WithAttributeSet(ab)
 	typeBar := attribute.NewSet(attribute.String("type", "bar"))
-	withTypeBar := instrument.WithAttributes(typeBar)
+	withTypeBar := instrument.WithAttributeSet(typeBar)
 	typeFoo := attribute.NewSet(attribute.String("type", "foo"))
-	withTypeFoo := instrument.WithAttributes(typeFoo)
+	withTypeFoo := instrument.WithAttributeSet(typeFoo)
 	testCases := []struct {
 		name                  string
 		customResouceAttrs    []attribute.KeyValue
