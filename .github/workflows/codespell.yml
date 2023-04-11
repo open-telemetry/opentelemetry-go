@@ -1,0 +1,16 @@
+name: codespell
+on:
+  push:
+jobs:
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Codespell with annotations
+        uses: codespell-project/actions-codespell@v1      
+        with:
+          skip: "./.git/*,go.mod,go.sum,./semconv/*"
+          ignore_words_list: ot,fo,te,collison,consequentially
