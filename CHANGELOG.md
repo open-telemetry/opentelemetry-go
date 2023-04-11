@@ -32,6 +32,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `Float64ObserveConfig` used to hold configuration for `float64` observed measurements
     - `NewFloat64ObserveConfig` used to create a new `Float64ObserveConfig`
     - `Float64ObserveOption` used to configure an `Float64ObserveConfig`
+- The `Version` function to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` to return the OTLP metrics client version. (#3956)
+- The `Version` function to `go.opentelemetry.io/otel/exporters/otlp/otlptrace` to return the OTLP trace client version. (#3956)
 
 ### Changed
 
