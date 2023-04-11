@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/otel v1.15.0-rc.2
 	go.opentelemetry.io/otel/schema v0.0.4
 	go.opentelemetry.io/otel/trace v1.15.0-rc.2
-	golang.org/x/sys v0.6.0
+	golang.org/x/sys v0.7.0
 )
 
 require (
@@ -27,3 +27,5 @@ require (
 replace go.opentelemetry.io/otel/trace => ../trace
 
 replace go.opentelemetry.io/otel/metric => ../metric
+
+replace go.opentelemetry.io/otel/schema => ../schema

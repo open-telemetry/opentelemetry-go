@@ -22,7 +22,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.1 // indirect
 	go.opentelemetry.io/otel/metric v1.15.0-rc.2 // indirect
 	go.opentelemetry.io/otel/schema v0.0.4 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
