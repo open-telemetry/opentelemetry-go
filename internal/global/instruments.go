@@ -20,8 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 // unwrapper unwraps to return the underlying instrument implementation.
@@ -30,7 +30,7 @@ type unwrapper interface {
 }
 
 type afCounter struct {
-	embedded.Float64ObservableCounter
+	metricembed.Float64ObservableCounter
 	instrument.Float64Observable
 
 	name string
@@ -59,7 +59,7 @@ func (i *afCounter) Unwrap() instrument.Observable {
 }
 
 type afUpDownCounter struct {
-	embedded.Float64ObservableUpDownCounter
+	metricembed.Float64ObservableUpDownCounter
 	instrument.Float64Observable
 
 	name string
@@ -88,7 +88,7 @@ func (i *afUpDownCounter) Unwrap() instrument.Observable {
 }
 
 type afGauge struct {
-	embedded.Float64ObservableGauge
+	metricembed.Float64ObservableGauge
 	instrument.Float64Observable
 
 	name string
@@ -117,7 +117,7 @@ func (i *afGauge) Unwrap() instrument.Observable {
 }
 
 type aiCounter struct {
-	embedded.Int64ObservableCounter
+	metricembed.Int64ObservableCounter
 	instrument.Int64Observable
 
 	name string
@@ -146,7 +146,7 @@ func (i *aiCounter) Unwrap() instrument.Observable {
 }
 
 type aiUpDownCounter struct {
-	embedded.Int64ObservableUpDownCounter
+	metricembed.Int64ObservableUpDownCounter
 	instrument.Int64Observable
 
 	name string
@@ -175,7 +175,7 @@ func (i *aiUpDownCounter) Unwrap() instrument.Observable {
 }
 
 type aiGauge struct {
-	embedded.Int64ObservableGauge
+	metricembed.Int64ObservableGauge
 	instrument.Int64Observable
 
 	name string
@@ -205,7 +205,7 @@ func (i *aiGauge) Unwrap() instrument.Observable {
 
 // Sync Instruments.
 type sfCounter struct {
-	embedded.Float64Counter
+	metricembed.Float64Counter
 
 	name string
 	opts []instrument.Float64CounterOption
@@ -231,7 +231,7 @@ func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 }
 
 type sfUpDownCounter struct {
-	embedded.Float64UpDownCounter
+	metricembed.Float64UpDownCounter
 
 	name string
 	opts []instrument.Float64UpDownCounterOption
@@ -257,7 +257,7 @@ func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attrib
 }
 
 type sfHistogram struct {
-	embedded.Float64Histogram
+	metricembed.Float64Histogram
 
 	name string
 	opts []instrument.Float64HistogramOption
@@ -283,7 +283,7 @@ func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.
 }
 
 type siCounter struct {
-	embedded.Int64Counter
+	metricembed.Int64Counter
 
 	name string
 	opts []instrument.Int64CounterOption
@@ -309,7 +309,7 @@ func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValu
 }
 
 type siUpDownCounter struct {
-	embedded.Int64UpDownCounter
+	metricembed.Int64UpDownCounter
 
 	name string
 	opts []instrument.Int64UpDownCounterOption
@@ -335,7 +335,7 @@ func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.K
 }
 
 type siHistogram struct {
-	embedded.Int64Histogram
+	metricembed.Int64Histogram
 
 	name string
 	opts []instrument.Int64HistogramOption

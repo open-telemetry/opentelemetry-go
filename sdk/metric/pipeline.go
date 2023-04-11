@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/metricembed"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -512,7 +512,7 @@ func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 }
 
 type unregisterFuncs struct {
-	embedded.Registration
+	metricembed.Registration
 	f []func()
 }
 

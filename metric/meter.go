@@ -18,8 +18,8 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 // MeterProvider provides access to named Meter instances, for instrumenting
@@ -29,7 +29,7 @@ import (
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type MeterProvider interface {
-	embedded.MeterProvider
+	metricembed.MeterProvider
 
 	// Meter returns a new Meter with the provided name and configuration.
 	//
@@ -49,7 +49,7 @@ type MeterProvider interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Meter interface {
-	embedded.Meter
+	metricembed.Meter
 
 	// Int64Counter returns a new instrument identified by name and configured
 	// with options. The instrument is used to synchronously record increasing
@@ -139,7 +139,7 @@ type Callback func(context.Context, Observer) error
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Observer interface {
-	embedded.Observer
+	metricembed.Observer
 
 	// ObserveFloat64 records the float64 value with attributes for obsrv.
 	ObserveFloat64(obsrv instrument.Float64Observable, value float64, attributes ...attribute.KeyValue)
@@ -154,7 +154,7 @@ type Observer interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Registration interface {
-	embedded.Registration
+	metricembed.Registration
 
 	// Unregister removes the callback registration from a Meter.
 	//

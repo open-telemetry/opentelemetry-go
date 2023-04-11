@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/metricembed"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -89,9 +89,9 @@ func (p *meter) Int64Histogram(string, ...instrument.Int64HistogramOption) (inst
 type inst struct {
 	aggregateFunc func(int64, attribute.Set)
 
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
+	metricembed.Int64Counter
+	metricembed.Int64UpDownCounter
+	metricembed.Int64Histogram
 }
 
 func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}

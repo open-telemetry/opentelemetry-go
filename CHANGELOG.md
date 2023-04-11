@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
 - Wrap `UploadMetrics` error in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/` to improve error message when encountering generic grpc errors. (#3974)
+- Renamed package `go.opentelemetry.io/otel/metric/embedded` to `go.opentelemetry.io/otel/metric/metricembed` in order to prevent possible collision while applying trace.
 
 ### Fixed
 

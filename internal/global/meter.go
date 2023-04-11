@@ -20,8 +20,8 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 // meterProvider is a placeholder for a configured SDK MeterProvider.
@@ -29,7 +29,7 @@ import (
 // All MeterProvider functionality is forwarded to a delegate once
 // configured.
 type meterProvider struct {
-	embedded.MeterProvider
+	metricembed.MeterProvider
 
 	mtx    sync.Mutex
 	meters map[il]*meter
@@ -97,7 +97,7 @@ func (p *meterProvider) Meter(name string, opts ...metric.MeterOption) metric.Me
 // All Meter functionality is forwarded to a delegate once configured.
 // Otherwise, all functionality is forwarded to a NoopMeter.
 type meter struct {
-	embedded.Meter
+	metricembed.Meter
 
 	name string
 	opts []metric.MeterOption
@@ -313,7 +313,7 @@ func unwrapInstruments(instruments []instrument.Observable) []instrument.Observa
 }
 
 type registration struct {
-	embedded.Registration
+	metricembed.Registration
 
 	instruments []instrument.Observable
 	function    metric.Callback

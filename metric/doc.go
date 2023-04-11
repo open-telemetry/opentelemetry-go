@@ -48,17 +48,17 @@ make:
   - Default to another implementation
 
 All interfaces in this API embed a corresponding interface from
-[go.opentelemetry.io/otel/metric/embedded]. If an author wants the default
+[go.opentelemetry.io/otel/metric/metricembed]. If an author wants the default
 behavior of their implementations to be a compilation failure, signaling to
 their users they need to update to the latest version of that implementation,
 they need to embed the corresponding interface from
-[go.opentelemetry.io/otel/metric/embedded] in their implementation. For
+[go.opentelemetry.io/otel/metric/metricembed] in their implementation. For
 example,
 
-	import "go.opentelemetry.io/otel/metric/embedded"
+	import "go.opentelemetry.io/otel/metric/metricembed"
 
 	type MeterProvider struct {
-		embedded.MeterProvider
+		metricembed.MeterProvider
 		// ...
 	}
 
@@ -76,7 +76,7 @@ This is not a recommended behavior as it could lead to publishing packages that
 contain runtime panics when users update other package that use newer versions
 of [go.opentelemetry.io/otel/metric].
 
-Finally, an author can embed another implementation in theirs. The embedded
+Finally, an author can embed another implementation in theirs. The metricembed
 implementation will be used for methods not defined by the author. For example,
 an author who want to default to silently dropping the call can use
 [go.opentelemetry.io/otel/metric/noop]:

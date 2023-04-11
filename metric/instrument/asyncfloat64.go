@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 // Float64Observable describes a set of instruments used asynchronously to
@@ -42,7 +42,7 @@ type Float64Observable interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64ObservableCounter interface {
-	embedded.Float64ObservableCounter
+	metricembed.Float64ObservableCounter
 
 	Float64Observable
 }
@@ -97,7 +97,7 @@ type Float64ObservableCounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64ObservableUpDownCounter interface {
-	embedded.Float64ObservableUpDownCounter
+	metricembed.Float64ObservableUpDownCounter
 
 	Float64Observable
 }
@@ -152,7 +152,7 @@ type Float64ObservableUpDownCounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64ObservableGauge interface {
-	embedded.Float64ObservableGauge
+	metricembed.Float64ObservableGauge
 
 	Float64Observable
 }
@@ -205,7 +205,7 @@ type Float64ObservableGaugeOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64Observer interface {
-	embedded.Float64Observer
+	metricembed.Float64Observer
 
 	// Observe records the float64 value with attributes.
 	Observe(value float64, attributes ...attribute.KeyValue)

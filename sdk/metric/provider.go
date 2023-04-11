@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/metricembed"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -27,7 +27,7 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	embedded.MeterProvider
+	metricembed.MeterProvider
 
 	pipes  pipelines
 	meters cache[instrumentation.Scope, *meter]

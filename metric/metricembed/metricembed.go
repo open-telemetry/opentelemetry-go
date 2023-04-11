@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package embedded provides interfaces embedded within the [OpenTelemetry
+// Package metricembed provides interfaces embedded within the [OpenTelemetry
 // metric API].
 //
 // Implementers of the [OpenTelemetry metric API] can embed the relevant type
@@ -22,7 +22,7 @@
 // the API package).
 //
 // [OpenTelemetry metric API]: go.opentelemetry.io/otel/metric
-package embedded // import "go.opentelemetry.io/otel/metric/embedded"
+package metricembed // import "go.opentelemetry.io/otel/metric/metricembed"
 
 // MeterProvider is embedded in the OpenTelemetry metric API [MeterProvider].
 //

@@ -19,12 +19,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 type testMeterProvider struct {
-	embedded.MeterProvider
+	metricembed.MeterProvider
 
 	count int
 }
@@ -36,7 +36,7 @@ func (p *testMeterProvider) Meter(name string, opts ...metric.MeterOption) metri
 }
 
 type testMeter struct {
-	embedded.Meter
+	metricembed.Meter
 
 	afCount   int
 	afUDCount int
@@ -128,7 +128,7 @@ func (m *testMeter) RegisterCallback(f metric.Callback, i ...instrument.Observab
 }
 
 type testReg struct {
-	embedded.Registration
+	metricembed.Registration
 
 	f func()
 }
@@ -152,7 +152,7 @@ func (m *testMeter) collect() {
 }
 
 type observationRecorder struct {
-	embedded.Observer
+	metricembed.Observer
 
 	ctx context.Context
 }

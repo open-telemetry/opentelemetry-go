@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 // Int64Counter is an instrument that records increasing int64 values.
@@ -28,7 +28,7 @@ import (
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Int64Counter interface {
-	embedded.Int64Counter
+	metricembed.Int64Counter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
@@ -75,7 +75,7 @@ type Int64CounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Int64UpDownCounter interface {
-	embedded.Int64UpDownCounter
+	metricembed.Int64UpDownCounter
 
 	// Add records a change to the counter.
 	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
@@ -123,7 +123,7 @@ type Int64UpDownCounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Int64Histogram interface {
-	embedded.Int64Histogram
+	metricembed.Int64Histogram
 
 	// Record adds an additional value to the distribution.
 	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)

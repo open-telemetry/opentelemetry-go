@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/metricembed"
 )
 
 func TestInt64ObservableConfiguration(t *testing.T) {
@@ -84,7 +84,7 @@ type int64ObservableConfig interface {
 }
 
 type int64Observer struct {
-	embedded.Int64Observer
+	metricembed.Int64Observer
 	Observable
 	got int64
 }
