@@ -32,7 +32,7 @@ type Observable interface {
 type ObservableT[N int64 | float64] interface {
 	Observable
 
-	observableT()
+	observableT(N)
 }
 
 // ObservableCounter is an instrument used to asynchronously record increasing

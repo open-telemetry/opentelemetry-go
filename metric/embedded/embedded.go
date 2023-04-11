@@ -65,7 +65,7 @@ type Observer interface{ observer() }
 // package).
 //
 // [Observer]: go.opentelemetry.io/otel/metric/instrument.ObserverT
-type ObserverT[N int64 | float64] interface{ observerT() }
+type ObserverT[N int64 | float64] interface{ observerT(N) }
 
 // Registration is embedded in the OpenTelemetry metric API [Registration].
 //
@@ -87,7 +87,7 @@ type Registration interface{ registration() }
 // package).
 //
 // [Counter]: go.opentelemetry.io/otel/metric.Counter
-type Counter[N int64 | float64] interface{ counter() }
+type Counter[N int64 | float64] interface{ counter(N) }
 
 // Histogram is embedded in the OpenTelemetry instrument API [Histogram].
 //
@@ -98,7 +98,7 @@ type Counter[N int64 | float64] interface{ counter() }
 // the API package).
 //
 // [Histogram]: go.opentelemetry.io/otel/metric/instrument.Histogram
-type Histogram[N int64 | float64] interface{ histogram() }
+type Histogram[N int64 | float64] interface{ histogram(N) }
 
 // ObservableCounter is embedded in the OpenTelemetry instrument API
 // [ObservableCounter].
@@ -110,7 +110,7 @@ type Histogram[N int64 | float64] interface{ histogram() }
 // version bump of the API package).
 //
 // [ObservableCounter]: go.opentelemetry.io/otel/metric/instrument.ObservableCounter
-type ObservableCounter[N int64 | float64] interface{ observableCounter() }
+type ObservableCounter[N int64 | float64] interface{ observableCounter(N) }
 
 // ObservableGauge is embedded in the OpenTelemetry instrument API
 // [ObservableGauge].
@@ -122,7 +122,7 @@ type ObservableCounter[N int64 | float64] interface{ observableCounter() }
 // version bump of the API package).
 //
 // [ObservableGauge]: go.opentelemetry.io/otel/metric/instrument.ObservableGauge
-type ObservableGauge[N int64 | float64] interface{ observableGauge() }
+type ObservableGauge[N int64 | float64] interface{ observableGauge(N) }
 
 // ObservableUpDownCounter is embedded in the OpenTelemetry instrument API
 // [ObservableUpDownCounter].
@@ -134,7 +134,7 @@ type ObservableGauge[N int64 | float64] interface{ observableGauge() }
 // that can happen without a major version bump of the API package).
 //
 // [ObservableUpDownCounter]: go.opentelemetry.io/otel/metric/instrument.ObservableUpDownCounter
-type ObservableUpDownCounter[N int64 | float64] interface{ observableUpDownCounter() }
+type ObservableUpDownCounter[N int64 | float64] interface{ observableUpDownCounter(N) }
 
 // UpDownCounter is embedded in the OpenTelemetry instrument API
 // [UpDownCounter].
@@ -146,4 +146,4 @@ type ObservableUpDownCounter[N int64 | float64] interface{ observableUpDownCount
 // version bump of the API package).
 //
 // [UpDownCounter]: go.opentelemetry.io/otel/metric/instrument.UpDownCounter
-type UpDownCounter[N int64 | float64] interface{ upDownCounter() }
+type UpDownCounter[N int64 | float64] interface{ upDownCounter(N) }
