@@ -176,10 +176,6 @@ vanity-import-fix: | $(PORTO)
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
-.PHONY: codespell
-codespell:
-	codespell -S "./.git/*,go.mod,go.sum,./semconv/*" -L ot,fo,te,collison,consequentially -i2 -w
-
 .PHONY: license-check
 license-check:
 	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './.git/*' ) ; do \
