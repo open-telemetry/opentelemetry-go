@@ -336,7 +336,7 @@ func TestSantitizeName(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"nam€_with_3_width_rune", "nam__with_3_width_rune"},
+		{"name€_with_4_width_rune", "name__with_4_width_rune"},
 		{"`", "_"},
 		{
 			`! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWKYZ[]\^_abcdefghijklmnopqrstuvwkyz{|}~`,

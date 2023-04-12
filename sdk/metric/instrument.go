@@ -290,7 +290,7 @@ func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 var errEmptyAgg = errors.New("no aggregators for observable instrument")
 
 // registerable returns an error if the observable o should not be registered,
-// and nil if it should. An errEmptyAgg error is returned if o is effecively a
+// and nil if it should. An errEmptyAgg error is returned if o is effectively a
 // no-op because it does not have any aggregators. Also, an error is returned
 // if scope defines a Meter other than the one o was created by.
 func (o *observable[N]) registerable(scope instrumentation.Scope) error {

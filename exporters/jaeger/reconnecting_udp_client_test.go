@@ -146,7 +146,7 @@ func waitForConnCondition(conn *reconnectingUDPConn, condition func(conn *reconn
 
 func newMockUDPAddr(t *testing.T, port int) *net.UDPAddr {
 	buf := make([]byte, 4)
-	// random is not seeded to ensure tests are deterministic (also doesnt matter if ip is valid)
+	// random is not seeded to ensure tests are deterministic (also does not matter if ip is valid)
 	_, err := rand.Read(buf)
 	require.NoError(t, err)
 
