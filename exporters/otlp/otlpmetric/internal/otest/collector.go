@@ -98,7 +98,7 @@ type GRPCCollector struct {
 // NewGRPCCollector returns a *GRPCCollector that is listening at the provided
 // endpoint.
 //
-// If endpoint is an empty string, the returned collector will be listeing on
+// If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
 //
 // If errCh is not nil, the collector will respond to Export calls with errors
@@ -204,7 +204,7 @@ type HTTPCollector struct {
 // NewHTTPCollector returns a *HTTPCollector that is listening at the provided
 // endpoint.
 //
-// If endpoint is an empty string, the returned collector will be listeing on
+// If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port, not use TLS, and listen at the
 // default OTLP metric endpoint path ("/v1/metrics"). If the endpoint contains
 // a prefix of "https" the server will generate weak self-signed TLS

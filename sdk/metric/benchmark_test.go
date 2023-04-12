@@ -163,7 +163,7 @@ func benchCollectHistograms(count int) func(*testing.B) {
 		h.Record(ctx, 1)
 	}
 
-	// Store bechmark results in a closure to prevent the compiler from
+	// Store benchmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
 	var (
 		collectedMetrics metricdata.ResourceMetrics
