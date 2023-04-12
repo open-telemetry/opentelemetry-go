@@ -455,7 +455,7 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 		return ""
 	}
 
-	formater := func(v T) string {
+	formatter := func(v T) string {
 		return fmt.Sprintf("%#v", v)
 	}
 
@@ -463,14 +463,14 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 	if len(extraExpected) > 0 {
 		_, _ = msg.WriteString("missing expected values:\n")
 		for _, v := range extraExpected {
-			_, _ = msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formatter(v) + "\n")
 		}
 	}
 
 	if len(extraActual) > 0 {
 		_, _ = msg.WriteString("unexpected additional values:\n")
 		for _, v := range extraActual {
-			_, _ = msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formatter(v) + "\n")
 		}
 	}
 

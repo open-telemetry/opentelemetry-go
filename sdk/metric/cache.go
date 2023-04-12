@@ -30,7 +30,7 @@ type cache[K comparable, V any] struct {
 	data map[K]V
 }
 
-// Lookup returns the value stored in the cache with the accociated key if it
+// Lookup returns the value stored in the cache with the associated key if it
 // exists. Otherwise, f is called and its returned value is set in the cache
 // for key and returned.
 //
