@@ -127,30 +127,30 @@ type HistogramDataPoint[N int64 | float64] struct {
 	BucketCounts []uint64
 
 	// Min is the minimum value recorded. (optional)
-	Min Extrema
+	Min Extrema[N]
 	// Max is the maximum value recorded. (optional)
-	Max Extrema
+	Max Extrema[N]
 	// Sum is the sum of the values recorded.
-	Sum float64
+	Sum N
 
 	// Exemplars is the sampled Exemplars collected during the timeseries.
 	Exemplars []Exemplar[N] `json:",omitempty"`
 }
 
 // Extrema is the minimum or maximum value of a dataset.
-type Extrema struct {
-	value float64
+type Extrema[N int64 | float64] struct {
+	value N
 	valid bool
 }
 
 // NewExtrema returns an Extrema set to v.
-func NewExtrema(v float64) Extrema {
-	return Extrema{value: v, valid: true}
+func NewExtrema[N int64 | float64](v N) Extrema[N] {
+	return Extrema[N]{value: v, valid: true}
 }
 
 // Value returns the Extrema value and true if the Extrema is defined.
 // Otherwise, if the Extrema is its zero-value, defined will be false.
-func (e Extrema) Value() (v float64, defined bool) {
+func (e Extrema[N]) Value() (v N, defined bool) {
 	return e.value, e.valid
 }
 

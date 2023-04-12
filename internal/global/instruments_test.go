@@ -20,7 +20,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
@@ -36,7 +38,7 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeterProvider().Meter(""))
+	setDelegate(noop.NewMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -53,7 +55,7 @@ func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue),
 		}
 	}()
 
-	setDelegate(metric.NewNoopMeterProvider().Meter(""))
+	setDelegate(noop.NewMeterProvider().Meter(""))
 	close(finish)
 }
 
@@ -145,6 +147,12 @@ type testCountingFloatInstrument struct {
 	count int
 
 	instrument.Float64Observable
+	embedded.Float64Counter
+	embedded.Float64UpDownCounter
+	embedded.Float64Histogram
+	embedded.Float64ObservableCounter
+	embedded.Float64ObservableUpDownCounter
+	embedded.Float64ObservableGauge
 }
 
 func (i *testCountingFloatInstrument) observe() {
@@ -161,6 +169,12 @@ type testCountingIntInstrument struct {
 	count int
 
 	instrument.Int64Observable
+	embedded.Int64Counter
+	embedded.Int64UpDownCounter
+	embedded.Int64Histogram
+	embedded.Int64ObservableCounter
+	embedded.Int64ObservableUpDownCounter
+	embedded.Int64ObservableGauge
 }
 
 func (i *testCountingIntInstrument) observe() {

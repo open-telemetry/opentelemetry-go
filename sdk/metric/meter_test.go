@@ -168,7 +168,6 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	extrema := metricdata.NewExtrema(7.)
 	attrs := []attribute.KeyValue{attribute.String("name", "alice")}
 	testCases := []struct {
 		name string
@@ -390,9 +389,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 							Count:        1,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Min:          extrema,
-							Max:          extrema,
-							Sum:          7.0,
+							Min:          metricdata.NewExtrema[int64](7),
+							Max:          metricdata.NewExtrema[int64](7),
+							Sum:          7,
 						},
 					},
 				},
@@ -454,8 +453,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 							Count:        1,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Min:          extrema,
-							Max:          extrema,
+							Min:          metricdata.NewExtrema[float64](7.),
+							Max:          metricdata.NewExtrema[float64](7.),
 							Sum:          7.0,
 						},
 					},
@@ -500,7 +499,7 @@ func TestRegisterNonSDKObserverErrors(t *testing.T) {
 		t,
 		err,
 		"invalid observable: from different implementation",
-		"External instrument registred",
+		"External instrument registered",
 	)
 }
 
@@ -522,13 +521,13 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 		t,
 		err,
 		`invalid registration: observable "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 	assert.ErrorContains(
 		t,
 		err,
 		`invalid registration: observable "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 }
 
@@ -1213,8 +1212,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
-							Min:          metricdata.NewExtrema(1.),
-							Max:          metricdata.NewExtrema(2.),
+							Min:          metricdata.NewExtrema[int64](1),
+							Max:          metricdata.NewExtrema[int64](2),
 							Sum:          3.0,
 						},
 					},

@@ -24,19 +24,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-type buckets struct {
+type buckets[N int64 | float64] struct {
 	counts   []uint64
 	count    uint64
-	sum      float64
-	min, max float64
+	sum      N
+	min, max N
 }
 
 // newBuckets returns buckets with n bins.
-func newBuckets(n int) *buckets {
-	return &buckets{counts: make([]uint64, n)}
+func newBuckets[N int64 | float64](n int) *buckets[N] {
+	return &buckets[N]{counts: make([]uint64, n)}
 }
 
-func (b *buckets) bin(idx int, value float64) {
+func (b *buckets[N]) bin(idx int, value N) {
 	b.counts[idx]++
 	b.count++
 	b.sum += value
@@ -52,7 +52,7 @@ func (b *buckets) bin(idx int, value float64) {
 type histValues[N int64 | float64] struct {
 	bounds []float64
 
-	values   map[attribute.Set]*buckets
+	values   map[attribute.Set]*buckets[N]
 	valuesMu sync.Mutex
 }
 
@@ -66,24 +66,19 @@ func newHistValues[N int64 | float64](bounds []float64) *histValues[N] {
 	sort.Float64s(b)
 	return &histValues[N]{
 		bounds: b,
-		values: make(map[attribute.Set]*buckets),
+		values: make(map[attribute.Set]*buckets[N]),
 	}
 }
 
 // Aggregate records the measurement value, scoped by attr, and aggregates it
 // into a histogram.
 func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
-	// Accept all types to satisfy the Aggregator interface. However, since
-	// the Aggregation produced by this Aggregator is only float64, convert
-	// here to only use this type.
-	v := float64(value)
-
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
 	// of s.bounds. This aligns with the buckets in that the length of buckets
 	// is len(s.bounds)+1, with the last bucket representing:
 	// (s.bounds[len(s.bounds)-1], +∞).
-	idx := sort.SearchFloat64s(s.bounds, v)
+	idx := sort.SearchFloat64s(s.bounds, float64(value))
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
@@ -97,12 +92,12 @@ func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 		// Then,
 		//
 		//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-		b = newBuckets(len(s.bounds) + 1)
+		b = newBuckets[N](len(s.bounds) + 1)
 		// Ensure min and max are recorded values (not zero), for new buckets.
-		b.min, b.max = v, v
+		b.min, b.max = value, value
 		s.values[attr] = b
 	}
-	b.bin(idx, v)
+	b.bin(idx, value)
 }
 
 // NewDeltaHistogram returns an Aggregator that summarizes a set of

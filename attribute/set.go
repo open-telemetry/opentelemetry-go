@@ -98,7 +98,7 @@ func (l *Set) Len() int {
 
 // Get returns the KeyValue at ordered position idx in this set.
 func (l *Set) Get(idx int) (KeyValue, bool) {
-	if l == nil {
+	if l == nil || !l.equivalent.Valid() {
 		return KeyValue{}, false
 	}
 	value := l.equivalent.reflectValue()
@@ -114,7 +114,7 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 
 // Value returns the value of a specified key in this set.
 func (l *Set) Value(k Key) (Value, bool) {
-	if l == nil {
+	if l == nil || !l.equivalent.Valid() {
 		return Value{}, false
 	}
 	rValue := l.equivalent.reflectValue()

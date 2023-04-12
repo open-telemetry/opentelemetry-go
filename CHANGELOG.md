@@ -8,10 +8,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `go.opentelemetry.io/otel/metric/embedded` package. (#3916)
+- The `Version` function to `go.opentelemetry.io/otel/sdk` to return the SDK version. (#3949)
+- Add a `WithNamespace` option to `go.opentelemetry.io/otel/exporters/prometheus` to allow users to prefix metrics with a namespace. (#3970)
+- The `Version` function to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` to return the OTLP metrics client version. (#3956)
+- The `Version` function to `go.opentelemetry.io/otel/exporters/otlp/otlptrace` to return the OTLP trace client version. (#3956)
+
+### Changed
+
+- The `Extrema` in `go.opentelemetry.io/otel/sdk/metric/metricdata` is redefined with a generic argument of `[N int64 | float64]`. (#3870)
+- Update all exported interfaces from `go.opentelemetry.io/otel/metric` to embed their corresponding interface from `go.opentelemetry.io/otel/metric/embedded`.
+  This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
+- Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
+  - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
+- Wrap `UploadMetrics` error in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/` to improve error message when encountering generic grpc errors. (#3974)
+
 ### Fixed
 
 - `TracerProvider` allows calling `Tracer()` while it's shutting down.
   It used to deadlock. (#3924)
+- Use the SDK version for the Telemetry SDK resource detector in `go.opentelemetry.io/otel/sdk/resource`. (#3949)
+- Automatically figure out the default aggregation with `aggregation.Default`. (#3967)
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
@@ -206,7 +225,7 @@ The next release will require at least [Go 1.19].
 - The `go.opentelemetry.io/otel/semconv/v1.16.0` package.
   The package contains semantic conventions from the `v1.16.0` version of the OpenTelemetry specification. (#3579)
 - Metric instruments to `go.opentelemetry.io/otel/metric/instrument`.
-  These instruments are use as replacements of the depreacted `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575, #3586)
+  These instruments are use as replacements of the deprecated `go.opentelemetry.io/otel/metric/instrument/{asyncfloat64,asyncint64,syncfloat64,syncint64}` packages.(#3575, #3586)
   - `Float64ObservableCounter` replaces the `asyncfloat64.Counter`
   - `Float64ObservableUpDownCounter` replaces the `asyncfloat64.UpDownCounter`
   - `Float64ObservableGauge` replaces the `asyncfloat64.Gauge`
@@ -229,7 +248,7 @@ The next release will require at least [Go 1.19].
 ### Changed
 
 - Jaeger and Zipkin exporter use `github.com/go-logr/logr` as the logging interface, and add the `WithLogr` option. (#3497, #3500)
-- Instrument configuration in `go.opentelemetry.io/otel/metric/instrument` is split into specific options and confguration based on the instrument type. (#3507)
+- Instrument configuration in `go.opentelemetry.io/otel/metric/instrument` is split into specific options and configuration based on the instrument type. (#3507)
   - Use the added `Int64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncint64`.
   - Use the added `Float64Option` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/syncfloat64`.
   - Use the added `Int64ObserverOption` type to configure instruments from `go.opentelemetry.io/otel/metric/instrument/asyncint64`.
@@ -242,7 +261,7 @@ The next release will require at least [Go 1.19].
 - The `Shutdown` method of the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` releases all computational resources when called the first time. (#3551)
 - The `Sampler` returned from `TraceIDRatioBased` `go.opentelemetry.io/otel/sdk/trace` now uses the rightmost bits for sampling decisions.
   This fixes random sampling when using ID generators like `xray.IDGenerator` and increasing parity with other language implementations. (#3557)
-- Errors from `go.opentelemetry.io/otel/exporters/otlp/otlptrace` exporters are wrapped in erros identifying their signal name.
+- Errors from `go.opentelemetry.io/otel/exporters/otlp/otlptrace` exporters are wrapped in errors identifying their signal name.
   Existing users of the exporters attempting to identify specific errors will need to use `errors.Unwrap()` to get the underlying error. (#3516)
 - Exporters from `go.opentelemetry.io/otel/exporters/otlp` will print the final retryable error message when attempts to retry time out. (#3514)
 - The instrument kind names in `go.opentelemetry.io/otel/sdk/metric` are updated to match the API. (#3562)
@@ -351,7 +370,7 @@ The next release will require at least [Go 1.19].
 - Asynchronous counters (`Counter` and `UpDownCounter`) from the metric SDK now produce delta sums when configured with delta temporality. (#3398)
 - Exported `Status` codes in the `go.opentelemetry.io/otel/exporters/zipkin` exporter are now exported as all upper case values. (#3340)
 - `Aggregation`s from `go.opentelemetry.io/otel/sdk/metric` with no data are not exported. (#3394, #3436)
-- Reenabled Attribute Filters in the Metric SDK. (#3396)
+- Re-enabled Attribute Filters in the Metric SDK. (#3396)
 - Asynchronous callbacks are only called if they are registered with at least one instrument that does not use drop aggragation. (#3408)
 - Do not report empty partial-success responses in the `go.opentelemetry.io/otel/exporters/otlp` exporters. (#3438, #3432)
 - Handle partial success responses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporters. (#3162, #3440)
@@ -932,7 +951,7 @@ This release includes an API and SDK for the tracing signal that will comply wit
 - Setting the global `ErrorHandler` with `"go.opentelemetry.io/otel".SetErrorHandler` multiple times is now supported. (#2160, #2140)
 - The `"go.opentelemetry.io/otel/attribute".Any` function now supports `int32` values. (#2169)
 - Multiple calls to `"go.opentelemetry.io/otel/sdk/metric/controller/basic".WithResource()` are handled correctly, and when no resources are provided `"go.opentelemetry.io/otel/sdk/resource".Default()` is used. (#2120)
-- The `WithoutTimestamps` option for the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` exporter causes the exporter to correctly ommit timestamps. (#2195)
+- The `WithoutTimestamps` option for the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` exporter causes the exporter to correctly omit timestamps. (#2195)
 - Fixed typos in resources.go. (#2201)
 
 ## [1.0.0-RC2] - 2021-07-26
@@ -1378,7 +1397,7 @@ with major version 0.
 - `NewGRPCDriver` function returns a `ProtocolDriver` that maintains a single gRPC connection to the collector. (#1369)
 - Added documentation about the project's versioning policy. (#1388)
 - Added `NewSplitDriver` for OTLP exporter that allows sending traces and metrics to different endpoints. (#1418)
-- Added codeql worfklow to GitHub Actions (#1428)
+- Added codeql workflow to GitHub Actions (#1428)
 - Added Gosec workflow to GitHub Actions (#1429)
 - Add new HTTP driver for OTLP exporter in `exporters/otlp/otlphttp`. Currently it only supports the binary protobuf payloads. (#1420)
 - Add an OpenCensus exporter bridge. (#1444)
@@ -2221,7 +2240,7 @@ There is still a possibility of breaking changes.
 
 ### Fixed
 
-- Use stateful batcher on Prometheus exporter fixing regresion introduced in #395. (#428)
+- Use stateful batcher on Prometheus exporter fixing regression introduced in #395. (#428)
 
 ## [0.2.1] - 2020-01-08
 

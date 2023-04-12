@@ -48,32 +48,32 @@ func testHistogram[N int64 | float64](t *testing.T) {
 		CycleN:       defaultCycles,
 	}
 
-	incr := monoIncr
+	incr := monoIncr[N]()
 	eFunc := deltaHistExpecter[N](incr)
 	t.Run("Delta", tester.Run(NewDeltaHistogram[N](histConf), incr, eFunc))
 	eFunc = cumuHistExpecter[N](incr)
 	t.Run("Cumulative", tester.Run(NewCumulativeHistogram[N](histConf), incr, eFunc))
 }
 
-func deltaHistExpecter[N int64 | float64](incr setMap) expectFunc {
+func deltaHistExpecter[N int64 | float64](incr setMap[N]) expectFunc {
 	h := metricdata.Histogram[N]{Temporality: metricdata.DeltaTemporality}
 	return func(m int) metricdata.Aggregation {
 		h.DataPoints = make([]metricdata.HistogramDataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			h.DataPoints = append(h.DataPoints, hPoint[N](a, float64(v), uint64(m)))
+			h.DataPoints = append(h.DataPoints, hPoint[N](a, v, uint64(m)))
 		}
 		return h
 	}
 }
 
-func cumuHistExpecter[N int64 | float64](incr setMap) expectFunc {
+func cumuHistExpecter[N int64 | float64](incr setMap[N]) expectFunc {
 	var cycle int
 	h := metricdata.Histogram[N]{Temporality: metricdata.CumulativeTemporality}
 	return func(m int) metricdata.Aggregation {
 		cycle++
 		h.DataPoints = make([]metricdata.HistogramDataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			h.DataPoints = append(h.DataPoints, hPoint[N](a, float64(v), uint64(cycle*m)))
+			h.DataPoints = append(h.DataPoints, hPoint[N](a, v, uint64(cycle*m)))
 		}
 		return h
 	}
@@ -81,8 +81,8 @@ func cumuHistExpecter[N int64 | float64](incr setMap) expectFunc {
 
 // hPoint returns an HistogramDataPoint that started and ended now with multi
 // number of measurements values v. It includes a min and max (set to v).
-func hPoint[N int64 | float64](a attribute.Set, v float64, multi uint64) metricdata.HistogramDataPoint[N] {
-	idx := sort.SearchFloat64s(bounds, v)
+func hPoint[N int64 | float64](a attribute.Set, v N, multi uint64) metricdata.HistogramDataPoint[N] {
+	idx := sort.SearchFloat64s(bounds, float64(v))
 	counts := make([]uint64, len(bounds)+1)
 	counts[idx] += multi
 	return metricdata.HistogramDataPoint[N]{
@@ -94,25 +94,32 @@ func hPoint[N int64 | float64](a attribute.Set, v float64, multi uint64) metricd
 		BucketCounts: counts,
 		Min:          metricdata.NewExtrema(v),
 		Max:          metricdata.NewExtrema(v),
-		Sum:          v * float64(multi),
+		Sum:          v * N(multi),
 	}
 }
 
 func TestBucketsBin(t *testing.T) {
-	b := newBuckets(3)
-	assertB := func(counts []uint64, count uint64, sum, min, max float64) {
-		assert.Equal(t, counts, b.counts)
-		assert.Equal(t, count, b.count)
-		assert.Equal(t, sum, b.sum)
-		assert.Equal(t, min, b.min)
-		assert.Equal(t, max, b.max)
-	}
+	t.Run("Int64", testBucketsBin[int64]())
+	t.Run("Float64", testBucketsBin[float64]())
+}
 
-	assertB([]uint64{0, 0, 0}, 0, 0, 0, 0)
-	b.bin(1, 2)
-	assertB([]uint64{0, 1, 0}, 1, 2, 0, 2)
-	b.bin(0, -1)
-	assertB([]uint64{1, 1, 0}, 2, 1, -1, 2)
+func testBucketsBin[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		b := newBuckets[N](3)
+		assertB := func(counts []uint64, count uint64, sum, min, max N) {
+			assert.Equal(t, counts, b.counts)
+			assert.Equal(t, count, b.count)
+			assert.Equal(t, sum, b.sum)
+			assert.Equal(t, min, b.min)
+			assert.Equal(t, max, b.max)
+		}
+
+		assertB([]uint64{0, 0, 0}, 0, 0, 0, 0)
+		b.bin(1, 2)
+		assertB([]uint64{0, 1, 0}, 1, 2, 0, 2)
+		b.bin(0, -1)
+		assertB([]uint64{1, 1, 0}, 2, 1, -1, 2)
+	}
 }
 
 func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBucketHistogram) Aggregator[N], getBounds func(Aggregator[N]) []float64) func(t *testing.T) {

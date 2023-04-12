@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -389,6 +390,8 @@ func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
 // returned.
 func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKind, temporality metricdata.Temporality, monotonic bool) (internal.Aggregator[N], error) {
 	switch a := agg.(type) {
+	case aggregation.Default:
+		return i.aggregator(DefaultAggregationSelector(kind), kind, temporality, monotonic)
 	case aggregation.Drop:
 		return nil, nil
 	case aggregation.LastValue:
@@ -443,6 +446,8 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 // | Observable Gauge         | X    | X         |     |           |                       |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
+	case aggregation.Default:
+		return nil
 	case aggregation.ExplicitBucketHistogram:
 		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
 			return nil
@@ -503,13 +508,16 @@ func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 	for i, pipe := range p {
 		unregs[i] = pipe.addMultiCallback(c)
 	}
-	return unregisterFuncs(unregs)
+	return unregisterFuncs{f: unregs}
 }
 
-type unregisterFuncs []func()
+type unregisterFuncs struct {
+	embedded.Registration
+	f []func()
+}
 
 func (u unregisterFuncs) Unregister() error {
-	for _, f := range u {
+	for _, f := range u.f {
 		f()
 	}
 	return nil

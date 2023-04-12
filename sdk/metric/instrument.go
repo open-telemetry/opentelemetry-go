@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -171,6 +172,13 @@ type streamID struct {
 
 type instrumentImpl[N int64 | float64] struct {
 	aggregators []internal.Aggregator[N]
+
+	embedded.Float64Counter
+	embedded.Float64UpDownCounter
+	embedded.Float64Histogram
+	embedded.Int64Counter
+	embedded.Int64UpDownCounter
+	embedded.Int64Histogram
 }
 
 var _ instrument.Float64Counter = (*instrumentImpl[float64])(nil)
@@ -213,6 +221,10 @@ type observablID[N int64 | float64] struct {
 type float64Observable struct {
 	instrument.Float64Observable
 	*observable[float64]
+
+	embedded.Float64ObservableCounter
+	embedded.Float64ObservableUpDownCounter
+	embedded.Float64ObservableGauge
 }
 
 var _ instrument.Float64ObservableCounter = float64Observable{}
@@ -228,6 +240,10 @@ func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name
 type int64Observable struct {
 	instrument.Int64Observable
 	*observable[int64]
+
+	embedded.Int64ObservableCounter
+	embedded.Int64ObservableUpDownCounter
+	embedded.Int64ObservableGauge
 }
 
 var _ instrument.Int64ObservableCounter = int64Observable{}
@@ -274,7 +290,7 @@ func (o *observable[N]) observe(val N, attrs []attribute.KeyValue) {
 var errEmptyAgg = errors.New("no aggregators for observable instrument")
 
 // registerable returns an error if the observable o should not be registered,
-// and nil if it should. An errEmptyAgg error is returned if o is effecively a
+// and nil if it should. An errEmptyAgg error is returned if o is effectively a
 // no-op because it does not have any aggregators. Also, an error is returned
 // if scope defines a Meter other than the one o was created by.
 func (o *observable[N]) registerable(scope instrumentation.Scope) error {
