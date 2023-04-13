@@ -510,7 +510,7 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			b, _ := NewTracerPair(tracer)
 
 			s := b.StartSpan(tc.name, tc.opt...)
-			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind, tc.expected)
+			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind(), tc.expected)
 		})
 	}
 }
@@ -575,4 +575,60 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 		assert.True(t, spanContext.(spanContextProvider).HasSpanID())
 		assert.True(t, spanContext.(spanContextProvider).HasTraceID())
 	})
+}
+
+func TestBridgeSpan_SetSpanKindTag(t *testing.T) {
+	testCases := []struct {
+		name               string
+		inputSpanKind      interface{}
+		setSpanKind        interface{}
+		expectedAttributes []attribute.KeyValue
+	}{
+		{
+			name:               "set span kind tag to client for OTel span without span kind specified",
+			inputSpanKind:      nil,
+			setSpanKind:        ext.SpanKindRPCClientEnum,
+			expectedAttributes: []attribute.KeyValue{attribute.String(string(ext.SpanKind), string(ext.SpanKindRPCClientEnum))},
+		},
+		{
+			name:               "set span kind tag to server for OTel span without span kind specified",
+			inputSpanKind:      nil,
+			setSpanKind:        ext.SpanKindRPCServerEnum,
+			expectedAttributes: []attribute.KeyValue{attribute.String(string(ext.SpanKind), string(ext.SpanKindRPCServerEnum))},
+		},
+		{
+			name:               "allow to set span kind tag to non-standard span kind",
+			inputSpanKind:      nil,
+			setSpanKind:        "non-standard span kind",
+			expectedAttributes: []attribute.KeyValue{attribute.String(string(ext.SpanKind), "non-standard span kind")},
+		},
+		{
+			name:               "set span kind tag to client for OTel span with span kind specified",
+			inputSpanKind:      ext.SpanKindRPCServerEnum,
+			setSpanKind:        ext.SpanKindRPCClientEnum,
+			expectedAttributes: nil,
+		},
+		{
+			name:               "set span kind tag to server for OTel span with span kind specified",
+			inputSpanKind:      ext.SpanKindRPCClientEnum,
+			setSpanKind:        ext.SpanKindRPCServerEnum,
+			expectedAttributes: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			otelMockTracer := internal.NewMockTracer()
+			bridgeTracer, _ := NewTracerPair(otelMockTracer)
+			startOption := ot.Tags{}
+			if tc.inputSpanKind != nil {
+				startOption = ot.Tags{string(ext.SpanKind): tc.inputSpanKind}
+			}
+			span := bridgeTracer.StartSpan("abc", startOption)
+			span.SetTag(string(ext.SpanKind), tc.setSpanKind)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+
+			assert.Equal(t, tc.expectedAttributes, mockSpan.Attributes)
+		})
+	}
 }

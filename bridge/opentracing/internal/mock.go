@@ -88,7 +88,7 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 		EndTime:        time.Time{},
 		ParentSpanID:   t.getParentSpanID(ctx, &config),
 		Events:         nil,
-		SpanKind:       trace.ValidateSpanKind(config.SpanKind()),
+		spanKind:       trace.ValidateSpanKind(config.SpanKind()),
 	}
 	if !migration.SkipContextSetup(ctx) {
 		ctx = trace.ContextWithSpan(ctx, span)
@@ -185,7 +185,7 @@ type MockSpan struct {
 	mockTracer     *MockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
-	SpanKind       trace.SpanKind
+	spanKind       trace.SpanKind
 	recording      bool
 
 	Attributes   []attribute.KeyValue
@@ -292,3 +292,7 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 }
 
 func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }
+
+func (s *MockSpan) SpanKind() trace.SpanKind {
+	return s.spanKind
+}
