@@ -36,14 +36,6 @@ func TestConfigAttrs(t *testing.T) {
 		return NewAddConfig(opts)
 	}))
 
-	t.Run("Int64AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]AddOption, len(mo))
-		for i := range mo {
-			opts[i] = mo[i].(AddOption)
-		}
-		return NewAddConfig(opts)
-	}))
-
 	t.Run("RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
 		opts := make([]RecordOption, len(mo))
 		for i := range mo {
@@ -52,23 +44,7 @@ func TestConfigAttrs(t *testing.T) {
 		return NewRecordConfig(opts)
 	}))
 
-	t.Run("Int64RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]RecordOption, len(mo))
-		for i := range mo {
-			opts[i] = mo[i].(RecordOption)
-		}
-		return NewRecordConfig(opts)
-	}))
-
 	t.Run("ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]ObserveOption, len(mo))
-		for i := range mo {
-			opts[i] = mo[i].(ObserveOption)
-		}
-		return NewObserveConfig(opts)
-	}))
-
-	t.Run("Int64ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
 		opts := make([]ObserveOption, len(mo))
 		for i := range mo {
 			opts[i] = mo[i].(ObserveOption)
