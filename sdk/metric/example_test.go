@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -42,7 +42,7 @@ func Example() {
 		metric.WithResource(res),
 		metric.WithReader(reader),
 	)
-	otel.SetMeterProvider(meterProvider)
+	global.SetMeterProvider(meterProvider)
 	defer func() {
 		err := meterProvider.Shutdown(context.Background())
 		if err != nil {
