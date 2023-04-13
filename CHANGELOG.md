@@ -14,24 +14,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Version` function to `go.opentelemetry.io/otel/sdk` to return the SDK version. (#3949)
 - Add a `WithNamespace` option to `go.opentelemetry.io/otel/exporters/prometheus` to allow users to prefix metrics with a namespace. (#3970)
 - The following configuration types were added to `go.opentelemetry.io/otel/metric/instrument` to be used in the configuration of measurement methods. (#3971)
-  - The `Int64AddConfig` used to hold configuration for `int64` addition measurements
-    - `NewInt64AddConfig` used to create a new `Int64AddConfig`
-    - `Int64AddOption` used to configure an `Int64AddConfig`
-  - The `Float64AddConfig` used to hold configuration for `float64` addition measurements
-    - `NewFloat64AddConfig` used to create a new `Float64AddConfig`
-    - `Float64AddOption` used to configure an `Float64AddConfig`
-  - The `Int64RecordConfig` used to hold configuration for `int64` recorded measurements
-    - `NewInt64RecordConfig` used to create a new `Int64RecordConfig`
-    - `Int64RecordOption` used to configure an `Int64RecordConfig`
-  - The `Float64RecordConfig` used to hold configuration for `float64` recorded measurements
-    - `NewFloat64RecordConfig` used to create a new `Float64RecordConfig`
-    - `Float64RecordOption` used to configure an `Float64RecordConfig`
-  - The `Int64ObserveConfig` used to hold configuration for `int64` observed measurements
-    - `NewInt64ObserveConfig` used to create a new `Int64ObserveConfig`
-    - `Int64ObserveOption` used to configure an `Int64ObserveConfig`
-  - The `Float64ObserveConfig` used to hold configuration for `float64` observed measurements
-    - `NewFloat64ObserveConfig` used to create a new `Float64ObserveConfig`
-    - `Float64ObserveOption` used to configure an `Float64ObserveConfig`
+  - The `AddConfig` used to hold configuration for addition measurements
+    - `NewAddConfig` used to create a new `AddConfig`
+    - `AddOption` used to configure an `AddConfig`
+  - The `RecordConfig` used to hold configuration for recorded measurements
+    - `NewRecordConfig` used to create a new `RecordConfig`
+    - `RecordOption` used to configure a `RecordConfig`
+  - The `ObserveConfig` used to hold configuration for observed measurements
+    - `NewObserveConfig` used to create a new `ObserveConfig`
+    - `ObserveOption` used to configure an `ObserveConfig`
 - `WithAttributeSet` and `WithAttributes` are added to `go.opentelemetry.io/otel/metric/instrument`.
   They return an option used during a measurement that defines the attribute Set associated with the measurement. (#3971)
 - The `Version` function to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` to return the OTLP metrics client version. (#3956)
@@ -46,17 +37,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
 - Wrap `UploadMetrics` error in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/` to improve error message when encountering generic grpc errors. (#3974)
 - The measurement methods for all instruments in `go.opentelemetry.io/otel/metric/instrument` accept an option instead of the variadic `"go.opentelemetry.io/otel/attribute".KeyValue`. (#3971)
-  - The `Int64Counter.Add` method now accepts `...Int64AddOption`
-  - The `Float64Counter.Add` method now accepts `...Float64AddOption`
-  - The `Int64UpDownCounter.Add` method now accepts `...Int64AddOption`
-  - The `Float64UpDownCounter.Add` method now accepts `...Float64AddOption`
-  - The `Int64Histogram.Record` method now accepts `...Int64RecordOption`
-  - The `Float64Histogram.Record` method now accepts `...Float64RecordOption`
-  - The `Int64Observer.Observe` method now accepts `...Int64ObserveOption`
-  - The `Float64Observer.Observe` method now accepts `...Float64ObserveOption`
+  - The `Int64Counter.Add` method now accepts `...AddOption`
+  - The `Float64Counter.Add` method now accepts `...AddOption`
+  - The `Int64UpDownCounter.Add` method now accepts `...AddOption`
+  - The `Float64UpDownCounter.Add` method now accepts `...AddOption`
+  - The `Int64Histogram.Record` method now accepts `...RecordOption`
+  - The `Float64Histogram.Record` method now accepts `...RecordOption`
+  - The `Int64Observer.Observe` method now accepts `...ObserveOption`
+  - The `Float64Observer.Observe` method now accepts `...ObserveOption`
 - The `Observer` methods in `go.opentelemetry.io/otel/metric` accept an option instead of the variadic `"go.opentelemetry.io/otel/attribute".KeyValue`. (#3971)
-  - The `Observer.ObserveInt64` method now accepts `...Int64ObserveOption`
-  - The `Observer.ObserveFloat64` method now accepts `...Float64ObserveOption`
+  - The `Observer.ObserveInt64` method now accepts `...ObserveOption`
+  - The `Observer.ObserveFloat64` method now accepts `...ObserveOption`
 - Move global metric back to `go.opentelemetry.io/otel/metric/global` from `go.opentelemetry.io/otel`. (#3986)
 
 ### Fixed
