@@ -20,9 +20,10 @@ import (
 	"net"
 	"sync"
 	"testing"
-	"time"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
@@ -38,6 +39,7 @@ func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
 			errors:  mockConfig.errors,
 			partial: mockConfig.partial,
 		},
+		stopped: make(chan struct{}),
 	}
 }
 
@@ -105,6 +107,7 @@ type mockCollector struct {
 	endpoint string
 	stopFunc func()
 	stopOnce sync.Once
+	stopped  chan struct{}
 }
 
 type mockConfig struct {
@@ -118,15 +121,15 @@ var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
 var errAlreadyStopped = fmt.Errorf("already stopped")
 
 func (mc *mockCollector) stop() error {
-	var err = errAlreadyStopped
+	err := errAlreadyStopped
 	mc.stopOnce.Do(func() {
 		err = nil
 		if mc.stopFunc != nil {
 			mc.stopFunc()
 		}
 	})
-	// Give it sometime to shutdown.
-	<-time.After(160 * time.Millisecond)
+	// Wait until gRPC server is down.
+	<-mc.stopped
 
 	// Getting the lock ensures the traceSvc is done flushing.
 	mc.traceSvc.mu.Lock()
@@ -157,28 +160,35 @@ func (mc *mockCollector) getHeaders() metadata.MD {
 
 // runMockCollector is a helper function to create a mock Collector.
 func runMockCollector(t *testing.T) *mockCollector {
+	t.Helper()
 	return runMockCollectorAtEndpoint(t, "localhost:0")
 }
 
 func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
+	t.Helper()
 	return runMockCollectorWithConfig(t, &mockConfig{endpoint: endpoint})
 }
 
 func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
+	t.Helper()
 	ln, err := net.Listen("tcp", mockConfig.endpoint)
-	if err != nil {
-		t.Fatalf("Failed to get an endpoint: %v", err)
-	}
+	require.NoError(t, err, "net.Listen")
 
 	srv := grpc.NewServer()
 	mc := makeMockCollector(t, mockConfig)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	go func() {
 		_ = srv.Serve(ln)
+		close(mc.stopped)
 	}()
 
 	mc.endpoint = ln.Addr().String()
 	mc.stopFunc = srv.Stop
+
+	// Wait until gRPC server is up.
+	conn, err := grpc.Dial(mc.endpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err, "grpc.Dial")
+	require.NoError(t, conn.Close(), "conn.Close")
 
 	return mc
 }
