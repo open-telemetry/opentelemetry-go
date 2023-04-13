@@ -57,6 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Observer` methods in `go.opentelemetry.io/otel/metric` accept an option instead of the variadic `"go.opentelemetry.io/otel/attribute".KeyValue`. (#3971)
   - The `Observer.ObserveInt64` method now accepts `...Int64ObserveOption`
   - The `Observer.ObserveFloat64` method now accepts `...Float64ObserveOption`
+- Move global metric back to `go.opentelemetry.io/otel/metric/global` from `go.opentelemetry.io/otel`. (#3986)
 
 ### Fixed
 
