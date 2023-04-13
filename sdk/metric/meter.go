@@ -296,7 +296,7 @@ var (
 	errUnregObserver   = errors.New("observable instrument not registered for callback")
 )
 
-func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, opts ...instrument.Float64ObserveOption) {
+func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, opts ...instrument.ObserveOption) {
 	var oImpl float64Observable
 	switch conv := o.(type) {
 	case float64Observable:
@@ -325,11 +325,11 @@ func (r observer) ObserveFloat64(o instrument.Float64Observable, v float64, opts
 		)
 		return
 	}
-	c := instrument.NewFloat64ObserveConfig(opts)
+	c := instrument.NewObserveConfig(opts)
 	oImpl.observe(v, c.Attributes())
 }
 
-func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, opts ...instrument.Int64ObserveOption) {
+func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, opts ...instrument.ObserveOption) {
 	var oImpl int64Observable
 	switch conv := o.(type) {
 	case int64Observable:
@@ -358,7 +358,7 @@ func (r observer) ObserveInt64(o instrument.Int64Observable, v int64, opts ...in
 		)
 		return
 	}
-	c := instrument.NewInt64ObserveConfig(opts)
+	c := instrument.NewObserveConfig(opts)
 	oImpl.observe(v, c.Attributes())
 }
 
@@ -452,8 +452,8 @@ type int64Observer struct {
 	int64Observable
 }
 
-func (o int64Observer) Observe(val int64, opts ...instrument.Int64ObserveOption) {
-	c := instrument.NewInt64ObserveConfig(opts)
+func (o int64Observer) Observe(val int64, opts ...instrument.ObserveOption) {
+	c := instrument.NewObserveConfig(opts)
 	o.observe(val, c.Attributes())
 }
 
@@ -485,7 +485,7 @@ type float64Observer struct {
 	float64Observable
 }
 
-func (o float64Observer) Observe(val float64, opts ...instrument.Float64ObserveOption) {
-	c := instrument.NewFloat64ObserveConfig(opts)
+func (o float64Observer) Observe(val float64, opts ...instrument.ObserveOption) {
+	c := instrument.NewObserveConfig(opts)
 	o.observe(val, c.Attributes())
 }

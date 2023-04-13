@@ -43,7 +43,7 @@ func BenchmarkCounterAddNoAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneAttr(b *testing.B) {
-	opt := []instrument.Int64AddOption{
+	opt := []instrument.AddOption{
 		instrument.WithAttributes(attribute.String("K", "V")),
 	}
 	ctx, _, cntr := benchCounter(b)
@@ -54,7 +54,7 @@ func BenchmarkCounterAddOneAttr(b *testing.B) {
 }
 
 func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
-	opt := []instrument.Int64AddOption{
+	opt := []instrument.AddOption{
 		instrument.WithAttributes(
 			attribute.String("", "V"),
 			attribute.String("K", "V"),
@@ -69,7 +69,7 @@ func BenchmarkCounterAddOneInvalidAttr(b *testing.B) {
 
 func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 	attrs := make([]attribute.KeyValue, 1)
-	opt := make([]instrument.Int64AddOption, 1)
+	opt := make([]instrument.AddOption, 1)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
@@ -82,7 +82,7 @@ func BenchmarkCounterAddSingleUseAttrs(b *testing.B) {
 
 func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 	attrs := make([]attribute.KeyValue, 2)
-	opt := make([]instrument.Int64AddOption, 1)
+	opt := make([]instrument.AddOption, 1)
 	ctx, _, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {
@@ -96,7 +96,7 @@ func BenchmarkCounterAddSingleUseInvalidAttrs(b *testing.B) {
 
 func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 	attrs := make([]attribute.KeyValue, 2)
-	opt := make([]instrument.Int64AddOption, 1)
+	opt := make([]instrument.AddOption, 1)
 	ctx, _, cntr := benchCounter(b, NewView(
 		Instrument{Name: "*"},
 		Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
@@ -114,7 +114,7 @@ func BenchmarkCounterAddSingleUseFilteredAttrs(b *testing.B) {
 }
 
 func BenchmarkCounterCollectOneAttr(b *testing.B) {
-	opt := []instrument.Int64AddOption{
+	opt := []instrument.AddOption{
 		instrument.WithAttributes(attribute.Int("K", 1)),
 	}
 	ctx, rdr, cntr := benchCounter(b)
@@ -128,7 +128,7 @@ func BenchmarkCounterCollectOneAttr(b *testing.B) {
 
 func BenchmarkCounterCollectTenAttrs(b *testing.B) {
 	attrs := make([]attribute.KeyValue, 1)
-	opt := make([]instrument.Int64AddOption, 1)
+	opt := make([]instrument.AddOption, 1)
 	ctx, rdr, cntr := benchCounter(b)
 
 	for i := 0; i < b.N; i++ {

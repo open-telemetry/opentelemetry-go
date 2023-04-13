@@ -207,7 +207,7 @@ type Float64Observer interface {
 	embedded.Float64Observer
 
 	// Observe records the float64 value.
-	Observe(value float64, opts ...Float64ObserveOption)
+	Observe(value float64, opts ...ObserveOption)
 }
 
 // Float64Callback is a function registered with a Meter that makes

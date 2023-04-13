@@ -206,7 +206,7 @@ type Int64Observer interface {
 	embedded.Int64Observer
 
 	// Observe records the int64 value.
-	Observe(value int64, opts ...Int64ObserveOption)
+	Observe(value int64, opts ...ObserveOption)
 }
 
 // Int64Callback is a function registered with a Meter that makes observations

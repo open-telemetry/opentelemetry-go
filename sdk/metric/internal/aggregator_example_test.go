@@ -94,8 +94,8 @@ type inst struct {
 	embedded.Int64Histogram
 }
 
-func (inst) Add(context.Context, int64, ...instrument.Int64AddOption)       {}
-func (inst) Record(context.Context, int64, ...instrument.Int64RecordOption) {}
+func (inst) Add(context.Context, int64, ...instrument.AddOption)       {}
+func (inst) Record(context.Context, int64, ...instrument.RecordOption) {}
 
 func Example() {
 	m := meter{}

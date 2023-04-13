@@ -141,9 +141,9 @@ type Observer interface {
 	embedded.Observer
 
 	// ObserveFloat64 records the float64 value for obsrv.
-	ObserveFloat64(obsrv instrument.Float64Observable, value float64, opts ...instrument.Float64ObserveOption)
+	ObserveFloat64(obsrv instrument.Float64Observable, value float64, opts ...instrument.ObserveOption)
 	// ObserveInt64 records the int64 value for obsrv.
-	ObserveInt64(obsrv instrument.Int64Observable, value int64, opts ...instrument.Int64ObserveOption)
+	ObserveInt64(obsrv instrument.Int64Observable, value int64, opts ...instrument.ObserveOption)
 }
 
 // Registration is an token representing the unique registration of a callback

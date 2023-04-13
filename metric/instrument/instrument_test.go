@@ -28,52 +28,52 @@ type attrConf interface {
 }
 
 func TestConfigAttrs(t *testing.T) {
-	t.Run("Float64AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Float64AddOption, len(mo))
+	t.Run("AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
+		opts := make([]AddOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Float64AddOption)
+			opts[i] = mo[i].(AddOption)
 		}
-		return NewFloat64AddConfig(opts)
+		return NewAddConfig(opts)
 	}))
 
 	t.Run("Int64AddConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Int64AddOption, len(mo))
+		opts := make([]AddOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Int64AddOption)
+			opts[i] = mo[i].(AddOption)
 		}
-		return NewInt64AddConfig(opts)
+		return NewAddConfig(opts)
 	}))
 
-	t.Run("Float64RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Float64RecordOption, len(mo))
+	t.Run("RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
+		opts := make([]RecordOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Float64RecordOption)
+			opts[i] = mo[i].(RecordOption)
 		}
-		return NewFloat64RecordConfig(opts)
+		return NewRecordConfig(opts)
 	}))
 
 	t.Run("Int64RecordConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Int64RecordOption, len(mo))
+		opts := make([]RecordOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Int64RecordOption)
+			opts[i] = mo[i].(RecordOption)
 		}
-		return NewInt64RecordConfig(opts)
+		return NewRecordConfig(opts)
 	}))
 
-	t.Run("Float64ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Float64ObserveOption, len(mo))
+	t.Run("ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
+		opts := make([]ObserveOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Float64ObserveOption)
+			opts[i] = mo[i].(ObserveOption)
 		}
-		return NewFloat64ObserveConfig(opts)
+		return NewObserveConfig(opts)
 	}))
 
 	t.Run("Int64ObserveConfig", testConfAttr(func(mo ...MeasurementOption) attrConf {
-		opts := make([]Int64ObserveOption, len(mo))
+		opts := make([]ObserveOption, len(mo))
 		for i := range mo {
-			opts[i] = mo[i].(Int64ObserveOption)
+			opts[i] = mo[i].(ObserveOption)
 		}
-		return NewInt64ObserveConfig(opts)
+		return NewObserveConfig(opts)
 	}))
 }
 
@@ -136,40 +136,40 @@ func TestWithAttributesRace(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		opt := []Int64AddOption{WithAttributes(attrs...)}
-		_ = NewInt64AddConfig(opt)
+		opt := []AddOption{WithAttributes(attrs...)}
+		_ = NewAddConfig(opt)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		opt := []Float64AddOption{WithAttributes(attrs...)}
-		_ = NewFloat64AddConfig(opt)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		opt := []Int64RecordOption{WithAttributes(attrs...)}
-		_ = NewInt64RecordConfig(opt)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		opt := []Float64RecordOption{WithAttributes(attrs...)}
-		_ = NewFloat64RecordConfig(opt)
+		opt := []AddOption{WithAttributes(attrs...)}
+		_ = NewAddConfig(opt)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		opt := []Int64ObserveOption{WithAttributes(attrs...)}
-		_ = NewInt64ObserveConfig(opt)
+		opt := []RecordOption{WithAttributes(attrs...)}
+		_ = NewRecordConfig(opt)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		opt := []Float64ObserveOption{WithAttributes(attrs...)}
-		_ = NewFloat64ObserveConfig(opt)
+		opt := []RecordOption{WithAttributes(attrs...)}
+		_ = NewRecordConfig(opt)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []ObserveOption{WithAttributes(attrs...)}
+		_ = NewObserveConfig(opt)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		opt := []ObserveOption{WithAttributes(attrs...)}
+		_ = NewObserveConfig(opt)
 	}()
 
 	wg.Wait()

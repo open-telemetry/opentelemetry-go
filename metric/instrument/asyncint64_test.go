@@ -88,6 +88,6 @@ type int64Observer struct {
 	got int64
 }
 
-func (o *int64Observer) Observe(v int64, _ ...Int64ObserveOption) {
+func (o *int64Observer) Observe(v int64, _ ...ObserveOption) {
 	o.got = v
 }
