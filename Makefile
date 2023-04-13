@@ -74,6 +74,25 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 .PHONY: tools
 tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
 
+# Python tools
+
+VENVDIR = $(CURDIR)/venv
+PYTOOLS = $(VENVDIR)/bin
+PY = $(PYTOOLS)/python
+
+# Create a virtual environment for Python tools.
+$(PYTOOLS):
+# Check if python3 is available.
+	@python3 --version >/dev/null 2>&1 || (echo "python3 is not available. Please install it." && exit 1)
+	@python3 -m venv $(VENVDIR)
+	$(PY) -m pip install --upgrade pip
+
+$(PYTOOLS)/%: | $(PYTOOLS)
+	$(PY) -m pip install --upgrade $(PACKAGE)
+
+CODESPELL = $(PYTOOLS)/codespell
+$(CODESPELL): PACKAGE=codespell
+
 # Build
 
 .PHONY: generate build
@@ -175,6 +194,10 @@ vanity-import-fix: | $(PORTO)
 .PHONY: misspell
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
+
+.PHONY: codespell
+codespell: | $(CODESPELL)
+	@$(CODESPELL)
 
 .PHONY: license-check
 license-check:
