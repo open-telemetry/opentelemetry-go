@@ -99,6 +99,36 @@ func TestNewConfig(t *testing.T) {
 				withoutUnits: true,
 			},
 		},
+		{
+			name: "with namespace",
+			options: []Option{
+				WithNamespace("test"),
+			},
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+				namespace:  "test_",
+			},
+		},
+		{
+			name: "with namespace with trailing underscore",
+			options: []Option{
+				WithNamespace("test_"),
+			},
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+				namespace:  "test_",
+			},
+		},
+		{
+			name: "with unsanitized namespace",
+			options: []Option{
+				WithNamespace("test/"),
+			},
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+				namespace:  "test_",
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {

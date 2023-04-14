@@ -38,6 +38,7 @@ type fileReader func(string) (string, error)
 
 type commandExecutor func(string, ...string) (string, error)
 
+// nolint: unused  // This is used by the hostReaderBSD, gated by build tags.
 func readFile(filename string) (string, error) {
 	b, err := os.ReadFile(filename)
 	if err != nil {

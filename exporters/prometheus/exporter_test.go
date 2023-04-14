@@ -258,6 +258,26 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 1, attrs...)
 			},
 		},
+		{
+			name:         "with namespace",
+			expectedFile: "testdata/with_namespace.txt",
+			options: []Option{
+				WithNamespace("test"),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				attrs := []attribute.KeyValue{
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				}
+				counter, err := meter.Float64Counter("foo", instrument.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, attrs...)
+				counter.Add(ctx, 10.3, attrs...)
+				counter.Add(ctx, 9, attrs...)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -316,7 +336,7 @@ func TestSantitizeName(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"nam€_with_3_width_rune", "nam__with_3_width_rune"},
+		{"name€_with_4_width_rune", "name__with_4_width_rune"},
 		{"`", "_"},
 		{
 			`! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWKYZ[]\^_abcdefghijklmnopqrstuvwkyz{|}~`,

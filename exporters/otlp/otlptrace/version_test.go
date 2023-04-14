@@ -12,32 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package otlptrace_test
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
-type testMeterProvider struct{ embedded.MeterProvider }
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+var versionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
+	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
+	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
-var _ metric.MeterProvider = &testMeterProvider{}
-
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return noop.NewMeterProvider().Meter("")
-}
-
-func TestMultipleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := noop.NewMeterProvider()
-	SetMeterProvider(&p1)
-	SetMeterProvider(p2)
-
-	got := GetMeterProvider()
-	assert.Equal(t, p2, got)
+func TestVersionSemver(t *testing.T) {
+	v := otlptrace.Version()
+	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }
