@@ -55,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `TracerProvider` allows calling `Tracer()` while it's shutting down.
   It used to deadlock. (#3924)
 - Use the SDK version for the Telemetry SDK resource detector in `go.opentelemetry.io/otel/sdk/resource`. (#3949)
+- Fix a data race in `SpanProcessor` returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#3951)
 - Automatically figure out the default aggregation with `aggregation.Default`. (#3967)
 
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
