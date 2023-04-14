@@ -25,12 +25,6 @@ import (
 
 // Client handles the transmission of OTLP data to an OTLP receiving endpoint.
 type Client interface {
-	// Temporality returns the Temporality to use for an instrument kind.
-	Temporality(metric.InstrumentKind) metricdata.Temporality
-
-	// Aggregation returns the Aggregation to use for an instrument kind.
-	Aggregation(metric.InstrumentKind) aggregation.Aggregation
-
 	// UploadMetrics transmits metric data to an OTLP receiver.
 	//
 	// All retry logic must be handled by UploadMetrics alone, the Exporter
@@ -55,4 +49,12 @@ type Client interface {
 	// anymore. Therefore all computational resources need to be released
 	// after this is called so the Client can be garbage collected.
 	Shutdown(context.Context) error
+}
+
+type ConfigSelector interface {
+	// Temporality returns the Temporality to use for an instrument kind.
+	Temporality(metric.InstrumentKind) metricdata.Temporality
+
+	// Aggregation returns the Aggregation to use for an instrument kind.
+	Aggregation(metric.InstrumentKind) aggregation.Aggregation
 }

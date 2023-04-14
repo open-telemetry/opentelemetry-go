@@ -45,11 +45,11 @@ import (
 // a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
 // endpoint using protobufs over HTTP.
 func New(_ context.Context, opts ...Option) (metric.Exporter, error) {
-	c, err := newClient(opts...)
+	c, cs, err := newClient(opts...)
 	if err != nil {
 		return nil, err
 	}
-	return ominternal.New(c), nil
+	return ominternal.New(c, cs), nil
 }
 
 type client struct {
@@ -81,7 +81,7 @@ var ourTransport = &http.Transport{
 }
 
 // newClient creates a new HTTP metric client.
-func newClient(opts ...Option) (ominternal.Client, error) {
+func newClient(opts ...Option) (ominternal.Client, ominternal.ConfigSelector, error) {
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := &http.Client{
@@ -105,7 +105,7 @@ func newClient(opts ...Option) (ominternal.Client, error) {
 	// Body is set when this is cloned during upload.
 	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req.Header.Set("User-Agent", ominternal.GetUserAgentHeader())
@@ -117,25 +117,17 @@ func newClient(opts ...Option) (ominternal.Client, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
+	cs := &configSelector{
+		temporalitySelector: cfg.Metrics.TemporalitySelector,
+		aggregationSelector: cfg.Metrics.AggregationSelector,
+	}
+
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
-
-		temporalitySelector: cfg.Metrics.TemporalitySelector,
-		aggregationSelector: cfg.Metrics.AggregationSelector,
-	}, nil
-}
-
-// Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	return c.temporalitySelector(k)
-}
-
-// Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	return c.aggregationSelector(k)
+	}, cs, nil
 }
 
 // ForceFlush does nothing, the client holds no state.
@@ -272,6 +264,21 @@ func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
 	}
 
 	return req, nil
+}
+
+type configSelector struct {
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
+}
+
+// Temporality returns the Temporality to use for an instrument kind.
+func (c *configSelector) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return c.temporalitySelector(k)
+}
+
+// Aggregation returns the Aggregation to use for an instrument kind.
+func (c *configSelector) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return c.aggregationSelector(k)
 }
 
 // bodyReader returns a closure returning a new reader for buf.

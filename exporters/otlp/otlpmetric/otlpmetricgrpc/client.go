@@ -42,23 +42,20 @@ import (
 //
 // If an already established gRPC ClientConn is not passed in options using
 // WithGRPCConn, a connection to the OTLP endpoint will be established based
-// on options. If a connection cannot be establishes in the lifetime of ctx,
+// on options. If a connection cannot be established in the lifetime of ctx,
 // an error will be returned.
 func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
-	c, err := newClient(ctx, options...)
+	c, cs, err := newClient(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
-	return ominternal.New(c), nil
+	return ominternal.New(c, cs), nil
 }
 
 type client struct {
 	metadata      metadata.MD
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
-
-	temporalitySelector metric.TemporalitySelector
-	aggregationSelector metric.AggregationSelector
 
 	// ourConn keeps track of where conn was created: true if created here in
 	// NewClient, or false if passed with an option. This is important on
@@ -70,16 +67,13 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, options ...Option) (ominternal.Client, error) {
+func newClient(ctx context.Context, options ...Option) (ominternal.Client, ominternal.ConfigSelector, error) {
 	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
 
 	c := &client{
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		conn:          cfg.GRPCConn,
-
-		temporalitySelector: cfg.Metrics.TemporalitySelector,
-		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}
 
 	if len(cfg.Metrics.Headers) > 0 {
@@ -91,7 +85,7 @@ func newClient(ctx context.Context, options ...Option) (ominternal.Client, error
 		// created, create one using the configuration they did provide.
 		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Keep track that we own the lifecycle of this conn and need to close
 		// it on Shutdown.
@@ -100,18 +94,12 @@ func newClient(ctx context.Context, options ...Option) (ominternal.Client, error
 	}
 
 	c.msc = colmetricpb.NewMetricsServiceClient(c.conn)
+	cs := &configSelector{
+		temporalitySelector: cfg.Metrics.TemporalitySelector,
+		aggregationSelector: cfg.Metrics.AggregationSelector,
+	}
 
-	return c, nil
-}
-
-// Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	return c.temporalitySelector(k)
-}
-
-// Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	return c.aggregationSelector(k)
+	return c, cs, nil
 }
 
 // ForceFlush does nothing, the client holds no state.
@@ -207,6 +195,21 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	}
 
 	return ctx, cancel
+}
+
+type configSelector struct {
+	temporalitySelector metric.TemporalitySelector
+	aggregationSelector metric.AggregationSelector
+}
+
+// Temporality returns the Temporality to use for an instrument kind.
+func (c *configSelector) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return c.temporalitySelector(k)
+}
+
+// Aggregation returns the Aggregation to use for an instrument kind.
+func (c *configSelector) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return c.aggregationSelector(k)
 }
 
 // retryable returns if err identifies a request that can be retried and a

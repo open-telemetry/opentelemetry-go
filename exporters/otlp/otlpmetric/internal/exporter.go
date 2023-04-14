@@ -29,24 +29,21 @@ import (
 // exporter exports metrics data as OTLP.
 type exporter struct {
 	// Ensure synchronous access to the client across all functionality.
-	clientMu sync.Mutex
-	client   Client
+	clientMu       sync.Mutex
+	client         Client
+	configSelector ConfigSelector
 
 	shutdownOnce sync.Once
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
 func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	e.clientMu.Lock()
-	defer e.clientMu.Unlock()
-	return e.client.Temporality(k)
+	return e.configSelector.Temporality(k)
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
 func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	e.clientMu.Lock()
-	defer e.clientMu.Unlock()
-	return e.client.Aggregation(k)
+	return e.configSelector.Aggregation(k)
 }
 
 // Export transforms and transmits metric data to an OTLP receiver.
@@ -84,8 +81,8 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 		e.clientMu.Lock()
 		client := e.client
 		e.client = shutdownClient{
-			temporalitySelector: client.Temporality,
-			aggregationSelector: client.Aggregation,
+			temporalitySelector: e.configSelector.Temporality,
+			aggregationSelector: e.configSelector.Aggregation,
 		}
 		e.clientMu.Unlock()
 		err = client.Shutdown(ctx)
@@ -96,8 +93,11 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 // New return an Exporter that uses client to transmits the OTLP data it
 // produces. The client is assumed to be fully started and able to communicate
 // with its OTLP receiving endpoint.
-func New(client Client) metric.Exporter {
-	return &exporter{client: client}
+func New(client Client, cs ConfigSelector) metric.Exporter {
+	return &exporter{
+		client:         client,
+		configSelector: cs,
+	}
 }
 
 type shutdownClient struct {
