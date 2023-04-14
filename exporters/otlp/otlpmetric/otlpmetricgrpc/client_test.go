@@ -130,15 +130,15 @@ func TestRetryable(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
+	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, ominternal.ConfigSelector, otest.Collector) {
 		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 
 		ctx := context.Background()
 		addr := coll.Addr().String()
-		client, err := newClient(ctx, WithEndpoint(addr), WithInsecure())
+		client, cs, err := newClient(ctx, WithEndpoint(addr), WithInsecure())
 		require.NoError(t, err)
-		return client, coll
+		return client, cs, coll
 	}
 
 	t.Run("Integration", otest.RunClientTests(factory))
