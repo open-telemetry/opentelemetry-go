@@ -17,8 +17,11 @@ package trace_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -148,6 +151,32 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 
 	stop <- struct{}{}
 	<-done
+}
+
+func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
+	exporter := &testExporter{}
+	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(ssp)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	span := func(spanName string) {
+		assert.NotPanics(t, func() {
+			defer wg.Done()
+			_, span := tp.Tracer("test").Start(context.Background(), spanName)
+			span.End()
+		})
+	}
+
+	go span("test-span-1")
+	go span("test-span-2")
+
+	wg.Wait()
+
+	assert.NoError(t, ssp.Shutdown(context.Background()))
+	assert.True(t, exporter.shutdown, "exporter shutdown")
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
