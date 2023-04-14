@@ -732,7 +732,7 @@ func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.Span
 		bag:             bag,
 		otelSpanContext: trace.SpanContextFromContext(ctx),
 	}
-	if !bridgeSC.otelSpanContext.IsValid() {
+	if !bridgeSC.otelSpanContext.IsValid() && !bridgeSC.otelSpanContext.IsSampled() {
 		return nil, ot.ErrSpanContextNotFound
 	}
 	return bridgeSC, nil

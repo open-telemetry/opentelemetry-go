@@ -378,6 +378,27 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 	}
 }
 
+func TestBridgeTracer_ExtractOnlySampledTraceFlags(t *testing.T) {
+	customExtract := func(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+		spanContext := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceFlags: trace.FlagsSampled,
+		})
+		return trace.ContextWithRemoteSpanContext(ctx, spanContext)
+	}
+	mockPropagator := &internal.MockTextMapPropagator{ExtractFunc: customExtract}
+
+	bridge := NewBridgeTracer()
+	bridge.SetTextMapPropagator(mockPropagator)
+	spanContext, err := bridge.Extract(ot.TextMap, ot.TextMapCarrier{})
+	assert.NoError(t, err)
+
+	bridgeSpanContext, ok := spanContext.(*bridgeSpanContext)
+	assert.True(t, ok)
+	require.NotNil(t, bridgeSpanContext.otelSpanContext)
+	assert.False(t, bridgeSpanContext.otelSpanContext.IsValid())
+	assert.True(t, bridgeSpanContext.otelSpanContext.IsSampled())
+}
+
 type nonDeferWrapperTracer struct {
 	*WrapperTracer
 }
