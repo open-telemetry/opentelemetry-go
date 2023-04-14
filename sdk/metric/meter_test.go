@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -499,7 +500,7 @@ func TestRegisterNonSDKObserverErrors(t *testing.T) {
 		t,
 		err,
 		"invalid observable: from different implementation",
-		"External instrument registred",
+		"External instrument registered",
 	)
 }
 
@@ -521,13 +522,13 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 		t,
 		err,
 		`invalid registration: observable "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 	assert.ErrorContains(
 		t,
 		err,
 		`invalid registration: observable "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
-		"Instrument registred with non-creation Meter",
+		"Instrument registered with non-creation Meter",
 	)
 }
 
@@ -629,7 +630,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	otel.SetLogger(logr.New(l))
 
 	const mtrName = "TestGlobalInstRegisterCallback"
-	preMtr := otel.Meter(mtrName)
+	preMtr := global.Meter(mtrName)
 	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
 	require.NoError(t, err)
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
@@ -637,9 +638,9 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
-	otel.SetMeterProvider(mp)
+	global.SetMeterProvider(mp)
 
-	postMtr := otel.Meter(mtrName)
+	postMtr := global.Meter(mtrName)
 	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
 	require.NoError(t, err)
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")

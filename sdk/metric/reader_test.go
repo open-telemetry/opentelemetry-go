@@ -280,7 +280,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 	ctx := context.Background()
 	r.register(testSDKProducer{})
 
-	// Store bechmark results in a closure to prevent the compiler from
+	// Store benchmark results in a closure to prevent the compiler from
 	// inlining and skipping the function.
 	var (
 		collectedMetrics metricdata.ResourceMetrics
