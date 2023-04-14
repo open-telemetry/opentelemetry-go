@@ -31,8 +31,7 @@ checks the status of the go module files.
 Additionally, there is a `codespell` target that checks for common
 typos in the code. It is not run by default, but you can run it
 manually with `make codespell`. It will set up a virtual environment
-in `venv` and install `codespell` there. It requires Python 3.7 or
-later to be installed.
+in `venv` and install `codespell` there.
 
 If after running `make precommit` the output of `git status` contains
 `nothing to commit, working tree clean` then it means that everything
