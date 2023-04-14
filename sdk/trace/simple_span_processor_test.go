@@ -163,15 +163,15 @@ func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
 	wg.Add(2)
 
 	span := func(spanName string) {
-		defer wg.Done()
-		_, span := tp.Tracer("test").Start(context.Background(), spanName)
-		span.End()
+		assert.NotPanics(t, func() {
+			defer wg.Done()
+			_, span := tp.Tracer("test").Start(context.Background(), spanName)
+			span.End()
+		})
 	}
 
-	assert.NotPanics(t, func() {
-		go span("test-span-1")
-		go span("test-span-2")
-	})
+	go span("test-span-1")
+	go span("test-span-2")
 
 	wg.Wait()
 
