@@ -34,14 +34,14 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
+	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, ominternal.ConfigSelector, otest.Collector) {
 		coll, err := otest.NewHTTPCollector("", rCh)
 		require.NoError(t, err)
 
 		addr := coll.Addr().String()
-		client, err := newClient(WithEndpoint(addr), WithInsecure())
+		client, cs, err := newClient(WithEndpoint(addr), WithInsecure())
 		require.NoError(t, err)
-		return client, coll
+		return client, cs, coll
 	}
 
 	t.Run("Integration", otest.RunClientTests(factory))

@@ -33,14 +33,6 @@ type client struct {
 	n int
 }
 
-func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	return metric.DefaultTemporalitySelector(k)
-}
-
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	return metric.DefaultAggregationSelector(k)
-}
-
 func (c *client) UploadMetrics(context.Context, *mpb.ResourceMetrics) error {
 	c.n++
 	return nil
@@ -56,10 +48,20 @@ func (c *client) Shutdown(context.Context) error {
 	return nil
 }
 
+type configSelector struct{}
+
+func (c *configSelector) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return metric.DefaultTemporalitySelector(k)
+}
+
+func (c *configSelector) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+	return metric.DefaultAggregationSelector(k)
+}
+
 func TestExporterClientConcurrency(t *testing.T) {
 	const goroutines = 5
 
-	exp := New(&client{})
+	exp := New(&client{}, &configSelector{})
 	rm := new(metricdata.ResourceMetrics)
 	ctx := context.Background()
 
