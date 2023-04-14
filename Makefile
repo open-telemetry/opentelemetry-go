@@ -74,21 +74,37 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 .PHONY: tools
 tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
 
-# Python tools
+# Virtualized python tools via docker
 
-VENVDIR = $(CURDIR)/venv
-PYTOOLS = $(VENVDIR)/bin
-PY = $(PYTOOLS)/python
+# The directory where the virtual environment is created.
+VENVDIR := venv
+
+# The directory where the python tools are installed.
+PYTOOLS := $(VENVDIR)/bin
+
+# The pip executable in the virtual environment.
+PIP := $(PYTOOLS)/pip
+
+# The directory in the docker image where the current directory is mounted.
+WORKDIR := /workdir
+
+# The python image to use for the virtual environment.
+PYTHONIMAGE := python:3.11.3-slim-bullseye
+
+# Run the python image with the current directory mounted.
+DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
 
 # Create a virtual environment for Python tools.
 $(PYTOOLS):
-# Check if python3 is available.
-	@python3 --version >/dev/null 2>&1 || (echo "python3 is not available. Please install it." && exit 1)
-	@python3 -m venv $(VENVDIR)
-	$(PY) -m pip install --upgrade pip
+# The `--upgrade` flag is needed to ensure that the virtual environment is
+# created with the latest pip version.
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
 
+# Install a python package into the virtual environment.
 $(PYTOOLS)/%: | $(PYTOOLS)
-	$(PY) -m pip install --upgrade $(PACKAGE)
+# The `--upgrade` flag is needed to ensure that the package is upgraded to the
+# latest version.
+	@$(DOCKERPY) $(PIP) install --upgrade $(PACKAGE)
 
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
@@ -197,7 +213,7 @@ misspell: | $(MISSPELL)
 
 .PHONY: codespell
 codespell: | $(CODESPELL)
-	@$(CODESPELL)
+	@$(DOCKERPY) $(CODESPELL)
 
 .PHONY: license-check
 license-check:
