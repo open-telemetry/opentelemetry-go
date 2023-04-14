@@ -547,7 +547,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 	}
 }
 
-func TestBridge_SpanContext_Promoted_Methods(t *testing.T) {
+func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
@@ -560,35 +560,19 @@ func TestBridge_SpanContext_Promoted_Methods(t *testing.T) {
 		SpanID() trace.SpanID
 	}
 
-	testCases := []struct {
-		name    string
-		traceID trace.TraceID
-		spanID  trace.SpanID
-	}{
-		{
-			name:    "support for getting spanID and traceID",
-			traceID: [16]byte{byte(1)},
-			spanID:  [8]byte{byte(2)},
-		},
-	}
+	err := bridge.Inject(newBridgeSpanContext(trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: [16]byte{byte(1)},
+		SpanID:  [8]byte{byte(2)},
+	}), nil), ot.TextMap, tmc)
+	assert.NoError(t, err)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := bridge.Inject(newBridgeSpanContext(trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: tc.traceID,
-				SpanID:  tc.spanID,
-			}), nil), ot.TextMap, tmc)
-			assert.NoError(t, err)
+	spanContext, err := bridge.Extract(ot.TextMap, tmc)
+	assert.NoError(t, err)
 
-			spanContext, err := bridge.Extract(ot.TextMap, tmc)
-			assert.NoError(t, err)
-
-			assert.NotPanics(t, func() {
-				assert.Equal(t, spanID.String(), spanContext.(spanContextProvider).SpanID().String())
-				assert.Equal(t, traceID.String(), spanContext.(spanContextProvider).TraceID().String())
-				assert.True(t, spanContext.(spanContextProvider).HasSpanID())
-				assert.True(t, spanContext.(spanContextProvider).HasTraceID())
-			})
-		})
-	}
+	assert.NotPanics(t, func() {
+		assert.Equal(t, spanID.String(), spanContext.(spanContextProvider).SpanID().String())
+		assert.Equal(t, traceID.String(), spanContext.(spanContextProvider).TraceID().String())
+		assert.True(t, spanContext.(spanContextProvider).HasSpanID())
+		assert.True(t, spanContext.(spanContextProvider).HasTraceID())
+	})
 }
