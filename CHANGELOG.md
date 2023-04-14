@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
 - Wrap `UploadMetrics` error in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/` to improve error message when encountering generic grpc errors. (#3974)
 - Move global metric back to `go.opentelemetry.io/otel/metric/global` from `go.opentelemetry.io/otel`. (#3986)
+- Support baggage-only propagation without trace context in OpenTracing Bridge (#4000).
 
 ### Fixed
 

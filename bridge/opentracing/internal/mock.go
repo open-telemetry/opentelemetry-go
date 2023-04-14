@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -292,3 +293,28 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 }
 
 func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }
+
+type MockTextMapPropagator struct {
+	FieldsToReturn []string
+	InjectFunc     func(ctx context.Context, carrier propagation.TextMapCarrier)
+	ExtractFunc    func(ctx context.Context, carrier propagation.TextMapCarrier) context.Context
+}
+
+var _ propagation.TextMapPropagator = (*MockTextMapPropagator)(nil)
+
+func (p *MockTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+	if p.InjectFunc != nil {
+		p.InjectFunc(ctx, carrier)
+	}
+}
+
+func (p *MockTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+	if p.ExtractFunc == nil {
+		return ctx
+	}
+	return p.ExtractFunc(ctx, carrier)
+}
+
+func (p *MockTextMapPropagator) Fields() []string {
+	return p.FieldsToReturn
+}

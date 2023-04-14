@@ -27,6 +27,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/baggage"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -376,6 +377,32 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBridgeTracer_ExtractOnlyBaggage(t *testing.T) {
+	testMember, err := baggage.NewMember("key", "val")
+	require.NoError(t, err)
+	testBaggage, err := baggage.New(testMember)
+	require.NoError(t, err)
+
+	customExtract := func(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+		return baggage.ContextWithBaggage(ctx, testBaggage)
+	}
+	mockPropagator := &internal.MockTextMapPropagator{ExtractFunc: customExtract}
+
+	bridge := NewBridgeTracer()
+	bridge.SetTextMapPropagator(mockPropagator)
+	spanContext, err := bridge.Extract(ot.TextMap, ot.TextMapCarrier{})
+	assert.NoError(t, err)
+
+	bridgeSpanContext, ok := spanContext.(*bridgeSpanContext)
+	assert.True(t, ok)
+	require.NotNil(t, bridgeSpanContext.otelSpanContext)
+	assert.False(t, bridgeSpanContext.otelSpanContext.IsValid())
+	assert.False(t, bridgeSpanContext.otelSpanContext.IsSampled())
+	assert.Equal(t, 0, bridgeSpanContext.otelSpanContext.TraceState().Len())
+	assert.Equal(t, 1, bridgeSpanContext.bag.Len())
+	assert.Equal(t, testMember, bridgeSpanContext.bag.Member("key"))
 }
 
 type nonDeferWrapperTracer struct {
