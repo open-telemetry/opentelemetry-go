@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel // import "go.opentelemetry.io/otel"
+package global // import "go.opentelemetry.io/otel/metric/global"
 
 import (
 	"testing"
@@ -38,6 +38,6 @@ func TestMultipleGlobalMeterProvider(t *testing.T) {
 	SetMeterProvider(&p1)
 	SetMeterProvider(p2)
 
-	got := GetMeterProvider()
+	got := MeterProvider()
 	assert.Equal(t, p2, got)
 }
