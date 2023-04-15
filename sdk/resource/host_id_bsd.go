@@ -18,11 +18,30 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
-	"errors"
-	"strings"
+	"os"
+	"os/exec"
 )
 
 var platformHostIDReader hostIDReader = &hostIDReaderBSD{
 	execCommand: execCommand,
 	readFile:    readFile,
+}
+
+func readFile(filename string) (string, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return "", nil
+	}
+
+	return string(b), nil
+}
+
+func execCommand(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

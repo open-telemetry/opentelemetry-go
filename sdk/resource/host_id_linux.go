@@ -17,6 +17,17 @@
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
+import "os"
+
 var platformHostIDReader hostIDReader = &hostIDReaderLinux{
 	readFile: readFile,
+}
+
+func readFile(filename string) (string, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return "", nil
+	}
+
+	return string(b), nil
 }

@@ -13,7 +13,18 @@
 // limitations under the License.
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
+import "os/exec"
 
 var platformHostIDReader hostIDReader = &hostIDReaderDarwin{
 	execCommand: execCommand,
+}
+
+func execCommand(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
