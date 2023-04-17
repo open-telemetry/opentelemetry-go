@@ -17,6 +17,8 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
+	"path"
 	"time"
 
 	"google.golang.org/grpc"
@@ -28,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	otinternal "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -244,7 +247,16 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Traces.Endpoint = endpoint
+		u, err := url.Parse(endpoint)
+		if err != nil {
+			global.Error(err, "parse url", "input", endpoint)
+			return cfg
+		}
+		cfg.Traces.Endpoint = u.Host
+		// For OTLP/HTTP endpoint URLs without a per-signal
+		// configuration, the passed endpoint is used as a base URL
+		// and the signals are sent to these paths relative to that.
+		cfg.Traces.URLPath = path.Join(u.Path, DefaultTracesPath)
 		return cfg
 	})
 }

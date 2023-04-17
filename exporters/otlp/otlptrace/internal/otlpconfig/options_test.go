@@ -92,10 +92,24 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Endpoint",
 			opts: []otlpconfig.GenericOption{
-				otlpconfig.WithEndpoint("someendpoint"),
+				otlpconfig.WithEndpoint("https://127.0.0.1:1234"),
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "127.0.0.1:1234", c.Traces.Endpoint)
+			},
+		},
+		{
+			name: "Test With Endpoint without scheme",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithEndpoint("127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Traces.Endpoint)
+				}
+				assert.Equal(t, otlpconfig.DefaultTracesPath, c.Traces.URLPath)
 			},
 		},
 		{
@@ -130,13 +144,13 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Mixed Environment and With Endpoint",
 			opts: []otlpconfig.GenericOption{
-				otlpconfig.WithEndpoint("traces_endpoint"),
+				otlpconfig.WithEndpoint("https://127.0.0.1:1234"),
 			},
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				assert.Equal(t, "traces_endpoint", c.Traces.Endpoint)
+				assert.Equal(t, "127.0.0.1:1234", c.Traces.Endpoint)
 			},
 		},
 		{
