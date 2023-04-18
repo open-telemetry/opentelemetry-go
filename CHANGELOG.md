@@ -58,6 +58,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a data race in `SpanProcessor` returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#3951)
 - Automatically figure out the default aggregation with `aggregation.Default`. (#3967)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/metric/instrument` package is deprecated.
+  Use the equivalent types added to `go.opentelemetry.io/otel/metric` instead. (#4018)
+
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
 This is a release candidate for the v1.15.0/v0.38.0 release.
