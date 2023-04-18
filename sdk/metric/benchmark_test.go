@@ -66,59 +66,65 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		iCtr, err := meter.Int64Counter("int64-counter")
 		assert.NoError(b, err)
 		b.Run("Int64Counter", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { iCtr.Add(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.AddOption{instrument.WithAttributeSet(s)}
+				return func() { iCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		fCtr, err := meter.Float64Counter("float64-counter")
 		assert.NoError(b, err)
 		b.Run("Float64Counter", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { fCtr.Add(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.AddOption{instrument.WithAttributeSet(s)}
+				return func() { fCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		iUDCtr, err := meter.Int64UpDownCounter("int64-up-down-counter")
 		assert.NoError(b, err)
 		b.Run("Int64UpDownCounter", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { iUDCtr.Add(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.AddOption{instrument.WithAttributeSet(s)}
+				return func() { iUDCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		fUDCtr, err := meter.Float64UpDownCounter("float64-up-down-counter")
 		assert.NoError(b, err)
 		b.Run("Float64UpDownCounter", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { fUDCtr.Add(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.AddOption{instrument.WithAttributeSet(s)}
+				return func() { fUDCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		iHist, err := meter.Int64Histogram("int64-histogram")
 		assert.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { iHist.Record(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.RecordOption{instrument.WithAttributeSet(s)}
+				return func() { iHist.Record(ctx, 1, o...) }
 			}
 		}()))
 
 		fHist, err := meter.Float64Histogram("float64-histogram")
 		assert.NoError(b, err)
 		b.Run("Float64Histogram", benchMeasAttrs(func() measF {
-			return func(attr []attribute.KeyValue) func() {
-				return func() { fHist.Record(ctx, 1, attr...) }
+			return func(s attribute.Set) func() {
+				o := []instrument.RecordOption{instrument.WithAttributeSet(s)}
+				return func() { fHist.Record(ctx, 1, o...) }
 			}
 		}()))
 	}
 }
 
-type measF func(attr []attribute.KeyValue) func()
+type measF func(s attribute.Set) func()
 
 func benchMeasAttrs(meas measF) func(*testing.B) {
 	return func(b *testing.B) {
 		b.Run("Attributes/0", func(b *testing.B) {
-			f := meas(nil)
+			f := meas(*attribute.EmptySet())
 			b.ReportAllocs()
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
@@ -126,8 +132,7 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 			}
 		})
 		b.Run("Attributes/1", func(b *testing.B) {
-			attrs := []attribute.KeyValue{attribute.Bool("K", true)}
-			f := meas(attrs)
+			f := meas(attribute.NewSet(attribute.Bool("K", true)))
 			b.ReportAllocs()
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
@@ -141,7 +146,7 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 			for i := 2; i < n; i++ {
 				attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
 			}
-			f := meas(attrs)
+			f := meas(attribute.NewSet(attrs...))
 			b.ReportAllocs()
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
@@ -165,163 +170,163 @@ func benchCollectViews(views ...View) func(*testing.B) {
 	}
 	ctx := context.Background()
 	return func(b *testing.B) {
-		b.Run("Int64Counter/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64Counter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Counter")
 			i, err := m.Int64Counter("int64-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, attr...)
+			i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Int64Counter/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64Counter/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Counter")
 			i, err := m.Int64Counter("int64-counter")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Add(ctx, 1, attr...)
+				i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Float64Counter/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64Counter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Counter")
 			i, err := m.Float64Counter("float64-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, attr...)
+			i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Float64Counter/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64Counter/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Counter")
 			i, err := m.Float64Counter("float64-counter")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Add(ctx, 1, attr...)
+				i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Int64UpDownCounter/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64UpDownCounter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64UpDownCounter")
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, attr...)
+			i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Int64UpDownCounter/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64UpDownCounter/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64UpDownCounter")
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Add(ctx, 1, attr...)
+				i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Float64UpDownCounter/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64UpDownCounter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64UpDownCounter")
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, attr...)
+			i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Float64UpDownCounter/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64UpDownCounter/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64UpDownCounter")
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Add(ctx, 1, attr...)
+				i.Add(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Int64Histogram/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64Histogram/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Histogram")
 			i, err := m.Int64Histogram("int64-histogram")
 			assert.NoError(b, err)
-			i.Record(ctx, 1, attr...)
+			i.Record(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Int64Histogram/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64Histogram/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Histogram")
 			i, err := m.Int64Histogram("int64-histogram")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Record(ctx, 1, attr...)
+				i.Record(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Float64Histogram/1", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64Histogram/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Histogram")
 			i, err := m.Float64Histogram("float64-histogram")
 			assert.NoError(b, err)
-			i.Record(ctx, 1, attr...)
+			i.Record(ctx, 1, instrument.WithAttributeSet(s))
 			return r
 		}))
-		b.Run("Float64Histogram/10", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64Histogram/10", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Histogram")
 			i, err := m.Float64Histogram("float64-histogram")
 			assert.NoError(b, err)
 			for n := 0; n < 10; n++ {
-				i.Record(ctx, 1, attr...)
+				i.Record(ctx, 1, instrument.WithAttributeSet(s))
 			}
 			return r
 		}))
 
-		b.Run("Int64ObservableCounter", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64ObservableCounter", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64ObservableCounter")
 			_, err := m.Int64ObservableCounter(
 				"int64-observable-counter",
-				instrument.WithInt64Callback(int64Cback(attr)),
+				instrument.WithInt64Callback(int64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
 		}))
 
-		b.Run("Float64ObservableCounter", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64ObservableCounter", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64ObservableCounter")
 			_, err := m.Float64ObservableCounter(
 				"float64-observable-counter",
-				instrument.WithFloat64Callback(float64Cback(attr)),
+				instrument.WithFloat64Callback(float64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
 		}))
 
-		b.Run("Int64ObservableUpDownCounter", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64ObservableUpDownCounter", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64ObservableUpDownCounter")
 			_, err := m.Int64ObservableUpDownCounter(
 				"int64-observable-up-down-counter",
-				instrument.WithInt64Callback(int64Cback(attr)),
+				instrument.WithInt64Callback(int64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
 		}))
 
-		b.Run("Float64ObservableUpDownCounter", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64ObservableUpDownCounter", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64ObservableUpDownCounter")
 			_, err := m.Float64ObservableUpDownCounter(
 				"float64-observable-up-down-counter",
-				instrument.WithFloat64Callback(float64Cback(attr)),
+				instrument.WithFloat64Callback(float64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
 		}))
 
-		b.Run("Int64ObservableGauge", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Int64ObservableGauge", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64ObservableGauge")
 			_, err := m.Int64ObservableGauge(
 				"int64-observable-gauge",
-				instrument.WithInt64Callback(int64Cback(attr)),
+				instrument.WithInt64Callback(int64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
 		}))
 
-		b.Run("Float64ObservableGauge", benchCollectAttrs(func(attr []attribute.KeyValue) Reader {
+		b.Run("Float64ObservableGauge", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64ObservableGauge")
 			_, err := m.Float64ObservableGauge(
 				"float64-observable-gauge",
-				instrument.WithFloat64Callback(float64Cback(attr)),
+				instrument.WithFloat64Callback(float64Cback(s)),
 			)
 			assert.NoError(b, err)
 			return r
@@ -329,21 +334,23 @@ func benchCollectViews(views ...View) func(*testing.B) {
 	}
 }
 
-func int64Cback(attr []attribute.KeyValue) instrument.Int64Callback {
+func int64Cback(s attribute.Set) instrument.Int64Callback {
+	opt := []instrument.ObserveOption{instrument.WithAttributeSet(s)}
 	return func(_ context.Context, o instrument.Int64Observer) error {
-		o.Observe(1, attr...)
+		o.Observe(1, opt...)
 		return nil
 	}
 }
 
-func float64Cback(attr []attribute.KeyValue) instrument.Float64Callback {
+func float64Cback(s attribute.Set) instrument.Float64Callback {
+	opt := []instrument.ObserveOption{instrument.WithAttributeSet(s)}
 	return func(_ context.Context, o instrument.Float64Observer) error {
-		o.Observe(1, attr...)
+		o.Observe(1, opt...)
 		return nil
 	}
 }
 
-func benchCollectAttrs(setup func([]attribute.KeyValue) Reader) func(*testing.B) {
+func benchCollectAttrs(setup func(attribute.Set) Reader) func(*testing.B) {
 	ctx := context.Background()
 	out := new(metricdata.ResourceMetrics)
 	run := func(reader Reader) func(b *testing.B) {
@@ -355,14 +362,14 @@ func benchCollectAttrs(setup func([]attribute.KeyValue) Reader) func(*testing.B)
 		}
 	}
 	return func(b *testing.B) {
-		b.Run("Attributes/0", run(setup(nil)))
+		b.Run("Attributes/0", run(setup(*attribute.EmptySet())))
 
 		attrs := []attribute.KeyValue{attribute.Bool("K", true)}
-		b.Run("Attributes/1", run(setup(attrs)))
+		b.Run("Attributes/1", run(setup(attribute.NewSet(attrs...))))
 
 		for i := 2; i < 10; i++ {
 			attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
 		}
-		b.Run("Attributes/10", run(setup(attrs)))
+		b.Run("Attributes/10", run(setup(attribute.NewSet(attrs...))))
 	}
 }
