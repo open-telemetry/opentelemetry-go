@@ -104,11 +104,7 @@ func TestConfigs(t *testing.T) {
 				otlpconfig.WithEndpoint("127.0.0.1:4318"),
 			},
 			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
-				if grpcOption {
-					assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
-				} else {
-					assert.Equal(t, "localhost:4318", c.Traces.Endpoint)
-				}
+				assert.Equal(t, "127.0.0.1:4318", c.Traces.Endpoint)
 				assert.Equal(t, otlpconfig.DefaultTracesPath, c.Traces.URLPath)
 			},
 		},
