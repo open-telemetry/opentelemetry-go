@@ -23,14 +23,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 func ExampleMeter_synchronous() {
 	// Create a histogram using the global MeterProvider.
 	workDuration, err := global.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
-		instrument.WithUnit("ms"))
+		metric.WithUnit("ms"))
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -48,8 +47,8 @@ func ExampleMeter_asynchronous_single() {
 
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
-		instrument.WithUnit("By"),
-		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
+		metric.WithUnit("By"),
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
 			// Do the real work here to get the real disk usage. For example,
 			//
 			//   usage, err := GetDiskUsage(diskID)
@@ -63,7 +62,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			obsrv.Observe(int64(usage), instrument.WithAttributes(attribute.Int("disk.id", 3)))
+			obsrv.Observe(int64(usage), metric.WithAttributes(attribute.Int("disk.id", 3)))
 			return nil
 		}),
 	)
@@ -104,4 +103,4 @@ func ExampleMeter_asynchronous_multiple() {
 }
 
 // This is just an example, see the the contrib runtime instrumentation for real implementation.
-func computeGCPauses(ctx context.Context, recorder instrument.Float64Histogram, pauseBuff []uint64) {}
+func computeGCPauses(ctx context.Context, recorder metric.Float64Histogram, pauseBuff []uint64) {}
