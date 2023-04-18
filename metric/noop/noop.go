@@ -26,7 +26,6 @@ package noop // import "go.opentelemetry.io/otel/metric/noop"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -153,11 +152,11 @@ func (Meter) RegisterCallback(metric.Callback, ...instrument.Observable) (metric
 type Observer struct{ embedded.Observer }
 
 // ObserveFloat64 performs no operation.
-func (Observer) ObserveFloat64(instrument.Float64Observable, float64, ...attribute.KeyValue) {
+func (Observer) ObserveFloat64(instrument.Float64Observable, float64, ...instrument.ObserveOption) {
 }
 
 // ObserveInt64 performs no operation.
-func (Observer) ObserveInt64(instrument.Int64Observable, int64, ...attribute.KeyValue) {
+func (Observer) ObserveInt64(instrument.Int64Observable, int64, ...instrument.ObserveOption) {
 }
 
 // Registration is the registration of a Callback with a No-Op Meter.
@@ -173,42 +172,42 @@ func (Registration) Unregister() error { return nil }
 type Int64Counter struct{ embedded.Int64Counter }
 
 // Add performs no operation.
-func (Int64Counter) Add(context.Context, int64, ...attribute.KeyValue) {}
+func (Int64Counter) Add(context.Context, int64, ...instrument.AddOption) {}
 
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
 type Float64Counter struct{ embedded.Float64Counter }
 
 // Add performs no operation.
-func (Float64Counter) Add(context.Context, float64, ...attribute.KeyValue) {}
+func (Float64Counter) Add(context.Context, float64, ...instrument.AddOption) {}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
 type Int64UpDownCounter struct{ embedded.Int64UpDownCounter }
 
 // Add performs no operation.
-func (Int64UpDownCounter) Add(context.Context, int64, ...attribute.KeyValue) {}
+func (Int64UpDownCounter) Add(context.Context, int64, ...instrument.AddOption) {}
 
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64UpDownCounter struct{ embedded.Float64UpDownCounter }
 
 // Add performs no operation.
-func (Float64UpDownCounter) Add(context.Context, float64, ...attribute.KeyValue) {}
+func (Float64UpDownCounter) Add(context.Context, float64, ...instrument.AddOption) {}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
 type Int64Histogram struct{ embedded.Int64Histogram }
 
 // Record performs no operation.
-func (Int64Histogram) Record(context.Context, int64, ...attribute.KeyValue) {}
+func (Int64Histogram) Record(context.Context, int64, ...instrument.RecordOption) {}
 
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
 type Float64Histogram struct{ embedded.Float64Histogram }
 
 // Record performs no operation.
-func (Float64Histogram) Record(context.Context, float64, ...attribute.KeyValue) {}
+func (Float64Histogram) Record(context.Context, float64, ...instrument.RecordOption) {}
 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.
@@ -256,11 +255,11 @@ type Float64ObservableUpDownCounter struct {
 type Int64Observer struct{ embedded.Int64Observer }
 
 // Observe performs no operation.
-func (Int64Observer) Observe(int64, ...attribute.KeyValue) {}
+func (Int64Observer) Observe(int64, ...instrument.ObserveOption) {}
 
 // Float64Observer is a recorder of float64 measurements that performs no
 // operation.
 type Float64Observer struct{ embedded.Float64Observer }
 
 // Observe performs no operation.
-func (Float64Observer) Observe(float64, ...attribute.KeyValue) {}
+func (Float64Observer) Observe(float64, ...instrument.ObserveOption) {}

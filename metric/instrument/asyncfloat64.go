@@ -17,7 +17,6 @@ package instrument // import "go.opentelemetry.io/otel/metric/instrument"
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -207,8 +206,8 @@ type Float64ObservableGaugeOption interface {
 type Float64Observer interface {
 	embedded.Float64Observer
 
-	// Observe records the float64 value with attributes.
-	Observe(value float64, attributes ...attribute.KeyValue)
+	// Observe records the float64 value.
+	Observe(value float64, opts ...ObserveOption)
 }
 
 // Float64Callback is a function registered with a Meter that makes
