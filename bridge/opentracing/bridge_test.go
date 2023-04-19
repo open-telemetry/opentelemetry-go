@@ -546,3 +546,34 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 		})
 	}
 }
+
+func TestOTHTTPHeadersCarrier(t *testing.T) {
+	carrier := ot.HTTPHeadersCarrier{}
+	testBridgeWithCarrier(t, carrier)
+}
+
+func TestOTTextMapCarrier(t *testing.T) {
+	carrier := ot.TextMapCarrier{}
+	testBridgeWithCarrier(t, carrier)
+}
+
+func testBridgeWithCarrier(t *testing.T, carrier interface{}) {
+	mockOtelTracer := internal.NewMockTracer()
+	bridgeTracer, _ := NewTracerPair(mockOtelTracer)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	span := bridgeTracer.StartSpan("testSpan1")
+	// adding data to baggage
+	span.SetBaggageItem("foo", "bar")
+	defer span.Finish()
+
+	err := bridgeTracer.Inject(span.Context(), ot.HTTPHeaders, carrier)
+	assert.NoError(t, err, "Inject error")
+
+	extractedSpanContext, err := bridgeTracer.Extract(ot.HTTPHeaders, carrier)
+	assert.NoError(t, err, "Extract error")
+
+	originalSpanContext := span.Context().(*bridgeSpanContext)
+	copySpanContext := *originalSpanContext
+	copySpanContext.otelSpanContext = copySpanContext.otelSpanContext.WithRemote(true)
+	assert.Equal(t, &copySpanContext, extractedSpanContext, "Extracted span context should match with original span context")
+}

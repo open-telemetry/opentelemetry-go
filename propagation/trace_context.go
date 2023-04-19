@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -63,6 +64,11 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 		sc.SpanID(),
 		flags)
 	carrier.Set(traceparentHeader, h)
+
+	bStr := baggage.FromContext(ctx).String()
+	if bStr != "" {
+		carrier.Set(baggageHeader, bStr)
+	}
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
@@ -75,7 +81,18 @@ func (tc TraceContext) Extract(ctx context.Context, carrier TextMapCarrier) cont
 	if !sc.IsValid() {
 		return ctx
 	}
-	return trace.ContextWithRemoteSpanContext(ctx, sc)
+
+	parent := trace.ContextWithRemoteSpanContext(ctx, sc)
+
+	bStr := carrier.Get(baggageHeader)
+	if bStr == "" {
+		return parent
+	}
+	bag, err := baggage.Parse(bStr)
+	if err != nil {
+		return parent
+	}
+	return baggage.ContextWithBaggage(parent, bag)
 }
 
 func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
