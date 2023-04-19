@@ -169,7 +169,8 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	attrs := []attribute.KeyValue{attribute.String("name", "alice")}
+	attrs := attribute.NewSet(attribute.String("name", "alice"))
+	opt := instrument.WithAttributeSet(attrs)
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -179,7 +180,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Int64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				ctr, err := m.Int64ObservableCounter("aint", instrument.WithInt64Callback(cback))
@@ -196,7 +197,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 3},
 					},
 				},
@@ -206,7 +207,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Int64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				ctr, err := m.Int64ObservableUpDownCounter("aint", instrument.WithInt64Callback(cback))
@@ -223,7 +224,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 11},
 					},
 				},
@@ -233,7 +234,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Int64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				gauge, err := m.Int64ObservableGauge("agauge", instrument.WithInt64Callback(cback))
@@ -248,7 +249,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 11},
 					},
 				},
@@ -258,7 +259,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Float64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				ctr, err := m.Float64ObservableCounter("afloat", instrument.WithFloat64Callback(cback))
@@ -275,7 +276,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 3},
 					},
 				},
@@ -285,7 +286,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Float64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				ctr, err := m.Float64ObservableUpDownCounter("afloat", instrument.WithFloat64Callback(cback))
@@ -302,7 +303,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 11},
 					},
 				},
@@ -312,7 +313,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			name: "ObservableFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
 				cback := func(_ context.Context, o instrument.Float64Observer) error {
-					o.Observe(4, attrs...)
+					o.Observe(4, opt)
 					return nil
 				}
 				gauge, err := m.Float64ObservableGauge("agauge", instrument.WithFloat64Callback(cback))
@@ -327,7 +328,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 4},
+						{Attributes: attrs, Value: 4},
 						{Value: 11},
 					},
 				},
@@ -885,6 +886,12 @@ func TestAttributeFilter(t *testing.T) {
 }
 
 func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
+	fooBar := attribute.NewSet(attribute.String("foo", "bar"))
+	withFooBar := instrument.WithAttributeSet(fooBar)
+	v1 := attribute.NewSet(attribute.String("foo", "bar"), attribute.Int("version", 1))
+	withV1 := instrument.WithAttributeSet(v1)
+	v2 := attribute.NewSet(attribute.String("foo", "bar"), attribute.Int("version", 2))
+	withV2 := instrument.WithAttributeSet(v2)
 	testcases := []struct {
 		name       string
 		register   func(t *testing.T, mtr metric.Meter) error
@@ -898,9 +905,9 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"))
-					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, withV1)
+					o.ObserveFloat64(ctr, 2.0, withFooBar)
+					o.ObserveFloat64(ctr, 1.0, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -909,10 +916,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Name: "afcounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      4.0,
-						},
+						{Attributes: fooBar, Value: 4.0},
 					},
 					Temporality: temporality,
 					IsMonotonic: true,
@@ -927,9 +931,9 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"))
-					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, withV1)
+					o.ObserveFloat64(ctr, 2.0, withFooBar)
+					o.ObserveFloat64(ctr, 1.0, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -956,8 +960,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(ctr, 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveFloat64(ctr, 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveFloat64(ctr, 1.0, withV1)
+					o.ObserveFloat64(ctr, 2.0, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -966,10 +970,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Name: "afgauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      2.0,
-						},
+						{Attributes: fooBar, Value: 2.0},
 					},
 				},
 			},
@@ -982,9 +983,9 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"))
-					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, withV1)
+					o.ObserveInt64(ctr, 20, withFooBar)
+					o.ObserveInt64(ctr, 10, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -993,10 +994,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Name: "aicounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      40,
-						},
+						{Attributes: fooBar, Value: 40},
 					},
 					Temporality: temporality,
 					IsMonotonic: true,
@@ -1011,9 +1009,9 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"))
-					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, withV1)
+					o.ObserveInt64(ctr, 20, withFooBar)
+					o.ObserveInt64(ctr, 10, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -1022,10 +1020,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Name: "aiupdowncounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      40,
-						},
+						{Attributes: fooBar, Value: 40},
 					},
 					Temporality: temporality,
 					IsMonotonic: false,
@@ -1040,8 +1035,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 				_, err = mtr.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveInt64(ctr, 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-					o.ObserveInt64(ctr, 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+					o.ObserveInt64(ctr, 10, withV1)
+					o.ObserveInt64(ctr, 20, withV2)
 					return nil
 				}, ctr)
 				return err
@@ -1050,10 +1045,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Name: "aigauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      20,
-						},
+						{Attributes: fooBar, Value: 20},
 					},
 				},
 			},
@@ -1066,18 +1058,15 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Add(context.Background(), 1.0, withV1)
+				ctr.Add(context.Background(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sfcounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      3.0,
-						},
+						{Attributes: fooBar, Value: 3.0},
 					},
 					Temporality: temporality,
 					IsMonotonic: true,
@@ -1092,18 +1081,15 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Add(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Add(context.Background(), 1.0, withV1)
+				ctr.Add(context.Background(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sfupdowncounter",
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      3.0,
-						},
+						{Attributes: fooBar, Value: 3.0},
 					},
 					Temporality: temporality,
 					IsMonotonic: false,
@@ -1118,8 +1104,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1.0, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Record(context.Background(), 2.0, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Record(context.Background(), 1.0, withV1)
+				ctr.Record(context.Background(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1127,7 +1113,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Data: metricdata.Histogram[float64]{
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+							Attributes:   fooBar,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
@@ -1148,18 +1134,15 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Add(context.Background(), 10, withV1)
+				ctr.Add(context.Background(), 20, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "sicounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      30,
-						},
+						{Attributes: fooBar, Value: 30},
 					},
 					Temporality: temporality,
 					IsMonotonic: true,
@@ -1174,18 +1157,15 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Add(context.Background(), 20, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Add(context.Background(), 10, withV1)
+				ctr.Add(context.Background(), 20, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
 				Name: "siupdowncounter",
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-							Value:      30,
-						},
+						{Attributes: fooBar, Value: 30},
 					},
 					Temporality: temporality,
 					IsMonotonic: false,
@@ -1200,8 +1180,8 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1, attribute.String("foo", "bar"), attribute.Int("version", 1))
-				ctr.Record(context.Background(), 2, attribute.String("foo", "bar"), attribute.Int("version", 2))
+				ctr.Record(context.Background(), 1, withV1)
+				ctr.Record(context.Background(), 2, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1209,7 +1189,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Data: metricdata.Histogram[int64]{
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
 						{
-							Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+							Attributes:   fooBar,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
@@ -1296,7 +1276,7 @@ func TestObservableExample(t *testing.T) {
 		_, err := meter.Int64ObservableCounter(instName, instrument.WithInt64Callback(
 			func(_ context.Context, o instrument.Int64Observer) error {
 				for attrSet, val := range observations {
-					o.Observe(val, attrSet.ToSlice()...)
+					o.Observe(val, instrument.WithAttributeSet(attrSet))
 				}
 				return nil
 			},
