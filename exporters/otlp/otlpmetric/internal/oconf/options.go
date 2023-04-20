@@ -17,6 +17,8 @@ package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
+	"path"
 	"time"
 
 	"google.golang.org/grpc"
@@ -263,9 +265,30 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Metrics.Endpoint = endpoint
+		// Add scheme if not present
+		if !internal.HasScheme(endpoint) {
+			endpoint = getScheme(cfg) + "://" + endpoint
+		}
+		u, err := url.Parse(endpoint)
+		if err != nil {
+			global.Error(err, "parse url", "input", endpoint)
+			return cfg
+		}
+		cfg.Metrics.Endpoint = u.Host
+		// For OTLP/HTTP endpoint URLs without a per-signal
+		// configuration, the passed endpoint is used as a base URL
+		// and the signals are sent to these paths relative to that.
+		cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
 		return cfg
 	})
+}
+
+// getScheme fetches scheme based on config.
+func getScheme(cfg Config) string {
+	if cfg.Metrics.Insecure {
+		return "http"
+	}
+	return "https"
 }
 
 func WithCompression(compression Compression) GenericOption {

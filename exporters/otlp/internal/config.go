@@ -32,3 +32,9 @@ func CleanPath(urlPath string, defaultPath string) string {
 	}
 	return tmp
 }
+
+// HasScheme determines if the given URL starts with a scheme.
+func HasScheme(rawURL string) bool {
+	rawURL = strings.ToLower(rawURL)
+	return strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://")
+}

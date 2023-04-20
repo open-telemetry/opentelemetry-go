@@ -14,7 +14,11 @@
 
 package internal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestCleanPath(t *testing.T) {
 	type args struct {
@@ -78,6 +82,50 @@ func TestCleanPath(t *testing.T) {
 			if got := CleanPath(tt.args.urlPath, tt.args.defaultPath); got != tt.want {
 				t.Errorf("CleanPath() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestHasScheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected bool
+	}{
+		{
+			name:     "No scheme",
+			url:      "localhost:3422",
+			expected: false,
+		},
+		{
+			name:     "With secure scheme",
+			url:      "https://127.0.0.1:3422",
+			expected: true,
+		},
+		{
+			name:     "With upper case secure scheme",
+			url:      "HtTpS://127.0.0.1:3422",
+			expected: true,
+		},
+		{
+			name:     "With insecure scheme",
+			url:      "http://127.0.0.1:3422",
+			expected: true,
+		},
+		{
+			name:     "With upper case insecure scheme",
+			url:      "HtTp://127.0.0.1:3422",
+			expected: true,
+		},
+		{
+			name:     "With invalid scheme",
+			url:      "ftp://127.0.0.1:3422",
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, HasScheme(tt.url))
 		})
 	}
 }

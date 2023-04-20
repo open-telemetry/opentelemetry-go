@@ -121,7 +121,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Use the SDK version for the Telemetry SDK resource detector in `go.opentelemetry.io/otel/sdk/resource`. (#3949)
 - Fix a data race in `SpanProcessor` returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#3951)
 - Automatically figure out the default aggregation with `aggregation.Default`. (#3967)
-- Changed `WithEndpoint` to require a protocol, and be the same as the environment variable. (#4016)
+- Changed `WithEndpoint` to require a protocol, and be the same as the environment variable for otlptrace and otlpmetrics. (#4016)
 
 ### Deprecated
 

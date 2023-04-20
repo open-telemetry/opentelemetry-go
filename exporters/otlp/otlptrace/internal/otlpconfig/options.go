@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net/url"
 	"path"
-	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -249,7 +248,7 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		// Add scheme if not present
-		if !hasScheme(endpoint) {
+		if !internal.HasScheme(endpoint) {
 			endpoint = getScheme(cfg) + "://" + endpoint
 		}
 		u, err := url.Parse(endpoint)
@@ -272,12 +271,6 @@ func getScheme(cfg Config) string {
 		return "http"
 	}
 	return "https"
-}
-
-// hasScheme determines if the given URL starts with a scheme.
-func hasScheme(rawURL string) bool {
-	rawURL = strings.ToLower(rawURL)
-	return strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://")
 }
 
 func WithCompression(compression Compression) GenericOption {

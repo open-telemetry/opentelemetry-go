@@ -102,6 +102,51 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Endpoint without scheme",
+			opts: []oconf.GenericOption{
+				oconf.WithEndpoint("127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				assert.Equal(t, "127.0.0.1:4318", c.Metrics.Endpoint)
+				assert.Equal(t, oconf.DefaultMetricsPath, c.Metrics.URLPath)
+			},
+		},
+		{
+			name: "Test With Endpoint with invalid URL",
+			opts: []oconf.GenericOption{
+				oconf.WithEndpoint(" 127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Metrics.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Metrics.Endpoint)
+				}
+				assert.Equal(t, oconf.DefaultMetricsPath, c.Metrics.URLPath)
+			},
+		},
+		{
+			name: "Test With Endpoint with no scheme and 'insecure' config",
+			opts: []oconf.GenericOption{
+				oconf.WithInsecure(),
+				oconf.WithEndpoint("127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				assert.Equal(t, "127.0.0.1:4318", c.Metrics.Endpoint)
+				assert.Equal(t, oconf.DefaultMetricsPath, c.Metrics.URLPath)
+			},
+		},
+		{
+			name: "Test With Endpoint with upper case scheme",
+			opts: []oconf.GenericOption{
+				oconf.WithEndpoint("HTTPS://127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				assert.Equal(t, "127.0.0.1:4318", c.Metrics.Endpoint)
+				assert.Equal(t, oconf.DefaultMetricsPath, c.Metrics.URLPath)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
