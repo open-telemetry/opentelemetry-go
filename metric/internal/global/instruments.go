@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/internal/global"
+package global // import "go.opentelemetry.io/otel/metric/internal/global"
 
 import (
 	"context"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/instrument"
@@ -45,7 +45,7 @@ var _ instrument.Float64ObservableCounter = (*afCounter)(nil)
 func (i *afCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64ObservableCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -74,7 +74,7 @@ var _ instrument.Float64ObservableUpDownCounter = (*afUpDownCounter)(nil)
 func (i *afUpDownCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64ObservableUpDownCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -103,7 +103,7 @@ var _ instrument.Float64ObservableGauge = (*afGauge)(nil)
 func (i *afGauge) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64ObservableGauge(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -132,7 +132,7 @@ var _ instrument.Int64ObservableCounter = (*aiCounter)(nil)
 func (i *aiCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64ObservableCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -161,7 +161,7 @@ var _ instrument.Int64ObservableUpDownCounter = (*aiUpDownCounter)(nil)
 func (i *aiUpDownCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64ObservableUpDownCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -190,7 +190,7 @@ var _ instrument.Int64ObservableGauge = (*aiGauge)(nil)
 func (i *aiGauge) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64ObservableGauge(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
@@ -218,15 +218,15 @@ var _ instrument.Float64Counter = (*sfCounter)(nil)
 func (i *sfCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64Counter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *sfCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+func (i *sfCounter) Add(ctx context.Context, incr float64, opts ...instrument.AddOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Counter).Add(ctx, incr, attrs...)
+		ctr.(instrument.Float64Counter).Add(ctx, incr, opts...)
 	}
 }
 
@@ -244,15 +244,15 @@ var _ instrument.Float64UpDownCounter = (*sfUpDownCounter)(nil)
 func (i *sfUpDownCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64UpDownCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, opts ...instrument.AddOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64UpDownCounter).Add(ctx, incr, attrs...)
+		ctr.(instrument.Float64UpDownCounter).Add(ctx, incr, opts...)
 	}
 }
 
@@ -270,15 +270,15 @@ var _ instrument.Float64Histogram = (*sfHistogram)(nil)
 func (i *sfHistogram) setDelegate(m metric.Meter) {
 	ctr, err := m.Float64Histogram(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *sfHistogram) Record(ctx context.Context, x float64, attrs ...attribute.KeyValue) {
+func (i *sfHistogram) Record(ctx context.Context, x float64, opts ...instrument.RecordOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Float64Histogram).Record(ctx, x, attrs...)
+		ctr.(instrument.Float64Histogram).Record(ctx, x, opts...)
 	}
 }
 
@@ -296,15 +296,15 @@ var _ instrument.Int64Counter = (*siCounter)(nil)
 func (i *siCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64Counter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *siCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (i *siCounter) Add(ctx context.Context, x int64, opts ...instrument.AddOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Counter).Add(ctx, x, attrs...)
+		ctr.(instrument.Int64Counter).Add(ctx, x, opts...)
 	}
 }
 
@@ -322,15 +322,15 @@ var _ instrument.Int64UpDownCounter = (*siUpDownCounter)(nil)
 func (i *siUpDownCounter) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64UpDownCounter(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *siUpDownCounter) Add(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (i *siUpDownCounter) Add(ctx context.Context, x int64, opts ...instrument.AddOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64UpDownCounter).Add(ctx, x, attrs...)
+		ctr.(instrument.Int64UpDownCounter).Add(ctx, x, opts...)
 	}
 }
 
@@ -348,14 +348,14 @@ var _ instrument.Int64Histogram = (*siHistogram)(nil)
 func (i *siHistogram) setDelegate(m metric.Meter) {
 	ctr, err := m.Int64Histogram(i.name, i.opts...)
 	if err != nil {
-		GetErrorHandler().Handle(err)
+		otel.Handle(err)
 		return
 	}
 	i.delegate.Store(ctr)
 }
 
-func (i *siHistogram) Record(ctx context.Context, x int64, attrs ...attribute.KeyValue) {
+func (i *siHistogram) Record(ctx context.Context, x int64, opts ...instrument.RecordOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(instrument.Int64Histogram).Record(ctx, x, attrs...)
+		ctr.(instrument.Int64Histogram).Record(ctx, x, opts...)
 	}
 }

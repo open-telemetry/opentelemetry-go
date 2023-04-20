@@ -239,7 +239,7 @@ var (
 
 func BenchmarkNewTracerConfig(b *testing.B) {
 	opts := []TracerOption{
-		WithInstrumentationVersion("testing verion"),
+		WithInstrumentationVersion("testing version"),
 		WithSchemaURL("testing URL"),
 	}
 

@@ -108,7 +108,7 @@ func newClient(opts ...Option) (ominternal.Client, error) {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", internal.GetUserAgentHeader())
+	req.Header.Set("User-Agent", ominternal.GetUserAgentHeader())
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
 		for k, v := range cfg.Metrics.Headers {
