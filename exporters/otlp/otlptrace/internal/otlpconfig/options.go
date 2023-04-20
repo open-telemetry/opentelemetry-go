@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -249,7 +250,7 @@ func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		// Add scheme if not present
 		if !hasScheme(endpoint) {
-			endpoint = (&url.URL{Scheme: getScheme(cfg), Host: endpoint}).String()
+			endpoint = getScheme(cfg) + "://" + endpoint
 		}
 		u, err := url.Parse(endpoint)
 		if err != nil {
@@ -273,31 +274,10 @@ func getScheme(cfg Config) string {
 	return "https"
 }
 
-// Maybe rawURL is of the form scheme:path.
-// (Scheme must be [a-zA-Z][a-zA-Z0-9+.-]*)
-// If so, return scheme; else return "".
+// hasScheme determines if the given URL starts with a scheme.
 func hasScheme(rawURL string) bool {
-	for i := 0; i < len(rawURL); i++ {
-		c := rawURL[i]
-		switch {
-		case 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z':
-		// do nothing
-		case '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.':
-			if i == 0 {
-				return false
-			}
-		case c == ':':
-			if i == 0 {
-				return false
-			}
-			return true
-		default:
-			// we have encountered an invalid character,
-			// so there is no valid scheme
-			return false
-		}
-	}
-	return false
+	rawURL = strings.ToLower(rawURL)
+	return strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://")
 }
 
 func WithCompression(compression Compression) GenericOption {

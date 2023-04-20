@@ -109,6 +109,41 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Endpoint with invalid URL",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithEndpoint(" 127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Traces.Endpoint)
+				}
+				assert.Equal(t, otlpconfig.DefaultTracesPath, c.Traces.URLPath)
+			},
+		},
+		{
+			name: "Test With Endpoint with no scheme and 'insecure' config",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithInsecure(),
+				otlpconfig.WithEndpoint("127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				assert.Equal(t, "127.0.0.1:4318", c.Traces.Endpoint)
+				assert.Equal(t, otlpconfig.DefaultTracesPath, c.Traces.URLPath)
+			},
+		},
+		{
+			name: "Test With Endpoint with upper case scheme",
+			opts: []otlpconfig.GenericOption{
+				otlpconfig.WithEndpoint("HTTPS://127.0.0.1:4318"),
+			},
+			asserts: func(t *testing.T, c *otlpconfig.Config, grpcOption bool) {
+				assert.Equal(t, "127.0.0.1:4318", c.Traces.Endpoint)
+				assert.Equal(t, otlpconfig.DefaultTracesPath, c.Traces.URLPath)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
