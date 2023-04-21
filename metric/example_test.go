@@ -63,7 +63,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			obsrv.Observe(int64(usage), attribute.Int("disk.id", 3))
+			obsrv.Observe(int64(usage), instrument.WithAttributes(attribute.Int("disk.id", 3)))
 			return nil
 		}),
 	)
@@ -79,10 +79,9 @@ func ExampleMeter_asynchronous_multiple() {
 	// This is just a sample of memory stats to record from the Memstats
 	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
 	gcCount, _ := meter.Int64ObservableCounter("gcCount")
-	gcPause, _ := meter.Float64Histogram("gcPause")
 
 	_, err := meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			memStats := &runtime.MemStats{}
 			// This call does work
 			runtime.ReadMemStats(memStats)
@@ -90,8 +89,6 @@ func ExampleMeter_asynchronous_multiple() {
 			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
 			o.ObserveInt64(gcCount, int64(memStats.NumGC))
 
-			// This function synchronously records the pauses
-			computeGCPauses(ctx, gcPause, memStats.PauseNs[:])
 			return nil
 		},
 		heapAlloc,
@@ -102,6 +99,3 @@ func ExampleMeter_asynchronous_multiple() {
 		panic(err)
 	}
 }
-
-// This is just an example, see the the contrib runtime instrumentation for real implementation.
-func computeGCPauses(ctx context.Context, recorder instrument.Float64Histogram, pauseBuff []uint64) {}
