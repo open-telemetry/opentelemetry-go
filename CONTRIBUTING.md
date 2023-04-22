@@ -536,7 +536,6 @@ interface that defines the specific functionality should be preferred.
 ### Approvers
 
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
-- [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
@@ -552,6 +551,7 @@ interface that defines the specific functionality should be preferred.
 ### Emeritus
 
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Josh MacDonald](https://github.com/jmacd), LightStep
 
 ### Become an Approver or a Maintainer
 
