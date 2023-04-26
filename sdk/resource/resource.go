@@ -74,7 +74,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 	}
 
 	// Ensure attributes comply with the specification:
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.0.1/specification/common/common.md#attributes
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
 	s, _ := attribute.NewSetWithFiltered(attrs, func(kv attribute.KeyValue) bool {
 		return kv.Valid()
 	})
@@ -154,7 +154,7 @@ func (r *Resource) Equal(eq *Resource) bool {
 // if resource b's value is empty.
 //
 // The SchemaURL of the resources will be merged according to the spec rules:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/bad49c714a62da5493f2d1d9bafd7ebe8c8ce7eb/specification/resource/sdk.md#merge
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 // If the resources have different non-empty schemaURL an empty resource and an error
 // will be returned.
 func Merge(a, b *Resource) (*Resource, error) {
