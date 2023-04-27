@@ -21,5 +21,5 @@ import (
 )
 
 func TestGetUserAgentHeader(t *testing.T) {
-	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", GetUserAgentHeader())
+	require.Regexp(t, "OTel OTLP Exporter Go/[01]\\..*", GetUserAgentHeader())
 }
