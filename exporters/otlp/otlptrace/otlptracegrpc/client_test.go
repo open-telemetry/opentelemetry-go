@@ -116,8 +116,6 @@ func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additio
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option) {
 	mc := runMockCollector(t)
 
-	<-time.After(5 * time.Millisecond)
-
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
 	t.Cleanup(func() {
@@ -247,8 +245,6 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
-
-	<-time.After(5 * time.Millisecond)
 
 	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
 	t.Cleanup(cancel)
@@ -383,8 +379,6 @@ func TestStartErrorInvalidAddress(t *testing.T) {
 func TestEmptyData(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
-
-	<-time.After(5 * time.Millisecond)
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
