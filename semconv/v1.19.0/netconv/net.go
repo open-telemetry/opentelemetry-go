@@ -20,7 +20,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/semconv/internal/v2"
+	"go.opentelemetry.io/otel/semconv/internal/v3"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 )
 
