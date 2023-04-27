@@ -6,9 +6,9 @@ require (
 	github.com/prometheus/client_golang v1.15.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/stretchr/testify v1.8.2
-	go.opentelemetry.io/otel v1.15.0-rc.2
+	go.opentelemetry.io/otel v1.15.0
 	go.opentelemetry.io/otel/metric v1.15.0-rc.2
-	go.opentelemetry.io/otel/sdk v1.15.0-rc.2
+	go.opentelemetry.io/otel/sdk v1.15.0
 	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.2
 	google.golang.org/protobuf v1.30.0
 )
@@ -26,7 +26,7 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
-	go.opentelemetry.io/otel/trace v1.15.0-rc.2 // indirect
+	go.opentelemetry.io/otel/trace v1.15.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
