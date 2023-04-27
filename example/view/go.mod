@@ -5,10 +5,10 @@ go 1.19
 require (
 	github.com/prometheus/client_golang v1.15.0
 	go.opentelemetry.io/otel v1.15.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.38.0-rc.2
-	go.opentelemetry.io/otel/metric v1.15.0-rc.2
+	go.opentelemetry.io/otel/exporters/prometheus v0.38.0
+	go.opentelemetry.io/otel/metric v0.38.0
 	go.opentelemetry.io/otel/sdk v1.15.0
-	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.2
+	go.opentelemetry.io/otel/sdk/metric v0.38.0
 )
 
 require (
