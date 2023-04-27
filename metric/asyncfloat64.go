@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
 	"context"
