@@ -16,5 +16,5 @@ package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
 // Version is the current release version of the OpenTelemetry OTLP metrics exporter in use.
 func Version() string {
-	return "1.15.0-rc.2"
+	return "0.38.0"
 }
