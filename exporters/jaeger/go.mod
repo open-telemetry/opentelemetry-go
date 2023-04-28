@@ -16,6 +16,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
+	go.opentelemetry.io/otel/metric v1.15.0-rc.2 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -25,3 +26,5 @@ replace go.opentelemetry.io/otel/trace => ../../trace
 replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/sdk => ../../sdk
+
+replace go.opentelemetry.io/otel/metric => ../../metric
