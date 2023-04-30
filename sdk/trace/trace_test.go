@@ -627,14 +627,14 @@ func TestSpanSetAttributes(t *testing.T) {
 			roSpan := span.(ReadOnlySpan)
 
 			// Ensure the span itself is valid.
-			assert.ElementsMatch(t, test.wantAttrs, roSpan.Attributes(), "exected attributes")
+			assert.ElementsMatch(t, test.wantAttrs, roSpan.Attributes(), "expected attributes")
 			assert.Equal(t, test.wantDropped, roSpan.DroppedAttributes(), "dropped attributes")
 
 			snap, ok := te.GetSpan(spanName)
 			require.Truef(t, ok, "span %s not exported", spanName)
 
 			// Ensure the exported span snapshot is valid.
-			assert.ElementsMatch(t, test.wantAttrs, snap.Attributes(), "exected attributes")
+			assert.ElementsMatch(t, test.wantAttrs, snap.Attributes(), "expected attributes")
 			assert.Equal(t, test.wantDropped, snap.DroppedAttributes(), "dropped attributes")
 		})
 	}

@@ -328,14 +328,14 @@ func equalSlices[T comparable](a, b []T) bool {
 	return true
 }
 
-func equalExtrema(a, b metricdata.Extrema, _ config) (reasons []string) {
+func equalExtrema[N int64 | float64](a, b metricdata.Extrema[N], _ config) (reasons []string) {
 	if !eqExtrema(a, b) {
 		reasons = append(reasons, notEqualStr("Extrema", a, b))
 	}
 	return reasons
 }
 
-func eqExtrema(a, b metricdata.Extrema) bool {
+func eqExtrema[N int64 | float64](a, b metricdata.Extrema[N]) bool {
 	aV, aOk := a.Value()
 	bV, bOk := b.Value()
 
@@ -455,7 +455,7 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 		return ""
 	}
 
-	formater := func(v T) string {
+	formatter := func(v T) string {
 		return fmt.Sprintf("%#v", v)
 	}
 
@@ -463,14 +463,14 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 	if len(extraExpected) > 0 {
 		_, _ = msg.WriteString("missing expected values:\n")
 		for _, v := range extraExpected {
-			_, _ = msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formatter(v) + "\n")
 		}
 	}
 
 	if len(extraActual) > 0 {
 		_, _ = msg.WriteString("unexpected additional values:\n")
 		for _, v := range extraActual {
-			_, _ = msg.WriteString(formater(v) + "\n")
+			_, _ = msg.WriteString(formatter(v) + "\n")
 		}
 	}
 

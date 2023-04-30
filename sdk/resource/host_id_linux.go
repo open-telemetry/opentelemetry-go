@@ -12,22 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+//go:build linux
+// +build linux
 
-import (
-	"testing"
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestInt64Options(t *testing.T) {
-	const (
-		token  int64 = 43
-		desc         = "Instrument description."
-		uBytes       = "By"
-	)
-
-	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+var platformHostIDReader hostIDReader = &hostIDReaderLinux{
+	readFile: readFile,
 }

@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+//go:build bsd || darwin
 
-import (
-	"testing"
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/stretchr/testify/assert"
-)
+import "os/exec"
 
-func TestFloat64Options(t *testing.T) {
-	const (
-		token  float64 = 43
-		desc           = "Instrument description."
-		uBytes         = "By"
-	)
+func execCommand(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
 
-	got := NewFloat64Config(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
+	return string(b), nil
 }

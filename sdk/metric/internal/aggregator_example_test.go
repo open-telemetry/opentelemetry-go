@@ -19,7 +19,8 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -30,7 +31,7 @@ type meter struct {
 	aggregations []metricdata.Aggregation
 }
 
-func (p *meter) Int64Counter(string, ...instrument.Int64Option) (instrument.Int64Counter, error) {
+func (p *meter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// counter. At this point the provider would determine the aggregation and
 	// temporality to used based on the Reader and View configuration. Assume
@@ -46,7 +47,7 @@ func (p *meter) Int64Counter(string, ...instrument.Int64Option) (instrument.Int6
 	return count, nil
 }
 
-func (p *meter) Int64UpDownCounter(string, ...instrument.Int64Option) (instrument.Int64UpDownCounter, error) {
+func (p *meter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// up-down counter. At this point the provider would determine the
 	// aggregation and temporality to used based on the Reader and View
@@ -63,7 +64,7 @@ func (p *meter) Int64UpDownCounter(string, ...instrument.Int64Option) (instrumen
 	return upDownCount, nil
 }
 
-func (p *meter) Int64Histogram(string, ...instrument.Int64Option) (instrument.Int64Histogram, error) {
+func (p *meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	// This is an example of how a meter would create an aggregator for a new
 	// histogram. At this point the provider would determine the aggregation
 	// and temporality to used based on the Reader and View configuration.
@@ -86,13 +87,15 @@ func (p *meter) Int64Histogram(string, ...instrument.Int64Option) (instrument.In
 // inst is a generalized int64 synchronous counter, up-down counter, and
 // histogram used for demonstration purposes only.
 type inst struct {
-	instrument.Synchronous
-
 	aggregateFunc func(int64, attribute.Set)
+
+	embedded.Int64Counter
+	embedded.Int64UpDownCounter
+	embedded.Int64Histogram
 }
 
-func (inst) Add(context.Context, int64, ...attribute.KeyValue)    {}
-func (inst) Record(context.Context, int64, ...attribute.KeyValue) {}
+func (inst) Add(context.Context, int64, ...metric.AddOption)       {}
+func (inst) Record(context.Context, int64, ...metric.RecordOption) {}
 
 func Example() {
 	m := meter{}

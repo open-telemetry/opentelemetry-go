@@ -43,17 +43,22 @@ When you have started an OpenTracing Span, make sure the OpenTelemetry knows abo
 
 The bridge functionality can be extended beyond the OpenTracing API.
 
-### `SpanContext.IsSampled`
-
-Return the underlying OpenTelemetry [`Span.IsSampled`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext.IsSampled) value by converting a `bridgeSpanContext`.
+Any [`trace.SpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext) method can be accessed as following:
 
 ```go
-type samplable interface {
+type spanContextProvider interface {
 	IsSampled() bool
+	TraceID() trace.TraceID
+	SpanID() trace.SpanID
+	TraceFlags() trace.TraceFlags
+	... // any other available method can be added here to access it
 }
 
 var sc opentracing.SpanContext = ...
-if s, ok := sc.(samplable); ok && s.IsSampled() {
-	// Do something with sc knowing it is sampled.
+if s, ok := sc.(spanContextProvider); ok {
+	// Use TraceID by s.TraceID()
+	// Use SpanID by s.SpanID()
+	// Use TraceFlags by s.TraceFlags()
+	...
 }
 ```

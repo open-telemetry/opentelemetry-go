@@ -39,71 +39,71 @@ func testSum[N int64 | float64](t *testing.T) {
 	}
 
 	t.Run("Delta", func(t *testing.T) {
-		incr, mono := monoIncr, true
+		incr, mono := monoIncr[N](), true
 		eFunc := deltaExpecter[N](incr, mono)
 		t.Run("Monotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
 
-		incr, mono = nonMonoIncr, false
+		incr, mono = nonMonoIncr[N](), false
 		eFunc = deltaExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
-		incr, mono := monoIncr, true
+		incr, mono := monoIncr[N](), true
 		eFunc := cumuExpecter[N](incr, mono)
 		t.Run("Monotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 
-		incr, mono = nonMonoIncr, false
+		incr, mono = nonMonoIncr[N](), false
 		eFunc = cumuExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("PreComputedDelta", func(t *testing.T) {
-		incr, mono := monoIncr, true
+		incr, mono := monoIncr[N](), true
 		eFunc := preDeltaExpecter[N](incr, mono)
 		t.Run("Monotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
 
-		incr, mono = nonMonoIncr, false
+		incr, mono = nonMonoIncr[N](), false
 		eFunc = preDeltaExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("PreComputedCumulative", func(t *testing.T) {
-		incr, mono := monoIncr, true
+		incr, mono := monoIncr[N](), true
 		eFunc := preCumuExpecter[N](incr, mono)
 		t.Run("Monotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
 
-		incr, mono = nonMonoIncr, false
+		incr, mono = nonMonoIncr[N](), false
 		eFunc = preCumuExpecter[N](incr, mono)
 		t.Run("NonMonotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
 	})
 }
 
-func deltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+func deltaExpecter[N int64 | float64](incr setMap[N], mono bool) expectFunc {
 	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality, IsMonotonic: mono}
 	return func(m int) metricdata.Aggregation {
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point(a, N(v*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, v*N(m)))
 		}
 		return sum
 	}
 }
 
-func cumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
-	var cycle int
+func cumuExpecter[N int64 | float64](incr setMap[N], mono bool) expectFunc {
+	var cycle N
 	sum := metricdata.Sum[N]{Temporality: metricdata.CumulativeTemporality, IsMonotonic: mono}
 	return func(m int) metricdata.Aggregation {
 		cycle++
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
 		for a, v := range incr {
-			sum.DataPoints = append(sum.DataPoints, point(a, N(v*cycle*m)))
+			sum.DataPoints = append(sum.DataPoints, point(a, v*cycle*N(m)))
 		}
 		return sum
 	}
 }
 
-func preDeltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+func preDeltaExpecter[N int64 | float64](incr setMap[N], mono bool) expectFunc {
 	sum := metricdata.Sum[N]{Temporality: metricdata.DeltaTemporality, IsMonotonic: mono}
 	last := make(map[attribute.Set]N)
 	return func(int) metricdata.Aggregation {
@@ -117,7 +117,7 @@ func preDeltaExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
 	}
 }
 
-func preCumuExpecter[N int64 | float64](incr setMap, mono bool) expectFunc {
+func preCumuExpecter[N int64 | float64](incr setMap[N], mono bool) expectFunc {
 	sum := metricdata.Sum[N]{Temporality: metricdata.CumulativeTemporality, IsMonotonic: mono}
 	return func(int) metricdata.Aggregation {
 		sum.DataPoints = make([]metricdata.DataPoint[N], 0, len(incr))
