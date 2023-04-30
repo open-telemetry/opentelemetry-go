@@ -723,13 +723,18 @@ func TestConcurrentCollect(t *testing.T) {
 		instrument.WithUnit("By"),
 		instrument.WithDescription("meter counter foo"))
 	assert.NoError(t, err)
-	fooA.Add(ctx, 100, attribute.String("A", "B"))
+
+	opt := otelmetric.WithAttributes(
+		attribute.Key("A").String("B"),
+	)
+
+	fooA.Add(ctx, 100, opt)
 
 	fooB, err := meterB.Int64Counter("foo",
 		instrument.WithUnit("By"),
 		instrument.WithDescription("meter counter foo"))
 	assert.NoError(t, err)
-	fooB.Add(ctx, 100, attribute.String("A", "B"))
+	fooB.Add(ctx, 100, opt)
 
 	concurrencyLevel := 100
 	ch := make(chan prometheus.Metric, concurrencyLevel)
@@ -802,7 +807,9 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 		instrument.WithDescription(invalidName))
 	assert.NoError(t, err)
 
-	counterA.Add(ctx, 100, attribute.String(invalidName, invalidName))
+	counterA.Add(ctx, 100, otelmetric.WithAttributes(
+		attribute.Key(invalidName).String(invalidName),
+	))
 
 	meterB := provider.Meter(validName, otelmetric.WithInstrumentationVersion("v0.1.0"))
 	counterB, err := meterB.Int64Counter(validName,
@@ -810,7 +817,9 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 		instrument.WithDescription(validName))
 	assert.NoError(t, err)
 
-	counterB.Add(ctx, 100, attribute.String(validName, validName))
+	counterB.Add(ctx, 100, otelmetric.WithAttributes(
+		attribute.Key(validName).String(validName),
+	))
 
 	ch := make(chan prometheus.Metric)
 
