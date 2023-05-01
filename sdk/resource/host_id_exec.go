@@ -12,12 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build dragonfly || freebsd || netbsd || openbsd || solaris
-// +build dragonfly freebsd netbsd openbsd solaris
+//go:build bsd || darwin
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-var platformHostIDReader hostIDReader = &hostIDReaderBSD{
-	execCommand: execCommand,
-	readFile:    readFile,
+import "os/exec"
+
+func execCommand(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

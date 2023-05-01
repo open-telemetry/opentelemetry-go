@@ -20,8 +20,8 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -178,17 +178,17 @@ type int64Inst struct {
 	embedded.Int64Histogram
 }
 
-var _ instrument.Int64Counter = (*int64Inst)(nil)
-var _ instrument.Int64UpDownCounter = (*int64Inst)(nil)
-var _ instrument.Int64Histogram = (*int64Inst)(nil)
+var _ metric.Int64Counter = (*int64Inst)(nil)
+var _ metric.Int64UpDownCounter = (*int64Inst)(nil)
+var _ metric.Int64Histogram = (*int64Inst)(nil)
 
-func (i *int64Inst) Add(ctx context.Context, val int64, opts ...instrument.AddOption) {
-	c := instrument.NewAddConfig(opts)
+func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
+	c := metric.NewAddConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *int64Inst) Record(ctx context.Context, val int64, opts ...instrument.RecordOption) {
-	c := instrument.NewRecordConfig(opts)
+func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
+	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
@@ -209,17 +209,17 @@ type float64Inst struct {
 	embedded.Float64Histogram
 }
 
-var _ instrument.Float64Counter = (*float64Inst)(nil)
-var _ instrument.Float64UpDownCounter = (*float64Inst)(nil)
-var _ instrument.Float64Histogram = (*float64Inst)(nil)
+var _ metric.Float64Counter = (*float64Inst)(nil)
+var _ metric.Float64UpDownCounter = (*float64Inst)(nil)
+var _ metric.Float64Histogram = (*float64Inst)(nil)
 
-func (i *float64Inst) Add(ctx context.Context, val float64, opts ...instrument.AddOption) {
-	c := instrument.NewAddConfig(opts)
+func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
+	c := metric.NewAddConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *float64Inst) Record(ctx context.Context, val float64, opts ...instrument.RecordOption) {
-	c := instrument.NewRecordConfig(opts)
+func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
+	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
 }
 
@@ -242,7 +242,7 @@ type observablID[N int64 | float64] struct {
 }
 
 type float64Observable struct {
-	instrument.Float64Observable
+	metric.Float64Observable
 	*observable[float64]
 
 	embedded.Float64ObservableCounter
@@ -250,9 +250,9 @@ type float64Observable struct {
 	embedded.Float64ObservableGauge
 }
 
-var _ instrument.Float64ObservableCounter = float64Observable{}
-var _ instrument.Float64ObservableUpDownCounter = float64Observable{}
-var _ instrument.Float64ObservableGauge = float64Observable{}
+var _ metric.Float64ObservableCounter = float64Observable{}
+var _ metric.Float64ObservableUpDownCounter = float64Observable{}
+var _ metric.Float64ObservableGauge = float64Observable{}
 
 func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
 	return float64Observable{
@@ -261,7 +261,7 @@ func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name
 }
 
 type int64Observable struct {
-	instrument.Int64Observable
+	metric.Int64Observable
 	*observable[int64]
 
 	embedded.Int64ObservableCounter
@@ -269,9 +269,9 @@ type int64Observable struct {
 	embedded.Int64ObservableGauge
 }
 
-var _ instrument.Int64ObservableCounter = int64Observable{}
-var _ instrument.Int64ObservableUpDownCounter = int64Observable{}
-var _ instrument.Int64ObservableGauge = int64Observable{}
+var _ metric.Int64ObservableCounter = int64Observable{}
+var _ metric.Int64ObservableUpDownCounter = int64Observable{}
+var _ metric.Int64ObservableGauge = int64Observable{}
 
 func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
 	return int64Observable{
@@ -280,7 +280,7 @@ func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, 
 }
 
 type observable[N int64 | float64] struct {
-	instrument.Observable
+	metric.Observable
 	observablID[N]
 
 	aggregators []internal.Aggregator[N]

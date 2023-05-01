@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
@@ -151,7 +150,7 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 type testCountingFloatInstrument struct {
 	count int
 
-	instrument.Float64Observable
+	metric.Float64Observable
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
@@ -163,17 +162,17 @@ type testCountingFloatInstrument struct {
 func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Add(context.Context, float64, ...instrument.AddOption) {
+func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Record(context.Context, float64, ...instrument.RecordOption) {
+func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric.RecordOption) {
 	i.count++
 }
 
 type testCountingIntInstrument struct {
 	count int
 
-	instrument.Int64Observable
+	metric.Int64Observable
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
@@ -185,9 +184,9 @@ type testCountingIntInstrument struct {
 func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
-func (i *testCountingIntInstrument) Add(context.Context, int64, ...instrument.AddOption) {
+func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOption) {
 	i.count++
 }
-func (i *testCountingIntInstrument) Record(context.Context, int64, ...instrument.RecordOption) {
+func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.RecordOption) {
 	i.count++
 }
