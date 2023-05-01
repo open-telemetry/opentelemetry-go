@@ -17,11 +17,6 @@
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-import (
-	"errors"
-	"strings"
-)
-
 var platformHostIDReader hostIDReader = &hostIDReaderBSD{
 	execCommand: execCommand,
 	readFile:    readFile,
