@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `go.opentelemetry.io/otel/metric` module to the `stable-v1` module set.
   This stages the metric API to be released as a stable module. (#4038)
 
+### Fixed
+
+- Remove unused imports from `sdk/resource/host_id_bsd.go` which caused build failures. (#4040, #4041)
+
 ## [1.15.0/0.38.0] 2023-04-27
 
 ### Added
