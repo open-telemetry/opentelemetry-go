@@ -100,11 +100,9 @@ $(PYTOOLS):
 # created with the latest pip version.
 	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
 
-# Install a python package into the virtual environment.
+# Install python packages into the virtual environment.
 $(PYTOOLS)/%: | $(PYTOOLS)
-# The `--upgrade` flag is needed to ensure that the package is upgraded to the
-# latest version.
-	@$(DOCKERPY) $(PIP) install --upgrade $(PACKAGE)
+	@$(DOCKERPY) $(PIP) install -r requirements.txt
 
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
