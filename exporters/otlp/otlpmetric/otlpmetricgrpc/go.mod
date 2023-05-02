@@ -8,8 +8,8 @@ require (
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.16.0-rc.1
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0-rc.1
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.38.1
-	go.opentelemetry.io/otel/sdk/metric v0.38.1
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.39.0-rc.1
+	go.opentelemetry.io/otel/sdk/metric v0.39.0-rc.1
 	go.opentelemetry.io/proto/otlp v0.19.0
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
 	google.golang.org/grpc v1.54.0
