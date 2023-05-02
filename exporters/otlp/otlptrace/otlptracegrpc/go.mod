@@ -23,6 +23,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	go.opentelemetry.io/otel/metric v0.38.1 // indirect
 	go.opentelemetry.io/otel/trace v1.15.1 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
@@ -39,3 +40,5 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlptrace => ../
 replace go.opentelemetry.io/otel/trace => ../../../../trace
 
 replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../internal/retry
+
+replace go.opentelemetry.io/otel/metric => ../../../../metric

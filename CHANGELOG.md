@@ -8,10 +8,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support global `MeterProvider` in `go.opentelemetry.io/otel`. (#4039)
+  - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
+  - Use `GetMeterProivder` for a global `metric.MeterProvider`.
+  - Use `SetMeterProivder` to set the global `metric.MeterProvider`.
+
 ### Changed
 
 - Move the `go.opentelemetry.io/otel/metric` module to the `stable-v1` module set.
   This stages the metric API to be released as a stable module. (#4038)
+
+### Removed
+
+- The `go.opentelemetry.io/otel/metric/global` package is removed.
+  Use `go.opentelemetry.io/otel` instead. (#4039)
 
 ## [1.15.1/0.38.1] 2023-05-02
 

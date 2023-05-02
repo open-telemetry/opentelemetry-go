@@ -17,8 +17,8 @@ package otlpmetricgrpc_test
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -35,7 +35,7 @@ func Example() {
 			panic(err)
 		}
 	}()
-	global.SetMeterProvider(meterProvider)
+	otel.SetMeterProvider(meterProvider)
 
 	// From here, the meterProvider can be used by instrumentation to collect
 	// telemetry.
