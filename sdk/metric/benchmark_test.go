@@ -50,13 +50,25 @@ var viewBenchmarks = []struct {
 	},
 }
 
-func BenchmarkSyncMeasure(b *testing.B) {
+func BenchmarkSyncMeasurePreallocated(b *testing.B) {
 	for _, bc := range viewBenchmarks {
-		b.Run(bc.Name, benchSyncViews(bc.Views...))
+		b.Run(bc.Name, benchSyncViewsPreallocated(bc.Views...))
 	}
 }
 
-func benchSyncViews(views ...View) func(*testing.B) {
+func BenchmarkSyncMeasurePlain(b *testing.B) {
+	for _, bc := range viewBenchmarks {
+		b.Run(bc.Name, benchSyncViewsPlain(bc.Views...))
+	}
+}
+
+func BenchmarkSyncMeasureSimple(b *testing.B) {
+	for _, bc := range viewBenchmarks {
+		b.Run(bc.Name, benchSyncViewsSimple(bc.Views...))
+	}
+}
+
+func benchSyncViewsPreallocated(views ...View) func(*testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
@@ -118,7 +130,120 @@ func benchSyncViews(views ...View) func(*testing.B) {
 	}
 }
 
+func benchSyncViewsPlain(views ...View) func(*testing.B) {
+	ctx := context.Background()
+	rdr := NewManualReader()
+	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
+	meter := provider.Meter("benchSyncViews")
+	return func(b *testing.B) {
+		iCtr, err := meter.Int64Counter("int64-counter")
+		assert.NoError(b, err)
+		b.Run("Int64Counter", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { iCtr.Add(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+
+		fCtr, err := meter.Float64Counter("float64-counter")
+		assert.NoError(b, err)
+		b.Run("Float64Counter", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { fCtr.Add(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+
+		iUDCtr, err := meter.Int64UpDownCounter("int64-up-down-counter")
+		assert.NoError(b, err)
+		b.Run("Int64UpDownCounter", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { iUDCtr.Add(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+
+		fUDCtr, err := meter.Float64UpDownCounter("float64-up-down-counter")
+		assert.NoError(b, err)
+		b.Run("Float64UpDownCounter", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { fUDCtr.Add(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+
+		iHist, err := meter.Int64Histogram("int64-histogram")
+		assert.NoError(b, err)
+		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { iHist.Record(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+
+		fHist, err := meter.Float64Histogram("float64-histogram")
+		assert.NoError(b, err)
+		b.Run("Float64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				return func() { fHist.Record(ctx, 1, metric.WithAttributeSet(s)) }
+			}
+		}()))
+	}
+}
+
+func benchSyncViewsSimple(views ...View) func(*testing.B) {
+	ctx := context.Background()
+	rdr := NewManualReader()
+	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
+	meter := provider.Meter("benchSyncViews")
+	return func(b *testing.B) {
+		iCtr, err := meter.Int64Counter("int64-counter")
+		assert.NoError(b, err)
+		b.Run("Int64Counter", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { iCtr.Add(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+
+		fCtr, err := meter.Float64Counter("float64-counter")
+		assert.NoError(b, err)
+		b.Run("Float64Counter", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { fCtr.Add(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+
+		iUDCtr, err := meter.Int64UpDownCounter("int64-up-down-counter")
+		assert.NoError(b, err)
+		b.Run("Int64UpDownCounter", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { iUDCtr.Add(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+
+		fUDCtr, err := meter.Float64UpDownCounter("float64-up-down-counter")
+		assert.NoError(b, err)
+		b.Run("Float64UpDownCounter", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { fUDCtr.Add(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+
+		iHist, err := meter.Int64Histogram("int64-histogram")
+		assert.NoError(b, err)
+		b.Run("Int64Histogram", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { iHist.Record(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+
+		fHist, err := meter.Float64Histogram("float64-histogram")
+		assert.NoError(b, err)
+		b.Run("Float64Histogram", benchMeasKeyValues(func() measKVF {
+			return func(s []attribute.KeyValue) func() {
+				return func() { fHist.Record(ctx, 1, metric.WithAttributes(s...)) }
+			}
+		}()))
+	}
+}
+
 type measF func(s attribute.Set) func()
+type measKVF func(s []attribute.KeyValue) func()
 
 func benchMeasAttrs(meas measF) func(*testing.B) {
 	return func(b *testing.B) {
@@ -146,6 +271,41 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 				attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
 			}
 			f := meas(attribute.NewSet(attrs...))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				f()
+			}
+		})
+	}
+}
+
+func benchMeasKeyValues(meas measKVF) func(*testing.B) {
+	return func(b *testing.B) {
+		b.Run("Attributes/0", func(b *testing.B) {
+			f := meas(nil)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				f()
+			}
+		})
+		b.Run("Attributes/1", func(b *testing.B) {
+			f := meas([]attribute.KeyValue{attribute.Bool("K", true)})
+			b.ReportAllocs()
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				f()
+			}
+		})
+		b.Run("Attributes/10", func(b *testing.B) {
+			n := 10
+			attrs := make([]attribute.KeyValue, 0)
+			attrs = append(attrs, attribute.Bool("K", true))
+			for i := 2; i < n; i++ {
+				attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
+			}
+			f := meas(attrs)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
