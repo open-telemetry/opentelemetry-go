@@ -35,9 +35,9 @@ func newState(encoded string) state {
 	if encoded == "" {
 		return state{}
 	}
-	split := strings.SplitN(encoded, ",", 2)
-	injects, _ := strconv.ParseUint(split[0], 10, 64)
-	extracts, _ := strconv.ParseUint(split[1], 10, 64)
+	s0, s1, _ := strings.Cut(encoded, ",")
+	injects, _ := strconv.ParseUint(s0, 10, 64)
+	extracts, _ := strconv.ParseUint(s1, 10, 64)
 	return state{
 		Injections:  injects,
 		Extractions: extracts,
