@@ -87,7 +87,7 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 			encoder: shutdownEncoder{},
 		})
 	})
-	return ctx.Err()
+	return nil
 }
 
 func redactTimestamps(orig *metricdata.ResourceMetrics) {

@@ -115,11 +115,6 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	// Stop any active and subsequent exports.
 	e.stopOnce.Do(func() { close(e.stopCh) })
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	return e.uploader.shutdown(ctx)
 }
 
