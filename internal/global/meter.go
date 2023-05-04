@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/metric/internal/global"
+package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"container/list"
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -35,11 +34,6 @@ type meterProvider struct {
 	meters map[il]*meter
 
 	delegate metric.MeterProvider
-}
-
-type il struct {
-	name    string
-	version string
 }
 
 // setDelegate configures p to delegate all MeterProvider functionality to
@@ -340,7 +334,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 
 	reg, err := m.RegisterCallback(c.function, insts...)
 	if err != nil {
-		otel.Handle(err)
+		GetErrorHandler().Handle(err)
 	}
 
 	c.unreg = reg.Unregister
