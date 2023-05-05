@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -630,7 +629,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	otel.SetLogger(logr.New(l))
 
 	const mtrName = "TestGlobalInstRegisterCallback"
-	preMtr := global.Meter(mtrName)
+	preMtr := otel.Meter(mtrName)
 	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
 	require.NoError(t, err)
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
@@ -638,9 +637,9 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
-	global.SetMeterProvider(mp)
+	otel.SetMeterProvider(mp)
 
-	postMtr := global.Meter(mtrName)
+	postMtr := otel.Meter(mtrName)
 	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
 	require.NoError(t, err)
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
