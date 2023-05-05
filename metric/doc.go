@@ -68,6 +68,37 @@ asynchronous measurement, a Gauge ([Int64ObservableGauge],
 See the [OpenTelemetry documentation] for more information about instruments
 and their intended use.
 
+# Measurements
+
+Measurements are made by recording values and information about the values with
+an instrument. How these measurements are recorded depends on the instrument.
+
+Measurements for synchronous instruments ([Int64Counter], [Int64UpDownCounter],
+[Int64Histogram], [Float64Counter], [Float64UpDownCounter], [Float64Histogram])
+are made using the instrument methods directly. All counter instruments have an
+`Add` method that is used to measure an increment value, and all histogram
+instruments have a `Record` method to measure a data point.
+
+Asynchronous instruments ([Int64ObservableCounter],
+[Int64ObservableUpDownCounter], [Int64ObservableGauge],
+[Float64ObservableCounter], [Float64ObservableUpDownCounter],
+[Float64ObservableGauge]) make measurements within a callback function. The
+callback is registered with the Meter which ensures the callback is called once
+per collection cycle. A callback can be registered two ways: during its
+creation using an option; the RegisterCallback method of the Meter that created
+the instrument.
+
+If the following criteria are meet, an option (i.e. [WithInt64Callback],
+[WithFloat64Callback]) can be used during the asynchronous instrument's
+creation to register a callback ([Int64Callback], [Float64Callback]):
+
+  - The measurement process is known when the instrument is created
+  - Only that instrument will make a measurement within the callback
+  - The callback never needs to be unregistered
+
+If not, use the RegisterCallback method of the Meter that created the
+instrument to register a [Callback].
+
 # API Implementations
 
 This package does not conform to the standard Go versioning policy, all of its
