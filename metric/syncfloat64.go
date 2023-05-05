@@ -27,6 +27,9 @@ import (
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64Counter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64Counter
 
 	// Add records a change to the counter.
@@ -74,6 +77,9 @@ type Float64CounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64UpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64UpDownCounter
 
 	// Add records a change to the counter.
@@ -122,6 +128,9 @@ type Float64UpDownCounterOption interface {
 // implementation for information on how to set default behavior for
 // unimplemented methods.
 type Float64Histogram interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64Histogram
 
 	// Record adds an additional value to the distribution.
