@@ -208,7 +208,7 @@ type Int64Observer interface {
 	// Observe records the int64 value.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to record with attributes.
+	// the WithAttributes) option to include measurement attributes.
 	Observe(value int64, options ...ObserveOption)
 }
 

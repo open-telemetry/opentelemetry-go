@@ -32,7 +32,7 @@ type Int64Counter interface {
 	// Add records a change to the counter.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to record with attributes.
+	// the WithAttributes) option to include measurement attributes.
 	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
@@ -82,7 +82,7 @@ type Int64UpDownCounter interface {
 	// Add records a change to the counter.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to record with attributes.
+	// the WithAttributes) option to include measurement attributes.
 	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
@@ -133,7 +133,7 @@ type Int64Histogram interface {
 	// Record adds an additional value to the distribution.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to record with attributes.
+	// the WithAttributes) option to include measurement attributes.
 	Record(ctx context.Context, incr int64, options ...RecordOption)
 }
 

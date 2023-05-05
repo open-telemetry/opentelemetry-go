@@ -209,7 +209,7 @@ type Float64Observer interface {
 	// Observe records the float64 value.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to record with attributes.
+	// the WithAttributes) option to include measurement attributes.
 	Observe(value float64, options ...ObserveOption)
 }
 
