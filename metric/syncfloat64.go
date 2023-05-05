@@ -30,7 +30,10 @@ type Float64Counter interface {
 	embedded.Float64Counter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, opts ...AddOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to record with attributes.
+	Add(ctx context.Context, incr float64, options ...AddOption)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -77,7 +80,10 @@ type Float64UpDownCounter interface {
 	embedded.Float64UpDownCounter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr float64, opts ...AddOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to record with attributes.
+	Add(ctx context.Context, incr float64, options ...AddOption)
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -125,7 +131,10 @@ type Float64Histogram interface {
 	embedded.Float64Histogram
 
 	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr float64, opts ...RecordOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to record with attributes.
+	Record(ctx context.Context, incr float64, options ...RecordOption)
 }
 
 // Float64HistogramConfig contains options for synchronous counter instruments
