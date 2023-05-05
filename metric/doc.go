@@ -86,8 +86,8 @@ Asynchronous instruments ([Int64ObservableCounter],
 [Float64ObservableGauge]) record measurements within a callback function. The
 callback is registered with the Meter which ensures the callback is called once
 per collection cycle. A callback can be registered two ways: during the
-creation of an instrument using an option; using the RegisterCallback method of
-the Meter that created the instrument.
+instrument's creation using an option, or later using the RegisterCallback
+method of the Meter that created the instrument.
 
 If the following criteria are met, an option ([WithInt64Callback] or
 [WithFloat64Callback]) can be used during the asynchronous instrument's
