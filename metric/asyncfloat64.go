@@ -80,8 +80,9 @@ func (c Float64ObservableCounterConfig) Callbacks() []Float64Callback {
 }
 
 // Float64ObservableCounterOption applies options to a
-// [Float64ObservableCounterConfig]. See [Float64ObservableOption] and [Option]
-// for other options that can be used as a Float64ObservableCounterOption.
+// [Float64ObservableCounterConfig]. See [Float64ObservableOption] and
+// [InstrumentOption] for other options that can be used as a
+// Float64ObservableCounterOption.
 type Float64ObservableCounterOption interface {
 	applyFloat64ObservableCounter(Float64ObservableCounterConfig) Float64ObservableCounterConfig
 }
@@ -136,7 +137,7 @@ func (c Float64ObservableUpDownCounterConfig) Callbacks() []Float64Callback {
 
 // Float64ObservableUpDownCounterOption applies options to a
 // [Float64ObservableUpDownCounterConfig]. See [Float64ObservableOption] and
-// [Option] for other options that can be used as a
+// [InstrumentOption] for other options that can be used as a
 // Float64ObservableUpDownCounterOption.
 type Float64ObservableUpDownCounterOption interface {
 	applyFloat64ObservableUpDownCounter(Float64ObservableUpDownCounterConfig) Float64ObservableUpDownCounterConfig
@@ -191,7 +192,7 @@ func (c Float64ObservableGaugeConfig) Callbacks() []Float64Callback {
 
 // Float64ObservableGaugeOption applies options to a
 // [Float64ObservableGaugeConfig]. See [Float64ObservableOption] and
-// [Option] for other options that can be used as a
+// [InstrumentOption] for other options that can be used as a
 // Float64ObservableGaugeOption.
 type Float64ObservableGaugeOption interface {
 	applyFloat64ObservableGauge(Float64ObservableGaugeConfig) Float64ObservableGaugeConfig

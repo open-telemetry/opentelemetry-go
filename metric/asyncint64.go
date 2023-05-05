@@ -80,8 +80,9 @@ func (c Int64ObservableCounterConfig) Callbacks() []Int64Callback {
 }
 
 // Int64ObservableCounterOption applies options to a
-// [Int64ObservableCounterConfig]. See [Int64ObservableOption] and [Option] for
-// other options that can be used as an Int64ObservableCounterOption.
+// [Int64ObservableCounterConfig]. See [Int64ObservableOption] and
+// [InstrumentOption] for other options that can be used as an
+// Int64ObservableCounterOption.
 type Int64ObservableCounterOption interface {
 	applyInt64ObservableCounter(Int64ObservableCounterConfig) Int64ObservableCounterConfig
 }
@@ -136,7 +137,7 @@ func (c Int64ObservableUpDownCounterConfig) Callbacks() []Int64Callback {
 
 // Int64ObservableUpDownCounterOption applies options to a
 // [Int64ObservableUpDownCounterConfig]. See [Int64ObservableOption] and
-// [Option] for other options that can be used as an
+// [InstrumentOption] for other options that can be used as an
 // Int64ObservableUpDownCounterOption.
 type Int64ObservableUpDownCounterOption interface {
 	applyInt64ObservableUpDownCounter(Int64ObservableUpDownCounterConfig) Int64ObservableUpDownCounterConfig
@@ -190,8 +191,9 @@ func (c Int64ObservableGaugeConfig) Callbacks() []Int64Callback {
 }
 
 // Int64ObservableGaugeOption applies options to a
-// [Int64ObservableGaugeConfig]. See [Int64ObservableOption] and [Option] for
-// other options that can be used as an Int64ObservableGaugeOption.
+// [Int64ObservableGaugeConfig]. See [Int64ObservableOption] and
+// [InstrumentOption] for other options that can be used as an
+// Int64ObservableGaugeOption.
 type Int64ObservableGaugeOption interface {
 	applyInt64ObservableGauge(Int64ObservableGaugeConfig) Int64ObservableGaugeConfig
 }
