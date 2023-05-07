@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.16.0-rc.1
 	go.opentelemetry.io/otel/trace v1.16.0-rc.1
-	golang.org/x/sys v0.7.0
+	golang.org/x/sys v0.8.0
 )
 
 require (
