@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/prometheus/client_golang v1.15.0
-	github.com/prometheus/client_model v0.3.0
+	github.com/prometheus/client_model v0.4.0
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.16.0-rc.1
 	go.opentelemetry.io/otel/metric v1.16.0-rc.1
