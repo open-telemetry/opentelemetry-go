@@ -20,7 +20,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/openzipkin/zipkin-go v0.4.1 // indirect
 	go.opentelemetry.io/otel/metric v1.16.0-rc.1 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 )
 
 replace go.opentelemetry.io/otel/trace => ../../trace
