@@ -76,8 +76,8 @@ an instrument. How these measurements are recorded depends on the instrument.
 Measurements for synchronous instruments ([Int64Counter], [Int64UpDownCounter],
 [Int64Histogram], [Float64Counter], [Float64UpDownCounter], and
 [Float64Histogram]) are recorded using the instrument methods directly. All
-counter instruments have an `Add` method that is used to measure an increment
-value, and all histogram instruments have a `Record` method to measure a data
+counter instruments have an Add method that is used to measure an increment
+value, and all histogram instruments have a Record method to measure a data
 point.
 
 Asynchronous instruments ([Int64ObservableCounter],
