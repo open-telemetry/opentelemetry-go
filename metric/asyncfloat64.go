@@ -41,6 +41,9 @@ type Float64Observable interface {
 // default behavior for
 // unimplemented methods.
 type Float64ObservableCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64ObservableCounter
 
 	Float64Observable
@@ -96,6 +99,9 @@ type Float64ObservableCounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Float64ObservableUpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64ObservableUpDownCounter
 
 	Float64Observable
@@ -150,6 +156,9 @@ type Float64ObservableUpDownCounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Float64ObservableGauge interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64ObservableGauge
 
 	Float64Observable
@@ -202,6 +211,9 @@ type Float64ObservableGaugeOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Float64Observer interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64Observer
 
 	// Observe records the float64 value.
