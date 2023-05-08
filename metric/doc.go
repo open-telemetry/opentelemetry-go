@@ -87,7 +87,7 @@ Asynchronous instruments ([Int64ObservableCounter],
 callback is registered with the Meter which ensures the callback is called once
 per collection cycle. A callback can be registered two ways: during the
 instrument's creation using an option, or later using the RegisterCallback
-method of the Meter that created the instrument.
+method of the [Meter] that created the instrument.
 
 If the following criteria are met, an option ([WithInt64Callback] or
 [WithFloat64Callback]) can be used during the asynchronous instrument's
@@ -98,7 +98,7 @@ respectively):
   - Only that instrument will make a measurement within the callback
   - The callback never needs to be unregistered
 
-If the criteria are not met, use the RegisterCallback method of the Meter that
+If the criteria are not met, use the RegisterCallback method of the [Meter] that
 created the instrument to register a [Callback].
 
 # API Implementations

@@ -58,7 +58,7 @@ type Meter interface {
 	// to synchronously record int64 measurements during a computational
 	// operation.
 	Int64UpDownCounter(name string, options ...Int64UpDownCounterOption) (Int64UpDownCounter, error)
-	// Int64Histogram returns a new Int64Histogram instrument identified by
+	// Int64Histogram returns a new [Int64Histogram] instrument identified by
 	// name and configured with options. The instrument is used to
 	// synchronously record the distribution of int64 measurements during a
 	// computational operation.
