@@ -37,9 +37,8 @@ type Int64Observable interface {
 // assumed the to be the cumulative sum of the count.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64ObservableCounter interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
@@ -95,9 +94,8 @@ type Int64ObservableCounterOption interface {
 // be the cumulative sum of the count.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64ObservableUpDownCounter interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
@@ -153,9 +151,8 @@ type Int64ObservableUpDownCounterOption interface {
 // only made within a callback for this instrument.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64ObservableGauge interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
@@ -208,9 +205,8 @@ type Int64ObservableGaugeOption interface {
 // Int64Observer is a recorder of int64 measurements.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64Observer interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"

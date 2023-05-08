@@ -23,9 +23,8 @@ import (
 // Int64Counter is an instrument that records increasing int64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64Counter interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
@@ -73,9 +72,8 @@ type Int64CounterOption interface {
 // int64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64UpDownCounter interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
@@ -124,9 +122,8 @@ type Int64UpDownCounterOption interface {
 // values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64Histogram interface {
 	// Users of the interface can ignore this. This embedded type is only used
 	// by implementations of this interface. See the "API Implementations"
