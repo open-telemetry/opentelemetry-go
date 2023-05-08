@@ -27,6 +27,9 @@ import (
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type MeterProvider interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.MeterProvider
 
 	// Meter returns a new Meter with the provided name and configuration.
@@ -47,6 +50,9 @@ type MeterProvider interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Meter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Meter
 
 	// Int64Counter returns a new Int64Counter instrument identified by name
@@ -174,6 +180,9 @@ type Callback func(context.Context, Observer) error
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Observer interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Observer
 
 	// ObserveFloat64 records the float64 value for obsrv.
@@ -189,6 +198,9 @@ type Observer interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Registration interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Registration
 
 	// Unregister removes the callback registration from a Meter.
