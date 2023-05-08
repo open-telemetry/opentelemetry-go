@@ -297,7 +297,7 @@ var _ batchUploader = (*collectorUploader)(nil)
 func (c *collectorUploader) shutdown(ctx context.Context) error {
 	// The Exporter will cancel any active exports and will prevent all
 	// subsequent exports, so nothing to do here.
-	return nil
+	return ctx.Err()
 }
 
 func (c *collectorUploader) upload(ctx context.Context, batch *gen.Batch) error {

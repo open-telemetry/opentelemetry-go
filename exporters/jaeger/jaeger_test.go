@@ -83,8 +83,8 @@ type testCollectorEndpoint struct {
 	batchesUploaded []*gen.Batch
 }
 
-func (c *testCollectorEndpoint) shutdown(context.Context) error {
-	return nil
+func (c *testCollectorEndpoint) shutdown(ctx context.Context) error {
+	return ctx.Err()
 }
 
 func (c *testCollectorEndpoint) upload(_ context.Context, batch *gen.Batch) error {

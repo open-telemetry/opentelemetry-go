@@ -149,7 +149,7 @@ func (c *client) Shutdown(ctx context.Context) error {
 
 	c.requestFunc = nil
 	c.httpClient = nil
-	return nil
+	return ctx.Err()
 }
 
 // UploadMetrics sends protoMetrics to the connected endpoint.
