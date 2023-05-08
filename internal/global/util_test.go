@@ -25,7 +25,9 @@ func ResetForTest(t testing.TB) {
 	t.Cleanup(func() {
 		globalTracer = defaultTracerValue()
 		globalPropagators = defaultPropagatorsValue()
+		globalMeterProvider = defaultMeterProvider()
 		delegateTraceOnce = sync.Once{}
 		delegateTextMapPropagatorOnce = sync.Once{}
+		delegateMeterOnce = sync.Once{}
 	})
 }
