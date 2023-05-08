@@ -26,6 +26,9 @@ import (
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64Counter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64Counter
 
 	// Add records a change to the counter.
@@ -72,6 +75,9 @@ type Int64CounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64UpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64UpDownCounter
 
 	// Add records a change to the counter.
@@ -119,6 +125,9 @@ type Int64UpDownCounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64Histogram interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64Histogram
 
 	// Record adds an additional value to the distribution.

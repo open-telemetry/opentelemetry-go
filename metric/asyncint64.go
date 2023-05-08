@@ -40,6 +40,9 @@ type Int64Observable interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64ObservableCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64ObservableCounter
 
 	Int64Observable
@@ -94,6 +97,9 @@ type Int64ObservableCounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64ObservableUpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64ObservableUpDownCounter
 
 	Int64Observable
@@ -148,6 +154,9 @@ type Int64ObservableUpDownCounterOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64ObservableGauge interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64ObservableGauge
 
 	Int64Observable
@@ -199,6 +208,9 @@ type Int64ObservableGaugeOption interface {
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Int64Observer interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64Observer
 
 	// Observe records the int64 value.
