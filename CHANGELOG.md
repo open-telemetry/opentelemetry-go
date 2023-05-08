@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/otel/metric/instrument` package is removed.
+  Use `go.opentelemetry.io/otel/metric` instead. (#4055)
+
 ## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
 
 This is a release candidate for the v1.16.0/v0.39.0 release.
