@@ -62,8 +62,9 @@ func (c Int64CounterConfig) Unit() string {
 	return c.unit
 }
 
-// Int64CounterOption applies options to a [Int64CounterConfig]. See [Option]
-// for other options that can be used as an Int64CounterOption.
+// Int64CounterOption applies options to a [Int64CounterConfig]. See
+// [InstrumentOption] for other options that can be used as an
+// Int64CounterOption.
 type Int64CounterOption interface {
 	applyInt64Counter(Int64CounterConfig) Int64CounterConfig
 }
@@ -112,7 +113,7 @@ func (c Int64UpDownCounterConfig) Unit() string {
 }
 
 // Int64UpDownCounterOption applies options to a [Int64UpDownCounterConfig].
-// See [Option] for other options that can be used as an
+// See [InstrumentOption] for other options that can be used as an
 // Int64UpDownCounterOption.
 type Int64UpDownCounterOption interface {
 	applyInt64UpDownCounter(Int64UpDownCounterConfig) Int64UpDownCounterConfig
@@ -162,7 +163,8 @@ func (c Int64HistogramConfig) Unit() string {
 }
 
 // Int64HistogramOption applies options to a [Int64HistogramConfig]. See
-// [Option] for other options that can be used as an Int64HistogramOption.
+// [InstrumentOption] for other options that can be used as an
+// Int64HistogramOption.
 type Int64HistogramOption interface {
 	applyInt64Histogram(Int64HistogramConfig) Int64HistogramConfig
 }

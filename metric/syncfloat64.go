@@ -63,7 +63,8 @@ func (c Float64CounterConfig) Unit() string {
 }
 
 // Float64CounterOption applies options to a [Float64CounterConfig]. See
-// [Option] for other options that can be used as a Float64CounterOption.
+// [InstrumentOption] for other options that can be used as a
+// Float64CounterOption.
 type Float64CounterOption interface {
 	applyFloat64Counter(Float64CounterConfig) Float64CounterConfig
 }
@@ -112,8 +113,8 @@ func (c Float64UpDownCounterConfig) Unit() string {
 }
 
 // Float64UpDownCounterOption applies options to a
-// [Float64UpDownCounterConfig]. See [Option] for other options that can be
-// used as a Float64UpDownCounterOption.
+// [Float64UpDownCounterConfig]. See [InstrumentOption] for other options that
+// can be used as a Float64UpDownCounterOption.
 type Float64UpDownCounterOption interface {
 	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
@@ -162,7 +163,8 @@ func (c Float64HistogramConfig) Unit() string {
 }
 
 // Float64HistogramOption applies options to a [Float64HistogramConfig]. See
-// [Option] for other options that can be used as a Float64HistogramOption.
+// [InstrumentOption] for other options that can be used as a
+// Float64HistogramOption.
 type Float64HistogramOption interface {
 	applyFloat64Histogram(Float64HistogramConfig) Float64HistogramConfig
 }
