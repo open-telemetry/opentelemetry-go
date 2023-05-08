@@ -23,10 +23,12 @@ import (
 // Float64Counter is an instrument that records increasing float64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64Counter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64Counter
 
 	// Add records a change to the counter.
@@ -64,7 +66,8 @@ func (c Float64CounterConfig) Unit() string {
 }
 
 // Float64CounterOption applies options to a [Float64CounterConfig]. See
-// [Option] for other options that can be used as a Float64CounterOption.
+// [InstrumentOption] for other options that can be used as a
+// Float64CounterOption.
 type Float64CounterOption interface {
 	applyFloat64Counter(Float64CounterConfig) Float64CounterConfig
 }
@@ -73,10 +76,12 @@ type Float64CounterOption interface {
 // float64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64UpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64UpDownCounter
 
 	// Add records a change to the counter.
@@ -114,8 +119,8 @@ func (c Float64UpDownCounterConfig) Unit() string {
 }
 
 // Float64UpDownCounterOption applies options to a
-// [Float64UpDownCounterConfig]. See [Option] for other options that can be
-// used as a Float64UpDownCounterOption.
+// [Float64UpDownCounterConfig]. See [InstrumentOption] for other options that
+// can be used as a Float64UpDownCounterOption.
 type Float64UpDownCounterOption interface {
 	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
@@ -124,10 +129,12 @@ type Float64UpDownCounterOption interface {
 // values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64Histogram interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Float64Histogram
 
 	// Record adds an additional value to the distribution.
@@ -165,7 +172,8 @@ func (c Float64HistogramConfig) Unit() string {
 }
 
 // Float64HistogramOption applies options to a [Float64HistogramConfig]. See
-// [Option] for other options that can be used as a Float64HistogramOption.
+// [InstrumentOption] for other options that can be used as a
+// Float64HistogramOption.
 type Float64HistogramOption interface {
 	applyFloat64Histogram(Float64HistogramConfig) Float64HistogramConfig
 }
