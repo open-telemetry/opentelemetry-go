@@ -23,9 +23,8 @@ import (
 // Float64Counter is an instrument that records increasing float64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64Counter interface {
 	embedded.Float64Counter
 
@@ -71,9 +70,8 @@ type Float64CounterOption interface {
 // float64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64UpDownCounter interface {
 	embedded.Float64UpDownCounter
 
@@ -119,9 +117,8 @@ type Float64UpDownCounterOption interface {
 // values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Float64Histogram interface {
 	embedded.Float64Histogram
 
