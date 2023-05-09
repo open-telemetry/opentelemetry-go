@@ -13,12 +13,4 @@ jobs:
         with:
           fetch-depth: 0
       - name: Codespell with annotations
-        uses: codespell-project/actions-codespell@v1
-        with:
-          builtin: clear,rare,informal
-          check_filenames: true
-          check_hidden: true
-          ignore_words_file: .codespellignore
-          only_warn: true
-          skip: "./.git/*,go.mod,go.sum,./semconv/*"
-          uri_ignore_words_list: "*"
+        run: make codespell
