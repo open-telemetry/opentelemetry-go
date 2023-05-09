@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal // import "go.opentelemetry.io/otel/semconv/internal/v3"
+package internal // import "go.opentelemetry.io/otel/semconv/internal/v4"
 
 import (
 	"fmt"
