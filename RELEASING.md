@@ -14,7 +14,6 @@ For example,
 ```sh
 export TAG="v1.13.0" # Change to the release version you are generating.
 export OTEL_SPEC_REPO="/absolute/path/to/opentelemetry-specification"
-git -C "$OTEL_SPEC_REPO" checkout "tags/$TAG" -b "$TAG"
 docker pull otel/semconvgen:latest
 make semconv-generate # Uses the exported TAG and OTEL_SPEC_REPO.
 ```
