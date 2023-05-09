@@ -75,10 +75,11 @@ func ClientResponse(resp *http.Response) []attribute.KeyValue {
 }
 
 // ClientRequest returns trace attributes for an HTTP request made by a client.
-// The following attributes are always returned: "http.url", "http.flavor",
-// "http.method", "net.peer.name". The following attributes are returned if the
-// related values are defined in req: "net.peer.port", "http.user_agent",
-// "http.request_content_length", "enduser.id".
+// The following attributes are always returned: "http.url",
+// "net.protocol.(name|version)", "http.method", "net.peer.name".
+// The following attributes are returned if the related values are defined
+// in req: "net.peer.port", "http.user_agent", "http.request_content_length",
+// "enduser.id".
 func ClientRequest(req *http.Request) []attribute.KeyValue {
 	return hc.ClientRequest(req)
 }
@@ -107,10 +108,10 @@ func ClientStatus(code int) (codes.Code, string) {
 // The req Host will be used to determine the server instead.
 //
 // The following attributes are always returned: "http.method", "http.scheme",
-// "http.flavor", "http.target", "net.host.name". The following attributes are
-// returned if they related values are defined in req: "net.host.port",
-// "net.sock.peer.addr", "net.sock.peer.port", "user_agent.original", "enduser.id",
-// "http.client_ip".
+// ""net.protocol.(name|version)", "http.target", "net.host.name".
+// The following attributes are returned if they related values are defined
+// in req: "net.host.port", "net.sock.peer.addr", "net.sock.peer.port",
+// "user_agent.original", "enduser.id", "http.client_ip".
 func ServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	return hc.ServerRequest(server, req)
 }
