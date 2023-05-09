@@ -129,9 +129,12 @@ var (
 		Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
-	minA       = metricdata.NewExtrema(-1.)
-	minB, maxB = metricdata.NewExtrema(3.), metricdata.NewExtrema(99.)
-	minC       = metricdata.NewExtrema(-1.)
+	minFloat64A              = metricdata.NewExtrema(-1.)
+	minInt64A                = metricdata.NewExtrema[int64](-1)
+	minFloat64B, maxFloat64B = metricdata.NewExtrema(3.), metricdata.NewExtrema(99.)
+	minInt64B, maxInt64B     = metricdata.NewExtrema[int64](3), metricdata.NewExtrema[int64](99)
+	minFloat64C              = metricdata.NewExtrema(-1.)
+	minInt64C                = metricdata.NewExtrema[int64](-1)
 
 	histogramDataPointInt64A = metricdata.HistogramDataPoint[int64]{
 		Attributes:   attrA,
@@ -140,7 +143,7 @@ var (
 		Count:        2,
 		Bounds:       []float64{0, 10},
 		BucketCounts: []uint64{1, 1},
-		Min:          minA,
+		Min:          minInt64A,
 		Sum:          2,
 		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64A},
 	}
@@ -151,7 +154,7 @@ var (
 		Count:        2,
 		Bounds:       []float64{0, 10},
 		BucketCounts: []uint64{1, 1},
-		Min:          minA,
+		Min:          minFloat64A,
 		Sum:          2,
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64A},
 	}
@@ -162,8 +165,8 @@ var (
 		Count:        3,
 		Bounds:       []float64{0, 10, 100},
 		BucketCounts: []uint64{1, 1, 1},
-		Max:          maxB,
-		Min:          minB,
+		Max:          maxInt64B,
+		Min:          minInt64B,
 		Sum:          3,
 		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64B},
 	}
@@ -174,8 +177,8 @@ var (
 		Count:        3,
 		Bounds:       []float64{0, 10, 100},
 		BucketCounts: []uint64{1, 1, 1},
-		Max:          maxB,
-		Min:          minB,
+		Max:          maxFloat64B,
+		Min:          minFloat64B,
 		Sum:          3,
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64B},
 	}
@@ -186,7 +189,7 @@ var (
 		Count:        2,
 		Bounds:       []float64{0, 10},
 		BucketCounts: []uint64{1, 1},
-		Min:          minC,
+		Min:          minInt64C,
 		Sum:          2,
 		Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64C},
 	}
@@ -197,7 +200,7 @@ var (
 		Count:        2,
 		Bounds:       []float64{0, 10},
 		BucketCounts: []uint64{1, 1},
-		Min:          minC,
+		Min:          minFloat64C,
 		Sum:          2,
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
@@ -371,7 +374,8 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("HistogramDataPointFloat64", testDatatype(histogramDataPointFloat64A, histogramDataPointFloat64B, equalHistogramDataPoints[float64]))
 	t.Run("DataPointInt64", testDatatype(dataPointInt64A, dataPointInt64B, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatype(dataPointFloat64A, dataPointFloat64B, equalDataPoints[float64]))
-	t.Run("Extrema", testDatatype(minA, minB, equalExtrema))
+	t.Run("ExtremaInt64", testDatatype(minInt64A, minInt64B, equalExtrema[int64]))
+	t.Run("ExtremaFloat64", testDatatype(minFloat64A, minFloat64B, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatype(exemplarInt64A, exemplarInt64B, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatype(exemplarFloat64A, exemplarFloat64B, equalExemplars[float64]))
 }
@@ -390,7 +394,8 @@ func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreTime(histogramDataPointFloat64A, histogramDataPointFloat64C, equalHistogramDataPoints[float64]))
 	t.Run("DataPointInt64", testDatatypeIgnoreTime(dataPointInt64A, dataPointInt64C, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatypeIgnoreTime(dataPointFloat64A, dataPointFloat64C, equalDataPoints[float64]))
-	t.Run("Extrema", testDatatypeIgnoreTime(minA, minC, equalExtrema))
+	t.Run("ExtremaInt64", testDatatypeIgnoreTime(minInt64A, minInt64C, equalExtrema[int64]))
+	t.Run("ExtremaFloat64", testDatatypeIgnoreTime(minFloat64A, minFloat64C, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatypeIgnoreTime(exemplarInt64A, exemplarInt64C, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatypeIgnoreTime(exemplarFloat64A, exemplarFloat64C, equalExemplars[float64]))
 }
@@ -473,7 +478,7 @@ func TestAssertAggregationsEqual(t *testing.T) {
 }
 
 func TestAssertAttributes(t *testing.T) {
-	AssertHasAttributes(t, minA, attribute.Bool("A", true)) // No-op, always pass.
+	AssertHasAttributes(t, minFloat64A, attribute.Bool("A", true)) // No-op, always pass.
 	AssertHasAttributes(t, exemplarInt64A, attribute.Bool("filter A", true))
 	AssertHasAttributes(t, exemplarFloat64A, attribute.Bool("filter A", true))
 	AssertHasAttributes(t, dataPointInt64A, attribute.Bool("A", true))

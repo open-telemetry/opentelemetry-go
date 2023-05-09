@@ -58,7 +58,7 @@ func (e *exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	e.clientMu.Unlock()
 	if upErr != nil {
 		if err == nil {
-			return upErr
+			return fmt.Errorf("failed to upload metrics: %w", upErr)
 		}
 		// Merge the two errors.
 		return fmt.Errorf("failed to upload incomplete metrics (%s): %w", err, upErr)

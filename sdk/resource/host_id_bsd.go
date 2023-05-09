@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package internal contains common functionality for all OTLP exporters.
-package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
+//go:build dragonfly || freebsd || netbsd || openbsd || solaris
+// +build dragonfly freebsd netbsd openbsd solaris
 
-import (
-	"testing"
+package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/stretchr/testify/require"
-)
-
-func TestGetUserAgentHeader(t *testing.T) {
-	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", GetUserAgentHeader())
+var platformHostIDReader hostIDReader = &hostIDReaderBSD{
+	execCommand: execCommand,
+	readFile:    readFile,
 }

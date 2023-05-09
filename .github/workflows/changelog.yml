@@ -1,6 +1,6 @@
 # This action requires that any PR targeting the main branch should touch at
 # least one CHANGELOG file. If a CHANGELOG entry is not required, or if
-# performing maintance on the Changelog, add either \"[chore]\" to the title of
+# performing maintenance on the Changelog, add either \"[chore]\" to the title of
 # the pull request or add the \"Skip Changelog\" label to disable this action.
 
 name: changelog

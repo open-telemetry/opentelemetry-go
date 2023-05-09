@@ -66,6 +66,7 @@ type collector struct {
 	createTargetInfoOnce sync.Once
 	scopeInfos           map[instrumentation.Scope]prometheus.Metric
 	metricFamilies       map[string]*dto.MetricFamily
+	namespace            string
 }
 
 // prometheus counters MUST have a _total suffix:
@@ -88,6 +89,7 @@ func New(opts ...Option) (*Exporter, error) {
 		disableScopeInfo:  cfg.disableScopeInfo,
 		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
 		metricFamilies:    make(map[string]*dto.MetricFamily),
+		namespace:         cfg.namespace,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -193,7 +195,7 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		m, err := prometheus.NewConstHistogram(desc, dp.Count, dp.Sum, buckets, values...)
+		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
 			continue
@@ -316,9 +318,12 @@ var unitSuffixes = map[string]string{
 	"ms": "_milliseconds",
 }
 
-// getName returns the sanitized name, including unit suffix.
+// getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics) string {
 	name := sanitizeName(m.Name)
+	if c.namespace != "" {
+		name = c.namespace + name
+	}
 	if c.withoutUnits {
 		return name
 	}

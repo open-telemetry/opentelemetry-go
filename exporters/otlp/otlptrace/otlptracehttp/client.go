@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	otinternal "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
@@ -209,7 +210,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 		return request{Request: r}, err
 	}
 
-	r.Header.Set("User-Agent", internal.GetUserAgentHeader())
+	r.Header.Set("User-Agent", otinternal.GetUserAgentHeader())
 
 	for k, v := range d.cfg.Headers {
 		r.Header.Set(k, v)

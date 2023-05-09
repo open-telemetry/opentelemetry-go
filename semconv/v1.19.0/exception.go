@@ -12,22 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.19.0"
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+const (
+	// ExceptionEventName is the name of the Span event representing an exception.
+	ExceptionEventName = "exception"
 )
-
-func TestInt64Options(t *testing.T) {
-	const (
-		token  int64 = 43
-		desc         = "Instrument description."
-		uBytes       = "By"
-	)
-
-	got := NewInt64Config(WithDescription(desc), WithUnit(uBytes))
-	assert.Equal(t, desc, got.Description(), "description")
-	assert.Equal(t, uBytes, got.Unit(), "unit")
-}

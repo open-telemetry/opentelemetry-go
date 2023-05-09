@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func TestMeterProviderRace(t *testing.T) {
@@ -41,7 +41,7 @@ func TestMeterProviderRace(t *testing.T) {
 		}
 	}()
 
-	mp.setDelegate(metric.NewNoopMeterProvider())
+	mp.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
@@ -84,7 +84,7 @@ func TestMeterRace(t *testing.T) {
 	}()
 
 	wg.Wait()
-	mtr.setDelegate(metric.NewNoopMeterProvider())
+	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
@@ -113,11 +113,11 @@ func TestUnregisterRace(t *testing.T) {
 	_ = reg.Unregister()
 
 	wg.Wait()
-	mtr.setDelegate(metric.NewNoopMeterProvider())
+	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 }
 
-func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float64Counter, instrument.Float64ObservableCounter) {
+func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Counter, metric.Float64ObservableCounter) {
 	afcounter, err := m.Float64ObservableCounter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64ObservableUpDownCounter("test_Async_UpDownCounter")

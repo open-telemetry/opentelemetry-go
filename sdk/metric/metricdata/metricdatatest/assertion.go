@@ -34,7 +34,8 @@ type Datatypes interface {
 		metricdata.Histogram[int64] |
 		metricdata.HistogramDataPoint[float64] |
 		metricdata.HistogramDataPoint[int64] |
-		metricdata.Extrema |
+		metricdata.Extrema[int64] |
+		metricdata.Extrema[float64] |
 		metricdata.Metrics |
 		metricdata.ResourceMetrics |
 		metricdata.ScopeMetrics |
@@ -119,8 +120,10 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint[float64]), cfg)
 	case metricdata.HistogramDataPoint[int64]:
 		r = equalHistogramDataPoints(e, aIface.(metricdata.HistogramDataPoint[int64]), cfg)
-	case metricdata.Extrema:
-		r = equalExtrema(e, aIface.(metricdata.Extrema), cfg)
+	case metricdata.Extrema[int64]:
+		r = equalExtrema(e, aIface.(metricdata.Extrema[int64]), cfg)
+	case metricdata.Extrema[float64]:
+		r = equalExtrema(e, aIface.(metricdata.Extrema[float64]), cfg)
 	case metricdata.Metrics:
 		r = equalMetrics(e, aIface.(metricdata.Metrics), cfg)
 	case metricdata.ResourceMetrics:
@@ -183,7 +186,7 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesHistogramDataPoints(e, attrs...)
 	case metricdata.HistogramDataPoint[float64]:
 		reasons = hasAttributesHistogramDataPoints(e, attrs...)
-	case metricdata.Extrema:
+	case metricdata.Extrema[int64], metricdata.Extrema[float64]:
 		// Nothing to check.
 	case metricdata.Histogram[int64]:
 		reasons = hasAttributesHistogram(e, attrs...)

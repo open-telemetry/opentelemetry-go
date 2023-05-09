@@ -60,7 +60,7 @@ func TestMixedAPIs(t *testing.T) {
 		for _, span := range spans {
 			t.Logf("Span: %s", span.Name())
 		}
-		t.Fatalf("Got %d spans, exepected %d.", len(spans), 4)
+		t.Fatalf("Got %d spans, expected %d.", len(spans), 4)
 	}
 
 	var parent trace.SpanContext
@@ -86,11 +86,11 @@ func TestStartOptions(t *testing.T) {
 	spans := sr.Ended()
 
 	if len(spans) != 1 {
-		t.Fatalf("Got %d spans, exepected %d", len(spans), 1)
+		t.Fatalf("Got %d spans, expected %d", len(spans), 1)
 	}
 
 	if spans[0].SpanKind() != trace.SpanKindClient {
-		t.Errorf("Got span kind %v, exepected %d", spans[0].SpanKind(), trace.SpanKindClient)
+		t.Errorf("Got span kind %v, expected %d", spans[0].SpanKind(), trace.SpanKindClient)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 	spans := sr.Ended()
 
 	if len(spans) != 1 {
-		t.Fatalf("Got %d spans, exepected %d", len(spans), 1)
+		t.Fatalf("Got %d spans, expected %d", len(spans), 1)
 	}
 
 	if psid := spans[0].Parent().SpanID(); psid != parent.SpanContext().SpanID() {
@@ -142,7 +142,7 @@ func TestToFromContext(t *testing.T) {
 	spans := sr.Ended()
 
 	if len(spans) != 2 {
-		t.Fatalf("Got %d spans, exepected %d.", len(spans), 2)
+		t.Fatalf("Got %d spans, expected %d.", len(spans), 2)
 	}
 
 	var parent trace.SpanContext
@@ -209,7 +209,7 @@ func TestSetThings(t *testing.T) {
 	spans := sr.Ended()
 
 	if len(spans) != 1 {
-		t.Fatalf("Got %d spans, exepected %d.", len(spans), 1)
+		t.Fatalf("Got %d spans, expected %d.", len(spans), 1)
 	}
 	s := spans[0]
 
