@@ -70,7 +70,7 @@ type collector struct {
 }
 
 // prometheus counters MUST have a _total suffix:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.14.0/specification/metrics/data-model.md#sums-1
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/compatibility/prometheus_and_openmetrics.md
 const counterSuffix = "_total"
 
 // New returns a Prometheus Exporter.
