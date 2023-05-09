@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build bsd || darwin
+//go:build darwin || dragonfly || freebsd || netbsd || openbsd || solaris
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
