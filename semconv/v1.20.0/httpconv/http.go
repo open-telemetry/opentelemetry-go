@@ -21,7 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv/internal/v3"
+	"go.opentelemetry.io/otel/semconv/internal/v4"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
@@ -44,7 +44,8 @@ var (
 
 		EnduserIDKey:                 semconv.EnduserIDKey,
 		HTTPClientIPKey:              semconv.HTTPClientIPKey,
-		HTTPFlavorKey:                semconv.HTTPFlavorKey,
+		NetProtocolNameKey:           semconv.NetProtocolNameKey,
+		NetProtocolVersionKey:        semconv.NetProtocolVersionKey,
 		HTTPMethodKey:                semconv.HTTPMethodKey,
 		HTTPRequestContentLengthKey:  semconv.HTTPRequestContentLengthKey,
 		HTTPResponseContentLengthKey: semconv.HTTPResponseContentLengthKey,
