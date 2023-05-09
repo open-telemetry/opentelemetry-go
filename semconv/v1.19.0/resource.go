@@ -916,6 +916,46 @@ func FaaSMaxMemory(val int) attribute.KeyValue {
 	return FaaSMaxMemoryKey.Int(val)
 }
 
+// Resource used by Google (GCP) Cloud Run
+const (
+	// GCPCloudRunJobExecution is the name of the Cloud Run execution
+	// being run for the Job, as set by the CLOUD_RUN_EXECUTION
+	// environment variable.
+	//
+	// Type: string
+	// RequirementLevel: Recommended
+	// Stability: stable
+	// Examples:
+	// 'sample-job-mdw84'
+	GCPCloudRunJobExecutionKey = attribute.Key("gcp.cloud_run.job.execution")
+
+	// GCPCloudRunJobTaskIndex is the index for a task within an
+	// execution as provided by the CLOUD_RUN_TASK_INDEX environment
+	// variable.
+	//
+	// Type: string
+	// RequirementLevel: Recommended
+	// Stability: stable
+	// Examples: '0', '1'
+	GCPCloudRunJobTaskIndexKey = attribute.Key("gcp.cloud_run.job.task_index")
+)
+
+// GCPCloudRunJobExecution returns an attribute KeyValue conforming
+// to the "gcp.cloud_run.job.execution" semantic conventions. It
+// represents the name of the Cloud Run execution being run for the
+// Job.
+func GCPCloudRunJobExecution(val string) attribute.KeyValue {
+	return GCPCloudRunJobExecutionKey.String(val)
+}
+
+// GCPCloudRunJobTaskIndexKey returns an attribute KeyValue conforming
+// to the "gcp.cloud_run.job.task_index" semantic conventions. It
+// represents the index for a task within an execution as provided by
+// the CLOUD_RUN_TASK_INDEX environment variable.
+func GCPCloudRunJobTaskIndex(val string) attribute.KeyValue {
+	return GCPCloudRunJobTaskIndex.String(val)
+}
+
 // A host is defined as a general computing instance.
 const (
 	// HostIDKey is the attribute Key conforming to the "host.id" semantic

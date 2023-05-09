@@ -25,6 +25,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
   - Use `GetMeterProivder` for a global `metric.MeterProvider`.
   - Use `SetMeterProivder` to set the global `metric.MeterProvider`.
+- GCP Cloud Run resource attributes `gcp.cloud_run.job.execution` and
+  `gcp.cloud_run.job.task_index`. (#4079)
 
 ### Changed
 
