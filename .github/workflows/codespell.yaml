@@ -10,5 +10,5 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
-      - name: Codespell with annotations
+      - name: Codespell
         run: make codespell
