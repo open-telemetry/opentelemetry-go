@@ -27,4 +27,5 @@
 // (e.g. `<key1>=<value1>,<key2>=<value2>,...`).
 //
 // Telemetry Stability: Unstable.
+// The attributes for a detected resource may change in future releases.
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
