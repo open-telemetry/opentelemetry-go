@@ -7,7 +7,6 @@ Thumbs.db
 *.iml
 *.so
 coverage.*
-go.work
 go.work.sum
 
 gen/

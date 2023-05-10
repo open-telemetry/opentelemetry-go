@@ -1,0 +1,36 @@
+go 1.19
+
+use (
+	./
+	./bridge/opencensus
+	./bridge/opencensus/test
+	./bridge/opentracing
+	./bridge/opentracing/test
+	./example/fib
+	./example/jaeger
+	./example/namedtracer
+	./example/opencensus
+	./example/otel-collector
+	./example/passthrough
+	./example/prometheus
+	./example/view
+	./example/zipkin
+	./exporters/jaeger
+	./exporters/otlp/internal/retry
+	./exporters/otlp/otlpmetric
+	./exporters/otlp/otlpmetric/otlpmetricgrpc
+	./exporters/otlp/otlpmetric/otlpmetrichttp
+	./exporters/otlp/otlptrace
+	./exporters/otlp/otlptrace/otlptracegrpc
+	./exporters/otlp/otlptrace/otlptracehttp
+	./exporters/prometheus
+	./exporters/stdout/stdoutmetric
+	./exporters/stdout/stdouttrace
+	./exporters/zipkin
+	./internal/tools
+	./metric
+	./schema
+	./sdk
+	./sdk/metric
+	./trace
+)
