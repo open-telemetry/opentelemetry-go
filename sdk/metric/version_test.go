@@ -12,24 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel_test
+package metric
 
 import (
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel"
 )
 
-// regex taken from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
 var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
 	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
 	`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 func TestVersionSemver(t *testing.T) {
-	v := otel.Version()
-	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
+	v := version()
+	assert.Regexp(t, versionRegex, v)
 }
