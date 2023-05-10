@@ -32,7 +32,10 @@ type Int64Counter interface {
 	embedded.Int64Counter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, opts ...AddOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -82,7 +85,10 @@ type Int64UpDownCounter interface {
 	embedded.Int64UpDownCounter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, opts ...AddOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -132,7 +138,10 @@ type Int64Histogram interface {
 	embedded.Int64Histogram
 
 	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr int64, opts ...RecordOption)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Record(ctx context.Context, incr int64, options ...RecordOption)
 }
 
 // Int64HistogramConfig contains options for synchronous counter instruments
