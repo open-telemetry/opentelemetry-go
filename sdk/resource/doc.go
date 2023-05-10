@@ -26,6 +26,6 @@
 // the value as a list of comma delimited key/value pairs
 // (e.g. `<key1>=<value1>,<key2>=<value2>,...`).
 //
-// Telemetry Stability: Unstable.
-// The attributes for a detected resource may change in future releases.
+// While this package provides a stable API,
+// the attributes added by resource detectors may change.
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
