@@ -29,7 +29,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -720,8 +719,8 @@ func TestConcurrentCollect(t *testing.T) {
 	meterB := provider.Meter("mb", otelmetric.WithInstrumentationVersion("v0.1.0"))
 
 	fooA, err := meterA.Int64Counter("foo",
-		instrument.WithUnit("By"),
-		instrument.WithDescription("meter counter foo"))
+		otelmetric.WithUnit("By"),
+		otelmetric.WithDescription("meter counter foo"))
 	assert.NoError(t, err)
 
 	opt := otelmetric.WithAttributes(
@@ -731,8 +730,8 @@ func TestConcurrentCollect(t *testing.T) {
 	fooA.Add(ctx, 100, opt)
 
 	fooB, err := meterB.Int64Counter("foo",
-		instrument.WithUnit("By"),
-		instrument.WithDescription("meter counter foo"))
+		otelmetric.WithUnit("By"),
+		otelmetric.WithDescription("meter counter foo"))
 	assert.NoError(t, err)
 	fooB.Add(ctx, 100, opt)
 
@@ -803,8 +802,8 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 	meterA := provider.Meter(invalidName, otelmetric.WithInstrumentationVersion("v0.1.0"))
 
 	counterA, err := meterA.Int64Counter(invalidName,
-		instrument.WithUnit("By"),
-		instrument.WithDescription(invalidName))
+		otelmetric.WithUnit("By"),
+		otelmetric.WithDescription(invalidName))
 	assert.NoError(t, err)
 
 	counterA.Add(ctx, 100, otelmetric.WithAttributes(
@@ -813,8 +812,8 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 
 	meterB := provider.Meter(validName, otelmetric.WithInstrumentationVersion("v0.1.0"))
 	counterB, err := meterB.Int64Counter(validName,
-		instrument.WithUnit("By"),
-		instrument.WithDescription(validName))
+		otelmetric.WithUnit("By"),
+		otelmetric.WithDescription(validName))
 	assert.NoError(t, err)
 
 	counterB.Add(ctx, 100, otelmetric.WithAttributes(

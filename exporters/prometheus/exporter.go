@@ -61,8 +61,8 @@ type collector struct {
 
 	withoutUnits     bool
 	disableScopeInfo bool
-  namespace            string
-  
+	namespace        string
+
 	mu                sync.RWMutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
