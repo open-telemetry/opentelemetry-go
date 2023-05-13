@@ -63,7 +63,7 @@ type collector struct {
 	disableScopeInfo bool
 	namespace        string
 
-	mu                sync.RWMutex // mu protects all members below from the concurrent access.
+	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
@@ -427,18 +427,17 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 }
 
 func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
-	c.mu.RLock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	emf, exist := c.metricFamilies[name]
-	c.mu.RUnlock()
 
 	if !exist {
-		c.mu.Lock()
 		c.metricFamilies[name] = &dto.MetricFamily{
 			Name: proto.String(name),
 			Help: proto.String(description),
 			Type: metricType,
 		}
-		c.mu.Unlock()
 		return false, ""
 	}
 
