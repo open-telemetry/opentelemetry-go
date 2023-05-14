@@ -127,11 +127,14 @@ func main() {
 		return
 	case err := <-errCh:
 		if err != nil {
-			l.Fatal(err)
+			l.Panic(err)
 		}
 	}
 }
 ```
+Note that when we receive an error on `errCh`, we call `(*log.Log).Panic` rather
+than `Fatal`. This allows deferred functions to run before the program exits,
+which we'll need when it's time to configure a [`TracerProvider`].
 
 With the code complete it is almost time to run the application. Before you can
 do that you need to initialize this directory as a Go module. From your

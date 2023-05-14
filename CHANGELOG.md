@@ -15,7 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`. (#4077)
+- Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`.
+  (#4077)
+- Replace `(*log.Log).Fatal` call in example that prevents `TracerProvider` shutting down
+  gracefully. (#4090)
 
 ## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
 
