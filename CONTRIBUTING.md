@@ -150,10 +150,10 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 ## Design Choices
 
 As with other OpenTelemetry clients, opentelemetry-go follows the
-[opentelemetry-specification](https://github.com/open-telemetry/opentelemetry-specification).
+[OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel).
 
 It's especially valuable to read through the [library
-guidelines](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/library-guidelines.md).
+guidelines](https://opentelemetry.io/docs/specs/otel/library-guidelines).
 
 ### Focus on Capabilities, Not Structure Compliance
 

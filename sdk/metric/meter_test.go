@@ -1234,7 +1234,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 
 func TestObservableExample(t *testing.T) {
 	// This example can be found:
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/8b91585e6175dd52b51e1d60bea105041225e35d/specification/metrics/supplementary-guidelines.md#asynchronous-example
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/metrics/supplementary-guidelines.md#asynchronous-example
 	var (
 		threadID1 = attribute.Int("tid", 1)
 		threadID2 = attribute.Int("tid", 2)
