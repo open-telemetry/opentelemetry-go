@@ -125,6 +125,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
+	// Initialize (once) targetInfo and disableTargetInfo.
 	func() {
 		var err error
 		var targetInfo prometheus.Metric
