@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package metric // import "go.opentelemetry.io/otel/metric"
 
 import "go.opentelemetry.io/otel/attribute"
 
@@ -22,8 +22,8 @@ type Observable interface {
 	observable()
 }
 
-// Option applies options to all instruments.
-type Option interface {
+// InstrumentOption applies options to all instruments.
+type InstrumentOption interface {
 	Int64CounterOption
 	Int64UpDownCounterOption
 	Int64HistogramOption
@@ -102,7 +102,7 @@ func (o descOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 }
 
 // WithDescription sets the instrument description.
-func WithDescription(desc string) Option { return descOpt(desc) }
+func WithDescription(desc string) InstrumentOption { return descOpt(desc) }
 
 type unitOpt string
 
@@ -167,10 +167,10 @@ func (o unitOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 }
 
 // WithUnit sets the instrument unit.
-func WithUnit(u string) Option { return unitOpt(u) }
+func WithUnit(u string) InstrumentOption { return unitOpt(u) }
 
 // AddOption applies options to an addition measurement. See
-// [MeasurementOption] for other options that can be used as a AddOption.
+// [MeasurementOption] for other options that can be used as an AddOption.
 type AddOption interface {
 	applyAdd(AddConfig) AddConfig
 }

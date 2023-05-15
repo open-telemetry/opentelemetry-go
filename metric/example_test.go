@@ -20,17 +20,16 @@ import (
 	"runtime"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 func ExampleMeter_synchronous() {
 	// Create a histogram using the global MeterProvider.
-	workDuration, err := global.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
+	workDuration, err := otel.Meter("go.opentelemetry.io/otel/metric#SyncExample").Int64Histogram(
 		"workDuration",
-		instrument.WithUnit("ms"))
+		metric.WithUnit("ms"))
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -44,12 +43,12 @@ func ExampleMeter_synchronous() {
 }
 
 func ExampleMeter_asynchronous_single() {
-	meter := global.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
+	meter := otel.Meter("go.opentelemetry.io/otel/metric#AsyncExample")
 
 	_, err := meter.Int64ObservableGauge(
 		"DiskUsage",
-		instrument.WithUnit("By"),
-		instrument.WithInt64Callback(func(_ context.Context, obsrv instrument.Int64Observer) error {
+		metric.WithUnit("By"),
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
 			// Do the real work here to get the real disk usage. For example,
 			//
 			//   usage, err := GetDiskUsage(diskID)
@@ -63,7 +62,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			obsrv.Observe(int64(usage), instrument.WithAttributes(attribute.Int("disk.id", 3)))
+			obsrv.Observe(int64(usage), metric.WithAttributes(attribute.Int("disk.id", 3)))
 			return nil
 		}),
 	)
@@ -74,7 +73,7 @@ func ExampleMeter_asynchronous_single() {
 }
 
 func ExampleMeter_asynchronous_multiple() {
-	meter := global.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
+	meter := otel.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
 	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")

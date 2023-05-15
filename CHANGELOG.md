@@ -8,6 +8,46 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/otel/metric/instrument` package is removed.
+  Use `go.opentelemetry.io/otel/metric` instead. (#4055)
+
+### Fixed
+
+- Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`. (#4077)
+
+## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
+
+This is a release candidate for the v1.16.0/v0.39.0 release.
+That release is expected to include the `v1` release of the OpenTelemetry Go metric API and will provide stability guarantees of that API.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
+### Added
+
+- Support global `MeterProvider` in `go.opentelemetry.io/otel`. (#4039)
+  - Use `Meter` for a `metric.Meter` from the global `metric.MeterProvider`.
+  - Use `GetMeterProivder` for a global `metric.MeterProvider`.
+  - Use `SetMeterProivder` to set the global `metric.MeterProvider`.
+
+### Changed
+
+- Move the `go.opentelemetry.io/otel/metric` module to the `stable-v1` module set.
+  This stages the metric API to be released as a stable module. (#4038)
+
+### Removed
+
+- The `go.opentelemetry.io/otel/metric/global` package is removed.
+  Use `go.opentelemetry.io/otel` instead. (#4039)
+
+## [1.15.1/0.38.1] 2023-05-02
+
+### Fixed
+
+- Remove unused imports from `sdk/resource/host_id_bsd.go` which caused build failures. (#4040, #4041)
+
+## [1.15.0/0.38.0] 2023-04-27
+
 ### Added
 
 - The `go.opentelemetry.io/otel/metric/embedded` package. (#3916)
@@ -35,6 +75,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This adds an implementation requirement to set the interface default behavior for unimplemented methods. (#3916)
 - Move No-Op implementation from `go.opentelemetry.io/otel/metric` into its own package `go.opentelemetry.io/otel/metric/noop`. (#3941)
   - `metric.NewNoopMeterProvider` is replaced with `noop.NewMeterProvider`
+- Add all the methods from `"go.opentelemetry.io/otel/trace".SpanContext` to `bridgeSpanContext` by embedding `otel.SpanContext` in `bridgeSpanContext`. (#3966)
 - Wrap `UploadMetrics` error in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/` to improve error message when encountering generic grpc errors. (#3974)
 - The measurement methods for all instruments in `go.opentelemetry.io/otel/metric/instrument` accept an option instead of the variadic `"go.opentelemetry.io/otel/attribute".KeyValue`. (#3971)
   - The `Int64Counter.Add` method now accepts `...AddOption`
@@ -58,6 +99,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a data race in `SpanProcessor` returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#3951)
 - Automatically figure out the default aggregation with `aggregation.Default`. (#3967)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/metric/instrument` package is deprecated.
+  Use the equivalent types added to `go.opentelemetry.io/otel/metric` instead. (#4018)
+
 ## [1.15.0-rc.2/0.38.0-rc.2] 2023-03-23
 
 This is a release candidate for the v1.15.0/v0.38.0 release.
@@ -73,6 +119,9 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Configuration for each metric instrument in `go.opentelemetry.io/otel/sdk/metric/instrument`. (#3895)
 - The internal logging introduces a warning level verbosity equal to `V(1)`. (#3900)
 - Added a log message warning about usage of `SimpleSpanProcessor` in production environments. (#3854)
+- The `go.opentelemetry.io/otel/semconv/v1.19.0` package. The package contains
+semantic conventions from the `v1.19.0` version of the OpenTelemetry
+specification. (#3846)
 
 ### Changed
 
@@ -2429,7 +2478,10 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.15.0-rc.2...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.16.0-rc.1...HEAD
+[1.16.0-rc.1/0.39.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1
+[1.15.1/0.38.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1
+[1.15.0/0.38.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0
 [1.15.0-rc.2/0.38.0-rc.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0-rc.2
 [1.15.0-rc.1/0.38.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0-rc.1
 [1.14.0/0.37.0/0.0.4]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.14.0

@@ -12,32 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/metric/global"
+package metric
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/noop"
 )
 
-type testMeterProvider struct{ embedded.MeterProvider }
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
+	`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
-var _ metric.MeterProvider = &testMeterProvider{}
-
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
-	return noop.NewMeterProvider().Meter("")
-}
-
-func TestMultipleGlobalMeterProvider(t *testing.T) {
-	p1 := testMeterProvider{}
-	p2 := noop.NewMeterProvider()
-	SetMeterProvider(&p1)
-	SetMeterProvider(p2)
-
-	got := MeterProvider()
-	assert.Equal(t, p2, got)
+func TestVersionSemver(t *testing.T) {
+	v := version()
+	assert.Regexp(t, versionRegex, v)
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global // import "go.opentelemetry.io/otel/metric/internal/global"
+package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"context"
@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
@@ -118,7 +117,7 @@ func TestUnregisterRace(t *testing.T) {
 	close(finish)
 }
 
-func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (instrument.Float64Counter, instrument.Float64ObservableCounter) {
+func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Counter, metric.Float64ObservableCounter) {
 	afcounter, err := m.Float64ObservableCounter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64ObservableUpDownCounter("test_Async_UpDownCounter")
