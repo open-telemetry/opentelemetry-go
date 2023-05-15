@@ -12,18 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build darwin || dragonfly || freebsd || netbsd || openbsd || solaris
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.19.0"
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
-
-import "os/exec"
-
-func execCommand(name string, arg ...string) (string, error) {
-	cmd := exec.Command(name, arg...)
-	b, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
+// SchemaURL is the schema URL that matches the version of the semantic conventions
+// that this package defines. Semconv packages starting from v1.4.0 must declare
+// non-empty schema URL in the form https://opentelemetry.io/schemas/<version>
+const SchemaURL = "https://opentelemetry.io/schemas/1.19.0"

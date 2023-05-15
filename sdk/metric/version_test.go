@@ -12,18 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build darwin || dragonfly || freebsd || netbsd || openbsd || solaris
+package metric
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+import (
+	"regexp"
+	"testing"
 
-import "os/exec"
+	"github.com/stretchr/testify/assert"
+)
 
-func execCommand(name string, arg ...string) (string, error) {
-	cmd := exec.Command(name, arg...)
-	b, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
+// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
+	`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
-	return string(b), nil
+func TestVersionSemver(t *testing.T) {
+	v := version()
+	assert.Regexp(t, versionRegex, v)
 }
