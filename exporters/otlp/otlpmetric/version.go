@@ -12,13 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package internal contains common functionality for all OTLP exporters.
-package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
+package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 
-import "go.opentelemetry.io/otel"
-
-// GetUserAgentHeader return an OTLP header value form "OTel OTLP Exporter Go/{{ .Version }}"
-// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#user-agent
-func GetUserAgentHeader() string {
-	return "OTel OTLP Exporter Go/" + otel.Version()
+// Version is the current release version of the OpenTelemetry OTLP metrics exporter in use.
+func Version() string {
+	return "0.39.0-rc.1"
 }

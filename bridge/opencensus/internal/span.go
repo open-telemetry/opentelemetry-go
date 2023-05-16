@@ -55,7 +55,7 @@ func (s *Span) IsRecordingEvents() bool {
 	return s.otelSpan.IsRecording()
 }
 
-// End ends thi span.
+// End ends this span.
 func (s *Span) End() {
 	s.otelSpan.End()
 }

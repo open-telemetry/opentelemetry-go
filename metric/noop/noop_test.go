@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 func TestImplementationNoPanics(t *testing.T) {
@@ -45,59 +44,59 @@ func TestImplementationNoPanics(t *testing.T) {
 	))
 	t.Run("Int64Counter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Counter{}),
-		reflect.TypeOf((*instrument.Int64Counter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64Counter)(nil)).Elem(),
 	))
 	t.Run("Float64Counter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Counter{}),
-		reflect.TypeOf((*instrument.Float64Counter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64Counter)(nil)).Elem(),
 	))
 	t.Run("Int64UpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64UpDownCounter{}),
-		reflect.TypeOf((*instrument.Int64UpDownCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64UpDownCounter)(nil)).Elem(),
 	))
 	t.Run("Float64UpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64UpDownCounter{}),
-		reflect.TypeOf((*instrument.Float64UpDownCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64UpDownCounter)(nil)).Elem(),
 	))
 	t.Run("Int64Histogram", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Histogram{}),
-		reflect.TypeOf((*instrument.Int64Histogram)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64Histogram)(nil)).Elem(),
 	))
 	t.Run("Float64Histogram", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Histogram{}),
-		reflect.TypeOf((*instrument.Float64Histogram)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64Histogram)(nil)).Elem(),
 	))
 	t.Run("Int64ObservableCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableCounter{}),
-		reflect.TypeOf((*instrument.Int64ObservableCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64ObservableCounter)(nil)).Elem(),
 	))
 	t.Run("Float64ObservableCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableCounter{}),
-		reflect.TypeOf((*instrument.Float64ObservableCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64ObservableCounter)(nil)).Elem(),
 	))
 	t.Run("Int64ObservableGauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableGauge{}),
-		reflect.TypeOf((*instrument.Int64ObservableGauge)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64ObservableGauge)(nil)).Elem(),
 	))
 	t.Run("Float64ObservableGauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableGauge{}),
-		reflect.TypeOf((*instrument.Float64ObservableGauge)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64ObservableGauge)(nil)).Elem(),
 	))
 	t.Run("Int64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableUpDownCounter{}),
-		reflect.TypeOf((*instrument.Int64ObservableUpDownCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64ObservableUpDownCounter)(nil)).Elem(),
 	))
 	t.Run("Float64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableUpDownCounter{}),
-		reflect.TypeOf((*instrument.Float64ObservableUpDownCounter)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64ObservableUpDownCounter)(nil)).Elem(),
 	))
 	t.Run("Int64Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Observer{}),
-		reflect.TypeOf((*instrument.Int64Observer)(nil)).Elem(),
+		reflect.TypeOf((*metric.Int64Observer)(nil)).Elem(),
 	))
 	t.Run("Float64Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Observer{}),
-		reflect.TypeOf((*instrument.Float64Observer)(nil)).Elem(),
+		reflect.TypeOf((*metric.Float64Observer)(nil)).Elem(),
 	))
 }
 

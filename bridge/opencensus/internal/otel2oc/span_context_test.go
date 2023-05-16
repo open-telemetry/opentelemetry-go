@@ -60,7 +60,7 @@ func TestSpanContextConversion(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			output := SpanContext(tc.input)
 			if output != tc.expected {
-				t.Fatalf("Got %+v spancontext, exepected %+v.", output, tc.expected)
+				t.Fatalf("Got %+v spancontext, expected %+v.", output, tc.expected)
 			}
 		})
 	}

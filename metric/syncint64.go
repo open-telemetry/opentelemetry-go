@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrument // import "go.opentelemetry.io/otel/metric/instrument"
+package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
 // Int64Counter is an instrument that records increasing int64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64Counter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64Counter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -61,8 +65,9 @@ func (c Int64CounterConfig) Unit() string {
 	return c.unit
 }
 
-// Int64CounterOption applies options to a [Int64CounterConfig]. See [Option]
-// for other options that can be used as an Int64CounterOption.
+// Int64CounterOption applies options to a [Int64CounterConfig]. See
+// [InstrumentOption] for other options that can be used as an
+// Int64CounterOption.
 type Int64CounterOption interface {
 	applyInt64Counter(Int64CounterConfig) Int64CounterConfig
 }
@@ -71,14 +76,19 @@ type Int64CounterOption interface {
 // int64 values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64UpDownCounter interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64UpDownCounter
 
 	// Add records a change to the counter.
-	Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Add(ctx context.Context, incr int64, options ...AddOption)
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -109,7 +119,7 @@ func (c Int64UpDownCounterConfig) Unit() string {
 }
 
 // Int64UpDownCounterOption applies options to a [Int64UpDownCounterConfig].
-// See [Option] for other options that can be used as an
+// See [InstrumentOption] for other options that can be used as an
 // Int64UpDownCounterOption.
 type Int64UpDownCounterOption interface {
 	applyInt64UpDownCounter(Int64UpDownCounterConfig) Int64UpDownCounterConfig
@@ -119,14 +129,19 @@ type Int64UpDownCounterOption interface {
 // values.
 //
 // Warning: Methods may be added to this interface in minor releases. See
-// [go.opentelemetry.io/otel/metric] package documentation on API
-// implementation for information on how to set default behavior for
-// unimplemented methods.
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Int64Histogram interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.Int64Histogram
 
 	// Record adds an additional value to the distribution.
-	Record(ctx context.Context, incr int64, attrs ...attribute.KeyValue)
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to include measurement attributes.
+	Record(ctx context.Context, incr int64, options ...RecordOption)
 }
 
 // Int64HistogramConfig contains options for synchronous counter instruments
@@ -157,7 +172,8 @@ func (c Int64HistogramConfig) Unit() string {
 }
 
 // Int64HistogramOption applies options to a [Int64HistogramConfig]. See
-// [Option] for other options that can be used as an Int64HistogramOption.
+// [InstrumentOption] for other options that can be used as an
+// Int64HistogramOption.
 type Int64HistogramOption interface {
 	applyInt64Histogram(Int64HistogramConfig) Int64HistogramConfig
 }

@@ -18,18 +18,16 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
+func testFloat64Race(interact func(float64), setDelegate func(metric.Meter)) {
 	finish := make(chan struct{})
 	go func() {
 		for {
-			interact(context.Background(), 1)
+			interact(1)
 			select {
 			case <-finish:
 				return
@@ -42,11 +40,11 @@ func testFloat64Race(interact func(context.Context, float64, ...attribute.KeyVal
 	close(finish)
 }
 
-func testInt64Race(interact func(context.Context, int64, ...attribute.KeyValue), setDelegate func(metric.Meter)) {
+func testInt64Race(interact func(int64), setDelegate func(metric.Meter)) {
 	finish := make(chan struct{})
 	go func() {
 		for {
-			interact(context.Background(), 1)
+			interact(1)
 			select {
 			case <-finish:
 				return
@@ -64,19 +62,19 @@ func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &afCounter{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &afUpDownCounter{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &afGauge{}
-			f := func(context.Context, float64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.Unwrap() }
 			testFloat64Race(f, delegate.setDelegate)
 		})
 	})
@@ -86,19 +84,19 @@ func TestAsyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &aiCounter{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &aiUpDownCounter{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &aiGauge{}
-			f := func(context.Context, int64, ...attribute.KeyValue) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.Unwrap() }
 			testInt64Race(f, delegate.setDelegate)
 		})
 	})
@@ -109,17 +107,20 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &sfCounter{}
-			testFloat64Race(delegate.Add, delegate.setDelegate)
+			f := func(v float64) { delegate.Add(context.Background(), v) }
+			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &sfUpDownCounter{}
-			testFloat64Race(delegate.Add, delegate.setDelegate)
+			f := func(v float64) { delegate.Add(context.Background(), v) }
+			testFloat64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
 			delegate := &sfHistogram{}
-			testFloat64Race(delegate.Record, delegate.setDelegate)
+			f := func(v float64) { delegate.Record(context.Background(), v) }
+			testFloat64Race(f, delegate.setDelegate)
 		})
 	})
 
@@ -128,17 +129,20 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &siCounter{}
-			testInt64Race(delegate.Add, delegate.setDelegate)
+			f := func(v int64) { delegate.Add(context.Background(), v) }
+			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &siUpDownCounter{}
-			testInt64Race(delegate.Add, delegate.setDelegate)
+			f := func(v int64) { delegate.Add(context.Background(), v) }
+			testInt64Race(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(t *testing.T) {
 			delegate := &siHistogram{}
-			testInt64Race(delegate.Record, delegate.setDelegate)
+			f := func(v int64) { delegate.Record(context.Background(), v) }
+			testInt64Race(f, delegate.setDelegate)
 		})
 	})
 }
@@ -146,7 +150,7 @@ func TestSyncInstrumentSetDelegateRace(t *testing.T) {
 type testCountingFloatInstrument struct {
 	count int
 
-	instrument.Float64Observable
+	metric.Float64Observable
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
@@ -158,17 +162,17 @@ type testCountingFloatInstrument struct {
 func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Add(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
 	i.count++
 }
-func (i *testCountingFloatInstrument) Record(context.Context, float64, ...attribute.KeyValue) {
+func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric.RecordOption) {
 	i.count++
 }
 
 type testCountingIntInstrument struct {
 	count int
 
-	instrument.Int64Observable
+	metric.Int64Observable
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
@@ -180,9 +184,9 @@ type testCountingIntInstrument struct {
 func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
-func (i *testCountingIntInstrument) Add(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOption) {
 	i.count++
 }
-func (i *testCountingIntInstrument) Record(context.Context, int64, ...attribute.KeyValue) {
+func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.RecordOption) {
 	i.count++
 }

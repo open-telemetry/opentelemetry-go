@@ -17,8 +17,6 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 	"errors"
-	"os"
-	"os/exec"
 	"strings"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -37,26 +35,6 @@ type hostIDReader interface {
 type fileReader func(string) (string, error)
 
 type commandExecutor func(string, ...string) (string, error)
-
-func readFile(filename string) (string, error) {
-	b, err := os.ReadFile(filename)
-	if err != nil {
-		return "", nil
-	}
-
-	return string(b), nil
-}
-
-// nolint: unused  // This is used by the hostReaderBSD, gated by build tags.
-func execCommand(name string, arg ...string) (string, error) {
-	cmd := exec.Command(name, arg...)
-	b, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
 
 // hostIDReaderBSD implements hostIDReader.
 type hostIDReaderBSD struct {

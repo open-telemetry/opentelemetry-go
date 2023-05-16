@@ -12,15 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package internal contains common functionality for all OTLP exporters.
-package internal // import "go.opentelemetry.io/otel/exporters/otlp/internal"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.19.0"
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+const (
+	// ExceptionEventName is the name of the Span event representing an exception.
+	ExceptionEventName = "exception"
 )
-
-func TestGetUserAgentHeader(t *testing.T) {
-	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", GetUserAgentHeader())
-}
