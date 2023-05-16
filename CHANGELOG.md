@@ -10,9 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `go.opentelemetry.io/otel/semconv/v1.20.0` package. The package contains
-semantic conventions from the `v1.20.0` version of the OpenTelemetry
-specification. (#4078)
+- The `go.opentelemetry.io/otel/semconv/v1.20.0` package.
+  The package contains semantic conventions from the `v1.20.0` version of the OpenTelemetry specification. (#4078)
 
 ### Removed
 
