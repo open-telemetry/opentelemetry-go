@@ -488,8 +488,8 @@ will fail to compile.
 
 We have explored using a v2 of the API to change interfaces and found that there
 was no way to introduce a v2 and have it seamlessly work with the v1 of the API.
-Problems happened libraries that upgraded to v2 when an application did not
-would not produce any telemetry.
+Problems happened with libraries that upgraded to v2 when an application did not,
+and would not produce any telemetry.
 
 More detail of the approaches considered and their limitations can be found in
 the [Use a V2 API to evolve interfaces](https://github.com/open-telemetry/opentelemetry-go/issues/3920)
