@@ -15,7 +15,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix inconsistent import comments in sdk/metric. (#4086)
 - Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`. (#4077)
 
 ## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
