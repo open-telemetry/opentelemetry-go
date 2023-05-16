@@ -9,10 +9,8 @@ import (
 )
 
 type Users struct {
-	Username          string    `json:"username"`
-	HashPassword      string    `json:"hash_password"`
-	FullName          string    `json:"full_name"`
-	Email             string    `json:"email"`
-	PasswordChangedAt time.Time `json:"password_changed_at"`
-	CreatedAt         time.Time `json:"created_at"`
+	Username  string    `json:"username"`
+	FullName  string    `json:"full_name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
 }
