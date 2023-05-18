@@ -85,7 +85,7 @@ go-generate/%: DIR=$*
 go-generate/%: | $(STRINGER) $(PORTO)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
-		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
+		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
 
 .PHONY: vanity-import-fix
 vanity-import-fix: | $(PORTO)
