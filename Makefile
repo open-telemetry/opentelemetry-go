@@ -25,8 +25,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-generate license-check vanity-import-fix misspell go-mod-tidy golangci-lint-fix test-default
-ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate dependabot-generate license-check vanity-import-fix misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -107,9 +107,9 @@ $(PYTOOLS)/%: | $(PYTOOLS)
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
 
-# Build
+# Generate
 
-.PHONY: generate build
+.PHONY: generate
 
 generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
 generate/%: DIR=$*
@@ -118,7 +118,11 @@ generate/%: | $(STRINGER) $(PORTO)
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
 
-build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+# Build
+
+.PHONY: build
+
+build: $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
 build/%: DIR=$*
 build/%:
 	@echo "$(GO) build $(DIR)/..." \
