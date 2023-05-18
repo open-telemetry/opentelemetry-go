@@ -82,7 +82,7 @@ generate: go-generate vanity-import-fix
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
 go-generate/%: DIR=$*
-go-generate/%: | $(STRINGER) $(PORTO)
+go-generate/%: | $(STRINGER)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
