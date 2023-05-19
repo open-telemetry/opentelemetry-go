@@ -71,7 +71,9 @@ type ErrLogger struct {
 
 // Handle logs err if no delegate is set, otherwise it is delegated.
 func (h *ErrLogger) Handle(err error) {
-	h.l.Print(err)
+	if err != nil {
+		h.l.Print(err)
+	}
 }
 
 // GetErrorHandler returns the global ErrorHandler instance.

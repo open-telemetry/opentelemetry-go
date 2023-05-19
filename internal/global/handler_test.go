@@ -119,6 +119,11 @@ func (s *HandlerTestSuite) TestAllowMultipleSets() {
 	s.Assert().Same(GlobalErrorHandler.getDelegate(), tertiary, "user Handler not overridden")
 }
 
+func (s *HandlerTestSuite) TestNilErrorSkip() {
+	Handle(nil)
+	s.Assert().Len(s.errCatcher.Got(), 0, "nil error does not go to logger")
+}
+
 func TestHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(HandlerTestSuite))
 }
