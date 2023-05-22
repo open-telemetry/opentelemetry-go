@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -96,6 +98,7 @@ func getOptionsFromEnv() []GenericOption {
 		WithEnvCompression("METRICS_COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
 		envconfig.WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
 		envconfig.WithDuration("METRICS_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+		WithEnvTemporalitySelector("METRICS_TEMPORALITY_PREFERENCE", func(s metric.TemporalitySelector) { opts = append(opts, WithTemporalitySelector(s)) }),
 	)
 
 	return opts
@@ -147,4 +150,36 @@ func withTLSConfig(c *tls.Config, fn func(*tls.Config)) func(e *envconfig.EnvOpt
 			fn(c)
 		}
 	}
+}
+
+// WithEnvTemporalitySelector sets the temporality selector based on the environment variable.
+// See https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk_exporters/otlp.md#additional-configuration
+// for more details.
+func WithEnvTemporalitySelector(n string, fn func(metric.TemporalitySelector)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
+		if v, ok := e.GetEnvValue(n); ok {
+			switch strings.ToLower(v) {
+			case "delta":
+				fn(deltaTemporality)
+			case "lowmemory":
+				fn(lowMemoryTemporality)
+			case "cumulative":
+				fn(cumulativeTemporality)
+			}
+		}
+	}
+}
+
+func deltaTemporality(ik metric.InstrumentKind) metricdata.Temporality {
+	return metricdata.DeltaTemporality
+}
+func cumulativeTemporality(ik metric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
+}
+func lowMemoryTemporality(ik metric.InstrumentKind) metricdata.Temporality {
+	switch ik {
+	case metric.InstrumentKindCounter, metric.InstrumentKindHistogram:
+		return metricdata.DeltaTemporality
+	}
+	return metricdata.CumulativeTemporality
 }

@@ -402,6 +402,30 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, metricdata.DeltaTemporality, got(undefinedKind))
 			},
 		},
+		{
+			name: "WithTemporalityPreference",
+			env:  map[string]string{"OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "LowMemory"},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				got := c.Metrics.TemporalitySelector
+				assert.Equal(t, metricdata.DeltaTemporality, got(metric.InstrumentKindCounter))
+				assert.Equal(t, metricdata.CumulativeTemporality, got(metric.InstrumentKindUpDownCounter))
+			},
+		},
+		{
+			name: "WithTemporalitySelector overrides preference",
+			env:  map[string]string{"OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative"},
+			opts: []oconf.GenericOption{
+				oconf.WithTemporalitySelector(deltaSelector),
+			},
+			asserts: func(t *testing.T, c *oconf.Config, grpcOption bool) {
+				// Function value comparisons are disallowed, test non-default
+				// behavior of a TemporalitySelector here to ensure our "catch
+				// all" was set.
+				var undefinedKind metric.InstrumentKind
+				got := c.Metrics.TemporalitySelector
+				assert.Equal(t, metricdata.DeltaTemporality, got(undefinedKind))
+			},
+		},
 
 		// Aggregation Selector Tests
 		{
