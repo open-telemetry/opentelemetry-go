@@ -37,7 +37,7 @@ jobs:
         with:
           path: ~/.tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
-      - name: Run go generate
+      - name: Generate
         run: make generate
       - name: Run linters
         run: make dependabot-check license-check lint vanity-import-check
