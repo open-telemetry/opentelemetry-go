@@ -42,7 +42,11 @@ type Datatypes interface {
 		metricdata.Sum[float64] |
 		metricdata.Sum[int64] |
 		metricdata.Exemplar[float64] |
-		metricdata.Exemplar[int64]
+		metricdata.Exemplar[int64] |
+		metricdata.ExponentialHistogram[float64] |
+		metricdata.ExponentialHistogram[int64] |
+		metricdata.ExponentialHistogramDataPoint[float64] |
+		metricdata.ExponentialHistogramDataPoint[int64]
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -134,6 +138,14 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalSums(e, aIface.(metricdata.Sum[int64]), cfg)
 	case metricdata.Sum[float64]:
 		r = equalSums(e, aIface.(metricdata.Sum[float64]), cfg)
+	case metricdata.ExponentialHistogram[float64]:
+		r = equalExponentialHistograms(e, aIface.(metricdata.ExponentialHistogram[float64]), cfg)
+	case metricdata.ExponentialHistogram[int64]:
+		r = equalExponentialHistograms(e, aIface.(metricdata.ExponentialHistogram[int64]), cfg)
+	case metricdata.ExponentialHistogramDataPoint[float64]:
+		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[float64]), cfg)
+	case metricdata.ExponentialHistogramDataPoint[int64]:
+		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[int64]), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -198,6 +210,14 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesScopeMetrics(e, attrs...)
 	case metricdata.ResourceMetrics:
 		reasons = hasAttributesResourceMetrics(e, attrs...)
+	case metricdata.ExponentialHistogram[int64]:
+		reasons = hasAttributesExponentialHistogram(e, attrs...)
+	case metricdata.ExponentialHistogram[float64]:
+		reasons = hasAttributesExponentialHistogram(e, attrs...)
+	case metricdata.ExponentialHistogramDataPoint[int64]:
+		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
+	case metricdata.ExponentialHistogramDataPoint[float64]:
+		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.

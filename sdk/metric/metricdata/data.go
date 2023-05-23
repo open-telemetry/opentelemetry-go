@@ -137,6 +137,52 @@ type HistogramDataPoint[N int64 | float64] struct {
 	Exemplars []Exemplar[N] `json:",omitempty"`
 }
 
+// ExponentialHistogram represents the histogram of all measurements of values from an instrument.
+type ExponentialHistogram[N int64 | float64] struct {
+	// DataPoints are the individual aggregated measurements with unique
+	// Attributes.
+	DataPoints []ExponentialHistogramDataPoint[N]
+	// Temporality describes if the aggregation is reported as the change from the
+	// last report time, or the cumulative changes since a fixed start time.
+	Temporality Temporality
+}
+
+func (ExponentialHistogram[N]) privateAggregation() {}
+
+// ExponentialHistogramDataPoint is a single histogram data point in a timeseries.
+type ExponentialHistogramDataPoint[N int64 | float64] struct {
+	// Attributes is the set of key value pairs that uniquely identify the
+	// timeseries.
+	Attributes attribute.Set
+	// StartTime is when the timeseries was started.
+	StartTime time.Time
+	// Time is the time when the timeseries was recorded.
+	Time time.Time
+
+	// Count is the number of updates this histogram has been calculated with.
+	Count uint64
+	// Min is the minimum value recorded. (optional)
+	Min Extrema[N]
+	// Max is the maximum value recorded. (optional)
+	Max Extrema[N]
+	// Sum is the sum of the values recorded.
+	Sum N
+
+	Scale     int32
+	ZeroCount uint64
+
+	PositiveOffset int32
+	PositiveCounts []uint64
+
+	NegativeOffset int32
+	NegativeCounts []uint64
+
+	ZeroThreshold float64
+
+	// Exemplars is the sampled Exemplars collected during the timeseries.
+	Exemplars []Exemplar[N] `json:",omitempty"`
+}
+
 // Extrema is the minimum or maximum value of a dataset.
 type Extrema[N int64 | float64] struct {
 	value N

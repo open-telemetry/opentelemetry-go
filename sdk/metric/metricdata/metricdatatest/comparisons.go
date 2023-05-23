@@ -143,6 +143,18 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, "Histogram not equal:")
 			reasons = append(reasons, r...)
 		}
+	case metricdata.ExponentialHistogram[int64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.ExponentialHistogram[float64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
 	default:
 		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
@@ -296,6 +308,97 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 	if a.Sum != b.Sum {
 		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
 	}
+	if !cfg.ignoreExemplars {
+		r := compareDiff(diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(a, b metricdata.Exemplar[N]) bool {
+				r := equalExemplars(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+		}
+	}
+	return reasons
+}
+
+// equalExponentialHistograms returns reasons exponential Histograms are not equal. If they are
+// equal, the returned reasons will be empty.
+//
+// The DataPoints each Histogram contains are compared based on containing the
+// same HistogramDataPoint, not the order they are stored in.
+func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHistogram[N], cfg config) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+
+	r := compareDiff(diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(a, b metricdata.ExponentialHistogramDataPoint[N]) bool {
+			r := equalExponentialHistogramDataPoints(a, b, cfg)
+			return len(r) == 0
+		},
+	))
+	if r != "" {
+		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
+	}
+	return reasons
+}
+
+// equalExponentialHistogramDataPoints returns reasons HistogramDataPoints are not equal.
+// If they are equal, the returned reasons will be empty.
+func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.ExponentialHistogramDataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.Encoded(attribute.DefaultEncoder()),
+			b.Attributes.Encoded(attribute.DefaultEncoder()),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if a.Count != b.Count {
+		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+	}
+	if !eqExtrema(a.Min, b.Min) {
+		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+	}
+	if !eqExtrema(a.Max, b.Max) {
+		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+	}
+	if a.Sum != b.Sum {
+		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+	}
+
+	if a.Scale != b.Scale {
+		reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
+	}
+	if a.ZeroCount != b.ZeroCount {
+		reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
+	}
+
+	if a.PositiveOffset != b.PositiveOffset {
+		reasons = append(reasons, notEqualStr("PositiveOffset", a.PositiveOffset, b.PositiveOffset))
+	}
+	if !equalSlices(a.PositiveCounts, b.PositiveCounts) {
+		reasons = append(reasons, notEqualStr("PositiveCounts", a.PositiveCounts, b.PositiveCounts))
+	}
+	if a.NegativeOffset != b.NegativeOffset {
+		reasons = append(reasons, notEqualStr("NegativeOffset", a.NegativeOffset, b.NegativeOffset))
+	}
+	if !equalSlices(a.NegativeCounts, b.NegativeCounts) {
+		reasons = append(reasons, notEqualStr("NegativeCounts", a.NegativeCounts, b.NegativeCounts))
+	}
+
 	if !cfg.ignoreExemplars {
 		r := compareDiff(diffSlices(
 			a.Exemplars,
@@ -557,6 +660,31 @@ func hasAttributesHistogram[T int64 | float64](histogram metricdata.Histogram[T]
 	return reasons
 }
 
+func hasAttributesExponentialHistogramDataPoints[T int64 | float64](dp metricdata.ExponentialHistogramDataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesExponentialHistogram[T int64 | float64](histogram metricdata.ExponentialHistogram[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range histogram.DataPoints {
+		reas := hasAttributesExponentialHistogramDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("histogram datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
 func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.KeyValue) (reasons []string) {
 	switch agg := agg.(type) {
 	case metricdata.Gauge[int64]:
@@ -571,6 +699,10 @@ func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.Key
 		reasons = hasAttributesHistogram(agg, attrs...)
 	case metricdata.Histogram[float64]:
 		reasons = hasAttributesHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[int64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[float64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
 	default:
 		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
 	}

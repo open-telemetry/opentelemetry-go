@@ -205,6 +205,99 @@ var (
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
+	exponentialHistogramDataPointInt64A = metricdata.ExponentialHistogramDataPoint[int64]{
+		Attributes:     attrA,
+		StartTime:      startA,
+		Time:           endA,
+		Count:          5,
+		Min:            minInt64A,
+		Sum:            2,
+		Scale:          1,
+		ZeroCount:      1,
+		PositiveOffset: 3,
+		PositiveCounts: []uint64{1, 1},
+		NegativeOffset: 2,
+		NegativeCounts: []uint64{1, 1},
+		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64A},
+	}
+	exponentialHistogramDataPointFloat64A = metricdata.ExponentialHistogramDataPoint[float64]{
+		Attributes:     attrA,
+		StartTime:      startA,
+		Time:           endA,
+		Count:          5,
+		Min:            minFloat64A,
+		Sum:            2,
+		Scale:          1,
+		ZeroCount:      1,
+		PositiveOffset: 3,
+		PositiveCounts: []uint64{1, 1},
+		NegativeOffset: 2,
+		NegativeCounts: []uint64{1, 1},
+		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64A},
+	}
+	exponentialHistogramDataPointInt64B = metricdata.ExponentialHistogramDataPoint[int64]{
+		Attributes:     attrB,
+		StartTime:      startB,
+		Time:           endB,
+		Count:          6,
+		Min:            minInt64B,
+		Max:            maxInt64B,
+		Sum:            3,
+		Scale:          2,
+		ZeroCount:      3,
+		PositiveOffset: 4,
+		PositiveCounts: []uint64{1, 1, 1},
+		NegativeOffset: 5,
+		NegativeCounts: []uint64{1, 1, 1},
+		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64B},
+	}
+	exponentialHistogramDataPointFloat64B = metricdata.ExponentialHistogramDataPoint[float64]{
+		Attributes:     attrB,
+		StartTime:      startB,
+		Time:           endB,
+		Count:          6,
+		Min:            minFloat64B,
+		Max:            maxFloat64B,
+		Sum:            3,
+		Scale:          2,
+		ZeroCount:      3,
+		PositiveOffset: 4,
+		PositiveCounts: []uint64{1, 1, 1},
+		NegativeOffset: 5,
+		NegativeCounts: []uint64{1, 1, 1},
+		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64B},
+	}
+	exponentialHistogramDataPointInt64C = metricdata.ExponentialHistogramDataPoint[int64]{
+		Attributes:     attrA,
+		StartTime:      startB,
+		Time:           endB,
+		Count:          5,
+		Min:            minInt64C,
+		Sum:            2,
+		Scale:          1,
+		ZeroCount:      1,
+		PositiveOffset: 3,
+		PositiveCounts: []uint64{1, 1},
+		NegativeOffset: 2,
+		NegativeCounts: []uint64{1, 1},
+		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64C},
+	}
+	exponentialHistogramDataPointFloat64C = metricdata.ExponentialHistogramDataPoint[float64]{
+		Attributes:     attrA,
+		StartTime:      startB,
+		Time:           endB,
+		Count:          5,
+		Min:            minFloat64A,
+		Sum:            2,
+		Scale:          1,
+		ZeroCount:      1,
+		PositiveOffset: 3,
+		PositiveCounts: []uint64{1, 1},
+		NegativeOffset: 2,
+		NegativeCounts: []uint64{1, 1},
+		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64C},
+	}
+
 	gaugeInt64A = metricdata.Gauge[int64]{
 		DataPoints: []metricdata.DataPoint[int64]{dataPointInt64A},
 	}
@@ -278,6 +371,31 @@ var (
 	histogramFloat64C = metricdata.Histogram[float64]{
 		Temporality: metricdata.CumulativeTemporality,
 		DataPoints:  []metricdata.HistogramDataPoint[float64]{histogramDataPointFloat64C},
+	}
+
+	exponentialHistogramInt64A = metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{exponentialHistogramDataPointInt64A},
+	}
+	exponentialHistogramFloat64A = metricdata.ExponentialHistogram[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{exponentialHistogramDataPointFloat64A},
+	}
+	exponentialHistogramInt64B = metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{exponentialHistogramDataPointInt64B},
+	}
+	exponentialHistogramFloat64B = metricdata.ExponentialHistogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{exponentialHistogramDataPointFloat64B},
+	}
+	exponentialHistogramInt64C = metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{exponentialHistogramDataPointInt64C},
+	}
+	exponentialHistogramFloat64C = metricdata.ExponentialHistogram[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{exponentialHistogramDataPointFloat64C},
 	}
 
 	metricsA = metricdata.Metrics{
@@ -378,6 +496,10 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("ExtremaFloat64", testDatatype(minFloat64A, minFloat64B, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatype(exemplarInt64A, exemplarInt64B, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatype(exemplarFloat64A, exemplarFloat64B, equalExemplars[float64]))
+	t.Run("ExponentialHistogramInt64", testDatatype(exponentialHistogramInt64A, exponentialHistogramInt64B, equalExponentialHistograms[int64]))
+	t.Run("ExponentialHistogramFloat64", testDatatype(exponentialHistogramFloat64A, exponentialHistogramFloat64B, equalExponentialHistograms[float64]))
+	t.Run("ExponentialHistogramDataPointInt64", testDatatype(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64B, equalExponentialHistogramDataPoints[int64]))
+	t.Run("ExponentialHistogramDataPointFloat64", testDatatype(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64B, equalExponentialHistogramDataPoints[float64]))
 }
 
 func TestAssertEqualIgnoreTime(t *testing.T) {
@@ -398,6 +520,10 @@ func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("ExtremaFloat64", testDatatypeIgnoreTime(minFloat64A, minFloat64C, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatypeIgnoreTime(exemplarInt64A, exemplarInt64C, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatypeIgnoreTime(exemplarFloat64A, exemplarFloat64C, equalExemplars[float64]))
+	t.Run("ExponentialHistogramInt64", testDatatypeIgnoreTime(exponentialHistogramInt64A, exponentialHistogramInt64C, equalExponentialHistograms[int64]))
+	t.Run("ExponentialHistogramFloat64", testDatatypeIgnoreTime(exponentialHistogramFloat64A, exponentialHistogramFloat64C, equalExponentialHistograms[float64]))
+	t.Run("ExponentialHistogramDataPointInt64", testDatatypeIgnoreTime(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64C, equalExponentialHistogramDataPoints[int64]))
+	t.Run("ExponentialHistogramDataPointFloat64", testDatatypeIgnoreTime(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64C, equalExponentialHistogramDataPoints[float64]))
 }
 
 func TestAssertEqualIgnoreExemplars(t *testing.T) {
@@ -416,6 +542,14 @@ func TestAssertEqualIgnoreExemplars(t *testing.T) {
 	dpFloat64 := dataPointFloat64A
 	dpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
 	t.Run("DataPointFloat64", testDatatypeIgnoreExemplars(dataPointFloat64A, dpFloat64, equalDataPoints[float64]))
+
+	ehdpInt64 := exponentialHistogramDataPointInt64A
+	ehdpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
+	t.Run("ExponentialHistogramDataPointInt64", testDatatypeIgnoreExemplars(exponentialHistogramDataPointInt64A, ehdpInt64, equalExponentialHistogramDataPoints[int64]))
+
+	ehdpFloat64 := exponentialHistogramDataPointFloat64A
+	ehdpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
+	t.Run("ExponentialHistogramDataPointFloat64", testDatatypeIgnoreExemplars(exponentialHistogramDataPointFloat64A, ehdpFloat64, equalExponentialHistogramDataPoints[float64]))
 }
 
 type unknownAggregation struct {
@@ -430,6 +564,8 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	AssertAggregationsEqual(t, gaugeFloat64A, gaugeFloat64A)
 	AssertAggregationsEqual(t, histogramInt64A, histogramInt64A)
 	AssertAggregationsEqual(t, histogramFloat64A, histogramFloat64A)
+	AssertAggregationsEqual(t, exponentialHistogramInt64A, exponentialHistogramInt64A)
+	AssertAggregationsEqual(t, exponentialHistogramFloat64A, exponentialHistogramFloat64A)
 
 	r := equalAggregations(sumInt64A, nil, config{})
 	assert.Len(t, r, 1, "should return nil comparison mismatch only")
@@ -475,6 +611,18 @@ func TestAssertAggregationsEqual(t *testing.T) {
 
 	r = equalAggregations(histogramFloat64A, histogramFloat64C, config{ignoreTimestamp: true})
 	assert.Len(t, r, 0, "histograms should be equal: %v", r)
+
+	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64B, config{})
+	assert.Greaterf(t, len(r), 0, "exponential histograms should not be equal: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64B)
+
+	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64C, config{ignoreTimestamp: true})
+	assert.Len(t, r, 0, "exponential histograms should be equal: %v", r)
+
+	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64B, config{})
+	assert.Greaterf(t, len(r), 0, "exponential histograms should not be equal: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64B)
+
+	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64C, config{ignoreTimestamp: true})
+	assert.Len(t, r, 0, "exponential histograms should be equal: %v", r)
 }
 
 func TestAssertAttributes(t *testing.T) {
@@ -494,6 +642,10 @@ func TestAssertAttributes(t *testing.T) {
 	AssertHasAttributes(t, metricsA, attribute.Bool("A", true))
 	AssertHasAttributes(t, scopeMetricsA, attribute.Bool("A", true))
 	AssertHasAttributes(t, resourceMetricsA, attribute.Bool("A", true))
+	AssertHasAttributes(t, exponentialHistogramDataPointInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, exponentialHistogramDataPointFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, exponentialHistogramInt64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, exponentialHistogramFloat64A, attribute.Bool("A", true))
 
 	r := hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", true))
 	assert.Equal(t, len(r), 0, "gaugeInt64A has A=True")
@@ -507,6 +659,10 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Equal(t, len(r), 0, "histogramInt64A has A=True")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", true))
 	assert.Equal(t, len(r), 0, "histogramFloat64A has A=True")
+	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "exponentialHistogramInt64A has A=True")
+	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("A", true))
+	assert.Equal(t, len(r), 0, "exponentialHistogramFloat64A has A=True")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", false))
 	assert.Greater(t, len(r), 0, "gaugeInt64A does not have A=False")
@@ -520,6 +676,10 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Greater(t, len(r), 0, "histogramInt64A does not have A=False")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", false))
 	assert.Greater(t, len(r), 0, "histogramFloat64A does not have A=False")
+	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "exponentialHistogramInt64A does not have A=False")
+	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("A", false))
+	assert.Greater(t, len(r), 0, "exponentialHistogramFloat64A does not have A=False")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("B", true))
 	assert.Greater(t, len(r), 0, "gaugeInt64A does not have Attribute B")
@@ -533,6 +693,10 @@ func TestAssertAttributes(t *testing.T) {
 	assert.Greater(t, len(r), 0, "histogramIntA does not have Attribute B")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("B", true))
 	assert.Greater(t, len(r), 0, "histogramFloatA does not have Attribute B")
+	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "exponentialHistogramIntA does not have Attribute B")
+	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("B", true))
+	assert.Greater(t, len(r), 0, "exponentialHistogramFloatA does not have Attribute B")
 }
 
 func TestAssertAttributesFail(t *testing.T) {
@@ -553,6 +717,10 @@ func TestAssertAttributesFail(t *testing.T) {
 	assert.False(t, AssertHasAttributes(fakeT, metricsA, attribute.Bool("B", true)))
 	assert.False(t, AssertHasAttributes(fakeT, resourceMetricsA, attribute.Bool("A", false)))
 	assert.False(t, AssertHasAttributes(fakeT, resourceMetricsA, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, exponentialHistogramDataPointInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, exponentialHistogramDataPointFloat64A, attribute.Bool("B", true)))
+	assert.False(t, AssertHasAttributes(fakeT, exponentialHistogramInt64A, attribute.Bool("A", false)))
+	assert.False(t, AssertHasAttributes(fakeT, exponentialHistogramFloat64A, attribute.Bool("B", true)))
 
 	sum := metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
