@@ -17,7 +17,6 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"encoding/json"
 	"reflect"
-	"runtime"
 	"sort"
 	"sync"
 )
@@ -30,14 +29,19 @@ type (
 	// This type supports the Equivalent method of comparison using values of
 	// type Distinct.
 	Set struct {
-		key uint64
+		// id is the key to the sets registry where this set's data is.
+		//
+		// A pointer is used so the finalizer can handle reference-counting for
+		// the sets registry while still being optimized as a map key.
+		id *uint64
 	}
 
 	// Distinct wraps a variable-size array of KeyValue, constructed with keys
 	// in sorted order. This can be used as a map key or for equality checking
 	// between Sets.
 	Distinct struct {
-		key uint64
+		// id is the key to the sets registry where this set's data is.
+		id uint64
 	}
 
 	// Filter supports removing certain attributes from attribute sets. When
@@ -76,18 +80,14 @@ func EmptySet() *Set {
 }
 
 // Valid returns true if this value refers to a valid Set.
-func (d Distinct) Valid() bool {
-	// TODO: determine if we want to use a bit to signal this instead of
-	// leaving it up to probabilities.
-	return d.key != 0
-}
+func (d Distinct) Valid() bool { return sets.Has(d.id) }
 
 // Len returns the number of attributes in this set.
 func (l *Set) Len() int {
-	if l == nil {
+	if l == nil || l.id == nil {
 		return 0
 	}
-	v, ok := sets.Load(l.key)
+	v, ok := sets.Load(*l.id)
 	if !ok {
 		return 0
 	}
@@ -96,10 +96,10 @@ func (l *Set) Len() int {
 
 // Get returns the KeyValue at ordered position idx in this set.
 func (l *Set) Get(idx int) (KeyValue, bool) {
-	if l == nil {
+	if l == nil || l.id == nil {
 		return KeyValue{}, false
 	}
-	v, ok := sets.Load(l.key)
+	v, ok := sets.Load(*l.id)
 	if ok && idx >= 0 && idx < len(v) {
 		// Note: The Go compiler successfully avoids an allocation for
 		// the interface{} conversion here:
@@ -111,10 +111,10 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 
 // Value returns the value of a specified key in this set.
 func (l *Set) Value(k Key) (Value, bool) {
-	if l == nil {
+	if l == nil || l.id == nil {
 		return Value{}, false
 	}
-	v, ok := sets.Load(l.key)
+	v, ok := sets.Load(*l.id)
 	if !ok {
 		return Value{}, false
 	}
@@ -132,16 +132,16 @@ func (l *Set) Value(k Key) (Value, bool) {
 
 // HasValue tests whether a key is defined in this set.
 func (l *Set) HasValue(k Key) bool {
-	if l == nil {
-		return false
-	}
 	_, ok := l.Value(k)
 	return ok
 }
 
 // Iter returns an iterator for visiting the attributes in this set.
 func (l *Set) Iter() Iterator {
-	v, _ := sets.Load(l.key)
+	if l == nil || l.id == nil {
+		return Iterator{idx: -1}
+	}
+	v, _ := sets.Load(*l.id)
 	return Iterator{
 		storage: v,
 		idx:     -1,
@@ -151,7 +151,10 @@ func (l *Set) Iter() Iterator {
 // ToSlice returns the set of attributes belonging to this set, sorted, where
 // keys appear no more than once.
 func (l *Set) ToSlice() []KeyValue {
-	v, ok := sets.Load(l.key)
+	if l == nil || l.id == nil {
+		return nil
+	}
+	v, ok := sets.Load(*l.id)
 	if !ok {
 		return nil
 	}
@@ -166,10 +169,10 @@ func (l *Set) ToSlice() []KeyValue {
 // attribute set with the same elements as this, where sets are made unique by
 // choosing the last value in the input for any given key.
 func (l *Set) Equivalent() Distinct {
-	if l == nil {
+	if l == nil || l.id == nil {
 		return Distinct{}
 	}
-	return Distinct{l.key}
+	return Distinct{*l.id}
 }
 
 // Equals returns true if the argument set is equivalent to this set.
@@ -177,7 +180,7 @@ func (l *Set) Equals(o *Set) bool {
 	if l == nil || o == nil {
 		return l == o
 	}
-	return l.key == o.key
+	return l.id == o.id
 }
 
 // Encoded returns the encoded form of this set, according to encoder.
@@ -267,6 +270,7 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 		return empty(), nil
 	}
 
+	// TODO: use a pool.
 	data := make([]KeyValue, len(kvs))
 	copy(data, kvs)
 
@@ -302,10 +306,9 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 	if filter != nil {
 		set, dropped = filterSet(data[position:], filter)
 	} else {
-		set = Set{key: sets.Store(data[position:])}
+		set = Set{id: sets.Store(data[position:])}
 	}
 
-	runtime.SetFinalizer(&set, func(s *Set) { sets.Delete(s.key) })
 	return set, dropped
 }
 
@@ -330,7 +333,7 @@ func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	}
 	excluded = kvs[:distinctPosition]
 
-	return Set{key: sets.Store(kvs[distinctPosition:])}, excluded
+	return Set{id: sets.Store(kvs[distinctPosition:])}, excluded
 }
 
 // Filter returns a filtered copy of this Set. See the documentation for
@@ -342,14 +345,15 @@ func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 
 	// Note: This could be refactored to avoid the temporary slice
 	// allocation, if it proves to be expensive.
-	set, dropped := filterSet(l.ToSlice(), re)
-	runtime.SetFinalizer(&set, func(s *Set) { sets.Delete(s.key) })
-	return set, dropped
+	return filterSet(l.ToSlice(), re)
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
 func (l *Set) MarshalJSON() ([]byte, error) {
-	v, _ := sets.Load(l.key)
+	if l == nil || l.id == nil {
+		return nil, nil
+	}
+	v, _ := sets.Load(*l.id)
 	return json.Marshal(v)
 }
 

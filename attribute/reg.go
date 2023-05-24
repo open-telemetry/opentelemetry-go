@@ -3,6 +3,7 @@ package attribute
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
@@ -10,62 +11,73 @@ import (
 
 // sets is a registry of all Set data.
 // TODO: optimize initial size.
-var sets = newRegistry(10)
+var sets = newDataRegistry(-1)
+
+type value struct {
+	// id is the hash of data. This value is stored (in addition to it being a
+	// map key) so a pointer that always points to the same place in memory is
+	// used. Otherwise, if a pointer to the computed hash value is used it will
+	// point to different memory and the finalizer will not be set for a unique
+	// identifier of the data.
+	id   uint64
+	data []KeyValue
+}
 
 type registry struct {
 	sync.RWMutex
-	data map[uint64][]KeyValue
+	data map[uint64]*value
 }
 
-func newRegistry(n int) *registry {
-	return &registry{data: make(map[uint64][]KeyValue, n)}
+func newDataRegistry(n int) *registry {
+	if n <= 0 {
+		return &registry{data: make(map[uint64]*value)}
+	}
+	return &registry{data: make(map[uint64]*value, n)}
 }
 
 // Load returns the value stored in the registry for a key, or nil if no value
 // is present. The ok result indicates whether value was found in the registry.
-func (r *registry) Load(key uint64) (value []KeyValue, ok bool) {
+func (r *registry) Load(key uint64) (v []KeyValue, ok bool) {
+	var val *value
 	r.RLock()
-	value, ok = r.data[key]
+	val, ok = r.data[key]
 	r.RUnlock()
-	return value, ok
+	return val.data, ok
 }
 
-// Store stores the value returning a unique identifying key.
+func (r *registry) Has(key uint64) (ok bool) {
+	r.RLock()
+	_, ok = r.data[key]
+	r.RUnlock()
+	return ok
+}
+
+// Store stores data and returns a pointer to its unique identifying key.
 //
-// This assumes value is sorted consistently.
-func (r *registry) Store(value []KeyValue) (key uint64) {
+// This assumes data is sorted consistently with unique values.
+func (r *registry) Store(data []KeyValue) *uint64 {
 	h := fnv.New()
-	for _, kv := range value {
+	for _, kv := range data {
 		h = hash(h, kv)
 	}
-	key = uint64(h)
+
+	key := uint64(h)
 
 	r.Lock()
-	key = r.unique(key, value)
-	r.data[key] = value
-	r.Unlock()
-
-	return key
-}
-
-// unique ensures key does not collide with any existing key. If it does not,
-// the original key will be returned. Otherwise, value is checked to determine
-// if it is the same value within the registry. If it is, the original key is
-// returned. If the key collides and the values are not equal, the key will be
-// re-hashed until an unique key is found, and that unique key will be
-// returned.
-//
-// This function assumes r.Lock is held.
-func (r *registry) unique(key uint64, value []KeyValue) uint64 {
-	h := fnv.Hash(key)
+	defer r.Unlock()
 	for {
+		// TODO: reserve 0 so empty Distinct lookups are empty.
 		stored, collision := r.data[key]
 		if !collision {
-			return key
+			v := &value{data: data, id: key}
+			r.data[key] = v
+			ptr := &v.id
+			runtime.SetFinalizer(ptr, func(k *uint64) { r.Delete(*k) })
+			return ptr
 		}
 
-		if equal(stored, value) {
-			return key
+		if equal(stored.data, data) {
+			return &stored.id
 		}
 
 		// Re-hash until we find an open value.
@@ -74,7 +86,6 @@ func (r *registry) unique(key uint64, value []KeyValue) uint64 {
 	}
 }
 
-// Delete deletes the value for a key.
 func (r *registry) Delete(key uint64) {
 	r.Lock()
 	delete(r.data, key)
