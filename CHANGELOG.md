@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- The `go.opentelemetry.io/otel/exporters/prometheus` exporter do not add `_ratio` suffix for unit "1" anymore(when unit suffix feature is enabled). (#4131)
+- The `go.opentelemetry.io/otel/exporters/prometheus` exporter do not add `_ratio` suffix for unit "1" anymore when unit suffix feature is enabled. (#4131)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
