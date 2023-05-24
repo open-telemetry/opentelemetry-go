@@ -313,7 +313,6 @@ func sanitizeRune(r rune) rune {
 }
 
 var unitSuffixes = map[string]string{
-	"1":  "_ratio",
 	"By": "_bytes",
 	"ms": "_milliseconds",
 }
