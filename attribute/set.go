@@ -180,7 +180,10 @@ func (l *Set) Equals(o *Set) bool {
 	if l == nil || o == nil {
 		return l == o
 	}
-	return l.id == o.id
+	if l.id == nil || o.id == nil {
+		return l.id == o.id
+	}
+	return *l.id == *o.id
 }
 
 // Encoded returns the encoded form of this set, according to encoder.
@@ -306,7 +309,7 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 	if filter != nil {
 		set, dropped = filterSet(data[position:], filter)
 	} else {
-		set = sets.newSet(data[position:])
+		set = newSet(data[position:])
 	}
 
 	return set, dropped
@@ -333,7 +336,7 @@ func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	}
 	excluded = kvs[:distinctPosition]
 
-	set := sets.newSet(kvs[distinctPosition:])
+	set := newSet(kvs[distinctPosition:])
 	return set, excluded
 }
 

@@ -55,10 +55,14 @@ func TestRegistry(t *testing.T) {
 	data1 := []KeyValue{Int("one", 1), Int("two", 2)}
 	data2 := []KeyValue{String("A", "a"), String("B", "b")}
 	reg := newRegistry(-1)
+	t.Cleanup(func(orig *registry) func() {
+		sets = reg
+		return func() { sets = orig }
+	}(sets))
 
 	t.Run("Store", func(t *testing.T) {
 		// First entry.
-		s0 := reg.newSet(data0)
+		s0 := newSet(data0)
 		k0 := s0.id
 		require.NotNil(t, k0, "invalid first key")
 
@@ -70,11 +74,11 @@ func TestRegistry(t *testing.T) {
 		}
 
 		// Second entry (same value as the first).
-		s1 := reg.newSet(data1)
+		s1 := newSet(data1)
 		k1 := s1.id
 		require.NotNil(t, k1, "invalid second key")
 
-		assert.Truef(t, k0 == k1, "different keys for the same data: %v, %v", k0, k1)
+		assert.Truef(t, s0.Equals(&s1), "sets should be equal: %v, %v", s0, s1)
 		assert.Equal(t, 1, reg.len(), "registry should hold only one entry")
 		if assert.True(t, reg.Has(*k0), "original data removed from registry") {
 			v, ok := reg.Load(*k1)
@@ -83,7 +87,7 @@ func TestRegistry(t *testing.T) {
 		}
 
 		// Third entry (different than the previous two).
-		s2 := reg.newSet(data2)
+		s2 := newSet(data2)
 		k2 := s2.id
 		require.NotNil(t, k1, "invalid third key")
 
@@ -107,13 +111,15 @@ func TestRegistry(t *testing.T) {
 	wait(time.Second*2, func() bool { return reg.len() == 0 })
 	if !assert.Equalf(t, 0, reg.len(), "registry should be empty: %#v", reg.data) {
 		// Reset manually for the next tests.
-		reg = newRegistry(-1)
+		for k := range reg.data {
+			delete(reg.data, k)
+		}
 	}
 
 	t.Run("Scope", func(t *testing.T) {
 		var k *uint64
 		{
-			localS := reg.newSet(data0)
+			localS := newSet(data0)
 			localK := localS.id
 			require.NotNil(t, localK, "invalid local key")
 			assert.True(t, reg.Has(*localK), "data not stored in registry")
