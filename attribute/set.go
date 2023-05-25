@@ -306,7 +306,7 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 	if filter != nil {
 		set, dropped = filterSet(data[position:], filter)
 	} else {
-		set = Set{id: sets.Store(data[position:])}
+		set = sets.newSet(data[position:])
 	}
 
 	return set, dropped
@@ -333,7 +333,8 @@ func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	}
 	excluded = kvs[:distinctPosition]
 
-	return Set{id: sets.Store(kvs[distinctPosition:])}, excluded
+	set := sets.newSet(kvs[distinctPosition:])
+	return set, excluded
 }
 
 // Filter returns a filtered copy of this Set. See the documentation for

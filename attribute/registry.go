@@ -19,22 +19,19 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
 
 // sets is a registry of all Set data.
 // TODO: optimize initial size.
-var sets = newDataRegistry(-1)
+var sets = newRegistry(-1)
 
 type value struct {
-	// id is the hash of data. This value is stored (in addition to it being a
-	// map key) so a pointer that always points to the same place in memory is
-	// used. Otherwise, if a pointer to the computed hash value is used it will
-	// point to different memory and the finalizer will not be set for a unique
-	// identifier of the data.
-	id   uint64
-	data []KeyValue
+	// idPtr is the address of the original data id.
+	idPtr uintptr
+	data  []KeyValue
 }
 
 type registry struct {
@@ -42,11 +39,24 @@ type registry struct {
 	data map[uint64]*value
 }
 
-func newDataRegistry(n int) *registry {
+func newRegistry(n int) *registry {
 	if n <= 0 {
 		return &registry{data: make(map[uint64]*value)}
 	}
 	return &registry{data: make(map[uint64]*value, n)}
+}
+
+func (r *registry) len() int {
+	r.RLock()
+	defer r.RUnlock()
+	return len(r.data)
+}
+
+func (r *registry) newSet(data []KeyValue) Set {
+	defer func() { fmt.Println("newSet: return") }()
+	s := r.Store(data)
+	fmt.Println("newSet:", *s.id)
+	return s
 }
 
 // Load returns the value stored in the registry for a key, or nil if no value
@@ -69,7 +79,7 @@ func (r *registry) Has(key uint64) (ok bool) {
 // Store stores data and returns a pointer to its unique identifying key.
 //
 // This assumes data is sorted consistently with unique values.
-func (r *registry) Store(data []KeyValue) *uint64 {
+func (r *registry) Store(data []KeyValue) Set {
 	h := fnv.New()
 	for _, kv := range data {
 		h = hash(h, kv)
@@ -83,15 +93,26 @@ func (r *registry) Store(data []KeyValue) *uint64 {
 		// TODO: reserve 0 so empty Distinct lookups are empty.
 		stored, collision := r.data[key]
 		if !collision {
-			v := &value{data: data, id: key}
+			ptr := &key
+			v := &value{
+				data: data,
+				// We can be sure ptr will remain allocated while we hold this
+				// map entry given the following finalizer.
+				idPtr: uintptr(unsafe.Pointer(ptr)),
+			}
 			r.data[key] = v
-			ptr := &v.id
-			runtime.SetFinalizer(ptr, func(k *uint64) { r.Delete(*k) })
-			return ptr
+
+			s := Set{id: ptr}
+			runtime.SetFinalizer(ptr, func(k *uint64) {
+				r.delete(k)
+			})
+			return s
 		}
 
 		if equal(stored.data, data) {
-			return &stored.id
+			// TODO: FIXME we are not guananteed that the address of ptr doesn't move.
+			s := Set{id: (*uint64)(unsafe.Pointer(stored.idPtr))}
+			return s
 		}
 
 		// Re-hash until we find an open value.
@@ -104,6 +125,11 @@ func (r *registry) Delete(key uint64) {
 	r.Lock()
 	delete(r.data, key)
 	r.Unlock()
+}
+
+func (r *registry) delete(key *uint64) {
+	fmt.Println("deleting", *key)
+	r.Delete(*key)
 }
 
 // hash returns the hash of kv with h as the base.

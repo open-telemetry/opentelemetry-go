@@ -17,6 +17,7 @@ package attribute_test
 import (
 	"reflect"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -224,4 +225,33 @@ func args(m reflect.Method) []reflect.Value {
 		out[i] = reflect.New(aType).Elem()
 	}
 	return out
+}
+
+var result attribute.Set
+
+func BenchmarkNewSet(b *testing.B) {
+	attrs := []attribute.KeyValue{
+		attribute.Bool("bool true", true),
+		attribute.Bool("bool false", false),
+		attribute.Int64("int64 1", 1),
+		attribute.Int64("int64 -1", -1),
+		attribute.Float64("float64 10", 10),
+		attribute.Float64("float64 -10", -10),
+		attribute.String("string empty", ""),
+		attribute.String("hello", "world"),
+		attribute.BoolSlice("[]bool", []bool{true, false, true}),
+		attribute.Int64Slice("[]int64", []int64{-10, 13124, -23, 0, 2}),
+		attribute.Float64Slice("[]float64", []float64{10.23, 941.1, 184e9, -2.3}),
+		attribute.StringSlice("[]string", []string{"", "one", "two"}),
+	}
+	// Pre-sort to remove from first iteration results.
+	sort.SliceStable(attrs, func(i, j int) bool {
+		return attrs[i].Key < attrs[j].Key
+	})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		result = attribute.NewSet(attrs...)
+	}
 }
