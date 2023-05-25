@@ -21,6 +21,17 @@ import (
 	"sync"
 )
 
+var slicePool = sync.Pool{New: func() any { return new([]KeyValue) }}
+
+func getSlice(length, capacity int) *[]KeyValue {
+	v := slicePool.Get().(*[]KeyValue)
+	if cap(*v) < capacity {
+		*v = make([]KeyValue, length, capacity)
+	}
+	*v = (*v)[:length]
+	return v
+}
+
 type (
 	// Set is the representation for a distinct attribute set. It manages an
 	// immutable set of attributes, with an internal cache for storing
@@ -91,7 +102,7 @@ func (l *Set) Len() int {
 	if !ok {
 		return 0
 	}
-	return len(v)
+	return len(*v)
 }
 
 // Get returns the KeyValue at ordered position idx in this set.
@@ -100,10 +111,10 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 		return KeyValue{}, false
 	}
 	v, ok := sets.Load(*l.id)
-	if ok && idx >= 0 && idx < len(v) {
+	if ok && idx >= 0 && idx < len(*v) {
 		// Note: The Go compiler successfully avoids an allocation for
 		// the interface{} conversion here:
-		return v[idx], true
+		return (*v)[idx], true
 	}
 
 	return KeyValue{}, false
@@ -118,14 +129,14 @@ func (l *Set) Value(k Key) (Value, bool) {
 	if !ok {
 		return Value{}, false
 	}
-	idx := sort.Search(len(v), func(idx int) bool {
-		return v[idx].Key >= k
+	idx := sort.Search(len(*v), func(idx int) bool {
+		return (*v)[idx].Key >= k
 	})
-	if idx >= len(v) {
+	if idx >= len(*v) {
 		return Value{}, false
 	}
-	if k == v[idx].Key {
-		return v[idx].Value, true
+	if k == (*v)[idx].Key {
+		return (*v)[idx].Value, true
 	}
 	return Value{}, false
 }
@@ -143,7 +154,7 @@ func (l *Set) Iter() Iterator {
 	}
 	v, _ := sets.Load(*l.id)
 	return Iterator{
-		storage: v,
+		storage: *v,
 		idx:     -1,
 	}
 }
@@ -159,8 +170,21 @@ func (l *Set) ToSlice() []KeyValue {
 		return nil
 	}
 	// Ensure our copy is immutable.
-	dest := make([]KeyValue, len(v))
-	copy(dest, v)
+	dest := make([]KeyValue, len(*v))
+	copy(dest, *v)
+	return dest
+}
+
+func (l *Set) toSlice() *[]KeyValue {
+	if l == nil || l.id == nil {
+		return nil
+	}
+	v, ok := sets.Load(*l.id)
+	if !ok {
+		return nil
+	}
+	dest := getSlice(len(*v), len(*v))
+	copy(*dest, *v)
 	return dest
 }
 
@@ -273,19 +297,16 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 		return empty(), nil
 	}
 
-	// TODO: use a pool.
-	data := make([]KeyValue, len(kvs))
-	copy(data, kvs)
+	data := getSlice(len(kvs), len(kvs))
+	copy(*data, kvs)
 
-	// Using tmp here prevents any allocations during the sort.
-	*tmp = data
+	*tmp = *data
 	// Stable sort so the following de-duplication can implement
 	// last-value-wins semantics.
 	sort.Stable(tmp)
-
 	*tmp = nil
 
-	position := len(data) - 1
+	position := len(*data) - 1
 	offset := position - 1
 
 	// The requirements stated above require that the stable
@@ -295,21 +316,22 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 	// De-duplicate with last-value-wins semantics.  Preserve
 	// duplicate values at the beginning of the input slice.
 	for ; offset >= 0; offset-- {
-		if data[offset].Key == data[position].Key {
+		if (*data)[offset].Key == (*data)[position].Key {
 			continue
 		}
 		position--
-		data[offset], data[position] = data[position], data[offset]
+		(*data)[offset], (*data)[position] = (*data)[position], (*data)[offset]
 	}
 
 	var (
 		set     Set
 		dropped []KeyValue
 	)
+	*data = (*data)[position:]
 	if filter != nil {
-		set, dropped = filterSet(data[position:], filter)
+		set, dropped = filterSet(data, filter)
 	} else {
-		set = newSet(data[position:])
+		set = newSet(data)
 	}
 
 	return set, dropped
@@ -317,26 +339,27 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 
 // filterSet reorders kvs so that included keys are contiguous at the end of
 // the slice, while excluded keys precede the included keys.
-func filterSet(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
+func filterSet(kvs *[]KeyValue, filter Filter) (Set, []KeyValue) {
 	var excluded []KeyValue
 
 	// Move attributes that do not match the filter so they're adjacent before
 	// calling computeDistinct().
-	distinctPosition := len(kvs)
+	distinctPosition := len(*kvs)
 
 	// Swap indistinct keys forward and distinct keys toward the
 	// end of the slice.
-	offset := len(kvs) - 1
+	offset := len(*kvs) - 1
 	for ; offset >= 0; offset-- {
-		if filter(kvs[offset]) {
+		if filter((*kvs)[offset]) {
 			distinctPosition--
-			kvs[offset], kvs[distinctPosition] = kvs[distinctPosition], kvs[offset]
+			(*kvs)[offset], (*kvs)[distinctPosition] = (*kvs)[distinctPosition], (*kvs)[offset]
 			continue
 		}
 	}
-	excluded = kvs[:distinctPosition]
+	excluded = (*kvs)[:distinctPosition]
 
-	set := newSet(kvs[distinctPosition:])
+	*kvs = (*kvs)[distinctPosition:]
+	set := newSet(kvs)
 	return set, excluded
 }
 
@@ -349,7 +372,7 @@ func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 
 	// Note: This could be refactored to avoid the temporary slice
 	// allocation, if it proves to be expensive.
-	return filterSet(l.ToSlice(), re)
+	return filterSet(l.toSlice(), re)
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
@@ -364,9 +387,11 @@ func (l *Set) MarshalJSON() ([]byte, error) {
 // MarshalLog is the marshaling function used by the logging system to represent this exporter.
 func (l Set) MarshalLog() interface{} {
 	kvs := make(map[string]string)
-	for _, kv := range l.ToSlice() {
+	s := l.toSlice()
+	for _, kv := range *s {
 		kvs[string(kv.Key)] = kv.Value.Emit()
 	}
+	slicePool.Put(s)
 	return kvs
 }
 

@@ -51,9 +51,9 @@ func wait(d time.Duration, done func() bool) {
 }
 
 func TestRegistry(t *testing.T) {
-	data0 := []KeyValue{Int("one", 1), Int("two", 2)}
-	data1 := []KeyValue{Int("one", 1), Int("two", 2)}
-	data2 := []KeyValue{String("A", "a"), String("B", "b")}
+	data0 := &[]KeyValue{Int("one", 1), Int("two", 2)}
+	data1 := &[]KeyValue{Int("one", 1), Int("two", 2)}
+	data2 := &[]KeyValue{String("A", "a"), String("B", "b")}
 	reg := newRegistry(-1)
 	t.Cleanup(func(orig *registry) func() {
 		sets = reg

@@ -27,26 +27,35 @@ import (
 // TODO: optimize initial size.
 var sets = newRegistry(-1)
 
-func newSet(data []KeyValue) Set {
+func newSet(data *[]KeyValue) Set {
 	s := sets.Store(data)
-	runtime.SetFinalizer(s.id, clearSet)
+	runtime.SetFinalizer(s.id, putID)
 	return s
 }
 
-func clearSet(key *uint64) {
-	sets.Delete(*key)
+func clearSet(key *uint64) {}
+
+var idPool = sync.Pool{New: func() any { return new(uint64) }}
+
+func getID() *uint64 {
+	return idPool.Get().(*uint64)
+}
+
+func putID(id *uint64) {
+	sets.Delete(*id)
+	idPool.Put(id)
 }
 
 type registry struct {
 	sync.RWMutex
-	data map[uint64][]KeyValue
+	data map[uint64]*[]KeyValue
 }
 
 func newRegistry(n int) *registry {
 	if n <= 0 {
-		return &registry{data: make(map[uint64][]KeyValue)}
+		return &registry{data: make(map[uint64]*[]KeyValue)}
 	}
-	return &registry{data: make(map[uint64][]KeyValue, n)}
+	return &registry{data: make(map[uint64]*[]KeyValue, n)}
 }
 
 func (r *registry) len() int {
@@ -57,7 +66,7 @@ func (r *registry) len() int {
 
 // Load returns the value stored in the registry for a key, or nil if no value
 // is present. The ok result indicates whether value was found in the registry.
-func (r *registry) Load(key uint64) (value []KeyValue, ok bool) {
+func (r *registry) Load(key uint64) (value *[]KeyValue, ok bool) {
 	r.RLock()
 	value, ok = r.data[key]
 	r.RUnlock()
@@ -74,9 +83,9 @@ func (r *registry) Has(key uint64) (ok bool) {
 // Store stores data and returns a pointer to its unique identifying key.
 //
 // This assumes data is sorted consistently with unique values.
-func (r *registry) Store(data []KeyValue) Set {
+func (r *registry) Store(data *[]KeyValue) Set {
 	h := fnv.New()
-	for _, kv := range data {
+	for _, kv := range *data {
 		h = hash(h, kv)
 	}
 
@@ -87,13 +96,15 @@ func (r *registry) Store(data []KeyValue) Set {
 	for {
 		// TODO: reserve 0 so empty Distinct lookups are empty.
 		stored, collision := r.data[key]
-		if !collision {
+		switch {
+		case !collision:
 			r.data[key] = data
-			return Set{id: &key}
-		}
-
-		if equal(stored, data) {
-			return Set{id: &key}
+			fallthrough
+		case equal(stored, data):
+			slicePool.Put(data)
+			id := getID()
+			*id = key
+			return Set{id: id}
 		}
 
 		// Re-hash until we find an open value.
@@ -104,8 +115,13 @@ func (r *registry) Store(data []KeyValue) Set {
 
 func (r *registry) Delete(key uint64) {
 	r.Lock()
+	defer r.Unlock()
+	v, ok := r.data[key]
+	if !ok {
+		return
+	}
 	delete(r.data, key)
-	r.Unlock()
+	slicePool.Put(v)
 }
 
 // hash returns the hash of kv with h as the base.
@@ -156,7 +172,8 @@ func hash(h fnv.Hash, kv KeyValue) fnv.Hash {
 }
 
 // equal returns if the sorted slices of []KeyValue a and b are equal, or not.
-func equal(a, b []KeyValue) bool {
+func equal(aPtr, bPtr *[]KeyValue) bool {
+	a, b := *aPtr, *bPtr
 	if len(a) != len(b) {
 		return false
 	}
