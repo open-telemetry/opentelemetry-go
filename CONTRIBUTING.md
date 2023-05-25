@@ -179,23 +179,16 @@ For a deeper discussion, see
 
 ## Documentation
 
-Each non-example Go Module should have its own `README.md` containing:
+Each package must be documented using
+[Go Doc Comments](https://go.dev/doc/comment),
+preferably in a `doc.go` file.
 
-- A pkg.go.dev badge which can be generated [here](https://pkg.go.dev/badge/).
-- Brief description.
-- Installation instructions (and requirements if applicable).
-- Hyperlink to an example. Depending on the component the example can be:
-  - An `example_test.go` like [here](exporters/stdout/stdouttrace/example_test.go).
-  - A sample Go application with its own `README.md`, like [here](example/zipkin).
-- Additional documentation sections such us:
-  - Configuration,
-  - Contributing,
-  - References.
+Prefer using [Examples](https://pkg.go.dev/testing#hdr-Examples)
+instead of putting code snippets in Go doc comments.
+In some cases, you can even create [Testable Examples](https://go.dev/blog/examples).
 
-[Here](exporters/jaeger/README.md) is an example of a concise `README.md`.
-
-Moreover, it should be possible to navigate to any `README.md` from the
-root `README.md`.
+[`go.opentelemetry.io/otel/metric`](https://pkg.go.dev/go.opentelemetry.io/otel/metric)
+is an example of a very well-documented package.
 
 ## Style Guide
 
