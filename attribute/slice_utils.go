@@ -71,6 +71,7 @@ func hashKV(h fnv.Hash, kv KeyValue) fnv.Hash {
 		for i := 0; i < rv.Len(); i++ {
 			h = h.String(rv.Index(i).String())
 		}
+	case INVALID:
 	default:
 		// Logging is an alternative, but using the internal logger here
 		// causes an import cycle so it is not done.
