@@ -124,7 +124,7 @@ func (l *Set) Len() int {
 		return 0
 	}
 	v := sets.Load(*l.id)
-	defer v.Decrement()
+	defer v.DecRef()
 	return v.Len()
 }
 
@@ -134,7 +134,7 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 		return KeyValue{}, false
 	}
 	v := sets.Load(*l.id)
-	defer v.Decrement()
+	defer v.DecRef()
 
 	if v != nil && idx >= 0 && idx < v.Len() {
 		// Note: The Go compiler successfully avoids an allocation for
@@ -154,7 +154,7 @@ func (l *Set) Value(k Key) (Value, bool) {
 	if v == nil {
 		return Value{}, false
 	}
-	defer v.Decrement()
+	defer v.DecRef()
 	idx := sort.Search(v.Len(), func(idx int) bool {
 		return v.Index(idx).Key >= k
 	})
@@ -179,7 +179,7 @@ func (l *Set) Iter() Iterator {
 		return newIterator(nil)
 	}
 	v := sets.Load(*l.id)
-	defer v.Decrement()
+	defer v.DecRef()
 	return newIterator(v)
 }
 
@@ -193,7 +193,7 @@ func (l *Set) ToSlice() []KeyValue {
 	if v == nil {
 		return nil
 	}
-	defer v.Decrement()
+	defer v.DecRef()
 	// Ensure our copy is immutable.
 	dest := make([]KeyValue, v.Len())
 	copy(dest, *v.data)
@@ -208,7 +208,7 @@ func (l *Set) toSlice() *[]KeyValue {
 	if v == nil {
 		return nil
 	}
-	defer v.Decrement()
+	defer v.DecRef()
 	n := v.Len()
 	dest := getSlice(n, n)
 	copy(*dest, *v.data)
@@ -408,7 +408,7 @@ func (l *Set) MarshalJSON() ([]byte, error) {
 		return nil, nil
 	}
 	v := sets.Load(*l.id)
-	defer v.Decrement()
+	defer v.DecRef()
 	return json.Marshal(v.data)
 }
 

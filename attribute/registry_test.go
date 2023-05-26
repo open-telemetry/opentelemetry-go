@@ -72,7 +72,7 @@ func TestRegistry(t *testing.T) {
 			v := reg.Load(*k0)
 			assert.NotNil(t, v, "Load returned different state from Has")
 			assert.Equal(t, data0, v.data, "incorrect data stored")
-			v.Decrement()
+			v.DecRef()
 		}
 
 		// Second entry (same value as the first).
@@ -86,7 +86,7 @@ func TestRegistry(t *testing.T) {
 			v := reg.Load(*k1)
 			assert.NotNil(t, v, "Load returned different state from Has")
 			assert.Equal(t, data0, v.data, "data corrupted")
-			v.Decrement()
+			v.DecRef()
 		}
 
 		// Third entry (different than the previous two).
@@ -100,13 +100,13 @@ func TestRegistry(t *testing.T) {
 			v := reg.Load(*k0)
 			assert.NotNil(t, v, "Load returned different state from Has")
 			assert.Equal(t, data0, v.data, "data corrupted")
-			v.Decrement()
+			v.DecRef()
 		}
 		if assert.True(t, reg.Has(*k2), "second data set not stored in registry") {
 			v := reg.Load(*k2)
 			assert.NotNil(t, v, "Load returned different state from Has")
 			assert.Equal(t, data2, v.data, "incorrect data stored")
-			v.Decrement()
+			v.DecRef()
 		}
 	})
 

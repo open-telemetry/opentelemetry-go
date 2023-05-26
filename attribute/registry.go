@@ -19,8 +19,11 @@ import (
 	"sync/atomic"
 )
 
+// Reserved hash key value.
 const zeroID uint64 = 0
 
+// setRegistry indexes the data for sets using a unique hash. The hash can be
+// used by a Set and when the original data is needed it can be retrieved.
 type setRegistry struct {
 	sync.RWMutex
 	data map[uint64]*setData
@@ -46,7 +49,7 @@ func (sr *setRegistry) len() int {
 func (sr *setRegistry) Load(key uint64) (value *setData) {
 	sr.RLock()
 	value = sr.data[key]
-	value.Increment()
+	value.IncRef()
 	sr.RUnlock()
 	return value
 }
@@ -86,7 +89,7 @@ func (sr *setRegistry) Store(data *[]KeyValue) uint64 {
 			return key
 		case equalKVs(stored.data, data):
 			slicePool.Put(data)
-			stored.Increment()
+			stored.IncRef()
 			return key
 		}
 
@@ -101,7 +104,7 @@ func (sr *setRegistry) Release(key uint64) {
 	defer sr.Unlock()
 
 	v := sr.data[key]
-	if v.decrement() <= 0 {
+	if v.decRef() <= 0 {
 		delete(sr.data, key)
 		v.free()
 	}
@@ -134,6 +137,7 @@ func newSetData(key uint64, reg *setRegistry, data *[]KeyValue) *setData {
 	return sd
 }
 
+// Len returns the lenght of the data.
 func (sd *setData) Len() int {
 	if sd == nil {
 		return 0
@@ -141,6 +145,8 @@ func (sd *setData) Len() int {
 	return len(*sd.data)
 }
 
+// Index returns the data value at index i. This will panic if i is not a valid
+// index for the underlying data.
 func (sd *setData) Index(i int) KeyValue {
 	if sd == nil {
 		return KeyValue{}
@@ -148,24 +154,27 @@ func (sd *setData) Index(i int) KeyValue {
 	return (*sd.data)[i]
 }
 
-func (sd *setData) Increment() {
+// IncRef increments the reference count of this data by one.
+func (sd *setData) IncRef() {
 	if sd == nil {
 		return
 	}
 	sd.nRef.Add(1)
 }
 
-func (sd *setData) Decrement() {
+// DecRef decrements the reference count of this data by one. If there are no
+// more reference after the decrement, the data is freed.
+func (sd *setData) DecRef() {
 	if sd == nil {
 		return
 	}
-	if sd.decrement() <= 0 {
+	if sd.decRef() <= 0 {
 		sd.reg.delete(sd.key)
 		sd.free()
 	}
 }
 
-func (sd *setData) decrement() int64 { return sd.nRef.Add(-1) }
+func (sd *setData) decRef() int64 { return sd.nRef.Add(-1) }
 
 func (sd *setData) free() {
 	slicePool.Put(sd.data)

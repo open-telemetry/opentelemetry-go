@@ -29,7 +29,7 @@ func newIterator(sd *setData) Iterator {
 	if sd == nil {
 		return Iterator{}
 	}
-	sd.Increment()
+	sd.IncRef()
 
 	i := iterPool.Get().(*iterator)
 	i.data = sd
@@ -41,7 +41,7 @@ func newIterator(sd *setData) Iterator {
 var iterPool = sync.Pool{New: func() any { return new(iterator) }}
 
 func freeIterator(i *iterator) {
-	i.data.Decrement()
+	i.data.DecRef()
 	i.data = nil
 	i.idx = 0
 	iterPool.Put(i)
