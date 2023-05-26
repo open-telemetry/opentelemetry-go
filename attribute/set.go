@@ -391,6 +391,9 @@ func (l *Set) MarshalJSON() ([]byte, error) {
 func (l Set) MarshalLog() interface{} {
 	kvs := make(map[string]string)
 	s := l.toSlice()
+	if s == nil {
+		return kvs
+	}
 	for _, kv := range *s {
 		kvs[string(kv.Key)] = kv.Value.Emit()
 	}
