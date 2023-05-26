@@ -179,7 +179,7 @@ For a deeper discussion, see
 
 ## Documentation
 
-Each package must be documented using
+Each (non-internal, non-test) package must be documented using
 [Go Doc Comments](https://go.dev/doc/comment),
 preferably in a `doc.go` file.
 
