@@ -15,279 +15,161 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
-	"fmt"
-	"reflect"
-	"runtime"
 	"sync"
 	"sync/atomic"
-
-	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
 
-// sets is a registry of all Set data.
-// TODO: optimize initial size.
-var sets = newRegistry(-1)
+const zeroID uint64 = 0
 
-func newSet(data *[]KeyValue) Set {
-	s := sets.Store(data)
-	// Set the finalizer here so putID can be defined at the package scope.
-	// Otherwise, and anonymous function, or method, is needed and that will
-	// make an allocation.
-	runtime.SetFinalizer(s.id, putID)
-	return s
-}
-
-var idPool = sync.Pool{New: func() any { return new(uint64) }}
-
-func getID() *uint64 {
-	return idPool.Get().(*uint64)
-}
-
-func putID(id *uint64) {
-	sets.Release(*id)
-	idPool.Put(id)
-}
-
-var referencePool = sync.Pool{
-	New: func() any { return new(reference) },
-}
-
-type reference struct {
-	// nRef is the reference counter.
-	nRef atomic.Int64
-
-	key uint64
-	reg *registry
-
-	data *[]KeyValue
-}
-
-func newReference(key uint64, reg *registry, data *[]KeyValue) *reference {
-	r := referencePool.Get().(*reference)
-	r.key = key
-	r.reg = reg
-	r.data = data
-	r.nRef.Store(1)
-	return r
-}
-
-func (r *reference) Len() int {
-	if r == nil {
-		return 0
-	}
-	return len(*r.data)
-}
-
-func (r *reference) Index(i int) KeyValue {
-	if r == nil {
-		return KeyValue{}
-	}
-	return (*r.data)[i]
-}
-
-func (r *reference) Increment() {
-	if r == nil {
-		return
-	}
-	r.nRef.Add(1)
-}
-
-func (r *reference) Decrement() {
-	if r == nil {
-		return
-	}
-	if r.decrement() <= 0 {
-		r.reg.delete(r.key)
-		r.free()
-	}
-}
-
-func (r *reference) decrement() int64 { return r.nRef.Add(-1) }
-
-func (r *reference) free() {
-	slicePool.Put(r.data)
-	r.data = nil
-	r.nRef.Store(0)
-	referencePool.Put(r)
-}
-
-type registry struct {
+type setRegistry struct {
 	sync.RWMutex
-	data map[uint64]*reference
+	data map[uint64]*setData
 }
 
-func newRegistry(n int) *registry {
+func newSetRegistry(n int) *setRegistry {
 	if n <= 0 {
-		return &registry{data: make(map[uint64]*reference)}
+		return &setRegistry{data: make(map[uint64]*setData)}
 	}
-	return &registry{data: make(map[uint64]*reference, n)}
+	return &setRegistry{data: make(map[uint64]*setData, n)}
 }
 
-func (r *registry) len() int {
-	r.RLock()
-	defer r.RUnlock()
-	return len(r.data)
+func (sr *setRegistry) len() int {
+	sr.RLock()
+	defer sr.RUnlock()
+	return len(sr.data)
 }
 
 // Load returns the value stored in the registry for a key, or nil if no value
 // is present.
 //
 // It is the callers responsibility to call Decrement when done with value.
-func (r *registry) Load(key uint64) (value *reference) {
-	r.RLock()
-	value = r.data[key]
+func (sr *setRegistry) Load(key uint64) (value *setData) {
+	sr.RLock()
+	value = sr.data[key]
 	value.Increment()
-	r.RUnlock()
+	sr.RUnlock()
 	return value
 }
 
-func (r *registry) Has(key uint64) (ok bool) {
-	r.RLock()
-	_, ok = r.data[key]
-	r.RUnlock()
+// Has returns if the registry holds a value for key.
+func (sr *setRegistry) Has(key uint64) (ok bool) {
+	sr.RLock()
+	_, ok = sr.data[key]
+	sr.RUnlock()
 	return ok
 }
 
-// Store stores data and returns a pointer to its unique identifying key.
+// Store stores data and returns its unique identifying key.
 //
 // This assumes data is sorted consistently with unique values.
-func (r *registry) Store(data *[]KeyValue) Set {
-	h := fnv.New()
-	for _, kv := range *data {
-		h = hash(h, kv)
-	}
-
+func (sr *setRegistry) Store(data *[]KeyValue) uint64 {
+	h := hashKVs(data)
 	key := uint64(h)
-
-	r.Lock()
-	defer r.Unlock()
-	for {
-		// TODO: reserve 0 so empty Distinct lookups are empty.
-		stored, collision := r.data[key]
-		switch {
-		case !collision:
-			r.data[key] = newReference(key, r, data)
-			id := getID()
-			*id = key
-			return Set{id: id}
-		case equal(stored.data, data):
-			slicePool.Put(data)
-			stored.Increment()
-			id := getID()
-			*id = key
-			return Set{id: id}
-		}
-
-		// Re-hash until we find an open value.
+	rehash := func() {
 		h = h.Uint64(key)
 		key = uint64(h)
 	}
+
+	sr.Lock()
+	defer sr.Unlock()
+	for {
+		if key == zeroID {
+			// Reserve zeroID so empty Distinct are empty.
+			rehash()
+			continue
+		}
+
+		stored, collision := sr.data[key]
+		switch {
+		case !collision:
+			sr.data[key] = newSetData(key, sr, data)
+			return key
+		case equalKVs(stored.data, data):
+			slicePool.Put(data)
+			stored.Increment()
+			return key
+		}
+
+		// Re-hash until we find an open key.
+		rehash()
+	}
 }
 
-// Release reference to the value stored with key.
-func (r *registry) Release(key uint64) {
-	r.Lock()
-	v := r.data[key]
+// Release releases reference to the value stored with key.
+func (sr *setRegistry) Release(key uint64) {
+	sr.Lock()
+	defer sr.Unlock()
+
+	v := sr.data[key]
 	if v.decrement() <= 0 {
-		delete(r.data, key)
+		delete(sr.data, key)
 		v.free()
 	}
-	r.Unlock()
 }
 
-func (r *registry) delete(key uint64) {
-	r.Lock()
-	delete(r.data, key)
-	r.Unlock()
+func (sr *setRegistry) delete(key uint64) {
+	sr.Lock()
+	delete(sr.data, key)
+	sr.Unlock()
 }
 
-// hash returns the hash of kv with h as the base.
-func hash(h fnv.Hash, kv KeyValue) fnv.Hash {
-	h = h.String(string(kv.Key))
+var setDataPool = sync.Pool{New: func() any { return new(setData) }}
 
-	switch kv.Value.Type() {
-	case BOOL:
-		h = h.Bool(kv.Value.AsBool())
-	case INT64:
-		h = h.Int64(kv.Value.AsInt64())
-	case FLOAT64:
-		h = h.Float64(kv.Value.AsFloat64())
-	case STRING:
-		h = h.String(kv.Value.AsString())
-	case BOOLSLICE:
-		// Avoid allocating a new []bool with AsBoolSlice.
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Bool(rv.Index(i).Bool())
-		}
-	case INT64SLICE:
-		// Avoid allocating a new []int64 with AsInt64Slice.
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Int64(rv.Index(i).Int())
-		}
-	case FLOAT64SLICE:
-		// Avoid allocating a new []float64 with AsFloat64Slice.
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Float64(rv.Index(i).Float())
-		}
-	case STRINGSLICE:
-		// Avoid allocating a new []string with AsStringSlice.
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.String(rv.Index(i).String())
-		}
-	default:
-		// Logging is an alternative, but using the internal logger here
-		// causes an import cycle so it is not done.
-		v := kv.Value.AsInterface()
-		msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", v)
-		panic(msg)
-	}
-	return h
+type setData struct {
+	// nRef is the reference counter.
+	nRef atomic.Int64
+
+	key uint64
+	reg *setRegistry
+
+	data *[]KeyValue
 }
 
-// equal returns if the sorted slices of []KeyValue a and b are equal, or not.
-func equal(aPtr, bPtr *[]KeyValue) bool {
-	a, b := *aPtr, *bPtr
-	if len(a) != len(b) {
-		return false
+func newSetData(key uint64, reg *setRegistry, data *[]KeyValue) *setData {
+	sd := setDataPool.Get().(*setData)
+	sd.key = key
+	sd.reg = reg
+	sd.data = data
+	sd.nRef.Store(1)
+	return sd
+}
+
+func (sd *setData) Len() int {
+	if sd == nil {
+		return 0
 	}
+	return len(*sd.data)
+}
 
-	for i, aKV := range a {
-		bKV := b[i]
-
-		if aKV.Key != bKV.Key {
-			return false
-		}
-
-		aVal, bVal := aKV.Value, bKV.Value
-		if aVal.Type() != bVal.Type() {
-			return false
-		}
-
-		switch aVal.Type() {
-		case BOOL, INT64, FLOAT64:
-			if aVal.numeric != bVal.numeric {
-				return false
-			}
-		case STRING:
-			if aVal.stringly != bVal.stringly {
-				return false
-			}
-		case BOOLSLICE, INT64SLICE, FLOAT64SLICE, STRINGSLICE:
-			if aVal.slice != bVal.slice {
-				return false
-			}
-		default:
-			// Logging is an alternative, but using the internal logger here
-			// causes an import cycle so it is not done.
-			v := aVal.AsInterface()
-			msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", v)
-			panic(msg)
-		}
+func (sd *setData) Index(i int) KeyValue {
+	if sd == nil {
+		return KeyValue{}
 	}
+	return (*sd.data)[i]
+}
 
-	return true
+func (sd *setData) Increment() {
+	if sd == nil {
+		return
+	}
+	sd.nRef.Add(1)
+}
+
+func (sd *setData) Decrement() {
+	if sd == nil {
+		return
+	}
+	if sd.decrement() <= 0 {
+		sd.reg.delete(sd.key)
+		sd.free()
+	}
+}
+
+func (sd *setData) decrement() int64 { return sd.nRef.Add(-1) }
+
+func (sd *setData) free() {
+	slicePool.Put(sd.data)
+	sd.data = nil
+	sd.nRef.Store(0)
+	setDataPool.Put(sd)
 }

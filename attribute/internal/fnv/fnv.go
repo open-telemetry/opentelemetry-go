@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fnv1 provides an efficient and allocation free implementation of the
+// Package fnv provides an efficient and allocation free implementation of the
 // FNV-1a, non-cryptographic hash functions created by Glenn Fowler, Landon
 // Curt Noll, and Phong Vo. See
 // https://en.wikipedia.org/wiki/Fowler-Noll-Vo_hash_function.

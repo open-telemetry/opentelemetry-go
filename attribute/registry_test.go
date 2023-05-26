@@ -55,8 +55,8 @@ func TestRegistry(t *testing.T) {
 	data0 := &[]KeyValue{Int("one", 1), Int("two", 2)}
 	data1 := &[]KeyValue{Int("one", 1), Int("two", 2)}
 	data2 := &[]KeyValue{String("A", "a"), String("B", "b")}
-	reg := newRegistry(-1)
-	t.Cleanup(func(orig *registry) func() {
+	reg := newSetRegistry(-1)
+	t.Cleanup(func(orig *setRegistry) func() {
 		sets = reg
 		return func() { sets = orig }
 	}(sets))

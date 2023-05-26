@@ -25,14 +25,14 @@ type Iterator struct {
 	*iterator
 }
 
-func newIterator(r *reference) Iterator {
-	if r == nil {
+func newIterator(sd *setData) Iterator {
+	if sd == nil {
 		return Iterator{}
 	}
-	r.Increment()
+	sd.Increment()
 
 	i := iterPool.Get().(*iterator)
-	i.ref = r
+	i.data = sd
 	i.idx = -1
 	runtime.SetFinalizer(i, freeIterator)
 	return Iterator{i}
@@ -41,8 +41,8 @@ func newIterator(r *reference) Iterator {
 var iterPool = sync.Pool{New: func() any { return new(iterator) }}
 
 func freeIterator(i *iterator) {
-	i.ref.Decrement()
-	i.ref = nil
+	i.data.Decrement()
+	i.data = nil
 	i.idx = 0
 	iterPool.Put(i)
 }
@@ -131,12 +131,12 @@ func (i *Iterator) ToSlice() []KeyValue {
 
 type iterator struct {
 	// This should be read only. It backs a Set and needs to remain immutable.
-	ref *reference
-	idx int
+	data *setData
+	idx  int
 }
 
 func (i *iterator) Next() bool {
-	if i == nil || i.ref == nil {
+	if i == nil || i.data == nil {
 		return false
 	}
 	i.idx++
@@ -144,17 +144,17 @@ func (i *iterator) Next() bool {
 }
 
 func (i *iterator) Attribute() KeyValue {
-	if i == nil || i.ref == nil {
+	if i == nil || i.data == nil {
 		return KeyValue{}
 	}
-	return i.ref.Index(i.idx)
+	return i.data.Index(i.idx)
 }
 
 func (i *iterator) Len() int {
-	if i == nil || i.ref == nil {
+	if i == nil || i.data == nil {
 		return 0
 	}
-	return i.ref.Len()
+	return i.data.Len()
 }
 
 // NewMergeIterator returns a MergeIterator for merging two attribute sets.

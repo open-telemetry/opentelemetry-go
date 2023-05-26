@@ -17,20 +17,10 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"encoding/json"
 	"reflect"
+	"runtime"
 	"sort"
 	"sync"
 )
-
-var slicePool = sync.Pool{New: func() any { return new([]KeyValue) }}
-
-func getSlice(length, capacity int) *[]KeyValue {
-	v := slicePool.Get().(*[]KeyValue)
-	if cap(*v) < capacity {
-		*v = make([]KeyValue, length, capacity)
-	}
-	*v = (*v)[:length]
-	return v
-}
 
 type (
 	// Set is the representation for a distinct attribute set. It manages an
@@ -68,6 +58,41 @@ type (
 	// provide in order to avoid an allocation. See NewSetWithSortable().
 	Sortable []KeyValue
 )
+
+var slicePool = sync.Pool{New: func() any { return new([]KeyValue) }}
+
+func getSlice(length, capacity int) *[]KeyValue {
+	v := slicePool.Get().(*[]KeyValue)
+	if cap(*v) < capacity {
+		*v = make([]KeyValue, length, capacity)
+	}
+	*v = (*v)[:length]
+	return v
+}
+
+// sets is a registry of all Set data.
+var sets = newSetRegistry(-1)
+
+func newSet(data *[]KeyValue) Set {
+	id := getID()
+	*id = sets.Store(data)
+	// Set the finalizer here, instead of in registry.Store, so putID can be
+	// declared at the package scope. Otherwise, and anonymous function, or
+	// method, is needed and that will make an allocation.
+	runtime.SetFinalizer(id, putID)
+	return Set{id: id}
+}
+
+var idPool = sync.Pool{New: func() any { return new(uint64) }}
+
+func getID() *uint64 {
+	return idPool.Get().(*uint64)
+}
+
+func putID(id *uint64) {
+	sets.Release(*id)
+	idPool.Put(id)
+}
 
 var (
 	// keyValueType is used in computeDistinctReflect.
