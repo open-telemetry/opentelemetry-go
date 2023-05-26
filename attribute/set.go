@@ -16,7 +16,6 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"encoding/json"
-	"reflect"
 	"runtime"
 	"sort"
 	"sync"
@@ -95,9 +94,6 @@ func putID(id *uint64) {
 }
 
 var (
-	// keyValueType is used in computeDistinctReflect.
-	keyValueType = reflect.TypeOf(KeyValue{})
-
 	// emptySet is returned for empty attribute sets.
 	emptySet = &Set{}
 

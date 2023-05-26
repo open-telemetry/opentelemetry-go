@@ -25,7 +25,7 @@ type Iterator struct {
 	*iterator
 
 	// Ensure Iterator remains non-comparable
-	noCmp [0]func()
+	noCmp [0]func() // nolint:unused
 }
 
 func newIterator(sd *setData) Iterator {

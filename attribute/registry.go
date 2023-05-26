@@ -137,7 +137,7 @@ func newSetData(key uint64, reg *setRegistry, data *[]KeyValue) *setData {
 	return sd
 }
 
-// Len returns the lenght of the data.
+// Len returns the length of the data.
 func (sd *setData) Len() int {
 	if sd == nil {
 		return 0

@@ -55,7 +55,7 @@ func (h Hash) Uint64(val uint64) Hash {
 	return Hash(v)
 }
 
-func (h Hash) Bool(val bool) Hash {
+func (h Hash) Bool(val bool) Hash { // nolint:revive  // val is not a flag.
 	if val {
 		return h.Uint64(1)
 	}

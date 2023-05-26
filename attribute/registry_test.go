@@ -15,7 +15,6 @@
 package attribute
 
 import (
-	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -117,7 +116,6 @@ func TestRegistry(t *testing.T) {
 	if !assert.Equalf(t, 0, reg.len(), "registry should be empty: %#v", reg.data) {
 		// Reset manually for the next tests.
 		for k := range reg.data {
-			fmt.Println(k, reg.data[k].nRef)
 			delete(reg.data, k)
 		}
 	}
