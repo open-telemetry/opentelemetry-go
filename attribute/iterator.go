@@ -23,6 +23,9 @@ import (
 // key.
 type Iterator struct {
 	*iterator
+
+	// Ensure Iterator remains non-comparable
+	noCmp [0]func()
 }
 
 func newIterator(sd *setData) Iterator {
@@ -35,7 +38,7 @@ func newIterator(sd *setData) Iterator {
 	i.data = sd
 	i.idx = -1
 	runtime.SetFinalizer(i, freeIterator)
-	return Iterator{i}
+	return Iterator{iterator: i}
 }
 
 var iterPool = sync.Pool{New: func() any { return new(iterator) }}
