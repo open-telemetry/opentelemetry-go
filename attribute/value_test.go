@@ -154,8 +154,12 @@ func TestSetComparability(t *testing.T) {
 		s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 		assert.NotPanicsf(t, func() {
 			_ = map[attribute.Set]struct{}{s0: {}}
-		}, "Set of %s not comparable", p[0].Value.Type())
-		assert.Truef(t, s0.Equals(&s1), "Set of %s not equivalent", p[0].Value.Type())
+		}, "%s Set not comparable", p[0].Value.Type())
+		assert.Truef(t, s0.Equals(&s1), "%s Set not equivalent", p[0].Value.Type())
+
+		m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
+		_, ok := m[s1.Equivalent()]
+		assert.Truef(t, ok, "%s Distinct not equivalent", p[0].Value.Type())
 	}
 }
 
