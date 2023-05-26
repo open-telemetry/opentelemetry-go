@@ -98,11 +98,9 @@ func (l *Set) Len() int {
 	if l == nil || l.id == nil {
 		return 0
 	}
-	v, ok := sets.Load(*l.id)
-	if !ok {
-		return 0
-	}
-	return len(*v)
+	v := sets.Load(*l.id)
+	defer v.Decrement()
+	return v.Len()
 }
 
 // Get returns the KeyValue at ordered position idx in this set.
@@ -110,11 +108,13 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 	if l == nil || l.id == nil {
 		return KeyValue{}, false
 	}
-	v, ok := sets.Load(*l.id)
-	if ok && idx >= 0 && idx < len(*v) {
+	v := sets.Load(*l.id)
+	defer v.Decrement()
+
+	if v != nil && idx >= 0 && idx < v.Len() {
 		// Note: The Go compiler successfully avoids an allocation for
 		// the interface{} conversion here:
-		return (*v)[idx], true
+		return v.Index(idx), true
 	}
 
 	return KeyValue{}, false
@@ -125,18 +125,19 @@ func (l *Set) Value(k Key) (Value, bool) {
 	if l == nil || l.id == nil {
 		return Value{}, false
 	}
-	v, ok := sets.Load(*l.id)
-	if !ok {
+	v := sets.Load(*l.id)
+	if v == nil {
 		return Value{}, false
 	}
-	idx := sort.Search(len(*v), func(idx int) bool {
-		return (*v)[idx].Key >= k
+	defer v.Decrement()
+	idx := sort.Search(v.Len(), func(idx int) bool {
+		return v.Index(idx).Key >= k
 	})
-	if idx >= len(*v) {
+	if idx >= v.Len() {
 		return Value{}, false
 	}
-	if k == (*v)[idx].Key {
-		return (*v)[idx].Value, true
+	if k == v.Index(idx).Key {
+		return v.Index(idx).Value, true
 	}
 	return Value{}, false
 }
@@ -150,13 +151,11 @@ func (l *Set) HasValue(k Key) bool {
 // Iter returns an iterator for visiting the attributes in this set.
 func (l *Set) Iter() Iterator {
 	if l == nil || l.id == nil {
-		return Iterator{idx: -1}
+		return newIterator(nil)
 	}
-	v, _ := sets.Load(*l.id)
-	return Iterator{
-		storage: *v,
-		idx:     -1,
-	}
+	v := sets.Load(*l.id)
+	defer v.Decrement()
+	return newIterator(v)
 }
 
 // ToSlice returns the set of attributes belonging to this set, sorted, where
@@ -165,13 +164,14 @@ func (l *Set) ToSlice() []KeyValue {
 	if l == nil || l.id == nil {
 		return nil
 	}
-	v, ok := sets.Load(*l.id)
-	if !ok {
+	v := sets.Load(*l.id)
+	if v == nil {
 		return nil
 	}
+	defer v.Decrement()
 	// Ensure our copy is immutable.
-	dest := make([]KeyValue, len(*v))
-	copy(dest, *v)
+	dest := make([]KeyValue, v.Len())
+	copy(dest, *v.data)
 	return dest
 }
 
@@ -179,12 +179,14 @@ func (l *Set) toSlice() *[]KeyValue {
 	if l == nil || l.id == nil {
 		return nil
 	}
-	v, ok := sets.Load(*l.id)
-	if !ok {
+	v := sets.Load(*l.id)
+	if v == nil {
 		return nil
 	}
-	dest := getSlice(len(*v), len(*v))
-	copy(*dest, *v)
+	defer v.Decrement()
+	n := v.Len()
+	dest := getSlice(n, n)
+	copy(*dest, *v.data)
 	return dest
 }
 
@@ -380,8 +382,9 @@ func (l *Set) MarshalJSON() ([]byte, error) {
 	if l == nil || l.id == nil {
 		return nil, nil
 	}
-	v, _ := sets.Load(*l.id)
-	return json.Marshal(v)
+	v := sets.Load(*l.id)
+	defer v.Decrement()
+	return json.Marshal(v.data)
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this exporter.

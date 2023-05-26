@@ -15,6 +15,7 @@
 package attribute
 
 import (
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -68,9 +69,10 @@ func TestRegistry(t *testing.T) {
 
 		assert.Equal(t, 1, reg.len(), "registry should hold only one entry")
 		if assert.True(t, reg.Has(*k0), "data not stored in registry") {
-			v, ok := reg.Load(*k0)
-			assert.True(t, ok, "Load returned different state from Has")
-			assert.Equal(t, data0, v, "incorrect data stored")
+			v := reg.Load(*k0)
+			assert.NotNil(t, v, "Load returned different state from Has")
+			assert.Equal(t, data0, v.data, "incorrect data stored")
+			v.Decrement()
 		}
 
 		// Second entry (same value as the first).
@@ -81,9 +83,10 @@ func TestRegistry(t *testing.T) {
 		assert.Truef(t, s0.Equals(&s1), "sets should be equal: %v, %v", s0, s1)
 		assert.Equal(t, 1, reg.len(), "registry should hold only one entry")
 		if assert.True(t, reg.Has(*k0), "original data removed from registry") {
-			v, ok := reg.Load(*k1)
-			assert.True(t, ok, "Load returned different state from Has")
-			assert.Equal(t, data0, v, "data corrupted")
+			v := reg.Load(*k1)
+			assert.NotNil(t, v, "Load returned different state from Has")
+			assert.Equal(t, data0, v.data, "data corrupted")
+			v.Decrement()
 		}
 
 		// Third entry (different than the previous two).
@@ -94,14 +97,16 @@ func TestRegistry(t *testing.T) {
 		assert.False(t, k0 == k2, "same keys for the different data")
 		assert.Equal(t, 2, reg.len(), "registry should hold only two entry")
 		if assert.True(t, reg.Has(*k0), "original data overwrote in registry") {
-			v, ok := reg.Load(*k0)
-			assert.True(t, ok, "Load returned different state from Has")
-			assert.Equal(t, data0, v, "data corrupted")
+			v := reg.Load(*k0)
+			assert.NotNil(t, v, "Load returned different state from Has")
+			assert.Equal(t, data0, v.data, "data corrupted")
+			v.Decrement()
 		}
 		if assert.True(t, reg.Has(*k2), "second data set not stored in registry") {
-			v, ok := reg.Load(*k2)
-			assert.True(t, ok, "Load returned different state from Has")
-			assert.Equal(t, data2, v, "incorrect data stored")
+			v := reg.Load(*k2)
+			assert.NotNil(t, v, "Load returned different state from Has")
+			assert.Equal(t, data2, v.data, "incorrect data stored")
+			v.Decrement()
 		}
 	})
 
@@ -112,6 +117,7 @@ func TestRegistry(t *testing.T) {
 	if !assert.Equalf(t, 0, reg.len(), "registry should be empty: %#v", reg.data) {
 		// Reset manually for the next tests.
 		for k := range reg.data {
+			fmt.Println(k, reg.data[k].nRef)
 			delete(reg.data, k)
 		}
 	}

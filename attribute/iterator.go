@@ -14,12 +14,37 @@
 
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
+import (
+	"runtime"
+	"sync"
+)
+
 // Iterator allows iterating over the set of attributes in order, sorted by
 // key.
 type Iterator struct {
-	// This should be read only. It backs a Set and needs to remain immutable.
-	storage []KeyValue
-	idx     int
+	*iterator
+}
+
+func newIterator(r *reference) Iterator {
+	if r == nil {
+		return Iterator{}
+	}
+	r.Increment()
+
+	i := iterPool.Get().(*iterator)
+	i.ref = r
+	i.idx = -1
+	runtime.SetFinalizer(i, freeIterator)
+	return Iterator{i}
+}
+
+var iterPool = sync.Pool{New: func() any { return new(iterator) }}
+
+func freeIterator(i *iterator) {
+	i.ref.Decrement()
+	i.ref = nil
+	i.idx = 0
+	iterPool.Put(i)
 }
 
 // MergeIterator supports iterating over two sets of attributes while
@@ -40,8 +65,10 @@ type oneIterator struct {
 // Next moves the iterator to the next position. Returns false if there are no
 // more attributes.
 func (i *Iterator) Next() bool {
-	i.idx++
-	return i.idx < i.Len()
+	if i == nil {
+		return false
+	}
+	return i.iterator.Next()
 }
 
 // Label returns current KeyValue. Must be called only after Next returns
@@ -55,7 +82,10 @@ func (i *Iterator) Label() KeyValue {
 // Attribute returns the current KeyValue of the Iterator. It must be called
 // only after Next returns true.
 func (i *Iterator) Attribute() KeyValue {
-	return i.storage[i.idx]
+	if i == nil {
+		return KeyValue{}
+	}
+	return i.iterator.Attribute()
 }
 
 // IndexedLabel returns current index and attribute. Must be called only
@@ -63,18 +93,24 @@ func (i *Iterator) Attribute() KeyValue {
 //
 // Deprecated: Use IndexedAttribute instead.
 func (i *Iterator) IndexedLabel() (int, KeyValue) {
-	return i.idx, i.Attribute()
+	return i.IndexedAttribute()
 }
 
 // IndexedAttribute returns current index and attribute. Must be called only
 // after Next returns true.
 func (i *Iterator) IndexedAttribute() (int, KeyValue) {
+	if i == nil || i.iterator == nil {
+		return 0, KeyValue{}
+	}
 	return i.idx, i.Attribute()
 }
 
 // Len returns a number of attributes in the iterated set.
 func (i *Iterator) Len() int {
-	return len(i.storage)
+	if i == nil {
+		return 0
+	}
+	return i.iterator.Len()
 }
 
 // ToSlice is a convenience function that creates a slice of attributes from
@@ -91,6 +127,34 @@ func (i *Iterator) ToSlice() []KeyValue {
 		slice = append(slice, i.Attribute())
 	}
 	return slice
+}
+
+type iterator struct {
+	// This should be read only. It backs a Set and needs to remain immutable.
+	ref *reference
+	idx int
+}
+
+func (i *iterator) Next() bool {
+	if i == nil || i.ref == nil {
+		return false
+	}
+	i.idx++
+	return i.idx < i.Len()
+}
+
+func (i *iterator) Attribute() KeyValue {
+	if i == nil || i.ref == nil {
+		return KeyValue{}
+	}
+	return i.ref.Index(i.idx)
+}
+
+func (i *iterator) Len() int {
+	if i == nil || i.ref == nil {
+		return 0
+	}
+	return i.ref.Len()
 }
 
 // NewMergeIterator returns a MergeIterator for merging two attribute sets.

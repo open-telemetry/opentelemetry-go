@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
@@ -29,11 +30,12 @@ var sets = newRegistry(-1)
 
 func newSet(data *[]KeyValue) Set {
 	s := sets.Store(data)
+	// Set the finalizer here so putID can be defined at the package scope.
+	// Otherwise, and anonymous function, or method, is needed and that will
+	// make an allocation.
 	runtime.SetFinalizer(s.id, putID)
 	return s
 }
-
-func clearSet(key *uint64) {}
 
 var idPool = sync.Pool{New: func() any { return new(uint64) }}
 
@@ -42,20 +44,83 @@ func getID() *uint64 {
 }
 
 func putID(id *uint64) {
-	sets.Delete(*id)
+	sets.Release(*id)
 	idPool.Put(id)
+}
+
+var referencePool = sync.Pool{
+	New: func() any { return new(reference) },
+}
+
+type reference struct {
+	// nRef is the reference counter.
+	nRef atomic.Int64
+
+	key uint64
+	reg *registry
+
+	data *[]KeyValue
+}
+
+func newReference(key uint64, reg *registry, data *[]KeyValue) *reference {
+	r := referencePool.Get().(*reference)
+	r.key = key
+	r.reg = reg
+	r.data = data
+	r.nRef.Store(1)
+	return r
+}
+
+func (r *reference) Len() int {
+	if r == nil {
+		return 0
+	}
+	return len(*r.data)
+}
+
+func (r *reference) Index(i int) KeyValue {
+	if r == nil {
+		return KeyValue{}
+	}
+	return (*r.data)[i]
+}
+
+func (r *reference) Increment() {
+	if r == nil {
+		return
+	}
+	r.nRef.Add(1)
+}
+
+func (r *reference) Decrement() {
+	if r == nil {
+		return
+	}
+	if r.decrement() <= 0 {
+		r.reg.delete(r.key)
+		r.free()
+	}
+}
+
+func (r *reference) decrement() int64 { return r.nRef.Add(-1) }
+
+func (r *reference) free() {
+	slicePool.Put(r.data)
+	r.data = nil
+	r.nRef.Store(0)
+	referencePool.Put(r)
 }
 
 type registry struct {
 	sync.RWMutex
-	data map[uint64]*[]KeyValue
+	data map[uint64]*reference
 }
 
 func newRegistry(n int) *registry {
 	if n <= 0 {
-		return &registry{data: make(map[uint64]*[]KeyValue)}
+		return &registry{data: make(map[uint64]*reference)}
 	}
-	return &registry{data: make(map[uint64]*[]KeyValue, n)}
+	return &registry{data: make(map[uint64]*reference, n)}
 }
 
 func (r *registry) len() int {
@@ -65,12 +130,15 @@ func (r *registry) len() int {
 }
 
 // Load returns the value stored in the registry for a key, or nil if no value
-// is present. The ok result indicates whether value was found in the registry.
-func (r *registry) Load(key uint64) (value *[]KeyValue, ok bool) {
+// is present.
+//
+// It is the callers responsibility to call Decrement when done with value.
+func (r *registry) Load(key uint64) (value *reference) {
 	r.RLock()
-	value, ok = r.data[key]
+	value = r.data[key]
+	value.Increment()
 	r.RUnlock()
-	return value, ok
+	return value
 }
 
 func (r *registry) Has(key uint64) (ok bool) {
@@ -98,10 +166,13 @@ func (r *registry) Store(data *[]KeyValue) Set {
 		stored, collision := r.data[key]
 		switch {
 		case !collision:
-			r.data[key] = data
-			fallthrough
-		case equal(stored, data):
+			r.data[key] = newReference(key, r, data)
+			id := getID()
+			*id = key
+			return Set{id: id}
+		case equal(stored.data, data):
 			slicePool.Put(data)
+			stored.Increment()
 			id := getID()
 			*id = key
 			return Set{id: id}
@@ -113,15 +184,21 @@ func (r *registry) Store(data *[]KeyValue) Set {
 	}
 }
 
-func (r *registry) Delete(key uint64) {
+// Release reference to the value stored with key.
+func (r *registry) Release(key uint64) {
 	r.Lock()
-	defer r.Unlock()
-	v, ok := r.data[key]
-	if !ok {
-		return
+	v := r.data[key]
+	if v.decrement() <= 0 {
+		delete(r.data, key)
+		v.free()
 	}
+	r.Unlock()
+}
+
+func (r *registry) delete(key uint64) {
+	r.Lock()
 	delete(r.data, key)
-	slicePool.Put(v)
+	r.Unlock()
 }
 
 // hash returns the hash of kv with h as the base.
