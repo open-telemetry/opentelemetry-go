@@ -538,14 +538,14 @@ interface that defines the specific functionality should be preferred.
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
-- [Robert Pająk](https://github.com/pellared), Splunk
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
+- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 
 ### Maintainers
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus
