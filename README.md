@@ -14,7 +14,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 | Signal  | Status     | Project |
 | ------- | ---------- | ------- |
 | Traces  | Stable     | N/A     |
-| Metrics | Beta       | N/A     |
+| Metrics | Stable     | N/A     |
 | Logs    | Frozen [1] | N/A     |
 
 - [1]: The Logs signal development is halted for this project while we develop both Traces and Metrics.

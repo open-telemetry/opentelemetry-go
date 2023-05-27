@@ -25,7 +25,7 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check vanity-import-fix misspell go-mod-tidy golangci-lint-fix test-default
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
 ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
@@ -110,13 +110,19 @@ $(CODESPELL): PACKAGE=codespell
 # Generate
 
 .PHONY: generate
+generate: go-generate vanity-import-fix
 
-generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
-generate/%: DIR=$*
-generate/%: | $(STRINGER) $(PORTO)
+.PHONY: go-generate
+go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
+go-generate/%: DIR=$*
+go-generate/%: | $(STRINGER)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
-		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
+		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
+
+.PHONY: vanity-import-fix
+vanity-import-fix: | $(PORTO)
+	@$(PORTO) --include-internal -w .
 
 # Build
 
@@ -204,10 +210,6 @@ lint: misspell lint-modules golangci-lint
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
-
-.PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
-	@$(PORTO) --include-internal -w .
 
 .PHONY: misspell
 misspell: | $(MISSPELL)
