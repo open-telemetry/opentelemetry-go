@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
+
 ## [1.16.0/0.39.0] 2023-05-18
 
 This release contains the first stable release of the OpenTelemetry Go [metric API].
