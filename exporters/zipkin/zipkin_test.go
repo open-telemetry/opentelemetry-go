@@ -15,6 +15,7 @@
 package zipkin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,9 +29,11 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
+	"github.com/go-logr/logr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tonglil/buflogr"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -363,4 +366,20 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+}
+
+func TestLogrFormatting(t *testing.T) {
+	format := "string %q, int %d"
+	args := []interface{}{"s", 1}
+
+	var buf bytes.Buffer
+	var log logr.Logger = buflogr.NewWithBuffer(&buf)
+
+	exp, err := New("", WithLogr(log))
+	require.NoError(t, err)
+	exp.logf(format, args...)
+
+	want := "INFO string \"s\", int 1\n"
+	got := buf.String()
+	assert.Equal(t, want, got)
 }
