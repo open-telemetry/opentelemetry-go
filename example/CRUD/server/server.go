@@ -7,13 +7,13 @@ import (
 
 type Server struct {
 	routes *gin.Engine
-	store  *db.Store
+	store  db.Store
 }
 
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	server := &Server{}
-	server.routes = initRoute()
 	server.store = store
+	server.setupRoutes()
 	return server
 }
 

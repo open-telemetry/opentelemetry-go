@@ -2,13 +2,16 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/otel/example/CRUD/controllers"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel/example/CRUD/trace"
 )
 
-func initRoute() *gin.Engine {
+func (server *Server) setupRoutes() {
 	r := gin.Default()
+	r.Use(otelgin.Middleware(trace.ServiceName))
 
-	r.POST("/users", controllers.CreateUser)
-	r.GET("/users/:username", controllers.GetUser)
-	return r
+	r.POST("/users", server.CreateUser)
+	r.GET("/users/:username", server.GetUser)
+
+	server.routes = r
 }
