@@ -29,7 +29,6 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
-	"github.com/go-logr/logr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -373,9 +372,7 @@ func TestLogrFormatting(t *testing.T) {
 	args := []interface{}{"s", 1}
 
 	var buf bytes.Buffer
-	var log logr.Logger = buflogr.NewWithBuffer(&buf)
-
-	exp, err := New("", WithLogr(log))
+	exp, err := New("", WithLogr(buflogr.NewWithBuffer(&buf)))
 	require.NoError(t, err)
 	exp.logf(format, args...)
 
