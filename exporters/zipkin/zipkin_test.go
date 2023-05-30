@@ -29,10 +29,10 @@ import (
 
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 
+	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tonglil/buflogr"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -372,11 +372,14 @@ func TestLogrFormatting(t *testing.T) {
 	args := []interface{}{"s", 1}
 
 	var buf bytes.Buffer
-	exp, err := New("", WithLogr(buflogr.NewWithBuffer(&buf)))
+	l := funcr.New(func(prefix, args string) {
+		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+	}, funcr.Options{})
+	exp, err := New("", WithLogr(l))
 	require.NoError(t, err)
 	exp.logf(format, args...)
 
-	want := "INFO string \"s\", int 1\n"
+	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
 	got := buf.String()
 	assert.Equal(t, want, got)
 }
