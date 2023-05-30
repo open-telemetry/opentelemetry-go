@@ -20,7 +20,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 [Go: Metric SDK (GA)]: https://github.com/orgs/open-telemetry/projects/34
 
 - [1]: [Metrics API](https://pkg.go.dev/go.opentelemetry.io/otel/metric) is Stable. [Metrics SDK](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric) is Beta.
-- [1]: The Logs signal development is halted for this project while we stablize the Metrics SDK.
+- [2]: The Logs signal development is halted for this project while we stablize the Metrics SDK.
    No Logs Pull Requests are currently being accepted.
 
 Progress and status specific to this repository is tracked in our
