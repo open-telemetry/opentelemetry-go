@@ -81,9 +81,10 @@ func TestMeterProviderReturnsSameMeter(t *testing.T) {
 
 func TestEmptyMeterName(t *testing.T) {
 	var buf strings.Builder
+	warnLevel := 1
 	l := funcr.New(func(prefix, args string) {
 		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
-	}, funcr.Options{Verbosity: 100})
+	}, funcr.Options{Verbosity: warnLevel})
 	otel.SetLogger(l)
 	mp := MeterProvider{}
 
