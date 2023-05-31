@@ -76,13 +76,20 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:     DefaultTracesPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+			Insecure:    true,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
+
 	cfg = ApplyHTTPEnvConfigs(cfg)
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
+
+	if cfg.Traces.TLSCfg != nil {
+		cfg.Traces.Insecure = false
+	}
+
 	cfg.Traces.URLPath = internal.CleanPath(cfg.Traces.URLPath, DefaultTracesPath)
 	return cfg
 }
@@ -96,6 +103,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			URLPath:     DefaultTracesPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+			Insecure:    true,
 		},
 		RetryConfig: retry.DefaultConfig,
 		DialOptions: []grpc.DialOption{grpc.WithUserAgent(otinternal.GetUserAgentHeader())},
@@ -105,14 +113,22 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		cfg = opt.ApplyGRPCOption(cfg)
 	}
 
+	if cfg.Traces.TLSCfg != nil {
+		cfg.Traces.Insecure = false
+	}
+
 	if cfg.ServiceConfig != "" {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
-	// Priroritize GRPCCredentials over Insecure (passing both is an error).
+	// Prioritize GRPCCredentials over Insecure (passing both is an error).
 	if cfg.Traces.GRPCCredentials != nil {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
+		creds := cfg.Traces.GRPCCredentials
+		cfg.Traces.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	} else if cfg.Traces.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		creds := insecure.NewCredentials()
+		cfg.Traces.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)

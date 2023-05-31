@@ -157,6 +157,12 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customUserAgentHeader,
 			},
 		},
+		{
+			name: "with insecure",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithInsecure(),
+			},
+		},
 	}
 
 	for _, tc := range tests {
