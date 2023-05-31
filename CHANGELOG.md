@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Fix default endpoint (i.e., use `http` instead of `https`) for OTLP exporters. (#4147)
+
 ## [1.16.0/0.39.0] 2023-05-18
 
 This release contains the first stable release of the OpenTelemetry Go [metric API].
@@ -33,7 +35,6 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Fixed
 
 - Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`. (#4077)
-- Fix default endpoint (i.e., use `http` instead of `https`) for OTLP exporters. (#4147)
 
 ## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
 
