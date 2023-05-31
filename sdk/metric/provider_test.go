@@ -112,7 +112,7 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 
 	m := mp.Meter("")
 	_, ok := m.(noop.Meter)
-	assert.Falsef(t, ok, "Meter from shutdown MeterProvider is not NoOp: %T", m)
+	assert.False(t, ok, "Meter from running MeterProvider is NoOp")
 
 	require.NoError(t, mp.Shutdown(context.Background()))
 
