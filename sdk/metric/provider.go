@@ -60,9 +60,6 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // telemetry. This name may be the same as the instrumented code only if that
 // code provides built-in instrumentation.
 //
-// If name is empty, the default (go.opentelemetry.io/otel/sdk/meter) will be
-// used.
-//
 // Calls to the Meter method after Shutdown has been called will return Meters
 // that perform no operations.
 //
