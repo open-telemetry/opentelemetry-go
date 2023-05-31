@@ -88,6 +88,7 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, oconf.NoCompression, c.Metrics.Compression)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
+				assert.True(t, c.Metrics.Insecure)
 			},
 		},
 

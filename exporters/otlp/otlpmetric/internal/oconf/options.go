@@ -89,16 +89,23 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+			Insecure:    true,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
+
 	cfg = ApplyHTTPEnvConfigs(cfg)
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
+
+	if cfg.Metrics.TLSCfg != nil {
+		cfg.Metrics.Insecure = false
+	}
+
 	cfg.Metrics.URLPath = internal.CleanPath(cfg.Metrics.URLPath, DefaultMetricsPath)
 	return cfg
 }
@@ -112,6 +119,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
 			Timeout:     DefaultTimeout,
+			Insecure:    true,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
@@ -119,19 +127,28 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		RetryConfig: retry.DefaultConfig,
 		DialOptions: []grpc.DialOption{grpc.WithUserAgent(ominternal.GetUserAgentHeader())},
 	}
+
 	cfg = ApplyGRPCEnvConfigs(cfg)
 	for _, opt := range opts {
 		cfg = opt.ApplyGRPCOption(cfg)
 	}
 
+	if cfg.Metrics.TLSCfg != nil {
+		cfg.Metrics.Insecure = false
+	}
+
 	if cfg.ServiceConfig != "" {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
-	// Priroritize GRPCCredentials over Insecure (passing both is an error).
+	// Prioritize GRPCCredentials over Insecure (passing both is an error).
 	if cfg.Metrics.GRPCCredentials != nil {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Metrics.GRPCCredentials))
+		creds := cfg.Metrics.GRPCCredentials
+		cfg.Metrics.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	} else if cfg.Metrics.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		creds := insecure.NewCredentials()
+		cfg.Metrics.GRPCCredentials = creds
+		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)

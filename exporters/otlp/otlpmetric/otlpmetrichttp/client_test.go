@@ -137,10 +137,9 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
 	})
 
-	t.Run("WithURLPath", func(t *testing.T) {
-		path := "/prefix/v2/metrics"
-		ePt := fmt.Sprintf("http://localhost:0%s", path)
-		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
+	t.Run("WithInsecure", func(t *testing.T) {
+		ePt := "http://localhost:0"
+		exp, coll := factoryFunc(ePt, nil, WithInsecure())
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
