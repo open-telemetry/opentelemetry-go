@@ -91,5 +91,5 @@ func TestEmptyMeterName(t *testing.T) {
 
 	mp.Meter("")
 
-	assert.Contains(t, buf.String(), `"level"=1 "msg"="Invalid Meter name." "meterName"=""`)
+	assert.Contains(t, buf.String(), `"level"=1 "msg"="Invalid Meter name." "name"=""`)
 }

@@ -70,7 +70,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
 	if name == "" {
-		global.Warn("Invalid Meter name.", "meterName", name)
+		global.Warn("Invalid Meter name.", "name", name)
 	}
 
 	c := metric.NewMeterConfig(options...)
