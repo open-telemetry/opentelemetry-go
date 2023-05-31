@@ -164,3 +164,51 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 		NoMinMax:   h.NoMinMax,
 	}
 }
+
+type ExponentialHistogram struct {
+	MaxSize       int
+	MaxScale      int
+	ZeroThreshold float64
+
+	// NoMinMax indicates whether to not record the min and max of the
+	// distribution. By default, these extrema are recorded.
+	//
+	// Recording these extrema for cumulative data is expected to have little
+	// value, they will represent the entire life of the instrument instead of
+	// just the current collection cycle. It is recommended to set this to true
+	// for that type of data to avoid computing the low-value extrema.
+	NoMinMax bool
+}
+
+var _ Aggregation = ExponentialHistogram{}
+
+// private attempts to ensure no user-defined Aggregation are allowed. The
+// OTel specification does not allow user-defined Aggregation currently.
+func (e ExponentialHistogram) private() {}
+
+// Copy returns a deep copy of the Aggregation.
+func (e ExponentialHistogram) Copy() Aggregation {
+	return e
+}
+
+const (
+	expoMaxScale = 20
+	expoMinScale = -10
+)
+
+// errExpoHist is returned by misconfigured ExplicitBucketHistograms.
+var errExpoHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
+
+// Err returns an error for any misconfigured Aggregation.
+func (e ExponentialHistogram) Err() error {
+	if e.MaxScale < expoMinScale {
+		return fmt.Errorf("%w: max size %d is less than minimum scale %d", errExpoHist, e.MaxSize, expoMinScale)
+	}
+	if e.MaxScale > expoMaxScale {
+		return fmt.Errorf("%w: max size %d is greater than maximum scale %d", errExpoHist, e.MaxSize, expoMaxScale)
+	}
+	if e.MaxSize <= 0 {
+		return fmt.Errorf("%w: max size %d is less than or equal to zero", errExpoHist, e.MaxSize)
+	}
+	return nil
+}
