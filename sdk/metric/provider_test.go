@@ -108,7 +108,7 @@ func TestEmptyMeterName(t *testing.T) {
 }
 
 func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
-	mp := MeterProvider{}
+	mp := NewMeterProvider()
 
 	m := mp.Meter("")
 	_, ok := m.(noop.Meter)
