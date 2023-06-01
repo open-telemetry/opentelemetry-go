@@ -8,7 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- Fix default endpoint (i.e., use `http` instead of `https`) for OTLP exporters. (#4147)
+### Fixed
+
+- Fix default endpoint (use `http` instead of `https`) for OTLP exporters. (#4155)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
