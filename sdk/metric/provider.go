@@ -120,6 +120,14 @@ func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Shutdown(ctx context.Context) error {
+	// Even though it may seem like there is a synchronization issue between the
+	// call to `Store` and checking `shutdown`, the Go concurrency model ensures
+	// that is not the case, as all the atomic operations executed in a program
+	// behave as though executed in some sequentially consistent order. This
+	// definition provides the same semantics as C++'s sequentially consistent
+	// atomics and Java's volatile variables.
+	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
+
 	mp.stopped.Store(true)
 	if mp.shutdown != nil {
 		return mp.shutdown(ctx)
