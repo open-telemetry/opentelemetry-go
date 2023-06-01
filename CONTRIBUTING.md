@@ -484,7 +484,7 @@ Otherwise, stable interfaces MUST NOT be modified.
 
 When an API change must be made, we will update the SDK with the new method one
 release before the API change. This will allow the SDK one version before the
-API change to work seemlessly with the new API.
+API change to work seamlessly with the new API.
 
 If an incompatible version of the SDK is used with the new API the application
 will fail to compile.
