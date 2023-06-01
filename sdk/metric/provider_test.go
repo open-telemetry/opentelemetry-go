@@ -16,9 +16,14 @@ package metric
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel"
 )
 
 func TestMeterConcurrentSafe(t *testing.T) {
@@ -73,4 +78,18 @@ func TestMeterProviderReturnsSameMeter(t *testing.T) {
 
 	assert.Same(t, mtr, mp.Meter(""))
 	assert.NotSame(t, mtr, mp.Meter("diff"))
+}
+
+func TestEmptyMeterName(t *testing.T) {
+	var buf strings.Builder
+	warnLevel := 1
+	l := funcr.New(func(prefix, args string) {
+		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+	}, funcr.Options{Verbosity: warnLevel})
+	otel.SetLogger(l)
+	mp := NewMeterProvider()
+
+	mp.Meter("")
+
+	assert.Contains(t, buf.String(), `"level"=1 "msg"="Invalid Meter name." "name"=""`)
 }
