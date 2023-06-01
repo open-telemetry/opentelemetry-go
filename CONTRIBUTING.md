@@ -492,7 +492,7 @@ will fail to compile.
 #### How Not to Change Specification Interfaces
 
 We have explored using a v2 of the API to change interfaces and found that there
-was no way to introduce a v2 and have it seamlessly work with the v1 of the API.
+was no way to introduce a v2 and have it work seamlessly with the v1 of the API.
 Problems happened with libraries that upgraded to v2 when an application did not,
 and would not produce any telemetry.
 
