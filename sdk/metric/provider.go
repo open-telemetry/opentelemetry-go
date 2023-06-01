@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -60,14 +61,15 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // telemetry. This name may be the same as the instrumented code only if that
 // code provides built-in instrumentation.
 //
-// If name is empty, the default (go.opentelemetry.io/otel/sdk/meter) will be
-// used.
-//
 // Calls to the Meter method after Shutdown has been called will return Meters
 // that perform no operations.
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
+	if name == "" {
+		global.Warn("Invalid Meter name.", "name", name)
+	}
+
 	c := metric.NewMeterConfig(options...)
 	s := instrumentation.Scope{
 		Name:      name,
