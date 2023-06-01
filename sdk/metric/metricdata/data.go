@@ -168,15 +168,33 @@ type ExponentialHistogramDataPoint[N int64 | float64] struct {
 	// Sum is the sum of the values recorded.
 	Sum N
 
-	Scale     int32
+	// Scale describes the resolution of the histogram. Boundaries are
+	// located at powers of the base, where:
+	//
+	//   base = (2^(2^-scale))
+	Scale int32
+	// ZeroCount is the count of values that are rounded to zero. This bucket
+	// stores values that cannot be expressed using the standard exponential formula.
 	ZeroCount uint64
 
+	// PositiveOffset is the positive bucket index of the first entry in the
+	// PositiveCounts slice.
 	PositiveOffset int32
+	// PositiveCounts is an slice where PositiveCounts[i] carries the count of
+	// the bucket at index (offset+i). PositiveCounts[i] is the count of values
+	// greater than base^(offset+i) and less than or equal to base^(offset+i+1).
 	PositiveCounts []uint64
 
+	// NegativeOffset is the positive bucket index of the first entry in the
+	// NegativeCounts slice.
 	NegativeOffset int32
+	// NegativeCounts is an slice where NegativeCounts[i] carries the count of
+	// the bucket at index (offset+i). NegativeCounts[i] is the count of values
+	// greater than base^(offset+i) and less than or equal to base^(offset+i+1).
 	NegativeCounts []uint64
 
+	// ZeroThreshold is the width of the zero region. Where the zero region is
+	// defined as the closed interval [-ZeroThreshold, ZeroThreshold].
 	ZeroThreshold float64
 
 	// Exemplars is the sampled Exemplars collected during the timeseries.
