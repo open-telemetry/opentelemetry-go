@@ -140,7 +140,7 @@ type HistogramDataPoint[N int64 | float64] struct {
 // ExponentialHistogram represents the histogram of all measurements of values from an instrument.
 type ExponentialHistogram[N int64 | float64] struct {
 	// DataPoints are the individual aggregated measurements with unique
-	// Attributes.
+	// attributes.
 	DataPoints []ExponentialHistogramDataPoint[N]
 	// Temporality describes if the aggregation is reported as the change from the
 	// last report time, or the cumulative changes since a fixed start time.
@@ -149,7 +149,7 @@ type ExponentialHistogram[N int64 | float64] struct {
 
 func (ExponentialHistogram[N]) privateAggregation() {}
 
-// ExponentialHistogramDataPoint is a single histogram data point in a timeseries.
+// ExponentialHistogramDataPoint is a single exponential histogram data point in a timeseries.
 type ExponentialHistogramDataPoint[N int64 | float64] struct {
 	// Attributes is the set of key value pairs that uniquely identify the
 	// timeseries.
@@ -171,26 +171,30 @@ type ExponentialHistogramDataPoint[N int64 | float64] struct {
 	// Scale describes the resolution of the histogram. Boundaries are
 	// located at powers of the base, where:
 	//
-	//   base = (2^(2^-scale))
+	//   base = 2 ^ (2 ^ -Scale)
 	Scale int32
-	// ZeroCount is the count of values that are rounded to zero. This bucket
-	// stores values that cannot be expressed using the standard exponential formula.
+	// ZeroCount is the number of values whose absolute value
+	// is less than or equal to [ZeroThreshold].
+	// When ZeroThreshold is 0, this is the number of values that
+	// cannot be expressed using the standard exponential formula
+	// as well as values that have been rounded to zero.
+	// ZeroCount represents the special zero count bucket.
 	ZeroCount uint64
 
 	// PositiveOffset is the positive bucket index of the first entry in the
 	// PositiveCounts slice.
 	PositiveOffset int32
 	// PositiveCounts is an slice where PositiveCounts[i] carries the count of
-	// the bucket at index (offset+i). PositiveCounts[i] is the count of values
-	// greater than base^(offset+i) and less than or equal to base^(offset+i+1).
+	// the bucket at index (PositiveOffset+i). PositiveCounts[i] is the count of values
+	// greater than base^(PositiveOffset+i) and less than or equal to base^(PositiveOffset+i+1).
 	PositiveCounts []uint64
 
-	// NegativeOffset is the positive bucket index of the first entry in the
+	// NegativeOffset is the negative bucket index of the first entry in the
 	// NegativeCounts slice.
 	NegativeOffset int32
 	// NegativeCounts is an slice where NegativeCounts[i] carries the count of
-	// the bucket at index (offset+i). NegativeCounts[i] is the count of values
-	// greater than base^(offset+i) and less than or equal to base^(offset+i+1).
+	// the bucket at index (NegativeOffset+i). NegativeCounts[i] is the count of values
+	// greater than base^(NegativeOffset+i) and less than or equal to base^(NegativeOffset+i+1).
 	NegativeCounts []uint64
 
 	// ZeroThreshold is the width of the zero region. Where the zero region is

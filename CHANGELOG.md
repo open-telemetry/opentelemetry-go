@@ -20,7 +20,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   The package contains semantic conventions from the `v1.19.0` version of the OpenTelemetry specification. (#3848)
 - The `go.opentelemetry.io/otel/semconv/v1.20.0` package.
   The package contains semantic conventions from the `v1.20.0` version of the OpenTelemetry specification. (#4078)
-- The Exponential Histogram data types to the sdk. (#????)
+- The Exponential Histogram data types in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#4165)
 
 ### Changed
 
