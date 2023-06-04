@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.7.0
 	go.opentelemetry.io/build-tools/multimod v0.7.0
 	go.opentelemetry.io/build-tools/semconvgen v0.7.0
-	golang.org/x/tools v0.9.1
+	golang.org/x/tools v0.9.3
 )
 
 require (
