@@ -6,7 +6,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golangci/golangci-lint v1.53.2
-	github.com/itchyny/gojq v0.12.12
+	github.com/itchyny/gojq v0.12.13
 	github.com/jcchavezs/porto v0.4.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.7.0
@@ -119,7 +119,7 @@ require (
 	github.com/maratori/testpackage v1.1.1 // indirect
 	github.com/matoous/godox v0.0.0-20230222163458-006bad1f9d26 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mbilski/exhaustivestruct v1.2.0 // indirect
