@@ -28,6 +28,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Changed
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#4049)
+- `MeterProvider` returns noop meters once it has been shutdown. (#4154)
 
 ### Removed
 
