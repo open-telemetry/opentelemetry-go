@@ -16,7 +16,6 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -509,7 +508,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Int64UpDownCounter with no validation issues",
@@ -529,7 +528,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Int64Histogram with no validation issues",
@@ -549,7 +548,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Int64ObservableCounter with no validation issues",
@@ -569,7 +568,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Int64ObservableUpDownCounter with no validation issues",
@@ -589,7 +588,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Int64ObservableGauge with no validation issues",
@@ -609,7 +608,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64Counter with no validation issues",
@@ -629,7 +628,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64UpDownCounter with no validation issues",
@@ -649,7 +648,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64Histogram with no validation issues",
@@ -669,7 +668,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64ObservableCounter with no validation issues",
@@ -689,7 +688,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64ObservableUpDownCounter with no validation issues",
@@ -709,7 +708,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "Float64ObservableGauge with no validation issues",
@@ -729,7 +728,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 	}
 
@@ -750,11 +749,11 @@ func TestValidateInstrumentName(t *testing.T) {
 	}{
 		{
 			name:    "",
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name:    "1",
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name: "n4me",
@@ -770,11 +769,11 @@ func TestValidateInstrumentName(t *testing.T) {
 		},
 		{
 			name:    "name!",
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 		{
 			name:    "someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp",
-			wantErr: errors.New("invalid instrument name"),
+			wantErr: ErrInvalidInstrumentName,
 		},
 	}
 

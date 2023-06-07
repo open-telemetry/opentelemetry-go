@@ -27,7 +27,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
 
-var instrumentNameRe = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
+var (
+	instrumentNameRe         = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
+	ErrInvalidInstrumentName = errors.New("invalid instrument name")
+)
 
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
@@ -237,7 +240,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 func validateInstrumentName(name string) error {
 	if !instrumentNameRe.MatchString(name) {
 		global.Warn("Invalid Instrument name. Instrument names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter")
-		return errors.New("invalid instrument name")
+		return ErrInvalidInstrumentName
 	}
 	return nil
 }
