@@ -495,7 +495,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64Counter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64Counter("counter")
+				i, err := m.Int64Counter("counter")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -503,7 +504,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64Counter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64Counter("_")
+				i, err := m.Int64Counter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -513,7 +515,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64UpDownCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64UpDownCounter("upDownCounter")
+				i, err := m.Int64UpDownCounter("upDownCounter")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -521,7 +524,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64UpDownCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64UpDownCounter("_")
+				i, err := m.Int64UpDownCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -531,7 +535,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64Histogram with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64Histogram("histogram")
+				i, err := m.Int64Histogram("histogram")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -539,7 +544,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64Histogram with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64Histogram("_")
+				i, err := m.Int64Histogram("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -549,7 +555,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableCounter("aint")
+				i, err := m.Int64ObservableCounter("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -557,7 +564,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableCounter("_")
+				i, err := m.Int64ObservableCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -567,7 +575,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableUpDownCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableUpDownCounter("aint")
+				i, err := m.Int64ObservableUpDownCounter("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -575,7 +584,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableUpDownCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableUpDownCounter("_")
+				i, err := m.Int64ObservableUpDownCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -585,7 +595,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableGauge with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableGauge("aint")
+				i, err := m.Int64ObservableGauge("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -593,7 +604,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Int64ObservableGauge with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableGauge("_")
+				i, err := m.Int64ObservableGauge("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -603,7 +615,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64Counter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64Counter("counter")
+				i, err := m.Float64Counter("counter")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -611,7 +624,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64Counter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64Counter("_")
+				i, err := m.Float64Counter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -621,7 +635,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64UpDownCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64UpDownCounter("upDownCounter")
+				i, err := m.Int64UpDownCounter("upDownCounter")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -629,7 +644,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64UpDownCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64UpDownCounter("_")
+				i, err := m.Int64UpDownCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -639,7 +655,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64Histogram with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64Histogram("histogram")
+				i, err := m.Float64Histogram("histogram")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -647,7 +664,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64Histogram with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64Histogram("_")
+				i, err := m.Float64Histogram("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -657,7 +675,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64ObservableCounter("aint")
+				i, err := m.Float64ObservableCounter("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -665,7 +684,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Int64ObservableCounter("_")
+				i, err := m.Int64ObservableCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -675,7 +695,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableUpDownCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64ObservableUpDownCounter("aint")
+				i, err := m.Float64ObservableUpDownCounter("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -683,7 +704,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableUpDownCounter with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64ObservableUpDownCounter("_")
+				i, err := m.Float64ObservableUpDownCounter("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
@@ -693,7 +715,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableGauge with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64ObservableGauge("aint")
+				i, err := m.Float64ObservableGauge("aint")
+				assert.NotNil(t, i)
 				return err
 			},
 		},
@@ -701,7 +724,8 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			name: "Float64ObservableGauge with an invalid name",
 
 			fn: func(t *testing.T, m metric.Meter) error {
-				_, err := m.Float64ObservableGauge("_")
+				i, err := m.Float64ObservableGauge("_")
+				assert.NotNil(t, i)
 				return err
 			},
 
