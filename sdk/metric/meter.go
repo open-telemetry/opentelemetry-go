@@ -28,8 +28,11 @@ import (
 )
 
 var (
-	instrumentNameRe         = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
-	ErrInvalidInstrumentName = errors.New("invalid instrument name. Instrument names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter")
+	instrumentNameRe = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
+
+	// ErrInvalidInstrumentName indicates the created instrument has an invalid name.
+	// Valid names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter
+	ErrInvalidInstrumentName = errors.New("invalid instrument name")
 )
 
 // meter handles the creation and coordination of all metric instruments. A
