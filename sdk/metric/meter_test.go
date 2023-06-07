@@ -787,9 +787,9 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 
 	m1 := mp.Meter("scope1")
 	m2 := mp.Meter("scope2")
-	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	iCtr, err := m2.Int64ObservableCounter("int64ctr")
 	require.NoError(t, err)
-	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	fCtr, err := m2.Float64ObservableCounter("float64ctr")
 	require.NoError(t, err)
 	_, err = m1.RegisterCallback(
 		func(context.Context, metric.Observer) error { return nil },
@@ -798,13 +798,13 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 	assert.ErrorContains(
 		t,
 		err,
-		`invalid registration: observable "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		`invalid registration: observable "int64ctr" from Meter "scope2", registered with Meter "scope1"`,
 		"Instrument registered with non-creation Meter",
 	)
 	assert.ErrorContains(
 		t,
 		err,
-		`invalid registration: observable "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		`invalid registration: observable "float64ctr" from Meter "scope2", registered with Meter "scope1"`,
 		"Instrument registered with non-creation Meter",
 	)
 }
@@ -818,9 +818,9 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	require.NoError(t, err)
 
 	m2 := mp.Meter("scope2")
-	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	iCtr, err := m2.Int64ObservableCounter("int64ctr")
 	require.NoError(t, err)
-	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	fCtr, err := m2.Float64ObservableCounter("float64ctr")
 	require.NoError(t, err)
 
 	type int64Obsrv struct{ metric.Int64Observable }
