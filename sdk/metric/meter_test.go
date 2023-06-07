@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -479,6 +480,283 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			require.Len(t, sm.Metrics, 1)
 			got := sm.Metrics[0]
 			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+func TestMeterCreatesInstrumentsValidations(t *testing.T) {
+	testCases := []struct {
+		name string
+		fn   func(*testing.T, metric.Meter) error
+
+		wantErr error
+	}{
+		{
+			name: "Int64Counter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64Counter("counter")
+				return err
+			},
+		},
+		{
+			name: "Int64Counter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64Counter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Int64UpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64UpDownCounter("upDownCounter")
+				return err
+			},
+		},
+		{
+			name: "Int64UpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64UpDownCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Int64Histogram with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64Histogram("histogram")
+				return err
+			},
+		},
+		{
+			name: "Int64Histogram with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64Histogram("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Int64ObservableCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableCounter("aint")
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Int64ObservableUpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableUpDownCounter("aint")
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableUpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableUpDownCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Int64ObservableGauge with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableGauge("aint")
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableGauge with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableGauge("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64Counter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64Counter("counter")
+				return err
+			},
+		},
+		{
+			name: "Float64Counter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64Counter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64UpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64UpDownCounter("upDownCounter")
+				return err
+			},
+		},
+		{
+			name: "Float64UpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64UpDownCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64Histogram with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64Histogram("histogram")
+				return err
+			},
+		},
+		{
+			name: "Float64Histogram with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64Histogram("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64ObservableCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64ObservableCounter("aint")
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Int64ObservableCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64ObservableUpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64ObservableUpDownCounter("aint")
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableUpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64ObservableUpDownCounter("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "Float64ObservableGauge with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64ObservableGauge("aint")
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableGauge with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				_, err := m.Float64ObservableGauge("_")
+				return err
+			},
+
+			wantErr: errors.New("invalid instrument name"),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMeterProvider().Meter("testInstruments")
+			err := tt.fn(t, m)
+			assert.Equal(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateInstrumentName(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		wantErr error
+	}{
+		{
+			name:    "",
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name:    "1",
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name: "n4me",
+		},
+		{
+			name: "n-me",
+		},
+		{
+			name: "na_e",
+		},
+		{
+			name: "nam.",
+		},
+		{
+			name:    "name!",
+			wantErr: errors.New("invalid instrument name"),
+		},
+		{
+			name:    "someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp",
+			wantErr: errors.New("invalid instrument name"),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantErr, validateInstrumentName(tt.name))
 		})
 	}
 }
