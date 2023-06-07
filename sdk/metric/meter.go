@@ -29,7 +29,7 @@ import (
 
 var (
 	instrumentNameRe         = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
-	ErrInvalidInstrumentName = errors.New("invalid instrument name")
+	ErrInvalidInstrumentName = errors.New("invalid instrument name. Instrument names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter")
 )
 
 // meter handles the creation and coordination of all metric instruments. A
@@ -239,7 +239,6 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 
 func validateInstrumentName(name string) error {
 	if !instrumentNameRe.MatchString(name) {
-		global.Warn("Invalid Instrument name. Instrument names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter")
 		return ErrInvalidInstrumentName
 	}
 	return nil
