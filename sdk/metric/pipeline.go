@@ -354,7 +354,7 @@ func (i *inserter[N]) logConflict(id streamID) {
 		return
 	}
 
-	global.Info(
+	global.Warn(
 		"duplicate metric stream definitions",
 		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
 		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
