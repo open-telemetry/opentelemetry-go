@@ -31,7 +31,7 @@ var (
 	instrumentNameRe = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
 
 	// ErrInvalidInstrumentName indicates the created instrument has an invalid name.
-	// Valid names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter
+	// Valid names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter.
 	ErrInvalidInstrumentName = errors.New("invalid instrument name")
 )
 
@@ -69,7 +69,6 @@ var _ metric.Meter = (*meter)(nil)
 // options. The instrument is used to synchronously record increasing int64
 // measurements during a computational operation.
 func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
-
 	cfg := metric.NewInt64CounterConfig(options...)
 	const kind = InstrumentKindCounter
 	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
