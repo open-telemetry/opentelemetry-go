@@ -17,6 +17,7 @@ package metric
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"testing"
@@ -263,7 +264,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64ObservableCounter("afloat", metric.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(ctr, 3)
+					o.ObserveFloat64(ctr, math.Inf(1))
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
@@ -275,7 +276,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attrs, Value: 4},
-						{Value: 3},
+						{Value: math.Inf(1)},
 					},
 				},
 			},
@@ -290,7 +291,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64ObservableUpDownCounter("afloat", metric.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(ctr, 11)
+					o.ObserveFloat64(ctr, math.Inf(1))
 					return nil
 				}, ctr)
 				assert.NoError(t, err)
@@ -302,7 +303,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attrs, Value: 4},
-						{Value: 11},
+						{Value: math.Inf(1)},
 					},
 				},
 			},
@@ -317,7 +318,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Float64ObservableGauge("agauge", metric.WithFloat64Callback(cback))
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					o.ObserveFloat64(gauge, 11)
+					o.ObserveFloat64(gauge, math.Inf(1))
 					return nil
 				}, gauge)
 				assert.NoError(t, err)
@@ -327,7 +328,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attrs, Value: 4},
-						{Value: 11},
+						{Value: math.Inf(1)},
 					},
 				},
 			},
@@ -422,7 +423,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 11)
+				ctr.Add(context.Background(), math.Inf(-1))
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -430,7 +431,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Value: 11},
+						{Value: math.Inf(-1)},
 					},
 				},
 			},
