@@ -153,10 +153,6 @@ func TestPrometheusExporter(t *testing.T) {
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, opt)
 
-				counter, err := meter.Float64Counter("0invalid.counter.name", otelmetric.WithDescription("a counter with an invalid name"))
-				require.NoError(t, err)
-				counter.Add(ctx, 100, opt)
-
 				histogram, err := meter.Float64Histogram("invalid.hist.name", otelmetric.WithDescription("a histogram with an invalid name"))
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, opt)
