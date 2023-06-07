@@ -4,7 +4,7 @@ linkTitle: Manual
 aliases:
   - /docs/instrumentation/go/instrumentation
   - /docs/instrumentation/go/manual_instrumentation
-weight: 3
+weight: 30
 ---
 
 Instrumentation is the process of adding observability code to your application.
