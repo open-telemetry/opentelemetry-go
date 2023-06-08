@@ -71,7 +71,12 @@ var _ metric.Meter = (*meter)(nil)
 func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	cfg := metric.NewInt64CounterConfig(options...)
 	const kind = InstrumentKindCounter
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64UpDownCounter returns a new instrument identified by name and
@@ -80,7 +85,12 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	cfg := metric.NewInt64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64Histogram returns a new instrument identified by name and configured
@@ -89,7 +99,12 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	cfg := metric.NewInt64HistogramConfig(options...)
 	const kind = InstrumentKindHistogram
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64ObservableCounter returns a new instrument identified by name and
@@ -100,11 +115,11 @@ func (m *meter) Int64ObservableCounter(name string, options ...metric.Int64Obser
 	const kind = InstrumentKindObservableCounter
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
@@ -115,11 +130,11 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...metric.Int6
 	const kind = InstrumentKindObservableUpDownCounter
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 // Int64ObservableGauge returns a new instrument identified by name and
@@ -130,11 +145,11 @@ func (m *meter) Int64ObservableGauge(name string, options ...metric.Int64Observa
 	const kind = InstrumentKindObservableGauge
 	p := int64ObservProvider{m.int64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 // Float64Counter returns a new instrument identified by name and configured
@@ -143,7 +158,12 @@ func (m *meter) Int64ObservableGauge(name string, options ...metric.Int64Observa
 func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	cfg := metric.NewFloat64CounterConfig(options...)
 	const kind = InstrumentKindCounter
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64UpDownCounter returns a new instrument identified by name and
@@ -152,7 +172,12 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64Histogram returns a new instrument identified by name and configured
@@ -161,7 +186,12 @@ func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDow
 func (m *meter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	cfg := metric.NewFloat64HistogramConfig(options...)
 	const kind = InstrumentKindHistogram
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64ObservableCounter returns a new instrument identified by name and
@@ -172,11 +202,11 @@ func (m *meter) Float64ObservableCounter(name string, options ...metric.Float64O
 	const kind = InstrumentKindObservableCounter
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 // Float64ObservableUpDownCounter returns a new instrument identified by name
@@ -187,11 +217,11 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...metric.Fl
 	const kind = InstrumentKindObservableUpDownCounter
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 // Float64ObservableGauge returns a new instrument identified by name and
@@ -202,11 +232,11 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 	const kind = InstrumentKindObservableGauge
 	p := float64ObservProvider{m.float64IP}
 	inst, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
-	if err != nil && err != ErrInvalidInstrumentName {
+	if err != nil {
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, err
+	return inst, validateInstrumentName(name)
 }
 
 func validateInstrumentName(name string) error {
@@ -408,12 +438,7 @@ func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]i
 // lookup returns the resolved instrumentImpl.
 func (p *int64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*int64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	inst := &int64Inst{aggregators: aggs}
-	if err != nil {
-		return inst, err
-	}
-
-	return inst, validateInstrumentName(name)
+	return &int64Inst{aggregators: aggs}, err
 }
 
 // float64InstProvider provides float64 OpenTelemetry instruments.
@@ -441,24 +466,14 @@ func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([
 // lookup returns the resolved instrumentImpl.
 func (p *float64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*float64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	inst := &float64Inst{aggregators: aggs}
-	if err != nil {
-		return inst, err
-	}
-
-	return inst, validateInstrumentName(name)
+	return &float64Inst{aggregators: aggs}, err
 }
 
 type int64ObservProvider struct{ *int64InstProvider }
 
 func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (int64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	inst := newInt64Observable(p.scope, kind, name, desc, u, aggs)
-	if err != nil {
-		return inst, err
-	}
-
-	return inst, validateInstrumentName(name)
+	return newInt64Observable(p.scope, kind, name, desc, u, aggs), err
 }
 
 func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []metric.Int64Callback) {
@@ -491,12 +506,7 @@ type float64ObservProvider struct{ *float64InstProvider }
 
 func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (float64Observable, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	inst := newFloat64Observable(p.scope, kind, name, desc, u, aggs)
-	if err != nil {
-		return inst, err
-	}
-
-	return inst, validateInstrumentName(name)
+	return newFloat64Observable(p.scope, kind, name, desc, u, aggs), err
 }
 
 func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks []metric.Float64Callback) {
