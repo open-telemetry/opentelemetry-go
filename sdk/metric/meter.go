@@ -243,9 +243,6 @@ func validateInstrumentName(name string) error {
 	if len(name) > 63 {
 		return fmt.Errorf("%w: %s: longer than 63 characters", ErrInstrumentName, name)
 	}
-	if len(name) == 0 {
-		return nil
-	}
 	if !isAlpha([]rune(name)[0]) {
 		return fmt.Errorf("%w: %s: must start with a letter", ErrInstrumentName, name)
 	}
