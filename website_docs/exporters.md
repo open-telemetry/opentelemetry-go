@@ -1,7 +1,7 @@
 ---
 title: Exporters
 aliases: [/docs/instrumentation/go/exporting_data]
-weight: 4
+weight: 50
 ---
 
 In order to visualize and analyze your [traces](/docs/concepts/signals/traces/)

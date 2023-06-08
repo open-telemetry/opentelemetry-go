@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-weight: 2
+weight: 10
 ---
 
 Welcome to the OpenTelemetry for Go getting started guide! This guide will walk
