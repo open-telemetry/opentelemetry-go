@@ -205,6 +205,22 @@ var (
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
+	exponentialBucket2 = metricdata.ExponentialBucket{
+		Offset: 2,
+		Counts: []uint64{1, 1},
+	}
+	exponentialBucket3 = metricdata.ExponentialBucket{
+		Offset: 3,
+		Counts: []uint64{1, 1},
+	}
+	exponentialBucket4 = metricdata.ExponentialBucket{
+		Offset: 4,
+		Counts: []uint64{1, 1, 1},
+	}
+	exponentialBucket5 = metricdata.ExponentialBucket{
+		Offset: 5,
+		Counts: []uint64{1, 1, 1},
+	}
 	exponentialHistogramDataPointInt64A = metricdata.ExponentialHistogramDataPoint[int64]{
 		Attributes:     attrA,
 		StartTime:      startA,
@@ -214,10 +230,8 @@ var (
 		Sum:            2,
 		Scale:          1,
 		ZeroCount:      1,
-		PositiveOffset: 3,
-		PositiveCounts: []uint64{1, 1},
-		NegativeOffset: 2,
-		NegativeCounts: []uint64{1, 1},
+		PositiveBucket: exponentialBucket3,
+		NegativeBucket: exponentialBucket2,
 		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64A},
 	}
 	exponentialHistogramDataPointFloat64A = metricdata.ExponentialHistogramDataPoint[float64]{
@@ -229,10 +243,8 @@ var (
 		Sum:            2,
 		Scale:          1,
 		ZeroCount:      1,
-		PositiveOffset: 3,
-		PositiveCounts: []uint64{1, 1},
-		NegativeOffset: 2,
-		NegativeCounts: []uint64{1, 1},
+		PositiveBucket: exponentialBucket3,
+		NegativeBucket: exponentialBucket2,
 		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64A},
 	}
 	exponentialHistogramDataPointInt64B = metricdata.ExponentialHistogramDataPoint[int64]{
@@ -245,10 +257,8 @@ var (
 		Sum:            3,
 		Scale:          2,
 		ZeroCount:      3,
-		PositiveOffset: 4,
-		PositiveCounts: []uint64{1, 1, 1},
-		NegativeOffset: 5,
-		NegativeCounts: []uint64{1, 1, 1},
+		PositiveBucket: exponentialBucket4,
+		NegativeBucket: exponentialBucket5,
 		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64B},
 	}
 	exponentialHistogramDataPointFloat64B = metricdata.ExponentialHistogramDataPoint[float64]{
@@ -261,10 +271,8 @@ var (
 		Sum:            3,
 		Scale:          2,
 		ZeroCount:      3,
-		PositiveOffset: 4,
-		PositiveCounts: []uint64{1, 1, 1},
-		NegativeOffset: 5,
-		NegativeCounts: []uint64{1, 1, 1},
+		PositiveBucket: exponentialBucket4,
+		NegativeBucket: exponentialBucket5,
 		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64B},
 	}
 	exponentialHistogramDataPointInt64C = metricdata.ExponentialHistogramDataPoint[int64]{
@@ -276,10 +284,8 @@ var (
 		Sum:            2,
 		Scale:          1,
 		ZeroCount:      1,
-		PositiveOffset: 3,
-		PositiveCounts: []uint64{1, 1},
-		NegativeOffset: 2,
-		NegativeCounts: []uint64{1, 1},
+		PositiveBucket: exponentialBucket3,
+		NegativeBucket: exponentialBucket2,
 		Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64C},
 	}
 	exponentialHistogramDataPointFloat64C = metricdata.ExponentialHistogramDataPoint[float64]{
@@ -291,10 +297,8 @@ var (
 		Sum:            2,
 		Scale:          1,
 		ZeroCount:      1,
-		PositiveOffset: 3,
-		PositiveCounts: []uint64{1, 1},
-		NegativeOffset: 2,
-		NegativeCounts: []uint64{1, 1},
+		PositiveBucket: exponentialBucket3,
+		NegativeBucket: exponentialBucket2,
 		Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64C},
 	}
 
@@ -500,6 +504,7 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("ExponentialHistogramFloat64", testDatatype(exponentialHistogramFloat64A, exponentialHistogramFloat64B, equalExponentialHistograms[float64]))
 	t.Run("ExponentialHistogramDataPointInt64", testDatatype(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64B, equalExponentialHistogramDataPoints[int64]))
 	t.Run("ExponentialHistogramDataPointFloat64", testDatatype(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64B, equalExponentialHistogramDataPoints[float64]))
+	t.Run("ExponentialBuckets", testDatatype(exponentialBucket2, exponentialBucket3, equalExponentialBuckets))
 }
 
 func TestAssertEqualIgnoreTime(t *testing.T) {
@@ -646,6 +651,7 @@ func TestAssertAttributes(t *testing.T) {
 	AssertHasAttributes(t, exponentialHistogramDataPointFloat64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, exponentialHistogramInt64A, attribute.Bool("A", true))
 	AssertHasAttributes(t, exponentialHistogramFloat64A, attribute.Bool("A", true))
+	AssertHasAttributes(t, exponentialBucket2, attribute.Bool("A", true)) // No-op, always pass.
 
 	r := hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", true))
 	assert.Equal(t, len(r), 0, "gaugeInt64A has A=True")

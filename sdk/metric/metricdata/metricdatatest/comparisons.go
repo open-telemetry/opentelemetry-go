@@ -386,17 +386,13 @@ func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.Expo
 		reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
 	}
 
-	if a.PositiveOffset != b.PositiveOffset {
-		reasons = append(reasons, notEqualStr("PositiveOffset", a.PositiveOffset, b.PositiveOffset))
+	r := equalExponentialBuckets(a.PositiveBucket, b.PositiveBucket, cfg)
+	if len(r) > 0 {
+		reasons = append(reasons, r...)
 	}
-	if !equalSlices(a.PositiveCounts, b.PositiveCounts) {
-		reasons = append(reasons, notEqualStr("PositiveCounts", a.PositiveCounts, b.PositiveCounts))
-	}
-	if a.NegativeOffset != b.NegativeOffset {
-		reasons = append(reasons, notEqualStr("NegativeOffset", a.NegativeOffset, b.NegativeOffset))
-	}
-	if !equalSlices(a.NegativeCounts, b.NegativeCounts) {
-		reasons = append(reasons, notEqualStr("NegativeCounts", a.NegativeCounts, b.NegativeCounts))
+	r = equalExponentialBuckets(a.NegativeBucket, b.NegativeBucket, cfg)
+	if len(r) > 0 {
+		reasons = append(reasons, r...)
 	}
 
 	if !cfg.ignoreExemplars {
@@ -411,6 +407,16 @@ func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.Expo
 		if r != "" {
 			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
 		}
+	}
+	return reasons
+}
+
+func equalExponentialBuckets(a, b metricdata.ExponentialBucket, _ config) (reasons []string) {
+	if a.Offset != b.Offset {
+		reasons = append(reasons, notEqualStr("Offset", a.Offset, b.Offset))
+	}
+	if !equalSlices(a.Counts, b.Counts) {
+		reasons = append(reasons, notEqualStr("Counts", a.Counts, b.Counts))
 	}
 	return reasons
 }

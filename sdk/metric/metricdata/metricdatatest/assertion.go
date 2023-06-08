@@ -46,7 +46,8 @@ type Datatypes interface {
 		metricdata.ExponentialHistogram[float64] |
 		metricdata.ExponentialHistogram[int64] |
 		metricdata.ExponentialHistogramDataPoint[float64] |
-		metricdata.ExponentialHistogramDataPoint[int64]
+		metricdata.ExponentialHistogramDataPoint[int64] |
+		metricdata.ExponentialBucket
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -146,6 +147,8 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[float64]), cfg)
 	case metricdata.ExponentialHistogramDataPoint[int64]:
 		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[int64]), cfg)
+	case metricdata.ExponentialBucket:
+		r = equalExponentialBuckets(e, aIface.(metricdata.ExponentialBucket), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -218,6 +221,8 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
 	case metricdata.ExponentialHistogramDataPoint[float64]:
 		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
+	case metricdata.ExponentialBucket:
+		// Nothing to check.
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.

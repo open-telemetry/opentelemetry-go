@@ -181,21 +181,10 @@ type ExponentialHistogramDataPoint[N int64 | float64] struct {
 	// ZeroCount represents the special zero count bucket.
 	ZeroCount uint64
 
-	// PositiveOffset is the positive bucket index of the first entry in the
-	// PositiveCounts slice.
-	PositiveOffset int32
-	// PositiveCounts is an slice where PositiveCounts[i] carries the count of
-	// the bucket at index (PositiveOffset+i). PositiveCounts[i] is the count of values
-	// greater than base^(PositiveOffset+i) and less than or equal to base^(PositiveOffset+i+1).
-	PositiveCounts []uint64
-
-	// NegativeOffset is the negative bucket index of the first entry in the
-	// NegativeCounts slice.
-	NegativeOffset int32
-	// NegativeCounts is an slice where NegativeCounts[i] carries the count of
-	// the bucket at index (NegativeOffset+i). NegativeCounts[i] is the count of values
-	// greater than base^(NegativeOffset+i) and less than or equal to base^(NegativeOffset+i+1).
-	NegativeCounts []uint64
+	// PositiveBucket is range of positive value bucket counts.
+	PositiveBucket ExponentialBucket
+	// NegativeBucket is range of negative value bucket counts.
+	NegativeBucket ExponentialBucket
 
 	// ZeroThreshold is the width of the zero region. Where the zero region is
 	// defined as the closed interval [-ZeroThreshold, ZeroThreshold].
@@ -203,6 +192,17 @@ type ExponentialHistogramDataPoint[N int64 | float64] struct {
 
 	// Exemplars is the sampled Exemplars collected during the timeseries.
 	Exemplars []Exemplar[N] `json:",omitempty"`
+}
+
+// ExponentialBucket are a set of bucket counts, encoded in a contiguous array
+// of counts.
+type ExponentialBucket struct {
+	// Offset is the bucket index of the first entry in the Counts slice.
+	Offset int32
+	// Counts is an slice where Counts[i] carries the count of the bucket at
+	// index (Offset+i). Counts[i] is the count of values greater than
+	// base^(Offset+i) and less than or equal to base^(Offset+i+1).
+	Counts []uint64
 }
 
 // Extrema is the minimum or maximum value of a dataset.
