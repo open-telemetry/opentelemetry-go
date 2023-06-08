@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
@@ -28,8 +27,6 @@ import (
 )
 
 var (
-	instrumentNameRe = regexp.MustCompile(`^([A-Za-z]){1}([A-Za-z0-9\_\-\.]){0,62}$`)
-
 	// ErrInstrumentName indicates the created instrument has an invalid name.
 	// Valid names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter.
 	ErrInstrumentName = errors.New("invalid instrument name")
@@ -240,10 +237,33 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 }
 
 func validateInstrumentName(name string) error {
-	if !instrumentNameRe.MatchString(name) {
-		return ErrInstrumentName
+	if len(name) == 0 {
+		return fmt.Errorf("%w: %s: is empty", ErrInstrumentName, name)
+	}
+	if len(name) > 63 {
+		return fmt.Errorf("%w: %s: longer than 63 characters", ErrInstrumentName, name)
+	}
+	if len(name) == 0 {
+		return nil
+	}
+	if !isAlpha([]rune(name)[0]) {
+		return fmt.Errorf("%w: %s: must start with a letter", ErrInstrumentName, name)
+	}
+	if len(name) == 1 {
+		return nil
+	}
+	for _, c := range name[1:] {
+		if !isAlphanumeric(c) && c != '_' && c != '.' && c != '-' {
+			return fmt.Errorf("%w: %s: must only contain [A-Za-z0-9_.-]", ErrInstrumentName, name)
+		}
 	}
 	return nil
+}
+func isAlpha(c rune) bool {
+	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+}
+func isAlphanumeric(c rune) bool {
+	return isAlpha(c) || ('0' <= c && c <= '9')
 }
 
 // RegisterCallback registers f to be called each collection cycle so it will

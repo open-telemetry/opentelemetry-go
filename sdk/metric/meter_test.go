@@ -508,7 +508,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Int64UpDownCounter with no validation issues",
@@ -528,7 +528,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Int64Histogram with no validation issues",
@@ -548,7 +548,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Int64ObservableCounter with no validation issues",
@@ -568,7 +568,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Int64ObservableUpDownCounter with no validation issues",
@@ -588,7 +588,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Int64ObservableGauge with no validation issues",
@@ -608,7 +608,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64Counter with no validation issues",
@@ -628,7 +628,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64UpDownCounter with no validation issues",
@@ -648,7 +648,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64Histogram with no validation issues",
@@ -668,7 +668,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64ObservableCounter with no validation issues",
@@ -688,7 +688,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64ObservableUpDownCounter with no validation issues",
@@ -708,7 +708,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "Float64ObservableGauge with no validation issues",
@@ -728,7 +728,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 				return err
 			},
 
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 	}
 
@@ -749,11 +749,11 @@ func TestValidateInstrumentName(t *testing.T) {
 	}{
 		{
 			name:    "",
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: : is empty", ErrInstrumentName),
 		},
 		{
 			name:    "1",
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: 1: must start with a letter", ErrInstrumentName),
 		},
 		{
 			name: "n4me",
@@ -769,11 +769,11 @@ func TestValidateInstrumentName(t *testing.T) {
 		},
 		{
 			name:    "name!",
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: name!: must only contain [A-Za-z0-9_.-]", ErrInstrumentName),
 		},
 		{
 			name:    "someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp",
-			wantErr: ErrInstrumentName,
+			wantErr: fmt.Errorf("%w: someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp: longer than 63 characters", ErrInstrumentName),
 		},
 	}
 
