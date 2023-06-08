@@ -756,6 +756,9 @@ func TestValidateInstrumentName(t *testing.T) {
 			wantErr: fmt.Errorf("%w: 1: must start with a letter", ErrInstrumentName),
 		},
 		{
+			name: "a",
+		},
+		{
 			name: "n4me",
 		},
 		{
