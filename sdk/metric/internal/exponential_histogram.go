@@ -12,80 +12,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-const smallestNonZeroNormalFloat64 = 0x1p-1022
+const (
+	expoMaxScale = 20
+	expoMinScale = -10
 
-func NewExpoDeltaHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
-	if cfg.MaxScale > expoMaxScale {
-		cfg.MaxScale = expoMaxScale
-	}
-	if cfg.MaxScale < expoMinScale {
-		cfg.MaxScale = expoMinScale
-	}
-	if cfg.MaxSize <= 0 {
-		cfg.MaxSize = 160
-	}
-
-	return &deltaExponentialHistogram[N]{
-		expoHistogramValues: &expoHistogramValues[N]{
-			maxSize:       cfg.MaxSize,
-			maxScale:      cfg.MaxScale,
-			zeroThreshold: math.Abs(cfg.ZeroThreshold),
-		},
-		noMinMax: cfg.NoMinMax,
-		start:    now(),
-	}
-}
-
-// deltaExponentialHistogram summarizes a set of measurements made in a single
-// aggregation cycle as an Exponential histogram with explicitly defined buckets.
-type deltaExponentialHistogram[N int64 | float64] struct {
-	*expoHistogramValues[N]
-
-	noMinMax bool
-	start    time.Time
-}
-
-func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	if len(e.values) == 0 {
-		return nil
-	}
-	t := now()
-	h := metricdata.ExponentialHistogram[N]{
-		Temporality: metricdata.DeltaTemporality,
-		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[N], 0, len(e.values)),
-	}
-	for a, b := range e.values {
-		ehdp := metricdata.ExponentialHistogramDataPoint[N]{
-			Attributes:     a,
-			StartTime:      e.start,
-			Time:           t,
-			Count:          b.count,
-			Sum:            b.sum,
-			Scale:          int32(b.scale),
-			ZeroCount:      b.zeroCount,
-			ZeroThreshold:  b.zeroThreshold,
-			PositiveOffset: int32(b.posBuckets.startIndex),
-			NegativeOffset: int32(b.negBuckets.startIndex),
-			PositiveCounts: make([]uint64, len(b.posBuckets.counts)),
-			NegativeCounts: make([]uint64, len(b.negBuckets.counts)),
-		}
-		copy(ehdp.PositiveCounts, b.posBuckets.counts)
-		copy(ehdp.NegativeCounts, b.negBuckets.counts)
-
-		if !e.noMinMax {
-			ehdp.Min = metricdata.NewExtrema(b.min)
-			ehdp.Max = metricdata.NewExtrema(b.max)
-		}
-		h.DataPoints = append(h.DataPoints, ehdp)
-
-		delete(e.values, a)
-	}
-	e.start = t
-	return h
-}
+	smallestNonZeroNormalFloat64 = 0x1p-1022
+)
 
 // expoHistogramValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
@@ -109,11 +41,6 @@ func (e *expoHistogramValues[N]) Aggregate(value N, attr attribute.Set) {
 	}
 	v.record(value)
 }
-
-const (
-	expoMaxScale = 20
-	expoMinScale = -10
-)
 
 // expoHistogramDataPoint is a single bucket in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
@@ -350,4 +277,164 @@ func (b *expoBucket) downscale(s int) {
 	lastIdx := (len(b.counts) - 1 + offset) / steps
 	b.counts = b.counts[:lastIdx+1]
 	b.startIndex = b.startIndex >> s
+}
+
+func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+	if cfg.MaxScale > expoMaxScale {
+		cfg.MaxScale = expoMaxScale
+	}
+	if cfg.MaxScale < expoMinScale {
+		cfg.MaxScale = expoMinScale
+	}
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = 160
+	}
+
+	return &deltaExponentialHistogram[N]{
+		expoHistogramValues: &expoHistogramValues[N]{
+			maxSize:       cfg.MaxSize,
+			maxScale:      cfg.MaxScale,
+			zeroThreshold: math.Abs(cfg.ZeroThreshold),
+
+			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
+		},
+		noMinMax: cfg.NoMinMax,
+		start:    now(),
+	}
+}
+
+// deltaExponentialHistogram summarizes a set of measurements made in a single
+// aggregation cycle as an Exponential histogram with explicitly defined buckets.
+type deltaExponentialHistogram[N int64 | float64] struct {
+	*expoHistogramValues[N]
+
+	noMinMax bool
+	start    time.Time
+}
+
+func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	if len(e.values) == 0 {
+		return nil
+	}
+	t := now()
+	h := metricdata.ExponentialHistogram[N]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[N], 0, len(e.values)),
+	}
+	for a, b := range e.values {
+		ehdp := metricdata.ExponentialHistogramDataPoint[N]{
+			Attributes:    a,
+			StartTime:     e.start,
+			Time:          t,
+			Count:         b.count,
+			Sum:           b.sum,
+			Scale:         int32(b.scale),
+			ZeroCount:     b.zeroCount,
+			ZeroThreshold: b.zeroThreshold,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: int32(b.posBuckets.startIndex),
+				Counts: make([]uint64, len(b.posBuckets.counts)),
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: int32(b.negBuckets.startIndex),
+				Counts: make([]uint64, len(b.negBuckets.counts)),
+			},
+		}
+		copy(ehdp.PositiveBucket.Counts, b.posBuckets.counts)
+		copy(ehdp.NegativeBucket.Counts, b.negBuckets.counts)
+
+		if !e.noMinMax {
+			ehdp.Min = metricdata.NewExtrema(b.min)
+			ehdp.Max = metricdata.NewExtrema(b.max)
+		}
+		h.DataPoints = append(h.DataPoints, ehdp)
+
+		delete(e.values, a)
+	}
+	e.start = t
+	return h
+}
+
+func NewCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+	if cfg.MaxScale > expoMaxScale {
+		cfg.MaxScale = expoMaxScale
+	}
+	if cfg.MaxScale < expoMinScale {
+		cfg.MaxScale = expoMinScale
+	}
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = 160
+	}
+
+	return &cumulativeExponentialHistogram[N]{
+		expoHistogramValues: &expoHistogramValues[N]{
+			maxSize:       cfg.MaxSize,
+			maxScale:      cfg.MaxScale,
+			zeroThreshold: math.Abs(cfg.ZeroThreshold),
+
+			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
+		},
+		noMinMax: cfg.NoMinMax,
+		start:    now(),
+	}
+}
+
+// cumulativeExponentialHistogram summarizes a set of measurements made in a single
+// aggregation cycle as an Exponential histogram with explicitly defined buckets.
+type cumulativeExponentialHistogram[N int64 | float64] struct {
+	*expoHistogramValues[N]
+
+	noMinMax bool
+	start    time.Time
+}
+
+func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	if len(e.values) == 0 {
+		return nil
+	}
+	t := now()
+	h := metricdata.ExponentialHistogram[N]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[N], 0, len(e.values)),
+	}
+	for a, b := range e.values {
+		ehdp := metricdata.ExponentialHistogramDataPoint[N]{
+			Attributes:    a,
+			StartTime:     e.start,
+			Time:          t,
+			Count:         b.count,
+			Sum:           b.sum,
+			Scale:         int32(b.scale),
+			ZeroCount:     b.zeroCount,
+			ZeroThreshold: b.zeroThreshold,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: int32(b.posBuckets.startIndex),
+				Counts: make([]uint64, len(b.posBuckets.counts)),
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: int32(b.negBuckets.startIndex),
+				Counts: make([]uint64, len(b.negBuckets.counts)),
+			},
+		}
+		copy(ehdp.PositiveBucket.Counts, b.posBuckets.counts)
+		copy(ehdp.NegativeBucket.Counts, b.negBuckets.counts)
+
+		if !e.noMinMax {
+			ehdp.Min = metricdata.NewExtrema(b.min)
+			ehdp.Max = metricdata.NewExtrema(b.max)
+		}
+		h.DataPoints = append(h.DataPoints, ehdp)
+		// TODO (#3006): This will use an unbounded amount of memory if there
+		// are unbounded number of attribute sets being aggregated. Attribute
+		// sets that become "stale" need to be forgotten so this will not
+		// overload the system.
+	}
+
+	return h
 }

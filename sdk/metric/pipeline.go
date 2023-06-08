@@ -429,6 +429,15 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 		default:
 			return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
 		}
+	case aggregation.ExponentialHistogram:
+		switch temporality {
+		case metricdata.CumulativeTemporality:
+			return internal.NewCumulativeExponentialHistogram[N](a), nil
+		case metricdata.DeltaTemporality:
+			return internal.NewDeltaExponentialHistogram[N](a), nil
+		default:
+			return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
+		}
 	}
 	return nil, errUnknownAggregation
 }
@@ -449,6 +458,13 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 	case aggregation.Default:
 		return nil
 	case aggregation.ExplicitBucketHistogram:
+		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
+			return nil
+		}
+		// TODO: review need for aggregation check after
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+		return errIncompatibleAggregation
+	case aggregation.ExponentialHistogram:
 		if kind == InstrumentKindCounter || kind == InstrumentKindHistogram {
 			return nil
 		}

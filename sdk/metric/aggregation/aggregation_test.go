@@ -55,6 +55,36 @@ func TestAggregationErr(t *testing.T) {
 			Boundaries: []float64{0, 1, 2, 1, 3, 4},
 		}.Err(), errAgg)
 	})
+
+	t.Run("ExponentialHistogramOperation", func(t *testing.T) {
+		assert.NoError(t, DefaultExponentialHistogram().Err())
+
+		assert.NoError(t, ExponentialHistogram{
+			MaxSize:  1,
+			NoMinMax: true,
+		}.Err())
+
+		assert.NoError(t, ExponentialHistogram{
+			MaxSize:       1024,
+			MaxScale:      -3,
+			ZeroThreshold: 1.0,
+		}.Err())
+	})
+
+	t.Run("InvalidExponentialHistogramOperation", func(t *testing.T) {
+		// MazSize must be greater than 0
+		assert.ErrorIs(t, ExponentialHistogram{}.Err(), errAgg)
+
+		// MaxScale Must be <=20 and >= -10
+		assert.ErrorIs(t, ExponentialHistogram{
+			MaxSize:  1,
+			MaxScale: 30,
+		}.Err(), errAgg)
+		assert.ErrorIs(t, ExponentialHistogram{
+			MaxSize:  1,
+			MaxScale: -20,
+		}.Err(), errAgg)
+	})
 }
 
 func TestExplicitBucketHistogramDeepCopy(t *testing.T) {

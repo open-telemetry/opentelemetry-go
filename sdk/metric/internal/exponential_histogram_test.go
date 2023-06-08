@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 type noErrorHandler struct{ t *testing.T }
@@ -595,4 +596,18 @@ func BenchmarkExponential(b *testing.B) {
 		x := rnd.ExpFloat64()
 		agg.record(x)
 	}
+}
+
+var expoHistConf = aggregation.DefaultExponentialHistogram()
+
+func BenchmarkExponentialHistogram(b *testing.B) {
+	b.Run("Int64", benchmarkExponentialHistogram[int64])
+	b.Run("Float64", benchmarkExponentialHistogram[float64])
+}
+
+func benchmarkExponentialHistogram[N int64 | float64](b *testing.B) {
+	factory := func() Aggregator[N] { return NewDeltaExponentialHistogram[N](expoHistConf) }
+	b.Run("Delta", benchmarkAggregator(factory))
+	factory = func() Aggregator[N] { return NewCumulativeExponentialHistogram[N](expoHistConf) }
+	b.Run("Cumulative", benchmarkAggregator(factory))
 }

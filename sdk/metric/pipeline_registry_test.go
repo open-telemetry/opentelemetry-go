@@ -527,6 +527,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
+			name: "SyncCounter and ExponentialHistogram",
+			kind: InstrumentKindCounter,
+			agg:  aggregation.ExponentialHistogram{},
+		},
+		{
 			name: "SyncUpDownCounter and Drop",
 			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.Drop{},
@@ -546,6 +551,12 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "SyncUpDownCounter and ExponentialHistogram",
+			kind: InstrumentKindUpDownCounter,
+			agg:  aggregation.ExponentialHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
@@ -570,6 +581,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			agg:  aggregation.ExplicitBucketHistogram{},
 		},
 		{
+			name: "SyncHistogram and ExponentialHistogram",
+			kind: InstrumentKindHistogram,
+			agg:  aggregation.ExponentialHistogram{},
+		},
+		{
 			name: "ObservableCounter and Drop",
 			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.Drop{},
@@ -589,6 +605,12 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "ObservableCounter and ExponentialHistogram",
+			kind: InstrumentKindObservableCounter,
+			agg:  aggregation.ExponentialHistogram{},
 			want: errIncompatibleAggregation,
 		},
 		{
@@ -614,6 +636,12 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			want: errIncompatibleAggregation,
 		},
 		{
+			name: "ObservableUpDownCounter and ExponentialHistogram",
+			kind: InstrumentKindObservableUpDownCounter,
+			agg:  aggregation.ExponentialHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
 			name: "ObservableGauge and Drop",
 			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.Drop{},
@@ -636,6 +664,12 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			want: errIncompatibleAggregation,
 		},
 		{
+			name: "ObservableGauge and ExponentialHistogram",
+			kind: InstrumentKindObservableGauge,
+			agg:  aggregation.ExponentialHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
 			name: "unknown kind with Sum should error",
 			kind: undefinedInstrument,
 			agg:  aggregation.Sum{},
@@ -651,6 +685,12 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "unknown kind with Histogram should error",
 			kind: undefinedInstrument,
 			agg:  aggregation.ExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "unknown kind with Histogram should error",
+			kind: undefinedInstrument,
+			agg:  aggregation.ExponentialHistogram{},
 			want: errIncompatibleAggregation,
 		},
 	}

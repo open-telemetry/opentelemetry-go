@@ -180,6 +180,14 @@ type ExponentialHistogram struct {
 	NoMinMax bool
 }
 
+func DefaultExponentialHistogram() ExponentialHistogram {
+	return ExponentialHistogram{
+		MaxSize:       160,
+		MaxScale:      20,
+		ZeroThreshold: 0.0,
+	}
+}
+
 var _ Aggregation = ExponentialHistogram{}
 
 // private attempts to ensure no user-defined Aggregation are allowed. The
