@@ -8,6 +8,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Starting from `v1.21.0` of semantic conventions, `go.opentelemetry.io/otel/semconv/{version}/httpconv` and `go.opentelemetry.io/otel/semconv/{version}/netconv` packages will no longer be published. (#4145)
+- Log duplicate instrument conflict at a warning level instead of info in `go.opentelemetry.io/otel/sdk/metric`. (#4202)
+
+## [1.16.0/0.39.0] 2023-05-18
+
+This release contains the first stable release of the OpenTelemetry Go [metric API].
+Our project stability guarantees now apply to the `go.opentelemetry.io/otel/metric` package.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
+### Added
+
+- The `go.opentelemetry.io/otel/semconv/v1.19.0` package.
+  The package contains semantic conventions from the `v1.19.0` version of the OpenTelemetry specification. (#3848)
+- The `go.opentelemetry.io/otel/semconv/v1.20.0` package.
+  The package contains semantic conventions from the `v1.20.0` version of the OpenTelemetry specification. (#4078)
+
+### Changed
+
+- Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#4049)
+- `MeterProvider` returns noop meters once it has been shutdown. (#4154)
+
+### Removed
+
+- The deprecated `go.opentelemetry.io/otel/metric/instrument` package is removed.
+  Use `go.opentelemetry.io/otel/metric` instead. (#4055)
+
+### Fixed
+
+- Fix build for BSD based systems in `go.opentelemetry.io/otel/sdk/resource`. (#4077)
+
 ## [1.16.0-rc.1/0.39.0-rc.1] 2023-05-03
 
 This is a release candidate for the v1.16.0/v0.39.0 release.
@@ -2466,7 +2498,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.16.0-rc.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.16.0...HEAD
+[1.16.0/0.39.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0
 [1.16.0-rc.1/0.39.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1
 [1.15.1/0.38.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1
 [1.15.0/0.38.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.0
@@ -2536,3 +2569,5 @@ It contains api and sdk for trace and meter.
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
+
+[metric API]:https://pkg.go.dev/go.opentelemetry.io/otel/metric

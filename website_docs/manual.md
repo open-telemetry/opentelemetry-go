@@ -4,7 +4,7 @@ linkTitle: Manual
 aliases:
   - /docs/instrumentation/go/instrumentation
   - /docs/instrumentation/go/manual_instrumentation
-weight: 3
+weight: 30
 ---
 
 Instrumentation is the process of adding observability code to your application.
@@ -297,7 +297,6 @@ After configuring context propagation, you'll most likely want to use automatic
 instrumentation to handle the behind-the-scenes work of actually managing
 serializing the context.
 
-[opentelemetry specification]: /docs/reference/specification/
-[trace semantic conventions]:
-  /docs/reference/specification/trace/semantic_conventions/
+[opentelemetry specification]: /docs/specs/otel/
+[trace semantic conventions]: /docs/specs/otel/trace/semantic_conventions/
 [instrumentation library]: ../libraries/

@@ -16,9 +16,12 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"sync/atomic"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -33,6 +36,7 @@ type MeterProvider struct {
 	meters cache[instrumentation.Scope, *meter]
 
 	forceFlush, shutdown func(context.Context) error
+	stopped              atomic.Bool
 }
 
 // Compile-time check MeterProvider implements metric.MeterProvider.
@@ -60,14 +64,19 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 // telemetry. This name may be the same as the instrumented code only if that
 // code provides built-in instrumentation.
 //
-// If name is empty, the default (go.opentelemetry.io/otel/sdk/meter) will be
-// used.
-//
 // Calls to the Meter method after Shutdown has been called will return Meters
 // that perform no operations.
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
+	if name == "" {
+		global.Warn("Invalid Meter name.", "name", name)
+	}
+
+	if mp.stopped.Load() {
+		return noop.Meter{}
+	}
+
 	c := metric.NewMeterConfig(options...)
 	s := instrumentation.Scope{
 		Name:      name,
@@ -111,6 +120,15 @@ func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 //
 // This method is safe to call concurrently.
 func (mp *MeterProvider) Shutdown(ctx context.Context) error {
+	// Even though it may seem like there is a synchronization issue between the
+	// call to `Store` and checking `shutdown`, the Go concurrency model ensures
+	// that is not the case, as all the atomic operations executed in a program
+	// behave as though executed in some sequentially consistent order. This
+	// definition provides the same semantics as C++'s sequentially consistent
+	// atomics and Java's volatile variables.
+	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
+
+	mp.stopped.Store(true)
 	if mp.shutdown != nil {
 		return mp.shutdown(ctx)
 	}

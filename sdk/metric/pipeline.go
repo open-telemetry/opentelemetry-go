@@ -354,7 +354,7 @@ func (i *inserter[N]) logConflict(id streamID) {
 		return
 	}
 
-	global.Info(
+	global.Warn(
 		"duplicate metric stream definitions",
 		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
 		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
@@ -401,7 +401,7 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 			// Observable counters and up-down-counters are defined to record
 			// the absolute value of the count:
-			// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
+			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/metrics/api.md#asynchronous-counter-creation
 			switch temporality {
 			case metricdata.CumulativeTemporality:
 				return internal.NewPrecomputedCumulativeSum[N](monotonic), nil

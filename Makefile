@@ -25,8 +25,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-generate license-check vanity-import-fix misspell go-mod-tidy golangci-lint-fix test-default
-ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -74,18 +74,66 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 .PHONY: tools
 tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
 
-# Build
+# Virtualized python tools via docker
 
-.PHONY: generate build
+# The directory where the virtual environment is created.
+VENVDIR := venv
 
-generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
-generate/%: DIR=$*
-generate/%: | $(STRINGER) $(PORTO)
+# The directory where the python tools are installed.
+PYTOOLS := $(VENVDIR)/bin
+
+# The pip executable in the virtual environment.
+PIP := $(PYTOOLS)/pip
+
+# The directory in the docker image where the current directory is mounted.
+WORKDIR := /workdir
+
+# The python image to use for the virtual environment.
+PYTHONIMAGE := python:3.11.3-slim-bullseye
+
+# Run the python image with the current directory mounted.
+DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+
+# Create a virtual environment for Python tools.
+$(PYTOOLS):
+# The `--upgrade` flag is needed to ensure that the virtual environment is
+# created with the latest pip version.
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
+
+# Install python packages into the virtual environment.
+$(PYTOOLS)/%: | $(PYTOOLS)
+	@$(DOCKERPY) $(PIP) install -r requirements.txt
+
+CODESPELL = $(PYTOOLS)/codespell
+$(CODESPELL): PACKAGE=codespell
+
+# Generate
+
+.PHONY: generate
+generate: go-generate vanity-import-fix
+
+.PHONY: go-generate
+go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
+go-generate/%: DIR=$*
+go-generate/%: | $(STRINGER)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
-		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
+		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
 
-build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+.PHONY: vanity-import-fix
+vanity-import-fix: | $(PORTO)
+	@$(PORTO) --include-internal -w .
+
+# Generate go.work file for local development.
+.PHONY: go-work
+go-work: | $(CROSSLINK)
+	$(CROSSLINK) work --root=$(shell pwd)
+
+# Build
+
+.PHONY: build
+
+build: $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
 build/%: DIR=$*
 build/%:
 	@echo "$(GO) build $(DIR)/..." \
@@ -168,13 +216,13 @@ lint: misspell lint-modules golangci-lint
 vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
 
-.PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
-	@$(PORTO) --include-internal -w .
-
 .PHONY: misspell
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
+
+.PHONY: codespell
+codespell: | $(CODESPELL)
+	@$(DOCKERPY) $(CODESPELL)
 
 .PHONY: license-check
 license-check:
@@ -211,6 +259,7 @@ semconv-generate: | $(SEMCONVGEN) $(SEMCONVKIT)
 	[ "$(TAG)" ] || ( echo "TAG unset: missing opentelemetry specification tag"; exit 1 )
 	[ "$(OTEL_SPEC_REPO)" ] || ( echo "OTEL_SPEC_REPO unset: missing path to opentelemetry specification repo"; exit 1 )
 	$(SEMCONVGEN) -i "$(OTEL_SPEC_REPO)/semantic_conventions/." --only=span -p conventionType=trace -f trace.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
+	$(SEMCONVGEN) -i "$(OTEL_SPEC_REPO)/semantic_conventions/." --only=attribute_group -p conventionType=trace -f attribute_group.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVGEN) -i "$(OTEL_SPEC_REPO)/semantic_conventions/." --only=event -p conventionType=event -f event.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVGEN) -i "$(OTEL_SPEC_REPO)/semantic_conventions/." --only=resource -p conventionType=resource -f resource.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVKIT) -output "$(SEMCONVPKG)/$(TAG)" -tag "$(TAG)"

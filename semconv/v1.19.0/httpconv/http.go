@@ -14,15 +14,15 @@
 
 // Package httpconv provides OpenTelemetry HTTP semantic conventions for
 // tracing telemetry.
-package httpconv // import "go.opentelemetry.io/otel/semconv/{{.TagVer}}/httpconv"
+package httpconv // import "go.opentelemetry.io/otel/semconv/v1.19.0/httpconv"
 
 import (
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv/internal/v2"
-	semconv "go.opentelemetry.io/otel/semconv/{{.TagVer}}"
+	"go.opentelemetry.io/otel/semconv/internal/v3"
+	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 )
 
 var (
@@ -54,7 +54,7 @@ var (
 		HTTPStatusCodeKey:            semconv.HTTPStatusCodeKey,
 		HTTPTargetKey:                semconv.HTTPTargetKey,
 		HTTPURLKey:                   semconv.HTTPURLKey,
-		HTTPUserAgentKey:             semconv.HTTPUserAgentKey,
+		UserAgentOriginalKey:         semconv.UserAgentOriginalKey,
 	}
 )
 
@@ -108,7 +108,7 @@ func ClientStatus(code int) (codes.Code, string) {
 // The following attributes are always returned: "http.method", "http.scheme",
 // "http.flavor", "http.target", "net.host.name". The following attributes are
 // returned if they related values are defined in req: "net.host.port",
-// "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
+// "net.sock.peer.addr", "net.sock.peer.port", "user_agent.original", "enduser.id",
 // "http.client_ip".
 func ServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	return hc.ServerRequest(server, req)
@@ -128,7 +128,7 @@ func ServerStatus(code int) (codes.Code, string) {
 // security risk - explicit configuration helps avoid leaking sensitive
 // information.
 //
-// The User-Agent header is already captured in the http.user_agent attribute
+// The User-Agent header is already captured in the user_agent.original attribute
 // from ClientRequest and ServerRequest. Instrumentation may provide an option
 // to capture that header here even though it is not recommended. Otherwise,
 // instrumentation should filter that out of what is passed.
@@ -143,7 +143,7 @@ func RequestHeader(h http.Header) []attribute.KeyValue {
 // security risk - explicit configuration helps avoid leaking sensitive
 // information.
 //
-// The User-Agent header is already captured in the http.user_agent attribute
+// The User-Agent header is already captured in the user_agent.original attribute
 // from ClientRequest and ServerRequest. Instrumentation may provide an option
 // to capture that header here even though it is not recommended. Otherwise,
 // instrumentation should filter that out of what is passed.

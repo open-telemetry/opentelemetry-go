@@ -28,6 +28,11 @@ precommit` - the `precommit` target is the default).
 The `precommit` target also fixes the formatting of the code and
 checks the status of the go module files.
 
+Additionally, there is a `codespell` target that checks for common
+typos in the code. It is not run by default, but you can run it
+manually with `make codespell`. It will set up a virtual environment
+in `venv` and install `codespell` there.
+
 If after running `make precommit` the output of `git status` contains
 `nothing to commit, working tree clean` then it means that everything
 is up-to-date and properly formatted.
@@ -150,10 +155,10 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 ## Design Choices
 
 As with other OpenTelemetry clients, opentelemetry-go follows the
-[opentelemetry-specification](https://github.com/open-telemetry/opentelemetry-specification).
+[OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel).
 
 It's especially valuable to read through the [library
-guidelines](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/library-guidelines.md).
+guidelines](https://opentelemetry.io/docs/specs/otel/library-guidelines).
 
 ### Focus on Capabilities, Not Structure Compliance
 
@@ -174,23 +179,23 @@ For a deeper discussion, see
 
 ## Documentation
 
-Each non-example Go Module should have its own `README.md` containing:
+Each (non-internal, non-test) package must be documented using
+[Go Doc Comments](https://go.dev/doc/comment),
+preferably in a `doc.go` file.
 
-- A pkg.go.dev badge which can be generated [here](https://pkg.go.dev/badge/).
-- Brief description.
-- Installation instructions (and requirements if applicable).
-- Hyperlink to an example. Depending on the component the example can be:
-  - An `example_test.go` like [here](exporters/stdout/stdouttrace/example_test.go).
-  - A sample Go application with its own `README.md`, like [here](example/zipkin).
-- Additional documentation sections such us:
-  - Configuration,
-  - Contributing,
-  - References.
+Prefer using [Examples](https://pkg.go.dev/testing#hdr-Examples)
+instead of putting code snippets in Go doc comments.
+In some cases, you can even create [Testable Examples](https://go.dev/blog/examples).
 
-[Here](exporters/jaeger/README.md) is an example of a concise `README.md`.
+You can install and run a "local Go Doc site" in the following way:
 
-Moreover, it should be possible to navigate to any `README.md` from the
-root `README.md`.
+  ```sh
+  go install golang.org/x/pkgsite/cmd/pkgsite@latest
+  pkgsite
+  ```
+
+[`go.opentelemetry.io/otel/metric`](https://pkg.go.dev/go.opentelemetry.io/otel/metric)
+is an example of a very well-documented package.
 
 ## Style Guide
 
@@ -533,14 +538,14 @@ interface that defines the specific functionality should be preferred.
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
-- [Robert Pająk](https://github.com/pellared), Splunk
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
+- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 
 ### Maintainers
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus

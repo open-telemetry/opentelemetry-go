@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-weight: 2
+weight: 10
 ---
 
 Welcome to the OpenTelemetry for Go getting started guide! This guide will walk
@@ -190,8 +190,8 @@ With the imports added, you can start instrumenting.
 The OpenTelemetry Tracing API provides a [`Tracer`] to create traces. These
 [`Tracer`]s are designed to be associated with one instrumentation library. That
 way telemetry they produce can be understood to come from that part of a code
-base. To uniquely identify your application to the [`Tracer`] you will
-create a constant with the package name in `app.go`.
+base. To uniquely identify your application to the [`Tracer`] you will create a
+constant with the package name in `app.go`.
 
 ```go
 // name is the Tracer name used to identify this instrumentation library.
