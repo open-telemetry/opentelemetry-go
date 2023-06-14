@@ -120,7 +120,9 @@ Once verified be sure to [make a release for the `contrib` repository](https://g
 
 ### Website Documentation
 
-Update [the documentation](./website_docs) for [the OpenTelemetry website](https://opentelemetry.io/docs/go/).
+Update the [Go instrumentation documentation] in the OpenTelemetry website under [content/en/docs/instrumentation/go].
 Importantly, bump any package versions referenced to be the latest one you just released and ensure all code examples still compile and are accurate.
 
 [OpenTelemetry Specification]: https://github.com/open-telemetry/opentelemetry-specification
+[Go instrumentation documentation]: https://opentelemetry.io/docs/instrumentation/go/
+[content/en/docs/instrumentation/go]: https://github.com/open-telemetry/opentelemetry.io/tree/main/content/en/docs/instrumentation/go
