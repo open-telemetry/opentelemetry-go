@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
 var (
@@ -441,7 +441,7 @@ func newInt64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string,
 	return &int64InstProvider{scope: s, pipes: p, resolve: newResolver[int64](p, c)}
 }
 
-func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]internal.Aggregator[int64], error) {
+func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Aggregator[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -469,7 +469,7 @@ func newFloat64InstProvider(s instrumentation.Scope, p pipelines, c *cache[strin
 	return &float64InstProvider{scope: s, pipes: p, resolve: newResolver[float64](p, c)}
 }
 
-func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]internal.Aggregator[float64], error) {
+func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Aggregator[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,

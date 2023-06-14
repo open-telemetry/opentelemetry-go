@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -171,7 +171,7 @@ type streamID struct {
 }
 
 type int64Inst struct {
-	aggregators []internal.Aggregator[int64]
+	aggregators []aggregate.Aggregator[int64]
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -192,7 +192,7 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) {
+func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
 	if err := ctx.Err(); err != nil {
 		return
 	}
@@ -202,7 +202,7 @@ func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) {
 }
 
 type float64Inst struct {
-	aggregators []internal.Aggregator[float64]
+	aggregators []aggregate.Aggregator[float64]
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -254,7 +254,7 @@ var _ metric.Float64ObservableCounter = float64Observable{}
 var _ metric.Float64ObservableUpDownCounter = float64Observable{}
 var _ metric.Float64ObservableGauge = float64Observable{}
 
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[float64]) float64Observable {
+func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[float64]) float64Observable {
 	return float64Observable{
 		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
@@ -273,7 +273,7 @@ var _ metric.Int64ObservableCounter = int64Observable{}
 var _ metric.Int64ObservableUpDownCounter = int64Observable{}
 var _ metric.Int64ObservableGauge = int64Observable{}
 
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[int64]) int64Observable {
+func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[int64]) int64Observable {
 	return int64Observable{
 		observable: newObservable(scope, kind, name, desc, u, agg),
 	}
@@ -283,10 +283,10 @@ type observable[N int64 | float64] struct {
 	metric.Observable
 	observablID[N]
 
-	aggregators []internal.Aggregator[N]
+	aggregators []aggregate.Aggregator[N]
 }
 
-func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []internal.Aggregator[N]) *observable[N] {
+func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[N]) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
