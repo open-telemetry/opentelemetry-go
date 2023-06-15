@@ -104,9 +104,9 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
-// collect and export data every 60 seconds, and will cancel export attempts
-// that exceed 30 seconds. The export time is not counted towards the interval
-// between attempts.
+// collect and export data every 60 seconds, and will cancel any attempts that
+// exceed 30 seconds, collect and export combined. The collect and export time
+// are not counted towards the interval between attempts.
 //
 // The Collect method of the returned Reader continues to gather and return
 // metric data to the user. It will not automatically send that data to the
@@ -237,7 +237,8 @@ func (r *periodicReader) collectAndExport(ctx context.Context) error {
 // data is not exported to the configured exporter, it is left to the caller to
 // handle that if desired.
 //
-// An error is returned if this is called after Shutdown. An error is return if rm is nil.
+// An error is returned if this is called after Shutdown, if rm is nil or if
+// the duration of the collect and export exceeded the timeout.
 func (r *periodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
 		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
