@@ -219,6 +219,9 @@ func (r *periodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *periodicReader) collectAndExport(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
@@ -276,9 +279,7 @@ func (r *periodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 
 // export exports metric data m using r's exporter.
 func (r *periodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
-	c, cancel := context.WithTimeout(ctx, r.timeout)
-	defer cancel()
-	return r.exporter.Export(c, m)
+	return r.exporter.Export(ctx, m)
 }
 
 // ForceFlush flushes pending telemetry.
