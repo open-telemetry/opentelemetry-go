@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -577,24 +576,25 @@ func Test_needRescale(t *testing.T) {
 	}
 }
 
-func BenchmarkLinear(b *testing.B) {
-	src := rand.NewSource(77777677777)
-	rnd := rand.New(src)
-	agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		x := 2 - rnd.Float64()
-		agg.record(x)
+		agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		n := math.MaxFloat64
+		for j := 0; j < 1024; j++ {
+			agg.record(n)
+			n = n / 2
+		}
 	}
 }
 
-// Benchmarks the Update() function for values in the range (0, MaxValue].
-func BenchmarkExponential(b *testing.B) {
-	src := rand.NewSource(77777677777)
-	rnd := rand.New(src)
-	agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		x := rnd.ExpFloat64()
-		agg.record(x)
+		agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		n := smallestNonZeroNormalFloat64
+		for j := 0; j < 1024; j++ {
+			agg.record(n)
+			n = n * 2
+		}
 	}
 }
 
@@ -611,3 +611,9 @@ func benchmarkExponentialHistogram[N int64 | float64](b *testing.B) {
 	factory = func() Aggregator[N] { return NewCumulativeExponentialHistogram[N](expoHistConf) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }
+
+// TODO: Test values below smallest NonZeroNormal
+// TODO: Test Zero Threshold
+// TODO: test scale Underflow
+// TODO: Test Aggregation() of Expo Histogram
+//

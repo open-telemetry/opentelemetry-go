@@ -90,13 +90,14 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	p.sum += v
 
 	absV := math.Abs(float64(v))
-	if float64(absV) <= p.zeroThreshold {
-		p.zeroCount++
-		return
-	}
 
 	if absV < smallestNonZeroNormalFloat64 {
 		absV = smallestNonZeroNormalFloat64
+	}
+
+	if float64(absV) <= p.zeroThreshold {
+		p.zeroCount++
+		return
 	}
 
 	index := getIndex(absV, p.scale)
@@ -239,24 +240,52 @@ func (b *expoBucket) record(index int) {
 	}
 	// if the new index is before the current start add spaces to the counts
 	if index < b.startIndex {
-		// TODO: if counts has the capacity just prepend.
-		temp := make([]uint64, endIndex-index+1)
-		copy(temp[b.startIndex-index:], b.counts)
-		b.counts = temp
+		origLen := len(b.counts)
+		newLength := endIndex - index + 1
+		shift := b.startIndex - index
+
+		if newLength > cap(b.counts) {
+			b.counts = append(b.counts, make([]uint64, newLength-len(b.counts))...)
+		}
+
+		copy(b.counts[shift:origLen+shift], b.counts[:])
+		b.counts = b.counts[:newLength]
+		for i := 1; i < shift; i++ {
+			b.counts[i] = 0
+		}
 		b.startIndex = index
 		b.counts[0] = 1
 		return
 	}
 	// if the new is after the end add spaces to the end
-	if index >= endIndex {
-		// TODO, if counts has the capacity just append.
+	if index > endIndex {
+		if index-b.startIndex < cap(b.counts) {
+			b.counts = b.counts[:index-b.startIndex+1]
+			for i := endIndex + 1 - b.startIndex; i < len(b.counts); i++ {
+				b.counts[i] = 0
+			}
+			b.counts[index-b.startIndex] = 1
+			return
+		}
+
 		end := make([]uint64, index-b.startIndex-len(b.counts)+1)
 		b.counts = append(b.counts, end...)
 		b.counts[index-b.startIndex] = 1
 	}
 }
 
+// downscale shinks a bucket by a factor of 2*s. It will sum counts into the
+// correct lower resolution bucket.
 func (b *expoBucket) downscale(s int) {
+	// Example
+	// s = 2
+	// Original offet: -6
+	// Counts: [ 3,  1,  2,  3,  4,  5, 6, 7, 8, 9, 10]
+	// index:   -6  -5, -4, -3, -2, -1, 0, 1, 2, 3, 4
+	// new idx: -2, -2, -1, -1, -1, -1, 0, 0, 0, 0, 1
+	// new Offet: -2
+	// new Counts: [4, 14, 30, 10]
+
 	if len(b.counts) <= 1 || s < 1 {
 		b.startIndex = b.startIndex >> s
 		return
