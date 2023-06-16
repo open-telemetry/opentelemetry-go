@@ -259,7 +259,6 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 // retryable returns if err identifies a request that can be retried and a
 // duration to wait for if an explicit throttle time is included in err.
 func retryable(err error) (bool, time.Duration) {
-	//func retryable(err error) (bool, time.Duration) {
 	s := status.Convert(err)
 	switch s.Code() {
 	case codes.Canceled,
