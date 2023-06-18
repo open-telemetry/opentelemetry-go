@@ -4,7 +4,7 @@ linkTitle: Libraries
 aliases:
   - /docs/instrumentation/go/using_instrumentation_libraries
   - /docs/instrumentation/go/automatic_instrumentation
-weight: 3
+weight: 40
 ---
 
 Go does not support truly automatic instrumentation like other languages today.
