@@ -30,13 +30,15 @@ type expoHistogramValues[N int64 | float64] struct {
 	valuesMu sync.Mutex
 }
 
+// Aggregate records the measurement, scoped by attr, and aggregates it
+// into an aggregation.
 func (e *expoHistogramValues[N]) Aggregate(value N, attr attribute.Set) {
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
 	v, ok := e.values[attr]
 	if !ok {
-		v = NewExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.zeroThreshold)
+		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.zeroThreshold)
 		e.values[attr] = v
 	}
 	v.record(value)
@@ -59,15 +61,12 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	zeroCount  uint64
 }
 
-func NewExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThreshold float64) *expoHistogramDataPoint[N] {
-
+func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThreshold float64) *expoHistogramDataPoint[N] {
 	f := math.MaxFloat64
-	max := N(f)
+	max := N(f) // if N is int64, max will overflow to -9223372036854775808
+	min := N(-f)
 	if N(math.MaxInt64) > N(f) {
 		max = N(math.MaxInt64)
-	}
-	min := N(-f)
-	if N(math.MinInt64) < N(-f) {
 		min = N(math.MinInt64)
 	}
 	return &expoHistogramDataPoint[N]{
@@ -79,6 +78,7 @@ func NewExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThr
 	}
 }
 
+// record adds a new measurment to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
 	p.count++
 	if v < p.min {
@@ -112,6 +112,8 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	if needRescale(index, bucket.startIndex, len(bucket.counts), p.maxSize) {
 		scale := scaleChange(index, bucket.startIndex, len(bucket.counts), p.maxSize)
 		if p.scale-scale < expoMinScale {
+			// With a scale of -10 there is only two buckets for the whole range of float64 values.
+			// This can only happen if there is a max size of 1.
 			otel.Handle(errors.New("exponential histogram scale underflow"))
 			return
 		}
@@ -126,37 +128,13 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	bucket.record(index)
 }
 
+// getIndex Returns the index of the bucket that the value v should be recorded
+// into at the given scale.
 func getIndex(v float64, scale int) int {
 	if scale <= 0 {
 		return getExpoIndex(v, scale)
 	}
 	return getLogIndex(v, scale)
-}
-
-// scaleFactors are constants used in calculating the index.  They are equivalent to
-// 2^index/log(2)
-var scaleFactors = [21]float64{
-	math.Ldexp(math.Log2E, 0),
-	math.Ldexp(math.Log2E, 1),
-	math.Ldexp(math.Log2E, 2),
-	math.Ldexp(math.Log2E, 3),
-	math.Ldexp(math.Log2E, 4),
-	math.Ldexp(math.Log2E, 5),
-	math.Ldexp(math.Log2E, 6),
-	math.Ldexp(math.Log2E, 7),
-	math.Ldexp(math.Log2E, 8),
-	math.Ldexp(math.Log2E, 9),
-	math.Ldexp(math.Log2E, 10),
-	math.Ldexp(math.Log2E, 11),
-	math.Ldexp(math.Log2E, 12),
-	math.Ldexp(math.Log2E, 13),
-	math.Ldexp(math.Log2E, 14),
-	math.Ldexp(math.Log2E, 15),
-	math.Ldexp(math.Log2E, 16),
-	math.Ldexp(math.Log2E, 17),
-	math.Ldexp(math.Log2E, 18),
-	math.Ldexp(math.Log2E, 19),
-	math.Ldexp(math.Log2E, 20),
 }
 
 func getExpoIndex(v float64, scale int) int {
@@ -187,6 +165,33 @@ func getLogIndex(v float64, scale int) int {
 	return int(math.Floor(math.Log(v) * scaleFactors[scale]))
 }
 
+// scaleFactors are constants used in calculating the logarithm index. They are
+// equivalent to 2^index/log(2)
+var scaleFactors = [21]float64{
+	math.Ldexp(math.Log2E, 0),
+	math.Ldexp(math.Log2E, 1),
+	math.Ldexp(math.Log2E, 2),
+	math.Ldexp(math.Log2E, 3),
+	math.Ldexp(math.Log2E, 4),
+	math.Ldexp(math.Log2E, 5),
+	math.Ldexp(math.Log2E, 6),
+	math.Ldexp(math.Log2E, 7),
+	math.Ldexp(math.Log2E, 8),
+	math.Ldexp(math.Log2E, 9),
+	math.Ldexp(math.Log2E, 10),
+	math.Ldexp(math.Log2E, 11),
+	math.Ldexp(math.Log2E, 12),
+	math.Ldexp(math.Log2E, 13),
+	math.Ldexp(math.Log2E, 14),
+	math.Ldexp(math.Log2E, 15),
+	math.Ldexp(math.Log2E, 16),
+	math.Ldexp(math.Log2E, 17),
+	math.Ldexp(math.Log2E, 18),
+	math.Ldexp(math.Log2E, 19),
+	math.Ldexp(math.Log2E, 20),
+}
+
+// needRescale checks if index will fit in the current bucket.
 func needRescale(index, startIndex, length, maxSize int) bool {
 	if length == 0 {
 		return false
@@ -196,19 +201,15 @@ func needRescale(index, startIndex, length, maxSize int) bool {
 	return index-startIndex >= maxSize || endIndex-index >= maxSize
 }
 
+// scaleChange returns the magnitude of the scale change needed to fit index in the bucket.
 func scaleChange(index, startIndex, length, maxSize int) int {
-	var low, high int
-	if index > startIndex {
-		low = startIndex
-		high = index
-	} else {
+	low := startIndex
+	high := index
+	if startIndex >= index {
 		low = index
 		high = startIndex + length - 1
 	}
 
-	if low > high {
-		low, high = high, low
-	}
 	count := 0
 	for high-low >= maxSize {
 		low = low >> 1
@@ -224,6 +225,8 @@ type expoBucket struct {
 	counts     []uint64
 }
 
+// record increments the count for the given index, and expands the buckets if needed.
+// Size changes must be done before calling this function.
 func (b *expoBucket) record(index int) {
 	if len(b.counts) == 0 {
 		b.counts = []uint64{1}
@@ -274,7 +277,7 @@ func (b *expoBucket) record(index int) {
 	}
 }
 
-// downscale shinks a bucket by a factor of 2*s. It will sum counts into the
+// downscale shrinks a bucket by a factor of 2*s. It will sum counts into the
 // correct lower resolution bucket.
 func (b *expoBucket) downscale(s int) {
 	// Example
@@ -308,7 +311,7 @@ func (b *expoBucket) downscale(s int) {
 	b.startIndex = b.startIndex >> s
 }
 
-func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.ExponentialHistogram {
 	if cfg.MaxScale > expoMaxScale {
 		cfg.MaxScale = expoMaxScale
 	}
@@ -318,12 +321,25 @@ func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.Exponential
 	if cfg.MaxSize <= 0 {
 		cfg.MaxSize = 160
 	}
+	cfg.ZeroThreshold = math.Abs(cfg.ZeroThreshold)
+	return cfg
+}
+
+// NewDeltaExponentialHistogram returns an Aggregator that summarizes a set of
+// measurements as an exponential histogram. Each histogram is scoped by attributes
+// and the aggregation cycle the measurements were made in.
+//
+// Each aggregation cycle is treated independently. When the returned
+// Aggregator's Aggregations method is called it will reset all histogram
+// counts to zero.
+func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+	cfg = normalizeConfig(cfg)
 
 	return &deltaExponentialHistogram[N]{
 		expoHistogramValues: &expoHistogramValues[N]{
 			maxSize:       cfg.MaxSize,
 			maxScale:      cfg.MaxScale,
-			zeroThreshold: math.Abs(cfg.ZeroThreshold),
+			zeroThreshold: cfg.ZeroThreshold,
 
 			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
 		},
@@ -341,6 +357,8 @@ type deltaExponentialHistogram[N int64 | float64] struct {
 	start    time.Time
 }
 
+// Aggregate records the measurement, scoped by attr, and aggregates it
+// into an aggregation.
 func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
@@ -387,22 +405,20 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 	return h
 }
 
+// NewCumulativeExponentialHistogram returns an Aggregator that summarizes a set of
+// measurements as an exponential histogram. Each histogram is scoped by attributes.
+//
+// Each aggregation cycle builds from the previous, the histogram counts are
+// the bucketed counts of all values aggregated since the returned Aggregator
+// was created.
 func NewCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
-	if cfg.MaxScale > expoMaxScale {
-		cfg.MaxScale = expoMaxScale
-	}
-	if cfg.MaxScale < expoMinScale {
-		cfg.MaxScale = expoMinScale
-	}
-	if cfg.MaxSize <= 0 {
-		cfg.MaxSize = 160
-	}
+	cfg = normalizeConfig(cfg)
 
 	return &cumulativeExponentialHistogram[N]{
 		expoHistogramValues: &expoHistogramValues[N]{
 			maxSize:       cfg.MaxSize,
 			maxScale:      cfg.MaxScale,
-			zeroThreshold: math.Abs(cfg.ZeroThreshold),
+			zeroThreshold: cfg.ZeroThreshold,
 
 			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
 		},
@@ -420,6 +436,8 @@ type cumulativeExponentialHistogram[N int64 | float64] struct {
 	start    time.Time
 }
 
+// Aggregate records the measurement, scoped by attr, and aggregates it
+// into an aggregation.
 func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
@@ -429,7 +447,7 @@ func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation
 	}
 	t := now()
 	h := metricdata.ExponentialHistogram[N]{
-		Temporality: metricdata.DeltaTemporality,
+		Temporality: metricdata.CumulativeTemporality,
 		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[N], 0, len(e.values)),
 	}
 	for a, b := range e.values {

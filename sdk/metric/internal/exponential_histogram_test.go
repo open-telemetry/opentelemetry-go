@@ -7,8 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 type noErrorHandler struct{ t *testing.T }
@@ -18,6 +21,7 @@ func (h *noErrorHandler) Handle(e error) {
 }
 
 func withHandler(t *testing.T) func() {
+	t.Helper()
 	h := &noErrorHandler{t: t}
 	original := global.GetErrorHandler()
 	global.SetErrorHandler(h)
@@ -126,7 +130,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
 			defer withHandler(t)()
 
-			dp := NewExpoHistogramDataPoint[N](tt.maxSize, 20, 0.0)
+			dp := newExpoHistogramDataPoint[N](tt.maxSize, 20, 0.0)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
@@ -163,7 +167,7 @@ func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) 
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
 			defer withHandler(t)()
 
-			dp := NewExpoHistogramDataPoint[N](4, 20, 0.0)
+			dp := newExpoHistogramDataPoint[N](4, 20, 0.0)
 			for _, v := range tt.values {
 				dp.record(v)
 			}
@@ -252,7 +256,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
 			defer withHandler(t)()
 
-			dp := NewExpoHistogramDataPoint[float64](tt.maxSize, 20, 0.0)
+			dp := newExpoHistogramDataPoint[float64](tt.maxSize, 20, 0.0)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
@@ -269,7 +273,7 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	// These indexes are calculated from the following formula:
 	// floor( log2( value) * 2^20 )
 
-	fdp := NewExpoHistogramDataPoint[float64](4, 20, 0.0)
+	fdp := newExpoHistogramDataPoint[float64](4, 20, 0.0)
 	fdp.record(math.MaxFloat64)
 
 	if fdp.posBuckets.startIndex != 1073741824 {
@@ -278,14 +282,14 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 
 	// Subnormal Numbers do not work with the above formula.
 	SmallestNonZeroNormalFloat64 := 0x1p-1022
-	fdp = NewExpoHistogramDataPoint[float64](4, 20, 0.0)
+	fdp = newExpoHistogramDataPoint[float64](4, 20, 0.0)
 	fdp.record(SmallestNonZeroNormalFloat64)
 
 	if fdp.posBuckets.startIndex != -1071644673 {
 		t.Errorf("Expected startIndex to be -1071644673, got %d", fdp.posBuckets.startIndex)
 	}
 
-	idp := NewExpoHistogramDataPoint[int64](4, 20, 0.0)
+	idp := newExpoHistogramDataPoint[int64](4, 20, 0.0)
 	idp.record(math.MaxInt64)
 
 	if idp.posBuckets.startIndex != 66060287 {
@@ -578,7 +582,7 @@ func Test_needRescale(t *testing.T) {
 
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		agg := newExpoHistogramDataPoint[float64](1024, 20, 0.0)
 		n := math.MaxFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -589,7 +593,7 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := NewExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		agg := newExpoHistogramDataPoint[float64](1024, 20, 0.0)
 		n := smallestNonZeroNormalFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -612,8 +616,283 @@ func benchmarkExponentialHistogram[N int64 | float64](b *testing.B) {
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }
 
-// TODO: Test values below smallest NonZeroNormal
-// TODO: Test Zero Threshold
-// TODO: test scale Underflow
-// TODO: Test Aggregation() of Expo Histogram
-//
+func TestSubNormal(t *testing.T) {
+	want := &expoHistogramDataPoint[float64]{
+		maxSize: 4,
+		count:   3,
+		min:     math.SmallestNonzeroFloat64,
+		max:     math.SmallestNonzeroFloat64,
+		sum:     3 * math.SmallestNonzeroFloat64,
+
+		scale: 20,
+		posBuckets: expoBucket{
+			startIndex: -1071644673, // This is the offset for the smallest normal float64 floor(Log_2(2.2250738585072014e-308)*2^20)
+			counts:     []uint64{3},
+		},
+	}
+
+	ehdp := newExpoHistogramDataPoint[float64](4, 20, 0.0)
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
+
+	assert.Equal(t, want, ehdp)
+}
+
+func TestZeroThresholdInt64(t *testing.T) {
+	defer withHandler(t)()
+
+	ehdp := newExpoHistogramDataPoint[int64](4, 20, 3.0)
+	ehdp.record(1)
+	ehdp.record(2)
+	ehdp.record(3)
+
+	assert.Len(t, ehdp.posBuckets.counts, 0)
+	assert.Len(t, ehdp.negBuckets.counts, 0)
+	assert.Equal(t, uint64(3), ehdp.zeroCount)
+}
+
+func TestZeroThresholdFloat64(t *testing.T) {
+	defer withHandler(t)()
+
+	ehdp := newExpoHistogramDataPoint[float64](4, 20, 0.3)
+	ehdp.record(0.1)
+	ehdp.record(0.2)
+	ehdp.record(0.3)
+
+	assert.Len(t, ehdp.posBuckets.counts, 0)
+	assert.Len(t, ehdp.negBuckets.counts, 0)
+	assert.Equal(t, uint64(3), ehdp.zeroCount)
+}
+
+func TestExponentialHistogramAggregation(t *testing.T) {
+	t.Run("Int64", testExponentialHistogramAggregation[int64])
+	t.Run("Float64", testExponentialHistogramAggregation[float64])
+	t.Run("Int64 Empty", testEmptyExponentialHistogramAggregation[int64])
+	t.Run("Float64 Empty", testEmptyExponentialHistogramAggregation[float64])
+}
+
+func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
+	cfg := aggregation.ExponentialHistogram{
+		MaxSize:  4,
+		MaxScale: 20,
+	}
+
+	type TestCase struct {
+		name       string
+		aggregator Aggregator[N]
+		input      [][]N
+		want       metricdata.ExponentialHistogram[N]
+	}
+
+	tests := []TestCase{
+		{
+			name:       "Delta Single",
+			aggregator: NewDeltaExponentialHistogram[N](cfg),
+			input: [][]N{
+				{4, 4, 4, 2, 16, 1},
+			},
+			want: metricdata.ExponentialHistogram[N]{
+				Temporality: metricdata.DeltaTemporality,
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+					{
+						Count: 6,
+						Min:   metricdata.NewExtrema[N](1),
+						Max:   metricdata.NewExtrema[N](16),
+						Sum:   31,
+						Scale: -1,
+						PositiveBucket: metricdata.ExponentialBucket{
+							Offset: -1,
+							Counts: []uint64{1, 4, 1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "Cumulative Single",
+			aggregator: NewCumulativeExponentialHistogram[N](cfg),
+			input: [][]N{
+				{4, 4, 4, 2, 16, 1},
+			},
+			want: metricdata.ExponentialHistogram[N]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+					{
+						Count: 6,
+						Min:   metricdata.NewExtrema[N](1),
+						Max:   metricdata.NewExtrema[N](16),
+						Sum:   31,
+						Scale: -1,
+						PositiveBucket: metricdata.ExponentialBucket{
+							Offset: -1,
+							Counts: []uint64{1, 4, 1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "Delta Multiple",
+			aggregator: NewDeltaExponentialHistogram[N](cfg),
+			input: [][]N{
+				{2, 3, 8},
+				{4, 4, 4, 2, 16, 1},
+			},
+			want: metricdata.ExponentialHistogram[N]{
+				Temporality: metricdata.DeltaTemporality,
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+					{
+						Count: 6,
+						Min:   metricdata.NewExtrema[N](1),
+						Max:   metricdata.NewExtrema[N](16),
+						Sum:   31,
+						Scale: -1,
+						PositiveBucket: metricdata.ExponentialBucket{
+							Offset: -1,
+							Counts: []uint64{1, 4, 1},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "Cumulative Multiple ",
+			aggregator: NewCumulativeExponentialHistogram[N](cfg),
+			input: [][]N{
+				{2, 3, 8},
+				{4, 4, 4, 2, 16, 1},
+			},
+			want: metricdata.ExponentialHistogram[N]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+					{
+						Count: 9,
+						Min:   metricdata.NewExtrema[N](1),
+						Max:   metricdata.NewExtrema[N](16),
+						Sum:   44,
+						Scale: -1,
+						PositiveBucket: metricdata.ExponentialBucket{
+							Offset: -1,
+							Counts: []uint64{1, 6, 2},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer withHandler(t)()
+
+			var got metricdata.Aggregation
+			for _, n := range tt.input {
+				for _, v := range n {
+					tt.aggregator.Aggregate(v, *attribute.EmptySet())
+				}
+				got = tt.aggregator.Aggregation()
+			}
+
+			metricdatatest.AssertAggregationsEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+func testEmptyExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
+	cfg := aggregation.ExponentialHistogram{
+		MaxSize:  4,
+		MaxScale: 20,
+	}
+	var want metricdata.Aggregation
+
+	c := NewCumulativeExponentialHistogram[N](cfg)
+	assert.Equal(t, want, c.Aggregation())
+
+	d := NewDeltaExponentialHistogram[N](cfg)
+	assert.Equal(t, want, d.Aggregation())
+}
+
+func TestNormalizeConfig(t *testing.T) {
+	type TestCase struct {
+		name string
+		cfg  aggregation.ExponentialHistogram
+		want aggregation.ExponentialHistogram
+	}
+	testCases := []TestCase{
+		{
+			name: "Normal",
+			cfg: aggregation.ExponentialHistogram{
+				MaxSize:       13,
+				MaxScale:      7,
+				ZeroThreshold: 0.5,
+			},
+			want: aggregation.ExponentialHistogram{
+				MaxSize:       13,
+				MaxScale:      7,
+				ZeroThreshold: 0.5,
+			},
+		},
+		{
+			name: "MaxScale too small",
+			cfg: aggregation.ExponentialHistogram{
+				MaxSize:       24,
+				MaxScale:      -15,
+				ZeroThreshold: 0.46,
+			},
+			want: aggregation.ExponentialHistogram{
+				MaxSize:       24,
+				MaxScale:      -10,
+				ZeroThreshold: 0.46,
+			},
+		},
+		{
+			name: "MaxScale too large",
+			cfg: aggregation.ExponentialHistogram{
+				MaxSize:       31,
+				MaxScale:      25,
+				ZeroThreshold: 0.8,
+			},
+			want: aggregation.ExponentialHistogram{
+				MaxSize:       31,
+				MaxScale:      20,
+				ZeroThreshold: 0.8,
+			},
+		},
+		{
+			name: "MaxSize too small",
+			cfg: aggregation.ExponentialHistogram{
+				MaxSize:       -1,
+				MaxScale:      10,
+				ZeroThreshold: 0.5,
+			},
+			want: aggregation.ExponentialHistogram{
+				MaxSize:       160,
+				MaxScale:      10,
+				ZeroThreshold: 0.5,
+			},
+		},
+		{
+			name: "ZeroThreshold negative",
+			cfg: aggregation.ExponentialHistogram{
+				MaxSize:       13,
+				MaxScale:      7,
+				ZeroThreshold: -0.5,
+			},
+			want: aggregation.ExponentialHistogram{
+				MaxSize:       13,
+				MaxScale:      7,
+				ZeroThreshold: 0.5,
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			defer withHandler(t)()
+
+			got := normalizeConfig(tt.cfg)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
