@@ -189,19 +189,19 @@ var (
 		Max:               &maxB,
 	}}
 
-	pbEHDPB_A = &mpb.ExponentialHistogramDataPoint_Buckets{
+	pbEHDPBA = &mpb.ExponentialHistogramDataPoint_Buckets{
 		Offset:       5,
 		BucketCounts: []uint64{0, 5, 0, 5},
 	}
-	pbEHDPB_B = &mpb.ExponentialHistogramDataPoint_Buckets{
+	pbEHDPBB = &mpb.ExponentialHistogramDataPoint_Buckets{
 		Offset:       3,
 		BucketCounts: []uint64{0, 5, 0, 5},
 	}
-	pbEHDPB_C = &mpb.ExponentialHistogramDataPoint_Buckets{
+	pbEHDPBC = &mpb.ExponentialHistogramDataPoint_Buckets{
 		Offset:       5,
 		BucketCounts: []uint64{0, 1},
 	}
-	pbEHDPB_D = &mpb.ExponentialHistogramDataPoint_Buckets{
+	pbEHDPBD = &mpb.ExponentialHistogramDataPoint_Buckets{
 		Offset:       3,
 		BucketCounts: []uint64{0, 1},
 	}
@@ -214,8 +214,8 @@ var (
 		Sum:               &sumA,
 		Scale:             2,
 		ZeroCount:         10,
-		Positive:          pbEHDPB_A,
-		Negative:          pbEHDPB_B,
+		Positive:          pbEHDPBA,
+		Negative:          pbEHDPBB,
 		Min:               &minA,
 		Max:               &maxA,
 	}, {
@@ -226,8 +226,8 @@ var (
 		Sum:               &sumB,
 		Scale:             4,
 		ZeroCount:         1,
-		Positive:          pbEHDPB_C,
-		Negative:          pbEHDPB_D,
+		Positive:          pbEHDPBC,
+		Negative:          pbEHDPBD,
 		Min:               &minB,
 		Max:               &maxB,
 	}}
@@ -533,7 +533,7 @@ func TestTransformations(t *testing.T) {
 	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
 	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPInt64))
 	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPFloat64))
-	assert.Equal(t, pbEHDPB_A, ExponentialHistogramDataPointBuckets(otelEBucketA))
+	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
