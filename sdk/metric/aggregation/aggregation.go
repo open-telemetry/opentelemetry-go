@@ -165,9 +165,14 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 	}
 }
 
+// ExponentialHistogram is an aggregation that summarizes a set of
+// measurements as an histogram with buckets widths that grow exponentially.
 type ExponentialHistogram struct {
-	MaxSize       int
-	MaxScale      int
+	// MaxSize is the maximum number of buckets to use for the histogram.
+	MaxSize int
+	// MaxScale is the maximum resolution scale to use for the histogram.
+	MaxScale int
+	// ZeroThreshold sets the minimum value blow which will be recorded as zero.
 	ZeroThreshold float64
 
 	// NoMinMax indicates whether to not record the min and max of the
@@ -180,6 +185,7 @@ type ExponentialHistogram struct {
 	NoMinMax bool
 }
 
+// DefaultExponentialHistogram returns the default Exponential Histogram aggregation used by the SDK.
 func DefaultExponentialHistogram() ExponentialHistogram {
 	return ExponentialHistogram{
 		MaxSize:       160,

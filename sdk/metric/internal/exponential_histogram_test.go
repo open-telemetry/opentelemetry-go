@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package internal
 
 import (
@@ -7,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -29,7 +44,6 @@ func withHandler(t *testing.T) func() {
 }
 
 func TestExpoHistogramDataPointRecord(t *testing.T) {
-
 	t.Run("float64", testExpoHistogramDataPointRecord[float64])
 	t.Run("float64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSum[float64])
 	t.Run("float64-2", testExpoHistogramDataPointRecordFloat64)
@@ -128,7 +142,8 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
-			defer withHandler(t)()
+			restore := withHandler(t)
+			defer restore()
 
 			dp := newExpoHistogramDataPoint[N](tt.maxSize, 20, 0.0)
 			for _, v := range tt.values {
@@ -165,7 +180,8 @@ func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) 
 
 	for _, tt := range testCases {
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
-			defer withHandler(t)()
+			restore := withHandler(t)
+			defer restore()
 
 			dp := newExpoHistogramDataPoint[N](4, 20, 0.0)
 			for _, v := range tt.values {
@@ -254,7 +270,8 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
-			defer withHandler(t)()
+			restore := withHandler(t)
+			defer restore()
 
 			dp := newExpoHistogramDataPoint[float64](tt.maxSize, 20, 0.0)
 			for _, v := range tt.values {
@@ -640,7 +657,8 @@ func TestSubNormal(t *testing.T) {
 }
 
 func TestZeroThresholdInt64(t *testing.T) {
-	defer withHandler(t)()
+	restore := withHandler(t)
+	defer restore()
 
 	ehdp := newExpoHistogramDataPoint[int64](4, 20, 3.0)
 	ehdp.record(1)
@@ -653,7 +671,8 @@ func TestZeroThresholdInt64(t *testing.T) {
 }
 
 func TestZeroThresholdFloat64(t *testing.T) {
-	defer withHandler(t)()
+	restore := withHandler(t)
+	defer restore()
 
 	ehdp := newExpoHistogramDataPoint[float64](4, 20, 0.3)
 	ehdp.record(0.1)
@@ -784,7 +803,8 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer withHandler(t)()
+			restore := withHandler(t)
+			defer restore()
 
 			var got metricdata.Aggregation
 			for _, n := range tt.input {
@@ -889,7 +909,8 @@ func TestNormalizeConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			defer withHandler(t)()
+			restore := withHandler(t)
+			defer restore()
 
 			got := normalizeConfig(tt.cfg)
 			assert.Equal(t, tt.want, got)
