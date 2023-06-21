@@ -51,15 +51,16 @@ func TestExpoHistogramDataPointRecord(t *testing.T) {
 	t.Run("int64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSum[int64])
 }
 
-func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
-	type TestCase struct {
-		maxSize         int
-		values          []N
-		expectedBuckets expoBucket
-		expectedScale   int
-	}
+// TODO: This can be defined in the test after we drop support for go1.19.
+type expoHistogramDataPointRecordTestCase[N int64 | float64] struct {
+	maxSize         int
+	values          []N
+	expectedBuckets expoBucket
+	expectedScale   int
+}
 
-	testCases := []TestCase{
+func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
+	testCases := []expoHistogramDataPointRecordTestCase[N]{
 		{
 			maxSize: 4,
 			values:  []N{2, 4, 1},
@@ -158,23 +159,27 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 	}
 }
 
+// TODO: This can be defined in the test after we drop support for go1.19.
+type expectedMinMaxSum[N int64 | float64] struct {
+	min   N
+	max   N
+	sum   N
+	count uint
+}
+type expoHistogramDataPointRecordMinMaxSumTestCase[N int64 | float64] struct {
+	values   []N
+	expected expectedMinMaxSum[N]
+}
+
 func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) {
-	type Expected struct {
-		min, max, sum N
-		count         uint
-	}
-	type TestCase struct {
-		values   []N
-		expected Expected
-	}
-	testCases := []TestCase{
+	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[N]{
 		{
 			values:   []N{2, 4, 1},
-			expected: Expected{1, 4, 7, 3},
+			expected: expectedMinMaxSum[N]{1, 4, 7, 3},
 		},
 		{
 			values:   []N{4, 4, 4, 2, 16, 1},
-			expected: Expected{1, 16, 31, 6},
+			expected: expectedMinMaxSum[N]{1, 16, 31, 6},
 		},
 	}
 
@@ -691,20 +696,21 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Float64 Empty", testEmptyExponentialHistogramAggregation[float64])
 }
 
+// TODO: This can be defined in the test after we drop support for go1.19.
+type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
+	name       string
+	aggregator Aggregator[N]
+	input      [][]N
+	want       metricdata.ExponentialHistogram[N]
+}
+
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	cfg := aggregation.ExponentialHistogram{
 		MaxSize:  4,
 		MaxScale: 20,
 	}
 
-	type TestCase struct {
-		name       string
-		aggregator Aggregator[N]
-		input      [][]N
-		want       metricdata.ExponentialHistogram[N]
-	}
-
-	tests := []TestCase{
+	tests := []exponentialHistogramAggregationTestCase[N]{
 		{
 			name:       "Delta Single",
 			aggregator: NewDeltaExponentialHistogram[N](cfg),

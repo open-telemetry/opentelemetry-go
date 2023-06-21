@@ -305,7 +305,7 @@ func (b *expoBucket) downscale(s int) {
 	// Counts: [ 3,  1,  2,  3,  4,  5, 6, 7, 8, 9, 10]
 	// index:   -6  -5, -4, -3, -2, -1, 0, 1, 2, 3, 4
 	// new idx: -2, -2, -1, -1, -1, -1, 0, 0, 0, 0, 1
-	// new Offet: -2
+	// new Offset: -2
 	// new Counts: [4, 14, 30, 10]
 
 	if len(b.counts) <= 1 || s < 1 {
