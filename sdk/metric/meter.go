@@ -26,6 +26,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 )
 
+var (
+	// ErrInstrumentName indicates the created instrument has an invalid name.
+	// Valid names must consist of 63 or fewer characters including alphanumeric, _, ., -, and start with a letter.
+	ErrInstrumentName = errors.New("invalid instrument name")
+)
+
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
 // produced by an instrumentation scope will use metric instruments from a
@@ -62,7 +68,12 @@ var _ metric.Meter = (*meter)(nil)
 func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	cfg := metric.NewInt64CounterConfig(options...)
 	const kind = InstrumentKindCounter
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64UpDownCounter returns a new instrument identified by name and
@@ -71,7 +82,12 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	cfg := metric.NewInt64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64Histogram returns a new instrument identified by name and configured
@@ -80,7 +96,12 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	cfg := metric.NewInt64HistogramConfig(options...)
 	const kind = InstrumentKindHistogram
-	return m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.int64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Int64ObservableCounter returns a new instrument identified by name and
@@ -95,7 +116,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...metric.Int64Obser
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
 }
 
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
@@ -110,7 +131,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...metric.Int6
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
 }
 
 // Int64ObservableGauge returns a new instrument identified by name and
@@ -125,7 +146,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...metric.Int64Observa
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
 }
 
 // Float64Counter returns a new instrument identified by name and configured
@@ -134,7 +155,12 @@ func (m *meter) Int64ObservableGauge(name string, options ...metric.Int64Observa
 func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	cfg := metric.NewFloat64CounterConfig(options...)
 	const kind = InstrumentKindCounter
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64UpDownCounter returns a new instrument identified by name and
@@ -143,7 +169,12 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64Histogram returns a new instrument identified by name and configured
@@ -152,7 +183,12 @@ func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDow
 func (m *meter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	cfg := metric.NewFloat64HistogramConfig(options...)
 	const kind = InstrumentKindHistogram
-	return m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := m.float64IP.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
 }
 
 // Float64ObservableCounter returns a new instrument identified by name and
@@ -167,7 +203,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...metric.Float64O
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
 }
 
 // Float64ObservableUpDownCounter returns a new instrument identified by name
@@ -182,7 +218,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...metric.Fl
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
 }
 
 // Float64ObservableGauge returns a new instrument identified by name and
@@ -197,7 +233,34 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 		return nil, err
 	}
 	p.registerCallbacks(inst, cfg.Callbacks())
-	return inst, nil
+	return inst, validateInstrumentName(name)
+}
+
+func validateInstrumentName(name string) error {
+	if len(name) == 0 {
+		return fmt.Errorf("%w: %s: is empty", ErrInstrumentName, name)
+	}
+	if len(name) > 63 {
+		return fmt.Errorf("%w: %s: longer than 63 characters", ErrInstrumentName, name)
+	}
+	if !isAlpha([]rune(name)[0]) {
+		return fmt.Errorf("%w: %s: must start with a letter", ErrInstrumentName, name)
+	}
+	if len(name) == 1 {
+		return nil
+	}
+	for _, c := range name[1:] {
+		if !isAlphanumeric(c) && c != '_' && c != '.' && c != '-' {
+			return fmt.Errorf("%w: %s: must only contain [A-Za-z0-9_.-]", ErrInstrumentName, name)
+		}
+	}
+	return nil
+}
+func isAlpha(c rune) bool {
+	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+}
+func isAlphanumeric(c rune) bool {
+	return isAlpha(c) || ('0' <= c && c <= '9')
 }
 
 // RegisterCallback registers f to be called each collection cycle so it will

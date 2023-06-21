@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Starting from `v1.21.0` of semantic conventions, `go.opentelemetry.io/otel/semconv/{version}/httpconv` and `go.opentelemetry.io/otel/semconv/{version}/netconv` packages will no longer be published. (#4145)
+- Log duplicate instrument conflict at a warning level instead of info in `go.opentelemetry.io/otel/sdk/metric`. (#4202)
+- Return an error on the creation of new instruments if their name doesn't pass regexp validation. (#4210)
+
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
@@ -24,10 +30,13 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   The package contains semantic conventions from the `v1.19.0` version of the OpenTelemetry specification. (#3848)
 - The `go.opentelemetry.io/otel/semconv/v1.20.0` package.
   The package contains semantic conventions from the `v1.20.0` version of the OpenTelemetry specification. (#4078)
+- The Exponential Histogram data types in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#4165)
+- OTLP metrics exporter now supports the Exponential Histogram Data Type. (#4222)
 
 ### Changed
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#4049)
+- `MeterProvider` returns noop meters once it has been shutdown. (#4154)
 
 ### Removed
 

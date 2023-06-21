@@ -16,9 +16,16 @@ package metric
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func TestMeterConcurrentSafe(t *testing.T) {
@@ -52,6 +59,17 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 	_ = mp.Shutdown(context.Background())
 }
 
+func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
+	const name = "TestMeterAndShutdownConcurrentSafe meter"
+	mp := NewMeterProvider()
+
+	go func() {
+		_ = mp.Shutdown(context.Background())
+	}()
+
+	_ = mp.Meter(name)
+}
+
 func TestMeterDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
 	assert.NotPanics(t, func() { _ = mp.Meter("") })
@@ -73,4 +91,32 @@ func TestMeterProviderReturnsSameMeter(t *testing.T) {
 
 	assert.Same(t, mtr, mp.Meter(""))
 	assert.NotSame(t, mtr, mp.Meter("diff"))
+}
+
+func TestEmptyMeterName(t *testing.T) {
+	var buf strings.Builder
+	warnLevel := 1
+	l := funcr.New(func(prefix, args string) {
+		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+	}, funcr.Options{Verbosity: warnLevel})
+	otel.SetLogger(l)
+	mp := NewMeterProvider()
+
+	mp.Meter("")
+
+	assert.Contains(t, buf.String(), `"level"=1 "msg"="Invalid Meter name." "name"=""`)
+}
+
+func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
+	mp := NewMeterProvider()
+
+	m := mp.Meter("")
+	_, ok := m.(noop.Meter)
+	assert.False(t, ok, "Meter from running MeterProvider is NoOp")
+
+	require.NoError(t, mp.Shutdown(context.Background()))
+
+	m = mp.Meter("")
+	_, ok = m.(noop.Meter)
+	assert.Truef(t, ok, "Meter from shutdown MeterProvider is not NoOp: %T", m)
 }
