@@ -95,6 +95,78 @@ var (
 		Sum:          sumB,
 	}}
 
+	otelEBucketA = metricdata.ExponentialBucket{
+		Offset: 5,
+		Counts: []uint64{0, 5, 0, 5},
+	}
+	otelEBucketB = metricdata.ExponentialBucket{
+		Offset: 3,
+		Counts: []uint64{0, 5, 0, 5},
+	}
+	otelEBucketsC = metricdata.ExponentialBucket{
+		Offset: 5,
+		Counts: []uint64{0, 1},
+	}
+	otelEBucketsD = metricdata.ExponentialBucket{
+		Offset: 3,
+		Counts: []uint64{0, 1},
+	}
+
+	otelEHDPInt64 = []metricdata.ExponentialHistogramDataPoint[int64]{{
+		Attributes:     alice,
+		StartTime:      start,
+		Time:           end,
+		Count:          30,
+		Scale:          2,
+		ZeroCount:      10,
+		PositiveBucket: otelEBucketA,
+		NegativeBucket: otelEBucketB,
+		ZeroThreshold:  .01,
+		Min:            metricdata.NewExtrema(int64(minA)),
+		Max:            metricdata.NewExtrema(int64(maxA)),
+		Sum:            int64(sumA),
+	}, {
+		Attributes:     bob,
+		StartTime:      start,
+		Time:           end,
+		Count:          3,
+		Scale:          4,
+		ZeroCount:      1,
+		PositiveBucket: otelEBucketsC,
+		NegativeBucket: otelEBucketsD,
+		ZeroThreshold:  .02,
+		Min:            metricdata.NewExtrema(int64(minB)),
+		Max:            metricdata.NewExtrema(int64(maxB)),
+		Sum:            int64(sumB),
+	}}
+	otelEHDPFloat64 = []metricdata.ExponentialHistogramDataPoint[float64]{{
+		Attributes:     alice,
+		StartTime:      start,
+		Time:           end,
+		Count:          30,
+		Scale:          2,
+		ZeroCount:      10,
+		PositiveBucket: otelEBucketA,
+		NegativeBucket: otelEBucketB,
+		ZeroThreshold:  .01,
+		Min:            metricdata.NewExtrema(minA),
+		Max:            metricdata.NewExtrema(maxA),
+		Sum:            sumA,
+	}, {
+		Attributes:     bob,
+		StartTime:      start,
+		Time:           end,
+		Count:          3,
+		Scale:          4,
+		ZeroCount:      1,
+		PositiveBucket: otelEBucketsC,
+		NegativeBucket: otelEBucketsD,
+		ZeroThreshold:  .02,
+		Min:            metricdata.NewExtrema(minB),
+		Max:            metricdata.NewExtrema(maxB),
+		Sum:            sumB,
+	}}
+
 	pbHDP = []*mpb.HistogramDataPoint{{
 		Attributes:        []*cpb.KeyValue{pbAlice},
 		StartTimeUnixNano: uint64(start.UnixNano()),
@@ -117,6 +189,49 @@ var (
 		Max:               &maxB,
 	}}
 
+	pbEHDPBA = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       5,
+		BucketCounts: []uint64{0, 5, 0, 5},
+	}
+	pbEHDPBB = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       3,
+		BucketCounts: []uint64{0, 5, 0, 5},
+	}
+	pbEHDPBC = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       5,
+		BucketCounts: []uint64{0, 1},
+	}
+	pbEHDPBD = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       3,
+		BucketCounts: []uint64{0, 1},
+	}
+
+	pbEHDP = []*mpb.ExponentialHistogramDataPoint{{
+		Attributes:        []*cpb.KeyValue{pbAlice},
+		StartTimeUnixNano: uint64(start.UnixNano()),
+		TimeUnixNano:      uint64(end.UnixNano()),
+		Count:             30,
+		Sum:               &sumA,
+		Scale:             2,
+		ZeroCount:         10,
+		Positive:          pbEHDPBA,
+		Negative:          pbEHDPBB,
+		Min:               &minA,
+		Max:               &maxA,
+	}, {
+		Attributes:        []*cpb.KeyValue{pbBob},
+		StartTimeUnixNano: uint64(start.UnixNano()),
+		TimeUnixNano:      uint64(end.UnixNano()),
+		Count:             3,
+		Sum:               &sumB,
+		Scale:             4,
+		ZeroCount:         1,
+		Positive:          pbEHDPBC,
+		Negative:          pbEHDPBD,
+		Min:               &minB,
+		Max:               &maxB,
+	}}
+
 	otelHistInt64 = metricdata.Histogram[int64]{
 		Temporality: metricdata.DeltaTemporality,
 		DataPoints:  otelHDPInt64,
@@ -131,9 +246,27 @@ var (
 		DataPoints:  otelHDPInt64,
 	}
 
+	otelExpoHistInt64 = metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelEHDPInt64,
+	}
+	otelExpoHistFloat64 = metricdata.ExponentialHistogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelEHDPFloat64,
+	}
+	otelExpoHistInvalid = metricdata.ExponentialHistogram[int64]{
+		Temporality: invalidTemporality,
+		DataPoints:  otelEHDPInt64,
+	}
+
 	pbHist = &mpb.Histogram{
 		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
 		DataPoints:             pbHDP,
+	}
+
+	pbExpoHist = &mpb.ExponentialHistogram{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		DataPoints:             pbEHDP,
 	}
 
 	otelDPtsInt64 = []metricdata.DataPoint[int64]{
@@ -263,6 +396,24 @@ var (
 			Unit:        "1",
 			Data:        unknownAgg,
 		},
+		{
+			Name:        "int64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistInt64,
+		},
+		{
+			Name:        "float64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistFloat64,
+		},
+		{
+			Name:        "invalid-ExponentialHistogram",
+			Description: "Invalid Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistInvalid,
+		},
 	}
 
 	pbMetrics = []*mpb.Metric{
@@ -301,6 +452,18 @@ var (
 			Description: "Histogram",
 			Unit:        "1",
 			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+		},
+		{
+			Name:        "int64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+		},
+		{
+			Name:        "float64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
 		},
 	}
 
@@ -368,6 +531,9 @@ func TestTransformations(t *testing.T) {
 	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPFloat64))
 	assert.Equal(t, pbDPtsInt64, DataPoints[int64](otelDPtsInt64))
 	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
+	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPInt64))
+	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPFloat64))
+	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
@@ -392,6 +558,16 @@ func TestTransformations(t *testing.T) {
 
 	assert.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
 	require.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
+
+	e, err := ExponentialHistogram(otelExpoHistInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	e, err = ExponentialHistogram(otelExpoHistFloat64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	e, err = ExponentialHistogram(otelExpoHistInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, e)
 
 	// Metrics.
 	m, err := Metrics(otelMetrics)

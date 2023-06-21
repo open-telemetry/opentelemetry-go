@@ -99,6 +99,10 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 		out.Data, err = Histogram(a)
 	case metricdata.Histogram[float64]:
 		out.Data, err = Histogram(a)
+	case metricdata.ExponentialHistogram[int64]:
+		out.Data, err = ExponentialHistogram(a)
+	case metricdata.ExponentialHistogram[float64]:
+		out.Data, err = ExponentialHistogram(a)
 	default:
 		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
 	}
@@ -195,6 +199,61 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 		out = append(out, hdp)
 	}
 	return out
+}
+
+// ExponentialHistogram returns an OTLP Metric_ExponentialHistogram generated from h. An error is
+// returned if the temporality of h is unknown.
+func ExponentialHistogram[N int64 | float64](h metricdata.ExponentialHistogram[N]) (*mpb.Metric_ExponentialHistogram, error) {
+	t, err := Temporality(h.Temporality)
+	if err != nil {
+		return nil, err
+	}
+	return &mpb.Metric_ExponentialHistogram{
+		ExponentialHistogram: &mpb.ExponentialHistogram{
+			AggregationTemporality: t,
+			DataPoints:             ExponentialHistogramDataPoints(h.DataPoints),
+		},
+	}, nil
+}
+
+// ExponentialHistogramDataPoints returns a slice of OTLP ExponentialHistogramDataPoint generated
+// from dPts.
+func ExponentialHistogramDataPoints[N int64 | float64](dPts []metricdata.ExponentialHistogramDataPoint[N]) []*mpb.ExponentialHistogramDataPoint {
+	out := make([]*mpb.ExponentialHistogramDataPoint, 0, len(dPts))
+	for _, dPt := range dPts {
+		sum := float64(dPt.Sum)
+		ehdp := &mpb.ExponentialHistogramDataPoint{
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
+			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			Count:             dPt.Count,
+			Sum:               &sum,
+			Scale:             dPt.Scale,
+			ZeroCount:         dPt.ZeroCount,
+
+			Positive: ExponentialHistogramDataPointBuckets(dPt.PositiveBucket),
+			Negative: ExponentialHistogramDataPointBuckets(dPt.NegativeBucket),
+		}
+		if v, ok := dPt.Min.Value(); ok {
+			vF64 := float64(v)
+			ehdp.Min = &vF64
+		}
+		if v, ok := dPt.Max.Value(); ok {
+			vF64 := float64(v)
+			ehdp.Max = &vF64
+		}
+		out = append(out, ehdp)
+	}
+	return out
+}
+
+// ExponentialHistogramDataPointBuckets returns an OTLP ExponentialHistogramDataPoint_Buckets generated
+// from bucket.
+func ExponentialHistogramDataPointBuckets(bucket metricdata.ExponentialBucket) *mpb.ExponentialHistogramDataPoint_Buckets {
+	return &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       bucket.Offset,
+		BucketCounts: bucket.Counts,
+	}
 }
 
 // Temporality returns an OTLP AggregationTemporality generated from t. If t
