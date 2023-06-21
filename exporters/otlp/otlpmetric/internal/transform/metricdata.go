@@ -203,8 +203,7 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 }
 
 // ExponentialHistogram returns an OTLP Metric_ExponentialHistogram generated from h. An error is
-// returned with a partial Metric_Histogram if the temporality of h is
-// unknown.
+// returned if the temporality of h is unknown.
 func ExponentialHistogram[N int64 | float64](h metricdata.ExponentialHistogram[N]) (*mpb.Metric_ExponentialHistogram, error) {
 	t, err := Temporality(h.Temporality)
 	if err != nil {
