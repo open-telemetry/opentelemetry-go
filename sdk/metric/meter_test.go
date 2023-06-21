@@ -483,6 +483,310 @@ func TestMeterCreatesInstruments(t *testing.T) {
 	}
 }
 
+func TestMeterCreatesInstrumentsValidations(t *testing.T) {
+	testCases := []struct {
+		name string
+		fn   func(*testing.T, metric.Meter) error
+
+		wantErr error
+	}{
+		{
+			name: "Int64Counter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Counter("counter")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64Counter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Counter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64UpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64UpDownCounter("upDownCounter")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64UpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64UpDownCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64Histogram with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Histogram("histogram")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64Histogram with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Histogram("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64ObservableCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableCounter("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64ObservableUpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableUpDownCounter("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableUpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableUpDownCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64ObservableGauge with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableGauge("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Int64ObservableGauge with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableGauge("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64Counter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Counter("counter")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64Counter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Counter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64UpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64UpDownCounter("upDownCounter")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64UpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64UpDownCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64Histogram with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Histogram("histogram")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64Histogram with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Histogram("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64ObservableCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64ObservableCounter("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64ObservableCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64ObservableUpDownCounter with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64ObservableUpDownCounter("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableUpDownCounter with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64ObservableUpDownCounter("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64ObservableGauge with no validation issues",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64ObservableGauge("aint")
+				assert.NotNil(t, i)
+				return err
+			},
+		},
+		{
+			name: "Float64ObservableGauge with an invalid name",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64ObservableGauge("_")
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMeterProvider().Meter("testInstruments")
+			err := tt.fn(t, m)
+			assert.Equal(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateInstrumentName(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		wantErr error
+	}{
+		{
+			name:    "",
+			wantErr: fmt.Errorf("%w: : is empty", ErrInstrumentName),
+		},
+		{
+			name:    "1",
+			wantErr: fmt.Errorf("%w: 1: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "a",
+		},
+		{
+			name: "n4me",
+		},
+		{
+			name: "n-me",
+		},
+		{
+			name: "na_e",
+		},
+		{
+			name: "nam.",
+		},
+		{
+			name:    "name!",
+			wantErr: fmt.Errorf("%w: name!: must only contain [A-Za-z0-9_.-]", ErrInstrumentName),
+		},
+		{
+			name:    "someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp",
+			wantErr: fmt.Errorf("%w: someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp: longer than 63 characters", ErrInstrumentName),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantErr, validateInstrumentName(tt.name))
+		})
+	}
+}
+
 func TestRegisterNonSDKObserverErrors(t *testing.T) {
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
@@ -509,9 +813,9 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 
 	m1 := mp.Meter("scope1")
 	m2 := mp.Meter("scope2")
-	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	iCtr, err := m2.Int64ObservableCounter("int64ctr")
 	require.NoError(t, err)
-	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	fCtr, err := m2.Float64ObservableCounter("float64ctr")
 	require.NoError(t, err)
 	_, err = m1.RegisterCallback(
 		func(context.Context, metric.Observer) error { return nil },
@@ -520,13 +824,13 @@ func TestMeterMixingOnRegisterErrors(t *testing.T) {
 	assert.ErrorContains(
 		t,
 		err,
-		`invalid registration: observable "int64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		`invalid registration: observable "int64ctr" from Meter "scope2", registered with Meter "scope1"`,
 		"Instrument registered with non-creation Meter",
 	)
 	assert.ErrorContains(
 		t,
 		err,
-		`invalid registration: observable "float64 ctr" from Meter "scope2", registered with Meter "scope1"`,
+		`invalid registration: observable "float64ctr" from Meter "scope2", registered with Meter "scope1"`,
 		"Instrument registered with non-creation Meter",
 	)
 }
@@ -540,9 +844,9 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 	require.NoError(t, err)
 
 	m2 := mp.Meter("scope2")
-	iCtr, err := m2.Int64ObservableCounter("int64 ctr")
+	iCtr, err := m2.Int64ObservableCounter("int64ctr")
 	require.NoError(t, err)
-	fCtr, err := m2.Float64ObservableCounter("float64 ctr")
+	fCtr, err := m2.Float64ObservableCounter("float64ctr")
 	require.NoError(t, err)
 
 	type int64Obsrv struct{ metric.Int64Observable }
