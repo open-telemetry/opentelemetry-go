@@ -97,7 +97,7 @@ func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThr
 	}
 }
 
-// record adds a new measurment to the histogram. It will rescale the buckets if needed.
+// record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
 	p.count++
 	if v < p.min {
@@ -301,7 +301,7 @@ func (b *expoBucket) record(index int) {
 func (b *expoBucket) downscale(s int) {
 	// Example
 	// s = 2
-	// Original offet: -6
+	// Original offset: -6
 	// Counts: [ 3,  1,  2,  3,  4,  5, 6, 7, 8, 9, 10]
 	// index:   -6  -5, -4, -3, -2, -1, 0, 1, 2, 3, 4
 	// new idx: -2, -2, -1, -1, -1, -1, 0, 0, 0, 0, 1
