@@ -40,12 +40,12 @@ const (
 // subnormal numbers.
 func getNormalBase2(value float64) int {
 	rawBits := math.Float64bits(value)
-	rawExponent := (int(rawBits) & exponentMask) >> significandWidth
-	return rawExponent - exponentBias
+	rawExponent := (int64(rawBits) & exponentMask) >> significandWidth
+	return int(rawExponent - exponentBias)
 }
 
 // getSignificand returns the 52 bit (unsigned) significand as a
 // signed value.
 func getSignificand(value float64) int {
-	return int(math.Float64bits(value)) & significandMask
+	return int(int64(math.Float64bits(value)) & significandMask)
 }
