@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `ManualReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+- Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+
 ### Changed
 
 - Starting from `v1.21.0` of semantic conventions, `go.opentelemetry.io/otel/semconv/{version}/httpconv` and `go.opentelemetry.io/otel/semconv/{version}/netconv` packages will no longer be published. (#4145)
