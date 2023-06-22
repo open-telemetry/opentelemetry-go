@@ -84,6 +84,23 @@ func (p *meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.I
 	return hist, nil
 }
 
+func (p *meter) Int64ExponentialHistogram(string, ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
+	// This is an example of how a meter would create an aggregator for a new
+	// histogram. At this point the provider would determine the aggregation
+	// and temporality to used based on the Reader and View configuration.
+	// Assume here these are determined to be a delta explicit-bucket
+	// histogram.
+
+	aggregator := NewDeltaExponentialHistogram[int64](aggregation.DefaultExponentialHistogram())
+	hist := inst{aggregateFunc: aggregator.Aggregate}
+
+	p.aggregations = append(p.aggregations, aggregator.Aggregation())
+
+	fmt.Printf("using %T aggregator for histogram\n", aggregator)
+
+	return hist, nil
+}
+
 // inst is a generalized int64 synchronous counter, up-down counter, and
 // histogram used for demonstration purposes only.
 type inst struct {
@@ -103,9 +120,11 @@ func Example() {
 	_, _ = m.Int64Counter("counter example")
 	_, _ = m.Int64UpDownCounter("up-down counter example")
 	_, _ = m.Int64Histogram("histogram example")
+	_, _ = m.Int64ExponentialHistogram("exponential histogram example")
 
 	// Output:
 	// using *internal.cumulativeSum[int64] aggregator for counter
 	// using *internal.lastValue[int64] aggregator for up-down counter
 	// using *internal.deltaHistogram[int64] aggregator for histogram
+	// using *internal.deltaExponentialHistogram[int64] aggregator for histogram
 }
