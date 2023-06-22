@@ -34,6 +34,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - The `go.opentelemetry.io/otel/semconv/v1.20.0` package.
   The package contains semantic conventions from the `v1.20.0` version of the OpenTelemetry specification. (#4078)
 - The Exponential Histogram data types in `go.opentelemetry.io/otel/sdk/metric/metricdata`. (#4165)
+- OTLP metrics exporter now supports the Exponential Histogram Data Type. (#4222)
 
 ### Changed
 
