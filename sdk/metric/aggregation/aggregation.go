@@ -185,7 +185,7 @@ type ExponentialHistogram struct {
 	NoMinMax bool
 }
 
-// DefaultExponentialHistogram returns the default Exponential Histogram aggregation used by the SDK.
+// DefaultExponentialHistogram returns the default  Exponential Histogram aggregation.
 func DefaultExponentialHistogram() ExponentialHistogram {
 	return ExponentialHistogram{
 		MaxSize:       160,
