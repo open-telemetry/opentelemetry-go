@@ -55,6 +55,8 @@ type Exporter interface {
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
+	//
+	// This method needs to be concurrent safe.
 	ForceFlush(context.Context) error
 
 	// Shutdown flushes all metric data held by an exporter and releases any
@@ -65,5 +67,7 @@ type Exporter interface {
 	//
 	// After Shutdown is called, calls to Export will perform no operation and
 	// instead will return an error indicating the shutdown state.
+	//
+	// This method needs to be concurrent safe.
 	Shutdown(context.Context) error
 }

@@ -66,6 +66,8 @@ func (mr *ManualReader) register(p sdkProducer) {
 
 // RegisterProducer stores the external Producer which enables the caller
 // to read metrics on demand.
+//
+// This method is safe to call concurrently.
 func (mr *ManualReader) RegisterProducer(p Producer) {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
@@ -90,11 +92,15 @@ func (mr *ManualReader) aggregation(kind InstrumentKind) aggregation.Aggregation
 }
 
 // ForceFlush is a no-op, it always returns nil.
+//
+// This method is safe to call concurrently.
 func (mr *ManualReader) ForceFlush(context.Context) error {
 	return nil
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
+//
+// This method is safe to call concurrently.
 func (mr *ManualReader) Shutdown(context.Context) error {
 	err := ErrReaderShutdown
 	mr.shutdownOnce.Do(func() {
@@ -117,6 +123,8 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 //
 // Collect will return an error if called after shutdown.
 // Collect will return an error if rm is a nil ResourceMetrics.
+//
+// This method is safe to call concurrently.
 func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
 		return errors.New("manual reader: *metricdata.ResourceMetrics is nil")
