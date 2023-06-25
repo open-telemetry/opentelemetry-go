@@ -193,6 +193,8 @@ func (r *PeriodicReader) register(p sdkProducer) {
 }
 
 // RegisterProducer registers p as an external Producer of this reader.
+//
+// This method is safe to call concurrently.
 func (r *PeriodicReader) RegisterProducer(p Producer) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -235,6 +237,8 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 // handle that if desired.
 //
 // An error is returned if this is called after Shutdown. An error is return if rm is nil.
+//
+// This method is safe to call concurrently.
 func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
 		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
@@ -282,6 +286,8 @@ func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetri
 }
 
 // ForceFlush flushes pending telemetry.
+//
+// This method is safe to call concurrently.
 func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	select {
@@ -304,6 +310,8 @@ func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 }
 
 // Shutdown flushes pending telemetry and then stops the export pipeline.
+//
+// This method is safe to call concurrently.
 func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
