@@ -8,11 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `ManualReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+- Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+
 ### Changed
 
 - Starting from `v1.21.0` of semantic conventions, `go.opentelemetry.io/otel/semconv/{version}/httpconv` and `go.opentelemetry.io/otel/semconv/{version}/netconv` packages will no longer be published. (#4145)
 - Log duplicate instrument conflict at a warning level instead of info in `go.opentelemetry.io/otel/sdk/metric`. (#4202)
 - Return an error on the creation of new instruments if their name doesn't pass regexp validation. (#4210)
+- `NewManualReader` in `go.opentelemetry.io/otel/sdk/metric` returns `*ManualReader` instead of `Reader`. (#4244)
+- `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric` returns `*PeriodicReader` instead of `Reader`. (#4244)
+- Count the Collect time in the PeriodicReader timeout. (#4221)
 
 ### Fixed
 
