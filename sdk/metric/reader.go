@@ -60,6 +60,8 @@ type Reader interface {
 	// RegisterProducer registers a an external Producer with this Reader.
 	// The Producer is used as a source of aggregated metric data which is
 	// incorporated into metrics collected from the SDK.
+	//
+	// This method needs to be concurrent safe.
 	RegisterProducer(Producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
@@ -71,6 +73,8 @@ type Reader interface {
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in out. An error is returned if this is called
 	// after Shutdown or if out is nil.
+	//
+	// This method needs to be concurrent safe.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
@@ -79,6 +83,8 @@ type Reader interface {
 	// error will be returned in these situations. There is no guaranteed that all
 	// telemetry be flushed or all resources have been released in these
 	// situations.
+	//
+	// This method needs to be concurrent safe.
 	ForceFlush(context.Context) error
 
 	// Shutdown flushes all metric measurements held in an export pipeline and releases any
@@ -91,6 +97,8 @@ type Reader interface {
 	//
 	// After Shutdown is called, calls to Collect will perform no operation and instead will return
 	// an error indicating the shutdown state.
+	//
+	// This method needs to be concurrent safe.
 	Shutdown(context.Context) error
 }
 
