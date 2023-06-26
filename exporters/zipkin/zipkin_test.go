@@ -377,6 +377,7 @@ func TestLogrFormatting(t *testing.T) {
 	}, funcr.Options{})
 	exp, err := New("", WithLogr(l))
 	require.NoError(t, err)
+
 	exp.logf(format, args...)
 
 	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
