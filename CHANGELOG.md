@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `ManualReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
 - Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+- Add support for Exponential Histogram Aggregations. A Histogram can be configured as an Exponential Histogram using a view with the `go.opentelemetry.io/otel/sdk/metric/aggregation.ExponentialHistogram` as the aggregation. (#4245)
 
 ### Changed
 
