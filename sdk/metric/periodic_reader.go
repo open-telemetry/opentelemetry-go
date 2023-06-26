@@ -104,9 +104,9 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
-// collect and export data every 60 seconds, and will cancel export attempts
-// that exceed 30 seconds. The export time is not counted towards the interval
-// between attempts.
+// collect and export data every 60 seconds, and will cancel any attempts that
+// exceed 30 seconds, collect and export combined. The collect and export time
+// are not counted towards the interval between attempts.
 //
 // The Collect method of the returned Reader continues to gather and return
 // metric data to the user. It will not automatically send that data to the
@@ -221,6 +221,9 @@ func (r *PeriodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
@@ -236,8 +239,8 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 // data is not exported to the configured exporter, it is left to the caller to
 // handle that if desired.
 //
-// An error is returned if this is called after Shutdown. An error is return if rm is nil.
-//
+// An error is returned if this is called after Shutdown, if rm is nil or if
+// the duration of the collect and export exceeded the timeout.
 // This method is safe to call concurrently.
 func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
@@ -280,9 +283,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 
 // export exports metric data m using r's exporter.
 func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
-	c, cancel := context.WithTimeout(ctx, r.timeout)
-	defer cancel()
-	return r.exporter.Export(c, m)
+	return r.exporter.Export(ctx, m)
 }
 
 // ForceFlush flushes pending telemetry.
