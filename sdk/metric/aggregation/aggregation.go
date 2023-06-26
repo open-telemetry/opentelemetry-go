@@ -196,7 +196,7 @@ func DefaultExponentialHistogram() ExponentialHistogram {
 
 var _ Aggregation = ExponentialHistogram{}
 
-// private attempts to ensure no user-defined Aggregation are allowed. The
+// private attempts to ensure no user-defined Aggregation is allowed. The
 // OTel specification does not allow user-defined Aggregation currently.
 func (e ExponentialHistogram) private() {}
 
