@@ -126,3 +126,11 @@ Importantly, bump any package versions referenced to be the latest one you just 
 [OpenTelemetry Specification]: https://github.com/open-telemetry/opentelemetry-specification
 [Go instrumentation documentation]: https://opentelemetry.io/docs/instrumentation/go/
 [content/en/docs/instrumentation/go]: https://github.com/open-telemetry/opentelemetry.io/tree/main/content/en/docs/instrumentation/go
+
+### Demo Repository
+
+Bump the dependencies in the following Go services:
+
+- [`accountingservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/accountingservice)
+- [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkoutservice)
+- [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/productcatalogservice)
