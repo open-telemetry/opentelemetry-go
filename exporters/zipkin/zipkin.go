@@ -181,7 +181,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 func (e *Exporter) logf(format string, args ...interface{}) {
 	if e.logger != emptyLogger {
-		e.logger.Info(format, args)
+		e.logger.Info(fmt.Sprintf(format, args...))
 	}
 }
 
