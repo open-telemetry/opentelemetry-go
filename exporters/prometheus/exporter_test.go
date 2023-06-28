@@ -757,7 +757,7 @@ func TestConcurrentCollect(t *testing.T) {
 	}
 }
 
-func TestNotNilScopeinfoInCollect(t *testing.T) {
+func TesInvalidInsrtrumentForPrometheusIsIgnored(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	cfg := newConfig(WithRegisterer(registry))
 
@@ -801,7 +801,7 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 
 	meterA := provider.Meter(invalidName, otelmetric.WithInstrumentationVersion("v0.1.0"))
 
-	counterA, err := meterA.Int64Counter(invalidName,
+	counterA, err := meterA.Int64Counter("with-invalid-description",
 		otelmetric.WithUnit("By"),
 		otelmetric.WithDescription(invalidName))
 	assert.NoError(t, err)
@@ -829,7 +829,7 @@ func TestNotNilScopeinfoInCollect(t *testing.T) {
 		case m := <-ch:
 			require.NotNil(t, m)
 
-			if strings.Contains(m.Desc().String(), "validName") {
+			if strings.Contains(m.Desc().String(), validName) {
 				return
 			}
 		case <-time.After(time.Second):
