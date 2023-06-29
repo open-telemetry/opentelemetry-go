@@ -334,11 +334,20 @@ var (
 		DataPoints:             pbDPtsFloat64,
 	}
 
-	otelGaugeInt64   = metricdata.Gauge[int64]{DataPoints: otelDPtsInt64}
-	otelGaugeFloat64 = metricdata.Gauge[float64]{DataPoints: otelDPtsFloat64}
+	otelGaugeInt64         = metricdata.Gauge[int64]{DataPoints: otelDPtsInt64}
+	otelGaugeFloat64       = metricdata.Gauge[float64]{DataPoints: otelDPtsFloat64}
+	otelGaugeZeroStartTime = metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: alice, StartTime: time.Time{}, Time: end, Value: 1}}}
 
-	pbGaugeInt64   = &mpb.Gauge{DataPoints: pbDPtsInt64}
-	pbGaugeFloat64 = &mpb.Gauge{DataPoints: pbDPtsFloat64}
+	pbGaugeInt64         = &mpb.Gauge{DataPoints: pbDPtsInt64}
+	pbGaugeFloat64       = &mpb.Gauge{DataPoints: pbDPtsFloat64}
+	pbGaugeZeroStartTime = &mpb.Gauge{DataPoints: []*mpb.NumberDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: 0,
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 1},
+		},
+	}}
 
 	unknownAgg  unknownAggT
 	otelMetrics = []metricdata.Metrics{
@@ -414,6 +423,12 @@ var (
 			Unit:        "1",
 			Data:        otelExpoHistInvalid,
 		},
+		{
+			Name:        "zero-time",
+			Description: "Gauge with 0 StartTime",
+			Unit:        "1",
+			Data:        otelGaugeZeroStartTime,
+		},
 	}
 
 	pbMetrics = []*mpb.Metric{
@@ -464,6 +479,12 @@ var (
 			Description: "Exponential Histogram",
 			Unit:        "1",
 			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+		},
+		{
+			Name:        "zero-time",
+			Description: "Gauge with 0 StartTime",
+			Unit:        "1",
+			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeZeroStartTime},
 		},
 	}
 
