@@ -239,8 +239,10 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 // data is not exported to the configured exporter, it is left to the caller to
 // handle that if desired.
 //
-// An error is returned if this is called after Shutdown, if rm is nil or if
-// the duration of the collect and export exceeded the timeout.
+// Collect will return an error if called after shutdown.
+// Collect will return an error if rm is a nil ResourceMetrics.
+// Collect will return an error if the context's Done channel is closed.
+//
 // This method is safe to call concurrently.
 func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if rm == nil {
