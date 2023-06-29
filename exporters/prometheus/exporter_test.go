@@ -677,7 +677,7 @@ func TestDuplicateMetrics(t *testing.T) {
 	}
 }
 
-func TestConcurrentCollect(t *testing.T) {
+func TestCollectConcurrentSafe(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	cfg := newConfig(WithRegisterer(registry))
 
