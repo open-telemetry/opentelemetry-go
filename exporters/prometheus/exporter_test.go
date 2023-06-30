@@ -17,7 +17,6 @@ package prometheus
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -753,87 +752,6 @@ func TestCollectConcurrentSafe(t *testing.T) {
 			}
 		case <-time.After(time.Second):
 			t.Fatal("timeout")
-		}
-	}
-}
-
-func TesInvalidInsrtrumentForPrometheusIsIgnored(t *testing.T) {
-	registry := prometheus.NewRegistry()
-	cfg := newConfig(WithRegisterer(registry))
-
-	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
-
-	collector := &collector{
-		reader:            reader,
-		disableTargetInfo: false,
-		withoutUnits:      true,
-		disableScopeInfo:  false,
-		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
-		metricFamilies:    make(map[string]*dto.MetricFamily),
-	}
-
-	err := cfg.registerer.Register(collector)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// initialize resource
-	res, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
-		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
-	)
-	require.NoError(t, err)
-	res, err = resource.Merge(resource.Default(), res)
-	require.NoError(t, err)
-
-	exporter := &Exporter{Reader: reader}
-
-	// initialize provider
-	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
-		metric.WithResource(res),
-	)
-
-	// invalid label or metric name leads to error returned from
-	// createScopeInfoMetric
-	invalidName := string([]byte{0xff, 0xfe, 0xfd})
-	validName := "validName"
-
-	meterA := provider.Meter(invalidName, otelmetric.WithInstrumentationVersion("v0.1.0"))
-
-	counterA, err := meterA.Int64Counter("with-invalid-description",
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription(invalidName))
-	assert.NoError(t, err)
-
-	counterA.Add(ctx, 100, otelmetric.WithAttributes(
-		attribute.Key(invalidName).String(invalidName),
-	))
-
-	meterB := provider.Meter(validName, otelmetric.WithInstrumentationVersion("v0.1.0"))
-	counterB, err := meterB.Int64Counter(validName,
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription(validName))
-	assert.NoError(t, err)
-
-	counterB.Add(ctx, 100, otelmetric.WithAttributes(
-		attribute.Key(validName).String(validName),
-	))
-
-	ch := make(chan prometheus.Metric)
-
-	go collector.Collect(ch)
-
-	for {
-		select {
-		case m := <-ch:
-			require.NotNil(t, m)
-
-			if strings.Contains(m.Desc().String(), validName) {
-				return
-			}
-		case <-time.After(time.Second):
-			t.Fatalf("timeout")
 		}
 	}
 }
