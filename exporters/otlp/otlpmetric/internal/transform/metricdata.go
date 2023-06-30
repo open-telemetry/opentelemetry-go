@@ -16,6 +16,7 @@ package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/
 
 import (
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -140,8 +141,8 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 	for _, dPt := range dPts {
 		ndp := &mpb.NumberDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
-			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
-			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
 		}
 		switch v := any(dPt.Value).(type) {
 		case int64:
@@ -181,8 +182,8 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 		sum := float64(dPt.Sum)
 		hdp := &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
-			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
-			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
 			Sum:               &sum,
 			BucketCounts:      dPt.BucketCounts,
@@ -224,8 +225,8 @@ func ExponentialHistogramDataPoints[N int64 | float64](dPts []metricdata.Exponen
 		sum := float64(dPt.Sum)
 		ehdp := &mpb.ExponentialHistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
-			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
-			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
 			Sum:               &sum,
 			Scale:             dPt.Scale,
@@ -269,4 +270,18 @@ func Temporality(t metricdata.Temporality) (mpb.AggregationTemporality, error) {
 		err := fmt.Errorf("%w: %s", errUnknownTemporality, t)
 		return mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED, err
 	}
+}
+
+// timeUnixNano returns t as a Unix time, the number of nanoseconds elapsed
+// since January 1, 1970 UTC as uint64.
+// The result is undefined if the Unix time
+// in nanoseconds cannot be represented by an int64
+// (a date before the year 1678 or after 2262).
+// timeUnixNano on the zero Time returns 0.
+// The result does not depend on the location associated with t.
+func timeUnixNano(t time.Time) uint64 {
+	if t.IsZero() {
+		return 0
+	}
+	return uint64(t.UnixNano())
 }
