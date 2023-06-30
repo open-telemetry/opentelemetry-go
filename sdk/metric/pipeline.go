@@ -60,7 +60,7 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 		resource: res,
 		reader:   reader,
 		views:    views,
-		// aggregator is lazy allocated when needed.
+		// aggregations is lazy allocated when needed.
 	}
 }
 
