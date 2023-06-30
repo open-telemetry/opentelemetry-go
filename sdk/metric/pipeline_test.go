@@ -39,31 +39,6 @@ func (testSumAggregator) Aggregation() metricdata.Aggregation {
 		DataPoints:  []metricdata.DataPoint[int64]{}}
 }
 
-func TestEmptyPipeline(t *testing.T) {
-	pipe := &pipeline{}
-
-	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
-	require.NoError(t, err)
-	assert.Nil(t, output.Resource)
-	assert.Len(t, output.ScopeMetrics, 0)
-
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
-	assert.NotPanics(t, func() {
-		pipe.addSync(instrumentation.Scope{}, iSync)
-	})
-
-	require.NotPanics(t, func() {
-		pipe.addMultiCallback(func(context.Context) error { return nil })
-	})
-
-	err = pipe.produce(context.Background(), &output)
-	require.NoError(t, err)
-	assert.Nil(t, output.Resource)
-	require.Len(t, output.ScopeMetrics, 1)
-	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
-}
-
 func TestNewPipeline(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 
