@@ -307,3 +307,12 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+  - package-ecosystem: pip
+    directory: /
+    labels:
+      - dependencies
+      - python
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
