@@ -41,17 +41,6 @@ import (
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-// New returns an OpenTelemetry metric Exporter. The Exporter can be used with
-// a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
-// endpoint using protobufs over HTTP.
-func New(_ context.Context, opts ...Option) (metric.Exporter, error) {
-	c, err := newClient(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return ominternal.New(c), nil
-}
-
 type client struct {
 	// req is cloned for every upload the client makes.
 	req         *http.Request
