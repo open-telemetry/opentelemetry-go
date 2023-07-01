@@ -26,8 +26,8 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-// exporter exports metrics data as OTLP.
-type exporter struct {
+// Exporter exports metrics data as OTLP.
+type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
 	client   Client
@@ -36,21 +36,21 @@ type exporter struct {
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
-func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+func (e *Exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
 	return e.client.Temporality(k)
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (e *Exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
 	return e.client.Aggregation(k)
 }
 
 // Export transforms and transmits metric data to an OTLP receiver.
-func (e *exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
@@ -67,7 +67,7 @@ func (e *exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 }
 
 // ForceFlush flushes any metric data held by an exporter.
-func (e *exporter) ForceFlush(ctx context.Context) error {
+func (e *Exporter) ForceFlush(ctx context.Context) error {
 	// The Exporter does not hold data, forward the command to the client.
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
@@ -78,7 +78,7 @@ var errShutdown = fmt.Errorf("exporter is shutdown")
 
 // Shutdown flushes all metric data held by an exporter and releases any held
 // computational resources.
-func (e *exporter) Shutdown(ctx context.Context) error {
+func (e *Exporter) Shutdown(ctx context.Context) error {
 	err := errShutdown
 	e.shutdownOnce.Do(func() {
 		e.clientMu.Lock()
@@ -96,8 +96,8 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 // New return an Exporter that uses client to transmits the OTLP data it
 // produces. The client is assumed to be fully started and able to communicate
 // with its OTLP receiving endpoint.
-func New(client Client) metric.Exporter {
-	return &exporter{client: client}
+func New(client Client) *Exporter {
+	return &Exporter{client: client}
 }
 
 type shutdownClient struct {
