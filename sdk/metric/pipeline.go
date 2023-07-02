@@ -58,10 +58,10 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 		res = resource.Empty()
 	}
 	return &pipeline{
-		resource:     res,
-		reader:       reader,
-		views:        views,
-		aggregations: make(map[instrumentation.Scope][]instrumentSync),
+		resource: res,
+		reader:   reader,
+		views:    views,
+		// aggregations is lazy allocated when needed.
 	}
 }
 
@@ -487,11 +487,7 @@ type pipelines []*pipeline
 func newPipelines(res *resource.Resource, readers []Reader, views []View) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
-		p := &pipeline{
-			resource: res,
-			reader:   r,
-			views:    views,
-		}
+		p := newPipeline(res, r, views)
 		r.register(p)
 		pipes = append(pipes, p)
 	}
