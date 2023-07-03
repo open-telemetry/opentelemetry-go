@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package aggregate
 
 import (
 	"context"
@@ -105,7 +105,7 @@ func Example() {
 	_, _ = m.Int64Histogram("histogram example")
 
 	// Output:
-	// using *internal.cumulativeSum[int64] aggregator for counter
-	// using *internal.lastValue[int64] aggregator for up-down counter
-	// using *internal.deltaHistogram[int64] aggregator for histogram
+	// using *aggregate.cumulativeSum[int64] aggregator for counter
+	// using *aggregate.lastValue[int64] aggregator for up-down counter
+	// using *aggregate.deltaHistogram[int64] aggregator for histogram
 }
