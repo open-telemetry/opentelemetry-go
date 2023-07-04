@@ -17,19 +17,16 @@ package prometheus
 import (
 	"context"
 	"os"
-	"strings"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -677,163 +674,58 @@ func TestDuplicateMetrics(t *testing.T) {
 	}
 }
 
-func TestCollectConcurrentSafe(t *testing.T) {
-	registry := prometheus.NewRegistry()
-	cfg := newConfig(WithRegisterer(registry))
-
-	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
-
-	collector := &collector{
-		reader:            reader,
-		disableTargetInfo: false,
-		withoutUnits:      true,
-		disableScopeInfo:  cfg.disableScopeInfo,
-		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
-		metricFamilies:    make(map[string]*dto.MetricFamily),
-	}
-
-	err := cfg.registerer.Register(collector)
-	require.NoError(t, err)
-
+func TestCollectorConcurrentSafe(t *testing.T) {
+	// This tests makes sure that the implemented
+	// https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Collector
+	// is concurrent safe.
 	ctx := context.Background()
-
-	// initialize resource
-	res, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
-		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
-	)
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
 	require.NoError(t, err)
-	res, err = resource.Merge(resource.Default(), res)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
 	require.NoError(t, err)
+	cnt.Add(ctx, 100)
 
-	exporter := &Exporter{Reader: reader}
-
-	// initialize provider
-	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
-		metric.WithResource(res),
-	)
-
-	// initialize two meter a, b
-	meterA := provider.Meter("ma", otelmetric.WithInstrumentationVersion("v0.1.0"))
-	meterB := provider.Meter("mb", otelmetric.WithInstrumentationVersion("v0.1.0"))
-
-	fooA, err := meterA.Int64Counter("foo",
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription("meter counter foo"))
-	assert.NoError(t, err)
-
-	opt := otelmetric.WithAttributes(
-		attribute.Key("A").String("B"),
-	)
-
-	fooA.Add(ctx, 100, opt)
-
-	fooB, err := meterB.Int64Counter("foo",
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription("meter counter foo"))
-	assert.NoError(t, err)
-	fooB.Add(ctx, 100, opt)
-
-	concurrencyLevel := 100
-	ch := make(chan prometheus.Metric, concurrencyLevel)
-
+	var wg sync.WaitGroup
+	concurrencyLevel := 10
 	for i := 0; i < concurrencyLevel; i++ {
+		wg.Add(1)
 		go func() {
-			collector.Collect(ch)
+			defer wg.Done()
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
 		}()
 	}
 
-	for ; concurrencyLevel > 0; concurrencyLevel-- {
-		select {
-		case <-ch:
-			concurrencyLevel--
-			if concurrencyLevel == 0 {
-				return
-			}
-		case <-time.After(time.Second):
-			t.Fatal("timeout")
-		}
-	}
+	wg.Wait()
 }
 
-func TesInvalidInsrtrumentForPrometheusIsIgnored(t *testing.T) {
-	registry := prometheus.NewRegistry()
-	cfg := newConfig(WithRegisterer(registry))
+func TestIncompatibleMeterName(t *testing.T) {
+	// This test checks that Prometheus exporter ignores
+	// when it encounters incompatible meter name.
 
-	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
-
-	collector := &collector{
-		reader:            reader,
-		disableTargetInfo: false,
-		withoutUnits:      true,
-		disableScopeInfo:  false,
-		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
-		metricFamilies:    make(map[string]*dto.MetricFamily),
-	}
-
-	err := cfg.registerer.Register(collector)
-	require.NoError(t, err)
+	// Invalid label or metric name leads to error returned from
+	// createScopeInfoMetric.
+	invalidName := string([]byte{0xff, 0xfe, 0xfd})
 
 	ctx := context.Background()
-
-	// initialize resource
-	res, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
-		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
-	)
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
 	require.NoError(t, err)
-	res, err = resource.Merge(resource.Default(), res)
-	require.NoError(t, err)
-
-	exporter := &Exporter{Reader: reader}
-
-	// initialize provider
 	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
-		metric.WithResource(res),
-	)
+		metric.WithResource(resource.Empty()),
+		metric.WithReader(exporter))
+	meter := provider.Meter(invalidName)
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
 
-	// invalid label or metric name leads to error returned from
-	// createScopeInfoMetric
-	invalidName := string([]byte{0xff, 0xfe, 0xfd})
-	validName := "validName"
+	file, err := os.Open("testdata/TestIncompatibleMeterName.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
 
-	meterA := provider.Meter(invalidName, otelmetric.WithInstrumentationVersion("v0.1.0"))
-
-	counterA, err := meterA.Int64Counter("with-invalid-description",
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription(invalidName))
-	assert.NoError(t, err)
-
-	counterA.Add(ctx, 100, otelmetric.WithAttributes(
-		attribute.Key(invalidName).String(invalidName),
-	))
-
-	meterB := provider.Meter(validName, otelmetric.WithInstrumentationVersion("v0.1.0"))
-	counterB, err := meterB.Int64Counter(validName,
-		otelmetric.WithUnit("By"),
-		otelmetric.WithDescription(validName))
-	assert.NoError(t, err)
-
-	counterB.Add(ctx, 100, otelmetric.WithAttributes(
-		attribute.Key(validName).String(validName),
-	))
-
-	ch := make(chan prometheus.Metric)
-
-	go collector.Collect(ch)
-
-	for {
-		select {
-		case m := <-ch:
-			require.NotNil(t, m)
-
-			if strings.Contains(m.Desc().String(), validName) {
-				return
-			}
-		case <-time.After(time.Second):
-			t.Fatalf("timeout")
-		}
-	}
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
 }
