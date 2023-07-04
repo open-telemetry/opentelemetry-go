@@ -73,7 +73,7 @@ func (w wrappedOption) applyHTTPOption(cfg oconf.Config) oconf.Config {
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{oconf.WithEndpoint(endpoint)}
+	return wrappedOption{oconf.WithHTTPEndpoint(endpoint)}
 }
 
 // WithCompression sets the compression strategy the Exporter will use to

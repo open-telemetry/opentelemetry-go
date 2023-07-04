@@ -69,7 +69,7 @@ func WithInsecure() Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
+	return wrappedOption{otlpconfig.WithGRPCEndpoint(endpoint)}
 }
 
 // WithReconnectionPeriod set the minimum amount of time between connection

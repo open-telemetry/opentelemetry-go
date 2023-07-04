@@ -261,9 +261,16 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 	return &grpcOption{fn: fn}
 }
 
+func WithGRPCEndpoint(endpoint string) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.Endpoint = endpoint
+		return cfg
+	})
+}
+
 // Generic Options
 
-func WithEndpoint(endpoint string) GenericOption {
+func WithHTTPEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		// Add scheme if not present
 		if !internal.HasScheme(endpoint) {

@@ -66,7 +66,7 @@ func (w wrappedOption) applyHTTPOption(cfg otlpconfig.Config) otlpconfig.Config 
 // the default endpoint (localhost:4318). Note that the endpoint
 // must not contain any URL path.
 func WithEndpoint(endpoint string) Option {
-	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
+	return wrappedOption{otlpconfig.WithHTTPEndpoint(endpoint)}
 }
 
 // WithCompression tells the driver to compress the sent data.
