@@ -433,9 +433,9 @@ func (i *inserter[N]) aggregator(agg aggregation.Aggregation, kind InstrumentKin
 	case aggregation.ExponentialHistogram:
 		switch temporality {
 		case metricdata.CumulativeTemporality:
-			return internal.NewCumulativeExponentialHistogram[N](a), nil
+			return aggregate.NewCumulativeExponentialHistogram[N](a), nil
 		case metricdata.DeltaTemporality:
-			return internal.NewDeltaExponentialHistogram[N](a), nil
+			return aggregate.NewDeltaExponentialHistogram[N](a), nil
 		default:
 			return nil, fmt.Errorf("%w: %s(%d)", errUnknownTemporality, temporality.String(), temporality)
 		}
