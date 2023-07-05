@@ -15,11 +15,14 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -68,6 +71,53 @@ func TestManualReaderTemporality(t *testing.T) {
 			var undefinedInstrument InstrumentKind
 			rdr := NewManualReader(tt.options...)
 			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
+		})
+	}
+}
+
+func TestManualReaderCollect(t *testing.T) {
+	expiredCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1))
+	defer cancel()
+
+	tests := []struct {
+		name string
+
+		ctx             context.Context
+		resourceMetrics *metricdata.ResourceMetrics
+
+		expectedErr error
+	}{
+		{
+			name: "with a valid context",
+
+			ctx:             context.Background(),
+			resourceMetrics: &metricdata.ResourceMetrics{},
+		},
+		{
+			name: "with an expired context",
+
+			ctx:             expiredCtx,
+			resourceMetrics: &metricdata.ResourceMetrics{},
+
+			expectedErr: context.DeadlineExceeded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewManualReader()
+			mp := NewMeterProvider(WithReader(rdr))
+			meter := mp.Meter("test")
+
+			// Ensure the pipeline has a callback setup
+			testM, err := meter.Int64ObservableCounter("test")
+			assert.NoError(t, err)
+			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+				return nil
+			}, testM)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, tt.resourceMetrics))
 		})
 	}
 }

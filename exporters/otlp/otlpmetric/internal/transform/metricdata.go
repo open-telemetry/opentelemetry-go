@@ -16,6 +16,7 @@ package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/
 
 import (
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -99,6 +100,10 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 		out.Data, err = Histogram(a)
 	case metricdata.Histogram[float64]:
 		out.Data, err = Histogram(a)
+	case metricdata.ExponentialHistogram[int64]:
+		out.Data, err = ExponentialHistogram(a)
+	case metricdata.ExponentialHistogram[float64]:
+		out.Data, err = ExponentialHistogram(a)
 	default:
 		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
 	}
@@ -114,8 +119,8 @@ func Gauge[N int64 | float64](g metricdata.Gauge[N]) *mpb.Metric_Gauge {
 	}
 }
 
-// Sum returns an OTLP Metric_Sum generated from s. An error is returned with
-// a partial Metric_Sum if the temporality of s is unknown.
+// Sum returns an OTLP Metric_Sum generated from s. An error is returned
+// if the temporality of s is unknown.
 func Sum[N int64 | float64](s metricdata.Sum[N]) (*mpb.Metric_Sum, error) {
 	t, err := Temporality(s.Temporality)
 	if err != nil {
@@ -136,8 +141,8 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 	for _, dPt := range dPts {
 		ndp := &mpb.NumberDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
-			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
-			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
 		}
 		switch v := any(dPt.Value).(type) {
 		case int64:
@@ -155,8 +160,7 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 }
 
 // Histogram returns an OTLP Metric_Histogram generated from h. An error is
-// returned with a partial Metric_Histogram if the temporality of h is
-// unknown.
+// returned if the temporality of h is unknown.
 func Histogram[N int64 | float64](h metricdata.Histogram[N]) (*mpb.Metric_Histogram, error) {
 	t, err := Temporality(h.Temporality)
 	if err != nil {
@@ -178,8 +182,8 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 		sum := float64(dPt.Sum)
 		hdp := &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
-			StartTimeUnixNano: uint64(dPt.StartTime.UnixNano()),
-			TimeUnixNano:      uint64(dPt.Time.UnixNano()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
 			Sum:               &sum,
 			BucketCounts:      dPt.BucketCounts,
@@ -198,6 +202,61 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 	return out
 }
 
+// ExponentialHistogram returns an OTLP Metric_ExponentialHistogram generated from h. An error is
+// returned if the temporality of h is unknown.
+func ExponentialHistogram[N int64 | float64](h metricdata.ExponentialHistogram[N]) (*mpb.Metric_ExponentialHistogram, error) {
+	t, err := Temporality(h.Temporality)
+	if err != nil {
+		return nil, err
+	}
+	return &mpb.Metric_ExponentialHistogram{
+		ExponentialHistogram: &mpb.ExponentialHistogram{
+			AggregationTemporality: t,
+			DataPoints:             ExponentialHistogramDataPoints(h.DataPoints),
+		},
+	}, nil
+}
+
+// ExponentialHistogramDataPoints returns a slice of OTLP ExponentialHistogramDataPoint generated
+// from dPts.
+func ExponentialHistogramDataPoints[N int64 | float64](dPts []metricdata.ExponentialHistogramDataPoint[N]) []*mpb.ExponentialHistogramDataPoint {
+	out := make([]*mpb.ExponentialHistogramDataPoint, 0, len(dPts))
+	for _, dPt := range dPts {
+		sum := float64(dPt.Sum)
+		ehdp := &mpb.ExponentialHistogramDataPoint{
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
+			Count:             dPt.Count,
+			Sum:               &sum,
+			Scale:             dPt.Scale,
+			ZeroCount:         dPt.ZeroCount,
+
+			Positive: ExponentialHistogramDataPointBuckets(dPt.PositiveBucket),
+			Negative: ExponentialHistogramDataPointBuckets(dPt.NegativeBucket),
+		}
+		if v, ok := dPt.Min.Value(); ok {
+			vF64 := float64(v)
+			ehdp.Min = &vF64
+		}
+		if v, ok := dPt.Max.Value(); ok {
+			vF64 := float64(v)
+			ehdp.Max = &vF64
+		}
+		out = append(out, ehdp)
+	}
+	return out
+}
+
+// ExponentialHistogramDataPointBuckets returns an OTLP ExponentialHistogramDataPoint_Buckets generated
+// from bucket.
+func ExponentialHistogramDataPointBuckets(bucket metricdata.ExponentialBucket) *mpb.ExponentialHistogramDataPoint_Buckets {
+	return &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       bucket.Offset,
+		BucketCounts: bucket.Counts,
+	}
+}
+
 // Temporality returns an OTLP AggregationTemporality generated from t. If t
 // is unknown, an error is returned along with the invalid
 // AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED.
@@ -211,4 +270,18 @@ func Temporality(t metricdata.Temporality) (mpb.AggregationTemporality, error) {
 		err := fmt.Errorf("%w: %s", errUnknownTemporality, t)
 		return mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_UNSPECIFIED, err
 	}
+}
+
+// timeUnixNano returns t as a Unix time, the number of nanoseconds elapsed
+// since January 1, 1970 UTC as uint64.
+// The result is undefined if the Unix time
+// in nanoseconds cannot be represented by an int64
+// (a date before the year 1678 or after 2262).
+// timeUnixNano on the zero Time returns 0.
+// The result does not depend on the location associated with t.
+func timeUnixNano(t time.Time) uint64 {
+	if t.IsZero() {
+		return 0
+	}
+	return uint64(t.UnixNano())
 }

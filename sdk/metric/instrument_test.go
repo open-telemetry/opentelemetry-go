@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
 func BenchmarkInstrument(b *testing.B) {
@@ -32,10 +32,10 @@ func BenchmarkInstrument(b *testing.B) {
 	}
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
-		inst := int64Inst{aggregators: []internal.Aggregator[int64]{
-			internal.NewLastValue[int64](),
-			internal.NewCumulativeSum[int64](true),
-			internal.NewDeltaSum[int64](true),
+		inst := int64Inst{aggregators: []aggregate.Aggregator[int64]{
+			aggregate.NewLastValue[int64](),
+			aggregate.NewCumulativeSum[int64](true),
+			aggregate.NewDeltaSum[int64](true),
 		}}
 		ctx := context.Background()
 
@@ -47,10 +47,10 @@ func BenchmarkInstrument(b *testing.B) {
 	})
 
 	b.Run("observable/observe", func(b *testing.B) {
-		o := observable[int64]{aggregators: []internal.Aggregator[int64]{
-			internal.NewLastValue[int64](),
-			internal.NewCumulativeSum[int64](true),
-			internal.NewDeltaSum[int64](true),
+		o := observable[int64]{aggregators: []aggregate.Aggregator[int64]{
+			aggregate.NewLastValue[int64](),
+			aggregate.NewCumulativeSum[int64](true),
+			aggregate.NewDeltaSum[int64](true),
 		}}
 
 		b.ReportAllocs()
