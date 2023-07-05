@@ -36,22 +36,6 @@ import (
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
-// New returns an OpenTelemetry metric Exporter. The Exporter can be used with
-// a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
-// endpoint using gRPC.
-//
-// If an already established gRPC ClientConn is not passed in options using
-// WithGRPCConn, a connection to the OTLP endpoint will be established based
-// on options. If a connection cannot be establishes in the lifetime of ctx,
-// an error will be returned.
-func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
-	c, err := newClient(ctx, options...)
-	if err != nil {
-		return nil, err
-	}
-	return ominternal.New(c), nil
-}
-
 type client struct {
 	metadata      metadata.MD
 	exportTimeout time.Duration

@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -76,7 +76,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		reader   Reader
 		views    []View
 		inst     Instrument
-		wantKind internal.Aggregator[N] //Aggregators should match len and types
+		wantKind aggregate.Aggregator[N] //Aggregators should match len and types
 		wantLen  int
 		wantErr  error
 	}{
@@ -91,7 +91,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewDeltaSum[N](false),
+			wantKind: aggregate.NewDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -99,7 +99,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantKind: aggregate.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
@@ -107,7 +107,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedDeltaSum[N](true),
+			wantKind: aggregate.NewPrecomputedDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -115,7 +115,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedDeltaSum[N](false),
+			wantKind: aggregate.NewPrecomputedDeltaSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -123,7 +123,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
+			wantKind: aggregate.NewLastValue[N](),
 			wantLen:  1,
 		},
 		{
@@ -131,7 +131,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewDeltaSum[N](true),
+			wantKind: aggregate.NewDeltaSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -139,7 +139,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](false),
+			wantKind: aggregate.NewCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -147,7 +147,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantKind: aggregate.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
@@ -155,7 +155,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
+			wantKind: aggregate.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -163,7 +163,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
+			wantKind: aggregate.NewPrecomputedCumulativeSum[N](false),
 			wantLen:  1,
 		},
 		{
@@ -171,7 +171,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
+			wantKind: aggregate.NewLastValue[N](),
 			wantLen:  1,
 		},
 		{
@@ -179,7 +179,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: aggregate.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -187,7 +187,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{changeAggView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantKind: aggregate.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
@@ -195,7 +195,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			views:    []View{defaultView, renameView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: aggregate.NewCumulativeSum[N](true),
 			wantLen:  2,
 		},
 		{
@@ -203,7 +203,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: aggregate.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -211,7 +211,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
+			wantKind: aggregate.NewCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -219,7 +219,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
+			wantKind: aggregate.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
 			wantLen:  1,
 		},
 		{
@@ -227,7 +227,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
+			wantKind: aggregate.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -235,7 +235,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
+			wantKind: aggregate.NewPrecomputedCumulativeSum[N](true),
 			wantLen:  1,
 		},
 		{
@@ -243,7 +243,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
 			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
+			wantKind: aggregate.NewLastValue[N](),
 			wantLen:  1,
 		},
 		{

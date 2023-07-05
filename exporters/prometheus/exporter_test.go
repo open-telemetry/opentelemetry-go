@@ -17,6 +17,7 @@ package prometheus
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -671,4 +672,60 @@ func TestDuplicateMetrics(t *testing.T) {
 			require.Truef(t, match, "expected export not produced: %v", err)
 		})
 	}
+}
+
+func TestCollectorConcurrentSafe(t *testing.T) {
+	// This tests makes sure that the implemented
+	// https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Collector
+	// is concurrent safe.
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	concurrencyLevel := 10
+	for i := 0; i < concurrencyLevel; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestIncompatibleMeterName(t *testing.T) {
+	// This test checks that Prometheus exporter ignores
+	// when it encounters incompatible meter name.
+
+	// Invalid label or metric name leads to error returned from
+	// createScopeInfoMetric.
+	invalidName := string([]byte{0xff, 0xfe, 0xfd})
+
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(
+		metric.WithResource(resource.Empty()),
+		metric.WithReader(exporter))
+	meter := provider.Meter(invalidName)
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	file, err := os.Open("testdata/TestIncompatibleMeterName.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
 }

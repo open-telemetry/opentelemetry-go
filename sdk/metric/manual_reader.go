@@ -123,6 +123,7 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 //
 // Collect will return an error if called after shutdown.
 // Collect will return an error if rm is a nil ResourceMetrics.
+// Collect will return an error if the context's Done channel is closed.
 //
 // This method is safe to call concurrently.
 func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
