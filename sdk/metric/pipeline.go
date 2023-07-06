@@ -332,7 +332,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		if agg == nil { // Drop aggregator.
 			return aggVal[N]{nil, nil}
 		}
-		if len(stream.AttributeKeys) > 0 {
+		if len(stream.AllowAttributeKeys) > 0 {
 			agg = aggregate.NewFilter(agg, stream.attributeFilter())
 		}
 

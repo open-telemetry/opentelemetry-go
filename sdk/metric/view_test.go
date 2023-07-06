@@ -406,13 +406,13 @@ func TestNewViewReplace(t *testing.T) {
 		},
 		{
 			name: "AttributeKeys",
-			mask: Stream{AttributeKeys: []attribute.Key{"test"}},
+			mask: Stream{AllowAttributeKeys: []attribute.Key{"test"}},
 			want: func(i Instrument) Stream {
 				return Stream{
-					Name:          i.Name,
-					Description:   i.Description,
-					Unit:          i.Unit,
-					AttributeKeys: []attribute.Key{"test"},
+					Name:               i.Name,
+					Description:        i.Description,
+					Unit:               i.Unit,
+					AllowAttributeKeys: []attribute.Key{"test"},
 				}
 			},
 		},
