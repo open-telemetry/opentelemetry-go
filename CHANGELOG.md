@@ -27,7 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `New` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` returns `*Exporter` instead of `"go.opentelemetry.io/otel/sdk/metric".Exporter`. (#4272)
 - ⚠️ Breaking ⚠️ : the `AttributeFilter` fields of the `Stream` from `go.opentelemetry.io/otel/sdk/metric` is replaced by the `AttributeKeys` field.
   The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
-  This change is made to ensure compatibility with the OpenTelemetry specification. (TBD)
+  This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
 
 ### Fixed
 
