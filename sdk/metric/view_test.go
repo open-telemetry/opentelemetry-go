@@ -405,6 +405,18 @@ func TestNewViewReplace(t *testing.T) {
 			},
 		},
 		{
+			name: "AttributeKeys",
+			mask: Stream{AttributeKeys: []attribute.Key{"test"}},
+			want: func(i Instrument) Stream {
+				return Stream{
+					Name:          i.Name,
+					Description:   i.Description,
+					Unit:          i.Unit,
+					AttributeKeys: []attribute.Key{"test"},
+				}
+			},
+		},
+		{
 			name: "Complete",
 			mask: Stream{
 				Name:        alt,
@@ -430,23 +442,6 @@ func TestNewViewReplace(t *testing.T) {
 			assert.Equal(t, test.want(completeIP), got)
 		})
 	}
-
-	// Go does not allow for the comparison of function values, even their
-	// addresses. Therefore, the AttributeFilter field needs an alternative
-	// testing strategy.
-	t.Run("AttributeFilter", func(t *testing.T) {
-		allowed := attribute.String("key", "val")
-		filter := func(kv attribute.KeyValue) bool {
-			return kv == allowed
-		}
-		mask := Stream{AttributeFilter: filter}
-		got, match := NewView(completeIP, mask)(completeIP)
-		require.True(t, match, "view did not match exact criteria")
-		require.NotNil(t, got.AttributeFilter, "AttributeFilter not set")
-		assert.True(t, got.AttributeFilter(allowed), "wrong AttributeFilter")
-		other := attribute.String("key", "other val")
-		assert.False(t, got.AttributeFilter(other), "wrong AttributeFilter")
-	})
 }
 
 type badAgg struct {
