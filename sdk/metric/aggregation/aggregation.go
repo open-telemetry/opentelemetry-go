@@ -166,7 +166,7 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 }
 
 // ExponentialHistogram is an aggregation that summarizes a set of
-// measurements as an histogram with buckets widths that grow exponentially.
+// measurements as an histogram with bucket widths that grow exponentially.
 type ExponentialHistogram struct {
 	// MaxSize is the maximum number of buckets to use for the histogram.
 	MaxSize int
