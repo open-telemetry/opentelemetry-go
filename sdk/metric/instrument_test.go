@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func BenchmarkInstrument(b *testing.B) {
@@ -32,11 +33,21 @@ func BenchmarkInstrument(b *testing.B) {
 	}
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
-		inst := int64Inst{aggregators: []aggregate.Aggregator[int64]{
-			aggregate.NewLastValue[int64](),
-			aggregate.NewCumulativeSum[int64](true),
-			aggregate.NewDeltaSum[int64](true),
-		}}
+		build := aggregate.Builder[int64]{}
+		var inputs []aggregate.Input[int64]
+
+		in, _ := build.LastValue()
+		inputs = append(inputs, in)
+
+		build.Temporality = metricdata.CumulativeTemporality
+		in, _ = build.Sum(true)
+		inputs = append(inputs, in)
+
+		build.Temporality = metricdata.DeltaTemporality
+		in, _ = build.Sum(true)
+		inputs = append(inputs, in)
+
+		inst := int64Inst{inputs: inputs}
 		ctx := context.Background()
 
 		b.ReportAllocs()
@@ -47,11 +58,21 @@ func BenchmarkInstrument(b *testing.B) {
 	})
 
 	b.Run("observable/observe", func(b *testing.B) {
-		o := observable[int64]{aggregators: []aggregate.Aggregator[int64]{
-			aggregate.NewLastValue[int64](),
-			aggregate.NewCumulativeSum[int64](true),
-			aggregate.NewDeltaSum[int64](true),
-		}}
+		build := aggregate.Builder[int64]{}
+		var inputs []aggregate.Input[int64]
+
+		in, _ := build.LastValue()
+		inputs = append(inputs, in)
+
+		build.Temporality = metricdata.CumulativeTemporality
+		in, _ = build.Sum(true)
+		inputs = append(inputs, in)
+
+		build.Temporality = metricdata.DeltaTemporality
+		in, _ = build.Sum(true)
+		inputs = append(inputs, in)
+
+		o := observable[int64]{inputs: inputs}
 
 		b.ReportAllocs()
 		b.ResetTimer()
