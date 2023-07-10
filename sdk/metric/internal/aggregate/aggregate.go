@@ -50,7 +50,7 @@ type Builder[N int64 | float64] struct {
 
 func (b Builder[N]) input(agg aggregator[N]) Input[N] {
 	if b.Filter != nil {
-		agg = NewFilter[N](agg, b.Filter)
+		agg = newFilter[N](agg, b.Filter)
 	}
 	return func(_ context.Context, n N, a attribute.Set) {
 		agg.Aggregate(n, a)

@@ -55,12 +55,12 @@ func (a *testStableAggregator[N]) Aggregation() metricdata.Aggregation {
 }
 
 func testNewFilterNoFilter[N int64 | float64](t *testing.T, agg aggregator[N]) {
-	filter := NewFilter(agg, nil)
+	filter := newFilter(agg, nil)
 	assert.Equal(t, agg, filter)
 }
 
 func testNewFilter[N int64 | float64](t *testing.T, agg aggregator[N]) {
-	f := NewFilter(agg, testAttributeFilter)
+	f := newFilter(agg, testAttributeFilter)
 	require.IsType(t, &filter[N]{}, f)
 	filt := f.(*filter[N])
 	assert.Equal(t, agg, filt.aggregator)
@@ -147,7 +147,7 @@ func testFilterAggregate[N int64 | float64](t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			f := NewFilter[N](&testStableAggregator[N]{}, testAttributeFilter)
+			f := newFilter[N](&testStableAggregator[N]{}, testAttributeFilter)
 			for _, set := range tt.inputAttr {
 				f.Aggregate(1, set)
 			}
@@ -167,7 +167,7 @@ func TestFilterAggregate(t *testing.T) {
 }
 
 func testFilterConcurrent[N int64 | float64](t *testing.T) {
-	f := NewFilter[N](&testStableAggregator[N]{}, testAttributeFilter)
+	f := newFilter[N](&testStableAggregator[N]{}, testAttributeFilter)
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 
@@ -205,7 +205,7 @@ func TestPrecomputedFilter(t *testing.T) {
 func testPrecomputedFilter[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		agg := newTestFilterAgg[N]()
-		f := NewFilter[N](agg, testAttributeFilter)
+		f := newFilter[N](agg, testAttributeFilter)
 		require.IsType(t, &precomputedFilter[N]{}, f)
 
 		var (
