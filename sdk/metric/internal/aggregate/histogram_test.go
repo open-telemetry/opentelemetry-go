@@ -50,9 +50,9 @@ func testHistogram[N int64 | float64](t *testing.T) {
 
 	incr := monoIncr[N]()
 	eFunc := deltaHistExpecter[N](incr)
-	t.Run("Delta", tester.Run(NewDeltaHistogram[N](histConf), incr, eFunc))
+	t.Run("Delta", tester.Run(newDeltaHistogram[N](histConf), incr, eFunc))
 	eFunc = cumuHistExpecter[N](incr)
-	t.Run("Cumulative", tester.Run(NewCumulativeHistogram[N](histConf), incr, eFunc))
+	t.Run("Cumulative", tester.Run(newCumulativeHistogram[N](histConf), incr, eFunc))
 }
 
 func deltaHistExpecter[N int64 | float64](incr setMap[N]) expectFunc {
@@ -143,7 +143,7 @@ func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBu
 
 func TestHistogramImmutableBounds(t *testing.T) {
 	t.Run("Delta", testHistImmutableBounds(
-		NewDeltaHistogram[int64],
+		newDeltaHistogram[int64],
 		func(a aggregator[int64]) []float64 {
 			deltaH := a.(*deltaHistogram[int64])
 			return deltaH.bounds
@@ -151,7 +151,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	))
 
 	t.Run("Cumulative", testHistImmutableBounds(
-		NewCumulativeHistogram[int64],
+		newCumulativeHistogram[int64],
 		func(a aggregator[int64]) []float64 {
 			cumuH := a.(*cumulativeHistogram[int64])
 			return cumuH.bounds
@@ -160,7 +160,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 }
 
 func TestCumulativeHistogramImutableCounts(t *testing.T) {
-	a := NewCumulativeHistogram[int64](histConf)
+	a := newCumulativeHistogram[int64](histConf)
 	a.Aggregate(5, alice)
 	hdp := a.Aggregation().(metricdata.Histogram[int64]).DataPoints[0]
 
@@ -176,7 +176,7 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 func TestDeltaHistogramReset(t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	a := NewDeltaHistogram[int64](histConf)
+	a := newDeltaHistogram[int64](histConf)
 	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
@@ -195,10 +195,10 @@ func TestDeltaHistogramReset(t *testing.T) {
 }
 
 func TestEmptyHistogramNilAggregation(t *testing.T) {
-	assert.Nil(t, NewCumulativeHistogram[int64](histConf).Aggregation())
-	assert.Nil(t, NewCumulativeHistogram[float64](histConf).Aggregation())
-	assert.Nil(t, NewDeltaHistogram[int64](histConf).Aggregation())
-	assert.Nil(t, NewDeltaHistogram[float64](histConf).Aggregation())
+	assert.Nil(t, newCumulativeHistogram[int64](histConf).Aggregation())
+	assert.Nil(t, newCumulativeHistogram[float64](histConf).Aggregation())
+	assert.Nil(t, newDeltaHistogram[int64](histConf).Aggregation())
+	assert.Nil(t, newDeltaHistogram[float64](histConf).Aggregation())
 }
 
 func BenchmarkHistogram(b *testing.B) {
@@ -207,8 +207,8 @@ func BenchmarkHistogram(b *testing.B) {
 }
 
 func benchmarkHistogram[N int64 | float64](b *testing.B) {
-	factory := func() aggregator[N] { return NewDeltaHistogram[N](histConf) }
+	factory := func() aggregator[N] { return newDeltaHistogram[N](histConf) }
 	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() aggregator[N] { return NewCumulativeHistogram[N](histConf) }
+	factory = func() aggregator[N] { return newCumulativeHistogram[N](histConf) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }

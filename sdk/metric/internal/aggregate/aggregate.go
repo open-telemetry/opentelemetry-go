@@ -119,9 +119,9 @@ func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistog
 	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = NewDeltaHistogram[N](cfg)
+		h = newDeltaHistogram[N](cfg)
 	default:
-		h = NewCumulativeHistogram[N](cfg)
+		h = newCumulativeHistogram[N](cfg)
 	}
 	return b.input(h), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.

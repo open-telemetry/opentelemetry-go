@@ -71,7 +71,7 @@ func (p *meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.I
 	// Assume here these are determined to be a delta explicit-bucket
 	// histogram.
 
-	aggregator := NewDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
+	aggregator := newDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
 		Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 		NoMinMax:   false,
 	})
