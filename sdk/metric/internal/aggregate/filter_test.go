@@ -54,12 +54,12 @@ func (a *testStableAggregator[N]) Aggregation() metricdata.Aggregation {
 	}
 }
 
-func testNewFilterNoFilter[N int64 | float64](t *testing.T, agg Aggregator[N]) {
+func testNewFilterNoFilter[N int64 | float64](t *testing.T, agg aggregator[N]) {
 	filter := NewFilter(agg, nil)
 	assert.Equal(t, agg, filter)
 }
 
-func testNewFilter[N int64 | float64](t *testing.T, agg Aggregator[N]) {
+func testNewFilter[N int64 | float64](t *testing.T, agg aggregator[N]) {
 	f := NewFilter(agg, testAttributeFilter)
 	require.IsType(t, &filter[N]{}, f)
 	filt := f.(*filter[N])

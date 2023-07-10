@@ -320,8 +320,8 @@ func benchmarkSum[N int64 | float64](b *testing.B) {
 	// The monotonic argument is only used to annotate the Sum returned from
 	// the Aggregation method. It should not have an effect on operational
 	// performance, therefore, only monotonic=false is benchmarked here.
-	factory := func() Aggregator[N] { return NewDeltaSum[N](false) }
+	factory := func() aggregator[N] { return NewDeltaSum[N](false) }
 	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() Aggregator[N] { return NewCumulativeSum[N](false) }
+	factory = func() aggregator[N] { return NewCumulativeSum[N](false) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }

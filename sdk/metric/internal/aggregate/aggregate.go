@@ -48,7 +48,7 @@ type Builder[N int64 | float64] struct {
 	Filter attribute.Filter
 }
 
-func (b Builder[N]) input(agg Aggregator[N]) Input[N] {
+func (b Builder[N]) input(agg aggregator[N]) Input[N] {
 	if b.Filter != nil {
 		agg = NewFilter[N](agg, b.Filter)
 	}
@@ -77,7 +77,7 @@ func (b Builder[N]) LastValue() (Input[N], Output) {
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
 func (b Builder[N]) PrecomputedSum(monotonic bool) (Input[N], Output) {
-	var s Aggregator[N]
+	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		s = NewPrecomputedDeltaSum[N](monotonic)
@@ -96,7 +96,7 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Input[N], Output) {
 
 // Sum returns a sum aggregate function input and output.
 func (b Builder[N]) Sum(monotonic bool) (Input[N], Output) {
-	var s Aggregator[N]
+	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		s = NewDeltaSum[N](monotonic)
@@ -116,7 +116,7 @@ func (b Builder[N]) Sum(monotonic bool) (Input[N], Output) {
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
 func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram) (Input[N], Output) {
-	var h Aggregator[N]
+	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		h = NewDeltaHistogram[N](cfg)

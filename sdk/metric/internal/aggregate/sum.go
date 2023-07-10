@@ -48,7 +48,7 @@ func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func NewDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return newDeltaSum[N](monotonic)
 }
 
@@ -108,7 +108,7 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func NewCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return newCumulativeSum[N](monotonic)
 }
 
@@ -224,7 +224,7 @@ func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // 
 // value is accurate. It is up to the caller to ensure it.
 //
 // The output Aggregation will report recorded values as delta temporality.
-func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedDeltaSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
 		reported:       make(map[attribute.Set]N),
@@ -302,7 +302,7 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 //
 // The output Aggregation will report recorded values as cumulative
 // temporality.
-func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedCumulativeSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
 		monotonic:      monotonic,

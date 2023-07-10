@@ -122,7 +122,7 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	}
 }
 
-func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBucketHistogram) Aggregator[N], getBounds func(Aggregator[N]) []float64) func(t *testing.T) {
+func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBucketHistogram) aggregator[N], getBounds func(aggregator[N]) []float64) func(t *testing.T) {
 	b := []float64{0, 1, 2}
 	cpB := make([]float64, len(b))
 	copy(cpB, b)
@@ -144,7 +144,7 @@ func testHistImmutableBounds[N int64 | float64](newA func(aggregation.ExplicitBu
 func TestHistogramImmutableBounds(t *testing.T) {
 	t.Run("Delta", testHistImmutableBounds(
 		NewDeltaHistogram[int64],
-		func(a Aggregator[int64]) []float64 {
+		func(a aggregator[int64]) []float64 {
 			deltaH := a.(*deltaHistogram[int64])
 			return deltaH.bounds
 		},
@@ -152,7 +152,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 	t.Run("Cumulative", testHistImmutableBounds(
 		NewCumulativeHistogram[int64],
-		func(a Aggregator[int64]) []float64 {
+		func(a aggregator[int64]) []float64 {
 			cumuH := a.(*cumulativeHistogram[int64])
 			return cumuH.bounds
 		},
@@ -207,8 +207,8 @@ func BenchmarkHistogram(b *testing.B) {
 }
 
 func benchmarkHistogram[N int64 | float64](b *testing.B) {
-	factory := func() Aggregator[N] { return NewDeltaHistogram[N](histConf) }
+	factory := func() aggregator[N] { return NewDeltaHistogram[N](histConf) }
 	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() Aggregator[N] { return NewCumulativeHistogram[N](histConf) }
+	factory = func() aggregator[N] { return NewCumulativeHistogram[N](histConf) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }
