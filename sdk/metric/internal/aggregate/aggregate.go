@@ -63,7 +63,7 @@ func (b Builder[N]) input(agg aggregator[N]) Input[N] {
 func (b Builder[N]) LastValue() (Input[N], Output) {
 	// Delta temporality is the only temporality that makes semantic sense for
 	// a last-value aggregate.
-	lv := NewLastValue[N]()
+	lv := newLastValue[N]()
 
 	return b.input(lv), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.

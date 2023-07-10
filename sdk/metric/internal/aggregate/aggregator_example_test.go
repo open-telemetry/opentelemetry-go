@@ -54,7 +54,7 @@ func (p *meter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (
 	// configuration. Assume here these are determined to be a last-value
 	// aggregation (the temporality does not affect the produced aggregations).
 
-	aggregator := NewLastValue[int64]()
+	aggregator := newLastValue[int64]()
 	upDownCount := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
