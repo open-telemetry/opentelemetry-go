@@ -202,7 +202,7 @@ func TestPreComputedDeltaSum(t *testing.T) {
 	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
 	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
-	// measured(+): 5, previous(-): 8, filtered(+): 13
+	// measured(+): 5, previous(-): 0, filtered(+): 13
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 18)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
