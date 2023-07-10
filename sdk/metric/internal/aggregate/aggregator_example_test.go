@@ -37,7 +37,7 @@ func (p *meter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64
 	// temporality to used based on the Reader and View configuration. Assume
 	// here these are determined to be a cumulative sum.
 
-	aggregator := NewCumulativeSum[int64](true)
+	aggregator := newCumulativeSum[int64](true)
 	count := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())

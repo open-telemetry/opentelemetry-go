@@ -41,41 +41,41 @@ func testSum[N int64 | float64](t *testing.T) {
 	t.Run("Delta", func(t *testing.T) {
 		incr, mono := monoIncr[N](), true
 		eFunc := deltaExpecter[N](incr, mono)
-		t.Run("Monotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
+		t.Run("Monotonic", tester.Run(newDeltaSum[N](mono), incr, eFunc))
 
 		incr, mono = nonMonoIncr[N](), false
 		eFunc = deltaExpecter[N](incr, mono)
-		t.Run("NonMonotonic", tester.Run(NewDeltaSum[N](mono), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(newDeltaSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("Cumulative", func(t *testing.T) {
 		incr, mono := monoIncr[N](), true
 		eFunc := cumuExpecter[N](incr, mono)
-		t.Run("Monotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
+		t.Run("Monotonic", tester.Run(newCumulativeSum[N](mono), incr, eFunc))
 
 		incr, mono = nonMonoIncr[N](), false
 		eFunc = cumuExpecter[N](incr, mono)
-		t.Run("NonMonotonic", tester.Run(NewCumulativeSum[N](mono), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(newCumulativeSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("PreComputedDelta", func(t *testing.T) {
 		incr, mono := monoIncr[N](), true
 		eFunc := preDeltaExpecter[N](incr, mono)
-		t.Run("Monotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+		t.Run("Monotonic", tester.Run(newPrecomputedDeltaSum[N](mono), incr, eFunc))
 
 		incr, mono = nonMonoIncr[N](), false
 		eFunc = preDeltaExpecter[N](incr, mono)
-		t.Run("NonMonotonic", tester.Run(NewPrecomputedDeltaSum[N](mono), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(newPrecomputedDeltaSum[N](mono), incr, eFunc))
 	})
 
 	t.Run("PreComputedCumulative", func(t *testing.T) {
 		incr, mono := monoIncr[N](), true
 		eFunc := preCumuExpecter[N](incr, mono)
-		t.Run("Monotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+		t.Run("Monotonic", tester.Run(newPrecomputedCumulativeSum[N](mono), incr, eFunc))
 
 		incr, mono = nonMonoIncr[N](), false
 		eFunc = preCumuExpecter[N](incr, mono)
-		t.Run("NonMonotonic", tester.Run(NewPrecomputedCumulativeSum[N](mono), incr, eFunc))
+		t.Run("NonMonotonic", tester.Run(newPrecomputedCumulativeSum[N](mono), incr, eFunc))
 	})
 }
 
@@ -141,7 +141,7 @@ func point[N int64 | float64](a attribute.Set, v N) metricdata.DataPoint[N] {
 func testDeltaSumReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	a := NewDeltaSum[N](false)
+	a := newDeltaSum[N](false)
 	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
@@ -166,7 +166,7 @@ func TestDeltaSumReset(t *testing.T) {
 
 func TestPreComputedDeltaSum(t *testing.T) {
 	var mono bool
-	agg := NewPrecomputedDeltaSum[int64](mono)
+	agg := newPrecomputedDeltaSum[int64](mono)
 	require.Implements(t, (*precomputeAggregator[int64])(nil), agg)
 
 	attrs := attribute.NewSet(attribute.String("key", "val"))
@@ -237,7 +237,7 @@ func TestPreComputedDeltaSum(t *testing.T) {
 
 func TestPreComputedCumulativeSum(t *testing.T) {
 	var mono bool
-	agg := NewPrecomputedCumulativeSum[int64](mono)
+	agg := newPrecomputedCumulativeSum[int64](mono)
 	require.Implements(t, (*precomputeAggregator[int64])(nil), agg)
 
 	attrs := attribute.NewSet(attribute.String("key", "val"))
@@ -293,22 +293,22 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 }
 
 func TestEmptySumNilAggregation(t *testing.T) {
-	assert.Nil(t, NewCumulativeSum[int64](true).Aggregation())
-	assert.Nil(t, NewCumulativeSum[int64](false).Aggregation())
-	assert.Nil(t, NewCumulativeSum[float64](true).Aggregation())
-	assert.Nil(t, NewCumulativeSum[float64](false).Aggregation())
-	assert.Nil(t, NewDeltaSum[int64](true).Aggregation())
-	assert.Nil(t, NewDeltaSum[int64](false).Aggregation())
-	assert.Nil(t, NewDeltaSum[float64](true).Aggregation())
-	assert.Nil(t, NewDeltaSum[float64](false).Aggregation())
-	assert.Nil(t, NewPrecomputedCumulativeSum[int64](true).Aggregation())
-	assert.Nil(t, NewPrecomputedCumulativeSum[int64](false).Aggregation())
-	assert.Nil(t, NewPrecomputedCumulativeSum[float64](true).Aggregation())
-	assert.Nil(t, NewPrecomputedCumulativeSum[float64](false).Aggregation())
-	assert.Nil(t, NewPrecomputedDeltaSum[int64](true).Aggregation())
-	assert.Nil(t, NewPrecomputedDeltaSum[int64](false).Aggregation())
-	assert.Nil(t, NewPrecomputedDeltaSum[float64](true).Aggregation())
-	assert.Nil(t, NewPrecomputedDeltaSum[float64](false).Aggregation())
+	assert.Nil(t, newCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, newCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, newCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, newCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, newDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, newDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, newDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, newDeltaSum[float64](false).Aggregation())
+	assert.Nil(t, newPrecomputedCumulativeSum[int64](true).Aggregation())
+	assert.Nil(t, newPrecomputedCumulativeSum[int64](false).Aggregation())
+	assert.Nil(t, newPrecomputedCumulativeSum[float64](true).Aggregation())
+	assert.Nil(t, newPrecomputedCumulativeSum[float64](false).Aggregation())
+	assert.Nil(t, newPrecomputedDeltaSum[int64](true).Aggregation())
+	assert.Nil(t, newPrecomputedDeltaSum[int64](false).Aggregation())
+	assert.Nil(t, newPrecomputedDeltaSum[float64](true).Aggregation())
+	assert.Nil(t, newPrecomputedDeltaSum[float64](false).Aggregation())
 }
 
 func BenchmarkSum(b *testing.B) {
@@ -320,8 +320,8 @@ func benchmarkSum[N int64 | float64](b *testing.B) {
 	// The monotonic argument is only used to annotate the Sum returned from
 	// the Aggregation method. It should not have an effect on operational
 	// performance, therefore, only monotonic=false is benchmarked here.
-	factory := func() aggregator[N] { return NewDeltaSum[N](false) }
+	factory := func() aggregator[N] { return newDeltaSum[N](false) }
 	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() aggregator[N] { return NewCumulativeSum[N](false) }
+	factory = func() aggregator[N] { return newCumulativeSum[N](false) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }

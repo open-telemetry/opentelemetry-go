@@ -80,9 +80,9 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Input[N], Output) {
 	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = NewPrecomputedDeltaSum[N](monotonic)
+		s = newPrecomputedDeltaSum[N](monotonic)
 	default:
-		s = NewPrecomputedCumulativeSum[N](monotonic)
+		s = newPrecomputedCumulativeSum[N](monotonic)
 	}
 
 	return b.input(s), func(dest *metricdata.Aggregation) int {
@@ -99,9 +99,9 @@ func (b Builder[N]) Sum(monotonic bool) (Input[N], Output) {
 	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = NewDeltaSum[N](monotonic)
+		s = newDeltaSum[N](monotonic)
 	default:
-		s = NewCumulativeSum[N](monotonic)
+		s = newCumulativeSum[N](monotonic)
 	}
 
 	return b.input(s), func(dest *metricdata.Aggregation) int {
