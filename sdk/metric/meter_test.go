@@ -1687,8 +1687,7 @@ func TestObservableExample(t *testing.T) {
 			Temporality: temporality,
 			IsMonotonic: true,
 			DataPoints: []metricdata.DataPoint[int64]{
-				// Thread 1 remains at last measured value.
-				{Attributes: thread1, Value: 60},
+				// Thread 1 is no longer exported.
 				{Attributes: thread2, Value: 53},
 				{Attributes: thread3, Value: 5},
 			},
@@ -1762,8 +1761,7 @@ func TestObservableExample(t *testing.T) {
 			Temporality: temporality,
 			IsMonotonic: true,
 			DataPoints: []metricdata.DataPoint[int64]{
-				// Thread 1 remains at last measured value.
-				{Attributes: thread1, Value: 0},
+				// Thread 1 is no longer exported.
 				{Attributes: thread2, Value: 6},
 				{Attributes: thread3, Value: 5},
 			},
