@@ -24,12 +24,13 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	registerer        prometheus.Registerer
-	disableTargetInfo bool
-	withoutUnits      bool
-	aggregation       metric.AggregationSelector
-	disableScopeInfo  bool
-	namespace         string
+	registerer             prometheus.Registerer
+	disableTargetInfo      bool
+	withoutUnits           bool
+	withoutCounterSuffixes bool
+	aggregation            metric.AggregationSelector
+	disableScopeInfo       bool
+	namespace              string
 }
 
 // newConfig creates a validated config configured with options.
@@ -106,6 +107,19 @@ func WithoutTargetInfo() Option {
 func WithoutUnits() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutUnits = true
+		return cfg
+	})
+}
+
+// WithoutUnits disables exporter's addition _total suffixes on counters.
+//
+// By default, metric names include a _total suffix to follow Prometheus naming
+// conventions. For example, the counter metric happy.people would become
+// happy_people_total. With this option set, the name would instead be
+// happy_people.
+func WithoutCounterSuffixes() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.withoutCounterSuffixes = true
 		return cfg
 	})
 }
