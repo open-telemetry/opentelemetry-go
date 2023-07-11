@@ -43,9 +43,7 @@ var viewBenchmarks = []struct {
 		"AttrFilterView",
 		[]View{NewView(
 			Instrument{Name: "*"},
-			Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
-				return kv.Key == attribute.Key("K")
-			}},
+			Stream{AllowAttributeKeys: []attribute.Key{"K"}},
 		)},
 	},
 }
