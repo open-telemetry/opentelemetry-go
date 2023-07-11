@@ -180,10 +180,9 @@ func TestPreComputedDeltaSum(t *testing.T) {
 	opt := metricdatatest.IgnoreTimestamp()
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
-	// Delta values should zero.
+	// No observation means no metric data
 	got = agg.Aggregation()
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 0)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	metricdatatest.AssertAggregationsEqual(t, nil, got, opt)
 
 	agg.(precomputeAggregator[int64]).aggregateFiltered(1, attrs)
 	got = agg.Aggregation()
@@ -193,13 +192,8 @@ func TestPreComputedDeltaSum(t *testing.T) {
 
 	// Filtered values should not persist.
 	got = agg.Aggregation()
-	// measured(+): 1, previous(-): 2, filtered(+): 0
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, -1)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
-	got = agg.Aggregation()
-	// measured(+): 1, previous(-): 1, filtered(+): 0
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 0)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	// No observation means no metric data
+	metricdatatest.AssertAggregationsEqual(t, nil, got, opt)
 
 	// Override set value.
 	agg.Aggregate(2, attrs)
@@ -208,8 +202,8 @@ func TestPreComputedDeltaSum(t *testing.T) {
 	agg.(precomputeAggregator[int64]).aggregateFiltered(3, attrs)
 	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
-	// measured(+): 5, previous(-): 1, filtered(+): 13
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 17)}
+	// measured(+): 5, previous(-): 0, filtered(+): 13
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 18)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
 	// Filtered values should not persist.
@@ -251,19 +245,18 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 	opt := metricdatatest.IgnoreTimestamp()
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
-	// Cumulative values should persist.
+	// Cumulative values should not persist.
 	got = agg.Aggregation()
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	metricdatatest.AssertAggregationsEqual(t, nil, got, opt)
 
 	agg.(precomputeAggregator[int64]).aggregateFiltered(1, attrs)
 	got = agg.Aggregation()
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 2)}
+	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 1)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 
 	// Filtered values should not persist.
 	got = agg.Aggregation()
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 1)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	metricdatatest.AssertAggregationsEqual(t, nil, got, opt)
 
 	// Override set value.
 	agg.Aggregate(5, attrs)
@@ -276,8 +269,7 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 
 	// Filtered values should not persist.
 	got = agg.Aggregation()
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 5)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
+	metricdatatest.AssertAggregationsEqual(t, nil, got, opt)
 
 	// Order should not affect measure.
 	// Filtered should add.
@@ -286,9 +278,6 @@ func TestPreComputedCumulativeSum(t *testing.T) {
 	agg.(precomputeAggregator[int64]).aggregateFiltered(10, attrs)
 	got = agg.Aggregation()
 	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 20)}
-	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
-	got = agg.Aggregation()
-	want.DataPoints = []metricdata.DataPoint[int64]{point[int64](attrs, 7)}
 	metricdatatest.AssertAggregationsEqual(t, want, got, opt)
 }
 
