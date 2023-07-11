@@ -25,6 +25,7 @@ import (
 
 var (
 	errMultiInst = errors.New("name replacement for multiple instruments")
+	errEmptyView = errors.New("no criteria provided for view")
 
 	emptyView = func(Instrument) (Stream, bool) { return Stream{}, false }
 )
@@ -55,6 +56,10 @@ type View func(Instrument) (Stream, bool)
 // View, create a View directly.
 func NewView(criteria Instrument, mask Stream) View {
 	if criteria.empty() {
+		global.Error(
+			errEmptyView, "dropping view",
+			"mask", mask,
+		)
 		return emptyView
 	}
 

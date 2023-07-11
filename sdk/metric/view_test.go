@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -464,6 +465,16 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 	require.True(t, match, "view did not match exact criteria")
 	assert.Nil(t, got.Aggregation, "erroring aggregation used")
 	assert.Equal(t, 1, l.ErrorN())
+}
+
+func TestNewViewEmptyViewErrorLogged(t *testing.T) {
+	var got string
+	otel.SetLogger(funcr.New(func(_, args string) {
+		got = args
+	}, funcr.Options{Verbosity: 6}))
+
+	_ = NewView(Instrument{}, Stream{})
+	assert.Contains(t, got, errEmptyView.Error())
 }
 
 func ExampleNewView() {
