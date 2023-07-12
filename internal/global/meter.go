@@ -298,13 +298,13 @@ type wrapped interface {
 }
 
 func unwrapInstruments(instruments []metric.Observable) []metric.Observable {
-	out := make([]metric.Observable, 0, len(instruments))
+	out := make([]metric.Observable, len(instruments))
 
-	for _, inst := range instruments {
+	for i, inst := range instruments {
 		if in, ok := inst.(wrapped); ok {
-			out = append(out, in.unwrap())
+			out[i] = in.unwrap()
 		} else {
-			out = append(out, inst)
+			out[i] = inst
 		}
 	}
 

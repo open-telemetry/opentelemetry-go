@@ -39,13 +39,13 @@ type member struct {
 }
 
 func (m member) Member(t *testing.T) baggage.Member {
-	props := make([]baggage.Property, 0, len(m.Properties))
-	for _, p := range m.Properties {
+	props := make([]baggage.Property, len(m.Properties))
+	for i, p := range m.Properties {
 		p, err := baggage.NewKeyValueProperty(p.Key, p.Value)
 		if err != nil {
 			t.Fatal(err)
 		}
-		props = append(props, p)
+		props[i] = p
 	}
 	bMember, err := baggage.NewMember(m.Key, url.QueryEscape(m.Value), props...)
 	if err != nil {
@@ -57,9 +57,9 @@ func (m member) Member(t *testing.T) baggage.Member {
 type members []member
 
 func (m members) Baggage(t *testing.T) baggage.Baggage {
-	bMembers := make([]baggage.Member, 0, len(m))
-	for _, mem := range m {
-		bMembers = append(bMembers, mem.Member(t))
+	bMembers := make([]baggage.Member, len(m))
+	for i, mem := range m {
+		bMembers[i] = mem.Member(t)
 	}
 	bag, err := baggage.New(bMembers...)
 	if err != nil {

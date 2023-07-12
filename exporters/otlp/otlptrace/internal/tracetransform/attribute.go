@@ -26,9 +26,9 @@ func KeyValues(attrs []attribute.KeyValue) []*commonpb.KeyValue {
 		return nil
 	}
 
-	out := make([]*commonpb.KeyValue, 0, len(attrs))
-	for _, kv := range attrs {
-		out = append(out, KeyValue(kv))
+	out := make([]*commonpb.KeyValue, len(attrs))
+	for i, kv := range attrs {
+		out[i] = KeyValue(kv)
 	}
 	return out
 }

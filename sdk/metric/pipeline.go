@@ -485,11 +485,11 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 type pipelines []*pipeline
 
 func newPipelines(res *resource.Resource, readers []Reader, views []View) pipelines {
-	pipes := make([]*pipeline, 0, len(readers))
-	for _, r := range readers {
+	pipes := make([]*pipeline, len(readers))
+	for i, r := range readers {
 		p := newPipeline(res, r, views)
 		r.register(p)
-		pipes = append(pipes, p)
+		pipes[i] = p
 	}
 	return pipes
 }

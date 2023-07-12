@@ -53,9 +53,9 @@ func init() {
 // SpanModels converts OpenTelemetry spans into Zipkin model spans.
 // This is used for exporting to Zipkin compatible tracing services.
 func SpanModels(batch []tracesdk.ReadOnlySpan) []zkmodel.SpanModel {
-	models := make([]zkmodel.SpanModel, 0, len(batch))
-	for _, data := range batch {
-		models = append(models, toZipkinSpanModel(data))
+	models := make([]zkmodel.SpanModel, len(batch))
+	for i, data := range batch {
+		models[i] = toZipkinSpanModel(data)
 	}
 	return models
 }
@@ -141,8 +141,8 @@ func toZipkinAnnotations(events []tracesdk.Event) []zkmodel.Annotation {
 	if len(events) == 0 {
 		return nil
 	}
-	annotations := make([]zkmodel.Annotation, 0, len(events))
-	for _, event := range events {
+	annotations := make([]zkmodel.Annotation, len(events))
+	for i, event := range events {
 		value := event.Name
 		if len(event.Attributes) > 0 {
 			jsonString := attributesToJSONMapString(event.Attributes)
@@ -150,10 +150,10 @@ func toZipkinAnnotations(events []tracesdk.Event) []zkmodel.Annotation {
 				value = fmt.Sprintf("%s: %s", event.Name, jsonString)
 			}
 		}
-		annotations = append(annotations, zkmodel.Annotation{
+		annotations[i] = zkmodel.Annotation{
 			Timestamp: event.Time,
 			Value:     value,
-		})
+		}
 	}
 	return annotations
 }

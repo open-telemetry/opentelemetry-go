@@ -39,9 +39,9 @@ func KeyValues(attrs []attribute.KeyValue) []*cpb.KeyValue {
 		return nil
 	}
 
-	out := make([]*cpb.KeyValue, 0, len(attrs))
-	for _, kv := range attrs {
-		out = append(out, KeyValue(kv))
+	out := make([]*cpb.KeyValue, len(attrs))
+	for i, kv := range attrs {
+		out[i] = KeyValue(kv)
 	}
 	return out
 }

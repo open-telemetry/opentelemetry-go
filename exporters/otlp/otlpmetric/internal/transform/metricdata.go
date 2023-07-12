@@ -43,21 +43,21 @@ func ResourceMetrics(rm *metricdata.ResourceMetrics) (*mpb.ResourceMetrics, erro
 // slice that contains partial OTLP ScopeMetrics.
 func ScopeMetrics(sms []metricdata.ScopeMetrics) ([]*mpb.ScopeMetrics, error) {
 	errs := &multiErr{datatype: "ScopeMetrics"}
-	out := make([]*mpb.ScopeMetrics, 0, len(sms))
-	for _, sm := range sms {
+	out := make([]*mpb.ScopeMetrics, len(sms))
+	for i, sm := range sms {
 		ms, err := Metrics(sm.Metrics)
 		if err != nil {
 			errs.append(err)
 		}
 
-		out = append(out, &mpb.ScopeMetrics{
+		out[i] = &mpb.ScopeMetrics{
 			Scope: &cpb.InstrumentationScope{
 				Name:    sm.Scope.Name,
 				Version: sm.Scope.Version,
 			},
 			Metrics:   ms,
 			SchemaUrl: sm.Scope.SchemaURL,
-		})
+		}
 	}
 	return out, errs.errOrNil()
 }
@@ -137,8 +137,8 @@ func Sum[N int64 | float64](s metricdata.Sum[N]) (*mpb.Metric_Sum, error) {
 
 // DataPoints returns a slice of OTLP NumberDataPoint generated from dPts.
 func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.NumberDataPoint {
-	out := make([]*mpb.NumberDataPoint, 0, len(dPts))
-	for _, dPt := range dPts {
+	out := make([]*mpb.NumberDataPoint, len(dPts))
+	for i, dPt := range dPts {
 		ndp := &mpb.NumberDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
 			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
@@ -154,7 +154,7 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 				AsDouble: v,
 			}
 		}
-		out = append(out, ndp)
+		out[i] = ndp
 	}
 	return out
 }
@@ -177,8 +177,8 @@ func Histogram[N int64 | float64](h metricdata.Histogram[N]) (*mpb.Metric_Histog
 // HistogramDataPoints returns a slice of OTLP HistogramDataPoint generated
 // from dPts.
 func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint[N]) []*mpb.HistogramDataPoint {
-	out := make([]*mpb.HistogramDataPoint, 0, len(dPts))
-	for _, dPt := range dPts {
+	out := make([]*mpb.HistogramDataPoint, len(dPts))
+	for i, dPt := range dPts {
 		sum := float64(dPt.Sum)
 		hdp := &mpb.HistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
@@ -197,7 +197,7 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 			vF64 := float64(v)
 			hdp.Max = &vF64
 		}
-		out = append(out, hdp)
+		out[i] = hdp
 	}
 	return out
 }
@@ -220,8 +220,8 @@ func ExponentialHistogram[N int64 | float64](h metricdata.ExponentialHistogram[N
 // ExponentialHistogramDataPoints returns a slice of OTLP ExponentialHistogramDataPoint generated
 // from dPts.
 func ExponentialHistogramDataPoints[N int64 | float64](dPts []metricdata.ExponentialHistogramDataPoint[N]) []*mpb.ExponentialHistogramDataPoint {
-	out := make([]*mpb.ExponentialHistogramDataPoint, 0, len(dPts))
-	for _, dPt := range dPts {
+	out := make([]*mpb.ExponentialHistogramDataPoint, len(dPts))
+	for i, dPt := range dPts {
 		sum := float64(dPt.Sum)
 		ehdp := &mpb.ExponentialHistogramDataPoint{
 			Attributes:        AttrIter(dPt.Attributes.Iter()),
@@ -243,7 +243,7 @@ func ExponentialHistogramDataPoints[N int64 | float64](dPts []metricdata.Exponen
 			vF64 := float64(v)
 			ehdp.Max = &vF64
 		}
-		out = append(out, ehdp)
+		out[i] = ehdp
 	}
 	return out
 }
