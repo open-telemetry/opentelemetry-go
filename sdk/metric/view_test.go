@@ -467,6 +467,16 @@ func TestNewViewAggregationErrorLogged(t *testing.T) {
 	assert.Equal(t, 1, l.ErrorN())
 }
 
+func TestNewViewEmptyViewErrorLogged(t *testing.T) {
+	var got string
+	otel.SetLogger(funcr.New(func(_, args string) {
+		got = args
+	}, funcr.Options{Verbosity: 6}))
+
+	_ = NewView(Instrument{}, Stream{})
+	assert.Contains(t, got, errEmptyView.Error())
+}
+
 func TestNewViewMultiInstMatchErrorLogged(t *testing.T) {
 	var got string
 	otel.SetLogger(funcr.New(func(_, args string) {
