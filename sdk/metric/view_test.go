@@ -477,6 +477,20 @@ func TestNewViewEmptyViewErrorLogged(t *testing.T) {
 	assert.Contains(t, got, errEmptyView.Error())
 }
 
+func TestNewViewMultiInstMatchErrorLogged(t *testing.T) {
+	var got string
+	otel.SetLogger(funcr.New(func(_, args string) {
+		got = args
+	}, funcr.Options{Verbosity: 6}))
+
+	_ = NewView(Instrument{
+		Name: "*", // Wildcard match name (multiple instruments).
+	}, Stream{
+		Name: "non-empty",
+	})
+	assert.Contains(t, got, errMultiInst.Error())
+}
+
 func ExampleNewView() {
 	// Create a view that renames the "latency" instrument from the v0.34.0
 	// version of the "http" instrumentation library as "request.latency".
