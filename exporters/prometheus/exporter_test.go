@@ -306,7 +306,7 @@ func TestPrometheusExporter(t *testing.T) {
 
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
-				metric.WithReader(exporter),
+				metric.WithReader(exporter.Reader()),
 				metric.WithView(metric.NewView(
 					metric.Instrument{Name: "histogram_*"},
 					metric.Stream{Aggregation: aggregation.ExplicitBucketHistogram{
@@ -378,7 +378,7 @@ func TestMultiScopes(t *testing.T) {
 	require.NoError(t, err)
 
 	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
+		metric.WithReader(exporter.Reader()),
 		metric.WithResource(res),
 	)
 
@@ -647,7 +647,7 @@ func TestDuplicateMetrics(t *testing.T) {
 
 			// initialize provider
 			provider := metric.NewMeterProvider(
-				metric.WithReader(exporter),
+				metric.WithReader(exporter.Reader()),
 				metric.WithResource(res),
 			)
 
@@ -682,7 +682,7 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	exporter, err := New(WithRegisterer(registry))
 	require.NoError(t, err)
-	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	provider := metric.NewMeterProvider(metric.WithReader(exporter.Reader()))
 	meter := provider.Meter("testmeter")
 	cnt, err := meter.Int64Counter("foo")
 	require.NoError(t, err)
@@ -716,7 +716,7 @@ func TestIncompatibleMeterName(t *testing.T) {
 	require.NoError(t, err)
 	provider := metric.NewMeterProvider(
 		metric.WithResource(resource.Empty()),
-		metric.WithReader(exporter))
+		metric.WithReader(exporter.Reader()))
 	meter := provider.Meter(invalidName)
 	cnt, err := meter.Int64Counter("foo")
 	require.NoError(t, err)

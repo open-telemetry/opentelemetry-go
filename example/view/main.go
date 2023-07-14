@@ -37,14 +37,13 @@ const meterName = "github.com/open-telemetry/opentelemetry-go/example/view"
 func main() {
 	ctx := context.Background()
 
-	// The exporter embeds a default OpenTelemetry Reader, allowing it to be used in WithReader.
 	exporter, err := otelprom.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
+		metric.WithReader(exporter.Reader()),
 		// View to customize histogram buckets and rename a single histogram instrument.
 		metric.WithView(metric.NewView(
 			metric.Instrument{

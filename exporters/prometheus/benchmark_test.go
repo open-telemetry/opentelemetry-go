@@ -30,7 +30,7 @@ func benchmarkCollect(b *testing.B, n int) {
 	registry := prometheus.NewRegistry()
 	exporter, err := New(WithRegisterer(registry))
 	require.NoError(b, err)
-	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	provider := metric.NewMeterProvider(metric.WithReader(exporter.Reader()))
 	meter := provider.Meter("testmeter")
 
 	for i := 0; i < n; i++ {

@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
+- Add `Exporter.Reader` method in `go.opentelemetry.io/otel/exporters/prometheus`. (#TODO)
 
 ### Changed
 
@@ -34,6 +35,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
 - Log an error for calls to `NewView` in `go.opentelemetry.io/otel/sdk/metric` that have empty criteria. (#4307)
+
+### Removed
+
+- The `Exporter` in `go.opentelemetry.io/otel/exporters/prometheus` no longer embedds `metric.Reader`.
+  Use `Exporter.Reader` method instead of directly using the exporter instance when it is used as a `metric.Reader`. (#TODO)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

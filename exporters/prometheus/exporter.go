@@ -47,13 +47,16 @@ const (
 
 var scopeInfoKeys = [2]string{"otel_scope_name", "otel_scope_version"}
 
-// Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
-// interface for easy instantiation with a MeterProvider.
+// Exporter is a Prometheus Exporter that registers a prometheus.Collector
+// and encapsulates metric.Reader used for integration with a MeterProvider.
 type Exporter struct {
-	metric.Reader
+	reader metric.Reader
 }
 
-var _ metric.Reader = &Exporter{}
+// Reader returns the exporter's metrics reader.
+func (e *Exporter) Reader() metric.Reader {
+	return e.reader
+}
 
 // collector is used to implement prometheus.Collector.
 type collector struct {
@@ -98,7 +101,7 @@ func New(opts ...Option) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		Reader: reader,
+		reader: reader,
 	}
 
 	return e, nil

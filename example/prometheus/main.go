@@ -36,14 +36,11 @@ func main() {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ctx := context.Background()
 
-	// The exporter embeds a default OpenTelemetry Reader and
-	// implements prometheus.Collector, allowing it to be used as
-	// both a Reader and Collector.
 	exporter, err := prometheus.New()
 	if err != nil {
 		log.Fatal(err)
 	}
-	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	provider := metric.NewMeterProvider(metric.WithReader(exporter.Reader()))
 	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
