@@ -62,9 +62,10 @@ func (e *Exporter) Reader() metric.Reader {
 type collector struct {
 	reader metric.Reader
 
-	withoutUnits     bool
-	disableScopeInfo bool
-	namespace        string
+	withoutUnits           bool
+	withoutCounterSuffixes bool
+	disableScopeInfo       bool
+	namespace              string
 
 	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
@@ -73,7 +74,7 @@ type collector struct {
 	metricFamilies    map[string]*dto.MetricFamily
 }
 
-// prometheus counters MUST have a _total suffix:
+// prometheus counters MUST have a _total suffix by default:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/compatibility/prometheus_and_openmetrics.md
 const counterSuffix = "_total"
 
@@ -87,13 +88,14 @@ func New(opts ...Option) (*Exporter, error) {
 	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
 
 	collector := &collector{
-		reader:            reader,
-		disableTargetInfo: cfg.disableTargetInfo,
-		withoutUnits:      cfg.withoutUnits,
-		disableScopeInfo:  cfg.disableScopeInfo,
-		scopeInfos:        make(map[instrumentation.Scope]prometheus.Metric),
-		metricFamilies:    make(map[string]*dto.MetricFamily),
-		namespace:         cfg.namespace,
+		reader:                 reader,
+		disableTargetInfo:      cfg.disableTargetInfo,
+		withoutUnits:           cfg.withoutUnits,
+		withoutCounterSuffixes: cfg.withoutCounterSuffixes,
+		disableScopeInfo:       cfg.disableScopeInfo,
+		scopeInfos:             make(map[instrumentation.Scope]prometheus.Metric),
+		metricFamilies:         make(map[string]*dto.MetricFamily),
+		namespace:              cfg.namespace,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -390,12 +392,12 @@ func (c *collector) metricTypeAndName(m metricdata.Metrics) (*dto.MetricType, st
 	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
 		return dto.MetricType_HISTOGRAM.Enum(), name
 	case metricdata.Sum[float64]:
-		if v.IsMonotonic {
+		if v.IsMonotonic && !c.withoutCounterSuffixes {
 			return dto.MetricType_COUNTER.Enum(), name + counterSuffix
 		}
 		return dto.MetricType_GAUGE.Enum(), name
 	case metricdata.Sum[int64]:
-		if v.IsMonotonic {
+		if v.IsMonotonic && !c.withoutCounterSuffixes {
 			return dto.MetricType_COUNTER.Enum(), name + counterSuffix
 		}
 		return dto.MetricType_GAUGE.Enum(), name
