@@ -58,7 +58,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		shutdown:   sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
-	global.Debug("MeterProvider created",
+	global.Info("MeterProvider created",
 		"Resource", conf.res,
 		"Readers", conf.readers,
 		"Views", len(conf.views),
@@ -92,7 +92,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		SchemaURL: c.SchemaURL(),
 	}
 
-	global.Debug("Meter created",
+	global.Info("Meter created",
 		"Name", s.Name,
 		"Version", s.Version,
 		"SchemaURL", s.SchemaURL,
