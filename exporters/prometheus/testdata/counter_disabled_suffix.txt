@@ -1,0 +1,10 @@
+# HELP foo_milliseconds a simple counter without a total suffix
+# TYPE foo_milliseconds counter
+foo_milliseconds{A="B",C="D",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 24.3
+foo_milliseconds{A="D",C="B",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 5
+# HELP otel_scope_info Instrumentation Scope metadata
+# TYPE otel_scope_info gauge
+otel_scope_info{otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{service_name="prometheus_test",telemetry_sdk_language="go",telemetry_sdk_name="opentelemetry",telemetry_sdk_version="latest"} 1
