@@ -25,12 +25,6 @@ import (
 // Input receives measurements to be aggregated.
 type Input[N int64 | float64] func(context.Context, N, attribute.Set)
 
-var bgCtx = context.Background()
-
-// Async receives asynchronous measurements that do not have a context
-// associated with them.
-func (f Input[N]) Async(v N, a attribute.Set) { f(bgCtx, v, a) }
-
 // Output stores the aggregate of measurements into dest and returns the number
 // of aggregate data-points output.
 type Output func(dest *metricdata.Aggregation) int
