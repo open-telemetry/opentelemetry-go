@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
 - Log an error for calls to `NewView` in `go.opentelemetry.io/otel/sdk/metric` that have empty criteria. (#4307)
+- Fix `readFile` in `go.opentelemetry.io/otel/sdk/resource` to return an error for non-existent files. `resource.WithHostID()` would previously return a resource with an empty `host.id` instead of returning an error. (#4317)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
