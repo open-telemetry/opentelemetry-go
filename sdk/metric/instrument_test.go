@@ -34,20 +34,20 @@ func BenchmarkInstrument(b *testing.B) {
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
 		build := aggregate.Builder[int64]{}
-		var inputs []aggregate.Input[int64]
+		var meas []aggregate.Measure[int64]
 
 		in, _ := build.LastValue()
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
 		in, _ = build.Sum(true)
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
 		in, _ = build.Sum(true)
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
-		inst := int64Inst{inputs: inputs}
+		inst := int64Inst{measures: meas}
 		ctx := context.Background()
 
 		b.ReportAllocs()
@@ -59,20 +59,20 @@ func BenchmarkInstrument(b *testing.B) {
 
 	b.Run("observable/observe", func(b *testing.B) {
 		build := aggregate.Builder[int64]{}
-		var inputs []aggregate.Input[int64]
+		var meas []aggregate.Measure[int64]
 
 		in, _ := build.LastValue()
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
 		in, _ = build.Sum(true)
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
 		in, _ = build.Sum(true)
-		inputs = append(inputs, in)
+		meas = append(meas, in)
 
-		o := observable[int64]{inputs: inputs}
+		o := observable[int64]{measures: meas}
 
 		b.ReportAllocs()
 		b.ResetTimer()

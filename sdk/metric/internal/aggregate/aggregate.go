@@ -22,12 +22,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// Input receives measurements to be aggregated.
-type Input[N int64 | float64] func(context.Context, N, attribute.Set)
+// Measure receives measurements to be aggregated.
+type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
-// Output stores the aggregate of measurements into dest and returns the number
-// of aggregate data-points output.
-type Output func(dest *metricdata.Aggregation) int
+// ComputeAggregation stores the aggregate of measurements into dest and
+// returns the number of aggregate data-points output.
+type ComputeAggregation func(dest *metricdata.Aggregation) int
 
 // Builder builds an aggregate function.
 type Builder[N int64 | float64] struct {
@@ -42,7 +42,7 @@ type Builder[N int64 | float64] struct {
 	Filter attribute.Filter
 }
 
-func (b Builder[N]) input(agg aggregator[N]) Input[N] {
+func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 	if b.Filter != nil {
 		agg = newFilter[N](agg, b.Filter)
 	}
@@ -54,7 +54,7 @@ func (b Builder[N]) input(agg aggregator[N]) Input[N] {
 // LastValue returns a last-value aggregate function input and output.
 //
 // The Builder.Temporality is ignored and delta is use always.
-func (b Builder[N]) LastValue() (Input[N], Output) {
+func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// Delta temporality is the only temporality that makes semantic sense for
 	// a last-value aggregate.
 	lv := newLastValue[N]()
@@ -70,7 +70,7 @@ func (b Builder[N]) LastValue() (Input[N], Output) {
 
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
-func (b Builder[N]) PrecomputedSum(monotonic bool) (Input[N], Output) {
+func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregation) {
 	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
@@ -89,7 +89,7 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Input[N], Output) {
 }
 
 // Sum returns a sum aggregate function input and output.
-func (b Builder[N]) Sum(monotonic bool) (Input[N], Output) {
+func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 	var s aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
@@ -109,7 +109,7 @@ func (b Builder[N]) Sum(monotonic bool) (Input[N], Output) {
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram) (Input[N], Output) {
+func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram) (Measure[N], ComputeAggregation) {
 	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:

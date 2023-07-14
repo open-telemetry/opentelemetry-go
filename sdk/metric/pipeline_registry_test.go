@@ -46,21 +46,21 @@ func (invalidAggregation) Err() error {
 	return nil
 }
 
-func requireN[N int64 | float64](t *testing.T, n int, i []aggregate.Input[N], o []aggregate.Output, err error) {
+func requireN[N int64 | float64](t *testing.T, n int, m []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 	t.Helper()
 	assert.NoError(t, err)
-	require.Len(t, i, n)
-	require.Len(t, o, n)
+	require.Len(t, m, n)
+	require.Len(t, comps, n)
 }
 
-func assertSum[N int64 | float64](n int, temp metricdata.Temporality, mono bool, v [2]N) func(*testing.T, []aggregate.Input[N], []aggregate.Output, error) {
-	return func(t *testing.T, i []aggregate.Input[N], o []aggregate.Output, err error) {
+func assertSum[N int64 | float64](n int, temp metricdata.Temporality, mono bool, v [2]N) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 		t.Helper()
-		requireN[N](t, n, i, o, err)
+		requireN[N](t, n, meas, comps, err)
 
 		for m := 0; m < n; m++ {
 			t.Logf("input/output number: %d", m)
-			in, out := i[m], o[m]
+			in, out := meas[m], comps[m]
 			in(context.Background(), 1, *attribute.EmptySet())
 
 			var got metricdata.Aggregation
@@ -83,12 +83,12 @@ func assertSum[N int64 | float64](n int, temp metricdata.Temporality, mono bool,
 	}
 }
 
-func assertHist[N int64 | float64](temp metricdata.Temporality) func(*testing.T, []aggregate.Input[N], []aggregate.Output, error) {
-	return func(t *testing.T, i []aggregate.Input[N], o []aggregate.Output, err error) {
+func assertHist[N int64 | float64](temp metricdata.Temporality) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 		t.Helper()
-		requireN[N](t, 1, i, o, err)
+		requireN[N](t, 1, meas, comps, err)
 
-		in, out := i[0], o[0]
+		in, out := meas[0], comps[0]
 		in(context.Background(), 1, *attribute.EmptySet())
 
 		var got metricdata.Aggregation
@@ -128,11 +128,11 @@ func assertHist[N int64 | float64](temp metricdata.Temporality) func(*testing.T,
 	}
 }
 
-func assertLastValue[N int64 | float64](t *testing.T, i []aggregate.Input[N], o []aggregate.Output, err error) {
+func assertLastValue[N int64 | float64](t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 	t.Helper()
-	requireN[N](t, 1, i, o, err)
+	requireN[N](t, 1, meas, comps, err)
 
-	in, out := i[0], o[0]
+	in, out := meas[0], comps[0]
 	in(context.Background(), 10, *attribute.EmptySet())
 	in(context.Background(), 1, *attribute.EmptySet())
 
@@ -172,17 +172,17 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		reader   Reader
 		views    []View
 		inst     Instrument
-		validate func(*testing.T, []aggregate.Input[N], []aggregate.Output, error)
+		validate func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error)
 	}{
 		{
 			name:   "Default/Drop",
 			reader: NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
 			inst:   instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, i []aggregate.Input[N], o []aggregate.Output, err error) {
+			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
 				assert.NoError(t, err)
-				assert.Len(t, i, 0)
-				assert.Len(t, o, 0)
+				assert.Len(t, meas, 0)
+				assert.Len(t, comps, 0)
 			},
 		},
 		{
@@ -262,11 +262,11 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader: NewManualReader(),
 			views:  []View{changeAggView},
 			inst:   instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, i []aggregate.Input[N], o []aggregate.Output, err error) {
+			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
-				requireN[N](t, 1, i, o, err)
+				requireN[N](t, 1, meas, comps, err)
 
-				in, out := i[0], o[0]
+				in, out := meas[0], comps[0]
 				in(context.Background(), 1, *attribute.EmptySet())
 
 				var got metricdata.Aggregation
@@ -343,7 +343,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader: NewManualReader(),
 			views:  []View{invalidAggView},
 			inst:   instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, _ []aggregate.Input[N], _ []aggregate.Output, err error) {
+			validate: func(t *testing.T, _ []aggregate.Measure[N], _ []aggregate.ComputeAggregation, err error) {
 				assert.ErrorIs(t, err, errCreatingAggregators)
 			},
 		},
@@ -354,13 +354,13 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			p := newPipeline(nil, tt.reader, tt.views)
 			i := newInserter[N](p, &c)
 			input, err := i.Instrument(tt.inst)
-			var output []aggregate.Output
+			var comps []aggregate.ComputeAggregation
 			for _, instSyncs := range p.aggregations {
 				for _, i := range instSyncs {
-					output = append(output, i.out)
+					comps = append(comps, i.compAgg)
 				}
 			}
-			tt.validate(t, input, output, err)
+			tt.validate(t, input, comps, err)
 		})
 	}
 }
