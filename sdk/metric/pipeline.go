@@ -235,7 +235,7 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *i
 func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Input[N], error) {
 	var (
 		matched bool
-		input   []aggregate.Input[N]
+		inputs  []aggregate.Input[N]
 	)
 
 	errs := &multierror{wrapped: errCreatingAggregators}
@@ -259,11 +259,11 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Input[N], error) 
 			continue
 		}
 		seen[id] = struct{}{}
-		input = append(input, in)
+		inputs = append(inputs, in)
 	}
 
 	if matched {
-		return input, errs.errorOrNil()
+		return inputs, errs.errorOrNil()
 	}
 
 	// Apply implicit default view if no explicit matched.
@@ -278,9 +278,9 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Input[N], error) 
 	}
 	if in != nil {
 		// Ensured to have not seen given matched was false.
-		input = append(input, in)
+		inputs = append(inputs, in)
 	}
-	return input, errs.errorOrNil()
+	return inputs, errs.errorOrNil()
 }
 
 var aggIDCount uint64
