@@ -413,6 +413,8 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg aggregation.Aggr
 		}
 	case aggregation.ExplicitBucketHistogram:
 		meas, comp = b.ExplicitBucketHistogram(a)
+	case aggregation.ExponentialHistogram:
+		meas, comp = b.ExponentialBucketHistogram(a)
 	default:
 		err = errUnknownAggregation
 	}

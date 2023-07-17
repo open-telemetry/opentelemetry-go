@@ -125,3 +125,22 @@ func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistog
 		return len(hData.DataPoints)
 	}
 }
+
+// ExponentialBucketHistogram returns a histogram aggregate function input and
+// output.
+func (b Builder[N]) ExponentialBucketHistogram(cfg aggregation.ExponentialHistogram) (Measure[N], ComputeAggregation) {
+	var h aggregator[N]
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		h = newDeltaExponentialHistogram[N](cfg)
+	default:
+		h = newCumulativeExponentialHistogram[N](cfg)
+	}
+	return b.input(h), func(dest *metricdata.Aggregation) int {
+		// TODO (#4220): optimize memory reuse here.
+		*dest = h.Aggregation()
+
+		hData, _ := (*dest).(metricdata.ExponentialHistogram[N])
+		return len(hData.DataPoints)
+	}
+}

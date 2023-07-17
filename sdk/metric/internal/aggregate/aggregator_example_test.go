@@ -91,7 +91,7 @@ func (p *meter) Int64ExponentialHistogram(string, ...metric.Int64HistogramOption
 	// Assume here these are determined to be a delta explicit-bucket
 	// histogram.
 
-	aggregator := NewDeltaExponentialHistogram[int64](aggregation.DefaultExponentialHistogram())
+	aggregator := newDeltaExponentialHistogram[int64](aggregation.DefaultExponentialHistogram())
 	hist := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())

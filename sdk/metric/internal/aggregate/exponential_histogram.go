@@ -44,6 +44,16 @@ type expoHistogramValues[N int64 | float64] struct {
 	valuesMu sync.Mutex
 }
 
+func newExpoHistValues[N int64 | float64](maxSize, maxScale int, zeroThreshold float64) *expoHistogramValues[N] {
+	return &expoHistogramValues[N]{
+		maxSize:       maxSize,
+		maxScale:      maxScale,
+		zeroThreshold: zeroThreshold,
+
+		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
+	}
+}
+
 // Aggregate records the measurement, scoped by attr, and aggregates it
 // into an aggregation.
 func (e *expoHistogramValues[N]) Aggregate(value N, attr attribute.Set) {
@@ -344,24 +354,22 @@ func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.Exponenti
 	return cfg
 }
 
-// NewDeltaExponentialHistogram returns an Aggregator that summarizes a set of
+// newDeltaExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func NewDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) aggregator[N] {
 	cfg = normalizeConfig(cfg)
 
 	return &deltaExponentialHistogram[N]{
-		expoHistogramValues: &expoHistogramValues[N]{
-			maxSize:       cfg.MaxSize,
-			maxScale:      cfg.MaxScale,
-			zeroThreshold: cfg.ZeroThreshold,
-
-			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
-		},
+		expoHistogramValues: newExpoHistValues[N](
+			cfg.MaxSize,
+			cfg.MaxScale,
+			cfg.ZeroThreshold,
+		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
 	}
@@ -385,6 +393,7 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 	if len(e.values) == 0 {
 		return nil
 	}
+
 	t := now()
 	h := metricdata.ExponentialHistogram[N]{
 		Temporality: metricdata.DeltaTemporality,
@@ -424,23 +433,21 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 	return h
 }
 
-// NewCumulativeExponentialHistogram returns an Aggregator that summarizes a set of
+// newCumulativeExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes.
 //
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func NewCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) Aggregator[N] {
+func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) aggregator[N] {
 	cfg = normalizeConfig(cfg)
 
 	return &cumulativeExponentialHistogram[N]{
-		expoHistogramValues: &expoHistogramValues[N]{
-			maxSize:       cfg.MaxSize,
-			maxScale:      cfg.MaxScale,
-			zeroThreshold: cfg.ZeroThreshold,
-
-			values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
-		},
+		expoHistogramValues: newExpoHistValues[N](
+			cfg.MaxSize,
+			cfg.MaxScale,
+			cfg.ZeroThreshold,
+		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
 	}
