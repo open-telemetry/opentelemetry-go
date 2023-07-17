@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
   This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
 - If an attribute set is omitted from an async callback, the previous value will no longer be exported. (#4290)
+- Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only accept and collect for instruments it created. (#4333)
 
 ### Fixed
 
