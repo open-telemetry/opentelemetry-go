@@ -163,8 +163,9 @@ func withEnvTemporalityPreference(n string, fn func(metric.TemporalitySelector))
 				fn(deltaTemporality)
 			case "lowmemory":
 				fn(lowMemory)
+			default:
+				global.Warn("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE is set to an invalid value. Defaulting to \"cumulative\".", "value", s)
 			}
-			global.Warn("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE is set to an invalid value. Defaulting to \"cumulative\".", "value", s)
 		}
 	}
 }
@@ -180,7 +181,6 @@ func deltaTemporality(ik metric.InstrumentKind) metricdata.Temporality {
 	default:
 		return metricdata.CumulativeTemporality
 	}
-
 }
 
 func lowMemory(ik metric.InstrumentKind) metricdata.Temporality {
