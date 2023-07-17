@@ -169,19 +169,24 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 }
 
 func TestBucketsSum(t *testing.T) {
-	t.Run("Int64", testBucketsBin[int64]())
-	t.Run("Float64", testBucketsBin[float64]())
+	t.Run("Int64", testBucketsSum[int64]())
+	t.Run("Float64", testBucketsSum[float64]())
 }
 
 func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		b := newBuckets[N](3)
 
-		assert.Equal(t, 0, b.total)
+		var want N
+		assert.Equal(t, want, b.total)
+
 		b.sum(2)
-		assert.Equal(t, 2, b.total)
+		want = 2
+		assert.Equal(t, want, b.total)
+
 		b.sum(-1)
-		assert.Equal(t, 1, b.total)
+		want = 1
+		assert.Equal(t, want, b.total)
 	}
 }
 
