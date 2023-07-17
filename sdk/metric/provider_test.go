@@ -146,7 +146,7 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 	_, err = m0.RegisterCallback(
 		func(_ context.Context, o api.Observer) error {
 			o.ObserveFloat64(m0Gauge, 2)
-			// Observe an instrument from a differnt MeterProvider.
+			// Observe an instrument from a different MeterProvider.
 			o.ObserveInt64(m1Gauge, 1)
 
 			return nil
