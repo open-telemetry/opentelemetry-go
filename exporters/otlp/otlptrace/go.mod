@@ -9,8 +9,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0
 	go.opentelemetry.io/otel/sdk v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
-	go.opentelemetry.io/proto/otlp v0.20.0
-	google.golang.org/grpc v1.56.1
+	go.opentelemetry.io/proto/otlp v1.0.0
+	google.golang.org/grpc v1.56.2
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -26,7 +26,7 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect

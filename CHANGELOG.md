@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
 - OTLP Metrics Exporter now supports the `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` environment variable. (#4287)
+- Add `WithoutCounterSuffixes` option in `go.opentelemetry.io/otel/exporters/prometheus` to disable addition of `_total` suffixes. (#4306)
+- Add info and debug logging to the metric SDK. (#4315)
 
 ### Changed
 
@@ -26,10 +28,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Count the Collect time in the PeriodicReader timeout. (#4221)
 - `New` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` returns `*Exporter` instead of `"go.opentelemetry.io/otel/sdk/metric".Exporter`. (#4272)
 - `New` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` returns `*Exporter` instead of `"go.opentelemetry.io/otel/sdk/metric".Exporter`. (#4272)
+- ⚠️ Metrics SDK Breaking ⚠️ : the `AttributeFilter` fields of the `Stream` from `go.opentelemetry.io/otel/sdk/metric` is replaced by the `AttributeKeys` field.
+  The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
+  This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
+- If an attribute set is omitted from an async callback, the previous value will no longer be exported. (#4290)
 
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
+- Log an error for calls to `NewView` in `go.opentelemetry.io/otel/sdk/metric` that have empty criteria. (#4307)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

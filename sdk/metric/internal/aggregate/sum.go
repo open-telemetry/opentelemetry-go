@@ -38,7 +38,7 @@ func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 	s.Unlock()
 }
 
-// NewDeltaSum returns an Aggregator that summarizes a set of measurements as
+// newDeltaSum returns an Aggregator that summarizes a set of measurements as
 // their arithmetic sum. Each sum is scoped by attributes and the aggregation
 // cycle the measurements were made in.
 //
@@ -48,11 +48,7 @@ func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
-	return newDeltaSum[N](monotonic)
-}
-
-func newDeltaSum[N int64 | float64](monotonic bool) *deltaSum[N] {
+func newDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &deltaSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -98,7 +94,7 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 	return out
 }
 
-// NewCumulativeSum returns an Aggregator that summarizes a set of
+// newCumulativeSum returns an Aggregator that summarizes a set of
 // measurements as their arithmetic sum. Each sum is scoped by attributes and
 // the aggregation cycle the measurements were made in.
 //
@@ -108,11 +104,7 @@ func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregation method is called it will reset all sums to zero.
-func NewCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
-	return newCumulativeSum[N](monotonic)
-}
-
-func newCumulativeSum[N int64 | float64](monotonic bool) *cumulativeSum[N] {
+func newCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &cumulativeSum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
@@ -215,7 +207,7 @@ func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // 
 	s.Unlock()
 }
 
-// NewPrecomputedDeltaSum returns an Aggregator that summarizes a set of
+// newPrecomputedDeltaSum returns an Aggregator that summarizes a set of
 // pre-computed sums. Each sum is scoped by attributes and the aggregation
 // cycle the measurements were made in.
 //
@@ -224,7 +216,7 @@ func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // 
 // value is accurate. It is up to the caller to ensure it.
 //
 // The output Aggregation will report recorded values as delta temporality.
-func NewPrecomputedDeltaSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func newPrecomputedDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedDeltaSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
 		reported:       make(map[attribute.Set]N),
@@ -255,10 +247,12 @@ type precomputedDeltaSum[N int64 | float64] struct {
 // collection cycle, and the unfiltered-sum is kept for the next collection
 // cycle.
 func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
+	newReported := make(map[attribute.Set]N)
 	s.Lock()
 	defer s.Unlock()
 
 	if len(s.values) == 0 {
+		s.reported = newReported
 		return nil
 	}
 
@@ -277,22 +271,18 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 			Time:       t,
 			Value:      delta,
 		})
-		if delta != 0 {
-			s.reported[attr] = v
-		}
-		value.filtered = N(0)
-		s.values[attr] = value
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
+		newReported[attr] = v
+		// Unused attribute sets do not report.
+		delete(s.values, attr)
 	}
+	// Unused attribute sets are forgotten.
+	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
 	return out
 }
 
-// NewPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
+// newPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
 // pre-computed sums. Each sum is scoped by attributes and the aggregation
 // cycle the measurements were made in.
 //
@@ -302,7 +292,7 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 //
 // The output Aggregation will report recorded values as cumulative
 // temporality.
-func NewPrecomputedCumulativeSum[N int64 | float64](monotonic bool) Aggregator[N] {
+func newPrecomputedCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedCumulativeSum[N]{
 		precomputedMap: newPrecomputedMap[N](),
 		monotonic:      monotonic,
@@ -349,12 +339,8 @@ func (s *precomputedCumulativeSum[N]) Aggregation() metricdata.Aggregation {
 			Time:       t,
 			Value:      value.measured + value.filtered,
 		})
-		value.filtered = N(0)
-		s.values[attr] = value
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
+		// Unused attribute sets do not report.
+		delete(s.values, attr)
 	}
 	return out
 }

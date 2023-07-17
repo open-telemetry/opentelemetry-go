@@ -25,11 +25,11 @@ import (
 // override the default time.Now function.
 var now = time.Now
 
-// Aggregator forms an aggregation from a collection of recorded measurements.
+// aggregator forms an aggregation from a collection of recorded measurements.
 //
 // Aggregators need to be comparable so they can be de-duplicated by the SDK
 // when it creates them for multiple views.
-type Aggregator[N int64 | float64] interface {
+type aggregator[N int64 | float64] interface {
 	// Aggregate records the measurement, scoped by attr, and aggregates it
 	// into an aggregation.
 	Aggregate(measurement N, attr attribute.Set)
@@ -45,7 +45,7 @@ type precomputeAggregator[N int64 | float64] interface {
 	// The Aggregate method of the embedded Aggregator is used to record
 	// pre-computed measurements, scoped by attributes that have not been
 	// filtered by an attribute filter.
-	Aggregator[N]
+	aggregator[N]
 
 	// aggregateFiltered records measurements scoped by attributes that have
 	// been filtered by an attribute filter.

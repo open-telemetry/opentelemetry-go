@@ -37,7 +37,7 @@ func (p *meter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64
 	// temporality to used based on the Reader and View configuration. Assume
 	// here these are determined to be a cumulative sum.
 
-	aggregator := NewCumulativeSum[int64](true)
+	aggregator := newCumulativeSum[int64](true)
 	count := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
@@ -54,7 +54,7 @@ func (p *meter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (
 	// configuration. Assume here these are determined to be a last-value
 	// aggregation (the temporality does not affect the produced aggregations).
 
-	aggregator := NewLastValue[int64]()
+	aggregator := newLastValue[int64]()
 	upDownCount := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
@@ -71,7 +71,7 @@ func (p *meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.I
 	// Assume here these are determined to be a delta explicit-bucket
 	// histogram.
 
-	aggregator := NewDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
+	aggregator := newDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
 		Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 		NoMinMax:   false,
 	})

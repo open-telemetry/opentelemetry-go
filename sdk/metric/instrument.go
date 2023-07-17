@@ -145,8 +145,31 @@ type Stream struct {
 	Unit string
 	// Aggregation the stream uses for an instrument.
 	Aggregation aggregation.Aggregation
-	// AttributeFilter applied to all attributes recorded for an instrument.
-	AttributeFilter attribute.Filter
+	// AllowAttributeKeys are an allow-list of attribute keys that will be
+	// preserved for the stream. Any attribute recorded for the stream with a
+	// key not in this slice will be dropped.
+	//
+	// If this slice is empty, all attributes will be kept.
+	AllowAttributeKeys []attribute.Key
+}
+
+// attributeFilter returns an attribute.Filter that only allows attributes
+// with keys in s.AttributeKeys.
+//
+// If s.AttributeKeys is empty an accept-all filter is returned.
+func (s Stream) attributeFilter() attribute.Filter {
+	if len(s.AllowAttributeKeys) <= 0 {
+		return func(kv attribute.KeyValue) bool { return true }
+	}
+
+	allowed := make(map[attribute.Key]struct{})
+	for _, k := range s.AllowAttributeKeys {
+		allowed[k] = struct{}{}
+	}
+	return func(kv attribute.KeyValue) bool {
+		_, ok := allowed[kv.Key]
+		return ok
+	}
 }
 
 // streamID are the identifying properties of a stream.
@@ -171,7 +194,7 @@ type streamID struct {
 }
 
 type int64Inst struct {
-	aggregators []aggregate.Aggregator[int64]
+	measures []aggregate.Measure[int64]
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -196,13 +219,13 @@ func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) {
 	if err := ctx.Err(); err != nil {
 		return
 	}
-	for _, agg := range i.aggregators {
-		agg.Aggregate(val, s)
+	for _, in := range i.measures {
+		in(ctx, val, s)
 	}
 }
 
 type float64Inst struct {
-	aggregators []aggregate.Aggregator[float64]
+	measures []aggregate.Measure[float64]
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -227,8 +250,8 @@ func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Se
 	if err := ctx.Err(); err != nil {
 		return
 	}
-	for _, agg := range i.aggregators {
-		agg.Aggregate(val, s)
+	for _, in := range i.measures {
+		in(ctx, val, s)
 	}
 }
 
@@ -254,9 +277,9 @@ var _ metric.Float64ObservableCounter = float64Observable{}
 var _ metric.Float64ObservableUpDownCounter = float64Observable{}
 var _ metric.Float64ObservableGauge = float64Observable{}
 
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[float64]) float64Observable {
+func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, meas),
 	}
 }
 
@@ -273,9 +296,9 @@ var _ metric.Int64ObservableCounter = int64Observable{}
 var _ metric.Int64ObservableUpDownCounter = int64Observable{}
 var _ metric.Int64ObservableGauge = int64Observable{}
 
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[int64]) int64Observable {
+func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable(scope, kind, name, desc, u, agg),
+		observable: newObservable(scope, kind, name, desc, u, meas),
 	}
 }
 
@@ -283,10 +306,10 @@ type observable[N int64 | float64] struct {
 	metric.Observable
 	observablID[N]
 
-	aggregators []aggregate.Aggregator[N]
+	measures []aggregate.Measure[N]
 }
 
-func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, agg []aggregate.Aggregator[N]) *observable[N] {
+func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
@@ -295,14 +318,14 @@ func newObservable[N int64 | float64](scope instrumentation.Scope, kind Instrume
 			unit:        u,
 			scope:       scope,
 		},
-		aggregators: agg,
+		measures: meas,
 	}
 }
 
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, s attribute.Set) {
-	for _, agg := range o.aggregators {
-		agg.Aggregate(val, s)
+	for _, in := range o.measures {
+		in(context.Background(), val, s)
 	}
 }
 
@@ -313,7 +336,7 @@ var errEmptyAgg = errors.New("no aggregators for observable instrument")
 // no-op because it does not have any aggregators. Also, an error is returned
 // if scope defines a Meter other than the one o was created by.
 func (o *observable[N]) registerable(scope instrumentation.Scope) error {
-	if len(o.aggregators) == 0 {
+	if len(o.measures) == 0 {
 		return errEmptyAgg
 	}
 	if scope != o.scope {
