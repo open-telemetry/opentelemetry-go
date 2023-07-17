@@ -21,11 +21,14 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestMeterConcurrentSafe(t *testing.T) {
@@ -119,4 +122,52 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 	m = mp.Meter("")
 	_, ok = m.(noop.Meter)
 	assert.Truef(t, ok, "Meter from shutdown MeterProvider is not NoOp: %T", m)
+}
+
+func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
+	otel.SetLogger(testr.New(t))
+
+	rdr0 := NewManualReader()
+	mp0 := NewMeterProvider(WithReader(rdr0))
+
+	rdr1 := NewManualReader()
+	mp1 := NewMeterProvider(WithReader(rdr1))
+
+	// Meters with the same scope but different MeterProviders.
+	m0 := mp0.Meter("TestMeterProviderMixingOnRegisterErrors")
+	m1 := mp1.Meter("TestMeterProviderMixingOnRegisterErrors")
+
+	m0Gauge, err := m0.Float64ObservableGauge("float64Gauge")
+	require.NoError(t, err)
+
+	m1Gauge, err := m1.Int64ObservableGauge("int64Gauge")
+	require.NoError(t, err)
+
+	_, err = m0.RegisterCallback(
+		func(_ context.Context, o api.Observer) error {
+			o.ObserveFloat64(m0Gauge, 2)
+			// Observe an instrument from a differnt MeterProvider.
+			o.ObserveInt64(m1Gauge, 1)
+
+			return nil
+		},
+		m0Gauge, m1Gauge,
+	)
+	assert.Error(
+		t,
+		err,
+		"Instrument registered with Meter from different MeterProvider",
+	)
+
+	var data metricdata.ResourceMetrics
+	_ = rdr0.Collect(context.Background(), &data)
+	// Only the metrics from mp0 should be produced.
+	assert.Len(t, data.ScopeMetrics, 1)
+
+	err = rdr1.Collect(context.Background(), &data)
+	assert.NoError(t, err, "Errored when collect should be a noop")
+	assert.Len(
+		t, data.ScopeMetrics, 0,
+		"Metrics produced for instrument collected by different MeterProvider",
+	)
 }
