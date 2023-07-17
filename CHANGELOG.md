@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for Exponential Histogram Aggregations. A Histogram can be configured as an Exponential Histogram using a view with the `go.opentelemetry.io/otel/sdk/metric/aggregation.ExponentialHistogram` as the aggregation. (#4245)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
+- Add `WithoutCounterSuffixes` option in `go.opentelemetry.io/otel/exporters/prometheus` to disable addition of `_total` suffixes. (#4306)
+- Add info and debug logging to the metric SDK. (#4315)
 
 ### Changed
 
@@ -29,10 +31,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ⚠️ Metrics SDK Breaking ⚠️ : the `AttributeFilter` fields of the `Stream` from `go.opentelemetry.io/otel/sdk/metric` is replaced by the `AttributeKeys` field.
   The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
   This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
+- If an attribute set is omitted from an async callback, the previous value will no longer be exported. (#4290)
 
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
+- Log an error for calls to `NewView` in `go.opentelemetry.io/otel/sdk/metric` that have empty criteria. (#4307)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

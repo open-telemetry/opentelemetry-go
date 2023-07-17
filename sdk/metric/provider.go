@@ -51,11 +51,19 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
-	return &MeterProvider{
+
+	mp := &MeterProvider{
 		pipes:      newPipelines(conf.res, conf.readers, conf.views),
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
+	// Log after creation so all readers show correctly they are registered.
+	global.Info("MeterProvider created",
+		"Resource", conf.res,
+		"Readers", conf.readers,
+		"Views", len(conf.views),
+	)
+	return mp
 }
 
 // Meter returns a Meter with the given name and configured with options.
@@ -83,6 +91,13 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		Version:   c.InstrumentationVersion(),
 		SchemaURL: c.SchemaURL(),
 	}
+
+	global.Info("Meter created",
+		"Name", s.Name,
+		"Version", s.Version,
+		"SchemaURL", s.SchemaURL,
+	)
+
 	return mp.meters.Lookup(s, func() *meter {
 		return newMeter(s, mp.pipes)
 	})

@@ -73,6 +73,9 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	if e.redactTimestamps {
 		redactTimestamps(data)
 	}
+
+	global.Debug("STDOUT exporter export", "Data", data)
+
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
 
@@ -88,6 +91,10 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 		})
 	})
 	return ctx.Err()
+}
+
+func (e *exporter) MarshalLog() interface{} {
+	return struct{ Type string }{Type: "STDOUT"}
 }
 
 func redactTimestamps(orig *metricdata.ResourceMetrics) {

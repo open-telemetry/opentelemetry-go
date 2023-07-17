@@ -18,6 +18,7 @@ import (
 	"context"
 
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -43,7 +44,9 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation 
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
 func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
-	return e.wrapped.Export(ctx, rm)
+	err := e.wrapped.Export(ctx, rm)
+	global.Debug("OTLP/gRPC exporter export", "Data", rm)
+	return err
 }
 
 // ForceFlush flushes any metric data held by an exporter.
@@ -65,6 +68,11 @@ func (e *Exporter) ForceFlush(ctx context.Context) error {
 // This method is safe to call concurrently.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	return e.wrapped.Shutdown(ctx)
+}
+
+// MarshalLog returns logging data about the Exporter.
+func (e *Exporter) MarshalLog() interface{} {
+	return struct{ Type string }{Type: "OTLP/gRPC"}
 }
 
 // New returns an OpenTelemetry metric Exporter. The Exporter can be used with
