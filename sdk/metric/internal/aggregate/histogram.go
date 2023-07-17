@@ -100,14 +100,14 @@ func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 	b.bin(idx, value)
 }
 
-// NewDeltaHistogram returns an Aggregator that summarizes a set of
+// newDeltaHistogram returns an Aggregator that summarizes a set of
 // measurements as an histogram. Each histogram is scoped by attributes and
 // the aggregation cycle the measurements were made in.
 //
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func NewDeltaHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
+func newDeltaHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) aggregator[N] {
 	return &deltaHistogram[N]{
 		histValues: newHistValues[N](cfg.Boundaries),
 		noMinMax:   cfg.NoMinMax,
@@ -164,13 +164,13 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 	return h
 }
 
-// NewCumulativeHistogram returns an Aggregator that summarizes a set of
+// newCumulativeHistogram returns an Aggregator that summarizes a set of
 // measurements as an histogram. Each histogram is scoped by attributes.
 //
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func NewCumulativeHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) Aggregator[N] {
+func newCumulativeHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) aggregator[N] {
 	return &cumulativeHistogram[N]{
 		histValues: newHistValues[N](cfg.Boundaries),
 		noMinMax:   cfg.NoMinMax,

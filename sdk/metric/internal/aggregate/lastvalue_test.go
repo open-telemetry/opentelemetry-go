@@ -47,13 +47,13 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 		return func(int) metricdata.Aggregation { return gauge }
 	}
 	incr := monoIncr[N]()
-	return tester.Run(NewLastValue[N](), incr, eFunc(incr))
+	return tester.Run(newLastValue[N](), incr, eFunc(incr))
 }
 
 func testLastValueReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	a := NewLastValue[N]()
+	a := newLastValue[N]()
 	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
@@ -86,11 +86,11 @@ func TestLastValueReset(t *testing.T) {
 }
 
 func TestEmptyLastValueNilAggregation(t *testing.T) {
-	assert.Nil(t, NewLastValue[int64]().Aggregation())
-	assert.Nil(t, NewLastValue[float64]().Aggregation())
+	assert.Nil(t, newLastValue[int64]().Aggregation())
+	assert.Nil(t, newLastValue[float64]().Aggregation())
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregator(NewLastValue[int64]))
-	b.Run("Float64", benchmarkAggregator(NewLastValue[float64]))
+	b.Run("Int64", benchmarkAggregator(newLastValue[int64]))
+	b.Run("Float64", benchmarkAggregator(newLastValue[float64]))
 }

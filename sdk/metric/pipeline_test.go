@@ -30,13 +30,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type testSumAggregator struct{}
-
-func (testSumAggregator) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[int64]{
+func testSumAggregateOutput(dest *metricdata.Aggregation) int {
+	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
-		DataPoints:  []metricdata.DataPoint[int64]{}}
+		DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+	}
+	return 1
 }
 
 func TestNewPipeline(t *testing.T) {
@@ -48,7 +48,7 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -92,7 +92,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", "1", testSumAggregator{}}
+			sync := instrumentSync{name, "desc", "1", testSumAggregateOutput}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
@@ -142,8 +142,8 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
-				for _, a := range got {
-					a.Aggregate(1, *attribute.EmptySet())
+				for _, in := range got {
+					in(context.Background(), 1, *attribute.EmptySet())
 				}
 
 				out := metricdata.ResourceMetrics{}
