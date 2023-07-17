@@ -451,7 +451,7 @@ func newInt64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string,
 	return &int64InstProvider{scope: s, pipes: p, resolve: newResolver[int64](p, c)}
 }
 
-func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Aggregator[int64], error) {
+func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -465,7 +465,7 @@ func (p *int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]a
 // lookup returns the resolved instrumentImpl.
 func (p *int64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*int64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	return &int64Inst{aggregators: aggs}, err
+	return &int64Inst{measures: aggs}, err
 }
 
 // float64InstProvider provides float64 OpenTelemetry instruments.
@@ -479,7 +479,7 @@ func newFloat64InstProvider(s instrumentation.Scope, p pipelines, c *cache[strin
 	return &float64InstProvider{scope: s, pipes: p, resolve: newResolver[float64](p, c)}
 }
 
-func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Aggregator[float64], error) {
+func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -493,7 +493,7 @@ func (p *float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([
 // lookup returns the resolved instrumentImpl.
 func (p *float64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*float64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
-	return &float64Inst{aggregators: aggs}, err
+	return &float64Inst{measures: aggs}, err
 }
 
 type int64ObservProvider struct{ *int64InstProvider }
@@ -504,7 +504,7 @@ func (p int64ObservProvider) lookup(kind InstrumentKind, name, desc, u string) (
 }
 
 func (p int64ObservProvider) registerCallbacks(inst int64Observable, cBacks []metric.Int64Callback) {
-	if inst.observable == nil || len(inst.aggregators) == 0 {
+	if inst.observable == nil || len(inst.measures) == 0 {
 		// Drop aggregator.
 		return
 	}
@@ -537,7 +537,7 @@ func (p float64ObservProvider) lookup(kind InstrumentKind, name, desc, u string)
 }
 
 func (p float64ObservProvider) registerCallbacks(inst float64Observable, cBacks []metric.Float64Callback) {
-	if inst.observable == nil || len(inst.aggregators) == 0 {
+	if inst.observable == nil || len(inst.measures) == 0 {
 		// Drop aggregator.
 		return
 	}

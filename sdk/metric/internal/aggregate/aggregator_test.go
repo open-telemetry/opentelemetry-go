@@ -84,12 +84,12 @@ type aggregatorTester[N int64 | float64] struct {
 	CycleN int
 }
 
-func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap[N], eFunc expectFunc) func(*testing.T) {
+func (at *aggregatorTester[N]) Run(a aggregator[N], incr setMap[N], eFunc expectFunc) func(*testing.T) {
 	m := at.MeasurementN * at.GoroutineN
 	return func(t *testing.T) {
 		t.Run("Comparable", func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				_ = map[Aggregator[N]]struct{}{a: {}}
+				_ = map[aggregator[N]]struct{}{a: {}}
 			})
 		})
 
@@ -117,7 +117,7 @@ func (at *aggregatorTester[N]) Run(a Aggregator[N], incr setMap[N], eFunc expect
 
 var bmarkResults metricdata.Aggregation
 
-func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggregator[N], count int) {
+func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() aggregator[N], count int) {
 	attrs := make([]attribute.Set, count)
 	for i := range attrs {
 		attrs[i] = attribute.NewSet(attribute.Int("value", i))
@@ -137,7 +137,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 	})
 
 	b.Run("Aggregations", func(b *testing.B) {
-		aggs := make([]Aggregator[N], b.N)
+		aggs := make([]aggregator[N], b.N)
 		for n := range aggs {
 			a := factory()
 			for _, attr := range attrs {
@@ -155,7 +155,7 @@ func benchmarkAggregatorN[N int64 | float64](b *testing.B, factory func() Aggreg
 	})
 }
 
-func benchmarkAggregator[N int64 | float64](factory func() Aggregator[N]) func(*testing.B) {
+func benchmarkAggregator[N int64 | float64](factory func() aggregator[N]) func(*testing.B) {
 	counts := []int{1, 10, 100}
 	return func(b *testing.B) {
 		for _, n := range counts {
