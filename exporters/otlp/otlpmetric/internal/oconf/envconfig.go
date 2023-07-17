@@ -182,6 +182,7 @@ func deltaTemporality(ik metric.InstrumentKind) metricdata.Temporality {
 	}
 
 }
+
 func lowMemory(ik metric.InstrumentKind) metricdata.Temporality {
 	switch ik {
 	case metric.InstrumentKindCounter, metric.InstrumentKindHistogram:
