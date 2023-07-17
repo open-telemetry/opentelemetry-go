@@ -425,12 +425,12 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg aggregation.Aggr
 //
 // | Instrument Kind          | Drop | LastValue | Sum | Histogram | Exponential Histogram |
 // |--------------------------|------|-----------|-----|-----------|-----------------------|
-// | Counter                  | X    |           | X   | X         | X                     |
-// | UpDownCounter            | X    |           | X   |           |                       |
-// | Histogram                | X    |           | X   | X         | X                     |
-// | Observable Counter       | X    |           | X   |           |                       |
-// | Observable UpDownCounter | X    |           | X   |           |                       |
-// | Observable Gauge         | X    | X         |     |           |                       |.
+// | Counter                  | ✓    |           | ✓   | ✓         | ✓                     |
+// | UpDownCounter            | ✓    |           | ✓   |           |                       |
+// | Histogram                | ✓    |           | ✓   | ✓         | ✓                     |
+// | Observable Counter       | ✓    |           | ✓   |           |                       |
+// | Observable UpDownCounter | ✓    |           | ✓   |           |                       |
+// | Observable Gauge         | ✓    | ✓         |     |           |                       |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.Default:
