@@ -74,7 +74,7 @@ func (p *meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.I
 	aggregator := newDeltaHistogram[int64](aggregation.ExplicitBucketHistogram{
 		Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 		NoMinMax:   false,
-	})
+	}, false)
 	hist := inst{aggregateFunc: aggregator.Aggregate}
 
 	p.aggregations = append(p.aggregations, aggregator.Aggregation())
