@@ -49,7 +49,7 @@ Note: all names are prefixed with `OTEL_EXPORTER_OTLP_` and are uppercased.
 | `METRICS_COMPRESSION` | Sets the compressions used in the connection. Supports `none` and `gzip`.  Must import the compressor for gzip to work. | none | http: [WithCompression()] grpc: [WithCompressor()] |
 | `TIMEOUT` | Sets the max amount of time an Exporter will attempt an export | 10s | `METRICS_TIMEOUT`, [WithTimeout()] |
 | `METRICS_TIMEOUT` | Sets the max amount of time an Exporter will attempt an export | 10s | [WithTimeout()] |
-| `METRICS_TEMPORALITY_PREFERENCE` | The aggregation temporality to use on the basis of instrument kind. Avaliable values are `Cumulative`, `Delta`, and `LowMemory`.  See [The OTLP Exporter Specification] for more details| Cumulative | [WithTemporalitySelector()] |
+| `METRICS_TEMPORALITY_PREFERENCE` | The aggregation temporality to use on the basis of instrument kind. Available values are `Cumulative`, `Delta`, and `LowMemory`.  See [The OTLP Exporter Specification] for more details| Cumulative | [WithTemporalitySelector()] |
 
 [WithEndpoint()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc#WithEndpoint
 [WithInsecure()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc#WithInsecure
