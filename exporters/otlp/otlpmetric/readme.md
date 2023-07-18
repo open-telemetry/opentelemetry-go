@@ -12,6 +12,7 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 
 or 
 
+
 ```
 go get -u go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 ```
@@ -19,11 +20,10 @@ go get -u go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 ## Examples
 
 - [HTTP Exporter setup and examples](./otlpmetrichttp/example_test.go)
-- [Full example of gRPC Exporter sending telemetry to a local collector](../../../example/otel-collector)
 
 ## [`otlpmetric`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric)
 
-The `otlptrace` package provides common functions used within the [otlpmetricgrpc](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc) and [otlpmetrichttp](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp) packages.
+The `otlpmetric` package provides common functions used within the [otlpmetricgrpc](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc) and [otlpmetrichttp](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp) packages.
 
 Exporters should be created using the New functions from the respective packages.
 
