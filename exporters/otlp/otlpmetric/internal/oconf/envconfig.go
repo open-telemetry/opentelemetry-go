@@ -164,7 +164,7 @@ func withEnvTemporalityPreference(n string, fn func(metric.TemporalitySelector))
 			case "lowmemory":
 				fn(lowMemory)
 			default:
-				global.Warn("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE is set to an invalid value. Defaulting to \"cumulative\".", "value", s)
+				global.Warn("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE is set to an invalid value, ignoring.", "value", s)
 			}
 		}
 	}
