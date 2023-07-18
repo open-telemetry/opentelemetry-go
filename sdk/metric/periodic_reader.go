@@ -115,6 +115,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &PeriodicReader{
+		interval: conf.interval,
 		timeout:  conf.timeout,
 		exporter: exporter,
 		flushCh:  make(chan chan error),
@@ -144,6 +145,7 @@ type PeriodicReader struct {
 	isShutdown        bool
 	externalProducers atomic.Value
 
+	interval time.Duration
 	timeout  time.Duration
 	exporter Exporter
 	flushCh  chan chan error
@@ -280,6 +282,9 @@ func (r *PeriodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
+
+	global.Debug("PeriodicReader collection", "Data", rm)
+
 	return unifyErrors(errs)
 }
 
@@ -349,4 +354,26 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		r.externalProducers.Store([]Producer{})
 	})
 	return err
+}
+
+// MarshalLog returns logging data about the PeriodicReader.
+func (r *PeriodicReader) MarshalLog() interface{} {
+	r.mu.Lock()
+	down := r.isShutdown
+	r.mu.Unlock()
+	return struct {
+		Type       string
+		Exporter   Exporter
+		Registered bool
+		Shutdown   bool
+		Interval   time.Duration
+		Timeout    time.Duration
+	}{
+		Type:       "PeriodicReader",
+		Exporter:   r.exporter,
+		Registered: r.sdkProducer.Load() != nil,
+		Shutdown:   down,
+		Interval:   r.interval,
+		Timeout:    r.timeout,
+	}
 }

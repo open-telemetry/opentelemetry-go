@@ -35,9 +35,9 @@ type lastValue[N int64 | float64] struct {
 	values map[attribute.Set]datapoint[N]
 }
 
-// NewLastValue returns an Aggregator that summarizes a set of measurements as
+// newLastValue returns an Aggregator that summarizes a set of measurements as
 // the last one made.
-func NewLastValue[N int64 | float64]() Aggregator[N] {
+func newLastValue[N int64 | float64]() aggregator[N] {
 	return &lastValue[N]{values: make(map[attribute.Set]datapoint[N])}
 }
 

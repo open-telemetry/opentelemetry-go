@@ -19,18 +19,21 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// NewFilter returns an Aggregator that wraps an agg with an attribute
+// newFilter returns an Aggregator that wraps an agg with an attribute
 // filtering function. Both pre-computed non-pre-computed Aggregators can be
 // passed for agg. An appropriate Aggregator will be returned for the detected
 // type.
-func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggregator[N] {
+func newFilter[N int64 | float64](agg aggregator[N], fn attribute.Filter) aggregator[N] {
 	if fn == nil {
 		return agg
 	}
 	if fa, ok := agg.(precomputeAggregator[N]); ok {
 		return newPrecomputedFilter(fa, fn)
 	}
-	return newFilter(agg, fn)
+	return &filter[N]{
+		filter:     fn,
+		aggregator: agg,
+	}
 }
 
 // filter wraps an aggregator with an attribute filter. All recorded
@@ -41,19 +44,7 @@ func NewFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) Aggreg
 // precomputedFilter instead.
 type filter[N int64 | float64] struct {
 	filter     attribute.Filter
-	aggregator Aggregator[N]
-}
-
-// newFilter returns an filter Aggregator that wraps agg with the attribute
-// filter fn.
-//
-// This should not be used to wrap a pre-computed Aggregator. Use a
-// precomputedFilter instead.
-func newFilter[N int64 | float64](agg Aggregator[N], fn attribute.Filter) *filter[N] {
-	return &filter[N]{
-		filter:     fn,
-		aggregator: agg,
-	}
+	aggregator aggregator[N]
 }
 
 // Aggregate records the measurement, scoped by attr, and aggregates it

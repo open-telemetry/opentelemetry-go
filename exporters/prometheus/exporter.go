@@ -53,6 +53,25 @@ type Exporter struct {
 	metric.Reader
 }
 
+// MarshalLog returns logging data about the Exporter.
+func (e *Exporter) MarshalLog() interface{} {
+	const t = "Prometheus exporter"
+
+	if r, ok := e.Reader.(*metric.ManualReader); ok {
+		under := r.MarshalLog()
+		if data, ok := under.(struct {
+			Type       string
+			Registered bool
+			Shutdown   bool
+		}); ok {
+			data.Type = t
+			return data
+		}
+	}
+
+	return struct{ Type string }{Type: t}
+}
+
 var _ metric.Reader = &Exporter{}
 
 // collector is used to implement prometheus.Collector.
@@ -128,6 +147,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			return
 		}
 	}
+
+	global.Debug("Prometheus exporter export", "Data", metrics)
 
 	// Initialize (once) targetInfo and disableTargetInfo.
 	func() {
