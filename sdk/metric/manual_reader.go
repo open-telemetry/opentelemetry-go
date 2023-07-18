@@ -157,7 +157,26 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		}
 		rm.ScopeMetrics = append(rm.ScopeMetrics, externalMetrics...)
 	}
+
+	global.Debug("ManualReader collection", "Data", rm)
+
 	return unifyErrors(errs)
+}
+
+// MarshalLog returns logging data about the ManualReader.
+func (r *ManualReader) MarshalLog() interface{} {
+	r.mu.Lock()
+	down := r.isShutdown
+	r.mu.Unlock()
+	return struct {
+		Type       string
+		Registered bool
+		Shutdown   bool
+	}{
+		Type:       "ManualReader",
+		Registered: r.sdkProducer.Load() != nil,
+		Shutdown:   down,
+	}
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.
