@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate stringer -type=InstrumentKind -trimprefix=InstrumentKind
+
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
@@ -25,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 var (
@@ -172,23 +173,16 @@ func (s Stream) attributeFilter() attribute.Filter {
 	}
 }
 
-// streamID are the identifying properties of a stream.
-type streamID struct {
+// instID are the identifying properties of a instrument.
+type instID struct {
 	// Name is the name of the stream.
 	Name string
 	// Description is the description of the stream.
 	Description string
+	// Kind defines the functional group of the instrument.
+	Kind InstrumentKind
 	// Unit is the unit of the stream.
 	Unit string
-	// Aggregation is the aggregation data type of the stream.
-	Aggregation string
-	// Monotonic is the monotonicity of an instruments data type. This field is
-	// not used for all data types, so a zero value needs to be understood in the
-	// context of Aggregation.
-	Monotonic bool
-	// Temporality is the temporality of a stream's data type. This field is
-	// not used by some data types.
-	Temporality metricdata.Temporality
 	// Number is the number type of the stream.
 	Number string
 }

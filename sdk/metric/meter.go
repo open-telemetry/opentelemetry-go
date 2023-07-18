@@ -49,7 +49,7 @@ type meter struct {
 func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
-	var viewCache cache[string, streamID]
+	var viewCache cache[string, instID]
 
 	return &meter{
 		scope:     s,
@@ -447,7 +447,7 @@ type int64InstProvider struct {
 	resolve resolver[int64]
 }
 
-func newInt64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string, streamID]) *int64InstProvider {
+func newInt64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string, instID]) *int64InstProvider {
 	return &int64InstProvider{scope: s, pipes: p, resolve: newResolver[int64](p, c)}
 }
 
@@ -475,7 +475,7 @@ type float64InstProvider struct {
 	resolve resolver[float64]
 }
 
-func newFloat64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string, streamID]) *float64InstProvider {
+func newFloat64InstProvider(s instrumentation.Scope, p pipelines, c *cache[string, instID]) *float64InstProvider {
 	return &float64InstProvider{scope: s, pipes: p, resolve: newResolver[float64](p, c)}
 }
 
