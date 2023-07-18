@@ -328,28 +328,15 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 	}
 
-	if err := errs.errorOrNil(); err != nil {
-		if reg.len() != 0 {
-			// Some instruments were invalid. Return a registration with only
-			// the valid instruments.
-			cback := func(ctx context.Context) error {
-				return f(ctx, reg)
-			}
-			return m.pipes.registerMultiCallback(cback), err
-		}
-
-		return nil, err
-	}
-
+	err := errs.errorOrNil()
 	if reg.len() == 0 {
-		// All insts use drop aggregation.
-		return noopRegister{}, nil
+		// All insts use drop aggregation or are invalid.
+		return noopRegister{}, err
 	}
 
-	cback := func(ctx context.Context) error {
-		return f(ctx, reg)
-	}
-	return m.pipes.registerMultiCallback(cback), nil
+	// Some or all instruments were valid.
+	cback := func(ctx context.Context) error { return f(ctx, reg) }
+	return m.pipes.registerMultiCallback(cback), err
 }
 
 type observer struct {
