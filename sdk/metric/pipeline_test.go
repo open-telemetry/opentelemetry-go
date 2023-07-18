@@ -17,11 +17,15 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -203,9 +207,12 @@ func TestLogConflictName(t *testing.T) {
 	}
 
 	var msg string
-	otel.SetLogger(funcr.New(func(_, args string) {
-		msg = args
-	}, funcr.Options{Verbosity: 20}))
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
 
 	for _, tc := range testcases {
 		var vc cache[string, streamID]
