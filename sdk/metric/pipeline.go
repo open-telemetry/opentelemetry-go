@@ -351,7 +351,10 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 // logConflict validates if an instrument with the same name as id has already
 // been created. If that instrument conflicts with id, a warning is logged.
 func (i *inserter[N]) logConflict(id streamID) {
-	existing := i.views.Lookup(id.Name, func() streamID { return id })
+	// The API specification defines names as case-insensitive. If there is a
+	// different casing of a name it needs to be a conflict.
+	name := strings.ToLower(id.Name)
+	existing := i.views.Lookup(name, func() streamID { return id })
 	if id == existing {
 		return
 	}
