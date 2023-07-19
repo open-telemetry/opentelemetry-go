@@ -65,9 +65,8 @@ func TestAggregationErr(t *testing.T) {
 		}.Err())
 
 		assert.NoError(t, ExponentialHistogram{
-			MaxSize:       1024,
-			MaxScale:      -3,
-			ZeroThreshold: 1.0,
+			MaxSize:  1024,
+			MaxScale: -3,
 		}.Err())
 	})
 

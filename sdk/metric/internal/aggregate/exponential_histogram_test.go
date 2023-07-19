@@ -849,66 +849,45 @@ func TestNormalizeConfig(t *testing.T) {
 		{
 			name: "Normal",
 			cfg: aggregation.ExponentialHistogram{
-				MaxSize:       13,
-				MaxScale:      7,
-				ZeroThreshold: 0.5,
+				MaxSize:  13,
+				MaxScale: 7,
 			},
 			want: aggregation.ExponentialHistogram{
-				MaxSize:       13,
-				MaxScale:      7,
-				ZeroThreshold: 0.5,
+				MaxSize:  13,
+				MaxScale: 7,
 			},
 		},
 		{
 			name: "MaxScale too small",
 			cfg: aggregation.ExponentialHistogram{
-				MaxSize:       24,
-				MaxScale:      -15,
-				ZeroThreshold: 0.46,
+				MaxSize:  24,
+				MaxScale: -15,
 			},
 			want: aggregation.ExponentialHistogram{
-				MaxSize:       24,
-				MaxScale:      -10,
-				ZeroThreshold: 0.46,
+				MaxSize:  24,
+				MaxScale: -10,
 			},
 		},
 		{
 			name: "MaxScale too large",
 			cfg: aggregation.ExponentialHistogram{
-				MaxSize:       31,
-				MaxScale:      25,
-				ZeroThreshold: 0.8,
+				MaxSize:  31,
+				MaxScale: 25,
 			},
 			want: aggregation.ExponentialHistogram{
-				MaxSize:       31,
-				MaxScale:      20,
-				ZeroThreshold: 0.8,
+				MaxSize:  31,
+				MaxScale: 20,
 			},
 		},
 		{
 			name: "MaxSize too small",
 			cfg: aggregation.ExponentialHistogram{
-				MaxSize:       -1,
-				MaxScale:      10,
-				ZeroThreshold: 0.5,
+				MaxSize:  -1,
+				MaxScale: 10,
 			},
 			want: aggregation.ExponentialHistogram{
-				MaxSize:       160,
-				MaxScale:      10,
-				ZeroThreshold: 0.5,
-			},
-		},
-		{
-			name: "ZeroThreshold negative",
-			cfg: aggregation.ExponentialHistogram{
-				MaxSize:       13,
-				MaxScale:      7,
-				ZeroThreshold: -0.5,
-			},
-			want: aggregation.ExponentialHistogram{
-				MaxSize:       13,
-				MaxScale:      7,
-				ZeroThreshold: 0.5,
+				MaxSize:  160,
+				MaxScale: 10,
 			},
 		},
 	}

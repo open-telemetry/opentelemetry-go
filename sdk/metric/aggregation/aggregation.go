@@ -172,8 +172,6 @@ type ExponentialHistogram struct {
 	MaxSize int
 	// MaxScale is the maximum resolution scale to use for the histogram.
 	MaxScale int
-	// ZeroThreshold sets the minimum value blow which will be recorded as zero.
-	ZeroThreshold float64
 
 	// NoMinMax indicates whether to not record the min and max of the
 	// distribution. By default, these extrema are recorded.
@@ -188,9 +186,8 @@ type ExponentialHistogram struct {
 // DefaultExponentialHistogram returns the default Exponential Histogram aggregation.
 func DefaultExponentialHistogram() ExponentialHistogram {
 	return ExponentialHistogram{
-		MaxSize:       160,
-		MaxScale:      20,
-		ZeroThreshold: 0.0,
+		MaxSize:  160,
+		MaxScale: 20,
 	}
 }
 

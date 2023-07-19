@@ -44,11 +44,10 @@ type expoHistogramValues[N int64 | float64] struct {
 	valuesMu sync.Mutex
 }
 
-func newExpoHistValues[N int64 | float64](maxSize, maxScale int, zeroThreshold float64) *expoHistogramValues[N] {
+func newExpoHistValues[N int64 | float64](maxSize, maxScale int) *expoHistogramValues[N] {
 	return &expoHistogramValues[N]{
-		maxSize:       maxSize,
-		maxScale:      maxScale,
-		zeroThreshold: zeroThreshold,
+		maxSize:  maxSize,
+		maxScale: maxScale,
 
 		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
 	}
@@ -350,7 +349,6 @@ func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.Exponenti
 	if cfg.MaxSize <= 0 {
 		cfg.MaxSize = 160
 	}
-	cfg.ZeroThreshold = math.Abs(cfg.ZeroThreshold)
 	return cfg
 }
 
@@ -368,7 +366,6 @@ func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.Exponential
 		expoHistogramValues: newExpoHistValues[N](
 			cfg.MaxSize,
 			cfg.MaxScale,
-			cfg.ZeroThreshold,
 		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
@@ -446,7 +443,6 @@ func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.Expone
 		expoHistogramValues: newExpoHistValues[N](
 			cfg.MaxSize,
 			cfg.MaxScale,
-			cfg.ZeroThreshold,
 		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
