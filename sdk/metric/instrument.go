@@ -277,9 +277,9 @@ var _ metric.Float64ObservableCounter = float64Observable{}
 var _ metric.Float64ObservableUpDownCounter = float64Observable{}
 var _ metric.Float64ObservableGauge = float64Observable{}
 
-func newFloat64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
+func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable(scope, kind, name, desc, u, meas),
+		observable: newObservable(m, kind, name, desc, u, meas),
 	}
 }
 
@@ -296,9 +296,9 @@ var _ metric.Int64ObservableCounter = int64Observable{}
 var _ metric.Int64ObservableUpDownCounter = int64Observable{}
 var _ metric.Int64ObservableGauge = int64Observable{}
 
-func newInt64Observable(scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
+func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable(scope, kind, name, desc, u, meas),
+		observable: newObservable(m, kind, name, desc, u, meas),
 	}
 }
 
@@ -306,18 +306,20 @@ type observable[N int64 | float64] struct {
 	metric.Observable
 	observablID[N]
 
+	meter    *meter
 	measures []aggregate.Measure[N]
 }
 
-func newObservable[N int64 | float64](scope instrumentation.Scope, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
+func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
 			description: desc,
 			kind:        kind,
 			unit:        u,
-			scope:       scope,
+			scope:       m.scope,
 		},
+		meter:    m,
 		measures: meas,
 	}
 }
@@ -335,16 +337,16 @@ var errEmptyAgg = errors.New("no aggregators for observable instrument")
 // and nil if it should. An errEmptyAgg error is returned if o is effectively a
 // no-op because it does not have any aggregators. Also, an error is returned
 // if scope defines a Meter other than the one o was created by.
-func (o *observable[N]) registerable(scope instrumentation.Scope) error {
+func (o *observable[N]) registerable(m *meter) error {
 	if len(o.measures) == 0 {
 		return errEmptyAgg
 	}
-	if scope != o.scope {
+	if m != o.meter {
 		return fmt.Errorf(
 			"invalid registration: observable %q from Meter %q, registered with Meter %q",
 			o.name,
 			o.scope.Name,
-			scope.Name,
+			m.scope.Name,
 		)
 	}
 	return nil
