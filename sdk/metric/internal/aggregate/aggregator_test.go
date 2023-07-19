@@ -34,9 +34,8 @@ const (
 )
 
 var (
-	alice = attribute.NewSet(attribute.String("user", "alice"), attribute.Bool("admin", true))
-	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
-	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
+	bob   = attribute.NewSet(attribute.String(keyUser, "bob"), attribute.Bool("admin", false))
+	carol = attribute.NewSet(attribute.String(keyUser, "carol"), attribute.Bool("admin", false))
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)
