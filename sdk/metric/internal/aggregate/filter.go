@@ -27,9 +27,6 @@ func newFilter[N int64 | float64](agg aggregator[N], fn attribute.Filter) aggreg
 	if fn == nil {
 		return agg
 	}
-	if fa, ok := agg.(precomputeAggregator[N]); ok {
-		return newPrecomputedFilter(fa, fn)
-	}
 	return &filter[N]{
 		filter:     fn,
 		aggregator: agg,
@@ -57,45 +54,5 @@ func (f *filter[N]) Aggregate(measurement N, attr attribute.Set) {
 // Aggregation returns an Aggregation, for all the aggregated
 // measurements made and ends an aggregation cycle.
 func (f *filter[N]) Aggregation() metricdata.Aggregation {
-	return f.aggregator.Aggregation()
-}
-
-// precomputedFilter is an aggregator that applies attribute filter when
-// Aggregating for pre-computed Aggregations. The pre-computed Aggregations
-// need to operate normally when no attribute filtering is done (for sums this
-// means setting the value), but when attribute filtering is done it needs to
-// be added to any set value.
-type precomputedFilter[N int64 | float64] struct {
-	filter     attribute.Filter
-	aggregator precomputeAggregator[N]
-}
-
-// newPrecomputedFilter returns a precomputedFilter Aggregator that wraps agg
-// with the attribute filter fn.
-//
-// This should not be used to wrap a non-pre-computed Aggregator. Use a
-// precomputedFilter instead.
-func newPrecomputedFilter[N int64 | float64](agg precomputeAggregator[N], fn attribute.Filter) *precomputedFilter[N] {
-	return &precomputedFilter[N]{
-		filter:     fn,
-		aggregator: agg,
-	}
-}
-
-// Aggregate records the measurement, scoped by attr, and aggregates it
-// into an aggregation.
-func (f *precomputedFilter[N]) Aggregate(measurement N, attr attribute.Set) {
-	fAttr, _ := attr.Filter(f.filter)
-	if fAttr.Equals(&attr) {
-		// No filtering done.
-		f.aggregator.Aggregate(measurement, fAttr)
-	} else {
-		f.aggregator.aggregateFiltered(measurement, fAttr)
-	}
-}
-
-// Aggregation returns an Aggregation, for all the aggregated
-// measurements made and ends an aggregation cycle.
-func (f *precomputedFilter[N]) Aggregation() metricdata.Aggregation {
 	return f.aggregator.Aggregation()
 }

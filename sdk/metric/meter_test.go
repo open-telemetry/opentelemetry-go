@@ -960,9 +960,6 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
 	assert.NoError(t, err)
 
-	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
-	assert.NoError(t, err)
-
 	got := metricdata.ResourceMetrics{}
 	err = rdr.Collect(context.Background(), &got)
 	assert.NoError(t, err)
