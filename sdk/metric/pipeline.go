@@ -247,7 +247,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Measure[N], error
 		}
 		matched = true
 
-		in, id, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
+		in, id, err := i.cachedAggregator(inst.Scope, inst.Kind, inst.bucketBoundaries, stream)
 		if err != nil {
 			errs.append(err)
 		}
@@ -272,7 +272,7 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Measure[N], error
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
-	in, _, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
+	in, _, err := i.cachedAggregator(inst.Scope, inst.Kind, inst.bucketBoundaries, stream)
 	if err != nil {
 		errs.append(err)
 	}
@@ -306,11 +306,16 @@ type aggVal[N int64 | float64] struct {
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind InstrumentKind, stream Stream) (meas aggregate.Measure[N], aggID uint64, err error) {
+func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind InstrumentKind, bucketBoundaries []float64, stream Stream) (meas aggregate.Measure[N], aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
 		stream.Aggregation = i.pipeline.reader.aggregation(kind)
+		// override bucket boundaries with the instrument-level default boundaries
+		if a, ok := stream.Aggregation.(aggregation.ExplicitBucketHistogram); ok && len(bucketBoundaries) > 0 {
+			a.Boundaries = bucketBoundaries
+			stream.Aggregation = a
+		}
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {

@@ -398,6 +398,32 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
+			name: "SyncInt64Histogram with bounds through advice",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.Int64Histogram("histogram", metric.WithExplicitBucketBoundaries([]float64{0, 1, 2, 3}))
+				assert.NoError(t, err)
+
+				gauge.Record(context.Background(), 7)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes:   attribute.Set{},
+							Count:        1,
+							Bounds:       []float64{0, 1, 2, 3},
+							BucketCounts: []uint64{0, 0, 0, 0, 1},
+							Min:          metricdata.NewExtrema[int64](7),
+							Max:          metricdata.NewExtrema[int64](7),
+							Sum:          7,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "SyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64Counter("sfloat")

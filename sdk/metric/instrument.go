@@ -80,6 +80,11 @@ type Instrument struct {
 	// Scope identifies the instrumentation that created the instrument.
 	Scope instrumentation.Scope
 
+	// bucketBoundaries are the configured boundaries for histogram instruments.
+	// Make this non-exported because I don't think we want users setting this
+	// in a view.
+	bucketBoundaries []float64
+
 	// Ensure forward compatibility if non-comparable fields need to be added.
 	nonComparable // nolint: unused
 }
@@ -91,6 +96,8 @@ func (i Instrument) empty() bool {
 		i.Kind == zeroInstrumentKind &&
 		i.Unit == "" &&
 		i.Scope == zeroScope
+	// This is only used for views, so no need to take bucket boundaries
+	// into account here.
 }
 
 // matches returns whether all the non-zero-value fields of i match the
@@ -102,6 +109,8 @@ func (i Instrument) matches(other Instrument) bool {
 		i.matchesKind(other) &&
 		i.matchesUnit(other) &&
 		i.matchesScope(other)
+	// Note: Don't require matching the bucket boundaries, as that isn't something
+	// that users can set with a view.
 }
 
 // matchesName returns true if the Name of i is "" or it equals the Name of
