@@ -144,7 +144,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				var c cache[string, streamID]
+				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
@@ -215,15 +215,15 @@ func TestLogConflictName(t *testing.T) {
 	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
 
 	for _, tc := range testcases {
-		var vc cache[string, streamID]
+		var vc cache[string, instID]
 
 		name := strings.ToLower(tc.existing)
-		_ = vc.Lookup(name, func() streamID {
-			return streamID{Name: tc.existing}
+		_ = vc.Lookup(name, func() instID {
+			return instID{Name: tc.existing}
 		})
 
 		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
-		i.logConflict(streamID{Name: tc.name})
+		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
 			assert.Containsf(
