@@ -277,9 +277,9 @@ var _ metric.Float64ObservableCounter = float64Observable{}
 var _ metric.Float64ObservableUpDownCounter = float64Observable{}
 var _ metric.Float64ObservableGauge = float64Observable{}
 
-func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
+func newFloat64Observable(m *meter, kind InstrumentKind, name string, cfg instrumentConfig, meas []aggregate.Measure[float64]) float64Observable {
 	return float64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable(m, kind, name, cfg, meas),
 	}
 }
 
@@ -296,9 +296,9 @@ var _ metric.Int64ObservableCounter = int64Observable{}
 var _ metric.Int64ObservableUpDownCounter = int64Observable{}
 var _ metric.Int64ObservableGauge = int64Observable{}
 
-func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
+func newInt64Observable(m *meter, kind InstrumentKind, name string, cfg instrumentConfig, meas []aggregate.Measure[int64]) int64Observable {
 	return int64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable(m, kind, name, cfg, meas),
 	}
 }
 
@@ -310,13 +310,13 @@ type observable[N int64 | float64] struct {
 	measures []aggregate.Measure[N]
 }
 
-func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
+func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name string, cfg instrumentConfig, meas []aggregate.Measure[N]) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
-			description: desc,
+			description: cfg.Description(),
 			kind:        kind,
-			unit:        u,
+			unit:        cfg.Unit(),
 			scope:       m.scope,
 		},
 		meter:    m,

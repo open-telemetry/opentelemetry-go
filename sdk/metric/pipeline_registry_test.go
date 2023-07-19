@@ -353,7 +353,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			var c cache[string, streamID]
 			p := newPipeline(nil, tt.reader, tt.views)
 			i := newInserter[N](p, &c)
-			input, err := i.Instrument(tt.inst)
+			input, err := i.Instrument(tt.inst, hints{})
 			var comps []aggregate.ComputeAggregation
 			for _, instSyncs := range p.aggregations {
 				for _, i := range instSyncs {
@@ -377,7 +377,7 @@ func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 		Name: "foo",
 		Kind: InstrumentKind(255),
 	}
-	_, _ = i.Instrument(inst)
+	_, _ = i.Instrument(inst, hints{})
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {

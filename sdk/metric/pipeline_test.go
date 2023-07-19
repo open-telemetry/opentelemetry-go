@@ -139,7 +139,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				var c cache[string, streamID]
 				i := newInserter[N](test.pipe, &c)
-				got, err := i.Instrument(inst)
+				got, err := i.Instrument(inst, hints{})
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {

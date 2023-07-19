@@ -398,6 +398,32 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			},
 		},
 		{
+			name: "SyncInt64Histogram With Hints",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.Int64Histogram("histogram", metric.WithInt64HistogramBoundaries([]float64{1, 5, 10, 15}))
+				assert.NoError(t, err)
+
+				gauge.Record(context.Background(), 7)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes:   attribute.Set{},
+							Count:        1,
+							Bounds:       []float64{1, 5, 10, 15},
+							BucketCounts: []uint64{0, 0, 1, 0, 0},
+							Min:          metricdata.NewExtrema[int64](7),
+							Max:          metricdata.NewExtrema[int64](7),
+							Sum:          7,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "SyncFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64Counter("sfloat")
@@ -453,6 +479,32 @@ func TestMeterCreatesInstruments(t *testing.T) {
 							Count:        1,
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[float64](7.),
+							Max:          metricdata.NewExtrema[float64](7.),
+							Sum:          7.0,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Histogram With Hints",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.Float64Histogram("histogram", metric.WithFloat64HistogramBoundaries([]float64{1, 5, 10, 15}))
+				assert.NoError(t, err)
+
+				gauge.Record(context.Background(), 7)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes:   attribute.Set{},
+							Count:        1,
+							Bounds:       []float64{1, 5, 10, 15},
+							BucketCounts: []uint64{0, 0, 1, 0, 0},
 							Min:          metricdata.NewExtrema[float64](7.),
 							Max:          metricdata.NewExtrema[float64](7.),
 							Sum:          7.0,

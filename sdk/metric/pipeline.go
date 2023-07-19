@@ -232,7 +232,7 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *i
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Measure[N], error) {
+func (i *inserter[N]) Instrument(inst Instrument, h hints) ([]aggregate.Measure[N], error) {
 	var (
 		matched  bool
 		measures []aggregate.Measure[N]
@@ -246,6 +246,10 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Measure[N], error
 			continue
 		}
 		matched = true
+
+		if stream.Aggregation == nil && inst.Kind == InstrumentKindHistogram && h.boundaries != nil {
+			stream.Aggregation = aggregation.ExplicitBucketHistogram{Boundaries: h.boundaries}
+		}
 
 		in, id, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
 		if err != nil {
@@ -272,6 +276,11 @@ func (i *inserter[N]) Instrument(inst Instrument) ([]aggregate.Measure[N], error
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
+
+	if inst.Kind == InstrumentKindHistogram && h.boundaries != nil {
+		stream.Aggregation = aggregation.ExplicitBucketHistogram{Boundaries: h.boundaries}
+	}
+
 	in, _, err := i.cachedAggregator(inst.Scope, inst.Kind, stream)
 	if err != nil {
 		errs.append(err)
@@ -534,14 +543,30 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, streamID]) re
 	return resolver[N]{in}
 }
 
+// Note: hints will ignore the zero value of each field.
+type hints struct {
+	boundaries []float64 //histograms only
+}
+
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
 func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) {
+	return r.aggregators(id, hints{})
+}
+
+func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64) ([]aggregate.Measure[N], error) {
+	if len(boundaries) == 0 {
+		return r.aggregators(id, hints{})
+	}
+	return r.aggregators(id, hints{boundaries: boundaries})
+}
+
+func (r resolver[N]) aggregators(id Instrument, h hints) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	errs := &multierror{}
 	for _, i := range r.inserters {
-		in, err := i.Instrument(id)
+		in, err := i.Instrument(id, h)
 		if err != nil {
 			errs.append(err)
 		}

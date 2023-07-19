@@ -149,6 +149,8 @@ type Float64Histogram interface {
 type Float64HistogramConfig struct {
 	description string
 	unit        string
+
+	boundaries []float64
 }
 
 // NewFloat64HistogramConfig returns a new [Float64HistogramConfig] with all
@@ -171,9 +173,27 @@ func (c Float64HistogramConfig) Unit() string {
 	return c.unit
 }
 
+func (c Float64HistogramConfig) Boundaries() []float64 {
+	return c.boundaries
+}
+
 // Float64HistogramOption applies options to a [Float64HistogramConfig]. See
 // [InstrumentOption] for other options that can be used as a
 // Float64HistogramOption.
 type Float64HistogramOption interface {
 	applyFloat64Histogram(Float64HistogramConfig) Float64HistogramConfig
+}
+
+func WithFloat64HistogramBoundaries(boundaries []float64) Float64HistogramOption {
+	return float64HistogramOptionFunc(func(cfg Float64HistogramConfig) Float64HistogramConfig {
+		cfg.boundaries = make([]float64, len(boundaries))
+		copy(cfg.boundaries, boundaries)
+		return cfg
+	})
+}
+
+type float64HistogramOptionFunc func(Float64HistogramConfig) Float64HistogramConfig
+
+func (fn float64HistogramOptionFunc) applyFloat64Histogram(cfg Float64HistogramConfig) Float64HistogramConfig {
+	return fn(cfg)
 }
