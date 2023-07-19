@@ -38,22 +38,3 @@ type aggregator[N int64 | float64] interface {
 	// measurements made and ends an aggregation cycle.
 	Aggregation() metricdata.Aggregation
 }
-
-// precomputeAggregator is an Aggregator that receives values to aggregate that
-// have been pre-computed by the caller.
-type precomputeAggregator[N int64 | float64] interface {
-	// The Aggregate method of the embedded Aggregator is used to record
-	// pre-computed measurements, scoped by attributes that have not been
-	// filtered by an attribute filter.
-	aggregator[N]
-
-	// aggregateFiltered records measurements scoped by attributes that have
-	// been filtered by an attribute filter.
-	//
-	// Pre-computed measurements of filtered attributes need to be recorded
-	// separate from those that haven't been filtered so they can be added to
-	// the non-filtered pre-computed measurements in a collection cycle and
-	// then resets after the cycle (the non-filtered pre-computed measurements
-	// are not reset).
-	aggregateFiltered(N, attribute.Set)
-}

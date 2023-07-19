@@ -350,7 +350,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			var c cache[string, streamID]
+			var c cache[string, instID]
 			p := newPipeline(nil, tt.reader, tt.views)
 			i := newInserter[N](p, &c)
 			input, err := i.Instrument(tt.inst)
@@ -371,7 +371,7 @@ func TestCreateAggregators(t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}), &c)
 	inst := Instrument{
 		Name: "foo",
@@ -391,7 +391,7 @@ func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	require.Len(t, pipes, 2, "created pipelines")
 
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[int64](pipes, &c)
 	aggs, err := r.Aggregators(inst)
 	require.NoError(t, err, "resolved Aggregators error")
@@ -468,7 +468,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
@@ -478,7 +478,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
@@ -498,14 +498,14 @@ func TestPipelineRegistryResource(t *testing.T) {
 }
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
-	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
+	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Sum{} }))
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
 	p := newPipelines(resource.Empty(), readers, views)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
-	var vc cache[string, streamID]
+	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
@@ -556,7 +556,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), readers, views)
 
-	var vc cache[string, streamID]
+	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)
@@ -648,13 +648,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncUpDownCounter and ExponentialHistogram",
 			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.ExponentialHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncHistogram and Drop",
@@ -702,13 +700,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableCounter and ExponentialHistogram",
 			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.ExponentialHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableUpDownCounter and Drop",
@@ -730,13 +726,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableUpDownCounter and ExponentialHistogram",
 			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.ExponentialHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableGauge and Drop",
@@ -758,13 +752,11 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableGauge and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableGauge and ExponentialHistogram",
 			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.ExponentialHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "unknown kind with Sum should error",

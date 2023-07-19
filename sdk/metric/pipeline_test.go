@@ -17,12 +17,19 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -137,7 +144,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				var c cache[string, streamID]
+				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
@@ -164,5 +171,75 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 			})
 		}
+	}
+}
+
+func TestLogConflictName(t *testing.T) {
+	testcases := []struct {
+		existing, name string
+		conflict       bool
+	}{
+		{
+			existing: "requestCount",
+			name:     "requestCount",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestDuration",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestcount",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "REQUESTCOUNT",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "rEqUeStCoUnT",
+			conflict: true,
+		},
+	}
+
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	for _, tc := range testcases {
+		var vc cache[string, instID]
+
+		name := strings.ToLower(tc.existing)
+		_ = vc.Lookup(name, func() instID {
+			return instID{Name: tc.existing}
+		})
+
+		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i.logConflict(instID{Name: tc.name})
+
+		if tc.conflict {
+			assert.Containsf(
+				t, msg, "duplicate metric stream definitions",
+				"warning not logged for conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		} else {
+			assert.Equalf(
+				t, msg, "",
+				"warning logged for non-conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		}
+
+		// Reset.
+		msg = ""
 	}
 }

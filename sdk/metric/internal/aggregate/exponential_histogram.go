@@ -36,6 +36,7 @@ const (
 // expoHistogramValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type expoHistogramValues[N int64 | float64] struct {
+	noSum         bool
 	maxSize       int
 	maxScale      int
 	zeroThreshold float64
@@ -44,8 +45,9 @@ type expoHistogramValues[N int64 | float64] struct {
 	valuesMu sync.Mutex
 }
 
-func newExpoHistValues[N int64 | float64](maxSize, maxScale int) *expoHistogramValues[N] {
+func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noSum bool) *expoHistogramValues[N] {
 	return &expoHistogramValues[N]{
+		noSum:    noSum,
 		maxSize:  maxSize,
 		maxScale: maxScale,
 
@@ -359,13 +361,14 @@ func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.Exponenti
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) aggregator[N] {
+func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram, noSum bool) aggregator[N] {
 	cfg = normalizeConfig(cfg)
 
 	return &deltaExponentialHistogram[N]{
 		expoHistogramValues: newExpoHistValues[N](
 			cfg.MaxSize,
 			cfg.MaxScale,
+			noSum,
 		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
@@ -402,7 +405,6 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 			StartTime:     e.start,
 			Time:          t,
 			Count:         b.count,
-			Sum:           b.sum,
 			Scale:         int32(b.scale),
 			ZeroCount:     b.zeroCount,
 			ZeroThreshold: b.zeroThreshold,
@@ -422,6 +424,9 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 			ehdp.Min = metricdata.NewExtrema(b.min)
 			ehdp.Max = metricdata.NewExtrema(b.max)
 		}
+		if !e.noSum {
+			ehdp.Sum = b.sum
+		}
 		h.DataPoints = append(h.DataPoints, ehdp)
 
 		delete(e.values, a)
@@ -436,13 +441,14 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram) aggregator[N] {
+func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram, noSum bool) aggregator[N] {
 	cfg = normalizeConfig(cfg)
 
 	return &cumulativeExponentialHistogram[N]{
 		expoHistogramValues: newExpoHistValues[N](
 			cfg.MaxSize,
 			cfg.MaxScale,
+			noSum,
 		),
 		noMinMax: cfg.NoMinMax,
 		start:    now(),
@@ -478,7 +484,6 @@ func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation
 			StartTime:     e.start,
 			Time:          t,
 			Count:         b.count,
-			Sum:           b.sum,
 			Scale:         int32(b.scale),
 			ZeroCount:     b.zeroCount,
 			ZeroThreshold: b.zeroThreshold,
@@ -497,6 +502,9 @@ func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation
 		if !e.noMinMax {
 			ehdp.Min = metricdata.NewExtrema(b.min)
 			ehdp.Max = metricdata.NewExtrema(b.max)
+		}
+		if !e.noSum {
+			ehdp.Sum = b.sum
 		}
 		h.DataPoints = append(h.DataPoints, ehdp)
 		// TODO (#3006): This will use an unbounded amount of memory if there

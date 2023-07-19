@@ -32,11 +32,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
   This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
 - If an attribute set is omitted from an async callback, the previous value will no longer be exported. (#4290)
+- If an attribute set is Observed multiple times in an async callback, the values will be summed instead of the last observation winning. (#4289)
+- Allow the explicit bucket histogram aggregation to be used for the up-down counter, observable counter, observable up-down counter, and observable gauge in the `go.opentelemetry.io/otel/sdk/metric` package. (#4332)
+- Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
 
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
 - Log an error for calls to `NewView` in `go.opentelemetry.io/otel/sdk/metric` that have empty criteria. (#4307)
+- Fix `resource.WithHostID()` to not set an empty `host.id`. (#4317)
+- Use the instrument identifying fields to cache aggregators and determine duplicate instrument registrations in `go.opentelemetry.io/otel/sdk/metric`. (#4337)
+- Detect duplicate instruments for case-insensitive names in `go.opentelemetry.io/otel/sdk/metric`. (#4338)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

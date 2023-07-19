@@ -632,9 +632,9 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 }
 
 func benchmarkExponentialHistogram[N int64 | float64](b *testing.B) {
-	factory := func() aggregator[N] { return newDeltaExponentialHistogram[N](expoHistConf) }
+	factory := func() aggregator[N] { return newDeltaExponentialHistogram[N](expoHistConf, false) }
 	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() aggregator[N] { return newCumulativeExponentialHistogram[N](expoHistConf) }
+	factory = func() aggregator[N] { return newCumulativeExponentialHistogram[N](expoHistConf, false) }
 	b.Run("Cumulative", benchmarkAggregator(factory))
 }
 
@@ -713,7 +713,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	tests := []exponentialHistogramAggregationTestCase[N]{
 		{
 			name:       "Delta Single",
-			aggregator: newDeltaExponentialHistogram[N](cfg),
+			aggregator: newDeltaExponentialHistogram[N](cfg, false),
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
 			},
@@ -736,7 +736,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name:       "Cumulative Single",
-			aggregator: newCumulativeExponentialHistogram[N](cfg),
+			aggregator: newCumulativeExponentialHistogram[N](cfg, false),
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
 			},
@@ -759,7 +759,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name:       "Delta Multiple",
-			aggregator: newDeltaExponentialHistogram[N](cfg),
+			aggregator: newDeltaExponentialHistogram[N](cfg, false),
 			input: [][]N{
 				{2, 3, 8},
 				{4, 4, 4, 2, 16, 1},
@@ -783,7 +783,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name:       "Cumulative Multiple ",
-			aggregator: newCumulativeExponentialHistogram[N](cfg),
+			aggregator: newCumulativeExponentialHistogram[N](cfg, false),
 			input: [][]N{
 				{2, 3, 8},
 				{4, 4, 4, 2, 16, 1},
@@ -832,10 +832,10 @@ func testEmptyExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	}
 	var want metricdata.Aggregation
 
-	c := newCumulativeExponentialHistogram[N](cfg)
+	c := newCumulativeExponentialHistogram[N](cfg, false)
 	assert.Equal(t, want, c.Aggregation())
 
-	d := newDeltaExponentialHistogram[N](cfg)
+	d := newDeltaExponentialHistogram[N](cfg, false)
 	assert.Equal(t, want, d.Aggregation())
 }
 
