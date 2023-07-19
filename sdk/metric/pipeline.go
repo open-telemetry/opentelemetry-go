@@ -187,24 +187,24 @@ type inserter[N int64 | float64] struct {
 	// cache ensures no duplicate aggregate functions are inserted into the
 	// reader pipeline and if a new request during an instrument creation asks
 	// for the same aggregate function input the same instance is returned.
-	aggregators *cache[streamID, aggVal[N]]
+	aggregators *cache[instID, aggVal[N]]
 
 	// views is a cache that holds instrument identifiers for all the
 	// instruments a Meter has created, it is provided from the Meter that owns
 	// this inserter. This cache ensures during the creation of instruments
 	// with the same name but different options (e.g. description, unit) a
 	// warning message is logged.
-	views *cache[string, streamID]
+	views *cache[string, instID]
 
 	pipeline *pipeline
 }
 
-func newInserter[N int64 | float64](p *pipeline, vc *cache[string, streamID]) *inserter[N] {
+func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *inserter[N] {
 	if vc == nil {
-		vc = &cache[string, streamID]{}
+		vc = &cache[string, instID]{}
 	}
 	return &inserter[N]{
-		aggregators: &cache[streamID, aggVal[N]]{},
+		aggregators: &cache[instID, aggVal[N]]{},
 		views:       vc,
 		pipeline:    p,
 	}
@@ -320,12 +320,14 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		)
 	}
 
-	id := i.streamID(kind, stream)
+	id := i.instID(kind, stream)
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
 	cv := i.aggregators.Lookup(id, func() aggVal[N] {
-		b := aggregate.Builder[N]{Temporality: id.Temporality}
+		b := aggregate.Builder[N]{
+			Temporality: i.pipeline.reader.temporality(kind),
+		}
 		if len(stream.AllowAttributeKeys) > 0 {
 			b.Filter = stream.attributeFilter()
 		}
@@ -350,8 +352,8 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 
 // logConflict validates if an instrument with the same name as id has already
 // been created. If that instrument conflicts with id, a warning is logged.
-func (i *inserter[N]) logConflict(id streamID) {
-	existing := i.views.Lookup(id.Name, func() streamID { return id })
+func (i *inserter[N]) logConflict(id instID) {
+	existing := i.views.Lookup(id.Name, func() instID { return id })
 	if id == existing {
 		return
 	}
@@ -360,31 +362,21 @@ func (i *inserter[N]) logConflict(id streamID) {
 		"duplicate metric stream definitions",
 		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
 		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
+		"kinds", fmt.Sprintf("%s, %s", existing.Kind, id.Kind),
 		"units", fmt.Sprintf("%s, %s", existing.Unit, id.Unit),
 		"numbers", fmt.Sprintf("%s, %s", existing.Number, id.Number),
-		"aggregations", fmt.Sprintf("%s, %s", existing.Aggregation, id.Aggregation),
-		"monotonics", fmt.Sprintf("%t, %t", existing.Monotonic, id.Monotonic),
-		"temporalities", fmt.Sprintf("%s, %s", existing.Temporality.String(), id.Temporality.String()),
 	)
 }
 
-func (i *inserter[N]) streamID(kind InstrumentKind, stream Stream) streamID {
+func (i *inserter[N]) instID(kind InstrumentKind, stream Stream) instID {
 	var zero N
-	id := streamID{
+	return instID{
 		Name:        stream.Name,
 		Description: stream.Description,
 		Unit:        stream.Unit,
-		Aggregation: fmt.Sprintf("%T", stream.Aggregation),
-		Temporality: i.pipeline.reader.temporality(kind),
+		Kind:        kind,
 		Number:      fmt.Sprintf("%T", zero),
 	}
-
-	switch kind {
-	case InstrumentKindObservableCounter, InstrumentKindCounter, InstrumentKindHistogram:
-		id.Monotonic = true
-	}
-
-	return id
 }
 
 // aggregateFunc returns new aggregate functions matching agg, kind, and
@@ -526,7 +518,7 @@ type resolver[N int64 | float64] struct {
 	inserters []*inserter[N]
 }
 
-func newResolver[N int64 | float64](p pipelines, vc *cache[string, streamID]) resolver[N] {
+func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) resolver[N] {
 	in := make([]*inserter[N], len(p))
 	for i := range in {
 		in[i] = newInserter[N](p[i], vc)
