@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `AttributeKeys` fields allows users to specify an allow-list of attributes allowed to be recorded for a view.
   This change is made to ensure compatibility with the OpenTelemetry specification. (#4288)
 - If an attribute set is omitted from an async callback, the previous value will no longer be exported. (#4290)
+- Allow the explicit bucket histogram aggregation to be used for the up-down counter, observable counter, observable up-down counter, and observable gauge in the `go.opentelemetry.io/otel/sdk/metric` package. (#4332)
 - Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
 
 ### Fixed
