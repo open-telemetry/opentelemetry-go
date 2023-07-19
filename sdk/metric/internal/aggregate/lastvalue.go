@@ -32,18 +32,30 @@ type datapoint[N int64 | float64] struct {
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
+	limit  int
 	values map[attribute.Set]datapoint[N]
 }
 
 // newLastValue returns an Aggregator that summarizes a set of measurements as
 // the last one made.
-func newLastValue[N int64 | float64]() aggregator[N] {
-	return &lastValue[N]{values: make(map[attribute.Set]datapoint[N])}
+func newLastValue[N int64 | float64](limit int) aggregator[N] {
+	return &lastValue[N]{
+		limit:  limit,
+		values: make(map[attribute.Set]datapoint[N]),
+	}
 }
+
+var overflowAttr = attribute.NewSet(attribute.Bool("otel.metric.overflow", true))
 
 func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
 	d := datapoint[N]{timestamp: now(), value: value}
 	s.Lock()
+
+	_, exists := s.values[attr]
+	if !exists && len(s.values) >= int(s.limit)-1 {
+		attr = overflowAttr
+	}
+
 	s.values[attr] = d
 	s.Unlock()
 }

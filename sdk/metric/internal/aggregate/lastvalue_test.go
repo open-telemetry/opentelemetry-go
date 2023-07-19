@@ -15,6 +15,7 @@
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,13 +48,13 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 		return func(int) metricdata.Aggregation { return gauge }
 	}
 	incr := monoIncr[N]()
-	return tester.Run(newLastValue[N](), incr, eFunc(incr))
+	return tester.Run(newLastValue[N](math.MaxInt), incr, eFunc(incr))
 }
 
 func testLastValueReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	a := newLastValue[N]()
+	a := newLastValue[N](math.MaxInt)
 	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
@@ -86,11 +87,15 @@ func TestLastValueReset(t *testing.T) {
 }
 
 func TestEmptyLastValueNilAggregation(t *testing.T) {
-	assert.Nil(t, newLastValue[int64]().Aggregation())
-	assert.Nil(t, newLastValue[float64]().Aggregation())
+	assert.Nil(t, newLastValue[int64](math.MaxInt).Aggregation())
+	assert.Nil(t, newLastValue[float64](math.MaxInt).Aggregation())
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregator(newLastValue[int64]))
-	b.Run("Float64", benchmarkAggregator(newLastValue[float64]))
+	b.Run("Int64", benchmarkAggregator(func() aggregator[int64] {
+		return newLastValue[int64](math.MaxInt)
+	}))
+	b.Run("Float64", benchmarkAggregator(func() aggregator[float64] {
+		return newLastValue[float64](math.MaxInt)
+	}))
 }

@@ -220,6 +220,14 @@ func (r *PeriodicReader) aggregation(kind InstrumentKind) aggregation.Aggregatio
 	return r.exporter.Aggregation(kind)
 }
 
+// limit returns what aggregation cardinality limit to use for kind.
+func (r *PeriodicReader) limit(kind InstrumentKind) int {
+	// TODO: Update the Exporter interface to have the exporter pass this
+	// value. For example.
+	//return r.exporter.CardinalityLimit(kind)
+	return DefaultCardinalityLimitSelector(kind)
+}
+
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {

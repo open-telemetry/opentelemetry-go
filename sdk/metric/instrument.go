@@ -151,6 +151,9 @@ type Stream struct {
 	//
 	// If this slice is empty, all attributes will be kept.
 	AllowAttributeKeys []attribute.Key
+	// AggregationCardinalityLimit is the maximum number of data points allowed
+	// to be emitted in a collection cycle for the stream.
+	AggregationCardinalityLimit int
 }
 
 // attributeFilter returns an attribute.Filter that only allows attributes

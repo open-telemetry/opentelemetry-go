@@ -38,6 +38,7 @@ type ManualReader struct {
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	limitSelector       CardinalityLimitSelector
 }
 
 // Compile time check the manualReader implements Reader and is comparable.
@@ -49,6 +50,7 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 	r := &ManualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
+		// TODO: configure the limitSelector with a new option.
 	}
 	r.externalProducers.Store([]Producer{})
 	return r
@@ -89,6 +91,14 @@ func (mr *ManualReader) temporality(kind InstrumentKind) metricdata.Temporality 
 // aggregation returns what Aggregation to use for kind.
 func (mr *ManualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
+}
+
+// limit returns what aggregation cardinality limit to use for kind.
+func (mr *ManualReader) limit(kind InstrumentKind) int {
+	if mr.limitSelector != nil {
+		return mr.limitSelector(kind)
+	}
+	return DefaultCardinalityLimitSelector(kind)
 }
 
 // ForceFlush is a no-op, it always returns nil.

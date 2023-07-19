@@ -70,6 +70,10 @@ type Reader interface {
 	// aggregation returns what Aggregation to use for an instrument kind.
 	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
+	// limit returns the aggregation cardinality limit to use for an instrument
+	// kind.
+	limit(InstrumentKind) int
+
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in out. An error is returned if this is called
 	// after Shutdown or if out is nil.
@@ -167,3 +171,11 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 	}
 	panic("unknown instrument kind")
 }
+
+// CardinalityLimitSelector selects the aggregation cardinality limit to use
+// for a stream based on the InstrumentKind.
+type CardinalityLimitSelector func(InstrumentKind) int
+
+// DefaultCardinalityLimitSelector returns the default aggregation cardinality
+// limit that will be used for each InstrumentKind.
+func DefaultCardinalityLimitSelector(InstrumentKind) int { return 2000 }

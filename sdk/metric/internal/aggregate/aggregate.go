@@ -40,6 +40,8 @@ type Builder[N int64 | float64] struct {
 	// Filter is the attribute filter the aggregate function will use on the
 	// input of measurements.
 	Filter attribute.Filter
+	// Limit is the aggregation cardinality limit.
+	Limit int
 }
 
 func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
@@ -57,7 +59,7 @@ func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// Delta temporality is the only temporality that makes semantic sense for
 	// a last-value aggregate.
-	lv := newLastValue[N]()
+	lv := newLastValue[N](b.Limit)
 
 	return b.input(lv), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.

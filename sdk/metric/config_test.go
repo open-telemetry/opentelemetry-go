@@ -32,6 +32,7 @@ type reader struct {
 	externalProducers []Producer
 	temporalityFunc   TemporalitySelector
 	aggregationFunc   AggregationSelector
+	limitFunc         CardinalityLimitSelector
 	collectFunc       func(context.Context, *metricdata.ResourceMetrics) error
 	forceFlushFunc    func(context.Context) error
 	shutdownFunc      func(context.Context) error
@@ -43,8 +44,9 @@ func (r *reader) aggregation(kind InstrumentKind) aggregation.Aggregation { // n
 	return r.aggregationFunc(kind)
 }
 
-func (r *reader) register(p sdkProducer)      { r.producer = p }
-func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
+func (r *reader) register(p sdkProducer)        { r.producer = p }
+func (r *reader) RegisterProducer(p Producer)   { r.externalProducers = append(r.externalProducers, p) }
+func (r *reader) limit(kind InstrumentKind) int { return r.limitFunc(kind) }
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }

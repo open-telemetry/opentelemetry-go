@@ -325,7 +325,16 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
 	cv := i.aggregators.Lookup(id, func() aggVal[N] {
-		b := aggregate.Builder[N]{Temporality: id.Temporality}
+		b := aggregate.Builder[N]{
+			Temporality: id.Temporality,
+			// View limit has priority.
+			Limit: stream.AggregationCardinalityLimit,
+		}
+		if b.Limit == 0 {
+			// If limit not set in view, use reader defined (which should
+			// default to default limit of 2000 if not set).
+			b.Limit = i.pipeline.reader.limit(kind)
+		}
 		if len(stream.AllowAttributeKeys) > 0 {
 			b.Filter = stream.attributeFilter()
 		}
