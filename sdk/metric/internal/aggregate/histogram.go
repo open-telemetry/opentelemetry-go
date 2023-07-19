@@ -27,7 +27,7 @@ import (
 type buckets[N int64 | float64] struct {
 	counts   []uint64
 	count    uint64
-	sum      N
+	total    N
 	min, max N
 }
 
@@ -36,10 +36,11 @@ func newBuckets[N int64 | float64](n int) *buckets[N] {
 	return &buckets[N]{counts: make([]uint64, n)}
 }
 
+func (b *buckets[N]) sum(value N) { b.total += value }
+
 func (b *buckets[N]) bin(idx int, value N) {
 	b.counts[idx]++
 	b.count++
-	b.sum += value
 	if value < b.min {
 		b.min = value
 	} else if value > b.max {
@@ -50,13 +51,14 @@ func (b *buckets[N]) bin(idx int, value N) {
 // histValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type histValues[N int64 | float64] struct {
+	noSum  bool
 	bounds []float64
 
 	values   map[attribute.Set]*buckets[N]
 	valuesMu sync.Mutex
 }
 
-func newHistValues[N int64 | float64](bounds []float64) *histValues[N] {
+func newHistValues[N int64 | float64](bounds []float64, noSum bool) *histValues[N] {
 	// The responsibility of keeping all buckets correctly associated with the
 	// passed boundaries is ultimately this type's responsibility. Make a copy
 	// here so we can always guarantee this. Or, in the case of failure, have
@@ -65,6 +67,7 @@ func newHistValues[N int64 | float64](bounds []float64) *histValues[N] {
 	copy(b, bounds)
 	sort.Float64s(b)
 	return &histValues[N]{
+		noSum:  noSum,
 		bounds: b,
 		values: make(map[attribute.Set]*buckets[N]),
 	}
@@ -98,6 +101,9 @@ func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 		s.values[attr] = b
 	}
 	b.bin(idx, value)
+	if !s.noSum {
+		b.sum(value)
+	}
 }
 
 // newDeltaHistogram returns an Aggregator that summarizes a set of
@@ -107,9 +113,9 @@ func (s *histValues[N]) Aggregate(value N, attr attribute.Set) {
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func newDeltaHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) aggregator[N] {
+func newDeltaHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram, noSum bool) aggregator[N] {
 	return &deltaHistogram[N]{
-		histValues: newHistValues[N](cfg.Boundaries),
+		histValues: newHistValues[N](cfg.Boundaries, noSum),
 		noMinMax:   cfg.NoMinMax,
 		start:      now(),
 	}
@@ -148,7 +154,9 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 			Count:        b.count,
 			Bounds:       bounds,
 			BucketCounts: b.counts,
-			Sum:          b.sum,
+		}
+		if !s.noSum {
+			hdp.Sum = b.total
 		}
 		if !s.noMinMax {
 			hdp.Min = metricdata.NewExtrema(b.min)
@@ -170,9 +178,9 @@ func (s *deltaHistogram[N]) Aggregation() metricdata.Aggregation {
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func newCumulativeHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram) aggregator[N] {
+func newCumulativeHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram, noSum bool) aggregator[N] {
 	return &cumulativeHistogram[N]{
-		histValues: newHistValues[N](cfg.Boundaries),
+		histValues: newHistValues[N](cfg.Boundaries, noSum),
 		noMinMax:   cfg.NoMinMax,
 		start:      now(),
 	}
@@ -219,7 +227,9 @@ func (s *cumulativeHistogram[N]) Aggregation() metricdata.Aggregation {
 			Count:        b.count,
 			Bounds:       bounds,
 			BucketCounts: counts,
-			Sum:          b.sum,
+		}
+		if !s.noSum {
+			hdp.Sum = b.total
 		}
 		if !s.noMinMax {
 			hdp.Min = metricdata.NewExtrema(b.min)

@@ -498,7 +498,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 }
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
-	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
+	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Sum{} }))
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
@@ -643,7 +643,6 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncHistogram and Drop",
@@ -686,7 +685,6 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableUpDownCounter and Drop",
@@ -708,7 +706,6 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableUpDownCounter,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableGauge and Drop",
@@ -730,7 +727,6 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			name: "ObservableGauge and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableGauge,
 			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
 		},
 		{
 			name: "unknown kind with Sum should error",
