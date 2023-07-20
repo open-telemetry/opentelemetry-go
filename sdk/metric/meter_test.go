@@ -818,7 +818,7 @@ func TestGaugeStartTime(t *testing.T) {
 
 	// Assert StartTime.
 	assert.GreaterOrEqual(t, got.DataPoints[0].StartTime, before)
-	assert.GreaterOrEqual(t, got.DataPoints[0].StartTime, after)
+	assert.LessOrEqual(t, got.DataPoints[0].StartTime, after)
 }
 
 func TestRegisterNonSDKObserverErrors(t *testing.T) {
