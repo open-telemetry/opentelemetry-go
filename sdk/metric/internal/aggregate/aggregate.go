@@ -44,7 +44,7 @@ type Builder[N int64 | float64] struct {
 
 func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 	if b.Filter != nil {
-		fltr := b.Filter // Copy to prevent any funny stuff.
+		fltr := b.Filter // Copy to make it immutable after assignment.
 		return func(_ context.Context, n N, a attribute.Set) {
 			fAttr, _ := a.Filter(fltr)
 			agg.Aggregate(n, fAttr)
