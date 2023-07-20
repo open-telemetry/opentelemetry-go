@@ -55,7 +55,11 @@ func (b Builder[N]) filter(f Measure[N]) Measure[N] {
 
 func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 	if b.Filter != nil {
-		agg = newFilter[N](agg, b.Filter)
+		fltr := b.Filter // Copy to make it immutable after assignment.
+		return func(_ context.Context, n N, a attribute.Set) {
+			fAttr, _ := a.Filter(fltr)
+			agg.Aggregate(n, fAttr)
+		}
 	}
 	return func(_ context.Context, n N, a attribute.Set) {
 		agg.Aggregate(n, a)

@@ -55,8 +55,46 @@ var (
 	}
 )
 
+type inputTester[N int64 | float64] struct {
+	aggregator[N]
+
+	value N
+	attr  attribute.Set
+}
+
+func (it *inputTester[N]) Aggregate(v N, a attribute.Set) { it.value, it.attr = v, a }
+
+func TestBuilderInput(t *testing.T) {
+	t.Run("Int64", testBuilderInput[int64]())
+	t.Run("Float64", testBuilderInput[float64]())
+}
+
+func testBuilderInput[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+
+		value, attr := N(1), alice
+		run := func(b Builder[N], wantA attribute.Set) func(*testing.T) {
+			return func(t *testing.T) {
+				t.Helper()
+
+				it := &inputTester[N]{}
+				meas := b.input(it)
+				meas(context.Background(), value, attr)
+
+				assert.Equal(t, value, it.value, "measured incorrect value")
+				assert.Equal(t, wantA, it.attr, "measured incorrect attributes")
+			}
+		}
+
+		t.Run("NoFilter", run(Builder[N]{}, attr))
+		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice))
+	}
+}
+
 type arg[N int64 | float64] struct {
-	ctx   context.Context
+	ctx context.Context
+
 	value N
 	attr  attribute.Set
 }
