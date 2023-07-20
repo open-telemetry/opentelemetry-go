@@ -150,63 +150,6 @@ func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	return out
 }
 
-// precomputedValue is the recorded measurement value for a set of attributes.
-type precomputedValue[N int64 | float64] struct {
-	// measured is the last value measured for a set of attributes that were
-	// not filtered.
-	measured N
-	// filtered is the sum of values from measurements that had their
-	// attributes filtered.
-	filtered N
-}
-
-// precomputedMap is the storage for precomputed sums.
-type precomputedMap[N int64 | float64] struct {
-	sync.Mutex
-	values map[attribute.Set]precomputedValue[N]
-}
-
-func newPrecomputedMap[N int64 | float64]() *precomputedMap[N] {
-	return &precomputedMap[N]{
-		values: make(map[attribute.Set]precomputedValue[N]),
-	}
-}
-
-// Aggregate records value with the unfiltered attributes attr.
-//
-// If a previous measurement was made for the same attribute set:
-//
-//   - If that measurement's attributes were not filtered, this value overwrite
-//     that value.
-//   - If that measurement's attributes were filtered, this value will be
-//     recorded along side that value.
-func (s *precomputedMap[N]) Aggregate(value N, attr attribute.Set) {
-	s.Lock()
-	v := s.values[attr]
-	v.measured = value
-	s.values[attr] = v
-	s.Unlock()
-}
-
-// aggregateFiltered records value with the filtered attributes attr.
-//
-// If a previous measurement was made for the same attribute set:
-//
-//   - If that measurement's attributes were not filtered, this value will be
-//     recorded along side that value.
-//   - If that measurement's attributes were filtered, this value will be
-//     added to it.
-//
-// This method should not be used if attr have not been reduced by an attribute
-// filter.
-func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // Used to agg filtered.
-	s.Lock()
-	v := s.values[attr]
-	v.filtered += value
-	s.values[attr] = v
-	s.Unlock()
-}
-
 // newPrecomputedDeltaSum returns an Aggregator that summarizes a set of
 // pre-computed sums. Each sum is scoped by attributes and the aggregation
 // cycle the measurements were made in.
@@ -218,17 +161,17 @@ func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // 
 // The output Aggregation will report recorded values as delta temporality.
 func newPrecomputedDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedDeltaSum[N]{
-		precomputedMap: newPrecomputedMap[N](),
-		reported:       make(map[attribute.Set]N),
-		monotonic:      monotonic,
-		start:          now(),
+		valueMap:  newValueMap[N](),
+		reported:  make(map[attribute.Set]N),
+		monotonic: monotonic,
+		start:     now(),
 	}
 }
 
 // precomputedDeltaSum summarizes a set of pre-computed sums recorded over all
 // aggregation cycles as the delta of these sums.
 type precomputedDeltaSum[N int64 | float64] struct {
-	*precomputedMap[N]
+	*valueMap[N]
 
 	reported map[attribute.Set]N
 
@@ -263,15 +206,14 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
 	}
 	for attr, value := range s.values {
-		v := value.measured + value.filtered
-		delta := v - s.reported[attr]
+		delta := value - s.reported[attr]
 		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
 			Attributes: attr,
 			StartTime:  s.start,
 			Time:       t,
 			Value:      delta,
 		})
-		newReported[attr] = v
+		newReported[attr] = value
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
 	}
@@ -294,15 +236,15 @@ func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
 // temporality.
 func newPrecomputedCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
 	return &precomputedCumulativeSum[N]{
-		precomputedMap: newPrecomputedMap[N](),
-		monotonic:      monotonic,
-		start:          now(),
+		valueMap:  newValueMap[N](),
+		monotonic: monotonic,
+		start:     now(),
 	}
 }
 
 // precomputedCumulativeSum directly records and reports a set of pre-computed sums.
 type precomputedCumulativeSum[N int64 | float64] struct {
-	*precomputedMap[N]
+	*valueMap[N]
 
 	monotonic bool
 	start     time.Time
@@ -337,7 +279,7 @@ func (s *precomputedCumulativeSum[N]) Aggregation() metricdata.Aggregation {
 			Attributes: attr,
 			StartTime:  s.start,
 			Time:       t,
-			Value:      value.measured + value.filtered,
+			Value:      value,
 		})
 		// Unused attribute sets do not report.
 		delete(s.values, attr)

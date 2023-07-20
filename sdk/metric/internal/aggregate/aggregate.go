@@ -109,13 +109,13 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram, noSum bool) (Measure[N], ComputeAggregation) {
 	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = newDeltaHistogram[N](cfg)
+		h = newDeltaHistogram[N](cfg, noSum)
 	default:
-		h = newCumulativeHistogram[N](cfg)
+		h = newCumulativeHistogram[N](cfg, noSum)
 	}
 	return b.input(h), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.
