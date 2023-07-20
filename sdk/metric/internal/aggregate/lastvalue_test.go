@@ -16,6 +16,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -37,29 +38,31 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 		CycleN:       defaultCycles,
 	}
 
+	startTime := now()
 	eFunc := func(increments setMap[N]) expectFunc {
 		data := make([]metricdata.DataPoint[N], 0, len(increments))
 		for a, v := range increments {
-			point := metricdata.DataPoint[N]{Attributes: a, Time: now(), Value: N(v)}
+			point := metricdata.DataPoint[N]{Attributes: a, Time: now(), StartTime: startTime, Value: N(v)}
 			data = append(data, point)
 		}
 		gauge := metricdata.Gauge[N]{DataPoints: data}
 		return func(int) metricdata.Aggregation { return gauge }
 	}
 	incr := monoIncr[N]()
-	return tester.Run(newLastValue[N](), incr, eFunc(incr))
+	return tester.Run(newLastValue[N](startTime), incr, eFunc(incr))
 }
 
 func testLastValueReset[N int64 | float64](t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	a := newLastValue[N]()
+	a := newLastValue[N](now())
 	assert.Nil(t, a.Aggregation())
 
 	a.Aggregate(1, alice)
 	expect := metricdata.Gauge[N]{
 		DataPoints: []metricdata.DataPoint[N]{{
 			Attributes: alice,
+			StartTime:  now(),
 			Time:       now(),
 			Value:      1,
 		}},
@@ -74,6 +77,7 @@ func testLastValueReset[N int64 | float64](t *testing.T) {
 	a.Aggregate(1, bob)
 	expect.DataPoints = []metricdata.DataPoint[N]{{
 		Attributes: bob,
+		StartTime:  now(),
 		Time:       now(),
 		Value:      1,
 	}}
@@ -86,11 +90,11 @@ func TestLastValueReset(t *testing.T) {
 }
 
 func TestEmptyLastValueNilAggregation(t *testing.T) {
-	assert.Nil(t, newLastValue[int64]().Aggregation())
-	assert.Nil(t, newLastValue[float64]().Aggregation())
+	assert.Nil(t, newLastValue[int64](time.Time{}).Aggregation())
+	assert.Nil(t, newLastValue[float64](time.Time{}).Aggregation())
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregator(newLastValue[int64]))
-	b.Run("Float64", benchmarkAggregator(newLastValue[float64]))
+	b.Run("Int64", benchmarkAggregator(func() aggregator[int64] { return newLastValue[int64](time.Time{}) }))
+	b.Run("Int64", benchmarkAggregator(func() aggregator[float64] { return newLastValue[float64](time.Time{}) }))
 }

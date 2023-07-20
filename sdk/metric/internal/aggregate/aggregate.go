@@ -16,6 +16,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -31,6 +32,8 @@ type ComputeAggregation func(dest *metricdata.Aggregation) int
 
 // Builder builds an aggregate function.
 type Builder[N int64 | float64] struct {
+	// PipelineStartTime is the timestamp when metrics pipeline started.
+	PipelineStartTime time.Time
 	// Temporality is the temporality used for the returned aggregate function.
 	//
 	// If this is not provided a default of cumulative will be used (except for
@@ -57,7 +60,7 @@ func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// Delta temporality is the only temporality that makes semantic sense for
 	// a last-value aggregate.
-	lv := newLastValue[N]()
+	lv := newLastValue[N](b.PipelineStartTime)
 
 	return b.input(lv), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -47,7 +48,7 @@ func testSumAggregateOutput(dest *metricdata.Aggregation) int {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, time.Time{}, nil, nil)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -73,7 +74,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil)
+	pipe := newPipeline(res, time.Time{}, nil, nil)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -82,7 +83,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrency(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, time.Time{}, nil, nil)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
 
@@ -132,11 +133,11 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil),
+				pipe: newPipeline(nil, time.Time{}, reader, nil),
 			},
 			{
 				name: "NoMatchingView",
-				pipe: newPipeline(nil, reader, []View{
+				pipe: newPipeline(nil, time.Time{}, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
 				}),
 			},
@@ -222,7 +223,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i := newInserter[int64](newPipeline(nil, time.Time{}, nil, nil), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -351,7 +352,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var c cache[string, instID]
-			p := newPipeline(nil, tt.reader, tt.views)
+			p := newPipeline(nil, time.Time{}, tt.reader, tt.views)
 			i := newInserter[N](p, &c)
 			input, err := i.Instrument(tt.inst)
 			var comps []aggregate.ComputeAggregation
@@ -372,7 +373,7 @@ func TestCreateAggregators(t *testing.T) {
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	var c cache[string, instID]
-	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}), &c)
+	i := newInserter[N](newPipeline(nil, time.Time{}, NewManualReader(), []View{defaultView}), &c)
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),

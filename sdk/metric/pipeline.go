@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
@@ -49,14 +50,15 @@ type instrumentSync struct {
 	compAgg     aggregate.ComputeAggregation
 }
 
-func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline {
+func newPipeline(res *resource.Resource, startTime time.Time, reader Reader, views []View) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
 	return &pipeline{
-		resource: res,
-		reader:   reader,
-		views:    views,
+		resource:  res,
+		startTime: startTime,
+		reader:    reader,
+		views:     views,
 		// aggregations is lazy allocated when needed.
 	}
 }
@@ -70,8 +72,9 @@ func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline 
 type pipeline struct {
 	resource *resource.Resource
 
-	reader Reader
-	views  []View
+	startTime time.Time
+	reader    Reader
+	views     []View
 
 	sync.Mutex
 	aggregations   map[instrumentation.Scope][]instrumentSync
@@ -326,7 +329,8 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	i.logConflict(id)
 	cv := i.aggregators.Lookup(id, func() aggVal[N] {
 		b := aggregate.Builder[N]{
-			Temporality: i.pipeline.reader.temporality(kind),
+			PipelineStartTime: i.pipeline.startTime,
+			Temporality:       i.pipeline.reader.temporality(kind),
 		}
 		if len(stream.AllowAttributeKeys) > 0 {
 			b.Filter = stream.attributeFilter()
@@ -480,8 +484,9 @@ type pipelines []*pipeline
 
 func newPipelines(res *resource.Resource, readers []Reader, views []View) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
+	startTime := time.Now()
 	for _, r := range readers {
-		p := newPipeline(res, r, views)
+		p := newPipeline(res, startTime, r, views)
 		r.register(p)
 		pipes = append(pipes, p)
 	}

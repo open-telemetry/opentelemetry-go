@@ -32,13 +32,17 @@ type datapoint[N int64 | float64] struct {
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
-	values map[attribute.Set]datapoint[N]
+	startTime time.Time
+	values    map[attribute.Set]datapoint[N]
 }
 
 // newLastValue returns an Aggregator that summarizes a set of measurements as
 // the last one made.
-func newLastValue[N int64 | float64]() aggregator[N] {
-	return &lastValue[N]{values: make(map[attribute.Set]datapoint[N])}
+func newLastValue[N int64 | float64](startTime time.Time) aggregator[N] {
+	return &lastValue[N]{
+		startTime: startTime,
+		values:    make(map[attribute.Set]datapoint[N]),
+	}
 }
 
 func (s *lastValue[N]) Aggregate(value N, attr attribute.Set) {
@@ -62,10 +66,10 @@ func (s *lastValue[N]) Aggregation() metricdata.Aggregation {
 	for a, v := range s.values {
 		gauge.DataPoints = append(gauge.DataPoints, metricdata.DataPoint[N]{
 			Attributes: a,
-			// The event time is the only meaningful timestamp, StartTime is
-			// ignored.
-			Time:  v.timestamp,
-			Value: v.value,
+			// StartTime is set to the timestamp when a metric collection system started.
+			StartTime: s.startTime,
+			Time:      v.timestamp,
+			Value:     v.value,
 		})
 		// Do not report stale values.
 		delete(s.values, a)
