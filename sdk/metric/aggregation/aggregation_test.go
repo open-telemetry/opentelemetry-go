@@ -20,6 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func defaultExponentialHistogram() ExponentialHistogram {
+	return ExponentialHistogram{
+		MaxSize:  160,
+		MaxScale: 20,
+	}
+}
+
 func TestAggregationErr(t *testing.T) {
 	t.Run("DropOperation", func(t *testing.T) {
 		assert.NoError(t, Drop{}.Err())
@@ -57,7 +64,7 @@ func TestAggregationErr(t *testing.T) {
 	})
 
 	t.Run("ExponentialHistogramOperation", func(t *testing.T) {
-		assert.NoError(t, DefaultExponentialHistogram().Err())
+		assert.NoError(t, defaultExponentialHistogram().Err())
 
 		assert.NoError(t, ExponentialHistogram{
 			MaxSize:  1,

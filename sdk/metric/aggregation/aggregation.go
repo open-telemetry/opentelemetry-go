@@ -183,14 +183,6 @@ type ExponentialHistogram struct {
 	NoMinMax bool
 }
 
-// DefaultExponentialHistogram returns the default Exponential Histogram aggregation.
-func DefaultExponentialHistogram() ExponentialHistogram {
-	return ExponentialHistogram{
-		MaxSize:  160,
-		MaxScale: 20,
-	}
-}
-
 var _ Aggregation = ExponentialHistogram{}
 
 // private attempts to ensure no user-defined Aggregation is allowed. The

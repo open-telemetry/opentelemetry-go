@@ -624,7 +624,10 @@ func BenchmarkAppend(b *testing.B) {
 	}
 }
 
-var expoHistConf = aggregation.DefaultExponentialHistogram()
+var expoHistConf = aggregation.ExponentialHistogram{
+	MaxSize:  160,
+	MaxScale: 20,
+}
 
 func BenchmarkExponentialHistogram(b *testing.B) {
 	b.Run("Int64", benchmarkExponentialHistogram[int64])
