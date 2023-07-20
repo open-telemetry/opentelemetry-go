@@ -34,7 +34,7 @@ type ManualReader struct {
 
 	mu                sync.Mutex
 	isShutdown        bool
-	externalProducers atomic.Value
+	externalProducers []Producer
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
@@ -49,8 +49,8 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 	r := &ManualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
+		externalProducers:   cfg.producers,
 	}
-	r.externalProducers.Store([]Producer{})
 	return r
 }
 
@@ -62,23 +62,6 @@ func (mr *ManualReader) register(p sdkProducer) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
-}
-
-// RegisterProducer stores the external Producer which enables the caller
-// to read metrics on demand.
-//
-// This method is safe to call concurrently.
-func (mr *ManualReader) RegisterProducer(p Producer) {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
-	if mr.isShutdown {
-		return
-	}
-	currentProducers := mr.externalProducers.Load().([]Producer)
-	newProducers := []Producer{}
-	newProducers = append(newProducers, currentProducers...)
-	newProducers = append(newProducers, p)
-	mr.externalProducers.Store(newProducers)
 }
 
 // temporality reports the Temporality for the instrument kind provided.
@@ -105,7 +88,7 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 		defer mr.mu.Unlock()
 		mr.isShutdown = true
 		// release references to Producer(s)
-		mr.externalProducers.Store([]Producer{})
+		mr.externalProducers = nil
 		err = nil
 	})
 	return err
@@ -143,7 +126,7 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		return err
 	}
 	var errs []error
-	for _, producer := range mr.externalProducers.Load().([]Producer) {
+	for _, producer := range mr.externalProducers {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
 			errs = append(errs, err)
@@ -176,6 +159,7 @@ func (r *ManualReader) MarshalLog() interface{} {
 type manualReaderConfig struct {
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	producers           []Producer
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.

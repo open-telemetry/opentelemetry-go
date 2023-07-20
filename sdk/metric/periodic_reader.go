@@ -36,8 +36,9 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval time.Duration
-	timeout  time.Duration
+	interval  time.Duration
+	timeout   time.Duration
+	producers []Producer
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -118,18 +119,18 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &PeriodicReader{
-		interval: conf.interval,
-		timeout:  conf.timeout,
-		exporter: exporter,
-		flushCh:  make(chan chan error),
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		interval:          conf.interval,
+		timeout:           conf.timeout,
+		exporter:          exporter,
+		flushCh:           make(chan chan error),
+		cancel:            cancel,
+		done:              make(chan struct{}),
+		externalProducers: conf.producers,
 		rmPool: sync.Pool{
 			New: func() interface{} {
 				return &metricdata.ResourceMetrics{}
 			}},
 	}
-	r.externalProducers.Store([]Producer{})
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -146,7 +147,7 @@ type PeriodicReader struct {
 
 	mu                sync.Mutex
 	isShutdown        bool
-	externalProducers atomic.Value
+	externalProducers []Producer
 
 	interval time.Duration
 	timeout  time.Duration
@@ -195,22 +196,6 @@ func (r *PeriodicReader) register(p sdkProducer) {
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}
-}
-
-// RegisterProducer registers p as an external Producer of this reader.
-//
-// This method is safe to call concurrently.
-func (r *PeriodicReader) RegisterProducer(p Producer) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.isShutdown {
-		return
-	}
-	currentProducers := r.externalProducers.Load().([]Producer)
-	newProducers := []Producer{}
-	newProducers = append(newProducers, currentProducers...)
-	newProducers = append(newProducers, p)
-	r.externalProducers.Store(newProducers)
 }
 
 // temporality reports the Temporality for the instrument kind provided.
@@ -278,7 +263,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 		return err
 	}
 	var errs []error
-	for _, producer := range r.externalProducers.Load().([]Producer) {
+	for _, producer := range r.externalProducers {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
 			errs = append(errs, err)
@@ -368,7 +353,7 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		defer r.mu.Unlock()
 		r.isShutdown = true
 		// release references to Producer(s)
-		r.externalProducers.Store([]Producer{})
+		r.externalProducers = nil
 	})
 	return err
 }
