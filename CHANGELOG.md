@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for Exponential Histogram Aggregations. A Histogram can be configured as an Exponential Histogram using a view with the `go.opentelemetry.io/otel/sdk/metric/aggregation.ExponentialHistogram` as the aggregation. (#4245)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
+- OTLP Metrics Exporter now supports the `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` environment variable. (#4287)
 - Add `WithoutCounterSuffixes` option in `go.opentelemetry.io/otel/exporters/prometheus` to disable addition of `_total` suffixes. (#4306)
 - Add info and debug logging to the metric SDK. (#4315)
 

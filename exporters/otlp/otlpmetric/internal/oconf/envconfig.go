@@ -24,6 +24,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -96,6 +99,7 @@ func getOptionsFromEnv() []GenericOption {
 		WithEnvCompression("METRICS_COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
 		envconfig.WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
 		envconfig.WithDuration("METRICS_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+		withEnvTemporalityPreference("METRICS_TEMPORALITY_PREFERENCE", func(t metric.TemporalitySelector) { opts = append(opts, WithTemporalitySelector(t)) }),
 	)
 
 	return opts
@@ -146,5 +150,44 @@ func withTLSConfig(c *tls.Config, fn func(*tls.Config)) func(e *envconfig.EnvOpt
 		if c.RootCAs != nil || len(c.Certificates) > 0 {
 			fn(c)
 		}
+	}
+}
+
+func withEnvTemporalityPreference(n string, fn func(metric.TemporalitySelector)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
+		if s, ok := e.GetEnvValue(n); ok {
+			switch strings.ToLower(s) {
+			case "cumulative":
+				fn(cumulativeTemporality)
+			case "delta":
+				fn(deltaTemporality)
+			case "lowmemory":
+				fn(lowMemory)
+			default:
+				global.Warn("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE is set to an invalid value, ignoring.", "value", s)
+			}
+		}
+	}
+}
+
+func cumulativeTemporality(metric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
+}
+
+func deltaTemporality(ik metric.InstrumentKind) metricdata.Temporality {
+	switch ik {
+	case metric.InstrumentKindCounter, metric.InstrumentKindHistogram, metric.InstrumentKindObservableCounter:
+		return metricdata.DeltaTemporality
+	default:
+		return metricdata.CumulativeTemporality
+	}
+}
+
+func lowMemory(ik metric.InstrumentKind) metricdata.Temporality {
+	switch ik {
+	case metric.InstrumentKindCounter, metric.InstrumentKindHistogram:
+		return metricdata.DeltaTemporality
+	default:
+		return metricdata.CumulativeTemporality
 	}
 }
