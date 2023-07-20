@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -785,6 +786,39 @@ func TestValidateInstrumentName(t *testing.T) {
 			assert.Equal(t, tt.wantErr, validateInstrumentName(tt.name))
 		})
 	}
+}
+
+func TestGaugeStartTime(t *testing.T) {
+	// Ensures https://github.com/open-telemetry/opentelemetry-specification/blob/dc78006c12d9767fd2e35b691706c7572a76fd43/specification/metrics/data-model.md#L440-L442
+	// A timestamp (start_time_unix_nano) which best represents the first possible moment a measurement could be recorded.
+	// This is commonly set to the timestamp when a metric collection system started.
+
+	// Start the system collection.
+	rdr := NewManualReader()
+	before := time.Now() // Time before metric collection system started.
+	m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+	cback := func(_ context.Context, o metric.Int64Observer) error {
+		o.Observe(4)
+		return nil
+	}
+	after := time.Now() // Time after metric collection system started.
+
+	// Make a gauge and a measurment.
+	_, err := m.Int64ObservableGauge("agauge", metric.WithInt64Callback(cback))
+	require.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = rdr.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	require.Len(t, sm.Metrics, 1)
+	got, ok := sm.Metrics[0].Data.(metricdata.Gauge[int64])
+	require.True(t, ok)
+	require.Len(t, got.DataPoints, 1)
+
+	// Assert StartTime.
+	assert.GreaterOrEqual(t, got.DataPoints[0].StartTime, before)
+	assert.GreaterOrEqual(t, got.DataPoints[0].StartTime, after)
 }
 
 func TestRegisterNonSDKObserverErrors(t *testing.T) {
