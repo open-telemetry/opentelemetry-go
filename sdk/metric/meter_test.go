@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
@@ -1810,4 +1811,79 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 		sfUpDownCounter, _ = meter.Float64UpDownCounter("sync.float64.up.down.counter")
 		sfHistogram, _ = meter.Float64Histogram("sync.float64.histogram")
 	}
+}
+
+func nilAggregationSelector(InstrumentKind) aggregation.Aggregation {
+	return nil
+}
+
+type noErrorHandler struct {
+	t *testing.T
+}
+
+func (h noErrorHandler) Handle(err error) {
+	assert.NoError(h.t, err)
+}
+
+func TestNilAggregationSelector(t *testing.T) {
+	origErrorHandler := global.GetErrorHandler()
+	defer global.SetErrorHandler(origErrorHandler)
+
+	global.SetErrorHandler(noErrorHandler{t})
+
+	reader := NewManualReader(WithAggregationSelector(nilAggregationSelector))
+	meter := NewMeterProvider(WithReader(reader)).Meter("TestNilAggregationSelector")
+
+	aiCounter, err := meter.Int64ObservableCounter("observable.int64.counter")
+	require.NoError(t, err)
+	aiUpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+	require.NoError(t, err)
+	aiGauge, err := meter.Int64ObservableGauge("observable.int64.gauge")
+	require.NoError(t, err)
+
+	afCounter, err := meter.Float64ObservableCounter("observable.float64.counter")
+	require.NoError(t, err)
+	afUpDownCounter, err := meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
+	require.NoError(t, err)
+	afGauge, err := meter.Float64ObservableGauge("observable.float64.gauge")
+	require.NoError(t, err)
+
+	siCounter, err := meter.Int64Counter("sync.int64.counter")
+	require.NoError(t, err)
+	siUpDownCounter, err := meter.Int64UpDownCounter("sync.int64.up.down.counter")
+	require.NoError(t, err)
+	siHistogram, err := meter.Int64Histogram("sync.int64.histogram")
+	require.NoError(t, err)
+
+	sfCounter, err := meter.Float64Counter("sync.float64.counter")
+	require.NoError(t, err)
+	sfUpDownCounter, err := meter.Float64UpDownCounter("sync.float64.up.down.counter")
+	require.NoError(t, err)
+	sfHistogram, err := meter.Float64Histogram("sync.float64.histogram")
+	require.NoError(t, err)
+
+	callback := func(ctx context.Context, obs metric.Observer) error {
+		obs.ObserveInt64(aiCounter, 1)
+		obs.ObserveInt64(aiUpDownCounter, 1)
+		obs.ObserveInt64(aiGauge, 1)
+		obs.ObserveFloat64(afCounter, 1)
+		obs.ObserveFloat64(afUpDownCounter, 1)
+		obs.ObserveFloat64(afGauge, 1)
+		return nil
+	}
+	meter.RegisterCallback(callback, aiCounter, aiUpDownCounter, aiGauge, afCounter, afUpDownCounter, afGauge)
+
+	siCounter.Add(context.Background(), 1)
+	siUpDownCounter.Add(context.Background(), 1)
+	siHistogram.Record(context.Background(), 1)
+	sfCounter.Add(context.Background(), 1)
+	sfUpDownCounter.Add(context.Background(), 1)
+	sfHistogram.Record(context.Background(), 1)
+
+	var rm metricdata.ResourceMetrics
+	err = reader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
 }
