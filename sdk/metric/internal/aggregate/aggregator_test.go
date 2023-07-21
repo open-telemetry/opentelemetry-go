@@ -38,10 +38,6 @@ func monoIncr[N int64 | float64]() setMap[N] {
 	return setMap[N]{alice: 1, bob: 10, carol: 2}
 }
 
-func nonMonoIncr[N int64 | float64]() setMap[N] {
-	return setMap[N]{alice: 1, bob: -1, carol: 2}
-}
-
 // setMap maps attribute sets to a number.
 type setMap[N int64 | float64] map[attribute.Set]N
 
