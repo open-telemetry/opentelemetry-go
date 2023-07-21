@@ -46,7 +46,6 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 
 	wg.Wait()
 	reset()
-
 }
 
 func TestLogLevel(t *testing.T) {
