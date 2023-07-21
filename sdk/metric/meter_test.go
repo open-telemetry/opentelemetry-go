@@ -1934,7 +1934,8 @@ func TestMalformedSelectors(t *testing.T) {
 				obs.ObserveFloat64(afGauge, 1)
 				return nil
 			}
-			meter.RegisterCallback(callback, aiCounter, aiUpDownCounter, aiGauge, afCounter, afUpDownCounter, afGauge)
+			_, err = meter.RegisterCallback(callback, aiCounter, aiUpDownCounter, aiGauge, afCounter, afUpDownCounter, afGauge)
+			require.NoError(t, err)
 
 			siCounter.Add(context.Background(), 1)
 			siUpDownCounter.Add(context.Background(), 1)
@@ -1949,6 +1950,8 @@ func TestMalformedSelectors(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
+
+			tt.reader.Shutdown(context.Background())
 		})
 	}
 }
