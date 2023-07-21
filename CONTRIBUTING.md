@@ -560,7 +560,7 @@ interface that defines the specific functionality should be preferred.
 
 The tests should never leak goroutines.
 
-Use the term `ConcurrentSafe`` in the test name when it aims to verify the
+Use the term `ConcurrentSafe` in the test name when it aims to verify the
 absence of race conditions.
 
 ## Approvers and Maintainers
