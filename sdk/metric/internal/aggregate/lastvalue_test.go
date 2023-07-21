@@ -15,12 +15,10 @@
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
 import (
+	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestLastValue(t *testing.T) {
@@ -31,66 +29,69 @@ func TestLastValue(t *testing.T) {
 }
 
 func testLastValue[N int64 | float64]() func(*testing.T) {
-	tester := &aggregatorTester[N]{
-		GoroutineN:   defaultGoroutines,
-		MeasurementN: defaultMeasurements,
-		CycleN:       defaultCycles,
-	}
-
-	eFunc := func(increments setMap[N]) expectFunc {
-		data := make([]metricdata.DataPoint[N], 0, len(increments))
-		for a, v := range increments {
-			point := metricdata.DataPoint[N]{Attributes: a, Time: now(), Value: N(v)}
-			data = append(data, point)
-		}
-		gauge := metricdata.Gauge[N]{DataPoints: data}
-		return func(int) metricdata.Aggregation { return gauge }
-	}
-	incr := monoIncr[N]()
-	return tester.Run(newLastValue[N](), incr, eFunc(incr))
-}
-
-func testLastValueReset[N int64 | float64](t *testing.T) {
-	t.Cleanup(mockTime(now))
-
-	a := newLastValue[N]()
-	assert.Nil(t, a.Aggregation())
-
-	a.Aggregate(1, alice)
-	expect := metricdata.Gauge[N]{
-		DataPoints: []metricdata.DataPoint[N]{{
-			Attributes: alice,
-			Time:       now(),
-			Value:      1,
-		}},
-	}
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
-
-	// The attr set should be forgotten once Aggregations is called.
-	expect.DataPoints = nil
-	assert.Nil(t, a.Aggregation())
-
-	// Aggregating another set should not affect the original (alice).
-	a.Aggregate(1, bob)
-	expect.DataPoints = []metricdata.DataPoint[N]{{
-		Attributes: bob,
-		Time:       now(),
-		Value:      1,
-	}}
-	metricdatatest.AssertAggregationsEqual(t, expect, a.Aggregation())
-}
-
-func TestLastValueReset(t *testing.T) {
-	t.Run("Int64", testLastValueReset[int64])
-	t.Run("Float64", testLastValueReset[float64])
-}
-
-func TestEmptyLastValueNilAggregation(t *testing.T) {
-	assert.Nil(t, newLastValue[int64]().Aggregation())
-	assert.Nil(t, newLastValue[float64]().Aggregation())
+	in, out := Builder[N]{Filter: attrFltr}.LastValue()
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			// Empty output if nothing is measured.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, -1, bob},
+				{ctx, 1, fltrAlice},
+				{ctx, 2, alice},
+				{ctx, -10, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							Time:       staticTime,
+							Value:      2,
+						},
+						{
+							Attributes: fltrBob,
+							Time:       staticTime,
+							Value:      -10,
+						},
+					},
+				},
+			},
+		}, {
+			// Everything resets, do not report old measurements.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
+		}, {
+			input: []arg[N]{
+				{ctx, 10, alice},
+				{ctx, 3, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							Time:       staticTime,
+							Value:      10,
+						},
+						{
+							Attributes: fltrBob,
+							Time:       staticTime,
+							Value:      3,
+						},
+					},
+				},
+			},
+		},
+	})
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregator(newLastValue[int64]))
-	b.Run("Float64", benchmarkAggregator(newLastValue[float64]))
+	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.LastValue))
+	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.LastValue))
 }
