@@ -52,7 +52,7 @@ var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer)
 	return nil
 }
 
-func TestMeterRace(t *testing.T) {
+func TestMeterConcurrentSafe(t *testing.T) {
 	mtr := &meter{}
 
 	wg := &sync.WaitGroup{}
@@ -94,7 +94,7 @@ func TestMeterRace(t *testing.T) {
 	<-done
 }
 
-func TestUnregisterRace(t *testing.T) {
+func TestUnregisterConcurrentSafe(t *testing.T) {
 	mtr := &meter{}
 	reg, err := mtr.RegisterCallback(zeroCallback)
 	require.NoError(t, err)
