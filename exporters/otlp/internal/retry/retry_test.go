@@ -227,7 +227,7 @@ func TestRetryNotEnabled(t *testing.T) {
 	}), assert.AnError)
 }
 
-func TestConcurrentRetry(t *testing.T) {
+func TestRetryConcurrentSafe(t *testing.T) {
 	ev := func(error) (bool, time.Duration) { return true, 0 }
 	reqFunc := Config{
 		Enabled: true,

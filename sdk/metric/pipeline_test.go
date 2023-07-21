@@ -81,7 +81,7 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrency(t *testing.T) {
+func TestPipelineConcurrentSafe(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics

@@ -78,7 +78,7 @@ func (at *aggregatorTester[N]) Run(a aggregator[N], incr setMap[N], eFunc expect
 			})
 		})
 
-		t.Run("Correctness", func(t *testing.T) {
+		t.Run("CorrectnessConcurrentSafe", func(t *testing.T) {
 			for i := 0; i < at.CycleN; i++ {
 				var wg sync.WaitGroup
 				wg.Add(at.GoroutineN)

@@ -56,7 +56,7 @@ func (c *client) Shutdown(context.Context) error {
 	return nil
 }
 
-func TestExporterClientConcurrency(t *testing.T) {
+func TestExporterClientConcurrentSafe(t *testing.T) {
 	const goroutines = 5
 
 	exp := New(&client{})
