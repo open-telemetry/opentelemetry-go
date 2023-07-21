@@ -27,10 +27,12 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-func TestMeterProviderRace(t *testing.T) {
+func TestMeterProviderConcurrentSafe(t *testing.T) {
 	mp := &meterProvider{}
+	done := make(chan struct{})
 	finish := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i := 0; ; i++ {
 			mp.Meter(fmt.Sprintf("a%d", i))
 			select {
@@ -43,6 +45,7 @@ func TestMeterProviderRace(t *testing.T) {
 
 	mp.setDelegate(noop.NewMeterProvider())
 	close(finish)
+	<-done
 }
 
 var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer) error {
@@ -54,8 +57,10 @@ func TestMeterRace(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	done := make(chan struct{})
 	finish := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i, once := 0, false; ; i++ {
 			name := fmt.Sprintf("a%d", i)
 			_, _ = mtr.Float64ObservableCounter(name)
@@ -86,6 +91,7 @@ func TestMeterRace(t *testing.T) {
 	wg.Wait()
 	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
+	<-done
 }
 
 func TestUnregisterRace(t *testing.T) {
@@ -95,8 +101,10 @@ func TestUnregisterRace(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	done := make(chan struct{})
 	finish := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i, once := 0, false; ; i++ {
 			_ = reg.Unregister()
 			if !once {
@@ -115,6 +123,7 @@ func TestUnregisterRace(t *testing.T) {
 	wg.Wait()
 	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
+	<-done
 }
 
 func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Counter, metric.Float64ObservableCounter) {
