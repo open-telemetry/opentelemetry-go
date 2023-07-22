@@ -49,6 +49,8 @@ module-sets:
       - go.opentelemetry.io/otel/bridge/opencensus
       - go.opentelemetry.io/otel/bridge/opencensus/test
       - go.opentelemetry.io/otel/example/view
+      - go.opentelemetry.io/otel/bridge/prometheus
+      - go.opentelemetry.io/otel/example/prometheusbridge
   experimental-schema:
     version: v0.0.4
     modules:

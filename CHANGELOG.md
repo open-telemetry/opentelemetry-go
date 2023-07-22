@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add info and debug logging to the metric SDK. (#4315)
 - The `go.opentelemetry.io/otel/semconv/v1.21.0` package.
   The package contains semantic conventions from the `v1.21.0` version of the OpenTelemetry Semantic Conventions. (#4362)
+- Add `go.opentelemetry.io/otel/bridge/prometheus` which can bridge metrics defined using the prometheus client library to OpenTelemetry. (#4351)
 
 ### Changed
 

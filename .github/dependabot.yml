@@ -65,6 +65,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /bridge/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /example/fib
     labels:
       - dependencies
@@ -120,6 +129,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /example/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /example/prometheusbridge
     labels:
       - dependencies
       - go
