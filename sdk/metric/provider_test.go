@@ -37,8 +37,8 @@ func TestMeterConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_ = mp.Meter(name)
-		close(done)
 	}()
 
 	_ = mp.Meter(name)
@@ -50,8 +50,8 @@ func TestForceFlushConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_ = mp.ForceFlush(context.Background())
-		close(done)
 	}()
 
 	_ = mp.ForceFlush(context.Background())
@@ -63,8 +63,8 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_ = mp.Shutdown(context.Background())
-		close(done)
 	}()
 
 	_ = mp.Shutdown(context.Background())
@@ -77,8 +77,8 @@ func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		_ = mp.Shutdown(context.Background())
-		close(done)
 	}()
 
 	_ = mp.Meter(name)
