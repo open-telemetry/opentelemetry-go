@@ -243,3 +243,118 @@ func TestLogConflictName(t *testing.T) {
 		msg = ""
 	}
 }
+
+func TestLogConflictSuggestView(t *testing.T) {
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	orig := instID{
+		Name:        "requestCount",
+		Description: "number of requests",
+		Kind:        InstrumentKindCounter,
+		Unit:        "1",
+		Number:      "int64",
+	}
+
+	var vc cache[string, instID]
+	name := strings.ToLower(orig.Name)
+	_ = vc.Lookup(name, func() instID { return orig })
+	i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+
+	viewSuggestion := func(inst instID, stream string) string {
+		return `"NewView(Instrument{` +
+			`Name: \"` + inst.Name +
+			`\", Description: \"` + inst.Description +
+			`\", Kind: \"InstrumentKind` + inst.Kind.String() +
+			`\", Unit: \"` + inst.Unit +
+			`\"}, ` +
+			stream +
+			`)"`
+	}
+
+	t.Run("Name", func(t *testing.T) {
+		inst := instID{
+			Name:        "requestcount",
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Description", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: "alt",
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Description: \"`+orig.Description+`\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Kind", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        InstrumentKindHistogram,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Unit", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        "ms",
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Number", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      "float64",
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+}
