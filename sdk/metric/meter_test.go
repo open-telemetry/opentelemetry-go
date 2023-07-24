@@ -1894,6 +1894,10 @@ func TestMalformedSelectors(t *testing.T) {
 			defer global.SetErrorHandler(origErrorHandler)
 			global.SetErrorHandler(noErrorHandler{t})
 
+			defer func() {
+				_ = tt.reader.Shutdown(context.Background())
+			}()
+
 			meter := NewMeterProvider(WithReader(tt.reader)).Meter("TestNilAggregationSelector")
 
 			// Create All instruments, they should not error
@@ -1951,7 +1955,6 @@ func TestMalformedSelectors(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
 
-			_ = tt.reader.Shutdown(context.Background())
 		})
 	}
 }
