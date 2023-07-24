@@ -1,8 +1,8 @@
-# OpenTelemetry-Go OTLP Metric GRPC Exporter
+# OpenTelemetry-Go OTLP Metric gRPC Exporter
 
 [![Go Reference](https://pkg.go.dev/badge/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc)
 
-[OpenTelemetry Protocol Exporter](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/protocol/exporter.md) implementation.
+[OpenTelemetry Protocol Exporter](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/protocol/exporter.md) implementation using gRPC.
 
 ## Installation
 
@@ -10,17 +10,11 @@
 go get -u go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 ```
 
-## Examples
+## Usage
 
-- [HTTP Exporter setup and examples](./example_test.go)
+Exporters should be created using the [New](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc#New) and used with a [PeriodicReader].
 
-## [`otlpmetricgrpc`](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc)
-
-Exporters should be created using the [New] and used with a [PeriodicReader].
-
-## Configuration
-
-### Environment Variables
+## Environment Variables
 
 The following environment variables can be used (instead of options objects) to override the default configuration.
 
