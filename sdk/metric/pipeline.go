@@ -366,14 +366,39 @@ func (i *inserter[N]) logConflict(id instID) {
 		return
 	}
 
-	global.Warn(
-		"duplicate metric stream definitions",
+	const msg = "duplicate metric stream definitions"
+	args := []interface{}{
 		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
 		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
 		"kinds", fmt.Sprintf("%s, %s", existing.Kind, id.Kind),
 		"units", fmt.Sprintf("%s, %s", existing.Unit, id.Unit),
 		"numbers", fmt.Sprintf("%s, %s", existing.Number, id.Number),
+	}
+
+	// The specification recommends logging a suggested view to resolve
+	// conflicts if possible.
+	//
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#duplicate-instrument-registration
+	if id.Unit != existing.Unit || id.Number != existing.Number {
+		// There is no view resolution for these, don't make a suggestion.
+		global.Warn(msg, args...)
+		return
+	}
+
+	var stream string
+	if id.Name != existing.Name || id.Kind != existing.Kind {
+		stream = `Stream{Name: "{{NEW_NAME}}"}`
+	} else if id.Description != existing.Description {
+		stream = fmt.Sprintf("Stream{Description: %q}", existing.Description)
+	}
+
+	inst := fmt.Sprintf(
+		"Instrument{Name: %q, Description: %q, Kind: %q, Unit: %q}",
+		id.Name, id.Description, "InstrumentKind"+id.Kind.String(), id.Unit,
 	)
+	args = append(args, "suggested.view", fmt.Sprintf("NewView(%s, %s)", inst, stream))
+
+	global.Warn(msg, args...)
 }
 
 func (i *inserter[N]) instID(kind InstrumentKind, stream Stream) instID {

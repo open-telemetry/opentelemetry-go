@@ -38,7 +38,7 @@ import (
 )
 
 // A meter should be able to make instruments concurrently.
-func TestMeterInstrumentConcurrency(t *testing.T) {
+func TestMeterInstrumentConcurrentSafe(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(12)
 

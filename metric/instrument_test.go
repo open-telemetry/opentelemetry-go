@@ -101,7 +101,7 @@ func testConfAttr(newConf func(...MeasurementOption) attrConf) func(t *testing.T
 	}
 }
 
-func TestWithAttributesRace(t *testing.T) {
+func TestWithAttributesConcurrentSafe(t *testing.T) {
 	attrs := []attribute.KeyValue{
 		attribute.String("user", "Alice"),
 		attribute.Bool("admin", true),

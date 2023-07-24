@@ -40,7 +40,7 @@ func TestCache(t *testing.T) {
 	assert.Equal(t, v1, c.Lookup(k1, func() int { return v1 }), "non-existing key")
 }
 
-func TestCacheConcurrency(t *testing.T) {
+func TestCacheConcurrentSafe(t *testing.T) {
 	const (
 		key        = "k"
 		goroutines = 10

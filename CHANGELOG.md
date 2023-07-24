@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Detect duplicate instruments for case-insensitive names in `go.opentelemetry.io/otel/sdk/metric`. (#4338)
 - The `ManualReader` will not panic if `AggregationSelector` returns `nil`. (#4350)
 - If a Reader's AggregationSelector return nil or DefaultAggregation the pipeline will use the default aggregation. (#4350)
+- Log a suggested view that fixes instrument conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4349)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

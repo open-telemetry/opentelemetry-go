@@ -556,6 +556,13 @@ functionality should be added, each one will need their own super-set
 interfaces and will duplicate the pattern. For this reason, the simple targeted
 interface that defines the specific functionality should be preferred.
 
+### Testing
+
+The tests should never leak goroutines.
+
+Use the term `ConcurrentSafe` in the test name when it aims to verify the
+absence of race conditions.
+
 ## Approvers and Maintainers
 
 ### Approvers
