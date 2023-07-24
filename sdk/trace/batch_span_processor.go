@@ -137,6 +137,7 @@ func (bsp *batchSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) 
 
 // OnEnd method enqueues a ReadOnlySpan for later processing.
 func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
+	// Do not enqueue spans ater Shutdown.
 	if bsp.stopped.Load() {
 		return
 	}
@@ -186,6 +187,7 @@ func (f forceFlushSpan) SpanContext() trace.SpanContext {
 
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
+	// Do nothing after Shutdown.
 	if bsp.stopped.Load() {
 		return nil
 	}
