@@ -43,7 +43,6 @@ func TestCacheConcurrentSafe(t *testing.T) {
 	const (
 		key        = "k"
 		goroutines = 10
-		timeoutSec = 5
 	)
 
 	c := cache[string, int]{}
