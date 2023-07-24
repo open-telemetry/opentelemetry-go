@@ -157,7 +157,7 @@ func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
-func (ts *readerTestSuite) TestMethodConcurrency() {
+func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 	// Requires the race-detector (a default test option for the project).
 
 	// All reader methods should be concurrent-safe.

@@ -17,8 +17,9 @@ package global
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log"
-	"os"
+	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -29,9 +30,21 @@ import (
 	"github.com/go-logr/stdr"
 )
 
-func TestRace(t *testing.T) {
-	go SetLogger(stdr.New(log.New(os.Stderr, "", 0)))
-	go Info("")
+func TestLoggerConcurrentSafe(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		SetLogger(stdr.New(log.New(io.Discard, "", 0)))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		Info("")
+	}()
+
+	wg.Wait()
+	reset()
 }
 
 func TestLogLevel(t *testing.T) {
