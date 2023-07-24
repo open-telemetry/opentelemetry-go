@@ -16,7 +16,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -84,6 +83,7 @@ type batchSpanProcessor struct {
 	stopWait   sync.WaitGroup
 	stopOnce   sync.Once
 	stopCh     chan struct{}
+	stopped    atomic.Bool
 }
 
 var _ SpanProcessor = (*batchSpanProcessor)(nil)
@@ -137,6 +137,10 @@ func (bsp *batchSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) 
 
 // OnEnd method enqueues a ReadOnlySpan for later processing.
 func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
+	if bsp.stopped.Load() {
+		return
+	}
+
 	// Do not enqueue spans if we are just going to drop them.
 	if bsp.e == nil {
 		return
@@ -149,6 +153,7 @@ func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
 func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 	var err error
 	bsp.stopOnce.Do(func() {
+		bsp.stopped.Store(true)
 		wait := make(chan struct{})
 		go func() {
 			close(bsp.stopCh)
@@ -181,6 +186,10 @@ func (f forceFlushSpan) SpanContext() trace.SpanContext {
 
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
+	if bsp.stopped.Load() {
+		return nil
+	}
+
 	var err error
 	if bsp.e != nil {
 		flushCh := make(chan struct{})
@@ -326,13 +335,6 @@ func (bsp *batchSpanProcessor) drainQueue() {
 	for {
 		select {
 		case sd := <-bsp.queue:
-			if sd == nil {
-				if err := bsp.exportSpans(ctx); err != nil {
-					otel.Handle(err)
-				}
-				return
-			}
-
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
 			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
@@ -344,7 +346,11 @@ func (bsp *batchSpanProcessor) drainQueue() {
 				}
 			}
 		default:
-			close(bsp.queue)
+			// There are no more enqueued spans. Make final export.
+			if err := bsp.exportSpans(ctx); err != nil {
+				otel.Handle(err)
+			}
+			return
 		}
 	}
 }
@@ -358,32 +364,9 @@ func (bsp *batchSpanProcessor) enqueue(sd ReadOnlySpan) {
 	}
 }
 
-func recoverSendOnClosedChan() {
-	x := recover()
-	switch err := x.(type) {
-	case nil:
-		return
-	case runtime.Error:
-		if err.Error() == "send on closed channel" {
-			return
-		}
-	}
-	panic(x)
-}
-
 func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd ReadOnlySpan) bool {
 	if !sd.SpanContext().IsSampled() {
 		return false
-	}
-
-	// This ensures the bsp.queue<- below does not panic as the
-	// processor shuts down.
-	defer recoverSendOnClosedChan()
-
-	select {
-	case <-bsp.stopCh:
-		return false
-	default:
 	}
 
 	select {
@@ -397,16 +380,6 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 func (bsp *batchSpanProcessor) enqueueDrop(ctx context.Context, sd ReadOnlySpan) bool {
 	if !sd.SpanContext().IsSampled() {
 		return false
-	}
-
-	// This ensures the bsp.queue<- below does not panic as the
-	// processor shuts down.
-	defer recoverSendOnClosedChan()
-
-	select {
-	case <-bsp.stopCh:
-		return false
-	default:
 	}
 
 	select {
