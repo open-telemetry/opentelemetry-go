@@ -195,6 +195,9 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 		flushCh := make(chan struct{})
 		if bsp.enqueueBlockOnQueueFull(ctx, forceFlushSpan{flushed: flushCh}) {
 			select {
+			case <-bsp.stopCh:
+				// The batchSpanProcessor is Shutdown.
+				return nil
 			case <-flushCh:
 				// Processed any items in queue prior to ForceFlush being called
 			case <-ctx.Done():
