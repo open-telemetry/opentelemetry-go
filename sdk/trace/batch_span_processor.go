@@ -340,6 +340,11 @@ func (bsp *batchSpanProcessor) drainQueue() {
 	for {
 		select {
 		case sd := <-bsp.queue:
+			if _, ok := sd.(forceFlushSpan); ok {
+				// Ignore flush requests as they are not valid spans.
+				continue
+			}
+
 			bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
 			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
