@@ -137,7 +137,7 @@ func (bsp *batchSpanProcessor) OnStart(parent context.Context, s ReadWriteSpan) 
 
 // OnEnd method enqueues a ReadOnlySpan for later processing.
 func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
-	// Do not enqueue spans ater Shutdown.
+	// Do not enqueue spans after Shutdown.
 	if bsp.stopped.Load() {
 		return
 	}
