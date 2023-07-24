@@ -56,6 +56,11 @@ type Exporter interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
+	// ForceFlush should only be called in cases where it is absolutely
+	// necessary, such as when using some FaaS providers that may suspend the
+	// process after an invocation, but before the exporter exports the
+	// completed metrics.
+	//
 	// This method needs to be concurrent safe.
 	ForceFlush(context.Context) error
 
