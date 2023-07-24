@@ -67,7 +67,8 @@ func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) perio
 }
 
 // WithTimeout configures the time a PeriodicReader waits for an export to
-// complete before canceling it.
+// complete before canceling it. This includes an export which occurs as part
+// of Shutdown.
 //
 // This option overrides any value set for the
 // OTEL_METRIC_EXPORT_TIMEOUT environment variable.
@@ -323,6 +324,8 @@ func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(ctx, r.timeout)
+		defer cancel()
 		// Stop the run loop.
 		r.cancel()
 		<-r.done
