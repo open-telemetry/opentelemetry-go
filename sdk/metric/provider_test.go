@@ -35,42 +35,54 @@ func TestMeterConcurrentSafe(t *testing.T) {
 	const name = "TestMeterConcurrentSafe meter"
 	mp := NewMeterProvider()
 
+	done := make(chan struct{})
 	go func() {
 		_ = mp.Meter(name)
+		close(done)
 	}()
 
 	_ = mp.Meter(name)
+	<-done
 }
 
 func TestForceFlushConcurrentSafe(t *testing.T) {
 	mp := NewMeterProvider()
 
+	done := make(chan struct{})
 	go func() {
 		_ = mp.ForceFlush(context.Background())
+		close(done)
 	}()
 
 	_ = mp.ForceFlush(context.Background())
+	<-done
 }
 
 func TestShutdownConcurrentSafe(t *testing.T) {
 	mp := NewMeterProvider()
 
+	done := make(chan struct{})
 	go func() {
 		_ = mp.Shutdown(context.Background())
+		close(done)
 	}()
 
 	_ = mp.Shutdown(context.Background())
+	<-done
 }
 
 func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
 	const name = "TestMeterAndShutdownConcurrentSafe meter"
 	mp := NewMeterProvider()
 
+	done := make(chan struct{})
 	go func() {
 		_ = mp.Shutdown(context.Background())
+		close(done)
 	}()
 
 	_ = mp.Meter(name)
+	<-done
 }
 
 func TestMeterDoesNotPanicForEmptyMeterProvider(t *testing.T) {

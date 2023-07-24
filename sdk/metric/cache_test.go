@@ -17,7 +17,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,18 +58,5 @@ func TestCacheConcurrentSafe(t *testing.T) {
 		}(n)
 	}
 
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	assert.Eventually(t, func() bool {
-		select {
-		case <-done:
-			return true
-		default:
-			return false
-		}
-	}, timeoutSec*time.Second, 10*time.Millisecond)
+	wg.Wait()
 }
