@@ -594,6 +594,49 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 	}
 }
 
+func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
+	ctx := context.Background()
+	var bp testBatchExporter
+	bsp := sdktrace.NewBatchSpanProcessor(&bp)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer(t.Name())
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		generateSpan(t, tr, testOption{genNumSpans: 1})
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = bsp.ForceFlush(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = bsp.Shutdown(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = tp.ForceFlush(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = tp.Shutdown(ctx)
+	}()
+
+	wg.Wait()
+}
+
 func BenchmarkSpanProcessor(b *testing.B) {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(
