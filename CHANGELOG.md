@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - If an attribute set is Observed multiple times in an async callback, the values will be summed instead of the last observation winning. (#4289)
 - Allow the explicit bucket histogram aggregation to be used for the up-down counter, observable counter, observable up-down counter, and observable gauge in the `go.opentelemetry.io/otel/sdk/metric` package. (#4332)
 - Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
+- `PeriodicReader.Shutdown` in `go.opentelemetry.io/otel/sdk/metric` now applies the periodic reader's timeout by default. (#4356)
 
 ### Fixed
 
