@@ -384,25 +384,18 @@ func TestPeriodicReaderCollect(t *testing.T) {
 	defer cancel()
 
 	tests := []struct {
-		name string
-
-		ctx             context.Context
-		resourceMetrics *metricdata.ResourceMetrics
-
+		name        string
+		ctx         context.Context
 		expectedErr error
 	}{
 		{
-			name: "with a valid context",
-
-			ctx:             context.Background(),
-			resourceMetrics: &metricdata.ResourceMetrics{},
+			name:        "with a valid context",
+			ctx:         context.Background(),
+			expectedErr: nil,
 		},
 		{
-			name: "with an expired context",
-
-			ctx:             expiredCtx,
-			resourceMetrics: &metricdata.ResourceMetrics{},
-
+			name:        "with an expired context",
+			ctx:         expiredCtx,
 			expectedErr: context.DeadlineExceeded,
 		},
 	}
@@ -421,7 +414,8 @@ func TestPeriodicReaderCollect(t *testing.T) {
 			}, testM)
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, tt.resourceMetrics))
+			rm := &metricdata.ResourceMetrics{}
+			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))
 		})
 	}
 }
