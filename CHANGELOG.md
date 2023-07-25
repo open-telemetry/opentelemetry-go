@@ -44,6 +44,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `resource.WithHostID()` to not set an empty `host.id`. (#4317)
 - Use the instrument identifying fields to cache aggregators and determine duplicate instrument registrations in `go.opentelemetry.io/otel/sdk/metric`. (#4337)
 - Detect duplicate instruments for case-insensitive names in `go.opentelemetry.io/otel/sdk/metric`. (#4338)
+- The `ManualReader` will not panic if `AggregationSelector` returns `nil`. (#4350)
+- If a Reader's AggregationSelector return nil or DefaultAggregation the pipeline will use the default aggregation. (#4350)
 - Log a suggested view that fixes instrument conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4349)
 - Fix possible panic, deadlock and race condition in batch span processor in `go.opentelemetry.io/otel/sdk/trace`. (#4353)
 

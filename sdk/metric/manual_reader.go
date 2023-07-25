@@ -227,6 +227,9 @@ func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	// Deep copy and validate before using.
 	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
 		a := selector(ik)
+		if a == nil {
+			return nil
+		}
 		cpA := a.Copy()
 		if err := cpA.Err(); err != nil {
 			cpA = DefaultAggregationSelector(ik)
