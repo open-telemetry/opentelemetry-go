@@ -1954,7 +1954,6 @@ func TestMalformedSelectors(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
-
 		})
 	}
 }
