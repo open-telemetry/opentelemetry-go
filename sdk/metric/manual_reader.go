@@ -118,7 +118,7 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 	return err
 }
 
-// Collect gathers and returns all metric data related to the Reader from
+// Collect gathers all metric data related to the Reader from
 // the SDK and other Producers and stores the result in rm.
 //
 // Collect will return an error if called after shutdown.
