@@ -33,7 +33,7 @@ var (
 	out = flag.String("output", "./", "output directory")
 	tag = flag.String("tag", "", "OpenTelemetry tagged version")
 
-	//go:embed templates/*.tmpl templates/netconv/*.tmpl templates/httpconv/*.tmpl
+	//go:embed templates/*.tmpl
 	rootFS embed.FS
 )
 
