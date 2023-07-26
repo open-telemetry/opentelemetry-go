@@ -237,8 +237,8 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	return err
 }
 
-// Collect gathers and returns all metric data related to the Reader from
-// the SDK and other Producers and stores the result in rm. The returned metric
+// Collect gathers all metric data related to the Reader from
+// the SDK and other Producers and stores the result in rm. The metric
 // data is not exported to the configured exporter, it is left to the caller to
 // handle that if desired.
 //

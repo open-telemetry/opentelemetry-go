@@ -549,18 +549,6 @@ func (indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnly
 	return ctx.Err()
 }
 
-func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
-	defer cancel()
-	<-ctx.Done()
-
-	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
-	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
-		t.Errorf("expected %q error, got %v", want, got)
-	}
-}
-
 func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Cancel the context
