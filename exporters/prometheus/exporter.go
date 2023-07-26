@@ -330,9 +330,45 @@ func sanitizeRune(r rune) rune {
 }
 
 var unitSuffixes = map[string]string{
-	"1":  "_ratio",
-	"By": "_bytes",
-	"ms": "_milliseconds",
+	// Time
+	"d":   "_days",
+	"h":   "_hours",
+	"min": "_minutes",
+	"s":   "_seconds",
+	"ms":  "_milliseconds",
+	"us":  "_microseconds",
+	"ns":  "_nanoseconds",
+
+	// Bytes
+	"By":   "_bytes",
+	"KiBy": "_kibibytes",
+	"MiBy": "_mebibytes",
+	"GiBy": "_gibibytes",
+	"TiBy": "_tibibytes",
+	"KBy":  "_kilobytes",
+	"MBy":  "_megabytes",
+	"GBy":  "_gigabytes",
+	"TBy":  "_terabytes",
+	"B":    "_bytes",
+	"KB":   "_kilobytes",
+	"MB":   "_megabytes",
+	"GB":   "_gigabytes",
+	"TB":   "_terabytes",
+
+	// SI
+	"m": "_meters",
+	"V": "_volts",
+	"A": "_amperes",
+	"J": "_joules",
+	"W": "_watts",
+	"g": "_grams",
+
+	// Misc
+	"Cel": "_celsius",
+	"Hz":  "_hertz",
+	"1":   "_ratio",
+	"%":   "_percent",
+	"$":   "_dollars",
 }
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
@@ -344,7 +380,7 @@ func (c *collector) getName(m metricdata.Metrics) string {
 	if c.withoutUnits {
 		return name
 	}
-	if suffix, ok := unitSuffixes[m.Unit]; ok {
+	if suffix, ok := unitSuffixes[m.Unit]; ok && !strings.HasSuffix(name, suffix) {
 		name += suffix
 	}
 	return name
