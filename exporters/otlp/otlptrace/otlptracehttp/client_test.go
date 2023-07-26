@@ -403,10 +403,10 @@ func TestPartialSuccess(t *testing.T) {
 }
 
 func TestOtherHTTPSuccess(t *testing.T) {
-	for i := 201; i <= 299; i++ {
-		t.Run(fmt.Sprintf("status_%d", i), func(t *testing.T) {
+	for code := 201; code <= 299; code++ {
+		t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
 			mcCfg := mockCollectorConfig{
-				InjectHTTPStatus: []int{i},
+				InjectHTTPStatus: []int{code},
 			}
 			mc := runMockCollector(t, mcCfg)
 			defer mc.MustStop(t)

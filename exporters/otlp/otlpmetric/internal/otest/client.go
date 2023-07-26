@@ -274,11 +274,11 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 		})
 
 		t.Run("Other HTTP success", func(t *testing.T) {
-			for i := 201; i <= 299; i++ {
-				t.Run(fmt.Sprintf("status_%d", i), func(t *testing.T) {
+			for code := 201; code <= 299; code++ {
+				t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
 					rCh := make(chan ExportResult, 1)
 					rCh <- ExportResult{
-						ResponseStatus: i,
+						ResponseStatus: code,
 					}
 
 					ctx := context.Background()
