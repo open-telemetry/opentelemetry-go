@@ -337,6 +337,46 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		assert.Equal(t, assert.AnError, r.Shutdown(context.Background()), "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})
+
+	t.Run("Shutdown timeout on producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout))
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				select {
+				case <-time.After(timeout + time.Second):
+					*rm = testResourceMetricsA
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return ctx.Err()
+				}
+				return nil
+			}})
+		r.RegisterProducer(testExternalProducer{})
+		assert.Equal(t, context.DeadlineExceeded, r.Shutdown(context.Background()), "timeout error not returned")
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+	})
+
+	t.Run("Shutdown timeout on external producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout))
+		r.register(testSDKProducer{})
+		r.RegisterProducer(testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				select {
+				case <-time.After(timeout + time.Second):
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return nil, ctx.Err()
+				}
+				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+			},
+		})
+		assert.Equal(t, context.DeadlineExceeded, r.Shutdown(context.Background()), "timeout error not returned")
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+	})
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {
@@ -384,25 +424,18 @@ func TestPeriodicReaderCollect(t *testing.T) {
 	defer cancel()
 
 	tests := []struct {
-		name string
-
-		ctx             context.Context
-		resourceMetrics *metricdata.ResourceMetrics
-
+		name        string
+		ctx         context.Context
 		expectedErr error
 	}{
 		{
-			name: "with a valid context",
-
-			ctx:             context.Background(),
-			resourceMetrics: &metricdata.ResourceMetrics{},
+			name:        "with a valid context",
+			ctx:         context.Background(),
+			expectedErr: nil,
 		},
 		{
-			name: "with an expired context",
-
-			ctx:             expiredCtx,
-			resourceMetrics: &metricdata.ResourceMetrics{},
-
+			name:        "with an expired context",
+			ctx:         expiredCtx,
 			expectedErr: context.DeadlineExceeded,
 		},
 	}
@@ -421,7 +454,8 @@ func TestPeriodicReaderCollect(t *testing.T) {
 			}, testM)
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, tt.resourceMetrics))
+			rm := &metricdata.ResourceMetrics{}
+			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))
 		})
 	}
 }

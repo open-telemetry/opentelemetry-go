@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -33,21 +32,7 @@ const (
 	defaultCycles       = 3
 )
 
-var (
-	alice = attribute.NewSet(attribute.String("user", "alice"), attribute.Bool("admin", true))
-	bob   = attribute.NewSet(attribute.String("user", "bob"), attribute.Bool("admin", false))
-	carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
-
-	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	staticTime    = time.Unix(946684800, 0)
-	staticNowFunc = func() time.Time { return staticTime }
-	// Pass to t.Cleanup to override the now function with staticNowFunc and
-	// revert once the test completes. E.g. t.Cleanup(mockTime(now)).
-	mockTime = func(orig func() time.Time) (cleanup func()) {
-		now = staticNowFunc
-		return func() { now = orig }
-	}
-)
+var carol = attribute.NewSet(attribute.String("user", "carol"), attribute.Bool("admin", false))
 
 func monoIncr[N int64 | float64]() setMap[N] {
 	return setMap[N]{alice: 1, bob: 10, carol: 2}
@@ -93,7 +78,7 @@ func (at *aggregatorTester[N]) Run(a aggregator[N], incr setMap[N], eFunc expect
 			})
 		})
 
-		t.Run("Correctness", func(t *testing.T) {
+		t.Run("CorrectnessConcurrentSafe", func(t *testing.T) {
 			for i := 0; i < at.CycleN; i++ {
 				var wg sync.WaitGroup
 				wg.Add(at.GoroutineN)

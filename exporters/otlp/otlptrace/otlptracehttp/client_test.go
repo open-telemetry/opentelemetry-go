@@ -330,7 +330,7 @@ func TestDeadlineContext(t *testing.T) {
 	assert.Empty(t, mc.GetSpans())
 }
 
-func TestStopWhileExporting(t *testing.T) {
+func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 	statuses := make([]int, 0, 5)
 	for i := 0; i < cap(statuses); i++ {
 		statuses = append(statuses, http.StatusTooManyRequests)

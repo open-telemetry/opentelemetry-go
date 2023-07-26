@@ -42,9 +42,24 @@ type Builder[N int64 | float64] struct {
 	Filter attribute.Filter
 }
 
+func (b Builder[N]) filter(f Measure[N]) Measure[N] {
+	if b.Filter != nil {
+		fltr := b.Filter // Copy to make it immutable after assignment.
+		return func(ctx context.Context, n N, a attribute.Set) {
+			fAttr, _ := a.Filter(fltr)
+			f(ctx, n, fAttr)
+		}
+	}
+	return f
+}
+
 func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
 	if b.Filter != nil {
-		agg = newFilter[N](agg, b.Filter)
+		fltr := b.Filter // Copy to make it immutable after assignment.
+		return func(_ context.Context, n N, a attribute.Set) {
+			fAttr, _ := a.Filter(fltr)
+			agg.Aggregate(n, fAttr)
+		}
 	}
 	return func(_ context.Context, n N, a attribute.Set) {
 		agg.Aggregate(n, a)
@@ -59,11 +74,13 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// a last-value aggregate.
 	lv := newLastValue[N]()
 
-	return b.input(lv), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = lv.Aggregation()
-
+	return b.filter(lv.measure), func(dest *metricdata.Aggregation) int {
+		// Ignore if dest is not a metricdata.Gauge. The chance for memory
+		// reuse of the DataPoints is missed (better luck next time).
 		gData, _ := (*dest).(metricdata.Gauge[N])
+		lv.computeAggregation(&gData.DataPoints)
+		*dest = gData
+
 		return len(gData.DataPoints)
 	}
 }
@@ -109,13 +126,13 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram, noSum bool) (Measure[N], ComputeAggregation) {
 	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = newDeltaHistogram[N](cfg)
+		h = newDeltaHistogram[N](cfg, noSum)
 	default:
-		h = newCumulativeHistogram[N](cfg)
+		h = newCumulativeHistogram[N](cfg, noSum)
 	}
 	return b.input(h), func(dest *metricdata.Aggregation) int {
 		// TODO (#4220): optimize memory reuse here.
@@ -124,4 +141,13 @@ func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistog
 		hData, _ := (*dest).(metricdata.Histogram[N])
 		return len(hData.DataPoints)
 	}
+}
+
+// reset ensures s has capacity and sets it length. If the capacity of s too
+// small, a new slice is returned with the specified capacity and length.
+func reset[T any](s []T, length, capacity int) []T {
+	if cap(s) < capacity {
+		return make([]T, length, capacity)
+	}
+	return s[:length]
 }
