@@ -402,29 +402,33 @@ func TestPartialSuccess(t *testing.T) {
 	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }
 
-func TestNoContent(t *testing.T) {
-	mcCfg := mockCollectorConfig{
-		InjectHTTPStatus: []int{204},
+func TestOtherHTTPSuccess(t *testing.T) {
+	for i := 201; i <= 299; i++ {
+		t.Run(fmt.Sprintf("status_%d", i), func(t *testing.T) {
+			mcCfg := mockCollectorConfig{
+				InjectHTTPStatus: []int{i},
+			}
+			mc := runMockCollector(t, mcCfg)
+			defer mc.MustStop(t)
+			driver := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpoint(mc.Endpoint()),
+				otlptracehttp.WithInsecure(),
+			)
+			ctx := context.Background()
+			exporter, err := otlptrace.New(ctx, driver)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, exporter.Shutdown(context.Background()))
+			}()
+
+			errs := []error{}
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				errs = append(errs, err)
+			}))
+			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+			assert.NoError(t, err)
+
+			require.Equal(t, 0, len(errs))
+		})
 	}
-	mc := runMockCollector(t, mcCfg)
-	defer mc.MustStop(t)
-	driver := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-	)
-	ctx := context.Background()
-	exporter, err := otlptrace.New(ctx, driver)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(context.Background()))
-	}()
-
-	errs := []error{}
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errs = append(errs, err)
-	}))
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
-
-	require.Equal(t, 0, len(errs))
 }

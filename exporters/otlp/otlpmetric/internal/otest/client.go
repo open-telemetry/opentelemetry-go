@@ -17,7 +17,6 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 
@@ -274,27 +273,31 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			assert.ErrorContains(t, errs[0], want)
 		})
 
-		t.Run("NoContent", func(t *testing.T) {
-			rCh := make(chan ExportResult, 1)
-			rCh <- ExportResult{
-				ResponseStatus: http.StatusNoContent,
+		t.Run("Other HTTP success", func(t *testing.T) {
+			for i := 201; i <= 299; i++ {
+				t.Run(fmt.Sprintf("status_%d", i), func(t *testing.T) {
+					rCh := make(chan ExportResult, 1)
+					rCh <- ExportResult{
+						ResponseStatus: i,
+					}
+
+					ctx := context.Background()
+					client, _ := f(rCh)
+
+					defer func(orig otel.ErrorHandler) {
+						otel.SetErrorHandler(orig)
+					}(otel.GetErrorHandler())
+
+					errs := []error{}
+					eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+					otel.SetErrorHandler(eh)
+
+					require.NoError(t, client.UploadMetrics(ctx, nil))
+					require.NoError(t, client.Shutdown(ctx))
+
+					require.Equal(t, 0, len(errs))
+				})
 			}
-
-			ctx := context.Background()
-			client, _ := f(rCh)
-
-			defer func(orig otel.ErrorHandler) {
-				otel.SetErrorHandler(orig)
-			}(otel.GetErrorHandler())
-
-			errs := []error{}
-			eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-			otel.SetErrorHandler(eh)
-
-			require.NoError(t, client.UploadMetrics(ctx, nil))
-			require.NoError(t, client.Shutdown(ctx))
-
-			require.Equal(t, 0, len(errs))
 		})
 	}
 }

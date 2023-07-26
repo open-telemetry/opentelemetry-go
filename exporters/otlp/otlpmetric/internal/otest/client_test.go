@@ -58,7 +58,6 @@ func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) err
 				otel.Handle(internal.MetricPartialSuccessError(n, msg))
 			}
 		}
-
 		return r.Err
 	}
 	return ctx.Err()
