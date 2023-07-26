@@ -311,6 +311,11 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	case nil, aggregation.Default:
 		// Undefined, nil, means to use the default from the reader.
 		stream.Aggregation = i.pipeline.reader.aggregation(kind)
+		switch stream.Aggregation.(type) {
+		case nil, aggregation.Default:
+			// If the reader returns default or nil use the default selector.
+			stream.Aggregation = DefaultAggregationSelector(kind)
+		}
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {

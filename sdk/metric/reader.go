@@ -145,6 +145,9 @@ func DefaultTemporalitySelector(InstrumentKind) metricdata.Temporality {
 
 // AggregationSelector selects the aggregation and the parameters to use for
 // that aggregation based on the InstrumentKind.
+//
+// If the Aggregation returned is nil or DefaultAggregation, the selection from
+// DefaultAggregationSelector will be used.
 type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 
 // DefaultAggregationSelector returns the default aggregation and parameters
