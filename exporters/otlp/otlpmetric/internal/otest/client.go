@@ -277,9 +277,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 		t.Run("NoContent", func(t *testing.T) {
 			rCh := make(chan ExportResult, 1)
 			rCh <- ExportResult{
-				Err: &HTTPResponseError{
-					Status: http.StatusNoContent,
-				},
+				ResponseStatus: http.StatusNoContent,
 			}
 
 			ctx := context.Background()
