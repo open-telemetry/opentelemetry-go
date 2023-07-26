@@ -177,7 +177,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 		var rErr error
 		switch resp.StatusCode {
-		case http.StatusOK:
+		case http.StatusOK, http.StatusNoContent:
 			// Success, do not retry.
 
 			// Read the partial success message, if any.

@@ -17,6 +17,7 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/inte
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -271,6 +272,31 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			require.Equal(t, 1, len(errs))
 			want := fmt.Sprintf("%s (%d metric data points rejected)", msg, n)
 			assert.ErrorContains(t, errs[0], want)
+		})
+
+		t.Run("NoContent", func(t *testing.T) {
+			rCh := make(chan ExportResult, 1)
+			rCh <- ExportResult{
+				Err: &HTTPResponseError{
+					Status: http.StatusNoContent,
+				},
+			}
+
+			ctx := context.Background()
+			client, _ := f(rCh)
+
+			defer func(orig otel.ErrorHandler) {
+				otel.SetErrorHandler(orig)
+			}(otel.GetErrorHandler())
+
+			errs := []error{}
+			eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+			otel.SetErrorHandler(eh)
+
+			require.NoError(t, client.UploadMetrics(ctx, nil))
+			require.NoError(t, client.Shutdown(ctx))
+
+			require.Equal(t, 0, len(errs))
 		})
 	}
 }
