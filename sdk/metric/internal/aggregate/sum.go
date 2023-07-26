@@ -61,6 +61,8 @@ type sum[N int64 | float64] struct {
 func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 	t := now()
 
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = metricdata.DeltaTemporality
 	sData.IsMonotonic = s.monotonic
@@ -93,6 +95,8 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 	t := now()
 
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = metricdata.CumulativeTemporality
 	sData.IsMonotonic = s.monotonic
@@ -147,6 +151,8 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 	t := now()
 	newReported := make(map[attribute.Set]N)
 
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = metricdata.DeltaTemporality
 	sData.IsMonotonic = s.monotonic
@@ -185,6 +191,8 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
 	t := now()
 
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = metricdata.CumulativeTemporality
 	sData.IsMonotonic = s.monotonic
