@@ -428,7 +428,7 @@ func TestOtherHTTPSuccess(t *testing.T) {
 			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 			assert.NoError(t, err)
 
-			require.Equal(t, 0, len(errs))
+			assert.Equal(t, 0, len(errs))
 		})
 	}
 }

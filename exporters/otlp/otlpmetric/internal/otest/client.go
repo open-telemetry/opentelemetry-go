@@ -292,10 +292,9 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 					eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
 					otel.SetErrorHandler(eh)
 
-					require.NoError(t, client.UploadMetrics(ctx, nil))
-					require.NoError(t, client.Shutdown(ctx))
-
-					require.Equal(t, 0, len(errs))
+					assert.NoError(t, client.UploadMetrics(ctx, nil))
+					assert.NoError(t, client.Shutdown(ctx))
+					assert.Equal(t, 0, len(errs))
 				})
 			}
 		})
