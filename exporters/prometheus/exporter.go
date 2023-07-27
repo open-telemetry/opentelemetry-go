@@ -363,7 +363,6 @@ var unitSuffixes = map[string]string{
 	"Hz":  "_hertz",
 	"1":   "_ratio",
 	"%":   "_percent",
-	"$":   "_dollars",
 }
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
