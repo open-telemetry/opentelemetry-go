@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
@@ -198,7 +199,7 @@ func (e *fnExporter) Shutdown(ctx context.Context) error {
 type periodicReaderTestSuite struct {
 	*readerTestSuite
 
-	ErrReader Reader
+	ErrReader *PeriodicReader
 }
 
 func (ts *periodicReaderTestSuite) SetupTest() {
@@ -377,6 +378,15 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		assert.Equal(t, context.DeadlineExceeded, r.Shutdown(context.Background()), "timeout error not returned")
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
+}
+
+func (ts *readerTestSuite) TestPeriodicReaderMultipleForceFlush(t *testing.T) {
+	ctx := context.Background()
+	r := NewPeriodicReader(new(fnExporter))
+	r.register(testSDKProducer{})
+	r.RegisterProducer(testExternalProducer{})
+	require.NoError(t, r.ForceFlush(ctx))
+	require.NoError(t, r.ForceFlush(ctx))
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {

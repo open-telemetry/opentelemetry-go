@@ -93,14 +93,6 @@ func (ts *readerTestSuite) TestShutdownTwice() {
 	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
 }
 
-func (ts *readerTestSuite) TestMultipleForceFlush() {
-	ctx := context.Background()
-	ts.Reader.register(testSDKProducer{})
-	ts.Reader.RegisterProducer(testExternalProducer{})
-	ts.Require().NoError(ts.Reader.ForceFlush(ctx))
-	ts.NoError(ts.Reader.ForceFlush(ctx))
-}
-
 func (ts *readerTestSuite) TestMultipleRegister() {
 	p0 := testSDKProducer{
 		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
@@ -174,11 +166,13 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 			_ = ts.Reader.Collect(ctx, nil)
 		}()
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = ts.Reader.ForceFlush(ctx)
-		}()
+		if f, ok := ts.Reader.(interface{ ForceFlush(context.Context) error }); ok {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = f.ForceFlush(ctx)
+			}()
+		}
 
 		wg.Add(1)
 		go func() {

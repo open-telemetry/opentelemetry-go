@@ -39,6 +39,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
 - `PeriodicReader.Shutdown` in `go.opentelemetry.io/otel/sdk/metric` now applies the periodic reader's timeout by default. (#4356)
 
+### Removed
+
+- Remove `Reader.ForceFlush` in `go.opentelemetry.io/otel/metric`. Notice that `PeriodicReader.ForceFlush` is still available. (#TODO)
+
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
