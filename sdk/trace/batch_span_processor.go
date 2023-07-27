@@ -187,6 +187,11 @@ func (f forceFlushSpan) SpanContext() trace.SpanContext {
 
 // ForceFlush exports all ended spans that have not yet been exported.
 func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
+	// Interrupt if context is already canceled.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Do nothing after Shutdown.
 	if bsp.stopped.Load() {
 		return nil
