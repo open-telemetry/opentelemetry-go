@@ -88,39 +88,23 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
 func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregation) {
-	var s aggregator[N]
+	s := newPrecomputedSum[N](monotonic)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = newPrecomputedDeltaSum[N](monotonic)
+		return b.filter(s.measure), s.delta
 	default:
-		s = newPrecomputedCumulativeSum[N](monotonic)
-	}
-
-	return b.input(s), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = s.Aggregation()
-
-		sData, _ := (*dest).(metricdata.Sum[N])
-		return len(sData.DataPoints)
+		return b.filter(s.measure), s.cumulative
 	}
 }
 
 // Sum returns a sum aggregate function input and output.
 func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
-	var s aggregator[N]
+	s := newSum[N](monotonic)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = newDeltaSum[N](monotonic)
+		return b.filter(s.measure), s.delta
 	default:
-		s = newCumulativeSum[N](monotonic)
-	}
-
-	return b.input(s), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = s.Aggregation()
-
-		sData, _ := (*dest).(metricdata.Sum[N])
-		return len(sData.DataPoints)
+		return b.filter(s.measure), s.cumulative
 	}
 }
 
