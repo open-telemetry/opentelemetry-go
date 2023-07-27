@@ -349,11 +349,6 @@ var unitSuffixes = map[string]string{
 	"MBy":  "_megabytes",
 	"GBy":  "_gigabytes",
 	"TBy":  "_terabytes",
-	"B":    "_bytes",
-	"KB":   "_kilobytes",
-	"MB":   "_megabytes",
-	"GB":   "_gigabytes",
-	"TB":   "_terabytes",
 
 	// SI
 	"m": "_meters",
