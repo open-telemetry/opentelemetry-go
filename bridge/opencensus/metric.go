@@ -18,81 +18,73 @@ import (
 	"context"
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
-	"go.opencensus.io/metric/metricexport"
 	"go.opencensus.io/metric/metricproducer"
 
 	"go.opentelemetry.io/otel"
 	internal "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const scopeName = "go.opentelemetry.io/otel/bridge/opencensus"
 
-type producer struct {
+// exporter wraps an OpenTelemetry exporter and adds OpenCensus metrics to it.
+type exporter struct {
 	manager *metricproducer.Manager
+	base    metric.Exporter
 }
 
-// NewMetricProducer returns a metric.Producer that fetches metrics from
-// OpenCensus.
-func NewMetricProducer() metric.Producer {
-	return &producer{
+// NewMetricExporter returns an OpenTelemetry exporter that adds metrics from OpenCensus
+// before exporting to the base OpenTelemetry exporter.
+func NewMetricExporter(base metric.Exporter) metric.Exporter {
+	return &exporter{
+		base:    base,
 		manager: metricproducer.GlobalManager(),
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
-	producers := p.manager.GetAll()
+func (e *exporter) Export(ctx context.Context, sdkMetrics *metricdata.ResourceMetrics) error {
+	producers := e.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
 	for _, ocProducer := range producers {
 		data = append(data, ocProducer.Read()...)
 	}
 	otelmetrics, err := internal.ConvertMetrics(data)
-	if len(otelmetrics) == 0 {
-		return nil, err
-	}
-	return []metricdata.ScopeMetrics{{
-		Scope: instrumentation.Scope{
-			Name: scopeName,
-		},
-		Metrics: otelmetrics,
-	}}, err
-}
-
-// exporter implements the OpenCensus metric Exporter interface using an
-// OpenTelemetry base exporter.
-type exporter struct {
-	base metric.Exporter
-	res  *resource.Resource
-}
-
-// NewMetricExporter returns an OpenCensus exporter that exports to an
-// OpenTelemetry (push) exporter.
-// Deprecated: Use NewMetricProducer instead.
-func NewMetricExporter(base metric.Exporter, res *resource.Resource) metricexport.Exporter {
-	return &exporter{base: base, res: res}
-}
-
-// ExportMetrics implements the OpenCensus metric Exporter interface by sending
-// to an OpenTelemetry exporter.
-func (e *exporter) ExportMetrics(ctx context.Context, ocmetrics []*ocmetricdata.Metric) error {
-	otelmetrics, err := internal.ConvertMetrics(ocmetrics)
 	if err != nil {
 		otel.Handle(err)
 	}
-	if len(otelmetrics) == 0 {
-		return nil
-	}
-	return e.base.Export(ctx, &metricdata.ResourceMetrics{
-		Resource: e.res,
-		ScopeMetrics: []metricdata.ScopeMetrics{
-			{
+	if len(otelmetrics) > 0 {
+		// add metrics from OpenCensus to our exported batch of metrics under
+		// its own scope.
+		sdkMetrics.ScopeMetrics = append(
+			sdkMetrics.ScopeMetrics,
+			metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name: scopeName,
 				},
 				Metrics: otelmetrics,
-			},
-		}})
+			})
+	}
+	return e.base.Export(ctx, sdkMetrics)
+}
+
+func (e *exporter) Temporality(kind metric.InstrumentKind) metricdata.Temporality {
+	return e.base.Temporality(kind)
+
+}
+
+func (e *exporter) Aggregation(kind metric.InstrumentKind) aggregation.Aggregation {
+	return e.base.Aggregation(kind)
+
+}
+
+func (e *exporter) ForceFlush(ctx context.Context) error {
+	return e.base.ForceFlush(ctx)
+
+}
+
+func (e *exporter) Shutdown(ctx context.Context) error {
+	return e.base.Shutdown(ctx)
 }

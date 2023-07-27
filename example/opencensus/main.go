@@ -103,9 +103,9 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // registry or an OpenCensus view.
 func monitoring(exporter metric.Exporter) error {
 	log.Println("Adding the OpenCensus metric Producer to an OpenTelemetry Reader to export OpenCensus metrics using the OpenTelemetry stdout exporter.")
+	// Wrap our exporter with the opencensus bridge to add metrics from OpenCensus to the output.
+	exporter = opencensus.NewMetricExporter(exporter)
 	reader := metric.NewPeriodicReader(exporter)
-	// Register the OpenCensus metric Producer to add metrics from OpenCensus to the output.
-	reader.RegisterProducer(opencensus.NewMetricProducer())
 	metric.NewMeterProvider(metric.WithReader(reader))
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")
