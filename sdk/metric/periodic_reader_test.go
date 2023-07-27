@@ -380,7 +380,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 }
 
-func (ts *readerTestSuite) TestPeriodicReaderMultipleForceFlush(t *testing.T) {
+func TestPeriodicReaderMultipleForceFlush(t *testing.T) {
 	ctx := context.Background()
 	r := NewPeriodicReader(new(fnExporter))
 	r.register(testSDKProducer{})
