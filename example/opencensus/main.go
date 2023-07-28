@@ -30,6 +30,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -58,10 +59,14 @@ func main() {
 	}
 	metricsExporter, err := stdoutmetric.New()
 	if err != nil {
-		log.Fatal(fmt.Errorf("error creating metric exporter: %w", err))
+		log.Fatal(fmt.Errorf("error creating stdout metric exporter: %w", err))
 	}
 	tracing(traceExporter)
-	if err := monitoring(metricsExporter); err != nil {
+	pullExporter, err := prometheus.New()
+	if err != nil {
+		log.Fatal(fmt.Errorf("error creating prometheus metric exporter: %w", err))
+	}
+	if err := monitoring(metricsExporter, pullExporter); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -101,12 +106,17 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // monitoring demonstrates creating an IntervalReader using the OpenTelemetry
 // exporter to send metrics to the exporter by using either an OpenCensus
 // registry or an OpenCensus view.
-func monitoring(exporter metric.Exporter) error {
+func monitoring(pushExporter metric.Exporter, pullExporter *prometheus.Exporter) error {
 	log.Println("Adding the OpenCensus metric Producer to an OpenTelemetry Reader to export OpenCensus metrics using the OpenTelemetry stdout exporter.")
-	// Wrap our exporter with the opencensus bridge to add metrics from OpenCensus to the output.
-	exporter = opencensus.NewMetricExporter(exporter)
-	reader := metric.NewPeriodicReader(exporter)
-	metric.NewMeterProvider(metric.WithReader(reader))
+	// Wrap our push exporter with the opencensus bridge to add metrics from OpenCensus to the output.
+	pushExporter = opencensus.NewMetricExporter(pushExporter)
+	reader := metric.NewPeriodicReader(pushExporter)
+
+	// Override the pull exporter's Reader with the OpenCensus reader bridge.
+	pullExporter.Reader = opencensus.NewMetricReader()
+
+	// Make a MeterProvider with push and pull bridged exporters.
+	metric.NewMeterProvider(metric.WithReader(reader), metric.WithReader(pullExporter))
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")
 	r := ocmetric.NewRegistry()

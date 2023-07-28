@@ -32,4 +32,13 @@
 // - Conversion of custom OpenCensus Samplers to OpenTelemetry is not
 // implemented. An error will be sent to the OpenTelemetry default
 // ErrorHandler if this is attempted.
+//
+// For Push Metric exporters:
+//
+// reader := metric.NewPeriodicReader(opencensus.NewMetricExporter(exporter))
+//
+// For Prometheus Metric exporters:
+//
+//	exporter := prometheus.NewExporter()
+//	exporter.Reader = opencensus.NewMetricReader()
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"

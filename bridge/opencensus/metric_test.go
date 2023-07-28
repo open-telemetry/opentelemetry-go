@@ -33,30 +33,22 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type fakeOCProducer struct {
-	metrics []*ocmetricdata.Metric
+var now = time.Now()
+
+type testCase struct {
+	desc         string
+	input        []*ocmetricdata.Metric
+	inputMetrics *metricdata.ResourceMetrics
+	inputErr     error
+	expected     *metricdata.ResourceMetrics
+	expectErr    bool
 }
 
-func (f *fakeOCProducer) Read() []*ocmetricdata.Metric {
-	return f.metrics
-}
-
-func TestPushMetricsExporter(t *testing.T) {
-	now := time.Now()
-	for _, tc := range []struct {
-		desc         string
-		input        []*ocmetricdata.Metric
-		inputMetrics *metricdata.ResourceMetrics
-		exportErr    error
-		expected     *metricdata.ResourceMetrics
-		expectErr    bool
-	}{
-		{
-			desc: "empty batch isn't sent",
-		},
+func testCases() []testCase {
+	return []testCase{
 		{
 			desc:         "export error",
-			exportErr:    fmt.Errorf("failed to export"),
+			inputErr:     fmt.Errorf("failed to export"),
 			inputMetrics: &metricdata.ResourceMetrics{},
 			input: []*ocmetricdata.Metric{
 				{
@@ -135,12 +127,16 @@ func TestPushMetricsExporter(t *testing.T) {
 				},
 			},
 		},
-	} {
+	}
+}
+
+func TestMetricExporter(t *testing.T) {
+	for _, tc := range testCases() {
 		t.Run(tc.desc, func(t *testing.T) {
 			fakeProducer := &fakeOCProducer{metrics: tc.input}
 			metricproducer.GlobalManager().AddProducer(fakeProducer)
 			defer metricproducer.GlobalManager().DeleteProducer(fakeProducer)
-			fake := &fakeExporter{err: tc.exportErr}
+			fake := &fakeExporter{err: tc.inputErr}
 			exporter := NewMetricExporter(fake)
 			err := exporter.Export(context.Background(), tc.inputMetrics)
 			if tc.expectErr {
@@ -158,6 +154,41 @@ func TestPushMetricsExporter(t *testing.T) {
 	}
 }
 
+func TestMetricReader(t *testing.T) {
+	for _, tc := range testCases() {
+		t.Run(tc.desc, func(t *testing.T) {
+			fakeProducer := &fakeOCProducer{metrics: tc.input}
+			metricproducer.GlobalManager().AddProducer(fakeProducer)
+			defer metricproducer.GlobalManager().DeleteProducer(fakeProducer)
+			reader := NewMetricReader()
+			// replace the SDK reader so we can inject an error
+			reader.Reader = &fakeSDKReader{err: tc.inputErr, data: tc.inputMetrics}
+			got := &metricdata.ResourceMetrics{}
+			err := reader.Collect(context.Background(), got)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.expected != nil {
+				require.NotNil(t, got)
+				metricdatatest.AssertEqual(t, *tc.expected, *got)
+			} else {
+				require.Nil(t, got.Resource)
+				require.Nil(t, got.ScopeMetrics)
+			}
+		})
+	}
+}
+
+type fakeOCProducer struct {
+	metrics []*ocmetricdata.Metric
+}
+
+func (f *fakeOCProducer) Read() []*ocmetricdata.Metric {
+	return f.metrics
+}
+
 type fakeExporter struct {
 	metric.Exporter
 	data *metricdata.ResourceMetrics
@@ -167,6 +198,19 @@ type fakeExporter struct {
 func (f *fakeExporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
 	if f.err == nil {
 		f.data = data
+	}
+	return f.err
+}
+
+type fakeSDKReader struct {
+	metric.Reader
+	data *metricdata.ResourceMetrics
+	err  error
+}
+
+func (f *fakeSDKReader) Collect(ctx context.Context, data *metricdata.ResourceMetrics) error {
+	if f.err == nil {
+		*data = *f.data
 	}
 	return f.err
 }
