@@ -76,7 +76,7 @@ var _ metric.Reader = &Exporter{}
 
 // collector is used to implement prometheus.Collector.
 type collector struct {
-	reader metric.Reader
+	exporter *Exporter
 
 	withoutUnits           bool
 	withoutCounterSuffixes bool
@@ -103,8 +103,12 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
 
+	e := &Exporter{
+		Reader: reader,
+	}
+
 	collector := &collector{
-		reader:                 reader,
+		exporter:               e,
 		disableTargetInfo:      cfg.disableTargetInfo,
 		withoutUnits:           cfg.withoutUnits,
 		withoutCounterSuffixes: cfg.withoutCounterSuffixes,
@@ -116,10 +120,6 @@ func New(opts ...Option) (*Exporter, error) {
 
 	if err := cfg.registerer.Register(collector); err != nil {
 		return nil, fmt.Errorf("cannot register the collector: %w", err)
-	}
-
-	e := &Exporter{
-		Reader: reader,
 	}
 
 	return e, nil
@@ -140,7 +140,7 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	// TODO (#3047): Use a sync.Pool instead of allocating metrics every Collect.
 	metrics := metricdata.ResourceMetrics{}
-	err := c.reader.Collect(context.TODO(), &metrics)
+	err := c.exporter.Reader.Collect(context.TODO(), &metrics)
 	if err != nil {
 		otel.Handle(err)
 		if err == metric.ErrReaderNotRegistered {
