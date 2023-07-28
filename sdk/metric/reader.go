@@ -65,9 +65,15 @@ type Reader interface {
 	RegisterProducer(Producer)
 
 	// temporality reports the Temporality for the instrument kind provided.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Reader methods.
 	temporality(InstrumentKind) metricdata.Temporality
 
 	// aggregation returns what Aggregation to use for an instrument kind.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Reader methods.
 	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
