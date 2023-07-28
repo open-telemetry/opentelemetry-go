@@ -68,7 +68,7 @@ func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) perio
 
 // WithTimeout configures the time a PeriodicReader waits for an export to
 // complete before canceling it. This includes an export which occurs as part
-// of Shutdown.
+// of ForceFlush and Shutdown.
 //
 // This option overrides any value set for the
 // OTEL_METRIC_EXPORT_TIMEOUT environment variable.
