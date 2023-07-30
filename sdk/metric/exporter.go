@@ -30,9 +30,15 @@ var ErrExporterShutdown = fmt.Errorf("exporter is shutdown")
 // the final component in the metric push pipeline.
 type Exporter interface {
 	// Temporality returns the Temporality to use for an instrument kind.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Exporter methods.
 	Temporality(InstrumentKind) metricdata.Temporality
 
 	// Aggregation returns the Aggregation to use for an instrument kind.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Exporter methods.
 	Aggregation(InstrumentKind) aggregation.Aggregation
 
 	// Export serializes and transmits metric data to a receiver.
