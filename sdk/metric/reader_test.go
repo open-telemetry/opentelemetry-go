@@ -163,6 +163,18 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			_ = ts.Reader.temporality(InstrumentKindCounter)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = ts.Reader.aggregation(InstrumentKindCounter)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			_ = ts.Reader.Collect(ctx, nil)
 		}()
 
