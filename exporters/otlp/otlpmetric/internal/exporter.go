@@ -27,6 +27,11 @@ import (
 )
 
 // Exporter exports metrics data as OTLP.
+//
+// Deprecated: Exporter exists for historical compatibility, it should not be
+// used. Do not removed Exporter unless the whole
+// "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" module is
+// removed.
 type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
@@ -96,6 +101,11 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 // New return an Exporter that uses client to transmits the OTLP data it
 // produces. The client is assumed to be fully started and able to communicate
 // with its OTLP receiving endpoint.
+//
+// Deprecated: New exists for historical compatibility, it should not be used.
+// Do not removed New unless the whole
+// "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" module is
+// removed.
 func New(client Client) *Exporter {
 	return &Exporter{client: client}
 }
