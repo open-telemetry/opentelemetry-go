@@ -71,8 +71,11 @@ $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 GOJQ = $(TOOLS)/gojq
 $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
+GOTMPL = $(TOOLS)/gotmpl
+$(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
+
 .PHONY: tools
-tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT)
+tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL)
 
 # Virtualized python tools via docker
 
@@ -115,7 +118,7 @@ generate: go-generate vanity-import-fix
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
 go-generate/%: DIR=$*
-go-generate/%: | $(STRINGER)
+go-generate/%: | $(STRINGER) $(GOTMPL)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
