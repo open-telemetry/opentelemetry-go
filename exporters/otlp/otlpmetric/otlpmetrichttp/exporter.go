@@ -44,11 +44,23 @@ type Exporter struct {
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
+	ts := cfg.Metrics.TemporalitySelector
+	if ts == nil {
+		ts = func(metric.InstrumentKind) metricdata.Temporality {
+			return metricdata.CumulativeTemporality
+		}
+	}
+
+	as := cfg.Metrics.AggregationSelector
+	if as == nil {
+		as = metric.DefaultAggregationSelector
+	}
+
 	return &Exporter{
 		client: c,
 
-		temporalitySelector: cfg.Metrics.TemporalitySelector,
-		aggregationSelector: cfg.Metrics.AggregationSelector,
+		temporalitySelector: ts,
+		aggregationSelector: as,
 	}, nil
 }
 
