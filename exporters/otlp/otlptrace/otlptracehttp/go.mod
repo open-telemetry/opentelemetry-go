@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.16.0
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0
 	go.opentelemetry.io/otel/sdk v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
@@ -38,7 +37,5 @@ replace go.opentelemetry.io/otel => ../../../..
 replace go.opentelemetry.io/otel/sdk => ../../../../sdk
 
 replace go.opentelemetry.io/otel/trace => ../../../../trace
-
-replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../internal/retry
 
 replace go.opentelemetry.io/otel/metric => ../../../../metric

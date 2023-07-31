@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
 	otinternal "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 )
 
 const (
