@@ -56,6 +56,8 @@ type Reader interface {
 	// The producer argument allows the Reader to signal the sdk to collect
 	// and send aggregated metric measurements.
 	register(sdkProducer)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// RegisterProducer registers a an external Producer with this Reader.
 	// The Producer is used as a source of aggregated metric data which is
@@ -63,6 +65,8 @@ type Reader interface {
 	//
 	// This method needs to be concurrent safe.
 	RegisterProducer(Producer)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// temporality reports the Temporality for the instrument kind provided.
 	//
@@ -83,6 +87,8 @@ type Reader interface {
 	// This method needs to be concurrent safe, and the cancelation of the
 	// passed context is expected to be honored.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// ForceFlush flushes all metric measurements held in an export pipeline.
 	//
@@ -93,6 +99,8 @@ type Reader interface {
 	//
 	// This method needs to be concurrent safe.
 	ForceFlush(context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Shutdown flushes all metric measurements held in an export pipeline and releases any
 	// held computational resources.
@@ -107,6 +115,8 @@ type Reader interface {
 	//
 	// This method needs to be concurrent safe.
 	Shutdown(context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 // sdkProducer produces metrics for a Reader.
@@ -123,6 +133,8 @@ type Producer interface {
 	//
 	// This method should be safe to call concurrently.
 	Produce(context.Context) ([]metricdata.ScopeMetrics, error)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 // produceHolder is used as an atomic.Value to wrap the non-concrete producer

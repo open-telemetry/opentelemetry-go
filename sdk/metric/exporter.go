@@ -34,12 +34,16 @@ type Exporter interface {
 	// This method needs to be concurrent safe with itself and all the other
 	// Exporter methods.
 	Temporality(InstrumentKind) metricdata.Temporality
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Aggregation returns the Aggregation to use for an instrument kind.
 	//
 	// This method needs to be concurrent safe with itself and all the other
 	// Exporter methods.
 	Aggregation(InstrumentKind) aggregation.Aggregation
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Export serializes and transmits metric data to a receiver.
 	//
@@ -56,6 +60,8 @@ type Exporter interface {
 	// exporter needs to hold this data after it returns, it needs to make a
 	// copy.
 	Export(context.Context, *metricdata.ResourceMetrics) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// ForceFlush flushes any metric data held by an exporter.
 	//
@@ -64,6 +70,8 @@ type Exporter interface {
 	//
 	// This method needs to be concurrent safe.
 	ForceFlush(context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Shutdown flushes all metric data held by an exporter and releases any
 	// held computational resources.
@@ -76,4 +84,6 @@ type Exporter interface {
 	//
 	// This method needs to be concurrent safe.
 	Shutdown(context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
