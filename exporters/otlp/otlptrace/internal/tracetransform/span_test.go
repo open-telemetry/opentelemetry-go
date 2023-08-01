@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/otlp/otlptrace/tracetransform/span_test.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -311,7 +314,9 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	sd := Spans(tracetest.SpanStubs{{}}.Snapshots())
+	sd := Spans(tracetest.SpanStubs{
+		{},
+	}.Snapshots())
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	scopeSpans := rs.GetScopeSpans()
@@ -323,5 +328,9 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { Spans(tracetest.SpanStubs{{}}.Snapshots()) })
+	assert.NotPanics(t, func() {
+		Spans(tracetest.SpanStubs{
+			{},
+		}.Snapshots())
+	})
 }
