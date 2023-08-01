@@ -29,7 +29,7 @@ import (
 // Exporter exports metrics data as OTLP.
 //
 // Deprecated: Exporter exists for historical compatibility, it should not be
-// used. Do not removed Exporter unless the whole
+// used. Do not remove Exporter unless the whole
 // "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" module is
 // removed.
 type Exporter struct {
@@ -103,7 +103,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 // with its OTLP receiving endpoint.
 //
 // Deprecated: New exists for historical compatibility, it should not be used.
-// Do not removed New unless the whole
+// Do not remove New unless the whole
 // "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" module is
 // removed.
 func New(client Client) *Exporter {
