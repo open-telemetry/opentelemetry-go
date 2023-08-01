@@ -328,7 +328,9 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { Spans(tracetest.SpanStubs{
-		{},
-	}.Snapshots()) })
+	assert.NotPanics(t, func() {
+		Spans(tracetest.SpanStubs{
+			{},
+		}.Snapshots())
+	})
 }
