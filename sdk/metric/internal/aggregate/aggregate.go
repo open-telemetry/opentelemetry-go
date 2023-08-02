@@ -128,7 +128,7 @@ func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistog
 
 // ExponentialBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExponentialBucketHistogram(cfg aggregation.ExponentialHistogram, noSum bool) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) ExponentialBucketHistogram(cfg aggregation.Base2ExponentialHistogram, noSum bool) (Measure[N], ComputeAggregation) {
 	var h aggregator[N]
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:

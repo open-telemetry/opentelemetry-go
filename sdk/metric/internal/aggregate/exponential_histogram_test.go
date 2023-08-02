@@ -55,7 +55,7 @@ func TestExpoHistogramDataPointRecord(t *testing.T) {
 type expoHistogramDataPointRecordTestCase[N int64 | float64] struct {
 	maxSize         int
 	values          []N
-	expectedBuckets expoBucket
+	expectedBuckets expoBuckets
 	expectedScale   int
 }
 
@@ -64,7 +64,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 4,
 			values:  []N{2, 4, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 1, 1},
@@ -74,7 +74,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 4,
 			values:  []N{4, 4, 4, 2, 16, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{1, 4, 1},
 			},
@@ -83,7 +83,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{1, 2, 4},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -93,7 +93,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{1, 4, 2},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -103,7 +103,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{2, 4, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -113,7 +113,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{2, 1, 4},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -123,7 +123,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{4, 1, 2},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -133,7 +133,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []N{4, 2, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 
 				counts: []uint64{1, 2},
@@ -146,15 +146,15 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[N](tt.maxSize, 20, 0.0)
+			dp := newExpoHistogramDataPoint[N](tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
 			}
 
-			assert.Equal(t, tt.expectedBuckets, dp.posBuckets)
-			assert.Equal(t, tt.expectedBuckets, dp.negBuckets)
-			assert.Equal(t, tt.expectedScale, dp.scale)
+			assert.Equal(t, tt.expectedBuckets, dp.posBuckets, "positive buckets")
+			assert.Equal(t, tt.expectedBuckets, dp.negBuckets, "negative buckets")
+			assert.Equal(t, tt.expectedScale, dp.scale, "scale")
 		})
 	}
 }
@@ -188,7 +188,7 @@ func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) 
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[N](4, 20, 0.0)
+			dp := newExpoHistogramDataPoint[N](4, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 			}
@@ -204,7 +204,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 	type TestCase struct {
 		maxSize         int
 		values          []float64
-		expectedBuckets expoBucket
+		expectedBuckets expoBuckets
 		expectedScale   int
 	}
 
@@ -212,7 +212,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 4,
 			values:  []float64{2, 2, 2, 1, 8, 0.5},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 3, 1},
 			},
@@ -221,7 +221,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{1, 0.5, 2},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -230,7 +230,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{1, 2, 0.5},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -239,7 +239,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{2, 0.5, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -248,7 +248,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{2, 1, 0.5},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -257,7 +257,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{0.5, 1, 2},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -266,7 +266,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 		{
 			maxSize: 2,
 			values:  []float64{0.5, 2, 1},
-			expectedBuckets: expoBucket{
+			expectedBuckets: expoBuckets{
 				startBin: -1,
 				counts:   []uint64{2, 1},
 			},
@@ -278,7 +278,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[float64](tt.maxSize, 20, 0.0)
+			dp := newExpoHistogramDataPoint[float64](tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
@@ -293,25 +293,23 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 
 func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	// These bins are calculated from the following formula:
-	// floor( log2( value) * 2^20 )
+	// floor( log2( value) * 2^20 ) using an arbitrary precision calculator.
 
-	fdp := newExpoHistogramDataPoint[float64](4, 20, 0.0)
+	fdp := newExpoHistogramDataPoint[float64](4, 20, false, false)
 	fdp.record(math.MaxFloat64)
 
-	if fdp.posBuckets.startBin != 1073741824 {
-		t.Errorf("Expected startBin to be 1073741824, got %d", fdp.posBuckets.startBin)
+	if fdp.posBuckets.startBin != 1073741823 {
+		t.Errorf("Expected startBin to be 1073741823, got %d", fdp.posBuckets.startBin)
 	}
 
-	// Subnormal Numbers do not work with the above formula.
-	SmallestNonZeroNormalFloat64 := 0x1p-1022
-	fdp = newExpoHistogramDataPoint[float64](4, 20, 0.0)
-	fdp.record(SmallestNonZeroNormalFloat64)
+	fdp = newExpoHistogramDataPoint[float64](4, 20, false, false)
+	fdp.record(math.SmallestNonzeroFloat64)
 
-	if fdp.posBuckets.startBin != -1071644673 {
-		t.Errorf("Expected startBin to be -1071644673, got %d", fdp.posBuckets.startBin)
+	if fdp.posBuckets.startBin != -1126170625 {
+		t.Errorf("Expected startBin to be -1126170625, got %d", fdp.posBuckets.startBin)
 	}
 
-	idp := newExpoHistogramDataPoint[int64](4, 20, 0.0)
+	idp := newExpoHistogramDataPoint[int64](4, 20, false, false)
 	idp.record(math.MaxInt64)
 
 	if idp.posBuckets.startBin != 66060287 {
@@ -322,144 +320,144 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 func TestExpoBucketDownscale(t *testing.T) {
 	tests := []struct {
 		name   string
-		bucket *expoBucket
+		bucket *expoBuckets
 		scale  int
-		want   *expoBucket
+		want   *expoBuckets
 	}{
 		{
 			name:   "Empty bucket",
-			bucket: &expoBucket{},
+			bucket: &expoBuckets{},
 			scale:  3,
-			want:   &expoBucket{},
+			want:   &expoBuckets{},
 		},
 		{
 			name: "1 size bucket",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 50,
 				counts:   []uint64{7},
 			},
 			scale: 4,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 3,
 				counts:   []uint64{7},
 			},
 		},
 		{
 			name: "zero scale",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 50,
 				counts:   []uint64{7, 5},
 			},
 			scale: 0,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 50,
 				counts:   []uint64{7, 5},
 			},
 		},
 		{
 			name: "aligned bucket scale 1",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			scale: 1,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{3, 7, 11},
 			},
 		},
 		{
 			name: "aligned bucket scale 2",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			scale: 2,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{10, 11},
 			},
 		},
 		{
 			name: "aligned bucket scale 3",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			scale: 3,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{21},
 			},
 		},
 		{
 			name: "unaligned bucket scale 1",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 5,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			}, // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
 			scale: 1,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 2,
 				counts:   []uint64{1, 5, 9, 6},
 			}, // This is equivalent to [0,0,1,5,9,6]
 		},
 		{
 			name: "unaligned bucket scale 2",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 7,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			}, // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
 			scale: 2,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 1,
 				counts:   []uint64{1, 14, 6},
 			}, // This is equivalent to [0,1,14,6]
 		},
 		{
 			name: "unaligned bucket scale 3",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 3,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			}, // This is equivalent to [0,0,0,1,2,3,4,5,6]
 			scale: 3,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{15, 6},
 			}, // This is equivalent to [0,15,6]
 		},
 		{
 			name: "unaligned bucket scale 1",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 1,
 				counts:   []uint64{1, 0, 1},
 			},
 			scale: 1,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 0,
 				counts:   []uint64{1, 1},
 			},
 		},
 		{
 			name: "negative startBin",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: -1,
 				counts:   []uint64{1, 0, 3},
 			},
 			scale: 1,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: -1,
 				counts:   []uint64{1, 3},
 			},
 		},
 		{
 			name: "negative startBin 2",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: -4,
 				counts:   []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 			},
 			scale: 1,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: -2,
 				counts:   []uint64{3, 7, 11, 15, 19},
 			},
@@ -477,51 +475,51 @@ func TestExpoBucketDownscale(t *testing.T) {
 func TestExpoBucketRecord(t *testing.T) {
 	tests := []struct {
 		name   string
-		bucket *expoBucket
+		bucket *expoBuckets
 		bin    int
-		want   *expoBucket
+		want   *expoBuckets
 	}{
 		{
 			name:   "Empty Bucket creates first count",
-			bucket: &expoBucket{},
+			bucket: &expoBuckets{},
 			bin:    -5,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: -5,
 				counts:   []uint64{1},
 			},
 		},
 		{
 			name: "Bin is in the bucket",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 3,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			bin: 5,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: 3,
 				counts:   []uint64{1, 2, 4, 4, 5, 6},
 			},
 		},
 		{
 			name: "Bin is before the start of the bucket",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: 1,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			bin: -2,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: -2,
 				counts:   []uint64{1, 0, 0, 1, 2, 3, 4, 5, 6},
 			},
 		},
 		{
 			name: "Bin is after the end of the bucket",
-			bucket: &expoBucket{
+			bucket: &expoBuckets{
 				startBin: -2,
 				counts:   []uint64{1, 2, 3, 4, 5, 6},
 			},
 			bin: 4,
-			want: &expoBucket{
+			want: &expoBuckets{
 				startBin: -2,
 				counts:   []uint64{1, 2, 3, 4, 5, 6, 1},
 			},
@@ -536,7 +534,7 @@ func TestExpoBucketRecord(t *testing.T) {
 	}
 }
 
-func Test_needRescale(t *testing.T) {
+func TestScaleChange(t *testing.T) {
 	type args struct {
 		bin      int
 		startBin int
@@ -546,7 +544,7 @@ func Test_needRescale(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want bool
+		want int
 	}{
 		{
 			name: "if length is 0, no rescale is needed",
@@ -557,7 +555,7 @@ func Test_needRescale(t *testing.T) {
 				length:   0,
 				maxSize:  4,
 			},
-			want: false,
+			want: 0,
 		},
 		{
 			name: "if bin is between start, and the end, no rescale needed",
@@ -568,7 +566,7 @@ func Test_needRescale(t *testing.T) {
 				length:   10,
 				maxSize:  20,
 			},
-			want: false,
+			want: 0,
 		},
 		{
 			name: "if len([bin,... end]) > maxSize, rescale needed",
@@ -579,7 +577,7 @@ func Test_needRescale(t *testing.T) {
 				length:   3,
 				maxSize:  5,
 			},
-			want: true,
+			want: 1,
 		},
 		{
 			name: "if len([start, ..., bin]) > maxSize, rescale needed",
@@ -590,13 +588,35 @@ func Test_needRescale(t *testing.T) {
 				length:   3,
 				maxSize:  5,
 			},
-			want: true,
+			want: 1,
+		},
+		{
+			name: "if len([start, ..., bin]) > maxSize, rescale needed",
+			// [2,3,4] Length 3 -> [2, ..., 7] Length 12
+			args: args{
+				bin:      13,
+				startBin: 2,
+				length:   3,
+				maxSize:  5,
+			},
+			want: 2,
+		},
+		{
+			name: "It should not hang if it will never be able to rescale",
+			args: args{
+				bin:      1,
+				startBin: -1,
+				length:   1,
+				maxSize:  1,
+			},
+			want: 31,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := needRescale(tt.args.bin, tt.args.startBin, tt.args.length, tt.args.maxSize); got != tt.want {
-				t.Errorf("needRescale() = %v, want %v", got, tt.want)
+			got := scaleChange(tt.args.bin, tt.args.startBin, tt.args.length, tt.args.maxSize)
+			if got != tt.want {
+				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -604,7 +624,7 @@ func Test_needRescale(t *testing.T) {
 
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		agg := newExpoHistogramDataPoint[float64](1024, 20, false, false)
 		n := math.MaxFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -615,7 +635,7 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](1024, 20, 0.0)
+		agg := newExpoHistogramDataPoint[float64](1024, 200, false, false)
 		n := smallestNonZeroNormalFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -624,7 +644,7 @@ func BenchmarkAppend(b *testing.B) {
 	}
 }
 
-var expoHistConf = aggregation.ExponentialHistogram{
+var expoHistConf = aggregation.Base2ExponentialHistogram{
 	MaxSize:  160,
 	MaxScale: 20,
 }
@@ -650,46 +670,18 @@ func TestSubNormal(t *testing.T) {
 		sum:     3 * math.SmallestNonzeroFloat64,
 
 		scale: 20,
-		posBuckets: expoBucket{
-			startBin: -1071644673, // This is the offset for the smallest normal float64 floor(Log_2(2.2250738585072014e-308)*2^20)
+		posBuckets: expoBuckets{
+			startBin: -1126170625,
 			counts:   []uint64{3},
 		},
 	}
 
-	ehdp := newExpoHistogramDataPoint[float64](4, 20, 0.0)
+	ehdp := newExpoHistogramDataPoint[float64](4, 20, false, false)
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
 
 	assert.Equal(t, want, ehdp)
-}
-
-func TestZeroThresholdInt64(t *testing.T) {
-	restore := withHandler(t)
-	defer restore()
-
-	ehdp := newExpoHistogramDataPoint[int64](4, 20, 3.0)
-	ehdp.record(1)
-	ehdp.record(2)
-	ehdp.record(3)
-
-	assert.Len(t, ehdp.posBuckets.counts, 0)
-	assert.Len(t, ehdp.negBuckets.counts, 0)
-	assert.Equal(t, uint64(3), ehdp.zeroCount)
-}
-
-func TestZeroThresholdFloat64(t *testing.T) {
-	restore := withHandler(t)
-	defer restore()
-
-	ehdp := newExpoHistogramDataPoint[float64](4, 20, 0.3)
-	ehdp.record(0.1)
-	ehdp.record(0.2)
-	ehdp.record(0.3)
-
-	assert.Len(t, ehdp.posBuckets.counts, 0)
-	assert.Len(t, ehdp.negBuckets.counts, 0)
-	assert.Equal(t, uint64(3), ehdp.zeroCount)
 }
 
 func TestExponentialHistogramAggregation(t *testing.T) {
@@ -708,7 +700,7 @@ type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
 }
 
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
-	cfg := aggregation.ExponentialHistogram{
+	cfg := aggregation.Base2ExponentialHistogram{
 		MaxSize:  4,
 		MaxScale: 20,
 	}
@@ -829,7 +821,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 }
 
 func testEmptyExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
-	cfg := aggregation.ExponentialHistogram{
+	cfg := aggregation.Base2ExponentialHistogram{
 		MaxSize:  4,
 		MaxScale: 20,
 	}
@@ -842,91 +834,51 @@ func testEmptyExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	assert.Equal(t, want, d.Aggregation())
 }
 
-func TestNormalizeConfig(t *testing.T) {
-	type TestCase struct {
-		name string
-		cfg  aggregation.ExponentialHistogram
-		want aggregation.ExponentialHistogram
+func FuzzGetBin(f *testing.F) {
+	values := []float64{
+		2.0,
+		0x1p35,
+		0x1.0000000000001p35,
+		0x1.fffffffffffffp34,
+		0x1p300,
+		0x1.0000000000001p300,
+		0x1.fffffffffffffp299,
 	}
-	testCases := []TestCase{
-		{
-			name: "Normal",
-			cfg: aggregation.ExponentialHistogram{
-				MaxSize:  13,
-				MaxScale: 7,
-			},
-			want: aggregation.ExponentialHistogram{
-				MaxSize:  13,
-				MaxScale: 7,
-			},
-		},
-		{
-			name: "MaxScale too small",
-			cfg: aggregation.ExponentialHistogram{
-				MaxSize:  24,
-				MaxScale: -15,
-			},
-			want: aggregation.ExponentialHistogram{
-				MaxSize:  24,
-				MaxScale: -10,
-			},
-		},
-		{
-			name: "MaxScale too large",
-			cfg: aggregation.ExponentialHistogram{
-				MaxSize:  31,
-				MaxScale: 25,
-			},
-			want: aggregation.ExponentialHistogram{
-				MaxSize:  31,
-				MaxScale: 20,
-			},
-		},
-		{
-			name: "MaxSize too small",
-			cfg: aggregation.ExponentialHistogram{
-				MaxSize:  -1,
-				MaxScale: 10,
-			},
-			want: aggregation.ExponentialHistogram{
-				MaxSize:  160,
-				MaxScale: 10,
-			},
-		},
+	scales := []int{0, 15, -5}
+
+	for _, s := range scales {
+		for _, v := range values {
+			f.Add(v, s)
+		}
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			restore := withHandler(t)
-			defer restore()
+	f.Fuzz(func(t *testing.T, v float64, scale int) {
+		// GetBin only works on positive values.
+		if math.Signbit(v) {
+			v = v * -1
+		}
+		// GetBin Doesn't work on zero.
+		if v == 0.0 {
+			t.Skip("skipping test for zero")
+		}
 
-			got := normalizeConfig(tt.cfg)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+		// GetBin is only used with a range of -10 to 20.
+		scale = (scale%31+31)%31 - 10
+
+		got := getBin(v, scale)
+		if v <= lowerBound(got, scale) {
+			t.Errorf("v=%x scale =%d had bin %d, but was below lower bound %x", v, scale, got, lowerBound(got, scale))
+		}
+		if v > lowerBound(got+1, scale) {
+			t.Errorf("v=%x scale =%d had bin %d, but was above upper bound %x", v, scale, got, lowerBound(got+1, scale))
+		}
+	})
 }
 
-func Test_getNormalBase2(t *testing.T) {
-	tests := []struct {
-		value float64
-		want  int
-	}{
-		// TODO: Add test cases.
-		{0x1p0, 0}, // 1
-		{0x1.0000000000001p0, 0},
-		{0x1.fffffffffffffp0, 0},
-		{0x1p1, 1}, // 2
-		{0x1.0000000000001p1, 1},
-		{0x1.fffffffffffffp1, 1},
-		{0x1p2, 2}, // 4
-		{math.MaxFloat64, 1023},
-		{smallestNonZeroNormalFloat64, -1022},
-	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%x", tt.value), func(t *testing.T) {
-			if got := getNormalBase2(tt.value); got != tt.want {
-				t.Errorf("getNormalBase2() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func lowerBound(index int, scale int) float64 {
+	// The lowerBound of the index of Math.SmallestNonzeroFloat64 at any scale
+	// is always rounded down to 0.0.
+	// For example lowerBound(getBin(Math.SmallestNonzeroFloat64, 7), 7) == 0.0
+	// 2 ^ (index * 2 ^ (-scale))
+	return math.Exp2(math.Ldexp(float64(index), -scale))
 }

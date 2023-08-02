@@ -626,7 +626,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncCounter and ExponentialHistogram",
 			kind: InstrumentKindCounter,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "SyncUpDownCounter and Drop",
@@ -652,7 +652,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncUpDownCounter and ExponentialHistogram",
 			kind: InstrumentKindUpDownCounter,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "SyncHistogram and Drop",
@@ -678,7 +678,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncHistogram and ExponentialHistogram",
 			kind: InstrumentKindHistogram,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableCounter and Drop",
@@ -704,7 +704,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableCounter and ExponentialHistogram",
 			kind: InstrumentKindObservableCounter,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableUpDownCounter and Drop",
@@ -730,7 +730,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableUpDownCounter and ExponentialHistogram",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableGauge and Drop",
@@ -756,7 +756,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableGauge and ExponentialHistogram",
 			kind: InstrumentKindObservableGauge,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 		},
 		{
 			name: "unknown kind with Sum should error",
@@ -779,7 +779,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "unknown kind with Histogram should error",
 			kind: undefinedInstrument,
-			agg:  aggregation.ExponentialHistogram{},
+			agg:  aggregation.Base2ExponentialHistogram{},
 			want: errIncompatibleAggregation,
 		},
 	}

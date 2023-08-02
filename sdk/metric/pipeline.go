@@ -416,7 +416,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg aggregation.Aggr
 			noSum = true
 		}
 		meas, comp = b.ExplicitBucketHistogram(a, noSum)
-	case aggregation.ExponentialHistogram:
+	case aggregation.Base2ExponentialHistogram:
 		var noSum bool
 		switch kind {
 		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge:
@@ -449,7 +449,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) er
 	switch agg.(type) {
 	case aggregation.Default:
 		return nil
-	case aggregation.ExplicitBucketHistogram, aggregation.ExponentialHistogram:
+	case aggregation.ExplicitBucketHistogram, aggregation.Base2ExponentialHistogram:
 		switch kind {
 		case InstrumentKindCounter,
 			InstrumentKindUpDownCounter,

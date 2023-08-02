@@ -31,23 +31,29 @@ const (
 	expoMinScale = -10
 
 	smallestNonZeroNormalFloat64 = 0x1p-1022
+
+	// These redefine the Math constants with a type, so the compiler won't coerce
+	// them into an int on 32 bit platforms.
+	maxInt64 int64 = math.MaxInt64
+	minInt64 int64 = math.MinInt64
 )
 
 // expoHistogramValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type expoHistogramValues[N int64 | float64] struct {
-	noSum         bool
-	maxSize       int
-	maxScale      int
-	zeroThreshold float64
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int
 
 	values   map[attribute.Set]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
 }
 
-func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noSum bool) *expoHistogramValues[N] {
+func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noMinMax, noSum bool) *expoHistogramValues[N] {
 	return &expoHistogramValues[N]{
 		noSum:    noSum,
+		noMinMax: noMinMax,
 		maxSize:  maxSize,
 		maxScale: maxScale,
 
@@ -63,7 +69,7 @@ func (e *expoHistogramValues[N]) Aggregate(value N, attr attribute.Set) {
 
 	v, ok := e.values[attr]
 	if !ok {
-		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.zeroThreshold)
+		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 		e.values[attr] = v
 	}
 	v.record(value)
@@ -76,22 +82,18 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	max   N
 	sum   N
 
-	maxSize       int
-	zeroThreshold float64
+	maxSize  int
+	noMinMax bool
+	noSum    bool
 
 	scale int
 
-	posBuckets expoBucket
-	negBuckets expoBucket
+	posBuckets expoBuckets
+	negBuckets expoBuckets
 	zeroCount  uint64
 }
 
-const (
-	maxInt64 int64 = math.MaxInt64
-	minInt64 int64 = math.MinInt64
-)
-
-func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThreshold float64) *expoHistogramDataPoint[N] {
+func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, noMinMax, noSum bool) *expoHistogramDataPoint[N] {
 	f := math.MaxFloat64
 	max := N(f) // if N is int64, max will overflow to -9223372036854775808
 	min := N(-f)
@@ -100,34 +102,36 @@ func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, zeroThr
 		min = N(minInt64)
 	}
 	return &expoHistogramDataPoint[N]{
-		min:           max,
-		max:           min,
-		maxSize:       maxSize,
-		zeroThreshold: zeroThreshold,
-		scale:         maxScale,
+		min:      max,
+		max:      min,
+		maxSize:  maxSize,
+		noMinMax: noMinMax,
+		noSum:    noSum,
+		scale:    maxScale,
 	}
 }
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
 	p.count++
-	if v < p.min {
-		p.min = v
+
+	if !p.noMinMax {
+		if v < p.min {
+			p.min = v
+		}
+		if v > p.max {
+			p.max = v
+		}
 	}
-	if v > p.max {
-		p.max = v
+	if !p.noSum {
+		p.sum += v
 	}
-	p.sum += v
 
 	absV := math.Abs(float64(v))
 
-	if float64(absV) <= p.zeroThreshold {
+	if float64(absV) == 0.0 {
 		p.zeroCount++
 		return
-	}
-
-	if absV < smallestNonZeroNormalFloat64 {
-		absV = smallestNonZeroNormalFloat64
 	}
 
 	bin := getBin(absV, p.scale)
@@ -139,8 +143,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if needRescale(bin, bucket.startBin, len(bucket.counts), p.maxSize) {
-		scaleDelta := scaleChange(bin, bucket.startBin, len(bucket.counts), p.maxSize)
+	if scaleDelta := scaleChange(bin, bucket.startBin, len(bucket.counts), p.maxSize); scaleDelta > 0 {
 		if p.scale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
@@ -161,38 +164,18 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 // getBin returns the bin of the bucket that the value v should be recorded
 // into at the given scale.
 func getBin(v float64, scale int) int {
+	frac, exp := math.Frexp(v)
 	if scale <= 0 {
-		return getExpoBin(v, scale)
+		// Because of the choice of fraction is always 1 power of two higher than we want.
+		correction := 1
+		if frac == .5 {
+			// If v is an exact power of two the frac will be .5 and the exp
+			// will be one higher than we want.
+			correction = 2
+		}
+		return (exp - correction) >> (-scale)
 	}
-	return getLogBin(v, scale)
-}
-
-func getExpoBin(v float64, scale int) int {
-	// Extract the raw exponent.
-	rawExp := getNormalBase2(v)
-
-	// In case the value is an exact power of two, compute a
-	// correction of -1:
-	correction := int((getSignificand(v) - 1) >> significandWidth)
-
-	// Note: bit-shifting does the right thing for negative
-	// exponents, e.g., -1 >> 1 == -1.
-	return (rawExp + correction) >> (-scale)
-}
-
-func getLogBin(v float64, scale int) int {
-	// Exact power-of-two correctness: an optional special case.
-	if getSignificand(v) == 0 {
-		exp := getNormalBase2(v)
-		return (exp << scale) - 1
-	}
-
-	// Non-power of two cases.  Use Floor(x) to round the scaled
-	// logarithm.  We could use Ceil(x)-1 to achieve the same
-	// result, though Ceil() is typically defined as -Floor(-x)
-	// and typically not performed in hardware, so this is likely
-	// less code.
-	return int(math.Floor(math.Log(v) * scaleFactors[scale]))
+	return exp<<scale + int(math.Log(frac)*scaleFactors[scale]) - 1
 }
 
 // scaleFactors are constants used in calculating the logarithm index. They are
@@ -221,18 +204,13 @@ var scaleFactors = [21]float64{
 	math.Ldexp(math.Log2E, 20),
 }
 
-// needRescale checks if bin will fit in the current bucket.
-func needRescale(bin, startBin, length, maxSize int) bool {
-	if length == 0 {
-		return false
-	}
-
-	endBin := startBin + length - 1
-	return bin-startBin >= maxSize || endBin-bin >= maxSize
-}
-
 // scaleChange returns the magnitude of the scale change needed to fit bin in the bucket.
 func scaleChange(bin, startBin, length, maxSize int) int {
+	if length == 0 {
+		// No need to rescale if there are no buckets.
+		return 0
+	}
+
 	low := startBin
 	high := bin
 	if startBin >= bin {
@@ -245,19 +223,22 @@ func scaleChange(bin, startBin, length, maxSize int) int {
 		low = low >> 1
 		high = high >> 1
 		count++
+		if count > expoMaxScale-expoMinScale {
+			return count
+		}
 	}
 	return count
 }
 
-// expoBucket is a single bucket in an exponential histogram.
-type expoBucket struct {
+// expoBuckets is a single bucket in an exponential histogram.
+type expoBuckets struct {
 	startBin int
 	counts   []uint64
 }
 
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
-func (b *expoBucket) record(bin int) {
+func (b *expoBuckets) record(bin int) {
 	if len(b.counts) == 0 {
 		b.counts = []uint64{1}
 		b.startBin = bin
@@ -309,7 +290,7 @@ func (b *expoBucket) record(bin int) {
 
 // downscale shrinks a bucket by a factor of 2*s. It will sum counts into the
 // correct lower resolution bucket.
-func (b *expoBucket) downscale(delta int) {
+func (b *expoBuckets) downscale(delta int) {
 	// Example
 	// delta = 2
 	// Original offset: -6
@@ -341,19 +322,6 @@ func (b *expoBucket) downscale(delta int) {
 	b.startBin = b.startBin >> delta
 }
 
-func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.ExponentialHistogram {
-	if cfg.MaxScale > expoMaxScale {
-		cfg.MaxScale = expoMaxScale
-	}
-	if cfg.MaxScale < expoMinScale {
-		cfg.MaxScale = expoMinScale
-	}
-	if cfg.MaxSize <= 0 {
-		cfg.MaxSize = 160
-	}
-	return cfg
-}
-
 // newDeltaExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
@@ -361,17 +329,16 @@ func normalizeConfig(cfg aggregation.ExponentialHistogram) aggregation.Exponenti
 // Each aggregation cycle is treated independently. When the returned
 // Aggregator's Aggregations method is called it will reset all histogram
 // counts to zero.
-func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram, noSum bool) aggregator[N] {
-	cfg = normalizeConfig(cfg)
+func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.Base2ExponentialHistogram, noSum bool) aggregator[N] {
 
 	return &deltaExponentialHistogram[N]{
 		expoHistogramValues: newExpoHistValues[N](
-			cfg.MaxSize,
-			cfg.MaxScale,
+			int(cfg.MaxSize),
+			int(cfg.MaxScale),
+			cfg.NoMinMax,
 			noSum,
 		),
-		noMinMax: cfg.NoMinMax,
-		start:    now(),
+		start: now(),
 	}
 }
 
@@ -380,8 +347,7 @@ func newDeltaExponentialHistogram[N int64 | float64](cfg aggregation.Exponential
 type deltaExponentialHistogram[N int64 | float64] struct {
 	*expoHistogramValues[N]
 
-	noMinMax bool
-	start    time.Time
+	start time.Time
 }
 
 // Aggregate records the measurement, scoped by attr, and aggregates it
@@ -407,7 +373,7 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 			Count:         b.count,
 			Scale:         int32(b.scale),
 			ZeroCount:     b.zeroCount,
-			ZeroThreshold: b.zeroThreshold,
+			ZeroThreshold: 0.0,
 			PositiveBucket: metricdata.ExponentialBucket{
 				Offset: int32(b.posBuckets.startBin),
 				Counts: make([]uint64, len(b.posBuckets.counts)),
@@ -441,17 +407,15 @@ func (e *deltaExponentialHistogram[N]) Aggregation() metricdata.Aggregation {
 // Each aggregation cycle builds from the previous, the histogram counts are
 // the bucketed counts of all values aggregated since the returned Aggregator
 // was created.
-func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.ExponentialHistogram, noSum bool) aggregator[N] {
-	cfg = normalizeConfig(cfg)
-
+func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.Base2ExponentialHistogram, noSum bool) aggregator[N] {
 	return &cumulativeExponentialHistogram[N]{
 		expoHistogramValues: newExpoHistValues[N](
-			cfg.MaxSize,
-			cfg.MaxScale,
+			int(cfg.MaxSize),
+			int(cfg.MaxScale),
+			cfg.NoMinMax,
 			noSum,
 		),
-		noMinMax: cfg.NoMinMax,
-		start:    now(),
+		start: now(),
 	}
 }
 
@@ -460,8 +424,7 @@ func newCumulativeExponentialHistogram[N int64 | float64](cfg aggregation.Expone
 type cumulativeExponentialHistogram[N int64 | float64] struct {
 	*expoHistogramValues[N]
 
-	noMinMax bool
-	start    time.Time
+	start time.Time
 }
 
 // Aggregate records the measurement, scoped by attr, and aggregates it
@@ -486,7 +449,7 @@ func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation
 			Count:         b.count,
 			Scale:         int32(b.scale),
 			ZeroCount:     b.zeroCount,
-			ZeroThreshold: b.zeroThreshold,
+			ZeroThreshold: 0.0,
 			PositiveBucket: metricdata.ExponentialBucket{
 				Offset: int32(b.posBuckets.startBin),
 				Counts: make([]uint64, len(b.posBuckets.counts)),
@@ -514,38 +477,4 @@ func (e *cumulativeExponentialHistogram[N]) Aggregation() metricdata.Aggregation
 	}
 
 	return h
-}
-
-const (
-	// significandWidth is the size of an IEEE 754 double-precision
-	// floating-point significand.
-	significandWidth = 52
-	// SignificandMask is the mask for the significand of an IEEE 754
-	// double-precision floating-point value: 0xFFFFFFFFFFFFF.
-	significandMask = 1<<significandWidth - 1
-	// exponentWidth is the size of an IEEE 754 double-precision
-	// floating-point exponent.
-	exponentWidth = 11
-	// exponentBias is the exponent bias specified for encoding
-	// the IEEE 754 double-precision floating point exponent: 1023.
-	exponentBias = 1<<(exponentWidth-1) - 1
-	// exponentMask are set to 1 for the bits of an IEEE 754
-	// floating point exponent: 0x7FF0000000000000.
-	exponentMask = ((1 << exponentWidth) - 1) << significandWidth
-)
-
-// getNormalBase2 extracts the normalized base-2 fractional exponent.
-// Unlike Frexp(), this returns k for the equation f x 2**k where f is
-// in the range [1, 2).  Note that this function is not called for
-// subnormal numbers.
-func getNormalBase2(value float64) int {
-	rawBits := math.Float64bits(value)
-	rawExponent := (int64(rawBits) & exponentMask) >> significandWidth
-	return int(rawExponent - exponentBias)
-}
-
-// getSignificand returns the 52 bit (unsigned) significand as a
-// signed value.
-func getSignificand(value float64) int64 {
-	return int64(math.Float64bits(value)) & significandMask
 }

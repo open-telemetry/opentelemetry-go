@@ -165,13 +165,20 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 	}
 }
 
-// ExponentialHistogram is an aggregation that summarizes a set of
+// Base2ExponentialHistogram is an aggregation that summarizes a set of
 // measurements as an histogram with bucket widths that grow exponentially.
-type ExponentialHistogram struct {
+type Base2ExponentialHistogram struct {
 	// MaxSize is the maximum number of buckets to use for the histogram.
-	MaxSize int
+	MaxSize int32
 	// MaxScale is the maximum resolution scale to use for the histogram.
-	MaxScale int
+	//
+	// MaxScale has a maximum value of 20. Using a value of 20 means the
+	// maximum number of buckets that can fit within the range of a
+	// signed 32-bit integer index could be used.
+	//
+	// MaxScale has a minimum value of -10. Using a value of -10 means only
+	// two buckets will be use.
+	MaxScale int32
 
 	// NoMinMax indicates whether to not record the min and max of the
 	// distribution. By default, these extrema are recorded.
@@ -183,14 +190,14 @@ type ExponentialHistogram struct {
 	NoMinMax bool
 }
 
-var _ Aggregation = ExponentialHistogram{}
+var _ Aggregation = Base2ExponentialHistogram{}
 
 // private attempts to ensure no user-defined Aggregation is allowed. The
 // OTel specification does not allow user-defined Aggregation currently.
-func (e ExponentialHistogram) private() {}
+func (e Base2ExponentialHistogram) private() {}
 
 // Copy returns a deep copy of the Aggregation.
-func (e ExponentialHistogram) Copy() Aggregation {
+func (e Base2ExponentialHistogram) Copy() Aggregation {
 	return e
 }
 
@@ -203,10 +210,7 @@ const (
 var errExpoHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
 
 // Err returns an error for any misconfigured Aggregation.
-func (e ExponentialHistogram) Err() error {
-	if e.MaxScale < expoMinScale {
-		return fmt.Errorf("%w: max size %d is less than minimum scale %d", errExpoHist, e.MaxSize, expoMinScale)
-	}
+func (e Base2ExponentialHistogram) Err() error {
 	if e.MaxScale > expoMaxScale {
 		return fmt.Errorf("%w: max size %d is greater than maximum scale %d", errExpoHist, e.MaxSize, expoMaxScale)
 	}

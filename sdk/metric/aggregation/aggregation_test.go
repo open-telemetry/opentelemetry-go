@@ -20,13 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func defaultExponentialHistogram() ExponentialHistogram {
-	return ExponentialHistogram{
-		MaxSize:  160,
-		MaxScale: 20,
-	}
-}
-
 func TestAggregationErr(t *testing.T) {
 	t.Run("DropOperation", func(t *testing.T) {
 		assert.NoError(t, Drop{}.Err())
@@ -64,14 +57,17 @@ func TestAggregationErr(t *testing.T) {
 	})
 
 	t.Run("ExponentialHistogramOperation", func(t *testing.T) {
-		assert.NoError(t, defaultExponentialHistogram().Err())
+		assert.NoError(t, Base2ExponentialHistogram{
+			MaxSize:  160,
+			MaxScale: 20,
+		}.Err())
 
-		assert.NoError(t, ExponentialHistogram{
+		assert.NoError(t, Base2ExponentialHistogram{
 			MaxSize:  1,
 			NoMinMax: true,
 		}.Err())
 
-		assert.NoError(t, ExponentialHistogram{
+		assert.NoError(t, Base2ExponentialHistogram{
 			MaxSize:  1024,
 			MaxScale: -3,
 		}.Err())
@@ -79,16 +75,12 @@ func TestAggregationErr(t *testing.T) {
 
 	t.Run("InvalidExponentialHistogramOperation", func(t *testing.T) {
 		// MazSize must be greater than 0
-		assert.ErrorIs(t, ExponentialHistogram{}.Err(), errAgg)
+		assert.ErrorIs(t, Base2ExponentialHistogram{}.Err(), errAgg)
 
-		// MaxScale Must be <=20 and >= -10
-		assert.ErrorIs(t, ExponentialHistogram{
+		// MaxScale Must be <=20
+		assert.ErrorIs(t, Base2ExponentialHistogram{
 			MaxSize:  1,
 			MaxScale: 30,
-		}.Err(), errAgg)
-		assert.ErrorIs(t, ExponentialHistogram{
-			MaxSize:  1,
-			MaxScale: -20,
 		}.Err(), errAgg)
 	})
 }
