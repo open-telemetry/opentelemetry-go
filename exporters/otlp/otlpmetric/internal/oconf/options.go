@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package oconf provides common metric configuration types and functionality
+// for all otlpmetric exporters.
+//
+// Deprecated: package oconf exists for historical compatibility, it should not
+// be used.
 package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 
 import (
@@ -27,7 +32,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" // nolint: staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
