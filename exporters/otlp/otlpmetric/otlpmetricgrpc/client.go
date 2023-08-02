@@ -27,11 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -40,9 +36,6 @@ type client struct {
 	metadata      metadata.MD
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
-
-	temporalitySelector metric.TemporalitySelector
-	aggregationSelector metric.AggregationSelector
 
 	// ourConn keeps track of where conn was created: true if created here in
 	// NewClient, or false if passed with an option. This is important on
@@ -54,16 +47,11 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, options ...Option) (ominternal.Client, error) {
-	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
-
+func newClient(ctx context.Context, cfg oconf.Config) (*client, error) {
 	c := &client{
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		conn:          cfg.GRPCConn,
-
-		temporalitySelector: cfg.Metrics.TemporalitySelector,
-		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}
 
 	if len(cfg.Metrics.Headers) > 0 {
@@ -87,19 +75,6 @@ func newClient(ctx context.Context, options ...Option) (ominternal.Client, error
 
 	return c, nil
 }
-
-// Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	return c.temporalitySelector(k)
-}
-
-// Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	return c.aggregationSelector(k)
-}
-
-// ForceFlush does nothing, the client holds no state.
-func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 
 // Shutdown shuts down the client, freeing all resource.
 //
