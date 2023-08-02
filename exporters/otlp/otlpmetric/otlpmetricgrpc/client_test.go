@@ -28,8 +28,10 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -129,6 +131,20 @@ func TestRetryable(t *testing.T) {
 	}
 }
 
+type clientShim struct {
+	*client
+}
+
+func (clientShim) Temporality(metric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
+}
+func (clientShim) Aggregation(metric.InstrumentKind) aggregation.Aggregation {
+	return nil
+}
+func (clientShim) ForceFlush(ctx context.Context) error {
+	return ctx.Err()
+}
+
 func TestClient(t *testing.T) {
 	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
 		coll, err := otest.NewGRPCCollector("", rCh)
@@ -136,9 +152,11 @@ func TestClient(t *testing.T) {
 
 		ctx := context.Background()
 		addr := coll.Addr().String()
-		client, err := newClient(ctx, WithEndpoint(addr), WithInsecure())
+		opts := []Option{WithEndpoint(addr), WithInsecure()}
+		cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
+		client, err := newClient(ctx, cfg)
 		require.NoError(t, err)
-		return client, coll
+		return clientShim{client}, coll
 	}
 
 	t.Run("Integration", otest.RunClientTests(factory))
