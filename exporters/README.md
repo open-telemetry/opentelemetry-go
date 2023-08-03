@@ -17,6 +17,6 @@ The following exporter packages are provided with the following OpenTelemetry si
 | [go.opentelemetry.io/otel/exporters/stdout/stdouttrace](./stdout/stdouttrace)   |         | ✓      |
 | [go.opentelemetry.io/otel/exporters/zipkin](./zipkin)                           |         | ✓      |
 
-See the [OpenTelemetry registry] for 3rd-part exporters compatible with this project.
+See the [OpenTelemetry registry] for 3rd-party exporters compatible with this project.
 
 [OpenTelemetry registry]: https://opentelemetry.io/registry/?language=go&component=exporter
