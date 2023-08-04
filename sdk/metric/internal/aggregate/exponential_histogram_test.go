@@ -704,7 +704,7 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 // TODO: This can be defined in the test after we drop support for go1.19.
 type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
 	name      string
-	inOut     func() (Measure[N], ComputeAggregation)
+	build     func() (Measure[N], ComputeAggregation)
 	input     [][]N
 	want      metricdata.ExponentialHistogram[N]
 	wantCount int
@@ -719,7 +719,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	tests := []exponentialHistogramAggregationTestCase[N]{
 		{
 			name: "Delta Single",
-			inOut: func() (Measure[N], ComputeAggregation) {
+			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.DeltaTemporality,
 				}.ExponentialBucketHistogram(cfg, false)
@@ -747,7 +747,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name: "Cumulative Single",
-			inOut: func() (Measure[N], ComputeAggregation) {
+			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.CumulativeTemporality,
 				}.ExponentialBucketHistogram(cfg, false)
@@ -775,7 +775,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name: "Delta Multiple",
-			inOut: func() (Measure[N], ComputeAggregation) {
+			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.DeltaTemporality,
 				}.ExponentialBucketHistogram(cfg, false)
@@ -804,7 +804,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		},
 		{
 			name: "Cumulative Multiple ",
-			inOut: func() (Measure[N], ComputeAggregation) {
+			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.CumulativeTemporality,
 				}.ExponentialBucketHistogram(cfg, false)
@@ -837,7 +837,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
-			in, out := tt.inOut()
+			in, out := tt.build()
 			ctx := context.Background()
 
 			var got metricdata.Aggregation
