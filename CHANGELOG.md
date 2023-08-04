@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `ManualReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
 - Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+- Add support for exponential histogram aggregations.
+  A histogram can be configured as an exponential histogram using a view with `go.opentelemetry.io/otel/sdk/metric/aggregation.ExponentialHistogram` as the aggregation. (#4245)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
 - OTLP Metrics Exporter now supports the `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` environment variable. (#4287)

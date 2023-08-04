@@ -112,6 +112,18 @@ func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistog
 	}
 }
 
+// ExponentialBucketHistogram returns a histogram aggregate function input and
+// output.
+func (b Builder[N]) ExponentialBucketHistogram(cfg aggregation.Base2ExponentialHistogram, noSum bool) (Measure[N], ComputeAggregation) {
+	h := newExponentialHistogram[N](cfg, noSum)
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		return b.filter(h.measure), h.delta
+	default:
+		return b.filter(h.measure), h.cumulative
+	}
+}
+
 // reset ensures s has capacity and sets it length. If the capacity of s too
 // small, a new slice is returned with the specified capacity and length.
 func reset[T any](s []T, length, capacity int) []T {
