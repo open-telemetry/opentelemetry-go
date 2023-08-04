@@ -67,6 +67,10 @@ func TestNewWithAttributes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+			// Run ctors in parallel to verify that there is no
+			// race condition.
+			t.Parallel()
+
 			res := resource.NewSchemaless(c.in...)
 			if diff := cmp.Diff(
 				res.Attributes(),
