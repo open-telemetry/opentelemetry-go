@@ -31,7 +31,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 var (
