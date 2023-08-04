@@ -66,6 +66,7 @@ func TestNewWithAttributes(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
+		c := c
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			// Run ctors in parallel to verify that there is no
 			// race condition.
