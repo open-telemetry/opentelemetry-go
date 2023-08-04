@@ -330,6 +330,52 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		_ = r.Shutdown(context.Background())
 	})
 
+	t.Run("ForceFlush timeout on producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout))
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				select {
+				case <-time.After(timeout + time.Second):
+					*rm = testResourceMetricsA
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return ctx.Err()
+				}
+				return nil
+			}})
+		r.RegisterProducer(testExternalProducer{})
+		assert.Equal(t, context.DeadlineExceeded, r.ForceFlush(context.Background()), "timeout error not returned")
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(context.Background())
+	})
+
+	t.Run("ForceFlush timeout on external producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout))
+		r.register(testSDKProducer{})
+		r.RegisterProducer(testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				select {
+				case <-time.After(timeout + time.Second):
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return nil, ctx.Err()
+				}
+				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+			},
+		})
+		assert.Equal(t, context.DeadlineExceeded, r.ForceFlush(context.Background()), "timeout error not returned")
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(context.Background())
+	})
+
 	t.Run("Shutdown", func(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp)
