@@ -41,7 +41,6 @@ const (
 
 // expoHistogramValues summarizes a set of measurements as expoHistogramDataPoints using
 // dynamically scaled buckets.
-// explicitly defined buckets.
 type expoHistogramValues[N int64 | float64] struct {
 	noSum    bool
 	noMinMax bool
