@@ -67,7 +67,10 @@ func (o periodicReaderOptionFunc) applyPeriodic(conf periodicReaderConfig) perio
 }
 
 // WithTimeout configures the time a PeriodicReader waits for an export to
-// complete before canceling it.
+// complete before canceling it. This includes an export which occurs as part
+// of Shutdown or ForceFlush if the user passed context does not have a
+// deadline. If the user passed context does have a deadline, it will be used
+// instead.
 //
 // This option overrides any value set for the
 // OTEL_METRIC_EXPORT_TIMEOUT environment variable.
@@ -236,8 +239,8 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	return err
 }
 
-// Collect gathers and returns all metric data related to the Reader from
-// the SDK and other Producers and stores the result in rm. The returned metric
+// Collect gathers all metric data related to the Reader from
+// the SDK and other Producers and stores the result in rm. The metric
 // data is not exported to the configured exporter, it is left to the caller to
 // handle that if desired.
 //
@@ -297,6 +300,13 @@ func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetri
 //
 // This method is safe to call concurrently.
 func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
+	// Prioritize the ctx timeout if it is set.
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, r.timeout)
+		defer cancel()
+	}
+
 	errCh := make(chan error, 1)
 	select {
 	case r.flushCh <- errCh:
@@ -323,6 +333,13 @@ func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	r.shutdownOnce.Do(func() {
+		// Prioritize the ctx timeout if it is set.
+		if _, ok := ctx.Deadline(); !ok {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, r.timeout)
+			defer cancel()
+		}
+
 		// Stop the run loop.
 		r.cancel()
 		<-r.done

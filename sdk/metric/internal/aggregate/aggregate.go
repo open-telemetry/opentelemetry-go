@@ -16,11 +16,16 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// now is used to return the current local time while allowing tests to
+// override the default time.Now function.
+var now = time.Now
 
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
@@ -42,13 +47,15 @@ type Builder[N int64 | float64] struct {
 	Filter attribute.Filter
 }
 
-func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
+func (b Builder[N]) filter(f Measure[N]) Measure[N] {
 	if b.Filter != nil {
-		agg = newFilter[N](agg, b.Filter)
+		fltr := b.Filter // Copy to make it immutable after assignment.
+		return func(ctx context.Context, n N, a attribute.Set) {
+			fAttr, _ := a.Filter(fltr)
+			f(ctx, n, fAttr)
+		}
 	}
-	return func(_ context.Context, n N, a attribute.Set) {
-		agg.Aggregate(n, a)
-	}
+	return f
 }
 
 // LastValue returns a last-value aggregate function input and output.
@@ -59,11 +66,13 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// a last-value aggregate.
 	lv := newLastValue[N]()
 
-	return b.input(lv), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = lv.Aggregation()
-
+	return b.filter(lv.measure), func(dest *metricdata.Aggregation) int {
+		// Ignore if dest is not a metricdata.Gauge. The chance for memory
+		// reuse of the DataPoints is missed (better luck next time).
 		gData, _ := (*dest).(metricdata.Gauge[N])
+		lv.computeAggregation(&gData.DataPoints)
+		*dest = gData
+
 		return len(gData.DataPoints)
 	}
 }
@@ -71,76 +80,55 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
 func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregation) {
-	var s aggregator[N]
+	s := newPrecomputedSum[N](monotonic)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = newPrecomputedDeltaSum[N](monotonic)
+		return b.filter(s.measure), s.delta
 	default:
-		s = newPrecomputedCumulativeSum[N](monotonic)
-	}
-
-	return b.input(s), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = s.Aggregation()
-
-		sData, _ := (*dest).(metricdata.Sum[N])
-		return len(sData.DataPoints)
+		return b.filter(s.measure), s.cumulative
 	}
 }
 
 // Sum returns a sum aggregate function input and output.
 func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
-	var s aggregator[N]
+	s := newSum[N](monotonic)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s = newDeltaSum[N](monotonic)
+		return b.filter(s.measure), s.delta
 	default:
-		s = newCumulativeSum[N](monotonic)
-	}
-
-	return b.input(s), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = s.Aggregation()
-
-		sData, _ := (*dest).(metricdata.Sum[N])
-		return len(sData.DataPoints)
+		return b.filter(s.measure), s.cumulative
 	}
 }
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
 func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram, noSum bool) (Measure[N], ComputeAggregation) {
-	var h aggregator[N]
+	h := newHistogram[N](cfg, noSum)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = newDeltaHistogram[N](cfg, noSum)
+		return b.filter(h.measure), h.delta
 	default:
-		h = newCumulativeHistogram[N](cfg, noSum)
-	}
-	return b.input(h), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = h.Aggregation()
-
-		hData, _ := (*dest).(metricdata.Histogram[N])
-		return len(hData.DataPoints)
+		return b.filter(h.measure), h.cumulative
 	}
 }
 
 // ExponentialBucketHistogram returns a histogram aggregate function input and
 // output.
 func (b Builder[N]) ExponentialBucketHistogram(cfg aggregation.Base2ExponentialHistogram, noSum bool) (Measure[N], ComputeAggregation) {
-	var h aggregator[N]
+	h := newExponentialHistogram[N](cfg, noSum)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = newDeltaExponentialHistogram[N](cfg, noSum)
+		return b.filter(h.measure), h.delta
 	default:
-		h = newCumulativeExponentialHistogram[N](cfg, noSum)
+		return b.filter(h.measure), h.cumulative
 	}
-	return b.input(h), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = h.Aggregation()
+}
 
-		hData, _ := (*dest).(metricdata.ExponentialHistogram[N])
-		return len(hData.DataPoints)
+// reset ensures s has capacity and sets it length. If the capacity of s too
+// small, a new slice is returned with the specified capacity and length.
+func reset[T any](s []T, length, capacity int) []T {
+	if cap(s) < capacity {
+		return make([]T, length, capacity)
 	}
+	return s[:length]
 }

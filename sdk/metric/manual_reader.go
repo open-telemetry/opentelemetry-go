@@ -118,8 +118,8 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 	return err
 }
 
-// Collect gathers all metrics from the SDK and other Producers, calling any
-// callbacks necessary and stores the result in rm.
+// Collect gathers all metric data related to the Reader from
+// the SDK and other Producers and stores the result in rm.
 //
 // Collect will return an error if called after shutdown.
 // Collect will return an error if rm is a nil ResourceMetrics.
@@ -227,6 +227,9 @@ func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	// Deep copy and validate before using.
 	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
 		a := selector(ik)
+		if a == nil {
+			return nil
+		}
 		cpA := a.Copy()
 		if err := cpA.Err(); err != nil {
 			cpA = DefaultAggregationSelector(ik)

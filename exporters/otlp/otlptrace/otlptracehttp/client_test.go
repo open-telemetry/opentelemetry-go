@@ -29,8 +29,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
@@ -330,7 +330,7 @@ func TestDeadlineContext(t *testing.T) {
 	assert.Empty(t, mc.GetSpans())
 }
 
-func TestStopWhileExporting(t *testing.T) {
+func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 	statuses := make([]int, 0, 5)
 	for i := 0; i < cap(statuses); i++ {
 		statuses = append(statuses, http.StatusTooManyRequests)

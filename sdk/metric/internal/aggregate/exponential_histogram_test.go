@@ -15,6 +15,7 @@
 package aggregate
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"testing"
@@ -650,15 +651,26 @@ var expoHistConf = aggregation.Base2ExponentialHistogram{
 }
 
 func BenchmarkExponentialHistogram(b *testing.B) {
-	b.Run("Int64", benchmarkExponentialHistogram[int64])
-	b.Run("Float64", benchmarkExponentialHistogram[float64])
-}
-
-func benchmarkExponentialHistogram[N int64 | float64](b *testing.B) {
-	factory := func() aggregator[N] { return newDeltaExponentialHistogram[N](expoHistConf, false) }
-	b.Run("Delta", benchmarkAggregator(factory))
-	factory = func() aggregator[N] { return newCumulativeExponentialHistogram[N](expoHistConf, false) }
-	b.Run("Cumulative", benchmarkAggregator(factory))
+	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.ExponentialBucketHistogram(expoHistConf, false)
+	}))
+	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.DeltaTemporality,
+		}.ExponentialBucketHistogram(expoHistConf, false)
+	}))
+	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.ExponentialBucketHistogram(expoHistConf, false)
+	}))
+	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{
+			Temporality: metricdata.DeltaTemporality,
+		}.ExponentialBucketHistogram(expoHistConf, false)
+	}))
 }
 
 func TestSubNormal(t *testing.T) {
@@ -687,16 +699,15 @@ func TestSubNormal(t *testing.T) {
 func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Int64", testExponentialHistogramAggregation[int64])
 	t.Run("Float64", testExponentialHistogramAggregation[float64])
-	t.Run("Int64 Empty", testEmptyExponentialHistogramAggregation[int64])
-	t.Run("Float64 Empty", testEmptyExponentialHistogramAggregation[float64])
 }
 
 // TODO: This can be defined in the test after we drop support for go1.19.
 type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
-	name       string
-	aggregator aggregator[N]
-	input      [][]N
-	want       metricdata.ExponentialHistogram[N]
+	name      string
+	inOut     func() (Measure[N], ComputeAggregation)
+	input     [][]N
+	want      metricdata.ExponentialHistogram[N]
+	wantCount int
 }
 
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
@@ -707,8 +718,12 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 
 	tests := []exponentialHistogramAggregationTestCase[N]{
 		{
-			name:       "Delta Single",
-			aggregator: newDeltaExponentialHistogram[N](cfg, false),
+			name: "Delta Single",
+			inOut: func() (Measure[N], ComputeAggregation) {
+				return Builder[N]{
+					Temporality: metricdata.DeltaTemporality,
+				}.ExponentialBucketHistogram(cfg, false)
+			},
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
 			},
@@ -728,10 +743,15 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 					},
 				},
 			},
+			wantCount: 1,
 		},
 		{
-			name:       "Cumulative Single",
-			aggregator: newCumulativeExponentialHistogram[N](cfg, false),
+			name: "Cumulative Single",
+			inOut: func() (Measure[N], ComputeAggregation) {
+				return Builder[N]{
+					Temporality: metricdata.CumulativeTemporality,
+				}.ExponentialBucketHistogram(cfg, false)
+			},
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
 			},
@@ -751,10 +771,15 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 					},
 				},
 			},
+			wantCount: 1,
 		},
 		{
-			name:       "Delta Multiple",
-			aggregator: newDeltaExponentialHistogram[N](cfg, false),
+			name: "Delta Multiple",
+			inOut: func() (Measure[N], ComputeAggregation) {
+				return Builder[N]{
+					Temporality: metricdata.DeltaTemporality,
+				}.ExponentialBucketHistogram(cfg, false)
+			},
 			input: [][]N{
 				{2, 3, 8},
 				{4, 4, 4, 2, 16, 1},
@@ -775,10 +800,15 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 					},
 				},
 			},
+			wantCount: 1,
 		},
 		{
-			name:       "Cumulative Multiple ",
-			aggregator: newCumulativeExponentialHistogram[N](cfg, false),
+			name: "Cumulative Multiple ",
+			inOut: func() (Measure[N], ComputeAggregation) {
+				return Builder[N]{
+					Temporality: metricdata.CumulativeTemporality,
+				}.ExponentialBucketHistogram(cfg, false)
+			},
 			input: [][]N{
 				{2, 3, 8},
 				{4, 4, 4, 2, 16, 1},
@@ -799,6 +829,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 					},
 				},
 			},
+			wantCount: 1,
 		},
 	}
 
@@ -806,32 +837,22 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
+			in, out := tt.inOut()
+			ctx := context.Background()
 
 			var got metricdata.Aggregation
+			var count int
 			for _, n := range tt.input {
 				for _, v := range n {
-					tt.aggregator.Aggregate(v, *attribute.EmptySet())
+					in(ctx, v, *attribute.EmptySet())
 				}
-				got = tt.aggregator.Aggregation()
+				count = out(&got)
 			}
 
 			metricdatatest.AssertAggregationsEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+			assert.Equal(t, tt.wantCount, count)
 		})
 	}
-}
-
-func testEmptyExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
-	cfg := aggregation.Base2ExponentialHistogram{
-		MaxSize:  4,
-		MaxScale: 20,
-	}
-	var want metricdata.Aggregation
-
-	c := newCumulativeExponentialHistogram[N](cfg, false)
-	assert.Equal(t, want, c.Aggregation())
-
-	d := newDeltaExponentialHistogram[N](cfg, false)
-	assert.Equal(t, want, d.Aggregation())
 }
 
 func FuzzGetBin(f *testing.F) {
