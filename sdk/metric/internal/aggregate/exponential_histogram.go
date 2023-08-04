@@ -39,7 +39,8 @@ const (
 	minInt64 int64 = math.MinInt64
 )
 
-// expoHistogramValues summarizes a set of measurements as an histValues with
+// expoHistogramValues summarizes a set of measurements as expoHistogramDataPoints using
+// dynamically scaled buckets.
 // explicitly defined buckets.
 type expoHistogramValues[N int64 | float64] struct {
 	noSum    bool
@@ -76,7 +77,7 @@ func (e *expoHistogramValues[N]) measure(_ context.Context, value N, attr attrib
 	v.record(value)
 }
 
-// expoHistogramDataPoint is a single bucket in an exponential histogram.
+// expoHistogramDataPoint is a set of buckets in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	count uint64
 	min   N

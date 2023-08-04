@@ -206,8 +206,8 @@ const (
 	expoMinScale = -10
 )
 
-// errExpoHist is returned by misconfigured ExplicitBucketHistograms.
-var errExpoHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
+// errExpoHist is returned by misconfigured Base2ExponentialBucketHistograms.
+var errExpoHist = fmt.Errorf("%w: exponential histogram", errAgg)
 
 // Err returns an error for any misconfigured Aggregation.
 func (e Base2ExponentialHistogram) Err() error {
