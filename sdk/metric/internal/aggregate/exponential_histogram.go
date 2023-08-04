@@ -77,7 +77,7 @@ func (e *expoHistogramValues[N]) measure(_ context.Context, value N, attr attrib
 	v.record(value)
 }
 
-// expoHistogramDataPoint is a set of buckets in an exponential histogram.
+// expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	count uint64
 	min   N
@@ -232,7 +232,7 @@ func scaleChange(bin, startBin, length, maxSize int) int {
 	return count
 }
 
-// expoBuckets is a single bucket in an exponential histogram.
+// expoBuckets is a set of buckets in an exponential histogram.
 type expoBuckets struct {
 	startBin int
 	counts   []uint64
