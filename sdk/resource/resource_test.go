@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -68,10 +69,6 @@ func TestNewWithAttributes(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			// Run ctors in parallel to verify that there is no
-			// race condition.
-			t.Parallel()
-
 			res := resource.NewSchemaless(c.in...)
 			if diff := cmp.Diff(
 				res.Attributes(),
@@ -774,3 +771,30 @@ func TestWithContainer(t *testing.T) {
 		string(semconv.ContainerIDKey): fakeContainerID,
 	}, toMap(res))
 }
+
+func TestResourceRace(t *testing.T) {
+	// Creating Resources should also be free of any ASAN issues,
+	// because Resources are immutable.
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	for i := 0; i < 2; i++ {
+		go func() {
+			defer wg.Done()
+			d := &fakeDetector{}
+			_, err := resource.Detect(context.Background(), d)
+			assert.NoError(t, err)
+		}()
+	}
+	wg.Wait()
+}
+
+type fakeDetector struct{}
+
+func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
+	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
+	// no attributes specified. We want to make sure that this is memory-safe.
+	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0"), nil
+}
+
+var _ resource.Detector = &fakeDetector{}
