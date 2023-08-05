@@ -67,7 +67,6 @@ func TestNewWithAttributes(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		c := c
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res := resource.NewSchemaless(c.in...)
 			if diff := cmp.Diff(
