@@ -401,3 +401,34 @@ func TestPartialSuccess(t *testing.T) {
 	require.Contains(t, errs[0].Error(), "partially successful")
 	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }
+
+func TestOtherHTTPSuccess(t *testing.T) {
+	for code := 201; code <= 299; code++ {
+		t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
+			mcCfg := mockCollectorConfig{
+				InjectHTTPStatus: []int{code},
+			}
+			mc := runMockCollector(t, mcCfg)
+			defer mc.MustStop(t)
+			driver := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpoint(mc.Endpoint()),
+				otlptracehttp.WithInsecure(),
+			)
+			ctx := context.Background()
+			exporter, err := otlptrace.New(ctx, driver)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, exporter.Shutdown(context.Background()))
+			}()
+
+			errs := []error{}
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				errs = append(errs, err)
+			}))
+			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+			assert.NoError(t, err)
+
+			assert.Equal(t, 0, len(errs))
+		})
+	}
+}

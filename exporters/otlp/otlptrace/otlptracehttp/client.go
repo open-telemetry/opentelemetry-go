@@ -164,8 +164,8 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}()
 		}
 
-		switch resp.StatusCode {
-		case http.StatusOK:
+		switch sc := resp.StatusCode; {
+		case sc >= 200 && sc <= 299:
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
@@ -190,7 +190,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 			return nil
 
-		case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+		case sc == http.StatusTooManyRequests, sc == http.StatusServiceUnavailable:
 			// Retry-able failures.  Drain the body to reuse the connection.
 			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
 				otel.Handle(err)

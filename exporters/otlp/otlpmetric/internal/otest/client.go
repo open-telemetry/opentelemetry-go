@@ -32,7 +32,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" // nolint: staticcheck  // Atomic deprecation.
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
@@ -276,6 +276,34 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			require.Equal(t, 1, len(errs))
 			want := fmt.Sprintf("%s (%d metric data points rejected)", msg, n)
 			assert.ErrorContains(t, errs[0], want)
+		})
+
+		t.Run("Other HTTP success", func(t *testing.T) {
+			for code := 201; code <= 299; code++ {
+				t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
+					rCh := make(chan ExportResult, 1)
+					rCh <- ExportResult{
+						ResponseStatus: code,
+					}
+
+					ctx := context.Background()
+					client, _ := f(rCh)
+					defer func() {
+						assert.NoError(t, client.Shutdown(ctx))
+					}()
+
+					defer func(orig otel.ErrorHandler) {
+						otel.SetErrorHandler(orig)
+					}(otel.GetErrorHandler())
+
+					errs := []error{}
+					eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+					otel.SetErrorHandler(eh)
+
+					assert.NoError(t, client.UploadMetrics(ctx, nil))
+					assert.Equal(t, 0, len(errs))
+				})
+			}
 		})
 	}
 }
