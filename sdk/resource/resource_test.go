@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -31,7 +32,7 @@ import (
 	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 var (
@@ -769,3 +770,29 @@ func TestWithContainer(t *testing.T) {
 		string(semconv.ContainerIDKey): fakeContainerID,
 	}, toMap(res))
 }
+
+func TestResourceConcurrentSafe(t *testing.T) {
+	// Creating Resources should also be free of any data races,
+	// because Resources are immutable.
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			d := &fakeDetector{}
+			_, err := resource.Detect(context.Background(), d)
+			assert.NoError(t, err)
+		}()
+	}
+	wg.Wait()
+}
+
+type fakeDetector struct{}
+
+func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
+	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
+	// no attributes specified. We want to make sure that this is concurrent-safe.
+	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0"), nil
+}
+
+var _ resource.Detector = &fakeDetector{}
