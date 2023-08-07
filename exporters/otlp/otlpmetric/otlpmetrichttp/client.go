@@ -153,8 +153,8 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 
 		var rErr error
-		switch resp.StatusCode {
-		case http.StatusOK:
+		switch sc := resp.StatusCode; {
+		case sc >= 200 && sc <= 299:
 			// Success, do not retry.
 
 			// Read the partial success message, if any.
@@ -179,8 +179,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				}
 			}
 			return nil
-		case http.StatusTooManyRequests,
-			http.StatusServiceUnavailable:
+		case sc == http.StatusTooManyRequests, sc == http.StatusServiceUnavailable:
 			// Retry-able failure.
 			rErr = newResponseError(resp.Header)
 

@@ -50,8 +50,9 @@ type Collector interface {
 }
 
 type ExportResult struct {
-	Response *collpb.ExportMetricsServiceResponse
-	Err      error
+	Response       *collpb.ExportMetricsServiceResponse
+	ResponseStatus int
+	Err            error
 }
 
 // Storage stores uploaded OTLP metric data in their proto form.
@@ -376,7 +377,11 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 	}
 
 	w.Header().Set("Content-Type", "application/x-protobuf")
-	w.WriteHeader(http.StatusOK)
+	if resp.ResponseStatus != 0 {
+		w.WriteHeader(resp.ResponseStatus)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 	if resp.Response == nil {
 		_, _ = w.Write(emptyExportMetricsServiceResponse)
 	} else {
