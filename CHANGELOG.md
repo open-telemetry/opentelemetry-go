@@ -63,6 +63,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Decouple `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` using gotmpl. (#4401, #3846)
 - Do not block the metric SDK when OTLP metric exports are blocked in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#3925, #4395)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
+
 ## [1.16.0/0.39.0] 2023-05-18
 
 This release contains the first stable release of the OpenTelemetry Go [metric API].
