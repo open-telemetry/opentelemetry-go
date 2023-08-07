@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/internal" // nolint: staticcheck  // Synchronous deprecation.
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
