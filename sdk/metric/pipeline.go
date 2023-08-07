@@ -446,6 +446,17 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg aggregation.Aggr
 			noSum = true
 		}
 		meas, comp = b.ExplicitBucketHistogram(a, noSum)
+	case aggregation.Base2ExponentialHistogram:
+		var noSum bool
+		switch kind {
+		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge:
+			// The sum should not be collected for any instrument that can make
+			// negative measurements:
+			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#histogram-aggregations
+			noSum = true
+		}
+		meas, comp = b.ExponentialBucketHistogram(a, noSum)
+
 	default:
 		err = errUnknownAggregation
 	}
@@ -459,16 +470,16 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg aggregation.Aggr
 // | Instrument Kind          | Drop | LastValue | Sum | Histogram | Exponential Histogram |
 // |--------------------------|------|-----------|-----|-----------|-----------------------|
 // | Counter                  | ✓    |           | ✓   | ✓         | ✓                     |
-// | UpDownCounter            | ✓    |           | ✓   | ✓         |                       |
+// | UpDownCounter            | ✓    |           | ✓   | ✓         | ✓                     |
 // | Histogram                | ✓    |           | ✓   | ✓         | ✓                     |
-// | Observable Counter       | ✓    |           | ✓   | ✓         |                       |
-// | Observable UpDownCounter | ✓    |           | ✓   | ✓         |                       |
-// | Observable Gauge         | ✓    | ✓         |     | ✓         |                       |.
+// | Observable Counter       | ✓    |           | ✓   | ✓         | ✓                     |
+// | Observable UpDownCounter | ✓    |           | ✓   | ✓         | ✓                     |
+// | Observable Gauge         | ✓    | ✓         |     | ✓         | ✓                     |.
 func isAggregatorCompatible(kind InstrumentKind, agg aggregation.Aggregation) error {
 	switch agg.(type) {
 	case aggregation.Default:
 		return nil
-	case aggregation.ExplicitBucketHistogram:
+	case aggregation.ExplicitBucketHistogram, aggregation.Base2ExponentialHistogram:
 		switch kind {
 		case InstrumentKindCounter,
 			InstrumentKindUpDownCounter,
