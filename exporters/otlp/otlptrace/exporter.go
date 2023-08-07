@@ -19,7 +19,7 @@ import (
 	"errors"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
