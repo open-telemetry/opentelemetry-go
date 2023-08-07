@@ -771,7 +771,7 @@ func TestWithContainer(t *testing.T) {
 	}, toMap(res))
 }
 
-func TestResourceRace(t *testing.T) {
+func TestResourceConcurrentSafe(t *testing.T) {
 	// Creating Resources should also be free of any data races,
 	// because Resources are immutable.
 	var wg sync.WaitGroup
