@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `ManualReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
 - Add `PeriodicReader` struct in `go.opentelemetry.io/otel/sdk/metric`. (#4244)
+- Add support for exponential histogram aggregations.
+  A histogram can be configured as an exponential histogram using a view with `go.opentelemetry.io/otel/sdk/metric/aggregation.ExponentialHistogram` as the aggregation. (#4245)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4272)
 - Add `Exporter` struct in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4272)
 - OTLP Metrics Exporter now supports the `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` environment variable. (#4287)
@@ -20,6 +22,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.21.0` package.
   The package contains semantic conventions from the `v1.21.0` version of the OpenTelemetry Semantic Conventions. (#4362)
 - Accept 201 to 299 HTTP status as success in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#4365)
+- Document the `Temporality` and `Aggregation` methods of the `"go.opentelemetry.io/otel/sdk/metric".Exporter"` need to be concurrent safe. (#4381)
+- Expand the set of units supported by the prometheus exporter, and don't add unit suffixes if they are already present in `go.opentelemetry.op/otel/exporters/prometheus` (#4374)
 
 ### Changed
 
@@ -38,7 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - If an attribute set is Observed multiple times in an async callback, the values will be summed instead of the last observation winning. (#4289)
 - Allow the explicit bucket histogram aggregation to be used for the up-down counter, observable counter, observable up-down counter, and observable gauge in the `go.opentelemetry.io/otel/sdk/metric` package. (#4332)
 - Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
-- `PeriodicReader.Shutdown` in `go.opentelemetry.io/otel/sdk/metric` now applies the periodic reader's timeout by default. (#4356)
+- `PeriodicReader.Shutdown` and `PeriodicReader.ForceFlush` in `go.opentelemetry.io/otel/sdk/metric` now apply the periodic reader's timeout to the operation if the user provided context does not contain a deadline. (#4356, #4377)
 
 ### Fixed
 
@@ -52,6 +56,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Log a suggested view that fixes instrument conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4349)
 - Fix possible panic, deadlock and race condition in batch span processor in `go.opentelemetry.io/otel/sdk/trace`. (#4353)
 - Improve context cancelation handling in batch span processor's `ForceFlush` in  `go.opentelemetry.io/otel/sdk/trace`. (#4369)
+- Decouple `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` using gotmpl. (#4397, #3846)
+- Decouple `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal` using gotmpl. (#4404, #3846)
+- Decouple `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal` using gotmpl. (#4407, #3846)
+- Decouple `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` using gotmpl. (#4400, #3846)
+- Decouple `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal` from `go.opentelemetry.io/otel/exporters/otlp/internal` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` using gotmpl. (#4401, #3846)
+- Do not block the metric SDK when OTLP metric exports are blocked in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#3925, #4395)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
