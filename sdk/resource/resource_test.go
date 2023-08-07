@@ -791,7 +791,7 @@ type fakeDetector struct{}
 
 func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
 	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
-	// no attributes specified. We want to make sure that this is memory-safe.
+	// no attributes specified. We want to make sure that this is concurrent-safe.
 	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0"), nil
 }
 
