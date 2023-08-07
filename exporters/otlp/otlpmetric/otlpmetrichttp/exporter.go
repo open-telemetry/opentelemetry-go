@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
