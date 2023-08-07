@@ -772,7 +772,7 @@ func TestWithContainer(t *testing.T) {
 }
 
 func TestResourceRace(t *testing.T) {
-	// Creating Resources should also be free of any ASAN issues,
+	// Creating Resources should also be free of any data races,
 	// because Resources are immutable.
 	var wg sync.WaitGroup
 	for i := 0; i < 2; i++ {
