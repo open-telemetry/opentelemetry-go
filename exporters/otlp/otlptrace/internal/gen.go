@@ -17,6 +17,9 @@ package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/in
 //go:generate gotmpl --body=../../../../internal/shared/otlp/wrappederror.go.tmpl "--data={}" --out=wrappederror.go
 //go:generate gotmpl --body=../../../../internal/shared/otlp/wrappederror_test.go.tmpl "--data={}" --out=wrappederror_test.go
 
+//go:generate gotmpl --body=../../../../internal/shared/otlp/otlptrace/header.go.tmpl "--data={}" --out=header.go
+//go:generate gotmpl --body=../../../../internal/shared/otlp/otlptrace/header_test.go.tmpl "--data={}" --out=header_test.go
+
 //go:generate gotmpl --body=../../../../internal/shared/otlp/envconfig/envconfig.go.tmpl "--data={}" --out=envconfig/envconfig.go
 //go:generate gotmpl --body=../../../../internal/shared/otlp/envconfig/envconfig_test.go.tmpl "--data={}" --out=envconfig/envconfig_test.go
 
