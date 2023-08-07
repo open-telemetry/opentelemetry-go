@@ -775,9 +775,8 @@ func TestResourceRace(t *testing.T) {
 	// Creating Resources should also be free of any ASAN issues,
 	// because Resources are immutable.
 	var wg sync.WaitGroup
-	wg.Add(2)
-
 	for i := 0; i < 2; i++ {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			d := &fakeDetector{}
