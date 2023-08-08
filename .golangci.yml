@@ -73,6 +73,60 @@ linters-settings:
           - pkg: "crypto/md5"
           - pkg: "crypto/sha1"
           - pkg: "crypto/**/pkix"
+      otlp-internal:
+        files:
+          # Do not allow even the 
+          - "**/otel/exporters/otlp/**/*.go"
+          # TODO: remove the following when otlpmetric/internal is removed.
+          - "!**/otel/exporters/otlp/otlpmetric/internal/oconf/envconfig.go"
+          - "!**/otel/exporters/otlp/otlpmetric/internal/oconf/options.go"
+          - "!**/otel/exporters/otlp/otlpmetric/internal/oconf/options_test.go"
+          - "!**/otel/exporters/otlp/otlpmetric/internal/otest/client_test.go"
+        deny:
+          - pkg: "go.opentelemetry.io/otel/exporters/otlp/internal"
+            desc: Do not use cross-module internal packages.
+      otlptrace-internal:
+        files:
+          - "**/otel/exporters/otlp/otlptrace/**/*.go"
+          - "!**/otel/exporters/otlp/otlptrace/internal/*.go"
+          - "!**/otel/exporters/otlp/otlptrace/internal/**/*.go"
+        deny:
+          - pkg: "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"
+            desc: Do not use cross-module internal packages.
+      otlpmetric-internal:
+        files:
+          - "**/otel/exporters/otlp/otlpmetric/**/*.go"
+          - "!**/otel/exporters/otlp/otlpmetric/internal/*.go"
+          - "!**/otel/exporters/otlp/otlpmetric/internal/**/*.go"
+        deny:
+          - pkg: "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
+            desc: Do not use cross-module internal packages.
+      otel-internal:
+        files:
+          - "**/otel/sdk/*.go"
+          - "**/otel/sdk/**/*.go"
+          - "**/otel/exporters/*.go"
+          - "**/otel/exporters/**/*.go"
+          - "**/otel/schema/*.go"
+          - "**/otel/schema/**/*.go"
+          - "**/otel/metric/*.go"
+          - "**/otel/metric/**/*.go"
+          - "**/otel/bridge/*.go"
+          - "**/otel/bridge/**/*.go"
+          - "**/otel/example/*.go"
+          - "**/otel/example/**/*.go"
+          - "**/otel/trace/*.go"
+          - "**/otel/trace/**/*.go"
+        deny:
+          - pkg: "go.opentelemetry.io/otel/internal$"
+            desc: Do not use cross-module internal packages.
+          - pkg: "go.opentelemetry.io/otel/internal/attribute"
+            desc: Do not use cross-module internal packages.
+          # TODO: Blocked on #4424
+          #- pkg: "go.opentelemetry.io/otel/internal/internaltest"
+          #  desc: Do not use cross-module internal packages.
+          - pkg: "go.opentelemetry.io/otel/internal/matchers"
+            desc: Do not use cross-module internal packages.
   godot:
     exclude:
       # Exclude links.
