@@ -16,10 +16,6 @@
 go get -u go.opentelemetry.io/otel/exporters/jaeger
 ```
 
-## Example
-
-See [../../example/jaeger](../../example/jaeger).
-
 ## Configuration
 
 The exporter can be used to send spans to:
