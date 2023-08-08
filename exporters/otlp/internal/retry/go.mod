@@ -1,3 +1,5 @@
+// Deprecated: package retry exists for historical compatibility, it should not
+// be used.
 module go.opentelemetry.io/otel/exporters/otlp/internal/retry
 
 go 1.19

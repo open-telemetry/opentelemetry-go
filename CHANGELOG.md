@@ -72,6 +72,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf` package is deprecated. (#4420)
 - The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest` package is deprecated. (#4420)
 - The `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform` package is deprecated. (#4420)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
