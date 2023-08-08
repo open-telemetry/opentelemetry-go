@@ -14,4 +14,7 @@
 
 // Package transform provides transformation functionality from the
 // sdk/metric/metricdata data-types into OTLP data-types.
+//
+// Deprecated: package transform exists for historical compatibility, it should
+// not be used.
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
