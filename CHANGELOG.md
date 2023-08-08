@@ -66,6 +66,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not append _total if the counter already ends in total `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/exporters/jaeger` package is deprecated.
+  OpenTelemetry dropped support for Jaeger exporter in July 2023.
+  Use `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`
+  or `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` instead. (#TODO)
+
 ## [1.16.0/0.39.0] 2023-05-18
 
 This release contains the first stable release of the OpenTelemetry Go [metric API].
