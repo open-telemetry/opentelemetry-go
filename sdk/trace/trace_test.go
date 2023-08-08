@@ -1198,7 +1198,7 @@ func TestRecordError(t *testing.T) {
 	}{
 		{
 			err: ottest.NewTestError("test error"),
-			typ: "go.opentelemetry.io/otel/internal/internaltest.TestError",
+			typ: "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError",
 			msg: "test error",
 		},
 		{
@@ -1250,7 +1250,7 @@ func TestRecordError(t *testing.T) {
 
 func TestRecordErrorWithStackTrace(t *testing.T) {
 	err := ottest.NewTestError("test error")
-	typ := "go.opentelemetry.io/otel/internal/internaltest.TestError"
+	typ := "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError"
 	msg := "test error"
 
 	te := NewTestExporter()
