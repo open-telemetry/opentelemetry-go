@@ -25,8 +25,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/internal"       // nolint: staticcheck  // Synchronous deprecation.
+	"go.opentelemetry.io/otel/exporters/otlp/internal/retry" // nolint: staticcheck  // Synchronous deprecation.
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"

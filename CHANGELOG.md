@@ -66,6 +66,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not append _total if the counter already ends in total `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
+
 ## [1.16.0/0.39.0] 2023-05-18
 
 This release contains the first stable release of the OpenTelemetry Go [metric API].
