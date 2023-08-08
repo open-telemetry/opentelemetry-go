@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig" // nolint: staticcheck  // Synchronous deprecation.
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"

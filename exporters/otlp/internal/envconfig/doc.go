@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package transform provides transformation functionality from the
-// sdk/metric/metricdata data-types into OTLP data-types.
+// Package envconfig contains common functionality for all OTLP exporter
+// configuration.
 //
-// Deprecated: package transform exists for historical compatibility, it should
+// Deprecated: package envconfig exists for historical compatibility, it should
 // not be used.
-package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/internal/envconfig"
