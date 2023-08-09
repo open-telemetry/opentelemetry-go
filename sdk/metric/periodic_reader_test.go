@@ -346,7 +346,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return nil
 			}})
 		r.RegisterProducer(testExternalProducer{})
-		assert.Equal(t, context.DeadlineExceeded, r.ForceFlush(context.Background()), "timeout error not returned")
+		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
 		// Ensure Reader is allowed clean up attempt.
@@ -369,7 +369,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
 			},
 		})
-		assert.Equal(t, context.DeadlineExceeded, r.ForceFlush(context.Background()), "timeout error not returned")
+		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
 		// Ensure Reader is allowed clean up attempt.
@@ -401,7 +401,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return nil
 			}})
 		r.RegisterProducer(testExternalProducer{})
-		assert.Equal(t, context.DeadlineExceeded, r.Shutdown(context.Background()), "timeout error not returned")
+		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
 
@@ -421,7 +421,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
 			},
 		})
-		assert.Equal(t, context.DeadlineExceeded, r.Shutdown(context.Background()), "timeout error not returned")
+		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
 }

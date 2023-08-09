@@ -39,7 +39,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf" // nolint: staticcheck  // Atomic deprecation.
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -50,8 +50,9 @@ type Collector interface {
 }
 
 type ExportResult struct {
-	Response *collpb.ExportMetricsServiceResponse
-	Err      error
+	Response       *collpb.ExportMetricsServiceResponse
+	ResponseStatus int
+	Err            error
 }
 
 // Storage stores uploaded OTLP metric data in their proto form.
@@ -376,7 +377,11 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 	}
 
 	w.Header().Set("Content-Type", "application/x-protobuf")
-	w.WriteHeader(http.StatusOK)
+	if resp.ResponseStatus != 0 {
+		w.WriteHeader(resp.ResponseStatus)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
 	if resp.Response == nil {
 		_, _ = w.Write(emptyExportMetricsServiceResponse)
 	} else {
