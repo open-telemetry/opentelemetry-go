@@ -33,8 +33,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
@@ -1198,7 +1198,7 @@ func TestRecordError(t *testing.T) {
 	}{
 		{
 			err: ottest.NewTestError("test error"),
-			typ: "go.opentelemetry.io/otel/internal/internaltest.TestError",
+			typ: "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError",
 			msg: "test error",
 		},
 		{
@@ -1250,7 +1250,7 @@ func TestRecordError(t *testing.T) {
 
 func TestRecordErrorWithStackTrace(t *testing.T) {
 	err := ottest.NewTestError("test error")
-	typ := "go.opentelemetry.io/otel/internal/internaltest.TestError"
+	typ := "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError"
 	msg := "test error"
 
 	te := NewTestExporter()
