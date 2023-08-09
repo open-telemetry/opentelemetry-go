@@ -1,5 +1,5 @@
 // Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/matchers/temporal_matcher.go.tmpl
+// source: internal/shared/matchers/expecter.go.tmpl
 
 // Copyright The OpenTelemetry Authors
 //
@@ -15,14 +15,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package matchers // import "go.opentelemetry.io/otel/internal/matchers"
+package matchers
 
-type TemporalMatcher byte
-
-//nolint:revive // ignoring missing comments for unexported constants in an internal package
-const (
-	Before TemporalMatcher = iota
-	BeforeOrSameTime
-	After
-	AfterOrSameTime
+import (
+	"testing"
 )
+
+type Expecter struct {
+	t *testing.T
+}
+
+func NewExpecter(t *testing.T) *Expecter {
+	return &Expecter{
+		t: t,
+	}
+}
+
+func (a *Expecter) Expect(actual interface{}) *Expectation {
+	return &Expectation{
+		t:      a.t,
+		actual: actual,
+	}
+}
