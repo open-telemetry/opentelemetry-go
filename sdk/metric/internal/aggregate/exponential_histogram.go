@@ -393,6 +393,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 	*dest = h
 	return n
 }
+
 func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	t := now()
 
