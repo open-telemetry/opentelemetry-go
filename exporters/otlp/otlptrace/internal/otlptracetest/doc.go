@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlptrace/tracetransform/instrumentation.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform
-
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-)
-
-func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationScope {
-	if il == (instrumentation.Scope{}) {
-		return nil
-	}
-	return &commonpb.InstrumentationScope{
-		Name:    il.Name,
-		Version: il.Version,
-	}
-}
+// Package otlptracetest contains common functionality for testing all OTLP
+// trace exporters.
+//
+// Deprecated: package otlptracetest exists for historical compatibility, it
+// should not be used.
+package otlptracetest // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"

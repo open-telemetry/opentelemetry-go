@@ -563,6 +563,30 @@ The tests should never leak goroutines.
 Use the term `ConcurrentSafe` in the test name when it aims to verify the
 absence of race conditions.
 
+### Internal packages
+
+The use of internal packages should be scoped to a single module. A sub-module
+should never import from a parent internal package. This creates a coupling
+between the two modules where a user can upgrade the parent without the child
+and if the internal package API has changed it will fail to upgrade[^3].
+
+There are two known exceptions to this rule:
+
+- `go.opentelemetry.io/otel/internal/global`
+  - This package manages global state for all of opentelemetry-go. It needs to
+  be a single package in order to ensure the uniqueness of the global state.
+- `go.opentelemetry.io/otel/internal/baggage`
+  - This package provides values in a `context.Context` that need to be
+  recognized by `go.opentelemetry.io/otel/baggage` and
+  `go.opentelemetry.io/otel/bridge/opentracing` but remain private.
+
+If you have duplicate code in multiple modules, make that code into a Go
+template stored in `go.opentelemetry.io/otel/internal/shared` and use [gotmpl]
+to render the templates in the desired locations. See [#4404] for an example of
+this.
+
+[^3]: https://github.com/open-telemetry/opentelemetry-go/issues/3548
+
 ## Approvers and Maintainers
 
 ### Approvers
@@ -592,3 +616,5 @@ repo](https://github.com/open-telemetry/community/blob/main/community-membership
 
 [Approver]: #approvers
 [Maintainer]: #maintainers
+[gotmpl]: https://pkg.go.dev/go.opentelemetry.io/build-tools/gotmpl
+[#4404]: https://github.com/open-telemetry/opentelemetry-go/pull/4404

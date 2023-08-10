@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -185,6 +186,16 @@ type instID struct {
 	Unit string
 	// Number is the number type of the stream.
 	Number string
+}
+
+// Returns a normalized copy of the instID i.
+//
+// Instrument names are considered case-insensitive. Standardize the instrument
+// name to always be lowercase for the returned instID so it can be compared
+// without the name casing affecting the comparison.
+func (i instID) normalize() instID {
+	i.Name = strings.ToLower(i.Name)
+	return i
 }
 
 type int64Inst struct {
