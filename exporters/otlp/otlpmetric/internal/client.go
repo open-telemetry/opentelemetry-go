@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -29,7 +28,7 @@ type Client interface {
 	Temporality(metric.InstrumentKind) metricdata.Temporality
 
 	// Aggregation returns the Aggregation to use for an instrument kind.
-	Aggregation(metric.InstrumentKind) aggregation.Aggregation
+	Aggregation(metric.InstrumentKind) metric.Aggregation
 
 	// UploadMetrics transmits metric data to an OTLP receiver.
 	//
