@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Accept 201 to 299 HTTP status as success in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#4365)
 - Document the `Temporality` and `Aggregation` methods of the `"go.opentelemetry.io/otel/sdk/metric".Exporter"` need to be concurrent safe. (#4381)
 - Expand the set of units supported by the prometheus exporter, and don't add unit suffixes if they are already present in `go.opentelemetry.op/otel/exporters/prometheus` (#4374)
+- The `Aggregation` interface and its implementations from `go.opentelemetry.io/otel/sdk/metric/aggregation` to `go.opentelemetry.io/otel/sdk/metric`. (#4435)
 
 ### Changed
 
@@ -76,6 +77,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/sdk/metric/aggregation` package is deprecated.
+  Use the aggregation types added to `go.opentelemetry.io/otel/sdk/metric` instead. (#4435)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
