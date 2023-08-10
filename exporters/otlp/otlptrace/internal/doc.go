@@ -12,17 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
-
-import (
-	"go.opentelemetry.io/otel/sdk/resource"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
-)
-
-// Resource transforms a Resource into an OTLP Resource.
-func Resource(r *resource.Resource) *resourcepb.Resource {
-	if r == nil {
-		return nil
-	}
-	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
-}
+// Package internal contains common functionality for all OTLP trace exporters.
+//
+// Deprecated: package internal exists for historical compatibility, it should
+// not be used.
+package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal"

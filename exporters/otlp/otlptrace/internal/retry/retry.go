@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/retry/retry.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +15,9 @@
 // Package retry provides request retry functionality that can perform
 // configurable exponential backoff for transient errors and honor any
 // explicit throttle responses received.
+//
+// Deprecated: package retry exists for historical compatibility, it should not
+// be used.
 package retry // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry"
 
 import (
