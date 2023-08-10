@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
@@ -397,7 +396,7 @@ func TestPrometheusExporter(t *testing.T) {
 				metric.WithReader(exporter),
 				metric.WithView(metric.NewView(
 					metric.Instrument{Name: "histogram_*"},
-					metric.Stream{Aggregation: aggregation.ExplicitBucketHistogram{
+					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
 						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 					}},
 				)),
