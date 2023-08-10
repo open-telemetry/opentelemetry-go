@@ -25,7 +25,7 @@ Ensure things look correct before submitting a pull request to include the addit
 
 You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) to ensure that there are no unwanted changes done in the public API.
 
-You can check/report problems with `gorelease` [here](golang.org/issues/26420).
+You can check/report problems with `gorelease` [here](https://golang.org/issues/26420).
 
 ## Pre-Release
 
