@@ -65,6 +65,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not block the metric SDK when OTLP metric exports are blocked in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#3925, #4395)
 - Do not append _total if the counter already ends in total `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
+- Use the first-seen instrument name during instrument name conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4428)
 
 ### Deprecated
 
