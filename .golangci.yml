@@ -119,9 +119,8 @@ linters-settings:
             desc: Do not use cross-module internal packages.
           - pkg: "go.opentelemetry.io/otel/internal/attribute"
             desc: Do not use cross-module internal packages.
-          # TODO: Blocked on #4424
-          #- pkg: "go.opentelemetry.io/otel/internal/internaltest"
-          #  desc: Do not use cross-module internal packages.
+          - pkg: "go.opentelemetry.io/otel/internal/internaltest"
+            desc: Do not use cross-module internal packages.
           - pkg: "go.opentelemetry.io/otel/internal/matchers"
             desc: Do not use cross-module internal packages.
   godot:
