@@ -25,7 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -645,31 +644,33 @@ func BenchmarkAppend(b *testing.B) {
 	}
 }
 
-var expoHistConf = aggregation.Base2ExponentialHistogram{
-	MaxSize:  160,
-	MaxScale: 20,
-}
-
 func BenchmarkExponentialHistogram(b *testing.B) {
+	const (
+		maxSize  = 160
+		maxScale = 20
+		noMinMax = false
+		noSum    = false
+	)
+
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
-		}.ExponentialBucketHistogram(expoHistConf, false)
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
-		}.ExponentialBucketHistogram(expoHistConf, false)
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
-		}.ExponentialBucketHistogram(expoHistConf, false)
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
-		}.ExponentialBucketHistogram(expoHistConf, false)
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 }
 
@@ -711,10 +712,12 @@ type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
 }
 
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
-	cfg := aggregation.Base2ExponentialHistogram{
-		MaxSize:  4,
-		MaxScale: 20,
-	}
+	const (
+		maxSize  = 4
+		maxScale = 20
+		noMinMax = false
+		noSum    = false
+	)
 
 	tests := []exponentialHistogramAggregationTestCase[N]{
 		{
@@ -722,7 +725,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.DeltaTemporality,
-				}.ExponentialBucketHistogram(cfg, false)
+				}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 			},
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
@@ -750,7 +753,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.CumulativeTemporality,
-				}.ExponentialBucketHistogram(cfg, false)
+				}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 			},
 			input: [][]N{
 				{4, 4, 4, 2, 16, 1},
@@ -778,7 +781,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.DeltaTemporality,
-				}.ExponentialBucketHistogram(cfg, false)
+				}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 			},
 			input: [][]N{
 				{2, 3, 8},
@@ -807,7 +810,7 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 			build: func() (Measure[N], ComputeAggregation) {
 				return Builder[N]{
 					Temporality: metricdata.CumulativeTemporality,
-				}.ExponentialBucketHistogram(cfg, false)
+				}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 			},
 			input: [][]N{
 				{2, 3, 8},

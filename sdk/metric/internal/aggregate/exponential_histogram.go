@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -326,12 +325,12 @@ func (b *expoBuckets) downscale(delta int) {
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](cfg aggregation.Base2ExponentialHistogram, noSum bool) *expoHistogram[N] {
+func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool) *expoHistogram[N] {
 	return &expoHistogram[N]{
 		expoHistogramValues: newExpoHistValues[N](
-			int(cfg.MaxSize),
-			int(cfg.MaxScale),
-			cfg.NoMinMax,
+			int(maxSize),
+			int(maxScale),
+			noMinMax,
 			noSum,
 		),
 		start: now(),
