@@ -743,7 +743,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 }
 
 func TestValidateInstrumentName(t *testing.T) {
-	const longName = "longValidNameOver255characters" +
+	const longName = "longNameOver255characters" +
 		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
 		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
 		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
