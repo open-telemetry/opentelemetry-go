@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -115,8 +114,8 @@ func TestTemporalitySelector(t *testing.T) {
 	assert.Equal(t, metricdata.DeltaTemporality, exp.Temporality(unknownKind))
 }
 
-func dropSelector(metric.InstrumentKind) aggregation.Aggregation {
-	return aggregation.Drop{}
+func dropSelector(metric.InstrumentKind) metric.Aggregation {
+	return metric.AggregationDrop{}
 }
 
 func TestAggregationSelector(t *testing.T) {
@@ -127,5 +126,5 @@ func TestAggregationSelector(t *testing.T) {
 	require.NoError(t, err)
 
 	var unknownKind metric.InstrumentKind
-	assert.Equal(t, aggregation.Drop{}, exp.Aggregation(unknownKind))
+	assert.Equal(t, metric.AggregationDrop{}, exp.Aggregation(unknownKind))
 }

@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -58,7 +57,7 @@ func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return e.temporalitySelector(k)
 }
 
-func (e *exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return e.aggregationSelector(k)
 }
 
