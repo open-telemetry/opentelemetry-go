@@ -277,7 +277,7 @@ gorelease/%:| $(GORELEASE)
 	@echo "gorelease in $(DIR):" \
 		&& cd $(DIR) \
 		&& $(GORELEASE) \
-		|| echo "exit code: $$?"
+		|| echo ""
 
 .PHONY: prerelease
 prerelease: | $(MULTIMOD)
