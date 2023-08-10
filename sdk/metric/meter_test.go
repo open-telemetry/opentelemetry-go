@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -1132,8 +1131,8 @@ func TestUnregisterUnregisters(t *testing.T) {
 }
 
 func TestRegisterCallbackDropAggregations(t *testing.T) {
-	aggFn := func(InstrumentKind) aggregation.Aggregation {
-		return aggregation.Drop{}
+	aggFn := func(InstrumentKind) Aggregation {
+		return AggregationDrop{}
 	}
 	r := NewManualReader(WithAggregationSelector(aggFn))
 	mp := NewMeterProvider(WithReader(r))
@@ -1813,11 +1812,11 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 	}
 }
 
-func testNilAggregationSelector(InstrumentKind) aggregation.Aggregation {
+func testNilAggregationSelector(InstrumentKind) Aggregation {
 	return nil
 }
-func testDefaultAggregationSelector(InstrumentKind) aggregation.Aggregation {
-	return aggregation.Default{}
+func testDefaultAggregationSelector(InstrumentKind) Aggregation {
+	return AggregationDefault{}
 }
 func testUndefinedTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.Temporality(0)

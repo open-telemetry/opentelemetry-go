@@ -32,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -366,7 +365,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	kind := InstrumentKindCounter
 	stream := Stream{
 		Name:        name,
-		Aggregation: aggregation.Sum{},
+		Aggregation: Sum{},
 	}
 
 	var vc cache[string, instID]

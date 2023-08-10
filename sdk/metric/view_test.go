@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 var (
@@ -395,13 +394,13 @@ func TestNewViewReplace(t *testing.T) {
 		},
 		{
 			name: "Aggregation",
-			mask: Stream{Aggregation: aggregation.LastValue{}},
+			mask: Stream{Aggregation: AggregationLastValue{}},
 			want: func(i Instrument) Stream {
 				return Stream{
 					Name:        i.Name,
 					Description: i.Description,
 					Unit:        i.Unit,
-					Aggregation: aggregation.LastValue{},
+					Aggregation: AggregationLastValue{},
 				}
 			},
 		},
@@ -423,14 +422,14 @@ func TestNewViewReplace(t *testing.T) {
 				Name:        alt,
 				Description: alt,
 				Unit:        "1",
-				Aggregation: aggregation.LastValue{},
+				Aggregation: AggregationLastValue{},
 			},
 			want: func(i Instrument) Stream {
 				return Stream{
 					Name:        alt,
 					Description: alt,
 					Unit:        "1",
-					Aggregation: aggregation.LastValue{},
+					Aggregation: AggregationLastValue{},
 				}
 			},
 		},
@@ -446,20 +445,19 @@ func TestNewViewReplace(t *testing.T) {
 }
 
 type badAgg struct {
-	aggregation.Aggregation
-	err error
+	e error
 }
 
-func (a badAgg) Copy() aggregation.Aggregation { return a }
+func (a badAgg) copy() Aggregation { return a }
 
-func (a badAgg) Err() error { return a.err }
+func (a badAgg) err() error { return a.e }
 
 func TestNewViewAggregationErrorLogged(t *testing.T) {
 	tLog := testr.NewWithOptions(t, testr.Options{Verbosity: 6})
 	l := &logCounter{LogSink: tLog.GetSink()}
 	otel.SetLogger(logr.New(l))
 
-	agg := badAgg{err: assert.AnError}
+	agg := badAgg{e: assert.AnError}
 	mask := Stream{Aggregation: agg}
 	got, match := NewView(completeIP, mask)(completeIP)
 	require.True(t, match, "view did not match exact criteria")
@@ -532,7 +530,7 @@ func ExampleNewView_drop() {
 	// library.
 	view := NewView(
 		Instrument{Scope: instrumentation.Scope{Name: "db"}},
-		Stream{Aggregation: aggregation.Drop{}},
+		Stream{Aggregation: AggregationDrop{}},
 	)
 
 	// The created view can then be registered with the OpenTelemetry metric
@@ -548,7 +546,7 @@ func ExampleNewView_drop() {
 	fmt.Printf("aggregation: %#v", stream.Aggregation)
 	// Output:
 	// name: queries
-	// aggregation: aggregation.Drop{}
+	// aggregation: metric.AggregationDrop{}
 }
 
 func ExampleNewView_wildcard() {

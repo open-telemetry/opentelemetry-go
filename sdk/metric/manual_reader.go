@@ -22,7 +22,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -87,7 +86,7 @@ func (mr *ManualReader) temporality(kind InstrumentKind) metricdata.Temporality 
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (mr *ManualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (mr *ManualReader) aggregation(kind InstrumentKind) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
 }
 
@@ -225,13 +224,13 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	// Deep copy and validate before using.
-	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
+	wrapped := func(ik InstrumentKind) Aggregation {
 		a := selector(ik)
 		if a == nil {
 			return nil
 		}
-		cpA := a.Copy()
-		if err := cpA.Err(); err != nil {
+		cpA := a.copy()
+		if err := cpA.err(); err != nil {
 			cpA = DefaultAggregationSelector(ik)
 			global.Error(
 				err, "using default aggregation instead",
