@@ -46,6 +46,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade all use of `go.opentelemetry.io/otel/semconv` to use `v1.21.0`. (#4408)
 - Increase instrument name maximum length from 63 to 255 characters. (#4434)
 
+### Removed
+
+- Remove `Reader.ForceFlush` in `go.opentelemetry.io/otel/metric`.
+  Notice that `PeriodicReader.ForceFlush` is still available. (#4375)
+
 ### Fixed
 
 - Correctly format log messages from the `go.opentelemetry.io/otel/exporters/zipkin` exporter. (#4143)
@@ -77,6 +82,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/envconfig` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry` package is deprecated. (#4425)
 
 ## [1.16.0/0.39.0] 2023-05-18
 

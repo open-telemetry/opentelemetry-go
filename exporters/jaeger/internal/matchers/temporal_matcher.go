@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/matchers/temporal_matcher.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
+package matchers // import "go.opentelemetry.io/otel/exporters/jaeger/internal/matchers"
 
-import (
-	"go.opentelemetry.io/otel/sdk/resource"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+type TemporalMatcher byte
+
+//nolint:revive // ignoring missing comments for unexported constants in an internal package
+const (
+	Before TemporalMatcher = iota
+	BeforeOrSameTime
+	After
+	AfterOrSameTime
 )
-
-// Resource transforms a Resource into an OTLP Resource.
-func Resource(r *resource.Resource) *resourcepb.Resource {
-	if r == nil {
-		return nil
-	}
-	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
-}
