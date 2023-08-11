@@ -365,7 +365,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	kind := InstrumentKindCounter
 	stream := Stream{
 		Name:        name,
-		Aggregation: Sum{},
+		Aggregation: AggregationSum{},
 	}
 
 	var vc cache[string, instID]

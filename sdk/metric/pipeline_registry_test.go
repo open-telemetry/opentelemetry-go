@@ -495,7 +495,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 }
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
-	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return Sum{} }))
+	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationSum{} }))
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
@@ -613,7 +613,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncCounter and Sum",
 			kind: InstrumentKindCounter,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncCounter and ExplicitBucketHistogram",
@@ -639,7 +639,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncUpDownCounter and Sum",
 			kind: InstrumentKindUpDownCounter,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
@@ -665,7 +665,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncHistogram and Sum",
 			kind: InstrumentKindHistogram,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncHistogram and ExplicitBucketHistogram",
@@ -691,7 +691,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableCounter and Sum",
 			kind: InstrumentKindObservableCounter,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "ObservableCounter and ExplicitBucketHistogram",
@@ -717,7 +717,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableUpDownCounter and Sum",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "ObservableUpDownCounter and ExplicitBucketHistogram",
@@ -742,7 +742,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "ObservableGauge and Sum",
 			kind: InstrumentKindObservableGauge,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 			want: errIncompatibleAggregation,
 		},
 		{
@@ -758,7 +758,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "unknown kind with Sum should error",
 			kind: undefinedInstrument,
-			agg:  Sum{},
+			agg:  AggregationSum{},
 			want: errIncompatibleAggregation,
 		},
 		{

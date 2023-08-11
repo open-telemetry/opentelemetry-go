@@ -26,7 +26,7 @@ func TestAggregationErr(t *testing.T) {
 	})
 
 	t.Run("SumOperation", func(t *testing.T) {
-		assert.NoError(t, Sum{}.err())
+		assert.NoError(t, AggregationSum{}.err())
 	})
 
 	t.Run("LastValueOperation", func(t *testing.T) {

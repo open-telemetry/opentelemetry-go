@@ -430,7 +430,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 		// Return nil in and out to signify the drop aggregator.
 	case AggregationLastValue:
 		meas, comp = b.LastValue()
-	case Sum:
+	case AggregationSum:
 		switch kind {
 		case InstrumentKindObservableCounter:
 			meas, comp = b.PrecomputedSum(true)
@@ -498,7 +498,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 		default:
 			return errIncompatibleAggregation
 		}
-	case Sum:
+	case AggregationSum:
 		switch kind {
 		case InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter, InstrumentKindCounter, InstrumentKindHistogram, InstrumentKindUpDownCounter:
 			return nil

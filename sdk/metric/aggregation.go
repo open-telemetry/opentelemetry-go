@@ -61,18 +61,18 @@ func (d AggregationDefault) copy() Aggregation { return d }
 // parameters and cannot be misconfigured, therefore this always returns nil.
 func (AggregationDefault) err() error { return nil }
 
-// Sum is an Aggregation that summarizes a set of measurements as their
+// AggregationSum is an Aggregation that summarizes a set of measurements as their
 // arithmetic sum.
-type Sum struct{} // Sum has no parameters.
+type AggregationSum struct{} // AggregationSum has no parameters.
 
-var _ Aggregation = Sum{}
+var _ Aggregation = AggregationSum{}
 
 // copy returns a deep copy of s.
-func (s Sum) copy() Aggregation { return s }
+func (s AggregationSum) copy() Aggregation { return s }
 
-// err returns an error for any misconfiguration. A Sum aggregation has no
+// err returns an error for any misconfiguration. A sum aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
-func (Sum) err() error { return nil }
+func (AggregationSum) err() error { return nil }
 
 // AggregationLastValue is an Aggregation that summarizes a set of measurements as the
 // last one made.
