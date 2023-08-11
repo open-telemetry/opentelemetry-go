@@ -32,14 +32,14 @@ type Aggregation interface {
 }
 
 // AggregationDrop is an Aggregation that drops all recorded data.
-type AggregationDrop struct{} // Drop has no parameters.
+type AggregationDrop struct{} // AggregationDrop has no parameters.
 
 var _ Aggregation = AggregationDrop{}
 
 // copy returns a deep copy of d.
 func (d AggregationDrop) copy() Aggregation { return d }
 
-// err returns an error for any misconfiguration. A Drop aggregation has no
+// err returns an error for any misconfiguration. A drop aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
 func (AggregationDrop) err() error { return nil }
 
@@ -50,14 +50,14 @@ func (AggregationDrop) err() error { return nil }
 //
 // See the "go.opentelemetry.io/otel/sdk/metric".DefaultAggregationSelector
 // for information about the default instrument kind selection mapping.
-type AggregationDefault struct{} // Default has no parameters.
+type AggregationDefault struct{} // AggregationDefault has no parameters.
 
 var _ Aggregation = AggregationDefault{}
 
 // copy returns a deep copy of d.
 func (d AggregationDefault) copy() Aggregation { return d }
 
-// err returns an error for any misconfiguration. A Default aggregation has no
+// err returns an error for any misconfiguration. A default aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
 func (AggregationDefault) err() error { return nil }
 
@@ -76,14 +76,14 @@ func (AggregationSum) err() error { return nil }
 
 // AggregationLastValue is an Aggregation that summarizes a set of measurements as the
 // last one made.
-type AggregationLastValue struct{} // LastValue has no parameters.
+type AggregationLastValue struct{} // AggregationLastValue has no parameters.
 
 var _ Aggregation = AggregationLastValue{}
 
 // copy returns a deep copy of l.
 func (l AggregationLastValue) copy() Aggregation { return l }
 
-// err returns an error for any misconfiguration. A LastValue aggregation has
+// err returns an error for any misconfiguration. A last-value aggregation has
 // no parameters and cannot be misconfigured, therefore this always returns
 // nil.
 func (AggregationLastValue) err() error { return nil }
