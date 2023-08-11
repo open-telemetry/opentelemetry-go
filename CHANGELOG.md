@@ -47,7 +47,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove `Reader.ForceFlush` in `go.opentelemetry.io/otel/metric`. Notice that `PeriodicReader.ForceFlush` is still available. (#4375)
+- Remove `Reader.ForceFlush` in `go.opentelemetry.io/otel/metric`.
+  Notice that `PeriodicReader.ForceFlush` is still available. (#4375)
 
 ### Fixed
 
