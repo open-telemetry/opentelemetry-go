@@ -307,14 +307,28 @@ type aggVal[N int64 | float64] struct {
 // is returned.
 func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind InstrumentKind, stream Stream) (meas aggregate.Measure[N], aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
-	case nil, AggregationDefault:
+	case nil:
 		// Undefined, nil, means to use the default from the reader.
 		stream.Aggregation = i.pipeline.reader.aggregation(kind)
 		switch stream.Aggregation.(type) {
 		case nil, AggregationDefault:
 			// If the reader returns default or nil use the default selector.
 			stream.Aggregation = DefaultAggregationSelector(kind)
+		default:
+			// Deep copy and validate before using.
+			stream.Aggregation = stream.Aggregation.copy()
+			if err := stream.Aggregation.err(); err != nil {
+				orig := stream.Aggregation
+				stream.Aggregation = DefaultAggregationSelector(kind)
+				global.Error(
+					err, "using default aggregation instead",
+					"aggregation", orig,
+					"replacement", stream.Aggregation,
+				)
+			}
 		}
+	case AggregationDefault:
+		stream.Aggregation = DefaultAggregationSelector(kind)
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
