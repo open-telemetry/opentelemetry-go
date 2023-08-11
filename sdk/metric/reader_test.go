@@ -172,7 +172,7 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_ = ts.Reader.Collect(ctx, nil)
+			_ = ts.Reader.Collect(ctx, &metricdata.ResourceMetrics{})
 		}()
 
 		if f, ok := ts.Reader.(interface{ ForceFlush(context.Context) error }); ok {
