@@ -223,25 +223,7 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // this option is not used, the reader will use the DefaultAggregationSelector
 // or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
-	// Deep copy and validate before using.
-	wrapped := func(ik InstrumentKind) Aggregation {
-		a := selector(ik)
-		if a == nil {
-			return nil
-		}
-		cpA := a.copy()
-		if err := cpA.err(); err != nil {
-			cpA = DefaultAggregationSelector(ik)
-			global.Error(
-				err, "using default aggregation instead",
-				"aggregation", a,
-				"replacement", cpA,
-			)
-		}
-		return cpA
-	}
-
-	return aggregationSelectorOption{selector: wrapped}
+	return aggregationSelectorOption{selector: selector}
 }
 
 type aggregationSelectorOption struct {
