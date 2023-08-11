@@ -119,18 +119,18 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &PeriodicReader{
-		interval:          conf.interval,
-		timeout:           conf.timeout,
-		exporter:          exporter,
-		flushCh:           make(chan chan error),
-		cancel:            cancel,
-		done:              make(chan struct{}),
-		externalProducers: conf.producers,
+		interval: conf.interval,
+		timeout:  conf.timeout,
+		exporter: exporter,
+		flushCh:  make(chan chan error),
+		cancel:   cancel,
+		done:     make(chan struct{}),
 		rmPool: sync.Pool{
 			New: func() interface{} {
 				return &metricdata.ResourceMetrics{}
 			}},
 	}
+	r.externalProducers.Store(conf.producers)
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -147,7 +147,7 @@ type PeriodicReader struct {
 
 	mu                sync.Mutex
 	isShutdown        bool
-	externalProducers []Producer
+	externalProducers atomic.Value
 
 	interval time.Duration
 	timeout  time.Duration
@@ -263,7 +263,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p interface{}, rm *metricd
 		return err
 	}
 	var errs []error
-	for _, producer := range r.externalProducers {
+	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
 			errs = append(errs, err)
@@ -353,7 +353,7 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		defer r.mu.Unlock()
 		r.isShutdown = true
 		// release references to Producer(s)
-		r.externalProducers = nil
+		r.externalProducers.Store([]Producer{})
 	})
 	return err
 }

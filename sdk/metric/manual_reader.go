@@ -34,7 +34,7 @@ type ManualReader struct {
 
 	mu                sync.Mutex
 	isShutdown        bool
-	externalProducers []Producer
+	externalProducers atomic.Value
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
@@ -49,8 +49,8 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 	r := &ManualReader{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
-		externalProducers:   cfg.producers,
 	}
+	r.externalProducers.Store(cfg.producers)
 	return r
 }
 
@@ -88,7 +88,7 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 		defer mr.mu.Unlock()
 		mr.isShutdown = true
 		// release references to Producer(s)
-		mr.externalProducers = nil
+		mr.externalProducers.Store([]Producer{})
 		err = nil
 	})
 	return err
@@ -126,7 +126,7 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		return err
 	}
 	var errs []error
-	for _, producer := range mr.externalProducers {
+	for _, producer := range mr.externalProducers.Load().([]Producer) {
 		externalMetrics, err := producer.Produce(ctx)
 		if err != nil {
 			errs = append(errs, err)
