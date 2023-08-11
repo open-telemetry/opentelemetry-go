@@ -49,7 +49,7 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
 	}
-	r.externalProducers.Store([]Producer{})
+	r.externalProducers.Store(cfg.producers)
 	return r
 }
 
@@ -61,23 +61,6 @@ func (mr *ManualReader) register(p sdkProducer) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
-}
-
-// RegisterProducer stores the external Producer which enables the caller
-// to read metrics on demand.
-//
-// This method is safe to call concurrently.
-func (mr *ManualReader) RegisterProducer(p Producer) {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
-	if mr.isShutdown {
-		return
-	}
-	currentProducers := mr.externalProducers.Load().([]Producer)
-	newProducers := []Producer{}
-	newProducers = append(newProducers, currentProducers...)
-	newProducers = append(newProducers, p)
-	mr.externalProducers.Store(newProducers)
 }
 
 // temporality reports the Temporality for the instrument kind provided.
@@ -175,6 +158,7 @@ func (r *ManualReader) MarshalLog() interface{} {
 type manualReaderConfig struct {
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	producers           []Producer
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.

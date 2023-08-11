@@ -56,13 +56,6 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(sdkProducer)
 
-	// RegisterProducer registers a an external Producer with this Reader.
-	// The Producer is used as a source of aggregated metric data which is
-	// incorporated into metrics collected from the SDK.
-	//
-	// This method needs to be concurrent safe.
-	RegisterProducer(Producer)
-
 	// temporality reports the Temporality for the instrument kind provided.
 	//
 	// This method needs to be concurrent safe with itself and all the other
@@ -164,4 +157,33 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 		}
 	}
 	panic("unknown instrument kind")
+}
+
+// ReaderOption is an option which can be applied to manual or Periodic
+// readers.
+type ReaderOption interface {
+	PeriodicReaderOption
+	ManualReaderOption
+}
+
+// WithProducers registers producers as an external Producer of metric data
+// for this Reader.
+func WithProducer(p Producer) ReaderOption {
+	return producerOption{p: p}
+}
+
+type producerOption struct {
+	p Producer
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (o producerOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.producers = append(c.producers, o.p)
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.producers = append(c.producers, o.p)
+	return c
 }
