@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -103,6 +104,7 @@ func getOptionsFromEnv() []GenericOption {
 		envconfig.WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
 		envconfig.WithDuration("METRICS_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
 		withEnvTemporalityPreference("METRICS_TEMPORALITY_PREFERENCE", func(t metric.TemporalitySelector) { opts = append(opts, WithTemporalitySelector(t)) }),
+		withEnvAggPreference("METRICS_DEFAULT_HISTOGRAM_AGGREGATION", func(a metric.AggregationSelector) { opts = append(opts, WithAggregationSelector(a)) }),
 	)
 
 	return opts
@@ -192,5 +194,29 @@ func lowMemory(ik metric.InstrumentKind) metricdata.Temporality {
 		return metricdata.DeltaTemporality
 	default:
 		return metricdata.CumulativeTemporality
+	}
+}
+
+func withEnvAggPreference(n string, fn func(metric.AggregationSelector)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
+		if s, ok := e.GetEnvValue(n); ok {
+			switch strings.ToLower(s) {
+			case "explicit_bucket_histogram":
+				fn(metric.DefaultAggregationSelector)
+			case "base2_exponential_bucket_histogram":
+				fn(func(kind metric.InstrumentKind) aggregation.Aggregation {
+					if kind == metric.InstrumentKindHistogram {
+						return aggregation.Base2ExponentialHistogram{
+							MaxSize:  160,
+							MaxScale: 20,
+							NoMinMax: false,
+						}
+					}
+					return metric.DefaultAggregationSelector(kind)
+				})
+			default:
+				global.Warn("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION is set to an invalid value, ignoring.", "value", s)
+			}
+		}
 	}
 }
