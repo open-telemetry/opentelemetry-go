@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlptrace/otlpconfig/options_test.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/envconfig" // nolint: staticcheck  // Atomic deprecation.
 )
 
 const (

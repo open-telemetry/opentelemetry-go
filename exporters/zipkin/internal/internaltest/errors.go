@@ -1,5 +1,5 @@
 // Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlptrace/tracetransform/instrumentation.go.tmpl
+// source: internal/shared/internaltest/errors.go.tmpl
 
 // Copyright The OpenTelemetry Authors
 //
@@ -15,19 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform
+package internaltest // import "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
 
-import (
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-)
+type TestError string
 
-func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationScope {
-	if il == (instrumentation.Scope{}) {
-		return nil
-	}
-	return &commonpb.InstrumentationScope{
-		Name:    il.Name,
-		Version: il.Version,
-	}
+var _ error = TestError("")
+
+func NewTestError(s string) error {
+	return TestError(s)
+}
+
+func (e TestError) Error() string {
+	return string(e)
 }
