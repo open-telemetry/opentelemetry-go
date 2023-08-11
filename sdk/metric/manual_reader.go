@@ -90,13 +90,6 @@ func (mr *ManualReader) aggregation(kind InstrumentKind) Aggregation { // nolint
 	return mr.aggregationSelector(kind)
 }
 
-// ForceFlush is a no-op, it always returns nil.
-//
-// This method is safe to call concurrently.
-func (mr *ManualReader) ForceFlush(context.Context) error {
-	return nil
-}
-
 // Shutdown closes any connections and frees any resources used by the reader.
 //
 // This method is safe to call concurrently.

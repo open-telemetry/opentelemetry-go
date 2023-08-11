@@ -83,16 +83,6 @@ type Reader interface {
 	// passed context is expected to be honored.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
 
-	// ForceFlush flushes all metric measurements held in an export pipeline.
-	//
-	// This deadline or cancellation of the passed context are honored. An appropriate
-	// error will be returned in these situations. There is no guaranteed that all
-	// telemetry be flushed or all resources have been released in these
-	// situations.
-	//
-	// This method needs to be concurrent safe.
-	ForceFlush(context.Context) error
-
 	// Shutdown flushes all metric measurements held in an export pipeline and releases any
 	// held computational resources.
 	//

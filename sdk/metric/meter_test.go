@@ -742,6 +742,11 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 }
 
 func TestValidateInstrumentName(t *testing.T) {
+	const longName = "longNameOver255characters" +
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	testCases := []struct {
 		name string
 
@@ -775,8 +780,8 @@ func TestValidateInstrumentName(t *testing.T) {
 			wantErr: fmt.Errorf("%w: name!: must only contain [A-Za-z0-9_.-]", ErrInstrumentName),
 		},
 		{
-			name:    "someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp",
-			wantErr: fmt.Errorf("%w: someverylongnamewhichisover63charactersbutallofwhichmatchtheregexp: longer than 63 characters", ErrInstrumentName),
+			name:    longName,
+			wantErr: fmt.Errorf("%w: %s: longer than 255 characters", ErrInstrumentName, longName),
 		},
 	}
 
