@@ -45,10 +45,10 @@ func withHandler(t *testing.T) func() {
 
 func TestExpoHistogramDataPointRecord(t *testing.T) {
 	t.Run("float64", testExpoHistogramDataPointRecord[float64])
-	t.Run("float64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSum[float64])
+	t.Run("float64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSumFloat64)
 	t.Run("float64-2", testExpoHistogramDataPointRecordFloat64)
 	t.Run("int64", testExpoHistogramDataPointRecord[int64])
-	t.Run("int64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSum[int64])
+	t.Run("int64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSumInt64)
 }
 
 // TODO: This can be defined in the test after we drop support for go1.19.
@@ -171,15 +171,15 @@ type expoHistogramDataPointRecordMinMaxSumTestCase[N int64 | float64] struct {
 	expected expectedMinMaxSum[N]
 }
 
-func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) {
-	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[N]{
+func testExpoHistogramDataPointRecordMinMaxSumInt64(t *testing.T) {
+	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[int64]{
 		{
-			values:   []N{2, 4, 1},
-			expected: expectedMinMaxSum[N]{1, 4, 7, 3},
+			values:   []int64{2, 4, 1},
+			expected: expectedMinMaxSum[int64]{1, 4, 7, 3},
 		},
 		{
-			values:   []N{4, 4, 4, 2, 16, 1},
-			expected: expectedMinMaxSum[N]{1, 16, 31, 6},
+			values:   []int64{4, 4, 4, 2, 16, 1},
+			expected: expectedMinMaxSum[int64]{1, 16, 31, 6},
 		},
 	}
 
@@ -188,7 +188,48 @@ func testExpoHistogramDataPointRecordMinMaxSum[N int64 | float64](t *testing.T) 
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[N](4, 20, false, false)
+			dp := newExpoHistogramDataPoint[int64](4, 20, false, false)
+			for _, v := range tt.values {
+				dp.record(v)
+			}
+
+			assert.Equal(t, tt.expected.max, dp.max)
+			assert.Equal(t, tt.expected.min, dp.min)
+			assert.Equal(t, tt.expected.sum, dp.sum)
+		})
+	}
+}
+
+func testExpoHistogramDataPointRecordMinMaxSumFloat64(t *testing.T) {
+	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[float64]{
+		{
+			values:   []float64{2, 4, 1},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 3},
+		},
+		{
+			values:   []float64{2, 4, 1, math.Inf(1)},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{2, 4, 1, math.Inf(-1)},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{2, 4, 1, math.NaN()},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{4, 4, 4, 2, 16, 1},
+			expected: expectedMinMaxSum[float64]{1, 16, 31, 6},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
+			restore := withHandler(t)
+			defer restore()
+
+			dp := newExpoHistogramDataPoint[float64](4, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 			}
