@@ -57,13 +57,6 @@ type Reader interface {
 	// and send aggregated metric measurements.
 	register(sdkProducer)
 
-	// RegisterProducer registers a an external Producer with this Reader.
-	// The Producer is used as a source of aggregated metric data which is
-	// incorporated into metrics collected from the SDK.
-	//
-	// This method needs to be concurrent safe.
-	RegisterProducer(Producer)
-
 	// temporality reports the Temporality for the instrument kind provided.
 	//
 	// This method needs to be concurrent safe with itself and all the other
@@ -83,16 +76,6 @@ type Reader interface {
 	// This method needs to be concurrent safe, and the cancelation of the
 	// passed context is expected to be honored.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
-
-	// ForceFlush flushes all metric measurements held in an export pipeline.
-	//
-	// This deadline or cancellation of the passed context are honored. An appropriate
-	// error will be returned in these situations. There is no guaranteed that all
-	// telemetry be flushed or all resources have been released in these
-	// situations.
-	//
-	// This method needs to be concurrent safe.
-	ForceFlush(context.Context) error
 
 	// Shutdown flushes all metric measurements held in an export pipeline and releases any
 	// held computational resources.
@@ -175,4 +158,33 @@ func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
 		}
 	}
 	panic("unknown instrument kind")
+}
+
+// ReaderOption is an option which can be applied to manual or Periodic
+// readers.
+type ReaderOption interface {
+	PeriodicReaderOption
+	ManualReaderOption
+}
+
+// WithProducers registers producers as an external Producer of metric data
+// for this Reader.
+func WithProducer(p Producer) ReaderOption {
+	return producerOption{p: p}
+}
+
+type producerOption struct {
+	p Producer
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (o producerOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.producers = append(c.producers, o.p)
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.producers = append(c.producers, o.p)
+	return c
 }

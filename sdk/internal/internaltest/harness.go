@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/internal/matchers"
+	"go.opentelemetry.io/otel/sdk/internal/matchers"
 	"go.opentelemetry.io/otel/trace"
 )
 

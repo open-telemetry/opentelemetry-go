@@ -329,7 +329,12 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	// If there is a conflict, the specification says the view should
 	// still be applied and a warning should be logged.
 	i.logConflict(id)
-	cv := i.aggregators.Lookup(id, func() aggVal[N] {
+
+	// If there are requests for the same instrument with different name
+	// casing, the first-seen needs to be returned. Use a normalize ID for the
+	// cache lookup to ensure the correct comparison.
+	normID := id.normalize()
+	cv := i.aggregators.Lookup(normID, func() aggVal[N] {
 		b := aggregate.Builder[N]{
 			Temporality: i.pipeline.reader.temporality(kind),
 		}
@@ -344,6 +349,8 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 			return aggVal[N]{0, nil, nil}
 		}
 		i.pipeline.addSync(scope, instrumentSync{
+			// Use the first-seen name casing for this and all subsequent
+			// requests of this instrument.
 			name:        stream.Name,
 			description: stream.Description,
 			unit:        stream.Unit,
@@ -355,12 +362,13 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	return cv.Measure, cv.ID, cv.Err
 }
 
-// logConflict validates if an instrument with the same name as id has already
-// been created. If that instrument conflicts with id, a warning is logged.
+// logConflict validates if an instrument with the same case-insensitive name
+// as id has already been created. If that instrument conflicts with id, a
+// warning is logged.
 func (i *inserter[N]) logConflict(id instID) {
 	// The API specification defines names as case-insensitive. If there is a
 	// different casing of a name it needs to be a conflict.
-	name := strings.ToLower(id.Name)
+	name := id.normalize().Name
 	existing := i.views.Lookup(name, func() instID { return id })
 	if id == existing {
 		return

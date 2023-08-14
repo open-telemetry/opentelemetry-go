@@ -44,6 +44,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Restrict `Meter`s in `go.opentelemetry.io/otel/sdk/metric` to only register and collect instruments it created. (#4333)
 - `PeriodicReader.Shutdown` and `PeriodicReader.ForceFlush` in `go.opentelemetry.io/otel/sdk/metric` now apply the periodic reader's timeout to the operation if the user provided context does not contain a deadline. (#4356, #4377)
 - Upgrade all use of `go.opentelemetry.io/otel/semconv` to use `v1.21.0`. (#4408)
+- Increase instrument name maximum length from 63 to 255 characters. (#4434)
+- Add `go.opentelemetry.op/otel/sdk/metric.WithProducer` as an Option for metric.NewManualReader and metric.NewPeriodicReader, and remove `Reader.RegisterProducer()` (#4346)
+
+### Removed
+
+- Remove `Reader.ForceFlush` in `go.opentelemetry.io/otel/metric`.
+  Notice that `PeriodicReader.ForceFlush` is still available. (#4375)
 
 ### Fixed
 
@@ -65,6 +72,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not block the metric SDK when OTLP metric exports are blocked in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#3925, #4395)
 - Do not append _total if the counter already ends in total `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
+- Use the first-seen instrument name during instrument name conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4428)
 
 ### Deprecated
 
@@ -75,6 +83,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/exporters/otlp/internal` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/envconfig` package is deprecated. (#4421)
 - The `go.opentelemetry.io/otel/exporters/otlp/internal/retry` package is deprecated. (#4421)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/envconfig` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest` package is deprecated. (#4425)
+- The `go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/retry` package is deprecated. (#4425)
 
 ## [1.16.0/0.39.0] 2023-05-18
 
