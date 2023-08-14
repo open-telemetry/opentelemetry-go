@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -99,6 +100,76 @@ func TestWithEnvTemporalityPreference(t *testing.T) {
 			require.NotNil(t, cfg.Metrics.TemporalitySelector)
 			for ik, want := range tt.want {
 				assert.Equal(t, want, cfg.Metrics.TemporalitySelector(ik))
+			}
+		})
+	}
+	DefaultEnvOptionsReader.GetEnv = origReader
+}
+
+func TestWithEnvAggPreference(t *testing.T) {
+	origReader := DefaultEnvOptionsReader.GetEnv
+	tests := []struct {
+		name     string
+		envValue string
+		want     map[metric.InstrumentKind]aggregation.Aggregation
+	}{
+		{
+			name:     "default do not set the selector",
+			envValue: "",
+		},
+		{
+			name:     "non-normative do not set the selector",
+			envValue: "non-normative",
+		},
+		{
+			name:     "explicit_bucket_histogram",
+			envValue: "explicit_bucket_histogram",
+			want: map[metric.InstrumentKind]aggregation.Aggregation{
+				metric.InstrumentKindCounter:                 metric.DefaultAggregationSelector(metric.InstrumentKindCounter),
+				metric.InstrumentKindHistogram:               metric.DefaultAggregationSelector(metric.InstrumentKindHistogram),
+				metric.InstrumentKindUpDownCounter:           metric.DefaultAggregationSelector(metric.InstrumentKindUpDownCounter),
+				metric.InstrumentKindObservableCounter:       metric.DefaultAggregationSelector(metric.InstrumentKindObservableCounter),
+				metric.InstrumentKindObservableUpDownCounter: metric.DefaultAggregationSelector(metric.InstrumentKindObservableUpDownCounter),
+				metric.InstrumentKindObservableGauge:         metric.DefaultAggregationSelector(metric.InstrumentKindObservableGauge),
+			},
+		},
+		{
+			name:     "base2_exponential_bucket_histogram",
+			envValue: "base2_exponential_bucket_histogram",
+			want: map[metric.InstrumentKind]aggregation.Aggregation{
+				metric.InstrumentKindCounter: metric.DefaultAggregationSelector(metric.InstrumentKindCounter),
+				metric.InstrumentKindHistogram: aggregation.Base2ExponentialHistogram{
+					MaxSize:  160,
+					MaxScale: 20,
+					NoMinMax: false,
+				},
+				metric.InstrumentKindUpDownCounter:           metric.DefaultAggregationSelector(metric.InstrumentKindUpDownCounter),
+				metric.InstrumentKindObservableCounter:       metric.DefaultAggregationSelector(metric.InstrumentKindObservableCounter),
+				metric.InstrumentKindObservableUpDownCounter: metric.DefaultAggregationSelector(metric.InstrumentKindObservableUpDownCounter),
+				metric.InstrumentKindObservableGauge:         metric.DefaultAggregationSelector(metric.InstrumentKindObservableGauge),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			DefaultEnvOptionsReader.GetEnv = func(key string) string {
+				if key == "OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION" {
+					return tt.envValue
+				}
+				return origReader(key)
+			}
+			cfg := Config{}
+			cfg = ApplyGRPCEnvConfigs(cfg)
+
+			if tt.want == nil {
+				// There is no function set, the SDK's default is used.
+				assert.Nil(t, cfg.Metrics.AggregationSelector)
+				return
+			}
+
+			require.NotNil(t, cfg.Metrics.AggregationSelector)
+			for ik, want := range tt.want {
+				assert.Equal(t, want, cfg.Metrics.AggregationSelector(ik))
 			}
 		})
 	}
