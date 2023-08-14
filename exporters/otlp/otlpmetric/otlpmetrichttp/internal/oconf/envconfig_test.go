@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -111,7 +110,7 @@ func TestWithEnvAggPreference(t *testing.T) {
 	tests := []struct {
 		name     string
 		envValue string
-		want     map[metric.InstrumentKind]aggregation.Aggregation
+		want     map[metric.InstrumentKind]metric.Aggregation
 	}{
 		{
 			name:     "default do not set the selector",
@@ -124,7 +123,7 @@ func TestWithEnvAggPreference(t *testing.T) {
 		{
 			name:     "explicit_bucket_histogram",
 			envValue: "explicit_bucket_histogram",
-			want: map[metric.InstrumentKind]aggregation.Aggregation{
+			want: map[metric.InstrumentKind]metric.Aggregation{
 				metric.InstrumentKindCounter:                 metric.DefaultAggregationSelector(metric.InstrumentKindCounter),
 				metric.InstrumentKindHistogram:               metric.DefaultAggregationSelector(metric.InstrumentKindHistogram),
 				metric.InstrumentKindUpDownCounter:           metric.DefaultAggregationSelector(metric.InstrumentKindUpDownCounter),
@@ -136,9 +135,9 @@ func TestWithEnvAggPreference(t *testing.T) {
 		{
 			name:     "base2_exponential_bucket_histogram",
 			envValue: "base2_exponential_bucket_histogram",
-			want: map[metric.InstrumentKind]aggregation.Aggregation{
+			want: map[metric.InstrumentKind]metric.Aggregation{
 				metric.InstrumentKindCounter: metric.DefaultAggregationSelector(metric.InstrumentKindCounter),
-				metric.InstrumentKindHistogram: aggregation.Base2ExponentialHistogram{
+				metric.InstrumentKindHistogram: metric.AggregationBase2ExponentialHistogram{
 					MaxSize:  160,
 					MaxScale: 20,
 					NoMinMax: false,

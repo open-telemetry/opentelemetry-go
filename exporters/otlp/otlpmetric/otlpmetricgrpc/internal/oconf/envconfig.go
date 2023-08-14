@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -204,9 +203,9 @@ func withEnvAggPreference(n string, fn func(metric.AggregationSelector)) func(e 
 			case "explicit_bucket_histogram":
 				fn(metric.DefaultAggregationSelector)
 			case "base2_exponential_bucket_histogram":
-				fn(func(kind metric.InstrumentKind) aggregation.Aggregation {
+				fn(func(kind metric.InstrumentKind) metric.Aggregation {
 					if kind == metric.InstrumentKindHistogram {
-						return aggregation.Base2ExponentialHistogram{
+						return metric.AggregationBase2ExponentialHistogram{
 							MaxSize:  160,
 							MaxScale: 20,
 							NoMinMax: false,
