@@ -21,11 +21,11 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 // the removed list of excluded attributes.
 type Filter func(KeyValue) bool
 
-// NewAllowAttributeKeysFilter returns a Filter that only allows attributes
-// with one of the provided keys.
+// NewAllowKeysFilter returns a Filter that only allows attributes with one of
+// the provided keys.
 //
 // If keys is empty a deny-all filter is returned.
-func NewAllowAttributeKeysFilter(keys ...Key) Filter {
+func NewAllowKeysFilter(keys ...Key) Filter {
 	if len(keys) <= 0 {
 		return func(kv KeyValue) bool { return false }
 	}
@@ -40,11 +40,11 @@ func NewAllowAttributeKeysFilter(keys ...Key) Filter {
 	}
 }
 
-// NewDenyAttributeKeysFilter returns a Filter that only allows attributes
+// NewDenyKeysFilter returns a Filter that only allows attributes
 // that do not have one of the provided keys.
 //
 // If keys is empty an allow-all filter is returned.
-func NewDenyAttributeKeysFilter(keys ...Key) Filter {
+func NewDenyKeysFilter(keys ...Key) Filter {
 	if len(keys) <= 0 {
 		return func(kv KeyValue) bool { return true }
 	}
