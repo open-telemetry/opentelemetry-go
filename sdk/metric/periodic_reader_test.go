@@ -25,7 +25,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -168,7 +167,7 @@ func (e *fnExporter) Temporality(k InstrumentKind) metricdata.Temporality {
 	return DefaultTemporalitySelector(k)
 }
 
-func (e *fnExporter) Aggregation(k InstrumentKind) aggregation.Aggregation {
+func (e *fnExporter) Aggregation(k InstrumentKind) Aggregation {
 	if e.aggregationFunc != nil {
 		return e.aggregationFunc(k)
 	}

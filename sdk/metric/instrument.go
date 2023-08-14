@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
@@ -146,7 +145,7 @@ type Stream struct {
 	// Unit is the unit of measurement recorded.
 	Unit string
 	// Aggregation the stream uses for an instrument.
-	Aggregation aggregation.Aggregation
+	Aggregation Aggregation
 	// AllowAttributeKeys are an allow-list of attribute keys that will be
 	// preserved for the stream. Any attribute recorded for the stream with a
 	// key not in this slice will be dropped.

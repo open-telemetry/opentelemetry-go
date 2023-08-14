@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package aggregation contains configuration types that define the
-// aggregation operation used to summarizes recorded measurements.
-//
-// Deprecated: Use the aggregation types in go.opentelemetry.io/otel/sdk/metric
-// instead.
-package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
+package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"errors"
@@ -29,85 +24,73 @@ var errAgg = errors.New("aggregation")
 
 // Aggregation is the aggregation used to summarize recorded measurements.
 type Aggregation interface {
-	// private attempts to ensure no user-defined Aggregation are allowed. The
-	// OTel specification does not allow user-defined Aggregation currently.
-	private()
+	// copy returns a deep copy of the Aggregation.
+	copy() Aggregation
 
-	// Copy returns a deep copy of the Aggregation.
-	Copy() Aggregation
-
-	// Err returns an error for any misconfigured Aggregation.
-	Err() error
+	// err returns an error for any misconfigured Aggregation.
+	err() error
 }
 
-// Drop is an aggregation that drops all recorded data.
-type Drop struct{} // Drop has no parameters.
+// AggregationDrop is an Aggregation that drops all recorded data.
+type AggregationDrop struct{} // AggregationDrop has no parameters.
 
-var _ Aggregation = Drop{}
+var _ Aggregation = AggregationDrop{}
 
-func (Drop) private() {}
+// copy returns a deep copy of d.
+func (d AggregationDrop) copy() Aggregation { return d }
 
-// Copy returns a deep copy of d.
-func (d Drop) Copy() Aggregation { return d }
-
-// Err returns an error for any misconfiguration. A Drop aggregation has no
+// err returns an error for any misconfiguration. A drop aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
-func (Drop) Err() error { return nil }
+func (AggregationDrop) err() error { return nil }
 
-// Default is an aggregation that uses the default instrument kind selection
-// mapping to select another aggregation. A metric reader can be configured to
+// AggregationDefault is an Aggregation that uses the default instrument kind selection
+// mapping to select another Aggregation. A metric reader can be configured to
 // make an aggregation selection based on instrument kind that differs from
-// the default. This aggregation ensures the default is used.
+// the default. This Aggregation ensures the default is used.
 //
 // See the "go.opentelemetry.io/otel/sdk/metric".DefaultAggregationSelector
 // for information about the default instrument kind selection mapping.
-type Default struct{} // Default has no parameters.
+type AggregationDefault struct{} // AggregationDefault has no parameters.
 
-var _ Aggregation = Default{}
+var _ Aggregation = AggregationDefault{}
 
-func (Default) private() {}
+// copy returns a deep copy of d.
+func (d AggregationDefault) copy() Aggregation { return d }
 
-// Copy returns a deep copy of d.
-func (d Default) Copy() Aggregation { return d }
-
-// Err returns an error for any misconfiguration. A Default aggregation has no
+// err returns an error for any misconfiguration. A default aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
-func (Default) Err() error { return nil }
+func (AggregationDefault) err() error { return nil }
 
-// Sum is an aggregation that summarizes a set of measurements as their
+// AggregationSum is an Aggregation that summarizes a set of measurements as their
 // arithmetic sum.
-type Sum struct{} // Sum has no parameters.
+type AggregationSum struct{} // AggregationSum has no parameters.
 
-var _ Aggregation = Sum{}
+var _ Aggregation = AggregationSum{}
 
-func (Sum) private() {}
+// copy returns a deep copy of s.
+func (s AggregationSum) copy() Aggregation { return s }
 
-// Copy returns a deep copy of s.
-func (s Sum) Copy() Aggregation { return s }
-
-// Err returns an error for any misconfiguration. A Sum aggregation has no
+// err returns an error for any misconfiguration. A sum aggregation has no
 // parameters and cannot be misconfigured, therefore this always returns nil.
-func (Sum) Err() error { return nil }
+func (AggregationSum) err() error { return nil }
 
-// LastValue is an aggregation that summarizes a set of measurements as the
+// AggregationLastValue is an Aggregation that summarizes a set of measurements as the
 // last one made.
-type LastValue struct{} // LastValue has no parameters.
+type AggregationLastValue struct{} // AggregationLastValue has no parameters.
 
-var _ Aggregation = LastValue{}
+var _ Aggregation = AggregationLastValue{}
 
-func (LastValue) private() {}
+// copy returns a deep copy of l.
+func (l AggregationLastValue) copy() Aggregation { return l }
 
-// Copy returns a deep copy of l.
-func (l LastValue) Copy() Aggregation { return l }
-
-// Err returns an error for any misconfiguration. A LastValue aggregation has
+// err returns an error for any misconfiguration. A last-value aggregation has
 // no parameters and cannot be misconfigured, therefore this always returns
 // nil.
-func (LastValue) Err() error { return nil }
+func (AggregationLastValue) err() error { return nil }
 
-// ExplicitBucketHistogram is an aggregation that summarizes a set of
+// AggregationExplicitBucketHistogram is an Aggregation that summarizes a set of
 // measurements as an histogram with explicitly defined buckets.
-type ExplicitBucketHistogram struct {
+type AggregationExplicitBucketHistogram struct {
 	// Boundaries are the increasing bucket boundary values. Boundary values
 	// define bucket upper bounds. Buckets are exclusive of their lower
 	// boundary and inclusive of their upper bound (except at positive
@@ -133,15 +116,13 @@ type ExplicitBucketHistogram struct {
 	NoMinMax bool
 }
 
-var _ Aggregation = ExplicitBucketHistogram{}
-
-func (ExplicitBucketHistogram) private() {}
+var _ Aggregation = AggregationExplicitBucketHistogram{}
 
 // errHist is returned by misconfigured ExplicitBucketHistograms.
 var errHist = fmt.Errorf("%w: explicit bucket histogram", errAgg)
 
-// Err returns an error for any misconfiguration.
-func (h ExplicitBucketHistogram) Err() error {
+// err returns an error for any misconfiguration.
+func (h AggregationExplicitBucketHistogram) err() error {
 	if len(h.Boundaries) <= 1 {
 		return nil
 	}
@@ -158,19 +139,19 @@ func (h ExplicitBucketHistogram) Err() error {
 	return nil
 }
 
-// Copy returns a deep copy of h.
-func (h ExplicitBucketHistogram) Copy() Aggregation {
+// copy returns a deep copy of h.
+func (h AggregationExplicitBucketHistogram) copy() Aggregation {
 	b := make([]float64, len(h.Boundaries))
 	copy(b, h.Boundaries)
-	return ExplicitBucketHistogram{
+	return AggregationExplicitBucketHistogram{
 		Boundaries: b,
 		NoMinMax:   h.NoMinMax,
 	}
 }
 
-// Base2ExponentialHistogram is an aggregation that summarizes a set of
+// AggregationBase2ExponentialHistogram is an Aggregation that summarizes a set of
 // measurements as an histogram with bucket widths that grow exponentially.
-type Base2ExponentialHistogram struct {
+type AggregationBase2ExponentialHistogram struct {
 	// MaxSize is the maximum number of buckets to use for the histogram.
 	MaxSize int32
 	// MaxScale is the maximum resolution scale to use for the histogram.
@@ -193,14 +174,10 @@ type Base2ExponentialHistogram struct {
 	NoMinMax bool
 }
 
-var _ Aggregation = Base2ExponentialHistogram{}
+var _ Aggregation = AggregationBase2ExponentialHistogram{}
 
-// private attempts to ensure no user-defined Aggregation is allowed. The
-// OTel specification does not allow user-defined Aggregation currently.
-func (e Base2ExponentialHistogram) private() {}
-
-// Copy returns a deep copy of the Aggregation.
-func (e Base2ExponentialHistogram) Copy() Aggregation {
+// copy returns a deep copy of the Aggregation.
+func (e AggregationBase2ExponentialHistogram) copy() Aggregation {
 	return e
 }
 
@@ -212,8 +189,8 @@ const (
 // errExpoHist is returned by misconfigured Base2ExponentialBucketHistograms.
 var errExpoHist = fmt.Errorf("%w: exponential histogram", errAgg)
 
-// Err returns an error for any misconfigured Aggregation.
-func (e Base2ExponentialHistogram) Err() error {
+// err returns an error for any misconfigured Aggregation.
+func (e AggregationBase2ExponentialHistogram) err() error {
 	if e.MaxScale > expoMaxScale {
 		return fmt.Errorf("%w: max size %d is greater than maximum scale %d", errExpoHist, e.MaxSize, expoMaxScale)
 	}

@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal/envconfig" // nolint: staticcheck  // Synchronous deprecation.
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -415,7 +414,7 @@ func TestConfigs(t *testing.T) {
 				// all" was set.
 				var undefinedKind metric.InstrumentKind
 				got := c.Metrics.AggregationSelector
-				assert.Equal(t, aggregation.Drop{}, got(undefinedKind))
+				assert.Equal(t, metric.AggregationDrop{}, got(undefinedKind))
 			},
 		},
 	}
@@ -441,8 +440,8 @@ func TestConfigs(t *testing.T) {
 	}
 }
 
-func dropSelector(metric.InstrumentKind) aggregation.Aggregation {
-	return aggregation.Drop{}
+func dropSelector(metric.InstrumentKind) metric.Aggregation {
+	return metric.AggregationDrop{}
 }
 
 func deltaSelector(metric.InstrumentKind) metricdata.Temporality {

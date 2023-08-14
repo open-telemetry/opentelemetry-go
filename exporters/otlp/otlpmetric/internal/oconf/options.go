@@ -33,9 +33,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/internal"                       // nolint: staticcheck  // Synchronous deprecation.
 	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"                 // nolint: staticcheck  // Synchronous deprecation.
 	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" // nolint: staticcheck  // Atomic deprecation.
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 const (
@@ -340,23 +338,8 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption 
 }
 
 func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
-	// Deep copy and validate before using.
-	wrapped := func(ik metric.InstrumentKind) aggregation.Aggregation {
-		a := selector(ik)
-		cpA := a.Copy()
-		if err := cpA.Err(); err != nil {
-			cpA = metric.DefaultAggregationSelector(ik)
-			global.Error(
-				err, "using default aggregation instead",
-				"aggregation", a,
-				"replacement", cpA,
-			)
-		}
-		return cpA
-	}
-
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Metrics.AggregationSelector = wrapped
+		cfg.Metrics.AggregationSelector = selector
 		return cfg
 	})
 }

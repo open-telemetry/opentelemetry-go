@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -67,7 +66,7 @@ type Reader interface {
 	//
 	// This method needs to be concurrent safe with itself and all the other
 	// Reader methods.
-	aggregation(InstrumentKind) aggregation.Aggregation // nolint:revive  // import-shadow for method scoped by type.
+	aggregation(InstrumentKind) Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in out. An error is returned if this is called
@@ -137,7 +136,7 @@ func DefaultTemporalitySelector(InstrumentKind) metricdata.Temporality {
 //
 // If the Aggregation returned is nil or DefaultAggregation, the selection from
 // DefaultAggregationSelector will be used.
-type AggregationSelector func(InstrumentKind) aggregation.Aggregation
+type AggregationSelector func(InstrumentKind) Aggregation
 
 // DefaultAggregationSelector returns the default aggregation and parameters
 // that will be used to summarize measurement made from an instrument of
@@ -145,14 +144,14 @@ type AggregationSelector func(InstrumentKind) aggregation.Aggregation
 // mapping: Counter ⇨ Sum, Observable Counter ⇨ Sum, UpDownCounter ⇨ Sum,
 // Observable UpDownCounter ⇨ Sum, Observable Gauge ⇨ LastValue,
 // Histogram ⇨ ExplicitBucketHistogram.
-func DefaultAggregationSelector(ik InstrumentKind) aggregation.Aggregation {
+func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 	switch ik {
 	case InstrumentKindCounter, InstrumentKindUpDownCounter, InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
-		return aggregation.Sum{}
+		return AggregationSum{}
 	case InstrumentKindObservableGauge:
-		return aggregation.LastValue{}
+		return AggregationLastValue{}
 	case InstrumentKindHistogram:
-		return aggregation.ExplicitBucketHistogram{
+		return AggregationExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 			NoMinMax:   false,
 		}

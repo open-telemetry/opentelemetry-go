@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -41,7 +40,7 @@ type clientShim struct {
 func (clientShim) Temporality(metric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
-func (clientShim) Aggregation(metric.InstrumentKind) aggregation.Aggregation {
+func (clientShim) Aggregation(metric.InstrumentKind) metric.Aggregation {
 	return nil
 }
 func (clientShim) ForceFlush(ctx context.Context) error {
