@@ -74,8 +74,11 @@ $(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 
+GORELEASE = $(TOOLS)/gorelease
+$(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
+
 .PHONY: tools
-tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL)
+tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL) $(GORELEASE)
 
 # Virtualized python tools via docker
 
@@ -266,6 +269,15 @@ semconv-generate: | $(SEMCONVGEN) $(SEMCONVKIT)
 	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=event -p conventionType=event -f event.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=resource -p conventionType=resource -f resource.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVKIT) -output "$(SEMCONVPKG)/$(TAG)" -tag "$(TAG)"
+
+.PHONY: gorelease
+gorelease: $(OTEL_GO_MOD_DIRS:%=gorelease/%)
+gorelease/%: DIR=$*
+gorelease/%:| $(GORELEASE)
+	@echo "gorelease in $(DIR):" \
+		&& cd $(DIR) \
+		&& $(GORELEASE) \
+		|| echo ""
 
 .PHONY: prerelease
 prerelease: | $(MULTIMOD)
