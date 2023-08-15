@@ -17,12 +17,19 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -74,7 +81,7 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrency(t *testing.T) {
+func TestPipelineConcurrentSafe(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
@@ -137,7 +144,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				var c cache[string, streamID]
+				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				got, err := i.Instrument(inst)
 				require.NoError(t, err)
@@ -165,4 +172,223 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestLogConflictName(t *testing.T) {
+	testcases := []struct {
+		existing, name string
+		conflict       bool
+	}{
+		{
+			existing: "requestCount",
+			name:     "requestCount",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestDuration",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestcount",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "REQUESTCOUNT",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "rEqUeStCoUnT",
+			conflict: true,
+		},
+	}
+
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	for _, tc := range testcases {
+		var vc cache[string, instID]
+
+		name := strings.ToLower(tc.existing)
+		_ = vc.Lookup(name, func() instID {
+			return instID{Name: tc.existing}
+		})
+
+		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i.logConflict(instID{Name: tc.name})
+
+		if tc.conflict {
+			assert.Containsf(
+				t, msg, "duplicate metric stream definitions",
+				"warning not logged for conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		} else {
+			assert.Equalf(
+				t, msg, "",
+				"warning logged for non-conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		}
+
+		// Reset.
+		msg = ""
+	}
+}
+
+func TestLogConflictSuggestView(t *testing.T) {
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	orig := instID{
+		Name:        "requestCount",
+		Description: "number of requests",
+		Kind:        InstrumentKindCounter,
+		Unit:        "1",
+		Number:      "int64",
+	}
+
+	var vc cache[string, instID]
+	name := strings.ToLower(orig.Name)
+	_ = vc.Lookup(name, func() instID { return orig })
+	i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+
+	viewSuggestion := func(inst instID, stream string) string {
+		return `"NewView(Instrument{` +
+			`Name: \"` + inst.Name +
+			`\", Description: \"` + inst.Description +
+			`\", Kind: \"InstrumentKind` + inst.Kind.String() +
+			`\", Unit: \"` + inst.Unit +
+			`\"}, ` +
+			stream +
+			`)"`
+	}
+
+	t.Run("Name", func(t *testing.T) {
+		inst := instID{
+			Name:        "requestcount",
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Description", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: "alt",
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Description: \"`+orig.Description+`\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Kind", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        InstrumentKindHistogram,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Unit", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        "ms",
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Number", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      "float64",
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+}
+
+func TestInserterCachedAggregatorNameConflict(t *testing.T) {
+	const name = "requestCount"
+	scope := instrumentation.Scope{Name: "pipeline_test"}
+	kind := InstrumentKindCounter
+	stream := Stream{
+		Name:        name,
+		Aggregation: AggregationSum{},
+	}
+
+	var vc cache[string, instID]
+	pipe := newPipeline(nil, NewManualReader(), nil)
+	i := newInserter[int64](pipe, &vc)
+
+	_, origID, err := i.cachedAggregator(scope, kind, stream)
+	require.NoError(t, err)
+
+	require.Len(t, pipe.aggregations, 1)
+	require.Contains(t, pipe.aggregations, scope)
+	iSync := pipe.aggregations[scope]
+	require.Len(t, iSync, 1)
+	require.Equal(t, name, iSync[0].name)
+
+	stream.Name = "RequestCount"
+	_, id, err := i.cachedAggregator(scope, kind, stream)
+	require.NoError(t, err)
+	assert.Equal(t, origID, id, "multiple aggregators for equivalent name")
+
+	assert.Len(t, pipe.aggregations, 1, "additional scope added")
+	require.Contains(t, pipe.aggregations, scope, "original scope removed")
+	iSync = pipe.aggregations[scope]
+	require.Len(t, iSync, 1, "registered instrumentSync changed")
+	assert.Equal(t, name, iSync[0].name, "stream name changed")
 }

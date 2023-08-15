@@ -22,7 +22,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -50,7 +49,7 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
 	}
-	r.externalProducers.Store([]Producer{})
+	r.externalProducers.Store(cfg.producers)
 	return r
 }
 
@@ -64,38 +63,14 @@ func (mr *ManualReader) register(p sdkProducer) {
 	}
 }
 
-// RegisterProducer stores the external Producer which enables the caller
-// to read metrics on demand.
-//
-// This method is safe to call concurrently.
-func (mr *ManualReader) RegisterProducer(p Producer) {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
-	if mr.isShutdown {
-		return
-	}
-	currentProducers := mr.externalProducers.Load().([]Producer)
-	newProducers := []Producer{}
-	newProducers = append(newProducers, currentProducers...)
-	newProducers = append(newProducers, p)
-	mr.externalProducers.Store(newProducers)
-}
-
 // temporality reports the Temporality for the instrument kind provided.
 func (mr *ManualReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return mr.temporalitySelector(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (mr *ManualReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (mr *ManualReader) aggregation(kind InstrumentKind) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
-}
-
-// ForceFlush is a no-op, it always returns nil.
-//
-// This method is safe to call concurrently.
-func (mr *ManualReader) ForceFlush(context.Context) error {
-	return nil
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
@@ -118,8 +93,8 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 	return err
 }
 
-// Collect gathers all metrics from the SDK and other Producers, calling any
-// callbacks necessary and stores the result in rm.
+// Collect gathers all metric data related to the Reader from
+// the SDK and other Producers and stores the result in rm.
 //
 // Collect will return an error if called after shutdown.
 // Collect will return an error if rm is a nil ResourceMetrics.
@@ -183,6 +158,7 @@ func (r *ManualReader) MarshalLog() interface{} {
 type manualReaderConfig struct {
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+	producers           []Producer
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.
@@ -224,22 +200,7 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // this option is not used, the reader will use the DefaultAggregationSelector
 // or the aggregation explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
-	// Deep copy and validate before using.
-	wrapped := func(ik InstrumentKind) aggregation.Aggregation {
-		a := selector(ik)
-		cpA := a.Copy()
-		if err := cpA.Err(); err != nil {
-			cpA = DefaultAggregationSelector(ik)
-			global.Error(
-				err, "using default aggregation instead",
-				"aggregation", a,
-				"replacement", cpA,
-			)
-		}
-		return cpA
-	}
-
-	return aggregationSelectorOption{selector: wrapped}
+	return aggregationSelectorOption{selector: selector}
 }
 
 type aggregationSelectorOption struct {

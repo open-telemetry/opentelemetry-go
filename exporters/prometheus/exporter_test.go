@@ -28,9 +28,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -55,7 +54,65 @@ func TestPrometheusExporter(t *testing.T) {
 				counter, err := meter.Float64Counter(
 					"foo",
 					otelmetric.WithDescription("a simple counter"),
-					otelmetric.WithUnit("ms"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "counter that already has the unit suffix",
+			expectedFile: "testdata/counter.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.seconds",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "counter that already has a total suffix",
+			expectedFile: "testdata/counter.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.total",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -85,7 +142,7 @@ func TestPrometheusExporter(t *testing.T) {
 				counter, err := meter.Float64Counter(
 					"foo",
 					otelmetric.WithDescription("a simple counter without a total suffix"),
-					otelmetric.WithUnit("ms"),
+					otelmetric.WithUnit("s"),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -339,7 +396,7 @@ func TestPrometheusExporter(t *testing.T) {
 				metric.WithReader(exporter),
 				metric.WithView(metric.NewView(
 					metric.Instrument{Name: "histogram_*"},
-					metric.Stream{Aggregation: aggregation.ExplicitBucketHistogram{
+					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
 						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 					}},
 				)),
@@ -415,7 +472,7 @@ func TestMultiScopes(t *testing.T) {
 	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
 		Int64Counter(
 			"foo",
-			otelmetric.WithUnit("ms"),
+			otelmetric.WithUnit("s"),
 			otelmetric.WithDescription("meter foo counter"))
 	assert.NoError(t, err)
 	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
@@ -423,7 +480,7 @@ func TestMultiScopes(t *testing.T) {
 	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
 		Int64Counter(
 			"bar",
-			otelmetric.WithUnit("ms"),
+			otelmetric.WithUnit("s"),
 			otelmetric.WithDescription("meter bar counter"))
 	assert.NoError(t, err)
 	barCounter.Add(ctx, 200, otelmetric.WithAttributes(attribute.String("type", "bar")))
@@ -571,7 +628,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				bazA.Add(ctx, 100, withTypeBar)
 
 				bazB, err := meterB.Int64Counter("bar",
-					otelmetric.WithUnit("ms"),
+					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter bar"))
 				assert.NoError(t, err)
 				bazB.Add(ctx, 100, withTypeBar)
@@ -589,7 +646,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA.Add(ctx, 100, withTypeBar)
 
 				barB, err := meterB.Int64UpDownCounter("bar",
-					otelmetric.WithUnit("ms"),
+					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter gauge bar"))
 				assert.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
@@ -607,7 +664,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA.Record(ctx, 100, withAB)
 
 				barB, err := meterB.Int64Histogram("bar",
-					otelmetric.WithUnit("ms"),
+					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter histogram bar"))
 				assert.NoError(t, err)
 				barB.Record(ctx, 100, withAB)

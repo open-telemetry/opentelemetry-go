@@ -189,10 +189,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		for _, m := range scopeMetrics.Metrics {
-			typ, name := c.metricTypeAndName(m)
+			typ := c.metricType(m)
 			if typ == nil {
 				continue
 			}
+			name := c.getName(m, typ)
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
@@ -330,22 +331,58 @@ func sanitizeRune(r rune) rune {
 }
 
 var unitSuffixes = map[string]string{
-	"1":  "_ratio",
-	"By": "_bytes",
-	"ms": "_milliseconds",
+	// Time
+	"d":   "_days",
+	"h":   "_hours",
+	"min": "_minutes",
+	"s":   "_seconds",
+	"ms":  "_milliseconds",
+	"us":  "_microseconds",
+	"ns":  "_nanoseconds",
+
+	// Bytes
+	"By":   "_bytes",
+	"KiBy": "_kibibytes",
+	"MiBy": "_mebibytes",
+	"GiBy": "_gibibytes",
+	"TiBy": "_tibibytes",
+	"KBy":  "_kilobytes",
+	"MBy":  "_megabytes",
+	"GBy":  "_gigabytes",
+	"TBy":  "_terabytes",
+
+	// SI
+	"m": "_meters",
+	"V": "_volts",
+	"A": "_amperes",
+	"J": "_joules",
+	"W": "_watts",
+	"g": "_grams",
+
+	// Misc
+	"Cel": "_celsius",
+	"Hz":  "_hertz",
+	"1":   "_ratio",
+	"%":   "_percent",
 }
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
-func (c *collector) getName(m metricdata.Metrics) string {
+func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := sanitizeName(m.Name)
+	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
+	if addCounterSuffix {
+		// Remove the _total suffix here, as we will re-add the total suffix
+		// later, and it needs to come after the unit suffix.
+		name = strings.TrimSuffix(name, counterSuffix)
+	}
 	if c.namespace != "" {
 		name = c.namespace + name
 	}
-	if c.withoutUnits {
-		return name
-	}
-	if suffix, ok := unitSuffixes[m.Unit]; ok {
+	if suffix, ok := unitSuffixes[m.Unit]; ok && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
 		name += suffix
+	}
+	if addCounterSuffix {
+		name += counterSuffix
 	}
 	return name
 }
@@ -403,27 +440,24 @@ func sanitizeName(n string) string {
 	return b.String()
 }
 
-func (c *collector) metricTypeAndName(m metricdata.Metrics) (*dto.MetricType, string) {
-	name := c.getName(m)
-
+func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
 	switch v := m.Data.(type) {
 	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
-		return dto.MetricType_HISTOGRAM.Enum(), name
+		return dto.MetricType_HISTOGRAM.Enum()
 	case metricdata.Sum[float64]:
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
-			return dto.MetricType_COUNTER.Enum(), name + counterSuffix
+		if v.IsMonotonic {
+			return dto.MetricType_COUNTER.Enum()
 		}
-		return dto.MetricType_GAUGE.Enum(), name
+		return dto.MetricType_GAUGE.Enum()
 	case metricdata.Sum[int64]:
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
-			return dto.MetricType_COUNTER.Enum(), name + counterSuffix
+		if v.IsMonotonic {
+			return dto.MetricType_COUNTER.Enum()
 		}
-		return dto.MetricType_GAUGE.Enum(), name
+		return dto.MetricType_GAUGE.Enum()
 	case metricdata.Gauge[int64], metricdata.Gauge[float64]:
-		return dto.MetricType_GAUGE.Enum(), name
+		return dto.MetricType_GAUGE.Enum()
 	}
-
-	return nil, ""
+	return nil
 }
 
 func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, error) {

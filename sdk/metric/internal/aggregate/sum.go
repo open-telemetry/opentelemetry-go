@@ -15,6 +15,7 @@
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -32,315 +33,190 @@ func newValueMap[N int64 | float64]() *valueMap[N] {
 	return &valueMap[N]{values: make(map[attribute.Set]N)}
 }
 
-func (s *valueMap[N]) Aggregate(value N, attr attribute.Set) {
+func (s *valueMap[N]) measure(_ context.Context, value N, attr attribute.Set) {
 	s.Lock()
 	s.values[attr] += value
 	s.Unlock()
 }
 
-// newDeltaSum returns an Aggregator that summarizes a set of measurements as
-// their arithmetic sum. Each sum is scoped by attributes and the aggregation
-// cycle the measurements were made in.
-//
-// The monotonic value is used to communicate the produced Aggregation is
-// monotonic or not. The returned Aggregator does not make any guarantees this
-// value is accurate. It is up to the caller to ensure it.
-//
-// Each aggregation cycle is treated independently. When the returned
-// Aggregator's Aggregation method is called it will reset all sums to zero.
-func newDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
-	return &deltaSum[N]{
+// newSum returns an aggregator that summarizes a set of measurements as their
+// arithmetic sum. Each sum is scoped by attributes and the aggregation cycle
+// the measurements were made in.
+func newSum[N int64 | float64](monotonic bool) *sum[N] {
+	return &sum[N]{
 		valueMap:  newValueMap[N](),
 		monotonic: monotonic,
 		start:     now(),
 	}
 }
 
-// deltaSum summarizes a set of measurements made in a single aggregation
-// cycle as their arithmetic sum.
-type deltaSum[N int64 | float64] struct {
+// sum summarizes a set of measurements made as their arithmetic sum.
+type sum[N int64 | float64] struct {
 	*valueMap[N]
 
 	monotonic bool
 	start     time.Time
 }
 
-func (s *deltaSum[N]) Aggregation() metricdata.Aggregation {
+func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
+	t := now()
+
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
+	sData, _ := (*dest).(metricdata.Sum[N])
+	sData.Temporality = metricdata.DeltaTemporality
+	sData.IsMonotonic = s.monotonic
+
 	s.Lock()
 	defer s.Unlock()
 
-	if len(s.values) == 0 {
-		return nil
-	}
+	n := len(s.values)
+	dPts := reset(sData.DataPoints, n, n)
 
-	t := now()
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
-	}
+	var i int
 	for attr, value := range s.values {
-		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
-			Attributes: attr,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      value,
-		})
-		// Unused attribute sets do not report.
+		dPts[i].Attributes = attr
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = value
+		// Do not report stale values.
 		delete(s.values, attr)
+		i++
 	}
 	// The delta collection cycle resets.
 	s.start = t
-	return out
+
+	sData.DataPoints = dPts
+	*dest = sData
+
+	return n
 }
 
-// newCumulativeSum returns an Aggregator that summarizes a set of
-// measurements as their arithmetic sum. Each sum is scoped by attributes and
-// the aggregation cycle the measurements were made in.
-//
-// The monotonic value is used to communicate the produced Aggregation is
-// monotonic or not. The returned Aggregator does not make any guarantees this
-// value is accurate. It is up to the caller to ensure it.
-//
-// Each aggregation cycle is treated independently. When the returned
-// Aggregator's Aggregation method is called it will reset all sums to zero.
-func newCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
-	return &cumulativeSum[N]{
-		valueMap:  newValueMap[N](),
-		monotonic: monotonic,
-		start:     now(),
-	}
-}
+func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
+	t := now()
 
-// cumulativeSum summarizes a set of measurements made over all aggregation
-// cycles as their arithmetic sum.
-type cumulativeSum[N int64 | float64] struct {
-	*valueMap[N]
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
+	sData, _ := (*dest).(metricdata.Sum[N])
+	sData.Temporality = metricdata.CumulativeTemporality
+	sData.IsMonotonic = s.monotonic
 
-	monotonic bool
-	start     time.Time
-}
-
-func (s *cumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	s.Lock()
 	defer s.Unlock()
 
-	if len(s.values) == 0 {
-		return nil
-	}
+	n := len(s.values)
+	dPts := reset(sData.DataPoints, n, n)
 
-	t := now()
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: s.monotonic,
-		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
-	}
+	var i int
 	for attr, value := range s.values {
-		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
-			Attributes: attr,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      value,
-		})
+		dPts[i].Attributes = attr
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = value
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
+		i++
 	}
-	return out
+
+	sData.DataPoints = dPts
+	*dest = sData
+
+	return n
 }
 
-// precomputedValue is the recorded measurement value for a set of attributes.
-type precomputedValue[N int64 | float64] struct {
-	// measured is the last value measured for a set of attributes that were
-	// not filtered.
-	measured N
-	// filtered is the sum of values from measurements that had their
-	// attributes filtered.
-	filtered N
-}
-
-// precomputedMap is the storage for precomputed sums.
-type precomputedMap[N int64 | float64] struct {
-	sync.Mutex
-	values map[attribute.Set]precomputedValue[N]
-}
-
-func newPrecomputedMap[N int64 | float64]() *precomputedMap[N] {
-	return &precomputedMap[N]{
-		values: make(map[attribute.Set]precomputedValue[N]),
+// newPrecomputedSum returns an aggregator that summarizes a set of
+// observatrions as their arithmetic sum. Each sum is scoped by attributes and
+// the aggregation cycle the measurements were made in.
+func newPrecomputedSum[N int64 | float64](monotonic bool) *precomputedSum[N] {
+	return &precomputedSum[N]{
+		valueMap:  newValueMap[N](),
+		monotonic: monotonic,
+		start:     now(),
 	}
 }
 
-// Aggregate records value with the unfiltered attributes attr.
-//
-// If a previous measurement was made for the same attribute set:
-//
-//   - If that measurement's attributes were not filtered, this value overwrite
-//     that value.
-//   - If that measurement's attributes were filtered, this value will be
-//     recorded along side that value.
-func (s *precomputedMap[N]) Aggregate(value N, attr attribute.Set) {
-	s.Lock()
-	v := s.values[attr]
-	v.measured = value
-	s.values[attr] = v
-	s.Unlock()
-}
-
-// aggregateFiltered records value with the filtered attributes attr.
-//
-// If a previous measurement was made for the same attribute set:
-//
-//   - If that measurement's attributes were not filtered, this value will be
-//     recorded along side that value.
-//   - If that measurement's attributes were filtered, this value will be
-//     added to it.
-//
-// This method should not be used if attr have not been reduced by an attribute
-// filter.
-func (s *precomputedMap[N]) aggregateFiltered(value N, attr attribute.Set) { // nolint: unused  // Used to agg filtered.
-	s.Lock()
-	v := s.values[attr]
-	v.filtered += value
-	s.values[attr] = v
-	s.Unlock()
-}
-
-// newPrecomputedDeltaSum returns an Aggregator that summarizes a set of
-// pre-computed sums. Each sum is scoped by attributes and the aggregation
-// cycle the measurements were made in.
-//
-// The monotonic value is used to communicate the produced Aggregation is
-// monotonic or not. The returned Aggregator does not make any guarantees this
-// value is accurate. It is up to the caller to ensure it.
-//
-// The output Aggregation will report recorded values as delta temporality.
-func newPrecomputedDeltaSum[N int64 | float64](monotonic bool) aggregator[N] {
-	return &precomputedDeltaSum[N]{
-		precomputedMap: newPrecomputedMap[N](),
-		reported:       make(map[attribute.Set]N),
-		monotonic:      monotonic,
-		start:          now(),
-	}
-}
-
-// precomputedDeltaSum summarizes a set of pre-computed sums recorded over all
-// aggregation cycles as the delta of these sums.
-type precomputedDeltaSum[N int64 | float64] struct {
-	*precomputedMap[N]
-
-	reported map[attribute.Set]N
+// precomputedSum summarizes a set of observatrions as their arithmetic sum.
+type precomputedSum[N int64 | float64] struct {
+	*valueMap[N]
 
 	monotonic bool
 	start     time.Time
+
+	reported map[attribute.Set]N
 }
 
-// Aggregation returns the recorded pre-computed sums as an Aggregation. The
-// sum values are expressed as the delta between what was measured this
-// collection cycle and the previous.
-//
-// All pre-computed sums that were recorded for attributes sets reduced by an
-// attribute filter (filtered-sums) are summed together and added to any
-// pre-computed sum value recorded directly for the resulting attribute set
-// (unfiltered-sum). The filtered-sums are reset to zero for the next
-// collection cycle, and the unfiltered-sum is kept for the next collection
-// cycle.
-func (s *precomputedDeltaSum[N]) Aggregation() metricdata.Aggregation {
+func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
+	t := now()
 	newReported := make(map[attribute.Set]N)
+
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
+	sData, _ := (*dest).(metricdata.Sum[N])
+	sData.Temporality = metricdata.DeltaTemporality
+	sData.IsMonotonic = s.monotonic
+
 	s.Lock()
 	defer s.Unlock()
 
-	if len(s.values) == 0 {
-		s.reported = newReported
-		return nil
-	}
+	n := len(s.values)
+	dPts := reset(sData.DataPoints, n, n)
 
-	t := now()
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.DeltaTemporality,
-		IsMonotonic: s.monotonic,
-		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
-	}
+	var i int
 	for attr, value := range s.values {
-		v := value.measured + value.filtered
-		delta := v - s.reported[attr]
-		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
-			Attributes: attr,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      delta,
-		})
-		newReported[attr] = v
+		delta := value - s.reported[attr]
+
+		dPts[i].Attributes = attr
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = delta
+
+		newReported[attr] = value
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
+		i++
 	}
 	// Unused attribute sets are forgotten.
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
-	return out
+
+	sData.DataPoints = dPts
+	*dest = sData
+
+	return n
 }
 
-// newPrecomputedCumulativeSum returns an Aggregator that summarizes a set of
-// pre-computed sums. Each sum is scoped by attributes and the aggregation
-// cycle the measurements were made in.
-//
-// The monotonic value is used to communicate the produced Aggregation is
-// monotonic or not. The returned Aggregator does not make any guarantees this
-// value is accurate. It is up to the caller to ensure it.
-//
-// The output Aggregation will report recorded values as cumulative
-// temporality.
-func newPrecomputedCumulativeSum[N int64 | float64](monotonic bool) aggregator[N] {
-	return &precomputedCumulativeSum[N]{
-		precomputedMap: newPrecomputedMap[N](),
-		monotonic:      monotonic,
-		start:          now(),
-	}
-}
+func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
+	t := now()
 
-// precomputedCumulativeSum directly records and reports a set of pre-computed sums.
-type precomputedCumulativeSum[N int64 | float64] struct {
-	*precomputedMap[N]
+	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
+	// use the zero-value sData and hope for better alignment next cycle.
+	sData, _ := (*dest).(metricdata.Sum[N])
+	sData.Temporality = metricdata.CumulativeTemporality
+	sData.IsMonotonic = s.monotonic
 
-	monotonic bool
-	start     time.Time
-}
-
-// Aggregation returns the recorded pre-computed sums as an Aggregation. The
-// sum values are expressed directly as they are assumed to be recorded as the
-// cumulative sum of a some measured phenomena.
-//
-// All pre-computed sums that were recorded for attributes sets reduced by an
-// attribute filter (filtered-sums) are summed together and added to any
-// pre-computed sum value recorded directly for the resulting attribute set
-// (unfiltered-sum). The filtered-sums are reset to zero for the next
-// collection cycle, and the unfiltered-sum is kept for the next collection
-// cycle.
-func (s *precomputedCumulativeSum[N]) Aggregation() metricdata.Aggregation {
 	s.Lock()
 	defer s.Unlock()
 
-	if len(s.values) == 0 {
-		return nil
-	}
+	n := len(s.values)
+	dPts := reset(sData.DataPoints, n, n)
 
-	t := now()
-	out := metricdata.Sum[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: s.monotonic,
-		DataPoints:  make([]metricdata.DataPoint[N], 0, len(s.values)),
-	}
+	var i int
 	for attr, value := range s.values {
-		out.DataPoints = append(out.DataPoints, metricdata.DataPoint[N]{
-			Attributes: attr,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      value.measured + value.filtered,
-		})
+		dPts[i].Attributes = attr
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = value
+
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
+		i++
 	}
-	return out
+
+	sData.DataPoints = dPts
+	*dest = sData
+
+	return n
 }

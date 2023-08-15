@@ -27,7 +27,13 @@ import (
 )
 
 func TestManualReader(t *testing.T) {
-	suite.Run(t, &readerTestSuite{Factory: func() Reader { return NewManualReader() }})
+	suite.Run(t, &readerTestSuite{Factory: func(opts ...ReaderOption) Reader {
+		var mopts []ManualReaderOption
+		for _, o := range opts {
+			mopts = append(mopts, o)
+		}
+		return NewManualReader(mopts...)
+	}})
 }
 
 func BenchmarkManualReader(b *testing.B) {
@@ -80,25 +86,18 @@ func TestManualReaderCollect(t *testing.T) {
 	defer cancel()
 
 	tests := []struct {
-		name string
-
-		ctx             context.Context
-		resourceMetrics *metricdata.ResourceMetrics
-
+		name        string
+		ctx         context.Context
 		expectedErr error
 	}{
 		{
-			name: "with a valid context",
-
-			ctx:             context.Background(),
-			resourceMetrics: &metricdata.ResourceMetrics{},
+			name:        "with a valid context",
+			ctx:         context.Background(),
+			expectedErr: nil,
 		},
 		{
-			name: "with an expired context",
-
-			ctx:             expiredCtx,
-			resourceMetrics: &metricdata.ResourceMetrics{},
-
+			name:        "with an expired context",
+			ctx:         expiredCtx,
 			expectedErr: context.DeadlineExceeded,
 		},
 	}
@@ -117,7 +116,8 @@ func TestManualReaderCollect(t *testing.T) {
 			}, testM)
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, tt.resourceMetrics))
+			rm := &metricdata.ResourceMetrics{}
+			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))
 		})
 	}
 }

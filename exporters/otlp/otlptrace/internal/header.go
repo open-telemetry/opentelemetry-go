@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
-// GetUserAgentHeader returns an OTLP header value form "OTel OTLP Exporter Go/{{ .Version }}"
+// GetUserAgentHeader returns an OTLP header value form "OTel OTLP Exporter Go/{ .Version }"
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/protocol/exporter.md#user-agent
 func GetUserAgentHeader() string {
 	return "OTel OTLP Exporter Go/" + otlptrace.Version()

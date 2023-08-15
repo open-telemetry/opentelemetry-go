@@ -40,11 +40,10 @@ func TestCache(t *testing.T) {
 	assert.Equal(t, v1, c.Lookup(k1, func() int { return v1 }), "non-existing key")
 }
 
-func TestCacheConcurrency(t *testing.T) {
+func TestCacheConcurrentSafe(t *testing.T) {
 	const (
 		key        = "k"
 		goroutines = 10
-		timeoutSec = 5
 	)
 
 	c := cache[string, int]{}
@@ -65,12 +64,9 @@ func TestCacheConcurrency(t *testing.T) {
 		close(done)
 	}()
 
-	assert.Eventually(t, func() bool {
-		select {
-		case <-done:
-			return true
-		default:
-			return false
-		}
-	}, timeoutSec*time.Second, 10*time.Millisecond)
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		assert.Fail(t, "timeout")
+	}
 }
