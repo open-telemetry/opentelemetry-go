@@ -9,7 +9,6 @@ The following exporter packages are provided with the following OpenTelemetry si
 
 | Exporter Package                                                                | Metrics | Traces |
 | :-----------------------------------------------------------------------------: | :-----: | :----: |
-| [go.opentelemetry.io/otel/exporters/jaeger](./jaeger)                           |         | ✓      |
 | [go.opentelemetry.io/otel/exporters/otlp/otlpmetric](./otlp/otlpmetric)         | ✓       |        |
 | [go.opentelemetry.io/otel/exporters/otlp/otlptrace](./otlp/otlptrace)           |         | ✓      |
 | [go.opentelemetry.io/otel/exporters/prometheus](./prometheus)                   | ✓       |        |
