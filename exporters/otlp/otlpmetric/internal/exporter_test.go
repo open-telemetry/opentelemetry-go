@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -37,7 +36,7 @@ func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return metric.DefaultTemporalitySelector(k)
 }
 
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return metric.DefaultAggregationSelector(k)
 }
 

@@ -21,6 +21,12 @@ make semconv-generate # Uses the exported TAG and OTEL_SEMCONV_REPO.
 This should create a new sub-package of [`semconv`](./semconv).
 Ensure things look correct before submitting a pull request to include the addition.
 
+## Breaking changes validation
+
+You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) to ensure that there are no unwanted changes done in the public API.
+
+You can check/report problems with `gorelease` [here](https://golang.org/issues/26420).
+
 ## Pre-Release
 
 First, decide which module sets will be released and update their versions

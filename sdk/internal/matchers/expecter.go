@@ -1,5 +1,5 @@
 // Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlptrace/tracetransform/resource.go.tmpl
+// source: internal/shared/matchers/expecter.go.tmpl
 
 // Copyright The OpenTelemetry Authors
 //
@@ -15,17 +15,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracetransform
+package matchers // import "go.opentelemetry.io/otel/sdk/internal/matchers"
 
 import (
-	"go.opentelemetry.io/otel/sdk/resource"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"testing"
 )
 
-// Resource transforms a Resource into an OTLP Resource.
-func Resource(r *resource.Resource) *resourcepb.Resource {
-	if r == nil {
-		return nil
+type Expecter struct {
+	t *testing.T
+}
+
+func NewExpecter(t *testing.T) *Expecter {
+	return &Expecter{
+		t: t,
 	}
-	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
+}
+
+func (a *Expecter) Expect(actual interface{}) *Expectation {
+	return &Expectation{
+		t:      a.t,
+		actual: actual,
+	}
 }

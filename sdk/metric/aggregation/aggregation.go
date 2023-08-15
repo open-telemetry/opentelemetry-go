@@ -14,6 +14,9 @@
 
 // Package aggregation contains configuration types that define the
 // aggregation operation used to summarizes recorded measurements.
+//
+// Deprecated: Use the aggregation types in go.opentelemetry.io/otel/sdk/metric
+// instead.
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 import (

@@ -29,7 +29,6 @@ import (
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 const meterName = "github.com/open-telemetry/opentelemetry-go/example/view"
@@ -53,7 +52,7 @@ func main() {
 			},
 			metric.Stream{
 				Name: "bar",
-				Aggregation: aggregation.ExplicitBucketHistogram{
+				Aggregation: metric.AggregationExplicitBucketHistogram{
 					Boundaries: []float64{64, 128, 256, 512, 1024, 2048, 4096},
 				},
 			},

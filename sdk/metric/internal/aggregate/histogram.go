@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -109,10 +108,10 @@ func (s *histValues[N]) measure(_ context.Context, value N, attr attribute.Set) 
 
 // newHistogram returns an Aggregator that summarizes a set of measurements as
 // an histogram.
-func newHistogram[N int64 | float64](cfg aggregation.ExplicitBucketHistogram, noSum bool) *histogram[N] {
+func newHistogram[N int64 | float64](boundaries []float64, noMinMax, noSum bool) *histogram[N] {
 	return &histogram[N]{
-		histValues: newHistValues[N](cfg.Boundaries, noSum),
-		noMinMax:   cfg.NoMinMax,
+		histValues: newHistValues[N](boundaries, noSum),
+		noMinMax:   noMinMax,
 		start:      now(),
 	}
 }

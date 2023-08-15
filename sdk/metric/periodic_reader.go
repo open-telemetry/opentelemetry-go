@@ -24,7 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -36,8 +35,9 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval time.Duration
-	timeout  time.Duration
+	interval  time.Duration
+	timeout   time.Duration
+	producers []Producer
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -129,7 +129,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 				return &metricdata.ResourceMetrics{}
 			}},
 	}
-	r.externalProducers.Store([]Producer{})
+	r.externalProducers.Store(conf.producers)
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -197,29 +197,13 @@ func (r *PeriodicReader) register(p sdkProducer) {
 	}
 }
 
-// RegisterProducer registers p as an external Producer of this reader.
-//
-// This method is safe to call concurrently.
-func (r *PeriodicReader) RegisterProducer(p Producer) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.isShutdown {
-		return
-	}
-	currentProducers := r.externalProducers.Load().([]Producer)
-	newProducers := []Producer{}
-	newProducers = append(newProducers, currentProducers...)
-	newProducers = append(newProducers, p)
-	r.externalProducers.Store(newProducers)
-}
-
 // temporality reports the Temporality for the instrument kind provided.
 func (r *PeriodicReader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.exporter.Temporality(kind)
 }
 
 // aggregation returns what Aggregation to use for kind.
-func (r *PeriodicReader) aggregation(kind InstrumentKind) aggregation.Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *PeriodicReader) aggregation(kind InstrumentKind) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.exporter.Aggregation(kind)
 }
 
