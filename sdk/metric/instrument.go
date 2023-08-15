@@ -146,13 +146,13 @@ type Stream struct {
 	Unit string
 	// Aggregation the stream uses for an instrument.
 	Aggregation Aggregation
-	// AttributeFilter is an [attribute.Filter] applied to the attributes
+	// AttributeFilter is an attribute Filter applied to the attributes
 	// recorded for an instrument's measurement. If the filter returns false
 	// the attribute will not be recorded, otherwise, if it returns true, it
 	// will record the attribute.
 	//
-	// Use [attribute.NewAllowKeysFilter] to provide an allow-list of
-	// attribute keys here.
+	// Use NewAllowKeysFilter from "go.opentelemetry.io/otel/attribute" to
+	// provide an allow-list of attribute keys here.
 	AttributeFilter attribute.Filter
 }
 
