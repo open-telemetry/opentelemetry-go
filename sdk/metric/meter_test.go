@@ -1565,10 +1565,10 @@ func TestObservableExample(t *testing.T) {
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
 		reader := NewManualReader(WithTemporalitySelector(selector))
 
-		noopFilter := func(kv attribute.KeyValue) bool { return true }
-		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: noopFilter})
+		allowAll := attribute.NewDenyKeysFilter()
+		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: allowAll})
 
-		filter := func(kv attribute.KeyValue) bool { return kv.Key != "tid" }
+		filter := attribute.NewDenyKeysFilter("tid")
 		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
 
 		mp := NewMeterProvider(WithReader(reader), WithView(noFiltered, filtered))
