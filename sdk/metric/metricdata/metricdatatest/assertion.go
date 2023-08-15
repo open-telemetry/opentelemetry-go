@@ -56,6 +56,7 @@ type Datatypes interface {
 type config struct {
 	ignoreTimestamp bool
 	ignoreExemplars bool
+	ignoreValue     bool
 }
 
 func newConfig(opts []Option) config {
@@ -89,6 +90,14 @@ func IgnoreTimestamp() Option {
 func IgnoreExemplars() Option {
 	return fnOption(func(cfg config) config {
 		cfg.ignoreExemplars = true
+		return cfg
+	})
+}
+
+// IgnoreValue disables checking if Exemplars are different.
+func IgnoreValue() Option {
+	return fnOption(func(cfg config) config {
+		cfg.ignoreValue = true
 		return cfg
 	})
 }
