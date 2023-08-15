@@ -55,21 +55,12 @@ var (
 	}
 )
 
-type inputTester[N int64 | float64] struct {
-	aggregator[N]
-
-	value N
-	attr  attribute.Set
+func TestBuilderFilter(t *testing.T) {
+	t.Run("Int64", testBuilderFilter[int64]())
+	t.Run("Float64", testBuilderFilter[float64]())
 }
 
-func (it *inputTester[N]) Aggregate(v N, a attribute.Set) { it.value, it.attr = v, a }
-
-func TestBuilderInput(t *testing.T) {
-	t.Run("Int64", testBuilderInput[int64]())
-	t.Run("Float64", testBuilderInput[float64]())
-}
-
-func testBuilderInput[N int64 | float64]() func(t *testing.T) {
+func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
@@ -78,12 +69,11 @@ func testBuilderInput[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				it := &inputTester[N]{}
-				meas := b.input(it)
+				meas := b.filter(func(_ context.Context, v N, a attribute.Set) {
+					assert.Equal(t, value, v, "measured incorrect value")
+					assert.Equal(t, wantA, a, "measured incorrect attributes")
+				})
 				meas(context.Background(), value, attr)
-
-				assert.Equal(t, value, it.value, "measured incorrect value")
-				assert.Equal(t, wantA, it.attr, "measured incorrect attributes")
 			}
 		}
 

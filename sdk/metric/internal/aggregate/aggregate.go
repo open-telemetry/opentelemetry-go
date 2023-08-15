@@ -16,11 +16,15 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// now is used to return the current local time while allowing tests to
+// override the default time.Now function.
+var now = time.Now
 
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
@@ -51,19 +55,6 @@ func (b Builder[N]) filter(f Measure[N]) Measure[N] {
 		}
 	}
 	return f
-}
-
-func (b Builder[N]) input(agg aggregator[N]) Measure[N] {
-	if b.Filter != nil {
-		fltr := b.Filter // Copy to make it immutable after assignment.
-		return func(_ context.Context, n N, a attribute.Set) {
-			fAttr, _ := a.Filter(fltr)
-			agg.Aggregate(n, fAttr)
-		}
-	}
-	return func(_ context.Context, n N, a attribute.Set) {
-		agg.Aggregate(n, a)
-	}
 }
 
 // LastValue returns a last-value aggregate function input and output.
@@ -110,20 +101,25 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram, noSum bool) (Measure[N], ComputeAggregation) {
-	var h aggregator[N]
+func (b Builder[N]) ExplicitBucketHistogram(boundaries []float64, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
+	h := newHistogram[N](boundaries, noMinMax, noSum)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		h = newDeltaHistogram[N](cfg, noSum)
+		return b.filter(h.measure), h.delta
 	default:
-		h = newCumulativeHistogram[N](cfg, noSum)
+		return b.filter(h.measure), h.cumulative
 	}
-	return b.input(h), func(dest *metricdata.Aggregation) int {
-		// TODO (#4220): optimize memory reuse here.
-		*dest = h.Aggregation()
+}
 
-		hData, _ := (*dest).(metricdata.Histogram[N])
-		return len(hData.DataPoints)
+// ExponentialBucketHistogram returns a histogram aggregate function input and
+// output.
+func (b Builder[N]) ExponentialBucketHistogram(maxSize, maxScale int32, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
+	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum)
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		return b.filter(h.measure), h.delta
+	default:
+		return b.filter(h.measure), h.cumulative
 	}
 }
 

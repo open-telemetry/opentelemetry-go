@@ -20,12 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
@@ -145,7 +145,7 @@ type Stream struct {
 	// Unit is the unit of measurement recorded.
 	Unit string
 	// Aggregation the stream uses for an instrument.
-	Aggregation aggregation.Aggregation
+	Aggregation Aggregation
 	// AllowAttributeKeys are an allow-list of attribute keys that will be
 	// preserved for the stream. Any attribute recorded for the stream with a
 	// key not in this slice will be dropped.
@@ -185,6 +185,16 @@ type instID struct {
 	Unit string
 	// Number is the number type of the stream.
 	Number string
+}
+
+// Returns a normalized copy of the instID i.
+//
+// Instrument names are considered case-insensitive. Standardize the instrument
+// name to always be lowercase for the returned instID so it can be compared
+// without the name casing affecting the comparison.
+func (i instID) normalize() instID {
+	i.Name = strings.ToLower(i.Name)
+	return i
 }
 
 type int64Inst struct {

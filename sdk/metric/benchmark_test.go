@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -36,7 +35,7 @@ var viewBenchmarks = []struct {
 		"DropView",
 		[]View{NewView(
 			Instrument{Name: "*"},
-			Stream{Aggregation: aggregation.Drop{}},
+			Stream{Aggregation: AggregationDrop{}},
 		)},
 	},
 	{

@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
 
 	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
@@ -38,7 +38,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 

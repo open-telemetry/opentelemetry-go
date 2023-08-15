@@ -110,6 +110,9 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 // telemetry be flushed or all resources have been released in these
 // situations.
 //
+// ForceFlush calls ForceFlush(context.Context) error
+// on all Readers that implements this method.
+//
 // This method is safe to call concurrently.
 func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
 	if mp.forceFlush != nil {

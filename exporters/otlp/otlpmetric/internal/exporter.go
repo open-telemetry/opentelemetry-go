@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package internal provides common utilities for all otlpmetric exporters.
+//
+// Deprecated: package internal exists for historical compatibility, it should
+// not be used.
 package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
 
 import (
@@ -19,9 +23,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform" // nolint: staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -43,7 +46,7 @@ func (e *Exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (e *Exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
 	return e.client.Aggregation(k)
@@ -116,7 +119,7 @@ func (c shutdownClient) Temporality(k metric.InstrumentKind) metricdata.Temporal
 	return c.temporalitySelector(k)
 }
 
-func (c shutdownClient) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (c shutdownClient) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return c.aggregationSelector(k)
 }
 

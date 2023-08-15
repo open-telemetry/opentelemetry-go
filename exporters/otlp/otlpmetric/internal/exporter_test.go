@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -37,7 +36,7 @@ func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 	return metric.DefaultTemporalitySelector(k)
 }
 
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (c *client) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return metric.DefaultAggregationSelector(k)
 }
 
@@ -64,16 +63,17 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	ctx := context.Background()
 
 	done := make(chan struct{})
-	first := make(chan struct{}, goroutines)
-	var wg sync.WaitGroup
+	var wg, someWork sync.WaitGroup
 	for i := 0; i < goroutines; i++ {
 		wg.Add(1)
+		someWork.Add(1)
 		go func() {
 			defer wg.Done()
 			assert.NoError(t, exp.Export(ctx, rm))
 			assert.NoError(t, exp.ForceFlush(ctx))
+
 			// Ensure some work is done before shutting down.
-			first <- struct{}{}
+			someWork.Done()
 
 			for {
 				_ = exp.Export(ctx, rm)
@@ -88,10 +88,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < goroutines; i++ {
-		<-first
-	}
-	close(first)
+	someWork.Wait()
 	assert.NoError(t, exp.Shutdown(ctx))
 	assert.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
 
