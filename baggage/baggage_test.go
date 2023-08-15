@@ -138,7 +138,7 @@ func TestNewKeyProperty(t *testing.T) {
 
 	p, err = NewKeyProperty("key")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key", hasData: true}, p)
+	assert.Equal(t, Property{key: "key"}, p)
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
@@ -152,14 +152,11 @@ func TestNewKeyValueProperty(t *testing.T) {
 
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key", value: "value", hasValue: true, hasData: true}, p)
+	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
 }
 
 func TestPropertyValidate(t *testing.T) {
 	p := Property{}
-	assert.ErrorIs(t, p.validate(), errInvalidProperty)
-
-	p.hasData = true
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p.key = "k"
@@ -562,7 +559,7 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.Equal(t, 1, len(b1.list))
 	assert.Equal(t, 1, len(b2.list))
 
-	p := properties{{key: "p", hasData: true}}
+	p := properties{{key: "p"}}
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
@@ -573,10 +570,10 @@ func TestBaggageSetMember(t *testing.T) {
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
-	p[0] = Property{key: "different", hasData: true}
+	p[0] = Property{key: "different"}
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	// Reset for below.
-	p[0] = Property{key: "p", hasData: true}
+	p[0] = Property{key: "p"}
 
 	m = Member{key: "another", hasData: true}
 	b4, err := b3.SetMember(m)
@@ -630,7 +627,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	assert.Equal(t, 1, len(b1.list))
 	assert.Equal(t, 1, len(b2.list))
 
-	p := properties{{key: "p", hasData: false}}
+	p := properties{{key: "p"}}
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
@@ -641,12 +638,12 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
-	p[0] = Property{key: "different", hasData: false}
+	p[0] = Property{key: "different"}
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	// Reset for below.
-	p[0] = Property{key: "p", hasData: false}
+	p[0] = Property{key: "p"}
 
-	m = Member{key: "another", hasData: false}
+	m = Member{key: "another"}
 	b4, err := b3.SetMember(m)
 	assert.Error(t, err)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
@@ -757,13 +754,13 @@ func TestNewMember(t *testing.T) {
 	assert.Equal(t, Member{hasData: false}, m)
 
 	key, val := "k", "v"
-	p := Property{key: "foo", hasData: true}
+	p := Property{key: "foo"}
 	m, err = NewMember(key, val, p)
 	assert.NoError(t, err)
 	expected := Member{
 		key:        key,
 		value:      val,
-		properties: properties{{key: "foo", hasData: true}},
+		properties: properties{{key: "foo"}},
 		hasData:    true,
 	}
 	assert.Equal(t, expected, m)
@@ -779,7 +776,7 @@ func TestNewMember(t *testing.T) {
 	expected = Member{
 		key:        key,
 		value:      ";",
-		properties: properties{{key: "foo", hasData: true}},
+		properties: properties{{key: "foo"}},
 		hasData:    true,
 	}
 	assert.NoError(t, err)
@@ -791,13 +788,13 @@ func TestNewMember(t *testing.T) {
 }
 
 func TestPropertiesValidate(t *testing.T) {
-	p := properties{{hasData: true}}
+	p := properties{{}}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p[0].key = "foo"
 	assert.NoError(t, p.validate())
 
-	p = append(p, Property{key: "bar", hasData: true})
+	p = append(p, Property{key: "bar"})
 	assert.NoError(t, p.validate())
 }
 
