@@ -1518,9 +1518,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					WithReader(rdr),
 					WithView(NewView(
 						Instrument{Name: "*"},
-						Stream{AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == attribute.Key("foo")
-						}},
+						Stream{AttributeFilter: attribute.NewAllowKeysFilter("foo")},
 					)),
 				).Meter("TestAttributeFilter")
 				require.NoError(t, tt.register(t, mtr))
