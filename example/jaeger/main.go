@@ -14,6 +14,13 @@
 
 // Command jaeger is an example program that creates spans
 // and uploads to Jaeger.
+//
+// Deprecated:  This example is no longer supported as
+// [go.opentelemetry.io/otel/exporters/jaeger] is no longer supported.
+// OpenTelemetry dropped support for Jaeger exporter in July 2023.
+// Jaeger officially accepts and recommends using OTLP.
+// Use [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
+// or [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc] instead.
 package main
 
 import (
@@ -23,7 +30,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/jaeger" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
