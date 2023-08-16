@@ -139,7 +139,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 		return
 	}
 
-	bin := getBin(absV, p.scale)
+	bin := p.getBin(absV)
 
 	bucket := &p.posBuckets
 	if v < 0 {
@@ -148,7 +148,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := scaleChange(bin, bucket.startBin, len(bucket.counts), p.maxSize); scaleDelta > 0 {
+	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
 		if p.scale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
@@ -160,17 +160,16 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 		p.posBuckets.downscale(scaleDelta)
 		p.negBuckets.downscale(scaleDelta)
 
-		bin = getBin(absV, p.scale)
+		bin = p.getBin(absV)
 	}
 
 	bucket.record(bin)
 }
 
-// getBin returns the bin of the bucket that the value v should be recorded
-// into at the given scale.
-func getBin(v float64, scale int) int {
+// getBin returns the bin v should be recorded into.
+func (p *expoHistogramDataPoint[N]) getBin(v float64) int {
 	frac, exp := math.Frexp(v)
-	if scale <= 0 {
+	if p.scale <= 0 {
 		// Because of the choice of fraction is always 1 power of two higher than we want.
 		correction := 1
 		if frac == .5 {
@@ -178,9 +177,9 @@ func getBin(v float64, scale int) int {
 			// will be one higher than we want.
 			correction = 2
 		}
-		return (exp - correction) >> (-scale)
+		return (exp - correction) >> (-p.scale)
 	}
-	return exp<<scale + int(math.Log(frac)*scaleFactors[scale]) - 1
+	return exp<<p.scale + int(math.Log(frac)*scaleFactors[p.scale]) - 1
 }
 
 // scaleFactors are constants used in calculating the logarithm index. They are
@@ -209,8 +208,9 @@ var scaleFactors = [21]float64{
 	math.Ldexp(math.Log2E, 20),
 }
 
-// scaleChange returns the magnitude of the scale change needed to fit bin in the bucket.
-func scaleChange(bin, startBin, length, maxSize int) int {
+// scaleChange returns the magnitude of the scale change needed to fit bin in
+// the bucket. If no scale change is needed 0 is returned.
+func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin, length int) int {
 	if length == 0 {
 		// No need to rescale if there are no buckets.
 		return 0
@@ -224,7 +224,7 @@ func scaleChange(bin, startBin, length, maxSize int) int {
 	}
 
 	count := 0
-	for high-low >= maxSize {
+	for high-low >= p.maxSize {
 		low = low >> 1
 		high = high >> 1
 		count++

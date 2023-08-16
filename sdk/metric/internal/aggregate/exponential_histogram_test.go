@@ -655,7 +655,8 @@ func TestScaleChange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := scaleChange(tt.args.bin, tt.args.startBin, tt.args.length, tt.args.maxSize)
+			p := newExpoHistogramDataPoint[float64](tt.args.maxSize, 20, false, false)
+			got := p.scaleChange(tt.args.bin, tt.args.startBin, tt.args.length)
 			if got != tt.want {
 				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
 			}
@@ -927,15 +928,15 @@ func FuzzGetBin(f *testing.F) {
 			t.Skip("skipping test for zero")
 		}
 
-		// GetBin is only used with a range of -10 to 20.
-		scale = (scale%31+31)%31 - 10
-
-		got := getBin(v, scale)
-		if v <= lowerBound(got, scale) {
-			t.Errorf("v=%x scale =%d had bin %d, but was below lower bound %x", v, scale, got, lowerBound(got, scale))
+		p := newExpoHistogramDataPoint[float64](4, 20, false, false)
+		// scale range is -10 to 20.
+		p.scale = (scale%31+31)%31 - 10
+		got := p.getBin(v)
+		if v <= lowerBound(got, p.scale) {
+			t.Errorf("v=%x scale =%d had bin %d, but was below lower bound %x", v, p.scale, got, lowerBound(got, p.scale))
 		}
-		if v > lowerBound(got+1, scale) {
-			t.Errorf("v=%x scale =%d had bin %d, but was above upper bound %x", v, scale, got, lowerBound(got+1, scale))
+		if v > lowerBound(got+1, p.scale) {
+			t.Errorf("v=%x scale =%d had bin %d, but was above upper bound %x", v, p.scale, got, lowerBound(got+1, p.scale))
 		}
 	})
 }
