@@ -63,6 +63,11 @@ func TestGetContainerIDFromLine(t *testing.T) {
 			expectedContainerID: "d86d75589bf6cc254f3e2cc29debdf85dde404998aa128997a819ff991827356",
 		},
 		{
+			name:                "with colon",
+			line:                " 13:name=systemd:/kuberuntime/containerd/kubepods-pod872d2066_00ef_48ea_a7d8_51b18b72d739:cri-containerd:e857a4bf05a69080a759574949d7a0e69572e27647800fa7faff6a05a8332aa1",
+			expectedContainerID: "e857a4bf05a69080a759574949d7a0e69572e27647800fa7faff6a05a8332aa1",
+		},
+		{
 			name: "invalid hex string",
 			line: "13:name=systemd:/podruntime/docker/kubepods/ac679f8a8319c8cf7d38e1adf263bc08d23zzzz",
 		},
