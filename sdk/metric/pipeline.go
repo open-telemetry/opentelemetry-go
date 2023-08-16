@@ -349,7 +349,8 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	normID := id.normalize()
 	cv := i.aggregators.Lookup(normID, func() aggVal[N] {
 		b := aggregate.Builder[N]{
-			Temporality: i.pipeline.reader.temporality(kind),
+			Temporality:   i.pipeline.reader.temporality(kind),
+			ReservoirFunc: reservoirFunc[N](stream.Aggregation),
 		}
 		if len(stream.AllowAttributeKeys) > 0 {
 			b.Filter = stream.attributeFilter()
