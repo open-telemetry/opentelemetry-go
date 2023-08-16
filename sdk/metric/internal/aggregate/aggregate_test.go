@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -55,6 +56,10 @@ var (
 	}
 )
 
+func dropExemplars[N int64 | float64]() exemplar.Reservoir[N] {
+	return exemplar.Drop[N]()
+}
+
 func TestBuilderFilter(t *testing.T) {
 	t.Run("Int64", testBuilderFilter[int64]())
 	t.Run("Float64", testBuilderFilter[float64]())
@@ -65,20 +70,21 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 		t.Helper()
 
 		value, attr := N(1), alice
-		run := func(b Builder[N], wantA attribute.Set) func(*testing.T) {
+		run := func(b Builder[N], wantO, wantF attribute.Set) func(*testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, a attribute.Set) {
+				meas := b.filter(func(_ context.Context, v N, o, f attribute.Set) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantA, a, "measured incorrect attributes")
+					assert.Equal(t, wantO, o, "measured incorrect original attributes")
+					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
 				})
 				meas(context.Background(), value, attr)
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{}, attr))
-		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice))
+		t.Run("NoFilter", run(Builder[N]{}, attr, attr))
+		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, alice, fltrAlice))
 	}
 }
 

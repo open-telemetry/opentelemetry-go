@@ -20,31 +20,57 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
-	values map[attribute.Set]N
+	values map[attribute.Distinct]struct {
+		attr attribute.Set
+		n    N
+		res  exemplar.Reservoir[N]
+	}
+	newRes func() exemplar.Reservoir[N]
 }
 
-func newValueMap[N int64 | float64]() *valueMap[N] {
-	return &valueMap[N]{values: make(map[attribute.Set]N)}
+func newValueMap[N int64 | float64](r func() exemplar.Reservoir[N]) *valueMap[N] {
+	return &valueMap[N]{
+		values: make(map[attribute.Distinct]struct {
+			attr attribute.Set
+			n    N
+			res  exemplar.Reservoir[N]
+		}),
+		newRes: r,
+	}
 }
 
-func (s *valueMap[N]) measure(_ context.Context, value N, attr attribute.Set) {
+func (s *valueMap[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
+	t := now()
+	key := fltrAttr.Equivalent()
+
 	s.Lock()
-	s.values[attr] += value
-	s.Unlock()
+	defer s.Unlock()
+
+	v, ok := s.values[key]
+	if !ok {
+		v.attr = fltrAttr
+		v.res = s.newRes()
+	}
+
+	v.n += value
+	v.res.Offer(ctx, t, value, origAttr)
+
+	s.values[key] = v
 }
 
 // newSum returns an aggregator that summarizes a set of measurements as their
 // arithmetic sum. Each sum is scoped by attributes and the aggregation cycle
 // the measurements were made in.
-func newSum[N int64 | float64](monotonic bool) *sum[N] {
+func newSum[N int64 | float64](monotonic bool, r func() exemplar.Reservoir[N]) *sum[N] {
 	return &sum[N]{
-		valueMap:  newValueMap[N](),
+		valueMap:  newValueMap[N](r),
 		monotonic: monotonic,
 		start:     now(),
 	}
@@ -74,13 +100,14 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, value := range s.values {
-		dPts[i].Attributes = attr
+	for key, val := range s.values {
+		dPts[i].Attributes = val.attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value
+		dPts[i].Value = val.n
+		val.res.Flush(&dPts[i].Exemplars, val.attr)
 		// Do not report stale values.
-		delete(s.values, attr)
+		delete(s.values, key)
 		i++
 	}
 	// The delta collection cycle resets.
@@ -108,11 +135,12 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, value := range s.values {
-		dPts[i].Attributes = attr
+	for _, val := range s.values {
+		dPts[i].Attributes = val.attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value
+		dPts[i].Value = val.n
+		val.res.Collect(&dPts[i].Exemplars, val.attr)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
@@ -129,9 +157,9 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 // newPrecomputedSum returns an aggregator that summarizes a set of
 // observatrions as their arithmetic sum. Each sum is scoped by attributes and
 // the aggregation cycle the measurements were made in.
-func newPrecomputedSum[N int64 | float64](monotonic bool) *precomputedSum[N] {
+func newPrecomputedSum[N int64 | float64](monotonic bool, r func() exemplar.Reservoir[N]) *precomputedSum[N] {
 	return &precomputedSum[N]{
-		valueMap:  newValueMap[N](),
+		valueMap:  newValueMap[N](r),
 		monotonic: monotonic,
 		start:     now(),
 	}
@@ -144,12 +172,12 @@ type precomputedSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
 
-	reported map[attribute.Set]N
+	reported map[attribute.Distinct]N
 }
 
 func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 	t := now()
-	newReported := make(map[attribute.Set]N)
+	newReported := make(map[attribute.Distinct]N)
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
 	// use the zero-value sData and hope for better alignment next cycle.
@@ -164,17 +192,18 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, value := range s.values {
-		delta := value - s.reported[attr]
+	for key, val := range s.values {
+		delta := val.n - s.reported[key]
 
-		dPts[i].Attributes = attr
+		dPts[i].Attributes = val.attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
+		val.res.Flush(&dPts[i].Exemplars, val.attr)
 
-		newReported[attr] = value
+		newReported[key] = val.n
 		// Unused attribute sets do not report.
-		delete(s.values, attr)
+		delete(s.values, key)
 		i++
 	}
 	// Unused attribute sets are forgotten.
@@ -204,14 +233,15 @@ func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, value := range s.values {
-		dPts[i].Attributes = attr
+	for key, val := range s.values {
+		dPts[i].Attributes = val.attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value
+		dPts[i].Value = val.n
+		val.res.Collect(&dPts[i].Exemplars, val.attr)
 
 		// Unused attribute sets do not report.
-		delete(s.values, attr)
+		delete(s.values, key)
 		i++
 	}
 
