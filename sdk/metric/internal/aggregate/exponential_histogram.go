@@ -64,6 +64,11 @@ func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noMinMax, noSum
 // Aggregate records the measurement, scoped by attr, and aggregates it
 // into an aggregation.
 func (e *expoHistogramValues[N]) measure(_ context.Context, value N, attr attribute.Set) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
@@ -113,11 +118,6 @@ func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, noMinMa
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
-	// Ignore NaN and infinity.
-	if math.IsInf(float64(v), 0) || math.IsNaN(float64(v)) {
-		return
-	}
-
 	p.count++
 
 	if !p.noMinMax {
