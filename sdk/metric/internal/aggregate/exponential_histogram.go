@@ -38,43 +38,6 @@ const (
 	minInt64 int64 = math.MinInt64
 )
 
-// expoHistogramValues summarizes a set of measurements as expoHistogramDataPoints using
-// dynamically scaled buckets.
-type expoHistogramValues[N int64 | float64] struct {
-	noSum    bool
-	noMinMax bool
-	maxSize  int
-	maxScale int
-
-	values   map[attribute.Set]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
-}
-
-func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noMinMax, noSum bool) *expoHistogramValues[N] {
-	return &expoHistogramValues[N]{
-		noSum:    noSum,
-		noMinMax: noMinMax,
-		maxSize:  maxSize,
-		maxScale: maxScale,
-
-		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
-	}
-}
-
-// Aggregate records the measurement, scoped by attr, and aggregates it
-// into an aggregation.
-func (e *expoHistogramValues[N]) measure(_ context.Context, value N, attr attribute.Set) {
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	v, ok := e.values[attr]
-	if !ok {
-		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-		e.values[attr] = v
-	}
-	v.record(value)
-}
-
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	count uint64
@@ -332,12 +295,13 @@ func (b *expoBuckets) downscale(delta int) {
 // and the aggregation cycle the measurements were made in.
 func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool) *expoHistogram[N] {
 	return &expoHistogram[N]{
-		expoHistogramValues: newExpoHistValues[N](
-			int(maxSize),
-			int(maxScale),
-			noMinMax,
-			noSum,
-		),
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: int(maxScale),
+
+		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
+
 		start: now(),
 	}
 }
@@ -345,9 +309,27 @@ func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMa
 // expoHistogram summarizes a set of measurements as an histogram with exponentially
 // defined buckets.
 type expoHistogram[N int64 | float64] struct {
-	*expoHistogramValues[N]
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int
+
+	values   map[attribute.Set]*expoHistogramDataPoint[N]
+	valuesMu sync.Mutex
 
 	start time.Time
+}
+
+func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Set) {
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	v, ok := e.values[attr]
+	if !ok {
+		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		e.values[attr] = v
+	}
+	v.record(value)
 }
 
 func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
