@@ -29,7 +29,7 @@ type datapoint[N int64 | float64] struct {
 	value     N
 }
 
-func newLastValue[N int64 | float64]() *lastValue[N] {
+func newLastValue[N int64 | float64](limit int) *lastValue[N] {
 	return &lastValue[N]{values: make(map[attribute.Set]datapoint[N])}
 }
 
@@ -37,12 +37,14 @@ func newLastValue[N int64 | float64]() *lastValue[N] {
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
+	limit  int
 	values map[attribute.Set]datapoint[N]
 }
 
 func (s *lastValue[N]) measure(ctx context.Context, value N, attr attribute.Set) {
 	d := datapoint[N]{timestamp: now(), value: value}
 	s.Lock()
+	attr = limitAttr(attr, s.values, s.limit)
 	s.values[attr] = d
 	s.Unlock()
 }

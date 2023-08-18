@@ -273,7 +273,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	cpB := make([]float64, len(b))
 	copy(cpB, b)
 
-	h := newHistogram[int64](b, false, false)
+	h := newHistogram[int64](b, false, false, 0)
 	require.Equal(t, cpB, h.bounds)
 
 	b[0] = 10
@@ -289,7 +289,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 }
 
 func TestCumulativeHistogramImutableCounts(t *testing.T) {
-	h := newHistogram[int64](bounds, noMinMax, false)
+	h := newHistogram[int64](bounds, noMinMax, false, 0)
 	h.measure(context.Background(), 5, alice)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
@@ -307,7 +307,7 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 func TestDeltaHistogramReset(t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	h := newHistogram[int64](bounds, noMinMax, false)
+	h := newHistogram[int64](bounds, noMinMax, false, 0)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	require.Equal(t, 0, h.delta(&data))
