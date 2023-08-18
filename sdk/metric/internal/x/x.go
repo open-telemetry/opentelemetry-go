@@ -12,41 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+// Package x contains support for OTel metric SDK experimental features.
+package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
 
 import (
 	"os"
 	"strings"
 )
 
-const xEnvKeyRoot = "OTEL_GO_X_"
+const EnvKeyRoot = "OTEL_GO_X_"
 
 var (
-	xExemplar = xFeature{
-		envKeySuffix:   "EXEMPLAR",
-		enablementVals: []string{"true"},
+	Exemplars = Feature{
+		EnvKeySuffix:   "EXEMPLAR",
+		EnablementVals: []string{"true"},
 	}
 )
 
-type xFeature struct {
-	// envKey is the environment variable key suffix the xFeature is stored at.
-	// It is assumed xEnvKeyRoot is the base of the environment variable key.
-	envKeySuffix string
-	// enablementVals are the case-insensitive comparison values that indicate
-	// the xFeature is enabled.
-	enablementVals []string
+type Feature struct {
+	// EnvKeySuffix is the environment variable key suffix the xFeature is
+	// stored at. It is assumed EnvKeyRoot is the base of the environment
+	// variable key.
+	EnvKeySuffix string
+	// EnablementVals are the case-insensitive comparison values that indicate
+	// the Feature is enabled.
+	EnablementVals []string
 }
 
-// xEnabled returns if the xFeature is enabled.
-func xEnabled(xf xFeature) bool {
-	key := xEnvKeyRoot + xf.envKeySuffix
+// Enabled returns if the Feature is enabled.
+func Enabled(f Feature) bool {
+	key := EnvKeyRoot + f.EnvKeySuffix
 	vRaw, present := os.LookupEnv(key)
 	if !present {
 		return false
 	}
 
 	v := strings.ToLower(vRaw)
-	for _, allowed := range xf.enablementVals {
+	for _, allowed := range f.EnablementVals {
 		if v == strings.ToLower(allowed) {
 			return true
 		}

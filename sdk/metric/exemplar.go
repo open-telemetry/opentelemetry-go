@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 )
 
 // reservoirFunc returns the appropriately configured exemplar reservoir
@@ -27,7 +28,7 @@ import (
 // Note: This will only return non-nil values when the experimental exemplar
 // feature is enabled.
 func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir[N] {
-	if !xEnabled(xExemplar) {
+	if !x.Enabled(x.Exemplars) {
 		return nil
 	}
 
