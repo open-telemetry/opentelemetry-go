@@ -45,10 +45,10 @@ func withHandler(t *testing.T) func() {
 
 func TestExpoHistogramDataPointRecord(t *testing.T) {
 	t.Run("float64", testExpoHistogramDataPointRecord[float64])
-	t.Run("float64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSumFloat64)
+	t.Run("float64 MinMaxSum", testExpoHistogramMinMaxSumFloat64)
 	t.Run("float64-2", testExpoHistogramDataPointRecordFloat64)
 	t.Run("int64", testExpoHistogramDataPointRecord[int64])
-	t.Run("int64 MinMaxSum", testExpoHistogramDataPointRecordMinMaxSumInt64)
+	t.Run("int64 MinMaxSum", testExpoHistogramMinMaxSumInt64)
 }
 
 // TODO: This can be defined in the test after we drop support for go1.19.
@@ -171,7 +171,7 @@ type expoHistogramDataPointRecordMinMaxSumTestCase[N int64 | float64] struct {
 	expected expectedMinMaxSum[N]
 }
 
-func testExpoHistogramDataPointRecordMinMaxSumInt64(t *testing.T) {
+func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[int64]{
 		{
 			values:   []int64{2, 4, 1},
@@ -188,10 +188,11 @@ func testExpoHistogramDataPointRecordMinMaxSumInt64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[int64](4, 20, false, false)
+			h := newExponentialHistogram[int64](4, 20, false, false)
 			for _, v := range tt.values {
-				dp.record(v)
+				h.measure(context.Background(), v, alice)
 			}
+			dp := h.values[alice]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -200,7 +201,7 @@ func testExpoHistogramDataPointRecordMinMaxSumInt64(t *testing.T) {
 	}
 }
 
-func testExpoHistogramDataPointRecordMinMaxSumFloat64(t *testing.T) {
+func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[float64]{
 		{
 			values:   []float64{2, 4, 1},
@@ -229,10 +230,11 @@ func testExpoHistogramDataPointRecordMinMaxSumFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[float64](4, 20, false, false)
+			h := newExponentialHistogram[float64](4, 20, false, false)
 			for _, v := range tt.values {
-				dp.record(v)
+				h.measure(context.Background(), v, alice)
 			}
+			dp := h.values[alice]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
