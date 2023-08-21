@@ -50,13 +50,13 @@ var errNonPositiveDuration = fmt.Errorf("non-positive duration")
 //
 // Pull-based exporters will typically implement Register
 // themselves, since they read on demand.
+//
+// Warning: methods may be added to this interface in minor releases.
 type Reader interface {
 	// register registers a Reader with a MeterProvider.
 	// The producer argument allows the Reader to signal the sdk to collect
 	// and send aggregated metric measurements.
 	register(sdkProducer)
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 
 	// temporality reports the Temporality for the instrument kind provided.
 	//
@@ -77,8 +77,6 @@ type Reader interface {
 	// This method needs to be concurrent safe, and the cancelation of the
 	// passed context is expected to be honored.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 
 	// Shutdown flushes all metric measurements held in an export pipeline and releases any
 	// held computational resources.
@@ -93,8 +91,6 @@ type Reader interface {
 	//
 	// This method needs to be concurrent safe.
 	Shutdown(context.Context) error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 }
 
 // sdkProducer produces metrics for a Reader.
@@ -107,6 +103,9 @@ type sdkProducer interface {
 
 // Producer produces metrics for a Reader from an external source.
 type Producer interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
 	// Produce returns aggregated metrics from an external source.
 	//
 	// This method should be safe to call concurrently.
