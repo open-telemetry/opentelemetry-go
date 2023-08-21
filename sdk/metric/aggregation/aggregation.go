@@ -35,13 +35,9 @@ type Aggregation interface {
 
 	// Copy returns a deep copy of the Aggregation.
 	Copy() Aggregation
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 
 	// Err returns an error for any misconfigured Aggregation.
 	Err() error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 }
 
 // Drop is an aggregation that drops all recorded data.
