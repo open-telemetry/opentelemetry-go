@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package oconf provides common metric configuration types and functionality
+// for all otlpmetric exporters.
+//
+// Deprecated: package oconf exists for historical compatibility, it should not
+// be used.
 package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
 
 import (
@@ -25,12 +30,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
-	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/exporters/otlp/internal"                       // nolint: staticcheck  // Synchronous deprecation.
+	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"                 // nolint: staticcheck  // Synchronous deprecation.
+	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal" // nolint: staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 )
 
 const (
@@ -335,23 +338,8 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption 
 }
 
 func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
-	// Deep copy and validate before using.
-	wrapped := func(ik metric.InstrumentKind) aggregation.Aggregation {
-		a := selector(ik)
-		cpA := a.Copy()
-		if err := cpA.Err(); err != nil {
-			cpA = metric.DefaultAggregationSelector(ik)
-			global.Error(
-				err, "using default aggregation instead",
-				"aggregation", a,
-				"replacement", cpA,
-			)
-		}
-		return cpA
-	}
-
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Metrics.AggregationSelector = wrapped
+		cfg.Metrics.AggregationSelector = selector
 		return cfg
 	})
 }

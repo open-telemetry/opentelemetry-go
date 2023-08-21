@@ -27,11 +27,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -42,7 +40,7 @@ type clientShim struct {
 func (clientShim) Temporality(metric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
-func (clientShim) Aggregation(metric.InstrumentKind) aggregation.Aggregation {
+func (clientShim) Aggregation(metric.InstrumentKind) metric.Aggregation {
 	return nil
 }
 func (clientShim) ForceFlush(ctx context.Context) error {
@@ -50,7 +48,7 @@ func (clientShim) ForceFlush(ctx context.Context) error {
 }
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan otest.ExportResult) (ominternal.Client, otest.Collector) {
+	factory := func(rCh <-chan otest.ExportResult) (otest.Client, otest.Collector) {
 		coll, err := otest.NewHTTPCollector("", rCh)
 		require.NoError(t, err)
 

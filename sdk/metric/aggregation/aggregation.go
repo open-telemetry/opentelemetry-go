@@ -14,6 +14,9 @@
 
 // Package aggregation contains configuration types that define the
 // aggregation operation used to summarizes recorded measurements.
+//
+// Deprecated: Use the aggregation types in go.opentelemetry.io/otel/sdk/metric
+// instead.
 package aggregation // import "go.opentelemetry.io/otel/sdk/metric/aggregation"
 
 import (
@@ -167,4 +170,59 @@ func (h ExplicitBucketHistogram) Copy() Aggregation {
 		Boundaries: b,
 		NoMinMax:   h.NoMinMax,
 	}
+}
+
+// Base2ExponentialHistogram is an aggregation that summarizes a set of
+// measurements as an histogram with bucket widths that grow exponentially.
+type Base2ExponentialHistogram struct {
+	// MaxSize is the maximum number of buckets to use for the histogram.
+	MaxSize int32
+	// MaxScale is the maximum resolution scale to use for the histogram.
+	//
+	// MaxScale has a maximum value of 20. Using a value of 20 means the
+	// maximum number of buckets that can fit within the range of a
+	// signed 32-bit integer index could be used.
+	//
+	// MaxScale has a minimum value of -10. Using a value of -10 means only
+	// two buckets will be use.
+	MaxScale int32
+
+	// NoMinMax indicates whether to not record the min and max of the
+	// distribution. By default, these extrema are recorded.
+	//
+	// Recording these extrema for cumulative data is expected to have little
+	// value, they will represent the entire life of the instrument instead of
+	// just the current collection cycle. It is recommended to set this to true
+	// for that type of data to avoid computing the low-value extrema.
+	NoMinMax bool
+}
+
+var _ Aggregation = Base2ExponentialHistogram{}
+
+// private attempts to ensure no user-defined Aggregation is allowed. The
+// OTel specification does not allow user-defined Aggregation currently.
+func (e Base2ExponentialHistogram) private() {}
+
+// Copy returns a deep copy of the Aggregation.
+func (e Base2ExponentialHistogram) Copy() Aggregation {
+	return e
+}
+
+const (
+	expoMaxScale = 20
+	expoMinScale = -10
+)
+
+// errExpoHist is returned by misconfigured Base2ExponentialBucketHistograms.
+var errExpoHist = fmt.Errorf("%w: exponential histogram", errAgg)
+
+// Err returns an error for any misconfigured Aggregation.
+func (e Base2ExponentialHistogram) Err() error {
+	if e.MaxScale > expoMaxScale {
+		return fmt.Errorf("%w: max size %d is greater than maximum scale %d", errExpoHist, e.MaxSize, expoMaxScale)
+	}
+	if e.MaxSize <= 0 {
+		return fmt.Errorf("%w: max size %d is less than or equal to zero", errExpoHist, e.MaxSize)
+	}
+	return nil
 }

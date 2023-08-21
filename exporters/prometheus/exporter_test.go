@@ -28,9 +28,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -83,6 +82,35 @@ func TestPrometheusExporter(t *testing.T) {
 				)
 				counter, err := meter.Float64Counter(
 					"foo.seconds",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "counter that already has a total suffix",
+			expectedFile: "testdata/counter.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.total",
 					otelmetric.WithDescription("a simple counter"),
 					otelmetric.WithUnit("s"),
 				)
@@ -368,7 +396,7 @@ func TestPrometheusExporter(t *testing.T) {
 				metric.WithReader(exporter),
 				metric.WithView(metric.NewView(
 					metric.Instrument{Name: "histogram_*"},
-					metric.Stream{Aggregation: aggregation.ExplicitBucketHistogram{
+					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
 						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 					}},
 				)),

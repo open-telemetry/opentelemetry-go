@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/otest"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -47,16 +47,17 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	rm := new(metricdata.ResourceMetrics)
 
 	done := make(chan struct{})
-	first := make(chan struct{}, goroutines)
-	var wg sync.WaitGroup
+	var wg, someWork sync.WaitGroup
 	for i := 0; i < goroutines; i++ {
 		wg.Add(1)
+		someWork.Add(1)
 		go func() {
 			defer wg.Done()
 			assert.NoError(t, exp.Export(ctx, rm))
 			assert.NoError(t, exp.ForceFlush(ctx))
+
 			// Ensure some work is done before shutting down.
-			first <- struct{}{}
+			someWork.Done()
 
 			for {
 				_ = exp.Export(ctx, rm)
@@ -71,10 +72,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < goroutines; i++ {
-		<-first
-	}
-	close(first)
+	someWork.Wait()
 	assert.NoError(t, exp.Shutdown(ctx))
 	assert.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
 

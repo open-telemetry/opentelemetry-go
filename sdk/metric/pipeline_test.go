@@ -358,3 +358,37 @@ func TestLogConflictSuggestView(t *testing.T) {
 		msg = ""
 	})
 }
+
+func TestInserterCachedAggregatorNameConflict(t *testing.T) {
+	const name = "requestCount"
+	scope := instrumentation.Scope{Name: "pipeline_test"}
+	kind := InstrumentKindCounter
+	stream := Stream{
+		Name:        name,
+		Aggregation: AggregationSum{},
+	}
+
+	var vc cache[string, instID]
+	pipe := newPipeline(nil, NewManualReader(), nil)
+	i := newInserter[int64](pipe, &vc)
+
+	_, origID, err := i.cachedAggregator(scope, kind, stream)
+	require.NoError(t, err)
+
+	require.Len(t, pipe.aggregations, 1)
+	require.Contains(t, pipe.aggregations, scope)
+	iSync := pipe.aggregations[scope]
+	require.Len(t, iSync, 1)
+	require.Equal(t, name, iSync[0].name)
+
+	stream.Name = "RequestCount"
+	_, id, err := i.cachedAggregator(scope, kind, stream)
+	require.NoError(t, err)
+	assert.Equal(t, origID, id, "multiple aggregators for equivalent name")
+
+	assert.Len(t, pipe.aggregations, 1, "additional scope added")
+	require.Contains(t, pipe.aggregations, scope, "original scope removed")
+	iSync = pipe.aggregations[scope]
+	require.Len(t, iSync, 1, "registered instrumentSync changed")
+	assert.Equal(t, name, iSync[0].name, "stream name changed")
+}

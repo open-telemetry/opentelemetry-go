@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
@@ -70,7 +69,7 @@ func (e *Exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
 }
 
 // Aggregation returns the Aggregation to use for an instrument kind.
-func (e *Exporter) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
+func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return e.aggregationSelector(k)
 }
 

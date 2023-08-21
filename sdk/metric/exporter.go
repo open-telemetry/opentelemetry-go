@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -41,7 +40,7 @@ type Exporter interface {
 	//
 	// This method needs to be concurrent safe with itself and all the other
 	// Exporter methods.
-	Aggregation(InstrumentKind) aggregation.Aggregation
+	Aggregation(InstrumentKind) Aggregation
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 

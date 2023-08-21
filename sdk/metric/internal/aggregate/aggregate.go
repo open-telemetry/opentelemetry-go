@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -102,8 +101,20 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
-func (b Builder[N]) ExplicitBucketHistogram(cfg aggregation.ExplicitBucketHistogram, noSum bool) (Measure[N], ComputeAggregation) {
-	h := newHistogram[N](cfg, noSum)
+func (b Builder[N]) ExplicitBucketHistogram(boundaries []float64, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
+	h := newHistogram[N](boundaries, noMinMax, noSum)
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		return b.filter(h.measure), h.delta
+	default:
+		return b.filter(h.measure), h.cumulative
+	}
+}
+
+// ExponentialBucketHistogram returns a histogram aggregate function input and
+// output.
+func (b Builder[N]) ExponentialBucketHistogram(maxSize, maxScale int32, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
+	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		return b.filter(h.measure), h.delta
