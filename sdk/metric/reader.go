@@ -40,7 +40,7 @@ var errNonPositiveDuration = fmt.Errorf("non-positive duration")
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
 // Reader, since the SDK initiates ForceFlush and Shutdown
-// while the initiates collection.  The Register() method here
+// while the exporter initiates collection.  The Register() method here
 // informs the Reader that it can begin reading, signaling the
 // start of bi-directional control flow.
 //
