@@ -527,12 +527,12 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 		if a.Value != b.Value {
 			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
 		}
-		if !equalSlices(a.SpanID, b.SpanID) {
-			reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))
-		}
-		if !equalSlices(a.TraceID, b.TraceID) {
-			reasons = append(reasons, notEqualStr("TraceID", a.TraceID, b.TraceID))
-		}
+	}
+	if !equalSlices(a.SpanID, b.SpanID) {
+		reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))
+	}
+	if !equalSlices(a.TraceID, b.TraceID) {
+		reasons = append(reasons, notEqualStr("TraceID", a.TraceID, b.TraceID))
 	}
 	return reasons
 }
