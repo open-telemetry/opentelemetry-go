@@ -94,7 +94,13 @@ func IgnoreExemplars() Option {
 	})
 }
 
-// IgnoreValue disables checking if Exemplars are different.
+// IgnoreValue disables checking if values are different. This can be
+// useful for non-deterministic values, like measured durations.
+//
+// This will ignore the value and trace information for Exemplars;
+// the buckets, zero count, scale, sum, max, min, and counts of
+// ExponentialHistogramDataPoints; the buckets, sum, count, max,
+// and min of HistogramDataPoints; the value of DataPoints.
 func IgnoreValue() Option {
 	return fnOption(func(cfg config) config {
 		cfg.ignoreValue = true
