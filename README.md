@@ -13,7 +13,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 
 | Signal  | Status     | Project               |
 |---------|------------|-----------------------|
-| Traces  | Stable     | N/A                   |
+| Traces  | Stable     | Completed             |
 | Metrics | Mixed [1]  | [Go: Metric SDK (GA)] |
 | Logs    | Frozen [2] | N/A                   |
 
