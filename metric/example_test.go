@@ -17,7 +17,6 @@ package metric_test
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -75,31 +74,26 @@ func ExampleMeter_asynchronous_single() {
 func ExampleMeter_asynchronous_multiple() {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
-	// This is just a sample of memory stats to record from the Memstats
-	heapAlloc, err := meter.Int64ObservableGauge("heapAllocs")
+	// This is just a sample of current online user & request counter
+	userOnline, err := meter.Int64ObservableCounter("userOnline")
 	if err != nil {
-		fmt.Println("Failed to register gauge for heapAllocs")
+		fmt.Println("failed to register counter for userOnline")
 		panic(err)
 	}
-	gcCount, err := meter.Int64ObservableGauge("gcCount")
+	requestCnt, err := meter.Int64ObservableCounter("requestCnt")
 	if err != nil {
-		fmt.Println("Failed to register gauge for gcCount")
+		fmt.Println("failed to register counter for requestCnt")
 		panic(err)
 	}
 
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
-			memStats := &runtime.MemStats{}
-			// This call does work
-			runtime.ReadMemStats(memStats)
-
-			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
-			o.ObserveInt64(gcCount, int64(memStats.NumGC))
-
+			o.ObserveInt64(requestCnt, 1)
+			o.ObserveInt64(userOnline, 1)
 			return nil
 		},
-		heapAlloc,
-		gcCount,
+		userOnline,
+		requestCnt,
 	)
 	if err != nil {
 		fmt.Println("Failed to register callback")
