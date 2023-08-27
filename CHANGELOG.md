@@ -29,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move the `Aggregation` interface and its implementations from `go.opentelemetry.io/otel/sdk/metric/aggregation` to `go.opentelemetry.io/otel/sdk/metric`. (#4435)
 - The exporters in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` now support the `OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION` environment variable. (#4437)
 - Add the `NewAllowKeysFilter` and `NewDenyKeysFilter` functions to `go.opentelemetry.io/otel/attribute` to allow convenient creation of allow-keys and deny-keys filters. (#4444)
+- Support Go 1.21. (#4463)
 
 ### Changed
 
