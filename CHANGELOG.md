@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [1.17.0/0.40.0] 2023-08-25
+## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
 ### Added
 
@@ -2592,7 +2592,7 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.17.0...HEAD
-[1.17.0/0.40.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.17.0
+[1.17.0/0.40.0/0.0.5]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.17.0
 [1.16.0/0.39.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0
 [1.16.0-rc.1/0.39.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1
 [1.15.1/0.38.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1
