@@ -108,6 +108,16 @@ func initTracerProvider(conn *grpc.ClientConn) (func(context.Context) error, err
 func initMeterProvider(conn *grpc.ClientConn) (func(context.Context) error, error) {
 	ctx := context.Background()
 
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// the service name used to display traces in backends
+			semconv.ServiceName("test-service"),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
 	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
@@ -115,6 +125,7 @@ func initMeterProvider(conn *grpc.ClientConn) (func(context.Context) error, erro
 
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+		sdkmetric.WithResource(res),
 	)
 	otel.SetMeterProvider(meterProvider)
 
