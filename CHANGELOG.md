@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the deprecated `go.opentelemetry.io/otel/sdk/metric/aggregation` package. (#TBD)
+- Removed the deprecated `go.opentelemetry.io/otel/sdk/metric/aggregation` package. (#4468)
 
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
