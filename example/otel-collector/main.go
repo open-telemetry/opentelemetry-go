@@ -32,8 +32,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -112,8 +113,8 @@ func initMeterProvider(conn *grpc.ClientConn) (func(context.Context) error, erro
 		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
 	}
 
-	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
 	)
 	otel.SetMeterProvider(meterProvider)
 
@@ -152,6 +153,7 @@ func main() {
 	}()
 
 	tracer := otel.Tracer("test-tracer")
+	meter := otel.Meter("test-meter")
 
 	// Attributes represent additional key-value descriptors that can be bound
 	// to a metric observer or recorder.
@@ -161,6 +163,8 @@ func main() {
 		attribute.String("attrC", "vanilla"),
 	}
 
+	runCount, err := meter.Int64Counter("run", metric.WithDescription("The number of times the iteration ran"))
+
 	// work begins
 	ctx, span := tracer.Start(
 		ctx,
@@ -169,6 +173,7 @@ func main() {
 	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
+		runCount.Add(ctx, 5, metric.WithAttributes(commonAttrs...))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 
 		<-time.After(time.Second)
