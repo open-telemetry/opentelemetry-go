@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` was deprecated in `v0.35.0` (#3541).
-  The deprecation notice format for the function has been corrected to trigger Go documentation and build tooling. (#TBD)
+  The deprecation notice format for the function has been corrected to trigger Go documentation and build tooling. (#4470)
 
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
