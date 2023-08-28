@@ -42,7 +42,7 @@ import (
 )
 
 // Initialize a gRPC connection to be used by both the tracer and meter
-// providers
+// providers.
 func initConn() (*grpc.ClientConn, error) {
 	ctx := context.Background()
 
@@ -175,6 +175,9 @@ func main() {
 	}
 
 	runCount, err := meter.Int64Counter("run", metric.WithDescription("The number of times the iteration ran"))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// work begins
 	ctx, span := tracer.Start(
