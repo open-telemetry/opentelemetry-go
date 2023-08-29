@@ -24,7 +24,6 @@ module-sets:
       - go.opentelemetry.io/otel/example/otel-collector
       - go.opentelemetry.io/otel/example/passthrough
       - go.opentelemetry.io/otel/example/zipkin
-      - go.opentelemetry.io/otel/exporters/otlp/internal/retry
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp

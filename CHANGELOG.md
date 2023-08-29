@@ -10,9 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove the deprecated `go.opentelemetry.io/otel/exporters/jaeger` package. (#4467)
-- Remove the deprecated `go.opentelemetry.io/otel/example/jaeger` package. (#4467)
+- Removed the deprecated `go.opentelemetry.io/otel/exporters/jaeger` package. (#4467)
+- Removed the deprecated `go.opentelemetry.io/otel/example/jaeger` package. (#4467)
 - Removed the deprecated `go.opentelemetry.io/otel/sdk/metric/aggregation` package. (#4468)
+- Removed the deprecated internal packages in `go.opentelemetry.io/otel/exporters/otlp` and its sub-packages. (#4469)
 
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
