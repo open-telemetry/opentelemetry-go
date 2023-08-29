@@ -13,6 +13,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `NewMetricExporter` in `go.opentelemetry.io/otel/bridge/opencensus` was deprecated in `v0.35.0` (#3541).
   The deprecation notice format for the function has been corrected to trigger Go documentation and build tooling. (#4470)
 
+### Removed
+
+- Removed the deprecated `go.opentelemetry.io/otel/exporters/jaeger` package. (#4467)
+- Removed the deprecated `go.opentelemetry.io/otel/example/jaeger` package. (#4467)
+- Removed the deprecated `go.opentelemetry.io/otel/sdk/metric/aggregation` package. (#4468)
+- Removed the deprecated internal packages in `go.opentelemetry.io/otel/exporters/otlp` and its sub-packages. (#4469)
+
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
 ### Added
