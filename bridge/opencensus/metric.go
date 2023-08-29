@@ -70,7 +70,8 @@ type exporter struct {
 
 // NewMetricExporter returns an OpenCensus exporter that exports to an
 // OpenTelemetry (push) exporter.
-// Deprecated: Use NewMetricProducer instead.
+//
+// Deprecated: Use [NewMetricProducer] instead.
 func NewMetricExporter(base metric.Exporter, res *resource.Resource) metricexport.Exporter {
 	return &exporter{base: base, res: res}
 }
