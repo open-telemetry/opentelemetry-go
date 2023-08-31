@@ -15,18 +15,21 @@
 package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestNewConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	aggregationSelector := func(metric.InstrumentKind) metric.Aggregation { return nil }
+	producer := &noopProducer{}
 
 	testCases := []struct {
 		name       string
@@ -56,6 +59,17 @@ func TestNewConfig(t *testing.T) {
 			},
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
+				readerOpts: []metric.ManualReaderOption{metric.WithAggregationSelector(aggregationSelector)},
+			},
+		},
+		{
+			name: "WithProducer",
+			options: []Option{
+				WithProducer(producer),
+			},
+			wantConfig: config{
+				registerer: prometheus.DefaultRegisterer,
+				readerOpts: []metric.ManualReaderOption{metric.WithProducer(producer)},
 			},
 		},
 		{
@@ -63,10 +77,15 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithRegisterer(registry),
 				WithAggregationSelector(aggregationSelector),
+				WithProducer(producer),
 			},
 
 			wantConfig: config{
 				registerer: registry,
+				readerOpts: []metric.ManualReaderOption{
+					metric.WithAggregationSelector(aggregationSelector),
+					metric.WithProducer(producer),
+				},
 			},
 		},
 		{
@@ -132,38 +151,18 @@ func TestNewConfig(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
-			// tested by TestConfigManualReaderOptions
-			cfg.aggregation = nil
+			// only check the length of readerOpts, since they are not compareable
+			assert.Equal(t, len(tt.wantConfig.readerOpts), len(cfg.readerOpts))
+			cfg.readerOpts = nil
+			tt.wantConfig.readerOpts = nil
 
 			assert.Equal(t, tt.wantConfig, cfg)
 		})
 	}
 }
 
-func TestConfigManualReaderOptions(t *testing.T) {
-	aggregationSelector := func(metric.InstrumentKind) metric.Aggregation { return nil }
+type noopProducer struct{}
 
-	testCases := []struct {
-		name            string
-		config          config
-		wantOptionCount int
-	}{
-		{
-			name:            "Default",
-			config:          config{},
-			wantOptionCount: 0,
-		},
-
-		{
-			name:            "WithAggregationSelector",
-			config:          config{aggregation: aggregationSelector},
-			wantOptionCount: 1,
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			opts := tt.config.manualReaderOptions()
-			assert.Len(t, opts, tt.wantOptionCount)
-		})
-	}
+func (*noopProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	return nil, nil
 }
