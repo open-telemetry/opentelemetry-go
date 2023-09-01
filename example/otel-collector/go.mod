@@ -48,5 +48,3 @@ replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc => ../
 replace go.opentelemetry.io/otel/exporters/otlp/otlpmetric => ../../exporters/otlp/otlpmetric
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
-
-replace go.opentelemetry.io/otel/exporters/otlp/internal/retry => ../../exporters/otlp/internal/retry
