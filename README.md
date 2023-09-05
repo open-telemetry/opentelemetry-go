@@ -11,9 +11,9 @@ It provides a set of APIs to directly measure performance and behavior of your s
 
 ## Project Status
 
-| Signal  | Status     | Project               |
+| Signal  | Status     | Work Tracking Project |
 |---------|------------|-----------------------|
-| Traces  | Stable     | Completed             |
+| Traces  | Stable     | N/A                   |
 | Metrics | Mixed [1]  | [Go: Metric SDK (GA)] |
 | Logs    | Frozen [2] | N/A                   |
 
