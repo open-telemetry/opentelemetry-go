@@ -146,31 +146,14 @@ type Stream struct {
 	Unit string
 	// Aggregation the stream uses for an instrument.
 	Aggregation Aggregation
-	// AllowAttributeKeys are an allow-list of attribute keys that will be
-	// preserved for the stream. Any attribute recorded for the stream with a
-	// key not in this slice will be dropped.
+	// AttributeFilter is an attribute Filter applied to the attributes
+	// recorded for an instrument's measurement. If the filter returns false
+	// the attribute will not be recorded, otherwise, if it returns true, it
+	// will record the attribute.
 	//
-	// If this slice is empty, all attributes will be kept.
-	AllowAttributeKeys []attribute.Key
-}
-
-// attributeFilter returns an attribute.Filter that only allows attributes
-// with keys in s.AttributeKeys.
-//
-// If s.AttributeKeys is empty an accept-all filter is returned.
-func (s Stream) attributeFilter() attribute.Filter {
-	if len(s.AllowAttributeKeys) <= 0 {
-		return func(kv attribute.KeyValue) bool { return true }
-	}
-
-	allowed := make(map[attribute.Key]struct{})
-	for _, k := range s.AllowAttributeKeys {
-		allowed[k] = struct{}{}
-	}
-	return func(kv attribute.KeyValue) bool {
-		_, ok := allowed[kv.Key]
-		return ok
-	}
+	// Use NewAllowKeysFilter from "go.opentelemetry.io/otel/attribute" to
+	// provide an allow-list of attribute keys here.
+	AttributeFilter attribute.Filter
 }
 
 // instID are the identifying properties of a instrument.
