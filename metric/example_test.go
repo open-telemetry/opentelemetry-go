@@ -76,10 +76,18 @@ func ExampleMeter_asynchronous_multiple() {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric#MultiAsyncExample")
 
 	// This is just a sample of memory stats to record from the Memstats
-	heapAlloc, _ := meter.Int64ObservableUpDownCounter("heapAllocs")
-	gcCount, _ := meter.Int64ObservableCounter("gcCount")
+	heapAlloc, err := meter.Int64ObservableUpDownCounter("heapAllocs")
+	if err != nil {
+		fmt.Println("failed to register updown counter for heapAllocs")
+		panic(err)
+	}
+	gcCount, err := meter.Int64ObservableCounter("gcCount")
+	if err != nil {
+		fmt.Println("failed to register counter for gcCount")
+		panic(err)
+	}
 
-	_, err := meter.RegisterCallback(
+	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
 			memStats := &runtime.MemStats{}
 			// This call does work

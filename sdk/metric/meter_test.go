@@ -1518,7 +1518,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 					WithReader(rdr),
 					WithView(NewView(
 						Instrument{Name: "*"},
-						Stream{AllowAttributeKeys: []attribute.Key{"foo"}},
+						Stream{AttributeFilter: attribute.NewAllowKeysFilter("foo")},
 					)),
 				).Meter("TestAttributeFilter")
 				require.NoError(t, tt.register(t, mtr))
@@ -1565,8 +1565,11 @@ func TestObservableExample(t *testing.T) {
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
 		reader := NewManualReader(WithTemporalitySelector(selector))
 
-		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName})
-		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AllowAttributeKeys: []attribute.Key{"pid"}})
+		allowAll := attribute.NewDenyKeysFilter()
+		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: allowAll})
+
+		filter := attribute.NewDenyKeysFilter("tid")
+		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
 
 		mp := NewMeterProvider(WithReader(reader), WithView(noFiltered, filtered))
 		meter := mp.Meter(scopeName)

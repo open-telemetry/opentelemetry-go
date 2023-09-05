@@ -101,7 +101,7 @@ func New(opts ...Option) (*Exporter, error) {
 	// this assumes that the default temporality selector will always return cumulative.
 	// we only support cumulative temporality, so building our own reader enforces this.
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
-	reader := metric.NewManualReader(cfg.manualReaderOptions()...)
+	reader := metric.NewManualReader(cfg.readerOpts...)
 
 	collector := &collector{
 		reader:                 reader,
