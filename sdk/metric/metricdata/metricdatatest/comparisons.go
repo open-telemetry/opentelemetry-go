@@ -252,8 +252,10 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 		}
 	}
 
-	if a.Value != b.Value {
-		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
 	}
 
 	if !cfg.ignoreExemplars {
@@ -290,23 +292,25 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 		}
 	}
-	if a.Count != b.Count {
-		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
-	}
-	if !equalSlices(a.Bounds, b.Bounds) {
-		reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
-	}
-	if !equalSlices(a.BucketCounts, b.BucketCounts) {
-		reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
-	}
-	if !eqExtrema(a.Min, b.Min) {
-		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
-	}
-	if !eqExtrema(a.Max, b.Max) {
-		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
-	}
-	if a.Sum != b.Sum {
-		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !equalSlices(a.Bounds, b.Bounds) {
+			reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
+		}
+		if !equalSlices(a.BucketCounts, b.BucketCounts) {
+			reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
 	}
 	if !cfg.ignoreExemplars {
 		r := compareDiff(diffSlices(
@@ -366,35 +370,36 @@ func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.Expo
 			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 		}
 	}
-	if a.Count != b.Count {
-		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
-	}
-	if !eqExtrema(a.Min, b.Min) {
-		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
-	}
-	if !eqExtrema(a.Max, b.Max) {
-		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
-	}
-	if a.Sum != b.Sum {
-		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
-	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
 
-	if a.Scale != b.Scale {
-		reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
-	}
-	if a.ZeroCount != b.ZeroCount {
-		reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
-	}
+		if a.Scale != b.Scale {
+			reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
+		}
+		if a.ZeroCount != b.ZeroCount {
+			reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
+		}
 
-	r := equalExponentialBuckets(a.PositiveBucket, b.PositiveBucket, cfg)
-	if len(r) > 0 {
-		reasons = append(reasons, r...)
+		r := equalExponentialBuckets(a.PositiveBucket, b.PositiveBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
+		r = equalExponentialBuckets(a.NegativeBucket, b.NegativeBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
 	}
-	r = equalExponentialBuckets(a.NegativeBucket, b.NegativeBucket, cfg)
-	if len(r) > 0 {
-		reasons = append(reasons, r...)
-	}
-
 	if !cfg.ignoreExemplars {
 		r := compareDiff(diffSlices(
 			a.Exemplars,
@@ -518,8 +523,10 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 		}
 	}
-	if a.Value != b.Value {
-		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
 	}
 	if !equalSlices(a.SpanID, b.SpanID) {
 		reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))

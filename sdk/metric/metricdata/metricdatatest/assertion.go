@@ -56,6 +56,7 @@ type Datatypes interface {
 type config struct {
 	ignoreTimestamp bool
 	ignoreExemplars bool
+	ignoreValue     bool
 }
 
 func newConfig(opts []Option) config {
@@ -89,6 +90,20 @@ func IgnoreTimestamp() Option {
 func IgnoreExemplars() Option {
 	return fnOption(func(cfg config) config {
 		cfg.ignoreExemplars = true
+		return cfg
+	})
+}
+
+// IgnoreValue disables checking if values are different. This can be
+// useful for non-deterministic values, like measured durations.
+//
+// This will ignore the value and trace information for Exemplars;
+// the buckets, zero count, scale, sum, max, min, and counts of
+// ExponentialHistogramDataPoints; the buckets, sum, count, max,
+// and min of HistogramDataPoints; the value of DataPoints.
+func IgnoreValue() Option {
+	return fnOption(func(cfg config) config {
+		cfg.ignoreValue = true
 		return cfg
 	})
 }

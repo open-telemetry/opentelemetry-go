@@ -351,9 +351,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		b := aggregate.Builder[N]{
 			Temporality: i.pipeline.reader.temporality(kind),
 		}
-		if len(stream.AllowAttributeKeys) > 0 {
-			b.Filter = stream.attributeFilter()
-		}
+		b.Filter = stream.AttributeFilter
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{0, nil, err}
