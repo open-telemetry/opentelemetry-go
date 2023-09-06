@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/bridge/opentracing
 
-go 1.19
+go 1.20
 
 replace go.opentelemetry.io/otel => ../..
 
