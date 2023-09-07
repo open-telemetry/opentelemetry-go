@@ -453,6 +453,18 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestWithoutSchemaURL(t *testing.T) {
+	schemaURL := "https://opentelemetry.io/schemas/1.4.0"
+	attrs := []attribute.KeyValue{kv11, kv21}
+	r := resource.NewWithAttributes(schemaURL, attrs...)
+
+	got := r.WithoutSchemaURL()
+
+	assert.Equal(t, schemaURL, r.SchemaURL(), "should not modify the original resource's SchemaURL")
+	assert.Empty(t, got.SchemaURL(), "should create a copy with empty SchemaURL")
+	assert.Equal(t, r.Attributes(), got.Attributes(), "should have the same attributes")
+}
+
 func TestNewWrapedError(t *testing.T) {
 	localErr := errors.New("local error")
 	_, err := resource.New(

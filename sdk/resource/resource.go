@@ -146,6 +146,14 @@ func (r *Resource) Equal(eq *Resource) bool {
 	return r.Equivalent() == eq.Equivalent()
 }
 
+// WithoutSchemaURL returns a copy of the resource without Schema URL.
+//
+// You can use this method to mitigate the error returned by [Merge]
+// when resources have different non-empty schema URLs.
+func (r *Resource) WithoutSchemaURL() *Resource {
+	return &Resource{attrs: r.attrs}
+}
+
 // Merge creates a new resource by combining resource a and b.
 //
 // If there are common keys between resource a and b, then the value
@@ -154,8 +162,9 @@ func (r *Resource) Equal(eq *Resource) bool {
 //
 // The SchemaURL of the resources will be merged according to the spec rules:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
-// If the resources have different non-empty schemaURL an empty resource and an error
+// If the resources have different non-empty schema URLs, an empty resource and an error
 // will be returned.
+// You can use [Resource.WithoutSchemaURL] to mitigate the schema URL conflict.
 func Merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
