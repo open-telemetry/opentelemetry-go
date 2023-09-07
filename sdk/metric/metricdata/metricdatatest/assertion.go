@@ -52,10 +52,12 @@ type Datatypes interface {
 	// Aggregation and Value type from metricdata are not included here.
 }
 
-// TB is an interface common to `testing.T` and `testing.B` but without the
+// TestingT is an interface that implements `testing.T`, but without the
 // private method of `testing.TB`, so other testing packages can rely on it as
 // well.
-type TB interface {
+//
+// Warning: methods may be added to this interface in minor releases.
+type TestingT interface {
 	Helper()
 	Error(...any)
 }
@@ -117,7 +119,7 @@ func IgnoreValue() Option {
 
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
-func AssertEqual[T Datatypes](t TB, expected, actual T, opts ...Option) bool {
+func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -185,7 +187,7 @@ func AssertEqual[T Datatypes](t TB, expected, actual T, opts ...Option) bool {
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t TB, expected, actual metricdata.Aggregation, opts ...Option) bool {
+func AssertAggregationsEqual(t TestingT, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -197,7 +199,7 @@ func AssertAggregationsEqual(t TB, expected, actual metricdata.Aggregation, opts
 }
 
 // AssertHasAttributes asserts that all Datapoints or HistogramDataPoints have all passed attrs.
-func AssertHasAttributes[T Datatypes](t TB, actual T, attrs ...attribute.KeyValue) bool {
+func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.KeyValue) bool {
 	t.Helper()
 
 	var reasons []string
