@@ -18,7 +18,6 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -51,6 +50,14 @@ type Datatypes interface {
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
+}
+
+// TB is an interface common to `testing.T` and `testing.B` but without the
+// private method of `testing.TB`, so other testing packages can rely on it as
+// well.
+type TB interface {
+	Helper()
+	Error(...any)
 }
 
 type config struct {
@@ -110,7 +117,7 @@ func IgnoreValue() Option {
 
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
-func AssertEqual[T Datatypes](t testing.TB, expected, actual T, opts ...Option) bool {
+func AssertEqual[T Datatypes](t TB, expected, actual T, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -178,7 +185,7 @@ func AssertEqual[T Datatypes](t testing.TB, expected, actual T, opts ...Option) 
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t testing.TB, expected, actual metricdata.Aggregation, opts ...Option) bool {
+func AssertAggregationsEqual(t TB, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -190,7 +197,7 @@ func AssertAggregationsEqual(t testing.TB, expected, actual metricdata.Aggregati
 }
 
 // AssertHasAttributes asserts that all Datapoints or HistogramDataPoints have all passed attrs.
-func AssertHasAttributes[T Datatypes](t testing.TB, actual T, attrs ...attribute.KeyValue) bool {
+func AssertHasAttributes[T Datatypes](t TB, actual T, attrs ...attribute.KeyValue) bool {
 	t.Helper()
 
 	var reasons []string
