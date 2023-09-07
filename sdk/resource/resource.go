@@ -146,7 +146,7 @@ func (r *Resource) Equal(eq *Resource) bool {
 	return r.Equivalent() == eq.Equivalent()
 }
 
-// WithoutSchemaURL returns a copy of the resource without Schema URL.
+// WithoutSchemaURL returns a copy of the resource without schema URL.
 //
 // You can use this method to mitigate the error returned by [Merge]
 // when resources have different non-empty schema URLs.
