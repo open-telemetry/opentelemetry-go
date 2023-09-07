@@ -743,7 +743,6 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Float64", testExponentialHistogramAggregation[float64])
 }
 
-// TODO: This can be defined in the test after we drop support for go1.19.
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	const (
 		maxSize  = 4
