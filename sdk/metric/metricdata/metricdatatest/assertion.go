@@ -55,11 +55,14 @@ type Datatypes interface {
 // TestingT is an interface that implements `testing.T`, but without the
 // private method of `testing.TB`, so other testing packages can rely on it as
 // well.
-//
-// Warning: methods may be added to this interface in minor releases.
 type TestingT interface {
 	Helper()
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+	
 	Error(...any)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 type config struct {
