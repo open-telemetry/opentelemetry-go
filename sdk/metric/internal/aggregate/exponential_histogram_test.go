@@ -51,16 +51,13 @@ func TestExpoHistogramDataPointRecord(t *testing.T) {
 	t.Run("int64 MinMaxSum", testExpoHistogramMinMaxSumInt64)
 }
 
-// TODO: This can be defined in the test after we drop support for go1.19.
-type expoHistogramDataPointRecordTestCase[N int64 | float64] struct {
-	maxSize         int
-	values          []N
-	expectedBuckets expoBuckets
-	expectedScale   int
-}
-
 func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
-	testCases := []expoHistogramDataPointRecordTestCase[N]{
+	testCases := []struct {
+		maxSize         int
+		values          []N
+		expectedBuckets expoBuckets
+		expectedScale   int
+	}{
 		{
 			maxSize: 4,
 			values:  []N{2, 4, 1},
@@ -746,15 +743,6 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Float64", testExponentialHistogramAggregation[float64])
 }
 
-// TODO: This can be defined in the test after we drop support for go1.19.
-type exponentialHistogramAggregationTestCase[N int64 | float64] struct {
-	name      string
-	build     func() (Measure[N], ComputeAggregation)
-	input     [][]N
-	want      metricdata.ExponentialHistogram[N]
-	wantCount int
-}
-
 func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 	const (
 		maxSize  = 4
@@ -763,7 +751,13 @@ func testExponentialHistogramAggregation[N int64 | float64](t *testing.T) {
 		noSum    = false
 	)
 
-	tests := []exponentialHistogramAggregationTestCase[N]{
+	tests := []struct {
+		name      string
+		build     func() (Measure[N], ComputeAggregation)
+		input     [][]N
+		want      metricdata.ExponentialHistogram[N]
+		wantCount int
+	}{
 		{
 			name: "Delta Single",
 			build: func() (Measure[N], ComputeAggregation) {
