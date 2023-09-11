@@ -12,7 +12,7 @@ jobs:
         with:
           go-version: "~1.21.1"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install zsh
         run: sudo apt-get update; sudo apt-get install zsh
