@@ -52,8 +52,8 @@ type Datatypes interface {
 	// Aggregation and Value type from metricdata are not included here.
 }
 
-// TestingT is an interface that implements `testing.T`, but without the
-// private method of `testing.TB`, so other testing packages can rely on it as
+// TestingT is an interface that implements [testing.T], but without the
+// private method of [testing.TB], so other testing packages can rely on it as
 // well.
 // The methods in this interface must match the `testing.TB` interface.
 type TestingT interface {
