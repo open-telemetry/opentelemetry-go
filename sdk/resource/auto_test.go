@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -30,19 +31,37 @@ func TestDetect(t *testing.T) {
 	cases := []struct {
 		name             string
 		schema1, schema2 string
-		isErr            bool
+		want             string
 	}{
 		{
 			name:    "different schema urls",
 			schema1: "https://opentelemetry.io/schemas/1.3.0",
 			schema2: "https://opentelemetry.io/schemas/1.4.0",
-			isErr:   true,
+			want:    "https://opentelemetry.io/schemas/1.4.0",
 		},
 		{
 			name:    "same schema url",
 			schema1: "https://opentelemetry.io/schemas/1.4.0",
 			schema2: "https://opentelemetry.io/schemas/1.4.0",
-			isErr:   false,
+			want:    "https://opentelemetry.io/schemas/1.4.0",
+		},
+		{
+			name:    "missing first schema url",
+			schema1: "",
+			schema2: "https://opentelemetry.io/schemas/1.4.0",
+			want:    "https://opentelemetry.io/schemas/1.4.0",
+		},
+		{
+			name:    "missing second schema url",
+			schema1: "https://opentelemetry.io/schemas/1.4.0",
+			schema2: "",
+			want:    "https://opentelemetry.io/schemas/1.4.0",
+		},
+		{
+			name:    "missing both schema url",
+			schema1: "",
+			schema2: "",
+			want:    "",
 		},
 	}
 
@@ -51,12 +70,9 @@ func TestDetect(t *testing.T) {
 			d1 := resource.StringDetector(c.schema1, semconv.HostNameKey, os.Hostname)
 			d2 := resource.StringDetector(c.schema2, semconv.HostNameKey, os.Hostname)
 			r, err := resource.Detect(context.Background(), d1, d2)
-			assert.NotNil(t, r)
-			if c.isErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			require.NoError(t, err)
+			require.NotNil(t, r)
+			assert.Equal(t, c.want, r.SchemaURL())
 		})
 	}
 }

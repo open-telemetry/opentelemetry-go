@@ -200,12 +200,12 @@ func Merge(a, b *Resource) (*Resource, error) {
 		if a.schemaURL != schemaURL {
 			a, err = upgradeResource(schemaURL, a)
 			if err != nil {
-				return nil, err
+				return Empty(), err
 			}
 		} else {
 			b, err = upgradeResource(schemaURL, b)
 			if err != nil {
-				return nil, err
+				return Empty(), err
 			}
 		}
 	}

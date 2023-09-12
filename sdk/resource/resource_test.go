@@ -180,11 +180,11 @@ func TestMerge(t *testing.T) {
 			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
 		},
 		{
-			name:  "Merge with different schemas",
-			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
-			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
-			want:  nil,
-			isErr: true,
+			name:      "Merge with different schemas",
+			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
+			want:      []attribute.KeyValue{kv42},
+			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
 		},
 	}
 	for _, c := range cases {
