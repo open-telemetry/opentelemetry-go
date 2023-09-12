@@ -87,6 +87,7 @@ type collector struct {
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
+	scopeInfoErrs     map[instrumentation.Scope]error
 	metricFamilies    map[string]*dto.MetricFamily
 }
 
@@ -110,6 +111,7 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutCounterSuffixes: cfg.withoutCounterSuffixes,
 		disableScopeInfo:       cfg.disableScopeInfo,
 		scopeInfos:             make(map[instrumentation.Scope]prometheus.Metric),
+		scopeInfoErrs:          make(map[instrumentation.Scope]error),
 		metricFamilies:         make(map[string]*dto.MetricFamily),
 		namespace:              cfg.namespace,
 	}
@@ -469,8 +471,14 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 		return scopeInfo, nil
 	}
 
-	scopeInfo, err := createScopeInfoMetric(scope)
+	err, ok := c.scopeInfoErrs[scope]
+	if ok {
+		return nil, fmt.Errorf("cannot retrieve scope info metric: %w", err)
+	}
+
+	scopeInfo, err = createScopeInfoMetric(scope)
 	if err != nil {
+		c.scopeInfoErrs[scope] = err
 		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
 	}
 
