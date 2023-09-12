@@ -30,6 +30,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Removed the deprecated internal packages in `go.opentelemetry.io/otel/exporters/otlp` and its sub-packages. (#4469)
 - Dropped guaranteed support for versions of Go less than 1.20. (#4481)
 
+### Fixed
+
+- In `go.opentelemetry.op/otel/exporters/prometheus`, don't try to create the prometheus metric on every `Collect` if we know the scope is invalid. (#4499)
+
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
 ### Added
