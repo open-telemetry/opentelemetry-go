@@ -1,0 +1,5 @@
+file_format: 1.0.0
+schema_url: https://opentelemetry.io/schemas/1.5.0
+versions:
+  1.5.0:
+  1.4.0:

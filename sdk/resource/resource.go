@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource/internal/schema"
 )
 
 // Resource describes an entity about which identifying information
@@ -152,10 +153,22 @@ func (r *Resource) Equal(eq *Resource) bool {
 // from resource b will overwrite the value from resource a, even
 // if resource b's value is empty.
 //
-// The SchemaURL of the resources will be merged according to the spec rules:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
-// If the resources have different non-empty schemaURL an empty resource and an error
-// will be returned.
+// The resources are merged after unifying on a common SchemaURL. If neither of
+// the resources have a schema URL defined, the returned resources will be
+// schema-less and no attribute translations will be made before the merge. If
+// only one of the resources has a schema defined, the returned resource will
+// use that as its SchemaURL and no translations will be made to either
+// resource before the merge. If both resources have valid OpenTelemetry schema
+// URLs defined, the greatest schema URL version between the two will be used.
+// The resource at a lower version will have all of its attributes translated
+// prior to the merge using the OpenTelemetry schema resource section
+// (https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/schemas/file_format_v1.1.0.md#resources-section)
+// for the translation.
+//
+// If one of the resources have an invalid SchemaURL (non-OpenTelemetry or an
+// otherwise invalid URL), the other resource will be returned along with an
+// error. If both resources have invalid schema URLs, an empty resource will be
+// returned along with an error.
 func Merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
@@ -168,7 +181,10 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 
 	// Merge the schema URL.
-	var schemaURL string
+	var (
+		schemaURL string
+		err       error
+	)
 	switch true {
 	case a.schemaURL == "":
 		schemaURL = b.schemaURL
@@ -177,7 +193,21 @@ func Merge(a, b *Resource) (*Resource, error) {
 	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
 	default:
-		return Empty(), errMergeConflictSchemaURL
+		schemaURL, err = schema.GreatestVersion(a.schemaURL, b.SchemaURL())
+		if schemaURL == "" {
+			return Empty(), err
+		}
+		if a.schemaURL != schemaURL {
+			a, err = upgradeResource(schemaURL, a)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b, err = upgradeResource(schemaURL, b)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
@@ -188,7 +218,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 		combine = append(combine, mi.Attribute())
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
-	return merged, nil
+	return merged, err
 }
 
 // Empty returns an instance of Resource with no attributes. It is
