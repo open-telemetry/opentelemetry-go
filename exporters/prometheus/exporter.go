@@ -45,7 +45,11 @@ const (
 	scopeInfoDescription = "Instrumentation Scope metadata"
 )
 
-var scopeInfoKeys = [2]string{"otel_scope_name", "otel_scope_version"}
+var (
+	scopeInfoKeys = [2]string{"otel_scope_name", "otel_scope_version"}
+
+	errScopeInvalid = errors.New("invalid scope")
+)
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -87,7 +91,7 @@ type collector struct {
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
-	scopeInfoErrs     map[instrumentation.Scope]error
+	scopeInfosInvalid map[instrumentation.Scope]bool
 	metricFamilies    map[string]*dto.MetricFamily
 }
 
@@ -111,7 +115,7 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutCounterSuffixes: cfg.withoutCounterSuffixes,
 		disableScopeInfo:       cfg.disableScopeInfo,
 		scopeInfos:             make(map[instrumentation.Scope]prometheus.Metric),
-		scopeInfoErrs:          make(map[instrumentation.Scope]error),
+		scopeInfosInvalid:      make(map[instrumentation.Scope]bool),
 		metricFamilies:         make(map[string]*dto.MetricFamily),
 		namespace:              cfg.namespace,
 	}
@@ -180,7 +184,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		if !c.disableScopeInfo {
 			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
 			if err != nil {
-				otel.Handle(err)
+				if err != errScopeInvalid {
+					otel.Handle(err)
+				}
 				continue
 			}
 
@@ -471,14 +477,13 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 		return scopeInfo, nil
 	}
 
-	err, ok := c.scopeInfoErrs[scope]
-	if ok {
-		return nil, fmt.Errorf("cannot retrieve scope info metric: %w", err)
+	if c.scopeInfosInvalid[scope] {
+		return nil, errScopeInvalid
 	}
 
-	scopeInfo, err = createScopeInfoMetric(scope)
+	scopeInfo, err := createScopeInfoMetric(scope)
 	if err != nil {
-		c.scopeInfoErrs[scope] = err
+		c.scopeInfosInvalid[scope] = true
 		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
 	}
 
