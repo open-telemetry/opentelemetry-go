@@ -27,8 +27,8 @@
 // A MeterProvider needs to be configured to export the measured data, this is
 // done by configuring it with a Reader implementation (using the WithReader
 // MeterProviderOption). Readers take two forms: ones that push to an endpoint
-// (NewPeriodicReader), and ones that an endpoint pulls from. See the
-// go.opentelemetry.io/otel/exporters package for exporters that can be used as
+// (NewPeriodicReader), and ones that an endpoint pulls from. See
+// [go.opentelemetry.io/otel/exporters] for exporters that can be used as
 // or with these Readers.
 //
 // Each Reader, when registered with the MeterProvider, can be augmented with a
@@ -40,5 +40,8 @@
 // WithResource MeterProviderOption, to include this information. This Resource
 // should be used to describe the unique runtime environment instrumented code
 // is being run on. That way when multiple instances of the code are collected
-// at a single endpoint their origin is decipherable.
+// at a single endpoint their origin is decipherable.\
+//
+// See [go.opentelemetry.io/otel/sdk/metric/example] to see an example of meter
+// provider initialization.
 package metric // import "go.opentelemetry.io/otel/sdk/metric"

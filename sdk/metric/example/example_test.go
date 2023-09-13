@@ -12,43 +12,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metric_test
+package example
 
 import (
 	"context"
 	"log"
+	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func Example() {
-	// This reader is used as a stand-in for a reader that will actually export
-	// data. See exporters in the go.opentelemetry.io/otel/exporters package
-	// for more information.
-	reader := metric.NewManualReader()
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName("my-service"),
+			semconv.ServiceVersion("0.1.0"),
+		))
+	if err != nil {
+		panic(err)
+	}
 
-	// See the go.opentelemetry.io/otel/sdk/resource package for more
-	// information about how to create and use Resources.
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("my-service"),
-		semconv.ServiceVersion("0.1.0"),
-	)
+	exporter, err := stdoutmetric.New()
+	if err != nil {
+		panic(err)
+	}
+	reader := metric.NewPeriodicReader(exporter,
+		// Default is 1m. Set to 3s for demonstrative purposes.
+		metric.WithInterval(3*time.Second))
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
 	)
+
+	// Set the global meter provider.
 	otel.SetMeterProvider(meterProvider)
+
+	// Handle shutdown properly so nothing leaks.
 	defer func() {
-		err := meterProvider.Shutdown(context.Background())
-		if err != nil {
-			log.Fatalln(err)
+		if err := meterProvider.Shutdown(context.Background()); err != nil {
+			log.Println(err)
 		}
 	}()
+
 	// The MeterProvider is configured and registered globally. You can now run
 	// your code instrumented with the OpenTelemetry API that uses the global
 	// MeterProvider without having to pass this MeterProvider instance. Or,
