@@ -12,31 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
 import (
-	"flag"
-	"log"
-
-	"go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
+	"fmt"
+	"os"
 )
 
-// local is the CLI flag for the local schema directory.
-var local string
+func Run(dest, local string) error {
+	f, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("failed to open desination %q: %w", dest, err)
+	}
+	defer f.Close()
 
-func init() {
-	flag.StringVar(&local, "local", "", "local schema directory to use instead of fetching remote")
-
-	flag.Parse()
-}
-
-func main() {
-	dest := flag.Arg(0)
-	if dest == "" {
-		log.Fatalln("empty desination")
+	data, err := load(local)
+	if err != nil {
+		return fmt.Errorf("failed to load schema: %w", err)
 	}
 
-	if err := cmd.Run(dest, local); err != nil {
-		log.Fatal(err)
+	err = render(f, data)
+	if err != nil {
+		return fmt.Errorf("failed to render template: %w", err)
 	}
+	return nil
 }

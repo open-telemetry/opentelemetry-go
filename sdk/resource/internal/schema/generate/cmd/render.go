@@ -12,27 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmd
 
 import (
 	"bytes"
 	"embed"
 	"go/format"
-	"os"
+	"io"
 	"text/template"
 )
 
 // Template source.
-const src = "templates/schema.go.tmpl"
+const src = "schema.go.tmpl"
 
-//go:embed templates/schema.go.tmpl
+//go:embed schema.go.tmpl
 var tmpl embed.FS
 
-// render renders src from f in dest using data.
-//
-// All src will be rendered in the same file-tree with the same names (except
-// for any ".tmpl" suffixes) as found in the Renderer's fs.FS.
-func render(dest string, data any) error {
+func render(dest io.Writer, data any) error {
 	t, err := template.ParseFS(tmpl, src)
 	if err != nil {
 		return err
@@ -49,15 +45,6 @@ func render(dest string, data any) error {
 		return err
 	}
 
-	f, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(src)
-	if err != nil {
-		return err
-	}
-
-	return f.Close()
+	_, err = dest.Write(src)
+	return err
 }
