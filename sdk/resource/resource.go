@@ -16,11 +16,14 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource/internal/schema"
+	"go.opentelemetry.io/otel/sdk/resource/internal/schema/resconv"
 )
 
 // Resource describes an entity about which identifying information
@@ -216,6 +219,32 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
 	return merged, err
+}
+
+var errUnknownSchema = errors.New("unknown schema")
+
+// upgradeResource returns a copy of orig with the schema URL set to schemaURL
+// and all attributes transformed based on the associated schema. If the schema
+// transformation fails an error is returned.
+func upgradeResource(schemaURL string, r *Resource) (*Resource, error) {
+	if r == nil || r.Len() == 0 {
+		return NewWithAttributes(schemaURL), nil
+	}
+
+	if r.SchemaURL() == schemaURL {
+		// Resources are immutable, just return the ptr to the same value.
+		return r, nil
+	}
+
+	s, ok := schema.Schemas[schemaURL]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", errUnknownSchema, schemaURL)
+	}
+	attrs := r.Attributes()
+	if err := resconv.Upgrade(s, attrs); err != nil {
+		return nil, err
+	}
+	return NewWithAttributes(schemaURL, attrs...), nil
 }
 
 // Empty returns an instance of Resource with no attributes. It is
