@@ -132,7 +132,3 @@ func (a *attributes) ReplaceKey(orig, repl string) {
 func (a *attributes) RenameFunc() func(string, string) {
 	return func(orig, repl string) { a.ReplaceKey(orig, repl) }
 }
-
-func (a *attributes) UnrenameFunc() func(string, string) {
-	return func(orig, repl string) { a.ReplaceKey(repl, orig) }
-}
