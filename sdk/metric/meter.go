@@ -28,7 +28,7 @@ import (
 
 var (
 	// ErrInstrumentName indicates the created instrument has an invalid name.
-	// Valid names must consist of 255 or fewer characters including alphanumeric, _, ., -, and start with a letter.
+	// Valid names must consist of 255 or fewer characters including alphanumeric, _, ., -, / and start with a letter.
 	ErrInstrumentName = errors.New("invalid instrument name")
 )
 
@@ -262,8 +262,8 @@ func validateInstrumentName(name string) error {
 		return nil
 	}
 	for _, c := range name[1:] {
-		if !isAlphanumeric(c) && c != '_' && c != '.' && c != '-' {
-			return fmt.Errorf("%w: %s: must only contain [A-Za-z0-9_.-]", ErrInstrumentName, name)
+		if !isAlphanumeric(c) && c != '_' && c != '.' && c != '-' && c != '/' {
+			return fmt.Errorf("%w: %s: must only contain [A-Za-z0-9_.-/]", ErrInstrumentName, name)
 		}
 	}
 	return nil
