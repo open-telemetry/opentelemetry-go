@@ -91,9 +91,13 @@ func ExampleView() {
 	}
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
 
+	// Below is an example of how the view will
+	// function in the SDK for certain instruments.
 	stream, _ := view(metric.Instrument{
 		Name: "computation.time.ms",
 		Unit: "ms",
@@ -122,9 +126,13 @@ func ExampleNewView() {
 	}, metric.Stream{Name: "request.latency"})
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
 
+	// Below is an example of how the view will
+	// function in the SDK for certain instruments.
 	stream, _ := view(metric.Instrument{
 		Name:        "latency",
 		Description: "request latency",
@@ -155,9 +163,13 @@ func ExampleNewView_drop() {
 	)
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
 
+	// Below is an example of how the view will
+	// function in the SDK for certain instruments.
 	stream, _ := view(metric.Instrument{
 		Name:  "queries",
 		Kind:  metric.InstrumentKindCounter,
@@ -179,9 +191,13 @@ func ExampleNewView_wildcard() {
 	)
 
 	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view
-	// function in the SDK for certain instruments.
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
 
+	// Below is an example of how the view will
+	// function in the SDK for certain instruments.
 	stream, _ := view(metric.Instrument{
 		Name: "computation.time.ms",
 		Unit: "1",
