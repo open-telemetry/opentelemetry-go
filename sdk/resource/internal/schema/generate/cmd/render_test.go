@@ -44,7 +44,7 @@ func TestRender(t *testing.T) {
 	require.NoError(t, err)
 
 	var got bytes.Buffer
-	render(&got, []entry{e})
+	require.NoError(t, render(&got, []entry{e}))
 
 	assert.Equal(t, want.String(), got.String())
 }
