@@ -27,33 +27,20 @@ import (
 )
 
 func Example() {
-	res, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName("my-service"),
-			semconv.ServiceVersion("0.1.0"),
-		))
+	res, err := newResource()
 	if err != nil {
 		panic(err)
 	}
 
-	exporter, err := stdoutmetric.New()
+	meterProvider, err := newMeterProvider(res)
 	if err != nil {
 		panic(err)
 	}
-	reader := metric.NewPeriodicReader(exporter,
-		// Default is 1m. Set to 3s for demonstrative purposes.
-		metric.WithInterval(3*time.Second))
-
-	meterProvider := metric.NewMeterProvider(
-		metric.WithResource(res),
-		metric.WithReader(reader),
-	)
 
 	// Set the global meter provider.
 	otel.SetMeterProvider(meterProvider)
 
-	// Handle shutdown properly so nothing leaks.
+	// Handle shutdown properly so that nothing leaks.
 	defer func() {
 		if err := meterProvider.Shutdown(context.Background()); err != nil {
 			log.Println(err)
@@ -68,4 +55,29 @@ func Example() {
 	//
 	// See the go.opentelemetry.io/otel/metric package for more information
 	// about the metric API.
+}
+
+func newResource() (*resource.Resource, error) {
+	return resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName("my-service"),
+			semconv.ServiceVersion("0.1.0"),
+		))
+}
+
+func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
+	metricExporter, err := stdoutmetric.New()
+	if err != nil {
+		return nil, err
+	}
+
+	metricReader := metric.NewPeriodicReader(metricExporter,
+		// Default is 1m. Set to 3s for demonstrative purposes.
+		metric.WithInterval(3*time.Second))
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithResource(res),
+		metric.WithReader(metricReader),
+	)
+	return meterProvider, nil
 }
