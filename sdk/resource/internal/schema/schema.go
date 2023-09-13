@@ -2189,4 +2189,5 @@ var Schemas = map[string]*ast.Schema{
 				Metrics:    ast.Metrics{},
 			},
 		},
-	}}
+	},
+}
