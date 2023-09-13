@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -20,6 +21,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
+	go.opentelemetry.io/otel/schema v0.0.6 // indirect
 	go.opentelemetry.io/otel/sdk v1.18.0 // indirect
 	go.opentelemetry.io/otel/trace v1.18.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
@@ -37,3 +39,5 @@ replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 replace go.opentelemetry.io/otel/metric => ../../metric
 
 replace go.opentelemetry.io/otel/trace => ../../trace
+
+replace go.opentelemetry.io/otel/schema => ../../schema
