@@ -776,8 +776,11 @@ func TestValidateInstrumentName(t *testing.T) {
 			name: "nam.",
 		},
 		{
+			name: "nam/e",
+		},
+		{
 			name:    "name!",
-			wantErr: fmt.Errorf("%w: name!: must only contain [A-Za-z0-9_.-]", ErrInstrumentName),
+			wantErr: fmt.Errorf("%w: name!: must only contain [A-Za-z0-9_.-/]", ErrInstrumentName),
 		},
 		{
 			name:    longName,
