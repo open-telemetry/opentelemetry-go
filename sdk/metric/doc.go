@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package metric provides an implementation of the OpenTelemetry metric SDK.
+// Package metric provides an implementation of the OpenTelemetry metrics SDK.
 //
 // See https://opentelemetry.io/docs/concepts/signals/metrics/ for information
 // about the concept of OpenTelemetry metrics and
@@ -42,6 +42,6 @@
 // is being run on. That way when multiple instances of the code are collected
 // at a single endpoint their origin is decipherable.
 //
-// See [go.opentelemetry.io/otel/sdk/metric/example] to see an example of meter
-// provider initialization.
+// See [go.opentelemetry.io/otel/metric] for more information about
+// the metric API.
 package metric // import "go.opentelemetry.io/otel/sdk/metric"

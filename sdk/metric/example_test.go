@@ -27,39 +27,51 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
+// To enable metrics in your application using the SDK,
+// you'll need to have an initialized [MeterProvider]
+// that will let you create a [go.opentelemetry.io/otel/metric.Meter].
+//
+// Here's how you might initialize a metrics provider.
 func Example() {
+	// See [go.opentelemetry.io/otel/sdk/resource] for more
+	// information about how to create and use resources.
+	res, err := resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName("my-service"),
+			semconv.ServiceVersion("0.1.0"),
+		))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	// This reader is used as a stand-in for a reader that will actually export
-	// data. See exporters in the go.opentelemetry.io/otel/exporters package
-	// for more information.
+	// data. See [go.opentelemetry.io/otel/exporters] for exporters
+	// that can be used as or with readers.
 	reader := metric.NewManualReader()
 
-	// See the go.opentelemetry.io/otel/sdk/resource package for more
-	// information about how to create and use Resources.
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("my-service"),
-		semconv.ServiceVersion("0.1.0"),
-	)
-
+	// Create a meter provider.
+	// You can pass this instance directly to your instrumented code if it
+	// accepts a MeterProvider instance.
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
 	)
+
+	// Register as global meter provider so that it can
+	// that can used via [go.opentelemetry.io/otel.Meter]
+	// and accessed using [go.opentelemetry.io/otel.GetMeterProvider].
+	// Most instrumentation libraries use the global meter provider as default.
+	// If the global meter provider is not set then a no-op implementation
+	// is used and which fails to generate data.
 	otel.SetMeterProvider(meterProvider)
+
+	// Handle shutdown properly so that nothing leaks.
 	defer func() {
 		err := meterProvider.Shutdown(context.Background())
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
-	// The MeterProvider is configured and registered globally. You can now run
-	// your code instrumented with the OpenTelemetry API that uses the global
-	// MeterProvider without having to pass this MeterProvider instance. Or,
-	// you can pass this instance directly to your instrumented code if it
-	// accepts a MeterProvider instance.
-	//
-	// See the go.opentelemetry.io/otel/metric package for more information
-	// about the metric API.
 }
 
 func ExampleView() {

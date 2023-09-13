@@ -43,7 +43,6 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/prometheus
       - go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
       - go.opentelemetry.io/otel/sdk/metric
-      - go.opentelemetry.io/otel/sdk/metric/example
       - go.opentelemetry.io/otel/bridge/opencensus
       - go.opentelemetry.io/otel/bridge/opencensus/test
       - go.opentelemetry.io/otel/example/view
