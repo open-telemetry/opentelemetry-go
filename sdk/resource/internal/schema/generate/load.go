@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+
 	sUtil "go.opentelemetry.io/otel/schema/v1.1"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
 )
