@@ -40,7 +40,7 @@
 // WithResource MeterProviderOption, to include this information. This Resource
 // should be used to describe the unique runtime environment instrumented code
 // is being run on. That way when multiple instances of the code are collected
-// at a single endpoint their origin is decipherable.\
+// at a single endpoint their origin is decipherable.
 //
 // See [go.opentelemetry.io/otel/sdk/metric/example] to see an example of meter
 // provider initialization.
