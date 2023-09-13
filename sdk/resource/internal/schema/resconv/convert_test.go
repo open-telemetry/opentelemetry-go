@@ -108,14 +108,6 @@ func TestUpgrade(t *testing.T) {
 	assert.Equal(t, v3Attr(), attr)
 }
 
-func TestDowngrade(t *testing.T) {
-	attr := v3Attr()
-	err := Downgrade(schema, "https://opentelemetry.io/schemas/0.9.0", attr)
-	require.NoError(t, err)
-
-	assert.Equal(t, v0Attr(), attr)
-}
-
 func TestInvalidTelemetryVersion(t *testing.T) {
 	s := &ast.Schema{
 		Versions: map[types.TelemetryVersion]ast.VersionDef{"invalid": {}},

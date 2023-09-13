@@ -20,8 +20,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	internal "go.opentelemetry.io/otel/sdk/resource/internal/schema"
-
 	"go.opentelemetry.io/otel/attribute"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
@@ -48,46 +46,6 @@ func Upgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
 		}
 		// Only other applicable section is for resources.
 		for _, c := range vDef.Resources.Changes {
-			forEach(c.RenameAttributes.AttributeMap, f)
-		}
-	}
-
-	return nil
-}
-
-// Downgrade downgrade attrs to the schema version of url in place with schema.
-func Downgrade(schema *ast.Schema, url string, attrs []attribute.KeyValue) error {
-	var min *semver.Version
-	if url != "" {
-		var err error
-		min, err = internal.Version(url)
-		if err != nil {
-			return fmt.Errorf("downgrade error: %w", err)
-		}
-	}
-
-	vers, err := versions(schema, min, true)
-	if err != nil {
-		return fmt.Errorf("downgrade error: %w", err)
-	}
-
-	a := newAttributes(attrs)
-	for _, v := range vers {
-		vDef, ok := schema.Versions[v]
-		if !ok {
-			return fmt.Errorf("downgrade error: version parsing: %q", v)
-		}
-		f := a.UnrenameFunc()
-		changes := vDef.Resources.Changes
-		for i := len(changes) - 1; i >= 0; i-- {
-			c := changes[i]
-			forEach(c.RenameAttributes.AttributeMap, f)
-		}
-		// Downgraing means all transformations in section "all" always are
-		// applied after the resource section is resolved.
-		changes = vDef.All.Changes
-		for i := len(changes) - 1; i >= 0; i-- {
-			c := changes[i]
 			forEach(c.RenameAttributes.AttributeMap, f)
 		}
 	}
