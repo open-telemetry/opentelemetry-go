@@ -186,6 +186,18 @@ func TestMerge(t *testing.T) {
 			want:      []attribute.KeyValue{kv42},
 			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
 		},
+		{
+			name:  "Merge with one unknown schema",
+			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			b:     resource.NewWithAttributes("https://localhost/2", kv42),
+			isErr: true,
+		},
+		{
+			name:  "Merge with unknown schemas",
+			a:     resource.NewWithAttributes("https://localhost/1", kv41),
+			b:     resource.NewWithAttributes("https://localhost/2", kv42),
+			isErr: true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {

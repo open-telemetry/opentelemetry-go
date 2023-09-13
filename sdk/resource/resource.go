@@ -165,10 +165,9 @@ func (r *Resource) Equal(eq *Resource) bool {
 // (https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/schemas/file_format_v1.1.0.md#resources-section)
 // for the translation.
 //
-// If one of the resources have an invalid SchemaURL (non-OpenTelemetry or an
-// otherwise invalid URL), the other resource will be returned along with an
-// error. If both resources have invalid schema URLs, an empty resource will be
-// returned along with an error.
+// If either of the resources have an invalid SchemaURL (non-OpenTelemetry or
+// an otherwise invalid URL), an empty resource will be returned along with an
+// error.
 func Merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
@@ -181,10 +180,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 
 	// Merge the schema URL.
-	var (
-		schemaURL string
-		err       error
-	)
+	var schemaURL string
 	switch true {
 	case a.schemaURL == "":
 		schemaURL = b.schemaURL
@@ -193,8 +189,9 @@ func Merge(a, b *Resource) (*Resource, error) {
 	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
 	default:
+		var err error
 		schemaURL, err = schema.GreatestVersion(a.schemaURL, b.SchemaURL())
-		if schemaURL == "" {
+		if err != nil {
 			return Empty(), err
 		}
 		if a.schemaURL != schemaURL {
@@ -218,7 +215,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 		combine = append(combine, mi.Attribute())
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
-	return merged, err
+	return merged, nil
 }
 
 var errUnknownSchema = errors.New("unknown schema")
