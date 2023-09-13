@@ -183,10 +183,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		if !c.disableScopeInfo {
 			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
+			if err == errScopeInvalid {
+				// Do not report the same error multiple times.
+				continue
+			}
 			if err != nil {
-				if err != errScopeInvalid {
-					otel.Handle(err)
-				}
+				otel.Handle(err)
 				continue
 			}
 
