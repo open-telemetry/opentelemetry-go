@@ -16,7 +16,6 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -40,8 +39,6 @@ var (
 	defaultResource     *Resource
 	defaultResourceOnce sync.Once
 )
-
-var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
 
 // New returns a Resource combined from the user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {

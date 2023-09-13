@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
+
 	internal "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 
 	"go.opentelemetry.io/otel/attribute"
