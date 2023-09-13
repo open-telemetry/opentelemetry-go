@@ -15,15 +15,23 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"io"
-	"log"
+	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	sUtil "go.opentelemetry.io/otel/schema/v1.1"
+	"go.opentelemetry.io/otel/schema/v1.1/ast"
 )
 
-var urls = []string{
+var schemaURLs = []string{
 	"https://opentelemetry.io/schemas/1.21.0",
 	"https://opentelemetry.io/schemas/1.20.0",
 	"https://opentelemetry.io/schemas/1.19.0",
@@ -57,37 +65,107 @@ var urls = []string{
 	// Does not exist: "https://opentelemetry.io/schemas/0.1"
 }
 
-func download(u string) error {
+type entry struct {
+	Version *semver.Version
+	Schema  *ast.Schema
+}
+
+func newEntry(s *ast.Schema) (entry, error) {
+	if s == nil {
+		return entry{}, errors.New("nil schema")
+	}
+
+	// https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md#schema-url
+	u, err := url.Parse(s.SchemaURL)
+	if err != nil {
+		return entry{}, fmt.Errorf("invalid schema URL %q: %w", s.SchemaURL, err)
+	}
+
+	verStr := u.Path[strings.LastIndex(u.Path, "/")+1:]
+	ver, err := semver.NewVersion(verStr)
+	if err != nil {
+		return entry{}, fmt.Errorf("invalid schema URL version %q: %w", verStr, err)
+	}
+
+	return entry{Version: ver, Schema: s}, nil
+}
+
+func load(local string) (any, error) {
+	var (
+		data []entry
+		err  error
+	)
+	if local != "" {
+		data, err = loadLocal(local)
+	} else {
+		data, err = loadRemote()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	sort.SliceStable(data, func(i, j int) bool {
+		return data[i].Version.LessThan(data[j].Version)
+	})
+	return data, nil
+}
+
+func loadLocal(local string) (data []entry, err error) {
+	const suffix = ".yaml"
+	err = filepath.WalkDir(local, func(p string, _ fs.DirEntry, err error) error {
+		if err != nil || path.Ext(p) != suffix {
+			return err
+		}
+
+		f, err := os.Open(p)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		s, err := sUtil.Parse(f)
+		if err != nil {
+			return err
+		}
+
+		e, err := newEntry(s)
+		if err != nil {
+			return err
+		}
+
+		data = append(data, e)
+		return nil
+	})
+	return data, err
+}
+
+func loadRemote() (data []entry, err error) {
+	var e entry
+	for _, u := range schemaURLs {
+		e, err = download(u)
+		if err != nil {
+			return data, fmt.Errorf("failed to download %q: %w", u, err)
+		}
+		data = append(data, e)
+	}
+	return data, nil
+}
+
+func download(u string) (entry, error) {
 	resp, err := http.Get(u)
 	if err != nil {
-		return fmt.Errorf("failed to get %q: %w", u, err)
+		return entry{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request error: %d", resp.StatusCode)
+		return entry{}, fmt.Errorf("request error: %d", resp.StatusCode)
 	}
 
-	fName := fmt.Sprintf("%s.yaml", path.Base(u))
-	f, err := os.Create(fName)
+	s, err := sUtil.Parse(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to create %q: %w", fName, err)
+		return entry{}, err
 	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to write %q: %w", fName, err)
-	}
-	return nil
-}
 
-func main() {
-	for _, u := range urls {
-		err := download(u)
-		if err != nil {
-			log.Printf("failed to download %q: %s", u, err)
-			continue
-		}
-		log.Printf("downloaded %q", u)
-	}
+	return newEntry(s)
 }
