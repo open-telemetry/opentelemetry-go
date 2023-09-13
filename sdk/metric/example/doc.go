@@ -15,4 +15,4 @@
 /*
 Package example provides an example of meter provider initialization.
 */
-package example
+package example // import "go.opentelemetry.io/otel/sdk/metric/example"
