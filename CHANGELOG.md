@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Allow '/' characters in metric instrument names. (#4501)
+- Use OpenTelemetry schema translations for resources to handle any merge conflicts in `"go.opentelemetry.io/otel/sdk/resource".Merge`. (#4503)
 
 ## [1.18.0/0.41.0/0.0.6] 2023-09-12
 
