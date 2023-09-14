@@ -41,7 +41,7 @@ var (
 		Resource: res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "example", Version: "v0.0.1"},
+				Scope: instrumentation.Scope{Name: "example", Version: "0.0.1"},
 				Metrics: []metricdata.Metrics{
 					{
 						Name:        "requests",
@@ -173,7 +173,7 @@ func Example() {
 	//     {
 	//       "Scope": {
 	//         "Name": "example",
-	//         "Version": "v0.0.1",
+	//         "Version": "0.0.1",
 	//         "SchemaURL": ""
 	//       },
 	//       "Metrics": [
