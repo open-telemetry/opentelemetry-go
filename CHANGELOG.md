@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.19.0-rc.1/0.42.0-rc.1] 2023-09-14
+
+This is a release candidate for the v1.19.0/v0.42.0 release.
+That release is expected to include the `v1` release of the OpenTelemetry Go metric SDK and will provide stability guarantees of that SDK.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Changed
 
 - Allow '/' characters in metric instrument names. (#4501)
@@ -2625,7 +2631,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.19.0-rc.1...HEAD
+[1.19.0-rc.1/0.42.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0-rc.1
 [1.18.0/0.41.0/0.0.6]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.18.0
 [1.17.0/0.40.0/0.0.5]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.17.0
 [1.16.0/0.39.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0
