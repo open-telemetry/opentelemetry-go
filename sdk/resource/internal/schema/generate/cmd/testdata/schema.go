@@ -27,137 +27,33 @@ var Schemas = map[string]*ast.Schema{
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.21.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
+			"1.20.0": {},
+			"1.21.0": {
+				All: ast10.Attributes{
+					Changes: []ast10.AttributeChange{
 						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
+							RenameAttributes: &ast10.RenameAttributes{
 								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
+									"Bar": "bar",
+								},
+							},
+						},
+						{
+							RenameAttributes: &ast10.RenameAttributes{
+								AttributeMap: map[string]string{
+									"foo": "Foo",
 								},
 							},
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.18.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.19.0": {
-				All: ast10.Attributes{},
 				Resources: ast10.Attributes{
 					Changes: []ast10.AttributeChange{
 						{
 							RenameAttributes: &ast10.RenameAttributes{
 								AttributeMap: map[string]string{
-									"browser.user_agent": "user_agent.original",
+									"one": "ONE",
+									"two": "TWO",
 								},
 							},
 						},
@@ -167,184 +63,100 @@ var Schemas = map[string]*ast.Schema{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
+								ApplyToSpans: []types10.SpanName{
+									"span0",
+									"span1",
+								},
 								AttributeMap: map[string]string{
-									"faas.execution": "faas.invocation_id",
+									"attr0": "Attr0",
+									"attr1": "Attr1",
 								},
 							},
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
-									"faas.id": "cloud.resource_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"http.user_agent": "user_agent.original",
+									"net.host.name": "server.address",
+									"net.host.port": "server.port",
 								},
 							},
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.20.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
+				SpanEvents: ast10.SpanEvents{
+					Changes: []ast10.SpanEventsChange{
 						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
+							RenameEvents: &ast10.RenameSpanEvents{
+								EventNameMap: map[string]string{
+									"event0": "Event0",
+									"event1": "Event1",
+								},
+							},
+							RenameAttributes: &ast10.RenameSpanEventAttributes{
+								ApplyToSpans: []types10.SpanName{
+									"spanA",
+									"spanB",
+								},
+								ApplyToEvents: []types10.EventName{
+									"Event0",
+									"Event1",
+								},
 								AttributeMap: map[string]string{
-									"net.app.protocol.name":    "net.protocol.name",
-									"net.app.protocol.version": "net.protocol.version",
+									"foo": "bar",
+								},
+							},
+						},
+						{
+							RenameAttributes: &ast10.RenameSpanEventAttributes{
+								AttributeMap: map[string]string{
+									"bar": "foo",
 								},
 							},
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.21.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
+				Logs: ast10.Logs{
+					Changes: []ast10.LogsChange{
 						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
+							RenameAttributes: &ast10.RenameAttributes{
 								AttributeMap: map[string]string{
-									"messaging.kafka.client_id":    "messaging.client_id",
-									"messaging.rocketmq.client_id": "messaging.client_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"http.client_ip":     "client.address",
-									"net.host.name":      "server.address",
-									"net.host.port":      "server.port",
-									"net.sock.host.addr": "server.socket.address",
-									"net.sock.host.port": "server.socket.port",
-									"net.sock.peer.name": "server.socket.domain",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"net.host.carrier.icc":        "network.carrier.icc",
-									"net.host.carrier.mcc":        "network.carrier.mcc",
-									"net.host.carrier.mnc":        "network.carrier.mnc",
-									"net.host.carrier.name":       "network.carrier.name",
-									"net.host.connection.subtype": "network.connection.subtype",
-									"net.host.connection.type":    "network.connection.type",
-									"net.protocol.name":           "network.protocol.name",
-									"net.protocol.version":        "network.protocol.version",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
-								AttributeMap: map[string]string{
-									"http.method":                  "http.request.method",
-									"http.request_content_length":  "http.request.body.size",
-									"http.response_content_length": "http.response.body.size",
-									"http.scheme":                  "url.scheme",
-									"http.status_code":             "http.response.status_code",
-									"http.url":                     "url.full",
+									"baz": "qux",
+									"foo": "bar",
 								},
 							},
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
 				Metrics: ast.Metrics{
 					Changes: []ast.MetricsChange{
 						{
 							RenameMetrics: map[types10.MetricName]types10.MetricName{
-								"process.runtime.jvm.cpu.utilization": "process.runtime.jvm.cpu.recent_utilization",
+								"utilization": "recent_utilization",
 							},
-							RenameAttributes: &ast10.AttributeMapForMetrics{},
-							Split:            &ast.SplitMetric{},
 						},
-					},
-				},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
 						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
+							RenameMetrics: map[types10.MetricName]types10.MetricName{
+								"foo": "bar",
+							},
+							RenameAttributes: &ast10.AttributeMapForMetrics{
+								ApplyToMetrics: []types10.MetricName{
+									"bar",
+								},
 								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
+									"up": "down",
+								},
+							},
+							Split: &ast.SplitMetric{
+								ApplyToMetric: "old",
+								ByAttribute:   "a",
+								MetricsFromAttributes: map[types10.MetricName]types.AttributeValue{
+									"baz": "qux",
+									"foo": "bar",
 								},
 							},
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
 		},
 	},

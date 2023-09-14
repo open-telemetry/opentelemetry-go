@@ -30,12 +30,24 @@ var Schemas = map[string]*ast.Schema {
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
 		{{- range $ver, $def := .Schema.Versions }}
 			"{{ $ver }}": {
+				{{- if .All.Changes }}
 				All: {{ template "ast10Attributes" $def.All }},
+				{{- end }}
+				{{- if .Resources.Changes }}
 				Resources: {{ template "ast10Attributes" $def.Resources }},
+				{{- end }}
+				{{- if .Spans.Changes }}
 				Spans: {{ template "ast10Spans" $def.Spans }},
+				{{- end }}
+				{{- if .SpanEvents.Changes }}
 				SpanEvents: {{ template "ast10SpanEvents" $def.SpanEvents }},
+				{{- end }}
+				{{- if .Logs.Changes }}
 				Logs: {{ template "ast10Logs" $def.Logs }},
+				{{- end }}
+				{{- if .Metrics.Changes }}
 				Metrics: {{ template "metrics" $def.Metrics }},
+				{{- end }}
 			},
 		{{- end }}
 		},
@@ -69,8 +81,12 @@ var Schemas = map[string]*ast.Schema {
 		{
 			RenameAttributes: &ast10.AttributeMapForSpans{
 			{{- with .RenameAttributes }}
+				{{- if .ApplyToSpans }}
 				ApplyToSpans: {{- template "ast10SpanName" .ApplyToSpans }},
+				{{- end }}
+				{{- if .AttributeMap }}
 				AttributeMap: {{- template "strStrMap" .AttributeMap }},
+				{{- end }}
 			{{- end }}
 			},
 		},
@@ -87,18 +103,28 @@ var Schemas = map[string]*ast.Schema {
 	Changes: []ast10.SpanEventsChange{
 		{{- range .Changes }}
 		{
+			{{- if .RenameEvents }}
 			RenameEvents: &ast10.RenameSpanEvents{
 			{{- with .RenameEvents }}
 				EventNameMap: {{- template "strStrMap" .EventNameMap }},
 			{{- end }}
 			},
+			{{- end }}
+			{{- if .RenameAttributes }}
 			RenameAttributes: &ast10.RenameSpanEventAttributes{
 			{{- with .RenameAttributes }}
+				{{- if .ApplyToSpans }}
 				ApplyToSpans: {{- template "ast10SpanName" .ApplyToSpans }},
-				ApplyToEvents: {{- template "ast10EventName" .ApplyToSpans }},
+				{{- end }}
+				{{- if .ApplyToEvents }}
+				ApplyToEvents: {{- template "ast10EventName" .ApplyToEvents }},
+				{{- end }}
+				{{- if .AttributeMap }}
 				AttributeMap: {{- template "strStrMap" .AttributeMap }},
+				{{- end }}
 			{{- end }}
 			},
+			{{- end }}
 		},
 		{{- end }}
 	},
@@ -132,6 +158,7 @@ var Schemas = map[string]*ast.Schema {
 	Changes: []ast.MetricsChange{
 		{{- range .Changes }}
 		{
+			{{- if .RenameMetrics }}
 			RenameMetrics: map[types10.MetricName]types10.MetricName{
 			{{- with .RenameMetrics }}
 				{{- if . }}
@@ -140,17 +167,26 @@ var Schemas = map[string]*ast.Schema {
 				{{- end }}
 			{{- end }}
 			},
+			{{- end }}
+			{{- if .RenameAttributes }}
 			RenameAttributes: &ast10.AttributeMapForMetrics{
 			{{- with .RenameAttributes }}
 				ApplyToMetrics: {{- template "ast10MetricName" .ApplyToMetrics }},
 				AttributeMap: {{- template "strStrMap" .AttributeMap }},
 			{{- end }}
 			},
+			{{- end }}
+			{{- if .Split }}
 			Split: &ast.SplitMetric{
 			{{- with .Split }}
+				{{- if .ApplyToMetric }}
 				ApplyToMetric: "{{ .ApplyToMetric }}",
+				{{- end }}
+				{{- if .ByAttribute }}
 				ByAttribute: "{{ .ByAttribute }}",
-				MetricsFromAttributes: map[types10.MetricName]types11.AttributeValue{
+				{{- end }}
+				{{- if .MetricsFromAttributes }}
+				MetricsFromAttributes: map[types10.MetricName]types.AttributeValue{
 				{{- with .MetricsFromAttributes }}
 					{{- if . }}
 						{{ range $key, $val := . }}"{{ $key }}": "{{ $val }}",
@@ -158,8 +194,10 @@ var Schemas = map[string]*ast.Schema {
 					{{- end  }}
 				{{- end  }}
 				},
+				{{- end }}
 			{{- end }}
 			},
+			{{- end }}
 		},
 		{{- end }}
 	},
