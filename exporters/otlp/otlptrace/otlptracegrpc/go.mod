@@ -5,10 +5,10 @@ go 1.20
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/stretchr/testify v1.8.4
-	go.opentelemetry.io/otel v1.18.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.18.0
-	go.opentelemetry.io/otel/sdk v1.18.0
-	go.opentelemetry.io/otel/trace v1.18.0
+	go.opentelemetry.io/otel v1.19.0-rc.1
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0-rc.1
+	go.opentelemetry.io/otel/sdk v1.19.0-rc.1
+	go.opentelemetry.io/otel/trace v1.19.0-rc.1
 	go.opentelemetry.io/proto/otlp v1.0.0
 	go.uber.org/goleak v1.2.1
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98
@@ -25,7 +25,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.opentelemetry.io/otel/metric v1.18.0 // indirect
+	go.opentelemetry.io/otel/metric v1.19.0-rc.1 // indirect
 	go.opentelemetry.io/otel/schema v0.0.6 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
