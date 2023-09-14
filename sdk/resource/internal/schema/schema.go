@@ -65,20 +65,7 @@ var Schemas = map[string]*ast.Schema{
 			"1.5.0": {},
 			"1.6.1": {},
 			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.8.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.9.0": {
@@ -89,20 +76,7 @@ var Schemas = map[string]*ast.Schema{
 			"1.5.0": {},
 			"1.6.1": {},
 			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.8.0": {},
 			"1.9.0": {},
 		},
 	},
@@ -115,21 +89,8 @@ var Schemas = map[string]*ast.Schema{
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.11.0": {
@@ -142,21 +103,8 @@ var Schemas = map[string]*ast.Schema{
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.12.0": {
@@ -170,21 +118,8 @@ var Schemas = map[string]*ast.Schema{
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.13.0": {
@@ -194,39 +129,13 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.4.0": {},
-			"1.5.0": {},
-			"1.6.1": {},
-			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.13.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.14.0": {
@@ -236,40 +145,14 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
 			"1.4.0":  {},
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.15.0": {
@@ -279,53 +162,15 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.4.0": {},
-			"1.5.0": {},
-			"1.6.1": {},
-			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.15.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.16.0": {
@@ -335,54 +180,16 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
 			"1.4.0":  {},
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.17.0": {
@@ -392,84 +199,17 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
-			"1.17.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.4.0": {},
-			"1.5.0": {},
-			"1.6.1": {},
-			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.17.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.18.0": {
@@ -479,85 +219,18 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
-			"1.17.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.17.0": {},
 			"1.18.0": {},
 			"1.4.0":  {},
 			"1.5.0":  {},
 			"1.6.1":  {},
 			"1.7.0":  {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.19.0": {
@@ -567,65 +240,11 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
-			"1.17.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.17.0": {},
 			"1.18.0": {},
 			"1.19.0": {
 				Resources: ast10.Attributes{
@@ -639,50 +258,12 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.execution": "faas.invocation_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.id": "cloud.resource_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.user_agent": "user_agent.original",
-								},
-							},
-						},
-					},
-				},
 			},
 			"1.4.0": {},
 			"1.5.0": {},
 			"1.6.1": {},
 			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.8.0": {},
 			"1.9.0": {},
 		},
 	},
@@ -693,65 +274,11 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
-			"1.17.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.17.0": {},
 			"1.18.0": {},
 			"1.19.0": {
 				Resources: ast10.Attributes{
@@ -765,65 +292,14 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.execution": "faas.invocation_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.id": "cloud.resource_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.user_agent": "user_agent.original",
-								},
-							},
-						},
-					},
-				},
 			},
-			"1.20.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.app.protocol.name":    "net.protocol.name",
-									"net.app.protocol.version": "net.protocol.version",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.4.0": {},
-			"1.5.0": {},
-			"1.6.1": {},
-			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.20.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.21.0": {
@@ -833,65 +309,11 @@ var Schemas = map[string]*ast.Schema{
 			"1.10.0": {},
 			"1.11.0": {},
 			"1.12.0": {},
-			"1.13.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.ip": "net.sock.host.addr",
-									"net.peer.ip": "net.sock.peer.addr",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.13.0": {},
 			"1.14.0": {},
-			"1.15.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.retry_count": "http.resend_count",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.15.0": {},
 			"1.16.0": {},
-			"1.17.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.consumer_id":                           "messaging.consumer.id",
-									"messaging.conversation_id":                       "messaging.message.conversation_id",
-									"messaging.destination":                           "messaging.destination.name",
-									"messaging.destination_kind":                      "messaging.destination.kind",
-									"messaging.kafka.consumer_group":                  "messaging.kafka.consumer.group",
-									"messaging.kafka.message_key":                     "messaging.kafka.message.key",
-									"messaging.kafka.partition":                       "messaging.kafka.destination.partition",
-									"messaging.kafka.tombstone":                       "messaging.kafka.message.tombstone",
-									"messaging.message_id":                            "messaging.message.id",
-									"messaging.message_payload_compressed_size_bytes": "messaging.message.payload_compressed_size_bytes",
-									"messaging.message_payload_size_bytes":            "messaging.message.payload_size_bytes",
-									"messaging.protocol":                              "net.app.protocol.name",
-									"messaging.protocol_version":                      "net.app.protocol.version",
-									"messaging.rabbitmq.routing_key":                  "messaging.rabbitmq.destination.routing_key",
-									"messaging.rocketmq.message_keys":                 "messaging.rocketmq.message.keys",
-									"messaging.rocketmq.message_tag":                  "messaging.rocketmq.message.tag",
-									"messaging.rocketmq.message_type":                 "messaging.rocketmq.message.type",
-									"messaging.temp_destination":                      "messaging.destination.temporary",
-								},
-							},
-						},
-					},
-				},
-			},
+			"1.17.0": {},
 			"1.18.0": {},
 			"1.19.0": {
 				Resources: ast10.Attributes{
@@ -905,126 +327,15 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.execution": "faas.invocation_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"faas.id": "cloud.resource_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.user_agent": "user_agent.original",
-								},
-							},
-						},
-					},
-				},
 			},
-			"1.20.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.app.protocol.name":    "net.protocol.name",
-									"net.app.protocol.version": "net.protocol.version",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.21.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"messaging.kafka.client_id":    "messaging.client_id",
-									"messaging.rocketmq.client_id": "messaging.client_id",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.client_ip":     "client.address",
-									"net.host.name":      "server.address",
-									"net.host.port":      "server.port",
-									"net.sock.host.addr": "server.socket.address",
-									"net.sock.host.port": "server.socket.port",
-									"net.sock.peer.name": "server.socket.domain",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"net.host.carrier.icc":        "network.carrier.icc",
-									"net.host.carrier.mcc":        "network.carrier.mcc",
-									"net.host.carrier.mnc":        "network.carrier.mnc",
-									"net.host.carrier.name":       "network.carrier.name",
-									"net.host.connection.subtype": "network.connection.subtype",
-									"net.host.connection.type":    "network.connection.type",
-									"net.protocol.name":           "network.protocol.name",
-									"net.protocol.version":        "network.protocol.version",
-								},
-							},
-						},
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"http.method":                  "http.request.method",
-									"http.request_content_length":  "http.request.body.size",
-									"http.response_content_length": "http.response.body.size",
-									"http.scheme":                  "url.scheme",
-									"http.status_code":             "http.response.status_code",
-									"http.url":                     "url.full",
-								},
-							},
-						},
-					},
-				},
-				Metrics: ast.Metrics{
-					Changes: []ast.MetricsChange{
-						{
-							RenameMetrics: map[types10.MetricName]types10.MetricName{
-								"process.runtime.jvm.cpu.utilization": "process.runtime.jvm.cpu.recent_utilization",
-							},
-						},
-					},
-				},
-			},
-			"1.4.0": {},
-			"1.5.0": {},
-			"1.6.1": {},
-			"1.7.0": {},
-			"1.8.0": {
-				Spans: ast10.Spans{
-					Changes: []ast10.SpansChange{
-						{
-							RenameAttributes: &ast10.AttributeMapForSpans{
-								AttributeMap: map[string]string{
-									"db.cassandra.keyspace": "db.name",
-									"db.hbase.namespace":    "db.name",
-								},
-							},
-						},
-					},
-				},
-			},
-			"1.9.0": {},
+			"1.20.0": {},
+			"1.21.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
+			"1.8.0":  {},
+			"1.9.0":  {},
 		},
 	},
 }
