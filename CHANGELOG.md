@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Allow '/' characters in metric instrument names. (#4501)
 
+### Fixed
+
+- In `go.opentelemetry.op/otel/exporters/prometheus`, don't try to create the prometheus metric on every `Collect` if we know the scope is invalid. (#4499)
+
 ## [1.18.0/0.41.0/0.0.6] 2023-09-12
 
 This release drops the compatibility guarantee of [Go 1.19].
@@ -37,10 +41,6 @@ This release drops the compatibility guarantee of [Go 1.19].
 - Removed the deprecated `go.opentelemetry.io/otel/sdk/metric/aggregation` package. (#4468)
 - Removed the deprecated internal packages in `go.opentelemetry.io/otel/exporters/otlp` and its sub-packages. (#4469)
 - Dropped guaranteed support for versions of Go less than 1.20. (#4481)
-
-### Fixed
-
-- In `go.opentelemetry.op/otel/exporters/prometheus`, don't try to create the prometheus metric on every `Collect` if we know the scope is invalid. (#4499)
 
 ## [1.17.0/0.40.0/0.0.5] 2023-08-28
 
