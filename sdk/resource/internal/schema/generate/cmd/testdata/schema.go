@@ -17,7 +17,6 @@ package schema
 
 import (
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
-	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
