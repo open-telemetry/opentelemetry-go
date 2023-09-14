@@ -23,7 +23,6 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	writer              io.Writer
 	prettyPrint         bool
 	encoder             *encoderHolder
 	temporalitySelector metric.TemporalitySelector
@@ -38,16 +37,15 @@ func newConfig(options ...Option) config {
 		cfg = opt.apply(cfg)
 	}
 
-	if cfg.writer == nil {
-		cfg.writer = os.Stdout
+	if cfg.encoder == nil {
+		enc := json.NewEncoder(os.Stdout)
+		cfg.encoder = &encoderHolder{encoder: enc}
 	}
 
-	if cfg.encoder == nil {
-		enc := json.NewEncoder(cfg.writer)
-		if cfg.prettyPrint {
-			enc.SetIndent("", "\t")
+	if cfg.prettyPrint {
+		if e, ok := cfg.encoder.encoder.(*json.Encoder); ok {
+			e.SetIndent("", "\t")
 		}
-		cfg.encoder = &encoderHolder{encoder: enc}
 	}
 
 	if cfg.temporalitySelector == nil {
@@ -86,10 +84,7 @@ func WithEncoder(encoder Encoder) Option {
 // WithWriter sets the export stream destination.
 // If `WithEncoder` is also used, this option will have no effect.
 func WithWriter(w io.Writer) Option {
-	return optionFunc(func(c config) config {
-		c.writer = w
-		return c
-	})
+	return WithEncoder(json.NewEncoder(w))
 }
 
 // WithPrettyPrint sets the export stream format to use JSON.
