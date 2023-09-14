@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource/internal/schema"
-	"go.opentelemetry.io/otel/sdk/resource/internal/schema/resconv"
 )
 
 // Resource describes an entity about which identifying information
@@ -238,7 +237,7 @@ func upgradeResource(schemaURL string, r *Resource) (*Resource, error) {
 		return nil, fmt.Errorf("%w: %s", errUnknownSchema, schemaURL)
 	}
 	attrs := r.Attributes()
-	if err := resconv.Upgrade(s, attrs); err != nil {
+	if err := schema.Upgrade(s, r.SchemaURL(), attrs); err != nil {
 		return nil, err
 	}
 	return NewWithAttributes(schemaURL, attrs...), nil

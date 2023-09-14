@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resconv // import "go.opentelemetry.io/otel/sdk/resource/internal/schema/resconv"
+package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 
 import (
 	"fmt"
@@ -26,16 +26,26 @@ import (
 	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
-// Upgrade upgrades attrs in place with schema.
-func Upgrade(schema *ast.Schema, attrs []attribute.KeyValue) error {
-	vers, err := versions(schema, nil, false)
+// Upgrade upgrades attrs in place. The upgrade will be done from the schemaURL
+// version to the target schemaURL version using the schema translations
+// defined in target.
+//
+// If schemaURL is version already greater than target, no upgrade will be
+// performed on attrs.
+func Upgrade(target *ast.Schema, schemaURL string, attrs []attribute.KeyValue) error {
+	min, err := Version(schemaURL)
+	if err != nil {
+		return err
+	}
+
+	vers, err := versions(target, min)
 	if err != nil {
 		return fmt.Errorf("upgrade error: %w", err)
 	}
 
 	a := newAttributes(attrs)
 	for _, v := range vers {
-		vDef, ok := schema.Versions[v]
+		vDef, ok := target.Versions[v]
 		if !ok {
 			return fmt.Errorf("upgrade error: version parsing: %s", v)
 		}
@@ -63,7 +73,7 @@ func (e *errTelemetryVer) Error() string {
 }
 
 // versions returns the sorted versions contained in schema.
-func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.TelemetryVersion, error) { // nolint:revive  // reverse controls a reversal.
+func versions(schema *ast.Schema, min *semver.Version) ([]types.TelemetryVersion, error) {
 	// The transformations specified in each version are applied one by one.
 	// Order the versions to ensure correct application.
 	versions := make([]*semver.Version, 0, len(schema.Versions))
@@ -76,9 +86,6 @@ func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.Te
 	}
 
 	var sIface sort.Interface = semver.Collection(versions)
-	if reverse {
-		sIface = sort.Reverse(sIface)
-	}
 	sort.Sort(sIface)
 
 	out := make([]types.TelemetryVersion, 0, len(versions))
@@ -86,7 +93,7 @@ func versions(schema *ast.Schema, min *semver.Version, reverse bool) ([]types.Te
 		if min != nil && min.GreaterThan(v) {
 			continue
 		}
-		out = append(out, types.TelemetryVersion(v.String()))
+		out = append(out, types.TelemetryVersion(v.Original()))
 	}
 	return out, nil
 }
@@ -115,20 +122,18 @@ func (a *attributes) init() {
 	}
 }
 
-func (a *attributes) ReplaceKey(orig, repl string) {
-	if a.index == nil {
-		a.init()
-	}
-
-	i, ok := a.index[orig]
-	if !ok {
-		return
-	}
-	delete(a.index, orig)
-	a.underlying[i].Key = attribute.Key(repl)
-	a.index[repl] = i
-}
-
 func (a *attributes) RenameFunc() func(string, string) {
-	return func(orig, repl string) { a.ReplaceKey(orig, repl) }
+	return func(orig, repl string) {
+		if a.index == nil {
+			a.init()
+		}
+
+		i, ok := a.index[orig]
+		if !ok {
+			return
+		}
+		delete(a.index, orig)
+		a.underlying[i].Key = attribute.Key(repl)
+		a.index[repl] = i
+	}
 }

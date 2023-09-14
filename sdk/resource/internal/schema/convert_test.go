@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resconv
+package schema
 
 import (
 	"testing"
@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
-var schema = &ast.Schema{
+var testSchema = &ast.Schema{
 	FileFormat: "1.1.0",
 	SchemaURL:  "https://opentelemetry.io/schemas/1.3.0",
 	Versions: map[types.TelemetryVersion]ast.VersionDef{
@@ -103,7 +103,7 @@ func v3Attr() []attribute.KeyValue {
 
 func TestUpgrade(t *testing.T) {
 	attr := v0Attr()
-	err := Upgrade(schema, attr)
+	err := Upgrade(testSchema, "https://opentelemetry.io/schemas/1.0.0", attr)
 	require.NoError(t, err)
 	assert.Equal(t, v3Attr(), attr)
 }
@@ -112,7 +112,7 @@ func TestInvalidTelemetryVersion(t *testing.T) {
 	s := &ast.Schema{
 		Versions: map[types.TelemetryVersion]ast.VersionDef{"invalid": {}},
 	}
-	err := Upgrade(s, nil)
+	err := Upgrade(s, "https://opentelemetry.io/schemas/1.0.0", nil)
 	var target *errTelemetryVer
 	assert.ErrorAs(t, err, &target)
 }
