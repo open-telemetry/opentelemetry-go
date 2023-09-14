@@ -27,150 +27,49 @@ var Schemas = map[string]*ast.Schema{
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.4.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.5.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.5.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.6.1": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.6.1",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.7.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.7.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.8.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.8.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -179,9 +78,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
 		},
 	},
@@ -189,46 +85,15 @@ var Schemas = map[string]*ast.Schema{
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.9.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -237,72 +102,24 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.10.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.10.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -311,80 +128,25 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.11.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.11.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -393,88 +155,26 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.12.0": {
 		FileFormat: "1.0.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.12.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -483,56 +183,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.13.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.13.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -541,50 +207,16 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -593,56 +225,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.14.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.14.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -651,58 +249,17 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -711,56 +268,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.15.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.15.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -769,26 +292,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -796,50 +306,16 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -848,56 +324,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.16.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.16.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -906,26 +348,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -933,58 +362,17 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -993,56 +381,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.17.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.17.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -1051,26 +405,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -1078,26 +419,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
 			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.consumer_id":                           "messaging.consumer.id",
 									"messaging.conversation_id":                       "messaging.message.conversation_id",
@@ -1122,50 +450,16 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -1174,56 +468,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.18.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.18.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -1232,26 +492,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -1259,26 +506,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
 			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.consumer_id":                           "messaging.consumer.id",
 									"messaging.conversation_id":                       "messaging.message.conversation_id",
@@ -1303,58 +537,17 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.18.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.18.0": {},
+			"1.4.0":  {},
+			"1.5.0":  {},
+			"1.6.1":  {},
+			"1.7.0":  {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -1363,56 +556,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.19.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.19.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -1421,26 +580,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -1448,26 +594,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
 			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.consumer_id":                           "messaging.consumer.id",
 									"messaging.conversation_id":                       "messaging.message.conversation_id",
@@ -1492,20 +625,9 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.18.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.18.0": {},
 			"1.19.0": {
-				All: ast10.Attributes{},
 				Resources: ast10.Attributes{
 					Changes: []ast10.AttributeChange{
 						{
@@ -1521,7 +643,6 @@ var Schemas = map[string]*ast.Schema{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.execution": "faas.invocation_id",
 								},
@@ -1529,7 +650,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.id": "cloud.resource_id",
 								},
@@ -1537,7 +657,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.user_agent": "user_agent.original",
 								},
@@ -1545,50 +664,16 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -1597,56 +682,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.20.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.20.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -1655,26 +706,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -1682,26 +720,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
 			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.consumer_id":                           "messaging.consumer.id",
 									"messaging.conversation_id":                       "messaging.message.conversation_id",
@@ -1726,20 +751,9 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.18.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.18.0": {},
 			"1.19.0": {
-				All: ast10.Attributes{},
 				Resources: ast10.Attributes{
 					Changes: []ast10.AttributeChange{
 						{
@@ -1755,7 +769,6 @@ var Schemas = map[string]*ast.Schema{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.execution": "faas.invocation_id",
 								},
@@ -1763,7 +776,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.id": "cloud.resource_id",
 								},
@@ -1771,7 +783,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.user_agent": "user_agent.original",
 								},
@@ -1779,18 +790,12 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
 			"1.20.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.app.protocol.name":    "net.protocol.name",
 									"net.app.protocol.version": "net.protocol.version",
@@ -1799,50 +804,16 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -1851,56 +822,22 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 	"https://opentelemetry.io/schemas/1.21.0": {
 		FileFormat: "1.1.0",
 		SchemaURL:  "https://opentelemetry.io/schemas/1.21.0",
 		Versions: map[types.TelemetryVersion]ast.VersionDef{
-			"1.10.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.11.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.12.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.10.0": {},
+			"1.11.0": {},
+			"1.12.0": {},
 			"1.13.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.ip": "net.sock.host.addr",
 									"net.peer.ip": "net.sock.peer.addr",
@@ -1909,26 +846,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.14.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.14.0": {},
 			"1.15.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.retry_count": "http.resend_count",
 								},
@@ -1936,26 +860,13 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.16.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.16.0": {},
 			"1.17.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.consumer_id":                           "messaging.consumer.id",
 									"messaging.conversation_id":                       "messaging.message.conversation_id",
@@ -1980,20 +891,9 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.18.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.18.0": {},
 			"1.19.0": {
-				All: ast10.Attributes{},
 				Resources: ast10.Attributes{
 					Changes: []ast10.AttributeChange{
 						{
@@ -2009,7 +909,6 @@ var Schemas = map[string]*ast.Schema{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.execution": "faas.invocation_id",
 								},
@@ -2017,7 +916,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"faas.id": "cloud.resource_id",
 								},
@@ -2025,7 +923,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.user_agent": "user_agent.original",
 								},
@@ -2033,18 +930,12 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
 			"1.20.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.app.protocol.name":    "net.protocol.name",
 									"net.app.protocol.version": "net.protocol.version",
@@ -2053,18 +944,12 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
 			"1.21.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"messaging.kafka.client_id":    "messaging.client_id",
 									"messaging.rocketmq.client_id": "messaging.client_id",
@@ -2073,7 +958,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.client_ip":     "client.address",
 									"net.host.name":      "server.address",
@@ -2086,7 +970,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"net.host.carrier.icc":        "network.carrier.icc",
 									"net.host.carrier.mcc":        "network.carrier.mcc",
@@ -2101,7 +984,6 @@ var Schemas = map[string]*ast.Schema{
 						},
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"http.method":                  "http.request.method",
 									"http.request_content_length":  "http.request.body.size",
@@ -2114,60 +996,25 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
 				Metrics: ast.Metrics{
 					Changes: []ast.MetricsChange{
 						{
 							RenameMetrics: map[types10.MetricName]types10.MetricName{
 								"process.runtime.jvm.cpu.utilization": "process.runtime.jvm.cpu.recent_utilization",
 							},
-							RenameAttributes: &ast10.AttributeMapForMetrics{},
-							Split:            &ast.SplitMetric{},
 						},
 					},
 				},
 			},
-			"1.4.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.5.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.6.1": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
-			"1.7.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.4.0": {},
+			"1.5.0": {},
+			"1.6.1": {},
+			"1.7.0": {},
 			"1.8.0": {
-				All:       ast10.Attributes{},
-				Resources: ast10.Attributes{},
 				Spans: ast10.Spans{
 					Changes: []ast10.SpansChange{
 						{
 							RenameAttributes: &ast10.AttributeMapForSpans{
-								ApplyToSpans: []types10.SpanName{},
 								AttributeMap: map[string]string{
 									"db.cassandra.keyspace": "db.name",
 									"db.hbase.namespace":    "db.name",
@@ -2176,18 +1023,8 @@ var Schemas = map[string]*ast.Schema{
 						},
 					},
 				},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
 			},
-			"1.9.0": {
-				All:        ast10.Attributes{},
-				Resources:  ast10.Attributes{},
-				Spans:      ast10.Spans{},
-				SpanEvents: ast10.SpanEvents{},
-				Logs:       ast10.Logs{},
-				Metrics:    ast.Metrics{},
-			},
+			"1.9.0": {},
 		},
 	},
 }
