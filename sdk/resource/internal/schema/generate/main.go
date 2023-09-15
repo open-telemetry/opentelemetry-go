@@ -21,7 +21,7 @@ import (
 
 	sUtil "go.opentelemetry.io/otel/schema/v1.1"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
-	"go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
+	cmd "go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/render"
 )
 
 const schema = "schema/schema.yaml"
