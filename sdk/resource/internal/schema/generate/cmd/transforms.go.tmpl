@@ -16,38 +16,34 @@
 package schema
 
 import (
-	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
-	"go.opentelemetry.io/otel/schema/v1.1/ast"
-	"go.opentelemetry.io/otel/schema/v1.1/types"
+	"github.com/Masterminds/semver/v3"
+	"go.opentelemetry.io/otel/schema/v1.0/ast"
 )
 
-var Schemas = map[string]*ast.Schema {
+var transforms = []transform{
 {{- range . }}
-	"{{ .Schema.SchemaURL }}": {
-		FileFormat: "{{ .Schema.FileFormat }}",
-		SchemaURL: "{{ .Schema.SchemaURL }}",
-		Versions: map[types.TelemetryVersion]ast.VersionDef{
-		{{- range $ver, $def := .Schema.Versions }}
-			"{{ $ver }}": {
-				{{- if .All.Changes }}
-				All: {{ template "ast10Attributes" $def.All }},
-				{{- end }}
-				{{- if .Resources.Changes }}
-				Resources: {{ template "ast10Attributes" $def.Resources }},
-				{{- end }}
-			},
+	{{- if or (.All.Changes) (.Resources.Changes) }}
+	{
+		Version: semver.New({{ .Version.Major }}, {{ .Version.Minor }}, {{ .Version.Patch }}, "{{ .Version.Prerelease }}", "{{ .Version.Metadata }}"),
+		{{- if .All.Changes }}
+		All: {{ template "astAttributes" .All }},
 		{{- end }}
-		},
+		{{- if .Resources.Changes }}
+		Resources: {{ template "astAttributes" .Resources }},
+		{{- end }}
 	},
+	{{- else }}
+	{Version: semver.New({{ .Version.Major }}, {{ .Version.Minor }}, {{ .Version.Patch }}, "{{ .Version.Prerelease }}", "{{ .Version.Metadata }}")},
+	{{- end }}
 {{- end }}
 }
 
-{{- define "ast10Attributes" }}ast10.Attributes{
+{{- define "astAttributes" }}ast.Attributes{
 	{{- if .Changes }}
-	Changes: []ast10.AttributeChange{
+	Changes: []ast.AttributeChange{
 		{{- range .Changes }}
 		{
-			RenameAttributes: &ast10.RenameAttributes{
+			RenameAttributes: &ast.RenameAttributes{
 			{{- with .RenameAttributes }}
 				AttributeMap: {{- template "strStrMap" .AttributeMap }},
 			{{- end }}

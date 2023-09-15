@@ -23,9 +23,9 @@ import (
 )
 
 // Template source.
-const src = "schema.go.tmpl"
+const src = "transforms.go.tmpl"
 
-//go:embed schema.go.tmpl
+//go:embed transforms.go.tmpl
 var tmpl embed.FS
 
 func render(dest io.Writer, data any) error {

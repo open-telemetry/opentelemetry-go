@@ -16,4 +16,4 @@
 // resource schemas.
 package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 
-//go:generate go run go.opentelemetry.io/otel/sdk/resource/internal/schema/generate ./schema.go
+//go:generate go run go.opentelemetry.io/otel/sdk/resource/internal/schema/generate ./transforms.go

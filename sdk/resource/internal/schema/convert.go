@@ -18,7 +18,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/otel/attribute"
-	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
+	"go.opentelemetry.io/otel/schema/v1.0/ast"
 )
 
 // Upgrade upgrades attrs in place. The upgrade will be done from the schemaURL
@@ -53,8 +53,8 @@ func upgrade(tforms []transform, attrs []attribute.KeyValue) error {
 
 type transform struct {
 	Version   *semver.Version
-	All       ast10.Attributes
-	Resources ast10.Attributes
+	All       ast.Attributes
+	Resources ast.Attributes
 }
 
 func slice(tforms []transform, min, max *semver.Version) []transform {

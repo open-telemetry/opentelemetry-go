@@ -15,80 +15,52 @@
 package cmd // import "go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
-	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
+	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	sUtil "go.opentelemetry.io/otel/schema/v1.1"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
+	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
-var schemaURLs = []string{
-	"https://opentelemetry.io/schemas/1.21.0",
-	"https://opentelemetry.io/schemas/1.20.0",
-	"https://opentelemetry.io/schemas/1.19.0",
-	"https://opentelemetry.io/schemas/1.18.0",
-	"https://opentelemetry.io/schemas/1.17.0",
-	"https://opentelemetry.io/schemas/1.16.0",
-	"https://opentelemetry.io/schemas/1.15.0",
-	"https://opentelemetry.io/schemas/1.14.0",
-	"https://opentelemetry.io/schemas/1.13.0",
-	"https://opentelemetry.io/schemas/1.12.0",
-	"https://opentelemetry.io/schemas/1.11.0",
-	"https://opentelemetry.io/schemas/1.10.0",
-	"https://opentelemetry.io/schemas/1.9.0",
-	"https://opentelemetry.io/schemas/1.8.0",
-	"https://opentelemetry.io/schemas/1.7.0",
-	"https://opentelemetry.io/schemas/1.6.1",
-	// Does not exist: "https://opentelemetry.io/schemas/1.6.0"
-	"https://opentelemetry.io/schemas/1.5.0",
-	"https://opentelemetry.io/schemas/1.4.0",
-	// Does not exist: "https://opentelemetry.io/schemas/1.3.0"
-	// Does not exist: "https://opentelemetry.io/schemas/1.2.0"
-	// Does not exist: "https://opentelemetry.io/schemas/1.1.0"
-	// Does not exist: "https://opentelemetry.io/schemas/1.0.1"
-	// Does not exist: "https://opentelemetry.io/schemas/1.0.0"
-	// Does not exist: "https://opentelemetry.io/schemas/0.7.0"
-	// Does not exist: "https://opentelemetry.io/schemas/0.6.0"
-	// Does not exist: "https://opentelemetry.io/schemas/0.5.0"
-	// Does not exist: "https://opentelemetry.io/schemas/0.4.0"
-	// Does not exist: "https://opentelemetry.io/schemas/0.3"
-	// Does not exist: "https://opentelemetry.io/schemas/0.2"
-	// Does not exist: "https://opentelemetry.io/schemas/0.1"
-}
+var schemaURL = "https://opentelemetry.io/schemas/1.21.0"
 
 type entry struct {
-	Version *semver.Version
-	Schema  *ast.Schema
+	Version   *semver.Version
+	All       ast10.Attributes
+	Resources ast10.Attributes
 }
 
-func newEntry(s *ast.Schema) (entry, error) {
+func newEntry(ver types.TelemetryVersion, def ast.VersionDef) (entry, error) {
+	v, err := semver.NewVersion(string(ver))
+	return entry{
+		Version:   v,
+		All:       def.All,
+		Resources: def.Resources,
+	}, err
+}
+
+func entries(s *ast.Schema) ([]entry, error) {
 	if s == nil {
-		return entry{}, errors.New("nil schema")
+		return nil, nil
 	}
 
-	// https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md#schema-url
-	u, err := url.Parse(s.SchemaURL)
-	if err != nil {
-		return entry{}, fmt.Errorf("invalid schema URL %q: %w", s.SchemaURL, err)
+	es := make([]entry, 0, len(s.Versions))
+	for v, def := range s.Versions {
+		e, err := newEntry(v, def)
+		if err != nil {
+			return nil, err
+		}
+
+		es = append(es, e)
 	}
 
-	verStr := u.Path[strings.LastIndex(u.Path, "/")+1:]
-	ver, err := semver.NewVersion(verStr)
-	if err != nil {
-		return entry{}, fmt.Errorf("invalid schema URL version %q: %w", verStr, err)
-	}
-
-	return entry{Version: ver, Schema: s}, nil
+	return es, nil
 }
 
 func load(local string) (any, error) {
@@ -112,61 +84,34 @@ func load(local string) (any, error) {
 }
 
 func loadLocal(local string) (data []entry, err error) {
-	const suffix = ".yaml"
-	err = filepath.WalkDir(local, func(p string, _ fs.DirEntry, err error) error {
-		if err != nil || path.Ext(p) != suffix {
-			return err
-		}
+	f, err := os.Open(local)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 
-		f, err := os.Open(p)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		s, err := sUtil.Parse(f)
-		if err != nil {
-			return err
-		}
-
-		e, err := newEntry(s)
-		if err != nil {
-			return err
-		}
-
-		data = append(data, e)
-		return nil
-	})
-	return data, err
+	s, err := sUtil.Parse(f)
+	if err != nil {
+		return nil, err
+	}
+	return entries(s)
 }
 
 func loadRemote() (data []entry, err error) {
-	var e entry
-	for _, u := range schemaURLs {
-		e, err = download(u)
-		if err != nil {
-			return data, fmt.Errorf("failed to download %q: %w", u, err)
-		}
-		data = append(data, e)
-	}
-	return data, nil
-}
-
-func download(u string) (entry, error) {
-	resp, err := http.Get(u)
+	resp, err := http.Get(schemaURL)
 	if err != nil {
-		return entry{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return entry{}, fmt.Errorf("request error: %d", resp.StatusCode)
+		return nil, fmt.Errorf("request error: %d", resp.StatusCode)
 	}
 
 	s, err := sUtil.Parse(resp.Body)
 	if err != nil {
-		return entry{}, err
+		return nil, err
 	}
 
-	return newEntry(s)
+	return entries(s)
 }
