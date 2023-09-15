@@ -19,6 +19,8 @@ import (
 	"os"
 )
 
+// Run runs the loads the OpenTelemetry schema and renders the appropriate code
+// to dest.
 func Run(dest, local string) error {
 	f, err := os.Create(dest)
 	if err != nil {
