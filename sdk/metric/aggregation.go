@@ -48,8 +48,8 @@ func (AggregationDrop) err() error { return nil }
 // make an aggregation selection based on instrument kind that differs from
 // the default. This Aggregation ensures the default is used.
 //
-// See the "go.opentelemetry.io/otel/sdk/metric".DefaultAggregationSelector
-// for information about the default instrument kind selection mapping.
+// See the [DefaultAggregationSelector] for information about the default
+// instrument kind selection mapping.
 type AggregationDefault struct{} // AggregationDefault has no parameters.
 
 var _ Aggregation = AggregationDefault{}
