@@ -34,18 +34,18 @@ func TestRender(t *testing.T) {
 	s, err := sUtil.Parse(schemaF)
 	require.NoError(t, err)
 
-	wantF, err := os.Open("./testdata/schema.go")
+	wantF, err := os.Open("./testdata/transforms.go")
 	require.NoError(t, err)
 
 	var want bytes.Buffer
 	_, err = io.Copy(&want, wantF)
 	require.NoError(t, err)
 
-	e, err := newEntry(s)
+	e, err := entries(s)
 	require.NoError(t, err)
 
 	var got bytes.Buffer
-	require.NoError(t, render(&got, []entry{e}))
+	require.NoError(t, render(&got, e))
 
 	assert.Equal(t, want.String(), got.String())
 }

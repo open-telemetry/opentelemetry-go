@@ -60,6 +60,10 @@ func entries(s *ast.Schema) ([]entry, error) {
 		es = append(es, e)
 	}
 
+	sort.Slice(es, func(i, j int) bool {
+		return es[i].Version.LessThan(es[j].Version)
+	})
+
 	return es, nil
 }
 
@@ -77,9 +81,6 @@ func load(local string) (any, error) {
 		return nil, err
 	}
 
-	sort.SliceStable(data, func(i, j int) bool {
-		return data[i].Version.LessThan(data[j].Version)
-	})
 	return data, nil
 }
 
