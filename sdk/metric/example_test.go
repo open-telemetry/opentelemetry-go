@@ -85,6 +85,8 @@ func ExampleView() {
 
 	re := regexp.MustCompile(`[._](ms|byte)$`)
 	var view metric.View = func(i metric.Instrument) (metric.Stream, bool) {
+		// In a custom View function, you need to explicitly copy
+		// the name, description, and unit.
 		s := metric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
 		// Any instrument that does not have a unit suffix defined, but has a
 		// dimensional unit defined, update the name with a unit suffix.
