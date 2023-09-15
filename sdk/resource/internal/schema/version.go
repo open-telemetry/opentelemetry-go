@@ -15,6 +15,7 @@
 package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -22,38 +23,27 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-func GreatestVersion(schemaURLs ...string) (string, error) {
-	greatest := struct {
-		Version *semver.Version
-		URL     string
-	}{}
-	var invalid []string
-	for _, u := range schemaURLs {
-		v, err := version(u)
-		if err != nil {
-			invalid = append(invalid, u)
-			continue
-		}
+var errInvalid = errors.New("invalid schema URL")
 
-		if greatest.Version == nil || greatest.Version.LessThan(v) {
-			greatest.Version = v
-			greatest.URL = u
-		}
+func Version(schemaURL string) (*semver.Version, error) {
+	if schemaURL == "" {
+		return nil, fmt.Errorf("%w: empty", errInvalid)
 	}
 
-	var err error
-	if len(invalid) > 0 {
-		err = fmt.Errorf("invalid schema URL: %v", invalid)
-	}
-	return greatest.URL, err
-}
-
-func version(schemaURL string) (*semver.Version, error) {
 	// https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md#schema-url
 	u, err := url.Parse(schemaURL)
 	if err != nil {
 		return nil, err
 	}
 
-	return semver.NewVersion(u.Path[strings.LastIndex(u.Path, "/")+1:])
+	if h := u.Hostname(); h != "opentelemetry.io" {
+		return nil, fmt.Errorf("%w: host not \"opentelemetry.io\": %s", errInvalid, h)
+	}
+
+	i := strings.LastIndex(u.Path, "/") + 1
+	if p := u.Path[:i]; p != "/schemas" {
+		return nil, fmt.Errorf("%w: path not \"/schemas\": %s", errInvalid, p)
+	}
+
+	return semver.NewVersion(u.Path[i:])
 }

@@ -16,8 +16,6 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -188,21 +186,28 @@ func Merge(a, b *Resource) (*Resource, error) {
 	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
 	default:
-		var err error
-		schemaURL, err = schema.GreatestVersion(a.schemaURL, b.SchemaURL())
+		aVer, err := schema.Version(a.schemaURL)
 		if err != nil {
 			return Empty(), err
 		}
-		if a.schemaURL != schemaURL {
-			a, err = upgradeResource(schemaURL, a)
-			if err != nil {
+
+		bVer, err := schema.Version(b.SchemaURL())
+		if err != nil {
+			return Empty(), err
+		}
+
+		if aVer.LessThan(bVer) {
+			attrs := a.Attributes()
+			if err := schema.Upgrade(aVer, bVer, attrs); err != nil {
 				return Empty(), err
 			}
+			a = NewWithAttributes(a.schemaURL, attrs...)
 		} else {
-			b, err = upgradeResource(schemaURL, b)
-			if err != nil {
+			attrs := b.Attributes()
+			if err := schema.Upgrade(bVer, aVer, attrs); err != nil {
 				return Empty(), err
 			}
+			b = NewWithAttributes(b.schemaURL, attrs...)
 		}
 	}
 
@@ -215,32 +220,6 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
 	return merged, nil
-}
-
-var errUnknownSchema = errors.New("unknown schema")
-
-// upgradeResource returns a copy of orig with the schema URL set to schemaURL
-// and all attributes transformed based on the associated schema. If the schema
-// transformation fails an error is returned.
-func upgradeResource(schemaURL string, r *Resource) (*Resource, error) {
-	if r == nil || r.Len() == 0 {
-		return NewWithAttributes(schemaURL), nil
-	}
-
-	if r.SchemaURL() == schemaURL {
-		// Resources are immutable, just return the ptr to the same value.
-		return r, nil
-	}
-
-	s, ok := schema.Schemas[schemaURL]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", errUnknownSchema, schemaURL)
-	}
-	attrs := r.Attributes()
-	if err := schema.Upgrade(s, r.SchemaURL(), attrs); err != nil {
-		return nil, err
-	}
-	return NewWithAttributes(schemaURL, attrs...), nil
 }
 
 // Empty returns an instance of Resource with no attributes. It is
