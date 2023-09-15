@@ -220,3 +220,23 @@ func ExampleNewView_wildcard() {
 	// name: computation.time.ms
 	// unit: ms
 }
+
+func ExampleNewView_exponentialHistogram() {
+	// Create a view that makes the "latency" instrument
+	// to be reported as an exponential histogram.
+	view := metric.NewView(
+		metric.Instrument{
+			Name:  "latency",
+			Scope: instrumentation.Scope{Name: "http"},
+		},
+		metric.Stream{
+			Aggregation: metric.AggregationBase2ExponentialHistogram{},
+		},
+	)
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+}
