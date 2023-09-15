@@ -36,8 +36,8 @@ const src = "transforms.go.tmpl"
 //go:embed transforms.go.tmpl
 var tmpl embed.FS
 
-// Run renders the passed Schema into the formatted code at dest.
-func Run(dest string, s *ast.Schema) error {
+// Render renders the passed Schema into the formatted code at dest.
+func Render(dest string, s *ast.Schema) error {
 	f, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to open destination %q: %w", dest, err)

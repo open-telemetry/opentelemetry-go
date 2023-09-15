@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf("failed to load schema: %s", err)
 	}
 
-	if err := cmd.Run(dest, s); err != nil {
+	if err := cmd.Render(dest, s); err != nil {
 		log.Fatal(err)
 	}
 }
