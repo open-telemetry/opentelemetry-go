@@ -184,3 +184,25 @@ func TestAttributes(t *testing.T) {
 		attribute.Bool("bar", false),
 	}, attr)
 }
+
+func TestVersionErrors(t *testing.T) {
+	schemaURLs := []string{
+		"",
+		"not a valid URL: 🌭",
+		"https://invalid.host/schemas/1.21.0",
+		"https://opentelemetry.io/invalid/path/1.21.0",
+		"https://opentelemetry.io/schemas/invalid_version",
+	}
+
+	for _, u := range schemaURLs {
+		_, err := Version(u)
+		assert.Errorf(t, err, "schema URL: %q", u)
+	}
+}
+
+func TestVersion(t *testing.T) {
+	schemaURL := "https://opentelemetry.io/schemas/1.21.0"
+	got, err := Version(schemaURL)
+	require.NoError(t, err)
+	assert.Equal(t, "1.21.0", got.Original())
+}

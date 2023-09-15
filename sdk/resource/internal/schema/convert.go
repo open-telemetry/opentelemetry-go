@@ -19,11 +19,41 @@ package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 //go:generate go run go.opentelemetry.io/otel/sdk/resource/internal/schema/generate ./transforms.go
 
 import (
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/schema/v1.0/ast"
 )
+
+var errInvalid = errors.New("invalid schema URL")
+
+func Version(schemaURL string) (*semver.Version, error) {
+	if schemaURL == "" {
+		return nil, fmt.Errorf("%w: empty", errInvalid)
+	}
+
+	// https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md#schema-url
+	u, err := url.Parse(schemaURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if h := u.Hostname(); h != "opentelemetry.io" {
+		return nil, fmt.Errorf("%w: host not \"opentelemetry.io\": %s", errInvalid, h)
+	}
+
+	i := strings.LastIndex(u.Path, "/")
+	if p := u.Path[:i]; p != "/schemas" {
+		return nil, fmt.Errorf("%w: path not \"/schemas\": %s", errInvalid, p)
+	}
+
+	return semver.NewVersion(u.Path[i+1:])
+}
 
 // Upgrade upgrades attrs in place. The upgrade will be done from the schemaURL
 // version to the target schemaURL version using the schema translations
