@@ -40,10 +40,10 @@ func Version(schemaURL string) (*semver.Version, error) {
 		return nil, fmt.Errorf("%w: host not \"opentelemetry.io\": %s", errInvalid, h)
 	}
 
-	i := strings.LastIndex(u.Path, "/") + 1
+	i := strings.LastIndex(u.Path, "/")
 	if p := u.Path[:i]; p != "/schemas" {
 		return nil, fmt.Errorf("%w: path not \"/schemas\": %s", errInvalid, p)
 	}
 
-	return semver.NewVersion(u.Path[i:])
+	return semver.NewVersion(u.Path[i+1:])
 }
