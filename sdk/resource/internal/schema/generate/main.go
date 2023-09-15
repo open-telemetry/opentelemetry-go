@@ -15,19 +15,22 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"log"
-	"os"
 
 	sUtil "go.opentelemetry.io/otel/schema/v1.1"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
 	"go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
 )
 
-const schema = "./schema/schema.yaml"
+const schema = "schema/schema.yaml"
+
+//go:embed schema/schema.yaml
+var schemaFs embed.FS
 
 func load() (*ast.Schema, error) {
-	f, err := os.Open(schema)
+	f, err := schemaFs.Open(schema)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +40,7 @@ func load() (*ast.Schema, error) {
 }
 
 func main() {
+	flag.Parse()
 	dest := flag.Arg(0)
 	if dest == "" {
 		log.Fatalln("empty desination")
