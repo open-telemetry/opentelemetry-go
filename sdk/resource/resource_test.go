@@ -79,13 +79,11 @@ func TestNewWithAttributes(t *testing.T) {
 	}
 }
 
-func TestMerge(t *testing.T) {
+func TestMergeAttributes(t *testing.T) {
 	cases := []struct {
-		name      string
-		a, b      *resource.Resource
-		want      []attribute.KeyValue
-		isErr     bool
-		schemaURL string
+		name string
+		a, b *resource.Resource
+		want []attribute.KeyValue
 	}{
 		{
 			name: "Merge 2 nils",
@@ -165,55 +163,148 @@ func TestMerge(t *testing.T) {
 			b:    resource.NewSchemaless(kv42),
 			want: []attribute.KeyValue{kv42},
 		},
-		{
-			name:      "Merge with first resource with schema",
-			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
-			b:         resource.NewSchemaless(kv42),
-			want:      []attribute.KeyValue{kv42},
-			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
-		},
-		{
-			name:      "Merge with second resource with schema",
-			a:         resource.NewSchemaless(kv41),
-			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv42),
-			want:      []attribute.KeyValue{kv42},
-			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
-		},
-		{
-			name:      "Merge with different schemas",
-			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
-			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
-			want:      []attribute.KeyValue{kv42},
-			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
-		},
-		{
-			name:  "Merge with one unknown schema",
-			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
-			b:     resource.NewWithAttributes("https://localhost/2", kv42),
-			isErr: true,
-		},
-		{
-			name:  "Merge with unknown schemas",
-			a:     resource.NewWithAttributes("https://localhost/1", kv41),
-			b:     resource.NewWithAttributes("https://localhost/2", kv42),
-			isErr: true,
-		},
 	}
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res, err := resource.Merge(c.a, c.b)
-			if c.isErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.EqualValues(t, c.schemaURL, res.SchemaURL())
+			require.NoError(t, err)
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
 				cmp.AllowUnexported(attribute.Value{})); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
+		})
+	}
+}
+
+func TestMergeSchemaTransforms(t *testing.T) {
+	alice := attribute.String("user", "Alice")
+	admin := attribute.Bool("admin", true)
+	browserAgent := attribute.String("browser.user_agent", "go_test")
+	userAgent := attribute.String("user_agent.original", "go_test")
+
+	cases := []struct {
+		name       string
+		a, b, want *resource.Resource
+	}{
+		{
+			name: "BothEmpty",
+			a:    resource.NewSchemaless(alice),
+			b:    resource.NewSchemaless(admin),
+			want: resource.NewSchemaless(alice, admin),
+		},
+		{
+			name: "OneEmpty",
+			a: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.4.0",
+				alice,
+			),
+			b: resource.NewSchemaless(admin),
+			want: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.4.0",
+				alice, admin,
+			),
+		},
+		{
+			name: "NoUpgrade",
+			a: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.18.0",
+				alice, browserAgent, // 1.19.0 transform should not be applied.
+			),
+			b: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.15.0",
+				admin,
+			),
+			want: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.18.0",
+				alice, admin, browserAgent,
+			),
+		},
+		{
+			name: "Upgrade",
+			a: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.18.0",
+				alice, browserAgent,
+			),
+			b: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.20.0",
+				admin,
+			),
+			want: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.20.0",
+				alice, admin, userAgent,
+			),
+		},
+		{
+			name: "OnlyUpgradeOther",
+			a: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.20.0",
+				alice, browserAgent, // 1.19.0 upgrade should not be applied.
+			),
+			b: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.18.0",
+				admin,
+			),
+			want: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.20.0",
+				alice, admin, browserAgent,
+			),
+		},
+		{
+			name: "NoUpgradeFromPrevious",
+			a: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.20.0",
+				alice, browserAgent, // 1.19.0 upgrade should not be applied.
+			),
+			b: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.21.0",
+				admin,
+			),
+			want: resource.NewWithAttributes(
+				"https://opentelemetry.io/schemas/1.21.0",
+				alice, admin, browserAgent,
+			),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := resource.Merge(c.a, c.b)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, got)
+
+			got, err = resource.Merge(c.b, c.a)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestMergeErrors(t *testing.T) {
+	cases := []struct {
+		name       string
+		a, b, want *resource.Resource
+	}{
+		{
+			name: "OneUnknownSchema",
+			a:    resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			b:    resource.NewWithAttributes("https://localhost/2", kv42),
+		},
+		{
+			name: "BothUnknownSchemas",
+			a:    resource.NewWithAttributes("https://localhost/1", kv41),
+			b:    resource.NewWithAttributes("https://localhost/2", kv42),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := resource.Merge(c.a, c.b)
+			if !assert.Error(t, err) {
+				return
+			}
+
+			_, err = resource.Merge(c.b, c.a)
+			assert.Error(t, err)
 		})
 	}
 }
