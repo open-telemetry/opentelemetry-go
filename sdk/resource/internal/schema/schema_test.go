@@ -78,8 +78,7 @@ func TestUpgrade(t *testing.T) {
 		attribute.Bool("foo", true),
 		attribute.Bool("untouched", true),
 	}
-	err := upgrade(tforms, attr)
-	require.NoError(t, err)
+	upgrade(tforms, attr)
 
 	want := []attribute.KeyValue{
 		attribute.Bool("qux", true),

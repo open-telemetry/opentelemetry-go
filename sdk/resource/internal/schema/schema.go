@@ -63,11 +63,11 @@ func Version(schemaURL string) (*semver.Version, error) {
 //
 // If schemaURL is version already greater than target, no upgrade will be
 // performed on attrs.
-func Upgrade(from, to *semver.Version, attrs []attribute.KeyValue) error {
-	return upgrade(slice(transforms, from, to), attrs)
+func Upgrade(from, to *semver.Version, attrs []attribute.KeyValue) {
+	upgrade(slice(transforms, from, to), attrs)
 }
 
-func upgrade(tforms []transform, attrs []attribute.KeyValue) error {
+func upgrade(tforms []transform, attrs []attribute.KeyValue) {
 	a := newAttributes(attrs)
 	for _, t := range tforms {
 		// Transformations in section "all" always are applied first.
@@ -83,8 +83,6 @@ func upgrade(tforms []transform, attrs []attribute.KeyValue) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 type transform struct {
