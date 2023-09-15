@@ -230,7 +230,10 @@ func ExampleNewView_exponentialHistogram() {
 			Scope: instrumentation.Scope{Name: "http"},
 		},
 		metric.Stream{
-			Aggregation: metric.AggregationBase2ExponentialHistogram{},
+			Aggregation: metric.AggregationBase2ExponentialHistogram{
+				MaxSize:  160,
+				MaxScale: 20,
+			},
 		},
 	)
 
