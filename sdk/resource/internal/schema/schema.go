@@ -32,6 +32,8 @@ import (
 
 var errInvalid = errors.New("invalid schema URL")
 
+// Version returns the version of schemaURL. If schemaURL is not and
+// OpenTelemetry schemaURL or an otherwise invalid URL, an error is returned.
 func Version(schemaURL string) (*semver.Version, error) {
 	if schemaURL == "" {
 		return nil, fmt.Errorf("%w: empty", errInvalid)
