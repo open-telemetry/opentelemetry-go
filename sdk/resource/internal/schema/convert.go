@@ -76,7 +76,8 @@ func slice(tforms []transform, min, max *semver.Version) []transform {
 	}
 
 	if low == -1 {
-		low = 0
+		// No transforms apply.
+		return nil
 	}
 
 	if high == -1 {

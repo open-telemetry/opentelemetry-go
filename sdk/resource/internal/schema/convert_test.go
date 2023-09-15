@@ -102,6 +102,21 @@ func TestSlice(t *testing.T) {
 		want     []transform
 	}{
 		{
+			min:  semver.New(1, 3, 0, "", ""),
+			max:  semver.New(1, 9, 0, "", ""),
+			want: tforms,
+		},
+		{
+			min:  semver.New(1, 4, 0, "", ""),
+			max:  semver.New(1, 9, 0, "", ""),
+			want: tforms,
+		},
+		{
+			min:  semver.New(1, 3, 0, "", ""),
+			max:  semver.New(1, 8, 0, "", ""),
+			want: tforms,
+		},
+		{
 			min:  semver.New(1, 4, 0, "", ""),
 			max:  semver.New(1, 8, 0, "", ""),
 			want: tforms,
@@ -125,6 +140,11 @@ func TestSlice(t *testing.T) {
 			min:  semver.New(1, 4, 2, "", ""),
 			max:  semver.New(1, 6, 3, "", ""),
 			want: tforms[2 : len(tforms)-2],
+		},
+		{
+			min:  semver.New(2, 0, 0, "", ""),
+			max:  semver.New(2, 9, 0, "", ""),
+			want: nil,
 		},
 		{
 			min:  semver.New(1, 8, 0, "", ""),
