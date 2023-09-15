@@ -414,26 +414,31 @@ func TestNew(t *testing.T) {
 			envars: "",
 			options: []resource.Option{
 				resource.WithDetectors(
-					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
+					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", "KEY", func() (string, error) {
+						return "VALUE", nil
+					}),
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.1.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
-			isErr:          true,
+			resourceValues: map[string]string{"KEY": "VALUE"},
+			schemaURL:      "https://opentelemetry.io/schemas/1.1.0",
 		},
 		{
 			name:   "With conflicting detector schema urls",
 			envars: "",
 			options: []resource.Option{
 				resource.WithDetectors(
-					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
-					resource.StringDetector("https://opentelemetry.io/schemas/1.1.0", semconv.HostNameKey, func() (string, error) { return "", errors.New("fail") }),
+					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", "KEY", func() (string, error) {
+						return "VALUE", nil
+					}),
+					resource.StringDetector("https://opentelemetry.io/schemas/1.1.0", "KEY", func() (string, error) {
+						return "", assert.AnError
+					}),
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
+			resourceValues: map[string]string{"KEY": "VALUE"},
+			schemaURL:      "https://opentelemetry.io/schemas/1.2.0",
 			isErr:          true,
 		},
 	}
