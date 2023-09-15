@@ -20,19 +20,15 @@ import (
 	"fmt"
 	"go/format"
 	"io"
-	"net/http"
 	"os"
 	"sort"
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
-	sUtil "go.opentelemetry.io/otel/schema/v1.1"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
-
-var schemaURL = "https://opentelemetry.io/schemas/1.21.0"
 
 // Template source.
 const src = "transforms.go.tmpl"
@@ -40,18 +36,17 @@ const src = "transforms.go.tmpl"
 //go:embed transforms.go.tmpl
 var tmpl embed.FS
 
-// Run runs the loads the OpenTelemetry schema and renders the appropriate code
-// to dest.
-func Run(dest, local string) error {
+// Run renders the passed Schema into the formatted code at dest.
+func Run(dest string, s *ast.Schema) error {
 	f, err := os.Create(dest)
 	if err != nil {
-		return fmt.Errorf("failed to open desination %q: %w", dest, err)
+		return fmt.Errorf("failed to open destination %q: %w", dest, err)
 	}
 	defer f.Close()
 
-	data, err := load(local)
+	data, err := entries(s)
 	if err != nil {
-		return fmt.Errorf("failed to load schema: %w", err)
+		return fmt.Errorf("failed to parse schema: %w", err)
 	}
 
 	err = render(f, data)
@@ -96,56 +91,6 @@ func entries(s *ast.Schema) ([]entry, error) {
 	})
 
 	return es, nil
-}
-
-func load(local string) (any, error) {
-	var (
-		data []entry
-		err  error
-	)
-	if local != "" {
-		data, err = loadLocal(local)
-	} else {
-		data, err = loadRemote()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func loadLocal(local string) (data []entry, err error) {
-	f, err := os.Open(local)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	s, err := sUtil.Parse(f)
-	if err != nil {
-		return nil, err
-	}
-	return entries(s)
-}
-
-func loadRemote() (data []entry, err error) {
-	resp, err := http.Get(schemaURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request error: %d", resp.StatusCode)
-	}
-
-	s, err := sUtil.Parse(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return entries(s)
 }
 
 func render(dest io.Writer, data any) error {

@@ -17,17 +17,23 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 
+	sUtil "go.opentelemetry.io/otel/schema/v1.1"
+	"go.opentelemetry.io/otel/schema/v1.1/ast"
 	"go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
 )
 
-// local is the CLI flag for the local schema directory.
-var local string
+const schema = "./schema/schema.yaml"
 
-func init() {
-	flag.StringVar(&local, "local", "", "local schema directory to use instead of fetching remote")
+func load() (*ast.Schema, error) {
+	f, err := os.Open(schema)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 
-	flag.Parse()
+	return sUtil.Parse(f)
 }
 
 func main() {
@@ -36,7 +42,12 @@ func main() {
 		log.Fatalln("empty desination")
 	}
 
-	if err := cmd.Run(dest, local); err != nil {
+	s, err := load()
+	if err != nil {
+		log.Fatalf("failed to load schema: %s", err)
+	}
+
+	if err := cmd.Run(dest, s); err != nil {
 		log.Fatal(err)
 	}
 }
