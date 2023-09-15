@@ -29,7 +29,7 @@ func GreatestVersion(schemaURLs ...string) (string, error) {
 	}{}
 	var invalid []string
 	for _, u := range schemaURLs {
-		v, err := Version(u)
+		v, err := version(u)
 		if err != nil {
 			invalid = append(invalid, u)
 			continue
@@ -48,7 +48,7 @@ func GreatestVersion(schemaURLs ...string) (string, error) {
 	return greatest.URL, err
 }
 
-func Version(schemaURL string) (*semver.Version, error) {
+func version(schemaURL string) (*semver.Version, error) {
 	// https://github.com/open-telemetry/oteps/blob/main/text/0152-telemetry-schemas.md#schema-url
 	u, err := url.Parse(schemaURL)
 	if err != nil {
