@@ -197,12 +197,16 @@ func Merge(a, b *Resource) (*Resource, error) {
 		}
 
 		if aVer.LessThan(bVer) {
+			schemaURL = b.SchemaURL()
+
 			attrs := a.Attributes()
 			if err := schema.Upgrade(aVer, bVer, attrs); err != nil {
 				return Empty(), err
 			}
 			a = NewWithAttributes(a.schemaURL, attrs...)
 		} else {
+			schemaURL = a.schemaURL
+
 			attrs := b.Attributes()
 			if err := schema.Upgrade(bVer, aVer, attrs); err != nil {
 				return Empty(), err
