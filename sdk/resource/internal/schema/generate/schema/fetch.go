@@ -20,20 +20,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-const (
-	// schemaURL is the target schema to download.
-	schemaURL = "https://opentelemetry.io/schemas/1.21.0"
-
-	// dest is the output file.
-	dest = "schema.yaml"
-)
+// dest is the output file.
+const dest = "schema.yaml"
 
 func run() error {
-	resp, err := http.Get(schemaURL)
+	resp, err := http.Get(semconv.SchemaURL)
 	if err != nil {
-		return fmt.Errorf("failed to download %q: %w", schemaURL, err)
+		return fmt.Errorf("failed to download %q: %w", semconv.SchemaURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -57,5 +54,5 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("downloaded %q", schemaURL)
+	log.Printf("downloaded %q", semconv.SchemaURL)
 }
