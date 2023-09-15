@@ -16,6 +16,13 @@ package schema
 
 import "testing"
 
+func TestTransformsOldesVersion(t *testing.T) {
+	got := transforms[0].Version.String()
+	if got != "1.4.0" {
+		t.Errorf("oldest transform not v1.4.0: %s", got)
+	}
+}
+
 func TestTransformsSorted(t *testing.T) {
 	for i := len(transforms) - 1; i > 0; i-- {
 		vI, vIMinus1 := transforms[i].Version, transforms[i-1].Version
