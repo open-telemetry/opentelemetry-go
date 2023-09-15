@@ -15,15 +15,10 @@
 package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
 
 import (
-	"fmt"
-	"sort"
-
 	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/otel/attribute"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
-	"go.opentelemetry.io/otel/schema/v1.1/ast"
-	"go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
 // Upgrade upgrades attrs in place. The upgrade will be done from the schemaURL
@@ -32,82 +27,69 @@ import (
 //
 // If schemaURL is version already greater than target, no upgrade will be
 // performed on attrs.
-func Upgrade(target *ast.Schema, schemaURL string, attrs []attribute.KeyValue) error {
-	min, err := Version(schemaURL)
-	if err != nil {
-		return err
-	}
+func Upgrade(from, to *semver.Version, attrs []attribute.KeyValue) error {
+	return upgrade(slice(transforms, from, to), attrs)
+}
 
-	vers, err := versions(target, min)
-	if err != nil {
-		return fmt.Errorf("upgrade error: %w", err)
-	}
-
+func upgrade(tforms []transform, attrs []attribute.KeyValue) error {
 	a := newAttributes(attrs)
-	for _, v := range vers {
-		vDef, ok := target.Versions[v]
-		if !ok {
-			return fmt.Errorf("upgrade error: version parsing: %s", v)
-		}
-		f := a.RenameFunc()
+	for _, t := range tforms {
 		// Transformations in section "all" always are applied first.
-		for _, c := range vDef.All.Changes {
-			forEach(c.RenameAttributes.AttributeMap, f)
+		for _, c := range t.All.Changes {
+			for key, val := range c.RenameAttributes.AttributeMap {
+				a.Rename(key, val)
+			}
 		}
 		// Only other applicable section is for resources.
-		for _, c := range vDef.Resources.Changes {
-			forEach(c.RenameAttributes.AttributeMap, f)
+		for _, c := range t.Resources.Changes {
+			for key, val := range c.RenameAttributes.AttributeMap {
+				a.Rename(key, val)
+			}
 		}
 	}
 
 	return nil
 }
 
-type errTelemetryVer struct {
-	ver types.TelemetryVersion
-	err error
+type transform struct {
+	Version   *semver.Version
+	All       ast10.Attributes
+	Resources ast10.Attributes
 }
 
-func (e *errTelemetryVer) Error() string {
-	return fmt.Sprintf("telemetry version %q: %s", e.ver, e.err)
-}
+func slice(tforms []transform, min, max *semver.Version) []transform {
+	if min.GreaterThan(max) {
+		return nil
+	}
 
-// versions returns the sorted versions contained in schema.
-func versions(schema *ast.Schema, min *semver.Version) ([]types.TelemetryVersion, error) {
-	// The transformations specified in each version are applied one by one.
-	// Order the versions to ensure correct application.
-	versions := make([]*semver.Version, 0, len(schema.Versions))
-	for telV := range schema.Versions {
-		v, err := semver.NewVersion(string(telV))
-		if err != nil {
-			return nil, &errTelemetryVer{ver: telV, err: err}
+	low, high := -1, -1
+	for i, t := range tforms {
+		if low < 0 && (min.Equal(t.Version) || min.LessThan(t.Version)) {
+			low = i
 		}
-		versions = append(versions, v)
-	}
-
-	var sIface sort.Interface = semver.Collection(versions)
-	sort.Sort(sIface)
-
-	out := make([]types.TelemetryVersion, 0, len(versions))
-	for _, v := range versions {
-		if min != nil && min.GreaterThan(v) {
-			continue
+		if high < 0 {
+			if max.LessThan(t.Version) {
+				high = i
+				break
+			}
 		}
-		out = append(out, types.TelemetryVersion(v.Original()))
 	}
-	return out, nil
-}
 
-func forEach(m ast10.AttributeMap, f func(string, string)) {
-	for key, val := range m {
-		f(key, val)
+	if low == -1 {
+		low = 0
 	}
+
+	if high == -1 {
+		high = len(tforms)
+	}
+
+	return tforms[low:high]
 }
 
 type attributes struct {
 	underlying []attribute.KeyValue
 
-	index map[string]int
+	index map[string][]int
 }
 
 func newAttributes(attr []attribute.KeyValue) *attributes {
@@ -116,24 +98,25 @@ func newAttributes(attr []attribute.KeyValue) *attributes {
 }
 
 func (a *attributes) init() {
-	a.index = make(map[string]int, len(a.underlying))
+	a.index = make(map[string][]int, len(a.underlying))
 	for i := range a.underlying {
-		a.index[string(a.underlying[i].Key)] = i
+		key := string(a.underlying[i].Key)
+		a.index[key] = append(a.index[key], i)
 	}
 }
 
-func (a *attributes) RenameFunc() func(string, string) {
-	return func(orig, repl string) {
-		if a.index == nil {
-			a.init()
-		}
-
-		i, ok := a.index[orig]
-		if !ok {
-			return
-		}
-		delete(a.index, orig)
-		a.underlying[i].Key = attribute.Key(repl)
-		a.index[repl] = i
+func (a *attributes) Rename(orig, repl string) {
+	if a.index == nil {
+		a.init()
 	}
+
+	index, ok := a.index[orig]
+	if !ok {
+		return
+	}
+	delete(a.index, orig)
+	for _, i := range index {
+		a.underlying[i].Key = attribute.Key(repl)
+	}
+	a.index[repl] = append(a.index[repl], index...)
 }
