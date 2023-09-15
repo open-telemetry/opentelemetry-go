@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package schema provides conversion and comparison utilities OpenTelemetry
+// resource schemas.
 package schema // import "go.opentelemetry.io/otel/sdk/resource/internal/schema"
+
+//go:generate go run go.opentelemetry.io/otel/sdk/resource/internal/schema/generate ./transforms.go
 
 import (
 	"github.com/Masterminds/semver/v3"
