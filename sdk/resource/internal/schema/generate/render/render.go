@@ -25,6 +25,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
+
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/ast"
 	"go.opentelemetry.io/otel/schema/v1.1/types"
