@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd // import "go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/cmd"
+package cmd // import "go.opentelemetry.io/otel/sdk/resource/internal/schema/generate/render"
 
 import (
 	"bytes"
