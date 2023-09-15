@@ -20,7 +20,6 @@ import (
 )
 
 // TODO: generate this.
-// TODO: add a test to ensure this is always generated in sorted order.
 var transforms = []transform{
 	{Version: semver.New(1, 4, 0, "", "")},
 	{Version: semver.New(1, 5, 0, "", "")},
