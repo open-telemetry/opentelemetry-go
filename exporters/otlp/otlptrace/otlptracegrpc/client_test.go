@@ -188,7 +188,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, endpoint)
-	_ = exp.Shutdown(ctx)
+	require.NoError(t, exp.Shutdown(ctx))
 }
 
 func TestNewWithEndpoint(t *testing.T) {
@@ -197,7 +197,7 @@ func TestNewWithEndpoint(t *testing.T) {
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	_ = exp.Shutdown(ctx)
+	require.NoError(t, exp.Shutdown(ctx))
 }
 
 func TestNewWithHeaders(t *testing.T) {
