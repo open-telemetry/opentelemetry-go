@@ -21,6 +21,7 @@ import (
 	"regexp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -167,35 +168,6 @@ func ExampleNewView() {
 	// unit: ms
 }
 
-func ExampleNewView_drop() {
-	// Create a view that sets the drop aggregator for all instrumentation from
-	// the "db" library, effectively turning-off all instrumentation from that
-	// library.
-	view := metric.NewView(
-		metric.Instrument{Scope: instrumentation.Scope{Name: "db"}},
-		metric.Stream{Aggregation: metric.AggregationDrop{}},
-	)
-
-	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option.
-	_ = metric.NewMeterProvider(
-		metric.WithView(view),
-	)
-
-	// Below is an example of how the view will
-	// function in the SDK for certain instruments.
-	stream, _ := view(metric.Instrument{
-		Name:  "queries",
-		Kind:  metric.InstrumentKindCounter,
-		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
-	})
-	fmt.Println("name:", stream.Name)
-	fmt.Printf("aggregation: %#v", stream.Aggregation)
-	// Output:
-	// name: queries
-	// aggregation: metric.AggregationDrop{}
-}
-
 func ExampleNewView_wildcard() {
 	// Create a view that sets unit to milliseconds for any instrument with a
 	// name suffix of ".ms".
@@ -223,9 +195,45 @@ func ExampleNewView_wildcard() {
 	// unit: ms
 }
 
+func ExampleNewView_drop() {
+	// Create a view that drops the "latency" instrument from the "http"
+	// instrumentation library.
+	view := metric.NewView(
+		metric.Instrument{
+			Name:  "latency",
+			Scope: instrumentation.Scope{Name: "http"},
+		},
+		metric.Stream{Aggregation: metric.AggregationDrop{}},
+	)
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+}
+
+func ExampleNewView_attributeFilter() {
+	// Create a view removes the "http.request.method" attribute recorded by
+	// the "latency" instrument from the "http" instrumentation library.
+	view := metric.NewView(
+		metric.Instrument{
+			Name:  "latency",
+			Scope: instrumentation.Scope{Name: "http"},
+		},
+		metric.Stream{AttributeFilter: attribute.NewDenyKeysFilter("http.request.method")},
+	)
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+}
+
 func ExampleNewView_exponentialHistogram() {
-	// Create a view that makes the "latency" instrument
-	// to be reported as an exponential histogram.
+	// Create a view that makes the "latency" instrument from the "http"
+	// instrumentation library to be reported as an exponential histogram.
 	view := metric.NewView(
 		metric.Instrument{
 			Name:  "latency",
