@@ -214,8 +214,8 @@ func ExampleNewView_drop() {
 }
 
 func ExampleNewView_attributeFilter() {
-	// Create a view removes the "http.request.method" attribute recorded by
-	// the "latency" instrument from the "http" instrumentation library.
+	// Create a view that removes the "http.request.method" attribute recorded
+	// by the "latency" instrument from the "http" instrumentation library.
 	view := metric.NewView(
 		metric.Instrument{
 			Name:  "latency",
