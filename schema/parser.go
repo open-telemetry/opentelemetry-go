@@ -20,8 +20,8 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"go.opentelemetry.io/otel/schema/ast"
 	"go.opentelemetry.io/otel/schema/internal"
-	"go.opentelemetry.io/otel/schema/v1.1/ast"
 )
 
 // Major file version number that this library supports.

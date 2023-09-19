@@ -15,9 +15,9 @@
 package ast // import "go.opentelemetry.io/otel/schema/v1.1/ast"
 
 import (
+	"go.opentelemetry.io/otel/schema/types"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
-	types11 "go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
 // Metrics corresponds to a section representing a list of changes that happened
@@ -43,10 +43,10 @@ type SplitMetric struct {
 
 	// Name of attribute in the old metric to use for splitting. The attribute will be
 	// eliminated, the new metric will not have it.
-	ByAttribute types11.AttributeName `yaml:"by_attribute"`
+	ByAttribute types.AttributeName `yaml:"by_attribute"`
 
 	// Names of new metrics to create, one for each possible value of attribute.
 	// map of key/values. The keys are the new metric name starting from this version,
 	// the values are old attribute value used in the previous version.
-	MetricsFromAttributes map[types10.MetricName]types11.AttributeValue `yaml:"metrics_from_attributes"`
+	MetricsFromAttributes map[types10.MetricName]types.AttributeValue `yaml:"metrics_from_attributes"`
 }

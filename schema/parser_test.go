@@ -19,10 +19,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/schema/ast"
+	"go.opentelemetry.io/otel/schema/types"
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
-	ast11 "go.opentelemetry.io/otel/schema/v1.1/ast"
-	types11 "go.opentelemetry.io/otel/schema/v1.1/types"
 )
 
 func TestParseSchemaFile(t *testing.T) {
@@ -30,10 +30,10 @@ func TestParseSchemaFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ts)
 	assert.EqualValues(
-		t, &ast11.Schema{
+		t, &ast.Schema{
 			FileFormat: "1.1.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",
-			Versions: map[types11.TelemetryVersion]ast11.VersionDef{
+			Versions: map[types.TelemetryVersion]ast.VersionDef{
 				"1.0.0": {},
 
 				"1.1.0": {
@@ -125,8 +125,8 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Metrics: ast11.Metrics{
-						Changes: []ast11.MetricsChange{
+					Metrics: ast.Metrics{
+						Changes: []ast.MetricsChange{
 							{
 								RenameAttributes: &ast10.AttributeMapForMetrics{
 									AttributeMap: map[string]string{
@@ -154,10 +154,10 @@ func TestParseSchemaFile(t *testing.T) {
 								},
 							},
 							{
-								Split: &ast11.SplitMetric{
+								Split: &ast.SplitMetric{
 									ApplyToMetric: "system.paging.operations",
 									ByAttribute:   "direction",
-									MetricsFromAttributes: map[types10.MetricName]types11.AttributeValue{
+									MetricsFromAttributes: map[types10.MetricName]types.AttributeValue{
 										"system.paging.operations.in":  "in",
 										"system.paging.operations.out": "out",
 									},
