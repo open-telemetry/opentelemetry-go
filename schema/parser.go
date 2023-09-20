@@ -19,7 +19,7 @@
 // major version bumps to this package.
 //
 // [OpenTelemetry schema files]: https://github.com/open-telemetry/opentelemetry-specification/blob/007f415120090972e22a90afd499640321f160f3/specification/schemas/file_format_v1.1.0.md
-package schema // import "go.opentelemetry.io/otel/schema/v1.1"
+package schema // import "go.opentelemetry.io/otel/schema"
 
 import (
 	"io"
