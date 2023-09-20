@@ -19,44 +19,34 @@ import (
 	"os"
 
 	"gopkg.in/yaml.v2"
-
-	"go.opentelemetry.io/otel/schema/internal"
 )
 
-// Major file version number that this library supports.
-const supportedFormatMajor = 1
-
-// Maximum minor version number that this library supports.
-const supportedFormatMinor = 1
-
-// ParseFile a schema file. schemaFilePath is the file path.
-func ParseFile(schemaFilePath string) (*Schema, error) {
-	file, err := os.Open(schemaFilePath)
+// ParseFile parses a Schema from the schema file found at path.
+func ParseFile(path string) (*Schema, error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	return Parse(file)
 }
 
-// Parse a schema file. schemaFileContent is the readable content of the schema file.
-func Parse(schemaFileContent io.Reader) (*Schema, error) {
-	var ts Schema
-	d := yaml.NewDecoder(schemaFileContent)
+// Parse parses a Schema read from r.
+//
+// If r contains a Schema with a file format version higher than FileFormat, an
+// error will be returned.
+//
+// If r contains an invalid schema URL an error will be returned.
+func Parse(r io.Reader) (*Schema, error) {
+	d := yaml.NewDecoder(r)
 	d.SetStrict(true) // Do not silently drop unknown fields.
-	err := d.Decode(&ts)
-	if err != nil {
+
+	var s Schema
+	if err := d.Decode(&s); err != nil {
 		return nil, err
 	}
 
-	err = internal.CheckFileFormatField(ts.FileFormat, supportedFormatMajor, supportedFormatMinor)
-	if err != nil {
+	if err := s.validate(); err != nil {
 		return nil, err
 	}
-
-	err = internal.CheckSchemaURL(ts.SchemaURL)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ts, nil
+	return &s, nil
 }

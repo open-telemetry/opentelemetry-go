@@ -14,6 +14,19 @@
 
 package schema // import "go.opentelemetry.io/otel/schema"
 
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
+)
+
+// FileFormat is the highest schema file format version this package is
+// compatible with.
+var FileFormat = semver.New(1, 1, 0, "", "")
+
 // Schema represents an OpenTelemetry [Schema file].
 //
 // [Schema file]: https://github.com/open-telemetry/opentelemetry-specification/blob/007f415120090972e22a90afd499640321f160f3/specification/schemas/file_format_v1.1.0.md
@@ -31,6 +44,32 @@ type Schema struct {
 	// Versions are the telemetry transforms that apply for each semantic
 	// convention version.
 	Versions map[SemConvVersion]Transform
+}
+
+var (
+	errUnsupportVer = errors.New("unsupported file format version")
+	errMissingURL   = errors.New("schema_url field is missing")
+)
+
+func (s *Schema) validate() error {
+	ffVer, err := semver.StrictNewVersion(s.FileFormat)
+	if err != nil {
+		return fmt.Errorf("invalid file format version: %q: %w", s.FileFormat, err)
+	}
+
+	if FileFormat.LessThan(ffVer) {
+		return fmt.Errorf("%w: %q", errUnsupportVer, ffVer)
+	}
+
+	if strings.TrimSpace(s.SchemaURL) == "" {
+		return errMissingURL
+	}
+
+	if _, err := url.Parse(s.SchemaURL); err != nil {
+		return fmt.Errorf("invalid schema URL %q: %w", s.SchemaURL, err)
+	}
+
+	return nil
 }
 
 // SemConvVersion is a semantic conventions version used by a schema file (e.g.

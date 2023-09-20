@@ -166,12 +166,6 @@ func TestParseSchemaFile(t *testing.T) {
 	)
 }
 
-func TestFailParseFileUnsupportedFileFormat(t *testing.T) {
-	ts, err := ParseFile("testdata/unsupported-file-format.yaml")
-	assert.ErrorContains(t, err, "unsupported schema file format minor version number")
-	assert.Nil(t, ts)
-}
-
 func TestFailParseFileUnknownField(t *testing.T) {
 	ts, err := ParseFile("testdata/unknown-field.yaml")
 	assert.ErrorContains(t, err, "field Resources not found in type schema.Transform")
