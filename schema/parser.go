@@ -20,7 +20,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"go.opentelemetry.io/otel/schema/ast"
 	"go.opentelemetry.io/otel/schema/internal"
 )
 
@@ -31,7 +30,7 @@ const supportedFormatMajor = 1
 const supportedFormatMinor = 1
 
 // ParseFile a schema file. schemaFilePath is the file path.
-func ParseFile(schemaFilePath string) (*ast.Schema, error) {
+func ParseFile(schemaFilePath string) (*Schema, error) {
 	file, err := os.Open(schemaFilePath)
 	if err != nil {
 		return nil, err
@@ -40,8 +39,8 @@ func ParseFile(schemaFilePath string) (*ast.Schema, error) {
 }
 
 // Parse a schema file. schemaFileContent is the readable content of the schema file.
-func Parse(schemaFileContent io.Reader) (*ast.Schema, error) {
-	var ts ast.Schema
+func Parse(schemaFileContent io.Reader) (*Schema, error) {
+	var ts Schema
 	d := yaml.NewDecoder(schemaFileContent)
 	d.SetStrict(true) // Do not silently drop unknown fields.
 	err := d.Decode(&ts)

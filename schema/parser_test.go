@@ -18,11 +18,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/schema/ast"
-	"go.opentelemetry.io/otel/schema/types"
-	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
-	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
 )
 
 func TestParseSchemaFile(t *testing.T) {
@@ -30,18 +25,18 @@ func TestParseSchemaFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, ts)
 	assert.EqualValues(
-		t, &ast.Schema{
+		t, &Schema{
 			FileFormat: "1.1.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",
-			Versions: map[types.TelemetryVersion]ast.VersionDef{
+			Versions: map[SemConvVersion]Transform{
 				"1.0.0": {},
 
 				"1.1.0": {
-					All: ast10.Attributes{
-						Changes: []ast10.AttributeChange{
+					All: All{
+						Changes: []AllChange{
 							{
-								RenameAttributes: &ast10.RenameAttributes{
-									AttributeMap: ast10.AttributeMap{
+								RenameAttributes: &RenameAttributes{
+									AttributeMap: map[string]string{
 										"k8s.cluster.name":     "kubernetes.cluster.name",
 										"k8s.namespace.name":   "kubernetes.namespace.name",
 										"k8s.node.name":        "kubernetes.node.name",
@@ -68,11 +63,11 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Resources: ast10.Attributes{
-						Changes: []ast10.AttributeChange{
+					Resources: Resources{
+						Changes: []ResourcesChange{
 							{
-								RenameAttributes: &ast10.RenameAttributes{
-									AttributeMap: ast10.AttributeMap{
+								RenameAttributes: &RenameAttributes{
+									AttributeMap: map[string]string{
 										"telemetry.auto.version": "telemetry.auto_instr.version",
 									},
 								},
@@ -80,32 +75,32 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Spans: ast10.Spans{
-						Changes: []ast10.SpansChange{
+					Spans: Spans{
+						Changes: []SpansChange{
 							{
-								RenameAttributes: &ast10.AttributeMapForSpans{
-									AttributeMap: ast10.AttributeMap{
+								RenameAttributes: &RenameSpansAttributes{
+									AttributeMap: map[string]string{
 										"peer.service": "peer.service.name",
 									},
-									ApplyToSpans: []types10.SpanName{"HTTP GET"},
+									ApplyToSpans: []string{"HTTP GET"},
 								},
 							},
 						},
 					},
 
-					SpanEvents: ast10.SpanEvents{
-						Changes: []ast10.SpanEventsChange{
+					SpanEvents: SpanEvents{
+						Changes: []SpanEventsChange{
 							{
-								RenameEvents: &ast10.RenameSpanEvents{
+								RenameEvents: &RenameSpanEvents{
 									EventNameMap: map[string]string{
 										"exception.stacktrace": "exception.stack_trace",
 									},
 								},
 							},
 							{
-								RenameAttributes: &ast10.RenameSpanEventAttributes{
-									ApplyToEvents: []types10.EventName{"exception.stack_trace"},
-									AttributeMap: ast10.AttributeMap{
+								RenameAttributes: &RenameSpanEventsAttributes{
+									ApplyToEvents: []string{"exception.stack_trace"},
+									AttributeMap: map[string]string{
 										"peer.service": "peer.service.name",
 									},
 								},
@@ -113,10 +108,10 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Logs: ast10.Logs{
-						Changes: []ast10.LogsChange{
+					Logs: Logs{
+						Changes: []LogsChange{
 							{
-								RenameAttributes: &ast10.RenameAttributes{
+								RenameAttributes: &RenameAttributes{
 									AttributeMap: map[string]string{
 										"process.executable_name": "process.executable.name",
 									},
@@ -125,24 +120,24 @@ func TestParseSchemaFile(t *testing.T) {
 						},
 					},
 
-					Metrics: ast.Metrics{
-						Changes: []ast.MetricsChange{
+					Metrics: Metrics{
+						Changes: []MetricsChange{
 							{
-								RenameAttributes: &ast10.AttributeMapForMetrics{
+								RenameAttributes: &RenameMetricsAttributes{
 									AttributeMap: map[string]string{
 										"http.status_code": "http.response_status_code",
 									},
 								},
 							},
 							{
-								RenameMetrics: map[types10.MetricName]types10.MetricName{
+								RenameMetrics: map[string]string{
 									"container.cpu.usage.total":  "cpu.usage.total",
 									"container.memory.usage.max": "memory.usage.max",
 								},
 							},
 							{
-								RenameAttributes: &ast10.AttributeMapForMetrics{
-									ApplyToMetrics: []types10.MetricName{
+								RenameAttributes: &RenameMetricsAttributes{
+									ApplyToMetrics: []string{
 										"system.cpu.utilization",
 										"system.memory.usage",
 										"system.memory.utilization",
@@ -154,10 +149,10 @@ func TestParseSchemaFile(t *testing.T) {
 								},
 							},
 							{
-								Split: &ast.SplitMetric{
+								Split: &SplitMetric{
 									ApplyToMetric: "system.paging.operations",
 									ByAttribute:   "direction",
-									MetricsFromAttributes: map[types10.MetricName]types.AttributeValue{
+									MetricsFromAttributes: map[string]any{
 										"system.paging.operations.in":  "in",
 										"system.paging.operations.out": "out",
 									},
@@ -179,6 +174,6 @@ func TestFailParseFileUnsupportedFileFormat(t *testing.T) {
 
 func TestFailParseFileUnknownField(t *testing.T) {
 	ts, err := ParseFile("testdata/unknown-field.yaml")
-	assert.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
+	assert.ErrorContains(t, err, "field Resources not found in type schema.Transform")
 	assert.Nil(t, ts)
 }
