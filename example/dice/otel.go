@@ -29,7 +29,7 @@ import (
 )
 
 // setupOTelSDK bootstraps the OpenTelemetry piepeline.
-// If it does not return an error, make sure to call shutdown for proper cleanup.
+// If it does not return an error, ake sure to call shutdown for proper cleanup.
 func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
@@ -45,7 +45,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 		return err
 	}
 
-	// handleErr calls shutdown for cleanup and make sure that all errors are returned.
+	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
 	handleErr := func(inErr error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
