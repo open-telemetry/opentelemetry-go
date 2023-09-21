@@ -84,6 +84,8 @@ func run() (err error) {
 	return srv.Shutdown(context.Background())
 }
 
+// handleFunc is a replacement for [net/http.HandleFunc]
+// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
 func handleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
 	// Configure the "http.route" for the HTTP instrumentation.
 	handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
