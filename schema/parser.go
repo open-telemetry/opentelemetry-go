@@ -25,7 +25,7 @@ import (
 	"io"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ParseFile parses a Schema from the schema file found at path.
@@ -45,7 +45,7 @@ func ParseFile(path string) (*Schema, error) {
 // If r contains an invalid schema URL an error will be returned.
 func Parse(r io.Reader) (*Schema, error) {
 	d := yaml.NewDecoder(r)
-	d.SetStrict(true) // Do not silently drop unknown fields.
+	d.KnownFields(true)
 
 	var s Schema
 	if err := d.Decode(&s); err != nil {
