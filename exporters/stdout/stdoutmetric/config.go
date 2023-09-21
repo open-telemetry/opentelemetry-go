@@ -82,13 +82,14 @@ func WithEncoder(encoder Encoder) Option {
 }
 
 // WithWriter sets the export stream destination.
-// If `WithEncoder` is also used, this option will have no effect.
+// Using this option overrides any previously set encoder.
 func WithWriter(w io.Writer) Option {
 	return WithEncoder(json.NewEncoder(w))
 }
 
 // WithPrettyPrint prettifies the emitted output.
-// If `WithEncoder` is also used, this option will have no effect.
+// This option only works if the encoder is a *json.Encoder, as is the case
+// when using `WithWriter`.
 func WithPrettyPrint() Option {
 	return optionFunc(func(c config) config {
 		c.prettyPrint = true
