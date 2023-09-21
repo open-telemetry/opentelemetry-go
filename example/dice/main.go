@@ -50,19 +50,14 @@ func run() (err error) {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}()
 
-	// Create HTTP server with requests' base context canceled on server shutdown.
-	rCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Start HTTP server.
 	srv := &http.Server{
 		Addr:         ":8080",
-		BaseContext:  func(_ net.Listener) context.Context { return rCtx },
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
 		ReadTimeout:  time.Second,
 		WriteTimeout: 10 * time.Second,
 		Handler:      newHTTPHandler(),
 	}
-	srv.RegisterOnShutdown(cancel)
-
-	// Start the server.
 	srvErr := make(chan error, 1)
 	go func() {
 		srvErr <- srv.ListenAndServe()
