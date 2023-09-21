@@ -50,6 +50,9 @@ func run() (err error) {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}()
 
+	// Register handlers.
+	handleFunc("/rolldice", rolldice)
+
 	// Create HTTP server with requests' base context canceled on server shutdown.
 	rCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -40,7 +40,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	handleFunc("/rolldice", rolldice)
 }
 
 func rolldice(w http.ResponseWriter, r *http.Request) {
