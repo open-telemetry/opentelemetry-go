@@ -78,12 +78,19 @@ func (s *Schema) validate() error {
 // Changeset is all the applicable telemetry changes for a particular semantic
 // convention version.
 type Changeset struct {
-	All        All
-	Resources  Resources
-	Spans      Spans
+	// All are the changes that apply to all telemetry before each specific
+	// telemetry changes are applied.
+	All All
+	// Resources are the changes applied to resources.
+	Resources Resources
+	// Spans are the changes applied to spans in tracing telemetry.
+	Spans Spans
+	// SpanEvents are the changes applied to span events in tracing telemetry.
 	SpanEvents SpanEvents `yaml:"span_events"`
-	Logs       Logs
-	Metrics    Metrics
+	// Logs are the changes applied to log telemetry.
+	Logs Logs
+	// Metrics are the changes applied to metric telemetry.
+	Metrics Metrics
 }
 
 // All defines the transforms that apply to all types of telemetry data.
