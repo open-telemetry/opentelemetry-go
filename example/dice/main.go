@@ -50,9 +50,6 @@ func run() (err error) {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}()
 
-	// Register handlers.
-	handleFunc("/rolldice", rolldice)
-
 	// Create HTTP server with requests' base context canceled on server shutdown.
 	rCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -61,8 +58,7 @@ func run() (err error) {
 		BaseContext:  func(_ net.Listener) context.Context { return rCtx },
 		ReadTimeout:  time.Second,
 		WriteTimeout: 10 * time.Second,
-		// Add HTTP instrumentation for the whole server.
-		Handler: otelhttp.NewHandler(http.DefaultServeMux, "/"),
+		Handler:      newHTTPHandler(),
 	}
 	srv.RegisterOnShutdown(cancel)
 
@@ -88,10 +84,21 @@ func run() (err error) {
 	return
 }
 
-// handleFunc is a replacement for [net/http.HandleFunc]
-// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
-func handleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	// Configure the "http.route" for the HTTP instrumentation.
-	handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
-	http.Handle(pattern, handler)
+func newHTTPHandler() http.Handler {
+	mux := http.NewServeMux()
+
+	// handleFunc is a replacement for mux.HandleFunc
+	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		// Configure the "http.route" for the HTTP instrumentation.
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+
+	// Register handlers.
+	handleFunc("/rolldice", rolldice)
+
+	// Add HTTP instrumentation for the whole server.
+	handler := otelhttp.NewHandler(mux, "/")
+	return handler
 }
