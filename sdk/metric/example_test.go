@@ -34,8 +34,7 @@ import (
 //
 // Here's how you might initialize a metrics provider.
 func Example() {
-	// See [go.opentelemetry.io/otel/sdk/resource] for more
-	// information about how to create and use resources.
+	// Create resource.
 	res, err := resource.Merge(resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,
 			semconv.ServiceName("my-service"),
@@ -46,8 +45,8 @@ func Example() {
 	}
 
 	// This reader is used as a stand-in for a reader that will actually export
-	// data. See [go.opentelemetry.io/otel/exporters] for exporters
-	// that can be used as or with readers.
+	// data. See https://pkg.go.dev/go.opentelemetry.io/otel/exporters for
+	// exporters that can be used as or with readers.
 	reader := metric.NewManualReader()
 
 	// Create a meter provider.
@@ -58,14 +57,6 @@ func Example() {
 		metric.WithReader(reader),
 	)
 
-	// Register as global meter provider so that it can
-	// that can used via [go.opentelemetry.io/otel.Meter]
-	// and accessed using [go.opentelemetry.io/otel.GetMeterProvider].
-	// Most instrumentation libraries use the global meter provider as default.
-	// If the global meter provider is not set then a no-op implementation
-	// is used and which fails to generate data.
-	otel.SetMeterProvider(meterProvider)
-
 	// Handle shutdown properly so that nothing leaks.
 	defer func() {
 		err := meterProvider.Shutdown(context.Background())
@@ -73,6 +64,13 @@ func Example() {
 			log.Fatalln(err)
 		}
 	}()
+
+	// Register as global meter provider so that it can
+	// that can used via otel.Meter and accessed using otel.GetMeterProvider.
+	// Most instrumentation libraries use the global meter provider as default.
+	// If the global meter provider is not set then a no-op implementation
+	// is used and which fails to generate data.
+	otel.SetMeterProvider(meterProvider)
 }
 
 func ExampleView() {
