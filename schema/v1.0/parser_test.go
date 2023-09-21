@@ -168,6 +168,10 @@ func TestFailParseSchemaFile(t *testing.T) {
 	ts, err = ParseFile("testdata/invalid-schema-url.yaml")
 	assert.Error(t, err)
 	assert.Nil(t, ts)
+
+	ts, err = ParseFile("testdata/unknown-field.yaml")
+	assert.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
+	assert.Nil(t, ts)
 }
 
 func TestFailParseSchema(t *testing.T) {
