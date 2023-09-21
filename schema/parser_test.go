@@ -28,7 +28,7 @@ func TestParseSchemaFile(t *testing.T) {
 		t, &Schema{
 			FileFormat: "1.1.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",
-			Versions: map[SemConvVersion]Transform{
+			Versions: map[SemConvVersion]Changeset{
 				"1.0.0": {},
 
 				"1.1.0": {
@@ -168,6 +168,6 @@ func TestParseSchemaFile(t *testing.T) {
 
 func TestFailParseFileUnknownField(t *testing.T) {
 	ts, err := ParseFile("testdata/unknown-field.yaml")
-	assert.ErrorContains(t, err, "field Resources not found in type schema.Transform")
+	assert.ErrorContains(t, err, "field Resources not found in type schema.Changeset")
 	assert.Nil(t, ts)
 }

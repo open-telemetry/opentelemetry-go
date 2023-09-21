@@ -43,7 +43,7 @@ type Schema struct {
 
 	// Versions are the telemetry transforms that apply for each semantic
 	// convention version.
-	Versions map[SemConvVersion]Transform
+	Versions map[SemConvVersion]Changeset
 }
 
 var (
@@ -76,9 +76,9 @@ func (s *Schema) validate() error {
 // "1.7.0").
 type SemConvVersion string
 
-// Transform is all the applicable telemetry changes for a particular semantic
+// Changeset is all the applicable telemetry changes for a particular semantic
 // convention version.
-type Transform struct {
+type Changeset struct {
 	All        All
 	Resources  Resources
 	Spans      Spans
