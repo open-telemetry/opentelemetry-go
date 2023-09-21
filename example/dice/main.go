@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// dice is the "Roll the dice" getting started example application.
 package main
 
 import (
 	"context"
 	"errors"
-	"io"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -43,7 +39,9 @@ func run() (err error) {
 	defer stop()
 
 	// Setup OpenTelemetry.
-	otelShutdown, err := setupOTelSDK(ctx)
+	serviceName := "dice"
+	serviceVersion := "0.1.0"
+	otelShutdown, err := setupOTelSDK(ctx, serviceName, serviceVersion)
 	if err != nil {
 		return
 	}
@@ -51,10 +49,6 @@ func run() (err error) {
 	defer func() {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}()
-
-	// Create HTTP request multiplexer.
-	mux := http.NewServeMux()
-	registerHandleFunc(mux, "/rolldice", handle)
 
 	// Create HTTP server with requests' base context canceled on server shutdown.
 	rCtx, cancel := context.WithCancel(context.Background())
@@ -65,7 +59,7 @@ func run() (err error) {
 		ReadTimeout:  time.Second,
 		WriteTimeout: 10 * time.Second,
 		// Add HTTP instrumentation for the whole server.
-		Handler: otelhttp.NewHandler(mux, "/"),
+		Handler: otelhttp.NewHandler(http.DefaultServeMux, "/"),
 	}
 	srv.RegisterOnShutdown(cancel)
 
@@ -90,16 +84,8 @@ func run() (err error) {
 	return srv.Shutdown(context.Background())
 }
 
-func registerHandleFunc(mux *http.ServeMux, pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+func handleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
 	// Configure the "http.route" for the HTTP instrumentation.
 	handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
-	mux.Handle(pattern, handler)
-}
-
-func handle(w http.ResponseWriter, r *http.Request) {
-	roll := 1 + rand.Intn(6)
-	resp := strconv.Itoa(roll) + "\n"
-	if _, err := io.WriteString(w, resp); err != nil {
-		log.Printf("Write failed: %v\n", err)
-	}
+	http.Handle(pattern, handler)
 }

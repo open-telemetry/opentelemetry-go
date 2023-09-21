@@ -28,7 +28,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	// shutdown calls cleanup functions registered via shutdownFuncs.
@@ -49,7 +49,7 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	}
 
 	// Setup Resource.
-	res, err := newResource()
+	res, err := newResource(serviceName, serviceVersion)
 	if err != nil {
 		handleErr(err)
 		return
@@ -76,11 +76,11 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	return
 }
 
-func newResource() (*resource.Resource, error) {
+func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName("dice"),
-			semconv.ServiceVersion("0.1.0"),
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(serviceVersion),
 		))
 }
 
