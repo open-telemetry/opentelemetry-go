@@ -18,7 +18,7 @@ import (
 	"io"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"go.opentelemetry.io/otel/schema/internal"
 	"go.opentelemetry.io/otel/schema/v1.0/ast"
@@ -43,6 +43,7 @@ func ParseFile(schemaFilePath string) (*ast.Schema, error) {
 func Parse(schemaFileContent io.Reader) (*ast.Schema, error) {
 	var ts ast.Schema
 	d := yaml.NewDecoder(schemaFileContent)
+	d.KnownFields(true)
 	err := d.Decode(&ts)
 	if err != nil {
 		return nil, err
