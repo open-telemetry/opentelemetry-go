@@ -81,7 +81,8 @@ func run() (err error) {
 	}
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
-	return srv.Shutdown(context.Background())
+	err = srv.Shutdown(context.Background())
+	return
 }
 
 // handleFunc is a replacement for [net/http.HandleFunc]
