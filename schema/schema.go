@@ -35,6 +35,9 @@ type Schema struct {
 	//
 	// [schema file format]: https://github.com/open-telemetry/opentelemetry-specification/blob/007f415120090972e22a90afd499640321f160f3/specification/schemas/file_format_v1.1.0.md#schema-file-format-number
 	FileFormat string `yaml:"file_format"`
+	// TODO: use a slimmed down version of semconv.Version here as a key. We
+	// convert this value in many places to that type for evaluation, it would
+	// be better to use the type instead of rely on the conversion later.
 
 	// SchemaURL is the [URL] for the Schema file.
 	//
@@ -47,6 +50,9 @@ type Schema struct {
 	// The version string is a semver string matching the release version of
 	// semantic conventions (e.g. "1.7.0").
 	Versions map[string]Changeset
+	// TODO: use a slimmed down version of semconv.Version here as a key. We
+	// convert this value in many places to that type for evaluation, it would
+	// be better to use the type instead of rely on the conversion later.
 }
 
 var (
