@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the "Roll the dice" getting started application example in `go.opentelemetry.io/otel/example/dice`. (#????)
+
 ## [1.19.0-rc.1/0.42.0-rc.1] 2023-09-14
 
 This is a release candidate for the v1.19.0/v0.42.0 release.
