@@ -28,7 +28,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-// setupOTelSDK bootstraps the OpenTelemetry piepeline.
+// setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, ake sure to call shutdown for proper cleanup.
 func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
@@ -50,14 +50,14 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	// Setup Resource.
+	// Setup resource.
 	res, err := newResource(serviceName, serviceVersion)
 	if err != nil {
 		handleErr(err)
 		return
 	}
 
-	// Setup Trace Provider.
+	// Setup trace provider.
 	tracerProvider, err := newTraceProvider(res)
 	if err != nil {
 		handleErr(err)
@@ -66,7 +66,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Setup Meter Provider.
+	// Setup meter provider.
 	meterProvider, err := newMeterProvider(res)
 	if err != nil {
 		handleErr(err)

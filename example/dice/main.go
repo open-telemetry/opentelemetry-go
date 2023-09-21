@@ -34,7 +34,7 @@ func main() {
 }
 
 func run() (err error) {
-	// Handle CTRL+C gracefully.
+	// Handle SIGINT (CTRL+C) gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
