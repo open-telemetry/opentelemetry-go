@@ -41,9 +41,12 @@ type Schema struct {
 	// [URL]: https://github.com/open-telemetry/opentelemetry-specification/blob/007f415120090972e22a90afd499640321f160f3/specification/schemas/file_format_v1.1.0.md#schema-url
 	SchemaURL string `yaml:"schema_url"`
 
-	// Versions are the telemetry transforms that apply for each semantic
-	// convention version.
-	Versions map[SemConvVersion]Changeset
+	// Versions is the map from semantic convention version to telemetry
+	// changeset required by those semantic convetions.
+	//
+	// The version string is a semver string matching the release version of
+	// semantic conventions (e.g. "1.7.0").
+	Versions map[string]Changeset
 }
 
 var (
@@ -71,10 +74,6 @@ func (s *Schema) validate() error {
 
 	return nil
 }
-
-// SemConvVersion is a semantic conventions version used by a schema file (e.g.
-// "1.7.0").
-type SemConvVersion string
 
 // Changeset is all the applicable telemetry changes for a particular semantic
 // convention version.

@@ -28,7 +28,7 @@ func TestParseSchemaFile(t *testing.T) {
 		t, &Schema{
 			FileFormat: "1.1.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",
-			Versions: map[SemConvVersion]Changeset{
+			Versions: map[string]Changeset{
 				"1.0.0": {},
 
 				"1.1.0": {
