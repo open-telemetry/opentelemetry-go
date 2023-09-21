@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Added
+
+- The `Parse` and `ParseFile` functions are added to `go.opentelemetry.io/otel/schema` to replace the ones formally found in `go.opentelemetry.io/otel/schema/v1.0` and `go.opentelemetry.io/otel/schema/v1.1`. (#4538)
+- The `Schema` and its related types are added to `go.opentelemetry.io/otel/schema` to replace the ones formally found in `go.opentelemetry.io/otel/schema/v1.0` and `go.opentelemetry.io/otel/schema/v1.1`. (#4538)
+
+## Removed
+
+- The `go.opentelemetry.io/otel/schema/v1.0` package.
+  Use the similar functions and types added to `go.opentelemetry.io/otel/schema` instead. (#4538)
+- The `go.opentelemetry.io/otel/schema/v1.1` package.
+  Use the equivalent functions and types added to `go.opentelemetry.io/otel/schema` instead. (#4538)
+
 ## [1.19.0-rc.1/0.42.0-rc.1] 2023-09-14
 
 This is a release candidate for the v1.19.0/v0.42.0 release.
