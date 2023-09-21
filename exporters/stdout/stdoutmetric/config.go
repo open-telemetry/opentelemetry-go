@@ -87,7 +87,7 @@ func WithWriter(w io.Writer) Option {
 	return WithEncoder(json.NewEncoder(w))
 }
 
-// WithPrettyPrint sets the export stream format to use JSON.
+// WithPrettyPrint prettifies the emitted output.
 // If `WithEncoder` is also used, this option will have no effect.
 func WithPrettyPrint() Option {
 	return optionFunc(func(c config) config {
