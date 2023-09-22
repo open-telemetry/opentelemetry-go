@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// dice is the "Roll the dice" getting started example application.
+// Dice is the "Roll the dice" getting started example application.
 package main
