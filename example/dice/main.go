@@ -38,7 +38,7 @@ func run() (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	// Setup OpenTelemetry.
+	// Set up OpenTelemetry.
 	serviceName := "dice"
 	serviceVersion := "0.1.0"
 	otelShutdown, err := setupOTelSDK(ctx, serviceName, serviceVersion)
