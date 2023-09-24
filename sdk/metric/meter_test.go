@@ -773,10 +773,10 @@ func TestValidateInstrumentName(t *testing.T) {
 			name: "na_e",
 		},
 		{
-			name: "nam.",
+			name: "name.",
 		},
 		{
-			name: "nam/e",
+			name: "name/e",
 		},
 		{
 			name:    "name!",
