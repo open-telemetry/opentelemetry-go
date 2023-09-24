@@ -14,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.19.0-rc.1
 	go.opentelemetry.io/otel/bridge/opentracing v1.19.0-rc.1
-	google.golang.org/grpc v1.58.1
+	google.golang.org/grpc v1.58.2
 )
 
 require (
