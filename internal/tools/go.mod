@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.11.0
 	go.opentelemetry.io/build-tools/gotmpl v0.11.0
 	go.opentelemetry.io/build-tools/multimod v0.11.0
-	go.opentelemetry.io/build-tools/semconvgen v0.11.0
+	go.opentelemetry.io/build-tools/semconvgen v0.12.0
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/tools v0.13.0
 )
@@ -191,7 +191,7 @@ require (
 	github.com/yeya24/promlinter v0.2.0 // indirect
 	github.com/ykadowak/zerologlint v0.1.3 // indirect
 	gitlab.com/bosi/decorder v0.4.0 // indirect
-	go.opentelemetry.io/build-tools v0.11.0 // indirect
+	go.opentelemetry.io/build-tools v0.12.0 // indirect
 	go.tmz.dev/musttag v0.7.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
