@@ -34,7 +34,7 @@ var (
 
 func init() {
 	var err error
-	rollCnt, err = meter.Int64Counter("roll_counter",
+	rollCnt, err = meter.Int64Counter("dice.rolls",
 		metric.WithDescription("The number of rolls by roll value"),
 		metric.WithUnit("{roll}"))
 	if err != nil {
@@ -43,7 +43,7 @@ func init() {
 }
 
 func rolldice(w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "do_roll")
+	ctx, span := tracer.Start(r.Context(), "roll")
 	defer span.End()
 
 	roll := 1 + rand.Intn(6)
