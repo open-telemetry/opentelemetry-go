@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove `go.opentelemetry.io/otel/bridge/opencensus.NewMetricExporter`, which is replaced by NewMetricProducer. (#4566)
+- Remove `"go.opentelemetry.io/otel/bridge/opencensus".NewMetricExporter`, which is replaced by `NewMetricProducer`. (#4566)
 
 ## [1.19.0-rc.1/0.42.0-rc.1] 2023-09-14
 
