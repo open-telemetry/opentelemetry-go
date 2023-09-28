@@ -1,7 +1,7 @@
 name: Benchmark
 on:
   push:
-    tags:
+        tags:
       - v1.* 
   workflow_dispatch: 
 
@@ -31,6 +31,8 @@ jobs:
           tool: 'go'
           output-file-path: output.txt
           external-data-json-path: ./benchmarks/data.json
-          auto-push: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks
+          auto-push: true
           fail-on-alert: false
           alert-threshold: "400%"
