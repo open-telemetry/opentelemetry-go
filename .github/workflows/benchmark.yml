@@ -1,7 +1,7 @@
 name: Benchmark
 on:
   push:
-        tags:
+    tags:
       - v1.* 
   workflow_dispatch: 
 
