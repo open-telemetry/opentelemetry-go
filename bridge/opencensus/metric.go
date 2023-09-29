@@ -26,15 +26,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-const scopeName = "go.opentelemetry.io/otel/bridge/opencensus"
-
 type producer struct {
 	manager *metricproducer.Manager
 }
 
 // NewMetricProducer returns a metric.Producer that fetches metrics from
 // OpenCensus.
-func NewMetricProducer() metric.Producer {
+func NewMetricProducer(opts ...MetricOption) metric.Producer {
 	return &producer{
 		manager: metricproducer.GlobalManager(),
 	}
