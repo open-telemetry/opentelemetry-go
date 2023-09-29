@@ -17,7 +17,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 | Metrics | Stable             |
 | Logs    | In Development [1] |
 
-- [1]: Currently the logs signal developement is in a design phase.
+- [1]: Currently the logs signal development is in a design phase.
    No Logs Pull Requests are currently being accepted.
 
 Progress and status specific to this repository is tracked in our
