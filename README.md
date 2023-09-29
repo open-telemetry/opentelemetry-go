@@ -17,8 +17,6 @@ It provides a set of APIs to directly measure performance and behavior of your s
 | Metrics | Stable             |
 | Logs    | In Development [1] |
 
-[Go: Metric SDK (GA)]: https://github.com/orgs/open-telemetry/projects/34
-
 - [1]: Currently the logs signal developement is in a design phase.
    No Logs Pull Requests are currently being accepted.
 
