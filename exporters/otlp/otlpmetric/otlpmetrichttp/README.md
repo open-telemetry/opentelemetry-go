@@ -20,21 +20,21 @@ The following environment variables can be used (instead of options objects) to 
 
 | Name | Description | Default | Override with |
 |------|-------------|---------|---------------|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint to which the exporter is going to send traces or metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true |`http://localhost:4317`| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, [WithEndpoint()] |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Endpoint to which the exporter is going to send metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true |`http://localhost:4317`| [WithEndpoint()] |
-| `OTEL_EXPORTER_OTLP_INSECURE` | If set to true the connection will not attempt to use tls when connecting | insecure | `OTEL_EXPORTER_OTLP_METRICS_INSECURE`, [WithInsecure()] |
-| `OTEL_EXPORTER_OTLP_METRICS_INSECURE` | If set to true the connection will not attempt to use tls when connecting | insecure | [WithInsecure()] |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint to which the exporter is going to send traces or metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true | `http://localhost:4317` | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, [WithEndpoint()] |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Endpoint to which the exporter is going to send metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true | `http://localhost:4317/v1/metrics` | [WithEndpoint()] |
+| `OTEL_EXPORTER_OTLP_INSECURE` | If set to true the connection will not attempt to use TLS when connecting | `false` | `OTEL_EXPORTER_OTLP_METRICS_INSECURE`, [WithInsecure()] |
+| `OTEL_EXPORTER_OTLP_METRICS_INSECURE` | If set to true the connection will not attempt to use TLS when connecting | `false` | [WithInsecure()] |
 | `OTEL_EXPORTER_OTLP_HEADERS` | A list of headers to send with each request | none | `OTEL_EXPORTER_OTLP_METRICS_HEADERS`, [WithHeaders()] |
 | `OTEL_EXPORTER_OTLP_METRICS_HEADERS` | A list of headers to send with each request | none | [WithHeaders()] |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` | Sets the compressions used in the connection. Supports `none` and `gzip`.  Must import the compressor for gzip to work. | none | `OTEL_EXPORTER_OTLP_METRICS_COMPRESSION`, [WithCompression()] |
 | `OTEL_EXPORTER_OTLP_METRICS_COMPRESSION` | Sets the compressions used in the connection. Supports `none` and `gzip`.  Must import the compressor for gzip to work. | none | [WithCompression()] |
-| `OTEL_EXPORTER_OTLP_TIMEOUT` | Sets the max amount of time an Exporter will attempt an export | 10s | `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`, [WithTimeout()] |
-| `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Sets the max amount of time an Exporter will attempt an export | 10s | [WithTimeout()] |
-| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | The aggregation temporality to use on the basis of instrument kind. Available values are `Cumulative`, `Delta`, and `LowMemory`.  See [The OTLP Exporter Specification] for more details| Cumulative | [WithTemporalitySelector()] |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` | Sets the max amount of time (as milliseconds) an Exporter will attempt an export | `10000` | `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT`, [WithTimeout()] |
+| `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Sets the max amount of time (as milliseconds) an Exporter will attempt an export | `10000` | [WithTimeout()] |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | The aggregation temporality to use on the basis of instrument kind. Available values are `Cumulative`, `Delta`, and `LowMemory`.  See [The OTLP Exporter Specification] for more details | `Cumulative` | [WithTemporalitySelector()] |
 
 [WithEndpoint()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithEndpoint
 [WithInsecure()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithInsecure
-[WithHeader()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithHeaders
+[WithHeaders()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithHeaders
 [WithCompression()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithCompression
 [WithCompressor()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithCompressor
 [WithTimeout()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithTimeout
