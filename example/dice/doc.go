@@ -12,9 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlptrace // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-
-// Version is the current release version of the OpenTelemetry OTLP trace exporter in use.
-func Version() string {
-	return "1.19.0"
-}
+// Dice is the "Roll the dice" getting started example application.
+package main

@@ -619,6 +619,10 @@ func testDatatypeIgnoreValue[T Datatypes](a, b T, f equalFunc[T]) func(*testing.
 	}
 }
 
+func TestTestingTImplementation(t *testing.T) {
+	assert.Implements(t, (*TestingT)(nil), t)
+}
+
 func TestAssertEqual(t *testing.T) {
 	t.Run("ResourceMetrics", testDatatype(resourceMetricsA, resourceMetricsB, equalResourceMetrics))
 	t.Run("ScopeMetrics", testDatatype(scopeMetricsA, scopeMetricsB, equalScopeMetrics))

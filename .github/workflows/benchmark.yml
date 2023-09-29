@@ -4,13 +4,13 @@ on:
     branches:
       - main
 env:
-  DEFAULT_GO_VERSION: "1.21"
+  DEFAULT_GO_VERSION: "~1.21.1"
 jobs:
   benchmark:
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}

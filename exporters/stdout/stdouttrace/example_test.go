@@ -29,7 +29,7 @@ import (
 
 const (
 	instrumentationName    = "github.com/instrumentron"
-	instrumentationVersion = "v0.1.0"
+	instrumentationVersion = "0.1.0"
 )
 
 var (

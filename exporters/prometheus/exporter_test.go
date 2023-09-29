@@ -16,6 +16,7 @@ package prometheus
 
 import (
 	"context"
+	"io"
 	"os"
 	"sync"
 	"testing"
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -790,6 +792,14 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 }
 
 func TestIncompatibleMeterName(t *testing.T) {
+	defer func(orig otel.ErrorHandler) {
+		otel.SetErrorHandler(orig)
+	}(otel.GetErrorHandler())
+
+	errs := []error{}
+	eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+	otel.SetErrorHandler(eh)
+
 	// This test checks that Prometheus exporter ignores
 	// when it encounters incompatible meter name.
 
@@ -815,4 +825,13 @@ func TestIncompatibleMeterName(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
+
+	assert.Equal(t, 1, len(errs))
+
+	// A second collect shouldn't trigger new errors
+	_, err = file.Seek(0, io.SeekStart)
+	assert.NoError(t, err)
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(errs))
 }

@@ -18,7 +18,6 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -51,6 +50,20 @@ type Datatypes interface {
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
+}
+
+// TestingT is an interface that implements [testing.T], but without the
+// private method of [testing.TB], so other testing packages can rely on it as
+// well.
+// The methods in this interface must match the [testing.TB] interface.
+type TestingT interface {
+	Helper()
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
+	Error(...any)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 type config struct {
@@ -110,7 +123,7 @@ func IgnoreValue() Option {
 
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
-func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) bool {
+func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -178,7 +191,7 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation, opts ...Option) bool {
+func AssertAggregationsEqual(t TestingT, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -190,7 +203,7 @@ func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregati
 }
 
 // AssertHasAttributes asserts that all Datapoints or HistogramDataPoints have all passed attrs.
-func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute.KeyValue) bool {
+func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.KeyValue) bool {
 	t.Helper()
 
 	var reasons []string

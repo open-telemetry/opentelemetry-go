@@ -8,12 +8,12 @@ jobs:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'dependencies') }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         ref: ${{ github.head_ref }}
     - uses: actions/setup-go@v4
       with:
-        go-version: '^1.21.0'
+        go-version: '^1.21.1'
     - uses: evantorrie/mott-the-tidier@v1-beta
       id: modtidy
       with:

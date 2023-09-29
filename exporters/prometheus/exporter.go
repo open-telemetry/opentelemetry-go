@@ -45,7 +45,11 @@ const (
 	scopeInfoDescription = "Instrumentation Scope metadata"
 )
 
-var scopeInfoKeys = [2]string{"otel_scope_name", "otel_scope_version"}
+var (
+	scopeInfoKeys = [2]string{"otel_scope_name", "otel_scope_version"}
+
+	errScopeInvalid = errors.New("invalid scope")
+)
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -87,6 +91,7 @@ type collector struct {
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
+	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 }
 
@@ -110,6 +115,7 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutCounterSuffixes: cfg.withoutCounterSuffixes,
 		disableScopeInfo:       cfg.disableScopeInfo,
 		scopeInfos:             make(map[instrumentation.Scope]prometheus.Metric),
+		scopeInfosInvalid:      make(map[instrumentation.Scope]struct{}),
 		metricFamilies:         make(map[string]*dto.MetricFamily),
 		namespace:              cfg.namespace,
 	}
@@ -177,6 +183,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		if !c.disableScopeInfo {
 			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
+			if err == errScopeInvalid {
+				// Do not report the same error multiple times.
+				continue
+			}
 			if err != nil {
 				otel.Handle(err)
 				continue
@@ -469,8 +479,13 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 		return scopeInfo, nil
 	}
 
+	if _, ok := c.scopeInfosInvalid[scope]; ok {
+		return nil, errScopeInvalid
+	}
+
 	scopeInfo, err := createScopeInfoMetric(scope)
 	if err != nil {
+		c.scopeInfosInvalid[scope] = struct{}{}
 		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
 	}
 
