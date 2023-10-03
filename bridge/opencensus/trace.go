@@ -36,9 +36,14 @@ func NewTracer(tracer trace.Tracer) octrace.Tracer {
 // the global OpenCensus tracer implementation. Once the bridge is installed,
 // spans recorded using OpenCensus are redirected to the OpenTelemetry SDK.
 func InstallTraceBridge(opts ...TraceOption) {
+	octrace.DefaultTracer = newTraceBridge(opts)
+}
+
+func newTraceBridge(opts []TraceOption) octrace.Tracer {
 	cfg := newTraceConfig(opts)
-	tracer := cfg.tp.Tracer(scopeName)
-	octrace.DefaultTracer = internal.NewTracer(tracer)
+	return internal.NewTracer(
+		cfg.tp.Tracer(scopeName, trace.WithInstrumentationVersion(Version())),
+	)
 }
 
 // OTelSpanContextToOC converts from an OpenTelemetry SpanContext to an

@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `go.opentelemetry.io/otel/bridge/opencensus.InstallTraceBridge`, which installs the OpenCensus trace bridge, and replaces `opencensus.NewTracer`. (#4567)
+- Add scope version to trace and metric bridges in `go.opentelemetry.io/otel/bridge/opencensus`. (#4584)
 
 ### Deprecated
 
