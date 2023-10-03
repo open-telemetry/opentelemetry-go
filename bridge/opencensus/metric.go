@@ -42,6 +42,8 @@ func NewMetricProducer(opts ...MetricOption) *MetricProducer {
 
 var _ metric.Producer = (*MetricProducer)(nil)
 
+// Produce implements metric.Producer by fetching metrics from the OpenCensus
+// manager, translating them to OpenTelemetry's data model, and returning them.
 func (p *MetricProducer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	producers := p.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
