@@ -154,7 +154,15 @@ func (s *bridgeSpan) SetOperationName(operationName string) ot.Span {
 func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
 	switch key {
 	case string(otext.SpanKind):
-		// TODO: Should we ignore it?
+		type readSpanKindSpan interface {
+			SpanKind() trace.SpanKind
+		}
+		// only add span kind tag when otel span kind is unset or bridge default (internal)
+		if span, ok := s.otelSpan.(readSpanKindSpan); ok {
+			if span.SpanKind() == trace.SpanKindUnspecified || span.SpanKind() == trace.SpanKindInternal {
+				s.otelSpan.SetAttributes(otTagToOTelAttr(key, value))
+			}
+		}
 	case string(otext.Error):
 		if b, ok := value.(bool); ok && b {
 			s.otelSpan.SetStatus(codes.Error, "")

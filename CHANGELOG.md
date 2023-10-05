@@ -277,6 +277,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   - The `Observer.ObserveInt64` method now accepts `...ObserveOption`
   - The `Observer.ObserveFloat64` method now accepts `...ObserveOption`
 - Move global metric back to `go.opentelemetry.io/otel/metric/global` from `go.opentelemetry.io/otel`. (#3986)
+- Allow to set span kind tag after a span is created in OpenTracing bridge (#3997).
 
 ### Fixed
 
