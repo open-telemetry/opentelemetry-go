@@ -20,6 +20,7 @@ import (
 	"time"
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
+	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -28,6 +29,7 @@ import (
 
 func TestConvertMetrics(t *testing.T) {
 	endTime1 := time.Now()
+	exemplarTime := endTime1.Add(-10 * time.Second)
 	endTime2 := endTime1.Add(-time.Millisecond)
 	startTime := endTime2.Add(-time.Minute)
 	for _, tc := range []struct {
@@ -73,9 +75,56 @@ func TestConvertMetrics(t *testing.T) {
 										Bounds: []float64{1.0, 2.0, 3.0},
 									},
 									Buckets: []ocmetricdata.Bucket{
-										{Count: 1},
-										{Count: 2},
-										{Count: 5},
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.8,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{1}),
+														SpanID:  octrace.SpanID([8]byte{2}),
+													},
+													"bool":         true,
+													"boolslice":    []bool{true, false},
+													"int":          10,
+													"intslice":     []int{10, 20},
+													"int64":        int64(10),
+													"int64slice":   []int64{10, 20},
+													"float64":      float64(10.0),
+													"float64slice": []float64{10.0, 20.0},
+													"string":       "string",
+													"stringslice":  []string{"string", "slice"},
+													"stringer":     fakeStringer("stringer"),
+												},
+											},
+										},
+										{
+											Count: 2,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     1.5,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{3}),
+														SpanID:  octrace.SpanID([8]byte{4}),
+													},
+												},
+											},
+										},
+										{
+											Count: 5,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     2.6,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{5}),
+														SpanID:  octrace.SpanID([8]byte{6}),
+													},
+												},
+											},
+										},
 									},
 								}),
 								ocmetricdata.NewDistributionPoint(endTime2, &ocmetricdata.Distribution{
@@ -85,9 +134,45 @@ func TestConvertMetrics(t *testing.T) {
 										Bounds: []float64{1.0, 2.0, 3.0},
 									},
 									Buckets: []ocmetricdata.Bucket{
-										{Count: 1},
-										{Count: 4},
-										{Count: 5},
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.9,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{7}),
+														SpanID:  octrace.SpanID([8]byte{8}),
+													},
+												},
+											},
+										},
+										{
+											Count: 4,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     1.1,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{9}),
+														SpanID:  octrace.SpanID([8]byte{10}),
+													},
+												},
+											},
+										},
+										{
+											Count: 5,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     2.7,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{11}),
+														SpanID:  octrace.SpanID([8]byte{12}),
+													},
+												},
+											},
+										},
 									},
 								}),
 							},
@@ -229,6 +314,39 @@ func TestConvertMetrics(t *testing.T) {
 								Sum:          100.0,
 								Bounds:       []float64{1.0, 2.0, 3.0},
 								BucketCounts: []uint64{1, 2, 5},
+								Exemplars: []metricdata.Exemplar[float64]{
+									{
+										Time:    exemplarTime,
+										Value:   0.8,
+										TraceID: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{2, 0, 0, 0, 0, 0, 0, 0},
+										FilteredAttributes: []attribute.KeyValue{
+											attribute.Bool("bool", true),
+											attribute.BoolSlice("boolslice", []bool{true, false}),
+											attribute.Float64("float64", 10.0),
+											attribute.Float64Slice("float64slice", []float64{10.0, 20.0}),
+											attribute.Int("int", 10),
+											attribute.Int64("int64", 10),
+											attribute.Int64Slice("int64slice", []int64{10, 20}),
+											attribute.IntSlice("intslice", []int{10, 20}),
+											attribute.String("string", "string"),
+											attribute.Stringer("stringer", fakeStringer("stringer")),
+											attribute.StringSlice("stringslice", []string{"string", "slice"}),
+										},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   1.5,
+										TraceID: []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{4, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   2.6,
+										TraceID: []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{6, 0, 0, 0, 0, 0, 0, 0},
+									},
+								},
 							}, {
 								Attributes: attribute.NewSet(attribute.KeyValue{
 									Key:   attribute.Key("a"),
@@ -243,6 +361,26 @@ func TestConvertMetrics(t *testing.T) {
 								Sum:          110.0,
 								Bounds:       []float64{1.0, 2.0, 3.0},
 								BucketCounts: []uint64{1, 4, 5},
+								Exemplars: []metricdata.Exemplar[float64]{
+									{
+										Time:    exemplarTime,
+										Value:   0.9,
+										TraceID: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{8, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   1.1,
+										TraceID: []byte{9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{10, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   2.7,
+										TraceID: []byte{11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{12, 0, 0, 0, 0, 0, 0, 0},
+									},
+								},
 							},
 						},
 						Temporality: metricdata.CumulativeTemporality,
@@ -517,6 +655,85 @@ func TestConvertMetrics(t *testing.T) {
 			expectedErr: errMismatchedValueTypes,
 		},
 		{
+			desc: "histogram with invalid span context exemplar",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/histogram-a",
+						Description: "a testing histogram",
+						Unit:        ocmetricdata.UnitDimensionless,
+						Type:        ocmetricdata.TypeCumulativeDistribution,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewDistributionPoint(endTime1, &ocmetricdata.Distribution{
+									Count: 8,
+									Sum:   100.0,
+									BucketOptions: &ocmetricdata.BucketOptions{
+										Bounds: []float64{1.0, 2.0, 3.0},
+									},
+									Buckets: []ocmetricdata.Bucket{
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.8,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: "notaspancontext",
+												},
+											},
+										},
+									},
+								}),
+							},
+							StartTime: startTime,
+						},
+					},
+				},
+			},
+			expectedErr: errInvalidExemplarSpanContext,
+		},
+		{
+			desc: "histogram with invalid exemplar attachment",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/histogram-a",
+						Description: "a testing histogram",
+						Unit:        ocmetricdata.UnitDimensionless,
+						Type:        ocmetricdata.TypeCumulativeDistribution,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewDistributionPoint(endTime1, &ocmetricdata.Distribution{
+									Count: 8,
+									Sum:   100.0,
+									BucketOptions: &ocmetricdata.BucketOptions{
+										Bounds: []float64{1.0, 2.0, 3.0},
+									},
+									Buckets: []ocmetricdata.Bucket{
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.8,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													"invalid attachment": metricdata.Histogram[float64]{},
+												},
+											},
+										},
+									},
+								}),
+							},
+							StartTime: startTime,
+						},
+					},
+				},
+			},
+			expectedErr: errInvalidExemplarAttachmentValue,
+		}, {
 			desc: "sum with non-sum datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -639,4 +856,10 @@ func TestConvertAttributes(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeStringer string
+
+func (f fakeStringer) String() string {
+	return string(f)
 }

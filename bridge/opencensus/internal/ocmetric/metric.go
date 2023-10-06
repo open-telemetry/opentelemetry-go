@@ -17,19 +17,24 @@ package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"sort"
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
+	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 var (
-	errAggregationType              = errors.New("unsupported OpenCensus aggregation type")
-	errMismatchedValueTypes         = errors.New("wrong value type for data point")
-	errNegativeDistributionCount    = errors.New("distribution count is negative")
-	errNegativeBucketCount          = errors.New("distribution bucket count is negative")
-	errMismatchedAttributeKeyValues = errors.New("mismatched number of attribute keys and values")
+	errAggregationType                = errors.New("unsupported OpenCensus aggregation type")
+	errMismatchedValueTypes           = errors.New("wrong value type for data point")
+	errNegativeDistributionCount      = errors.New("distribution count is negative")
+	errNegativeBucketCount            = errors.New("distribution bucket count is negative")
+	errMismatchedAttributeKeyValues   = errors.New("mismatched number of attribute keys and values")
+	errInvalidExemplarSpanContext     = errors.New("span context exemplar attachment did not contain an OpenCensus SpanContext")
+	errInvalidExemplarAttachmentValue = errors.New("exemplar attachment is not a supported OpenTelemetry attribute type")
 )
 
 // ConvertMetrics converts metric data from OpenCensus to OpenTelemetry.
@@ -134,7 +139,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				err = errors.Join(err, fmt.Errorf("%w: %d", errMismatchedValueTypes, p.Value))
 				continue
 			}
-			bucketCounts, bucketErr := convertBucketCounts(dist.Buckets)
+			bucketCounts, exemplars, bucketErr := convertBuckets(dist.Buckets)
 			if bucketErr != nil {
 				err = errors.Join(err, bucketErr)
 				continue
@@ -143,7 +148,6 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeDistributionCount, dist.Count))
 				continue
 			}
-			// TODO: handle exemplars
 			points = append(points, metricdata.HistogramDataPoint[float64]{
 				Attributes:   attrs,
 				StartTime:    t.StartTime,
@@ -152,22 +156,93 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				Sum:          dist.Sum,
 				Bounds:       dist.BucketOptions.Bounds,
 				BucketCounts: bucketCounts,
+				Exemplars:    exemplars,
 			})
 		}
 	}
 	return metricdata.Histogram[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, err
 }
 
-// convertBucketCounts converts from OpenCensus bucket counts to slice of uint64.
-func convertBucketCounts(buckets []ocmetricdata.Bucket) ([]uint64, error) {
+// convertBuckets converts from OpenCensus bucket counts to slice of uint64,
+// and converts OpenCensus exemplars to OpenTelemetry exemplars.
+func convertBuckets(buckets []ocmetricdata.Bucket) ([]uint64, []metricdata.Exemplar[float64], error) {
 	bucketCounts := make([]uint64, len(buckets))
+	exemplars := []metricdata.Exemplar[float64]{}
+	var err error
 	for i, bucket := range buckets {
 		if bucket.Count < 0 {
-			return nil, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count)
+			err = errors.Join(err, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count))
+		} else {
+			bucketCounts[i] = uint64(bucket.Count)
 		}
-		bucketCounts[i] = uint64(bucket.Count)
+		if bucket.Exemplar != nil {
+			exemplar, exemplarErr := convertExemplar(bucket.Exemplar)
+			if exemplarErr != nil {
+				err = errors.Join(err, exemplarErr)
+			} else {
+				exemplars = append(exemplars, exemplar)
+			}
+		}
 	}
-	return bucketCounts, nil
+	return bucketCounts, exemplars, err
+}
+
+// convertExemplar converts an OpenCensus exemplar to an OpenTelemetry exemplar.
+func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[float64], error) {
+	exemplar := metricdata.Exemplar[float64]{
+		Value: ocExemplar.Value,
+		Time:  ocExemplar.Timestamp,
+	}
+	if ocExemplar.Attachments == nil {
+		return exemplar, nil
+	}
+	var err error
+	for k, v := range ocExemplar.Attachments {
+		if k == ocmetricdata.AttachmentKeySpanContext {
+			if sc, ok := v.(octrace.SpanContext); ok {
+				exemplar.SpanID = sc.SpanID[:]
+				exemplar.TraceID = sc.TraceID[:]
+			} else {
+				err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarSpanContext, reflect.TypeOf(v)))
+			}
+		} else if kv := convertKV(k, v); kv.Valid() {
+			exemplar.FilteredAttributes = append(exemplar.FilteredAttributes, kv)
+		} else {
+			err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarAttachmentValue, reflect.TypeOf(v)))
+		}
+	}
+	sortable := attribute.Sortable(exemplar.FilteredAttributes)
+	sort.Sort(&sortable)
+	return exemplar, err
+}
+
+// convertKV converts an OpenCensus Attachment to an OpenTelemetry KeyValue.
+func convertKV(key string, value any) attribute.KeyValue {
+	switch typedVal := value.(type) {
+	case bool:
+		return attribute.Bool(key, typedVal)
+	case []bool:
+		return attribute.BoolSlice(key, typedVal)
+	case int:
+		return attribute.Int(key, typedVal)
+	case []int:
+		return attribute.IntSlice(key, typedVal)
+	case int64:
+		return attribute.Int64(key, typedVal)
+	case []int64:
+		return attribute.Int64Slice(key, typedVal)
+	case float64:
+		return attribute.Float64(key, typedVal)
+	case []float64:
+		return attribute.Float64Slice(key, typedVal)
+	case string:
+		return attribute.String(key, typedVal)
+	case []string:
+		return attribute.StringSlice(key, typedVal)
+	case fmt.Stringer:
+		return attribute.Stringer(key, typedVal)
+	}
+	return attribute.KeyValue{}
 }
 
 // convertAttrs converts from OpenCensus attribute keys and values to an
