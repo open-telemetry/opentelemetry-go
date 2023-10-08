@@ -71,10 +71,10 @@ jobs:
         run: make generate
       - name: Check clean repository
         run: make check-clean-work-tree
-    	- uses: dominikh/staticcheck-action@v1.2.0
-	      with:
-		      version: "2023.1.6"
-		      install-go: false
+      - uses: dominikh/staticcheck-action@v1.2.0
+        with:
+          version: "2023.1.6"
+          install-go: false
   test-race:
     runs-on: ubuntu-latest
     steps:
