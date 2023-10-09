@@ -230,9 +230,9 @@ misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
 .PHONY: govulncheck
-go-mod-tidy: $(OTEL_GO_MOD_DIRS:%=govulncheck/%)
-go-mod-tidy/%: DIR=$*
-govulncheck: | $(GOVULNCHECK)
+govulncheck: $(OTEL_GO_MOD_DIRS:%=govulncheck/%)
+govulncheck/%: DIR=$*
+govulncheck/%: | $(GOVULNCHECK)
 	@echo "govulncheck ./... in $(DIR)" \
 		&& cd $(DIR) \
 		&& $(GOVULNCHECK) ./...
