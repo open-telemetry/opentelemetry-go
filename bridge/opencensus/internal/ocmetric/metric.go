@@ -17,6 +17,7 @@ package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
 
@@ -27,7 +28,7 @@ import (
 var (
 	errAggregationType              = errors.New("unsupported OpenCensus aggregation type")
 	errMismatchedValueTypes         = errors.New("wrong value type for data point")
-	errNegativeDistributionCount    = errors.New("distribution count is negative")
+	errNegativeCount                = errors.New("distribution or summary count is negative")
 	errNegativeBucketCount          = errors.New("distribution bucket count is negative")
 	errMismatchedAttributeKeyValues = errors.New("mismatched number of attribute keys and values")
 )
@@ -72,7 +73,8 @@ func convertAggregation(metric *ocmetricdata.Metric) (metricdata.Aggregation, er
 		return convertSum[float64](labelKeys, metric.TimeSeries)
 	case ocmetricdata.TypeCumulativeDistribution:
 		return convertHistogram(labelKeys, metric.TimeSeries)
-		// TODO: Support summaries, once it is in the OTel data types.
+	case ocmetricdata.TypeSummary:
+		return convertSummary(labelKeys, metric.TimeSeries)
 	}
 	return nil, fmt.Errorf("%w: %q", errAggregationType, metric.Descriptor.Type)
 }
@@ -140,7 +142,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				continue
 			}
 			if dist.Count < 0 {
-				err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeDistributionCount, dist.Count))
+				err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeCount, dist.Count))
 				continue
 			}
 			// TODO: handle exemplars
@@ -169,6 +171,63 @@ func convertBucketCounts(buckets []ocmetricdata.Bucket) ([]uint64, error) {
 	}
 	return bucketCounts, nil
 }
+
+// convertSummary converts OpenCensus Summary timeseries to an
+// OpenTelemetry Summary.
+func convertSummary(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Summary, error) {
+	points := make([]metricdata.SummaryDataPoint, 0, len(ts))
+	var err error
+	for _, t := range ts {
+		attrs, attrErr := convertAttrs(labelKeys, t.LabelValues)
+		if attrErr != nil {
+			err = errors.Join(err, attrErr)
+			continue
+		}
+		for _, p := range t.Points {
+			summary, ok := p.Value.(*ocmetricdata.Summary)
+			if !ok {
+				err = errors.Join(err, fmt.Errorf("%w: %d", errMismatchedValueTypes, p.Value))
+				continue
+			}
+			if summary.Count < 0 {
+				err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeCount, summary.Count))
+				continue
+			}
+			point := metricdata.SummaryDataPoint{
+				Attributes:     attrs,
+				StartTime:      t.StartTime,
+				Time:           p.Time,
+				Count:          uint64(summary.Count),
+				QuantileValues: convertQuantiles(summary.Snapshot),
+				Sum:            summary.Sum,
+			}
+			points = append(points, point)
+		}
+	}
+	return metricdata.Summary{DataPoints: points}, err
+}
+
+// convertQuantiles converts an OpenCensus summary snapshot to
+// OpenTelemetry quantiles.
+func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue {
+	quantileValues := make([]metricdata.QuantileValue, 0, len(snapshot.Percentiles))
+	for quantile, value := range snapshot.Percentiles {
+		quantileValues = append(quantileValues, metricdata.QuantileValue{
+			Quantile: quantile,
+			Value:    value,
+		})
+	}
+	sort.Sort(byQuantile(quantileValues))
+	return quantileValues
+}
+
+// byQuantile implements sort.Interface for []metricdata.QuantileValue
+// based on the Quantile field.
+type byQuantile []metricdata.QuantileValue
+
+func (a byQuantile) Len() int           { return len(a) }
+func (a byQuantile) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byQuantile) Less(i, j int) bool { return a[i].Quantile < a[j].Quantile }
 
 // convertAttrs converts from OpenCensus attribute keys and values to an
 // OpenTelemetry attribute Set.

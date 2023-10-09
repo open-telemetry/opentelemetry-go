@@ -56,7 +56,6 @@
 //     implemented, and An error will be sent to the OpenTelemetry ErrorHandler.
 //
 // There are known limitations to the metric bridge:
-//   - Summary-typed metrics are dropped
 //   - GaugeDistribution-typed metrics are dropped
 //   - Histogram's SumOfSquaredDeviation field is dropped
 //   - Exemplars on Histograms are dropped
