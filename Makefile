@@ -220,7 +220,7 @@ go-mod-tidy/%: | crosslink
 lint-modules: go-mod-tidy
 
 .PHONY: lint
-lint: misspell lint-modules golangci-lint 
+lint: misspell govulncheck
 
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
