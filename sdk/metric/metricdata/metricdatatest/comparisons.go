@@ -38,6 +38,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons 
 		b.ScopeMetrics,
 		func(a, b metricdata.ScopeMetrics) bool {
 			r := equalScopeMetrics(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -62,6 +63,7 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []stri
 		b.Metrics,
 		func(a, b metricdata.Metrics) bool {
 			r := equalMetrics(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -172,6 +174,7 @@ func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reaso
 		b.DataPoints,
 		func(a, b metricdata.DataPoint[N]) bool {
 			r := equalDataPoints(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -199,6 +202,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 		b.DataPoints,
 		func(a, b metricdata.DataPoint[N]) bool {
 			r := equalDataPoints(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -223,6 +227,7 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 		b.DataPoints,
 		func(a, b metricdata.HistogramDataPoint[N]) bool {
 			r := equalHistogramDataPoints(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -264,6 +269,7 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 			b.Exemplars,
 			func(a, b metricdata.Exemplar[N]) bool {
 				r := equalExemplars(a, b, cfg)
+				reasons = append(reasons, r...)
 				return len(r) == 0
 			},
 		))
@@ -318,6 +324,7 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 			b.Exemplars,
 			func(a, b metricdata.Exemplar[N]) bool {
 				r := equalExemplars(a, b, cfg)
+				reasons = append(reasons, r...)
 				return len(r) == 0
 			},
 		))
@@ -343,6 +350,7 @@ func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHi
 		b.DataPoints,
 		func(a, b metricdata.ExponentialHistogramDataPoint[N]) bool {
 			r := equalExponentialHistogramDataPoints(a, b, cfg)
+			reasons = append(reasons, r...)
 			return len(r) == 0
 		},
 	))
@@ -406,6 +414,7 @@ func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.Expo
 			b.Exemplars,
 			func(a, b metricdata.Exemplar[N]) bool {
 				r := equalExemplars(a, b, cfg)
+				reasons = append(reasons, r...)
 				return len(r) == 0
 			},
 		))
