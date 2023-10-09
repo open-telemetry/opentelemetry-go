@@ -80,7 +80,6 @@ $(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(TOOLS)/govulncheck: PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-
 .PHONY: tools
 tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL) $(GORELEASE)
 
@@ -231,10 +230,12 @@ misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
 .PHONY: govulncheck
+go-mod-tidy: $(OTEL_GO_MOD_DIRS:%=govulncheck/%)
+go-mod-tidy/%: DIR=$*
 govulncheck: | $(GOVULNCHECK)
-	@echo "govulncheck ./..." \
-		$(GOVULNCHECK) ./...
-
+	@echo "govulncheck ./... in $(DIR)" \
+		&& cd $(DIR) \
+		&& $(GOVULNCHECK) ./...
 
 .PHONY: codespell
 codespell: | $(CODESPELL)
