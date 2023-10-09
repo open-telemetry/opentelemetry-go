@@ -41,7 +41,7 @@ func TestConvertMetrics(t *testing.T) {
 			expected: []metricdata.Metrics{},
 		},
 		{
-			desc: "normal Histogram, gauges, and sums",
+			desc: "normal Histogram, summary, gauges, and sums",
 			input: []*ocmetricdata.Metric{
 				{
 					Descriptor: ocmetricdata.Descriptor{
@@ -207,6 +207,54 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-a",
+						Description: "a testing summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+						LabelKeys: []ocmetricdata.LabelKey{
+							{Key: "g"},
+							{Key: "h"},
+						},
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							LabelValues: []ocmetricdata.LabelValue{
+								{
+									Value:   "ding",
+									Present: true,
+								}, {
+									Value:   "dong",
+									Present: true,
+								},
+							},
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.1,
+											0.5: 1.0,
+											1.0: 10.4,
+										},
+									},
+								}),
+								ocmetricdata.NewSummaryPoint(endTime2, &ocmetricdata.Summary{
+									Count: 12,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.2,
+											0.5: 1.1,
+											1.0: 10.5,
+										},
+									},
+								}),
+							},
+						},
+					},
 				},
 			},
 			expected: []metricdata.Metrics{
@@ -368,6 +416,64 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Name:        "foo.com/summary-a",
+					Description: "a testing summary",
+					Unit:        "ms",
+					Data: metricdata.Summary{
+						DataPoints: []metricdata.SummaryDataPoint{
+							{
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime1,
+								Count: 10,
+								Sum:   pointerTo(13.2),
+								QuantileValues: []metricdata.ValueAtQuantile{
+									{
+										Quantile: 0.0,
+										Value:    0.1,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.0,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.4,
+									},
+								},
+							}, {
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime2,
+								Count: 12,
+								QuantileValues: []metricdata.ValueAtQuantile{
+									{
+										Quantile: 0.0,
+										Value:    0.2,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.1,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.5,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		}, {
@@ -461,7 +567,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errNegativeDistributionCount,
+			expectedErr: errNegativeCount,
 		}, {
 			desc: "histogram with negative bucket count",
 			input: []*ocmetricdata.Metric{
@@ -631,4 +737,8 @@ func TestConvertAttributes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func pointerTo(f float64) *float64 {
+	return &f
 }
