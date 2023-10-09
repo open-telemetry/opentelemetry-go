@@ -19,7 +19,7 @@ jobs:
       with:
         gomods: '**/go.mod'
         gomodsum_only: true
-    - uses: stefanzweifel/git-auto-commit-action@v4
+    - uses: stefanzweifel/git-auto-commit-action@v5
       id: autocommit
       with:
         commit_message: Auto-fix go.sum changes in dependent modules
