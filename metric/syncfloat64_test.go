@@ -51,3 +51,9 @@ type float64Config interface {
 	Description() string
 	Unit() string
 }
+
+func TestFloat64ExplicitBucketHistogramConfiguration(t *testing.T) {
+	bounds := []float64{0.1, 0.5, 1.0}
+	got := NewFloat64HistogramConfig(WithExplicitBucketBoundaries(bounds...))
+	assert.Equal(t, bounds, got.ExplicitBucketBoundaries(), "boundaries")
+}
