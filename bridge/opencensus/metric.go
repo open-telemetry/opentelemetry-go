@@ -56,7 +56,8 @@ func (p *MetricProducer) Produce(context.Context) ([]metricdata.ScopeMetrics, er
 	}
 	return []metricdata.ScopeMetrics{{
 		Scope: instrumentation.Scope{
-			Name: scopeName,
+			Name:    scopeName,
+			Version: Version(),
 		},
 		Metrics: otelmetrics,
 	}}, err
