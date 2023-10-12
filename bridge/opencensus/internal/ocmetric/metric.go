@@ -194,9 +194,6 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 		Value: ocExemplar.Value,
 		Time:  ocExemplar.Timestamp,
 	}
-	if ocExemplar.Attachments == nil {
-		return exemplar, nil
-	}
 	var err error
 	for k, v := range ocExemplar.Attachments {
 		switch {
@@ -209,13 +206,12 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 			exemplar.SpanID = sc.SpanID[:]
 			exemplar.TraceID = sc.TraceID[:]
 		default:
-			kv := convertKV(k, v); kv.Valid()
+			kv := convertKV(k, v)
 			if !kv.Valid() {
 				err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarAttachmentValue, reflect.TypeOf(v)))
 				continue
 			}
 			exemplar.FilteredAttributes = append(exemplar.FilteredAttributes, kv)
-		}
 		}
 	}
 	sortable := attribute.Sortable(exemplar.FilteredAttributes)
