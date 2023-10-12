@@ -178,6 +178,8 @@ func (o unitOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 func WithUnit(u string) InstrumentOption { return unitOpt(u) }
 
 // WithExplicitBucketBoundaries sets the instrument explicit bucket boundaries.
+//
+// This option is considered "advisory", and may be ignored by API implementations.
 func WithExplicitBucketBoundaries(bounds ...float64) HistogramOption { return bucketOpt(bounds) }
 
 type bucketOpt []float64
