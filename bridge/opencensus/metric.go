@@ -26,19 +26,25 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-type producer struct {
+// MetricProducer implements the [go.opentelemetry.io/otel/sdk/metric.Producer] to provide metrics
+// from OpenCensus to the OpenTelemetry SDK.
+type MetricProducer struct {
 	manager *metricproducer.Manager
 }
 
 // NewMetricProducer returns a metric.Producer that fetches metrics from
 // OpenCensus.
-func NewMetricProducer(opts ...MetricOption) metric.Producer {
-	return &producer{
+func NewMetricProducer(opts ...MetricOption) *MetricProducer {
+	return &MetricProducer{
 		manager: metricproducer.GlobalManager(),
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+var _ metric.Producer = (*MetricProducer)(nil)
+
+// Produce fetches metrics from the OpenCensus manager,
+// translates them to OpenTelemetry's data model, and returns them.
+func (p *MetricProducer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	producers := p.manager.GetAll()
 	data := []*ocmetricdata.Metric{}
 	for _, ocProducer := range producers {
@@ -50,7 +56,8 @@ func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	}
 	return []metricdata.ScopeMetrics{{
 		Scope: instrumentation.Scope{
-			Name: scopeName,
+			Name:    scopeName,
+			Version: Version(),
 		},
 		Metrics: otelmetrics,
 	}}, err

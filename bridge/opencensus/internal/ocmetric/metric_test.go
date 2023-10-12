@@ -461,7 +461,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errNegativeDistributionCount,
 		}, {
 			desc: "histogram with negative bucket count",
 			input: []*ocmetricdata.Metric{
@@ -488,7 +488,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errNegativeBucketCount,
 		}, {
 			desc: "histogram with non-histogram datapoint type",
 			input: []*ocmetricdata.Metric{
@@ -509,7 +509,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errMismatchedValueTypes,
 		}, {
 			desc: "sum with non-sum datapoint type",
 			input: []*ocmetricdata.Metric{
@@ -530,7 +530,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errMismatchedValueTypes,
 		}, {
 			desc: "gauge with non-gauge datapoint type",
 			input: []*ocmetricdata.Metric{
@@ -551,7 +551,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errMismatchedValueTypes,
 		}, {
 			desc: "unsupported Gauge Distribution type",
 			input: []*ocmetricdata.Metric{
@@ -564,7 +564,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errAggregationType,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {

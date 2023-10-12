@@ -77,6 +77,9 @@ $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 GORELEASE = $(TOOLS)/gorelease
 $(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
 
+GOVULNCHECK = $(TOOLS)/govulncheck
+$(TOOLS)/govulncheck: PACKAGE=golang.org/x/vuln/cmd/govulncheck
+
 .PHONY: tools
 tools: $(CROSSLINK) $(DBOTCONF) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(SEMCONVGEN) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL) $(GORELEASE)
 
@@ -228,7 +231,7 @@ go-mod-tidy/%: | crosslink
 lint-modules: go-mod-tidy
 
 .PHONY: lint
-lint: misspell lint-modules golangci-lint
+lint: misspell lint-modules golangci-lint govulncheck
 
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
@@ -237,6 +240,14 @@ vanity-import-check: | $(PORTO)
 .PHONY: misspell
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
+
+.PHONY: govulncheck
+govulncheck: $(OTEL_GO_MOD_DIRS:%=govulncheck/%)
+govulncheck/%: DIR=$*
+govulncheck/%: | $(GOVULNCHECK)
+	@echo "govulncheck ./... in $(DIR)" \
+		&& cd $(DIR) \
+		&& $(GOVULNCHECK) ./...
 
 .PHONY: codespell
 codespell: | $(CODESPELL)
