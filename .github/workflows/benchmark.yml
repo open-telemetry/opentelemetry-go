@@ -4,7 +4,7 @@ on:
     branches:
       - main
 env:
-  DEFAULT_GO_VERSION: "~1.21.1"
+  DEFAULT_GO_VERSION: "~1.21.3"
 jobs:
   benchmark:
     name: Benchmarks
