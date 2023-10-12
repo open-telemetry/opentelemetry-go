@@ -27,13 +27,6 @@ jobs:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Tools cache
-        uses: actions/cache@v3
-        env:
-          cache-name: go-tools-cache
-        with:
-          path: ~/.tools
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       - name: Generate
         run: make generate
       - name: Run linters
