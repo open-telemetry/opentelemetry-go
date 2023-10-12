@@ -33,7 +33,7 @@ var (
 	errNegativeDistributionCount      = errors.New("distribution count is negative")
 	errNegativeBucketCount            = errors.New("distribution bucket count is negative")
 	errMismatchedAttributeKeyValues   = errors.New("mismatched number of attribute keys and values")
-	errInvalidExemplarSpanContext     = errors.New("span context exemplar attachment did not contain an OpenCensus SpanContext")
+	errInvalidExemplarSpanContext     = errors.New("span context exemplar attachment does not contain an OpenCensus SpanContext")
 	errInvalidExemplarAttachmentValue = errors.New("exemplar attachment is not a supported OpenTelemetry attribute type")
 )
 
@@ -172,16 +172,17 @@ func convertBuckets(buckets []ocmetricdata.Bucket) ([]uint64, []metricdata.Exemp
 	for i, bucket := range buckets {
 		if bucket.Count < 0 {
 			err = errors.Join(err, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count))
-		} else {
-			bucketCounts[i] = uint64(bucket.Count)
+			continue
 		}
+		bucketCounts[i] = uint64(bucket.Count)
+
 		if bucket.Exemplar != nil {
 			exemplar, exemplarErr := convertExemplar(bucket.Exemplar)
 			if exemplarErr != nil {
 				err = errors.Join(err, exemplarErr)
-			} else {
-				exemplars = append(exemplars, exemplar)
+				continue
 			}
+			exemplars = append(exemplars, exemplar)
 		}
 	}
 	return bucketCounts, exemplars, err
@@ -198,17 +199,23 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 	}
 	var err error
 	for k, v := range ocExemplar.Attachments {
-		if k == ocmetricdata.AttachmentKeySpanContext {
-			if sc, ok := v.(octrace.SpanContext); ok {
-				exemplar.SpanID = sc.SpanID[:]
-				exemplar.TraceID = sc.TraceID[:]
-			} else {
+		switch {
+		case k == ocmetricdata.AttachmentKeySpanContext:
+			sc, ok := v.(octrace.SpanContext)
+			if !ok {
 				err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarSpanContext, reflect.TypeOf(v)))
+				continue
 			}
-		} else if kv := convertKV(k, v); kv.Valid() {
+			exemplar.SpanID = sc.SpanID[:]
+			exemplar.TraceID = sc.TraceID[:]
+		default:
+			kv := convertKV(k, v); kv.Valid()
+			if !kv.Valid() {
+				err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarAttachmentValue, reflect.TypeOf(v)))
+				continue
+			}
 			exemplar.FilteredAttributes = append(exemplar.FilteredAttributes, kv)
-		} else {
-			err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarAttachmentValue, reflect.TypeOf(v)))
+		}
 		}
 	}
 	sortable := attribute.Sortable(exemplar.FilteredAttributes)
