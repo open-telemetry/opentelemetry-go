@@ -29,6 +29,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Tools cache
         uses: actions/cache@v3
@@ -59,6 +60,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run tests with race detector
         run: make test-race
@@ -76,6 +78,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run coverage tests
         run: |
@@ -123,6 +126,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run tests
         env:

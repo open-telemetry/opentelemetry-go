@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
       - name: Run benchmarks
         run: make test-bench | tee output.txt
       - name: Download previous benchmark data
