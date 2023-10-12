@@ -20,9 +20,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
 type nonComparableTracerProvider struct {
@@ -55,7 +56,7 @@ func TestSetTracerProvider(t *testing.T) {
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
 		ResetForTest(t)
 
-		SetTracerProvider(trace.NewNoopTracerProvider())
+		SetTracerProvider(tracenoop.NewTracerProvider())
 
 		_, ok := TracerProvider().(*tracerProvider)
 		if ok {
@@ -67,7 +68,7 @@ func TestSetTracerProvider(t *testing.T) {
 		ResetForTest(t)
 
 		tp := TracerProvider()
-		SetTracerProvider(trace.NewNoopTracerProvider())
+		SetTracerProvider(tracenoop.NewTracerProvider())
 
 		ntp := tp.(*tracerProvider)
 
@@ -153,7 +154,7 @@ func TestSetMeterProvider(t *testing.T) {
 	t.Run("First Set() should replace the delegate", func(t *testing.T) {
 		ResetForTest(t)
 
-		SetMeterProvider(noop.NewMeterProvider())
+		SetMeterProvider(metricnoop.NewMeterProvider())
 
 		_, ok := MeterProvider().(*meterProvider)
 		if ok {
@@ -166,7 +167,7 @@ func TestSetMeterProvider(t *testing.T) {
 
 		mp := MeterProvider()
 
-		SetMeterProvider(noop.NewMeterProvider())
+		SetMeterProvider(metricnoop.NewMeterProvider())
 
 		dmp := mp.(*meterProvider)
 

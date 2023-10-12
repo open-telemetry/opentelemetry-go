@@ -23,9 +23,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type fnTracerProvider struct {
+	embedded.TracerProvider
+
 	tracer func(string, ...trace.TracerOption) trace.Tracer
 }
 
@@ -34,6 +38,8 @@ func (fn fnTracerProvider) Tracer(instrumentationName string, opts ...trace.Trac
 }
 
 type fnTracer struct {
+	embedded.Tracer
+
 	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 }
 
@@ -72,7 +78,7 @@ func TestTraceProviderDelegation(t *testing.T) {
 							assert.Equal(t, want, spanName)
 						}
 					}
-					return trace.NewNoopTracerProvider().Tracer(name).Start(ctx, spanName)
+					return noop.NewTracerProvider().Tracer(name).Start(ctx, spanName)
 				},
 			}
 		},
@@ -107,7 +113,7 @@ func TestTraceProviderDelegates(t *testing.T) {
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
 			called = true
 			assert.Equal(t, "abc", name)
-			return trace.NewNoopTracerProvider().Tracer("")
+			return noop.NewTracerProvider().Tracer("")
 		},
 	})
 
@@ -148,7 +154,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 				// Signal the goroutine to finish.
 				close(quit)
 			}
-			return trace.NewNoopTracerProvider().Tracer("")
+			return noop.NewTracerProvider().Tracer("")
 		},
 	})
 
@@ -195,7 +201,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 						// Signal the goroutine to finish.
 						close(quit)
 					}
-					return trace.NewNoopTracerProvider().Tracer("").Start(ctx, spanName)
+					return noop.NewTracerProvider().Tracer("").Start(ctx, spanName)
 				},
 			}
 		},
@@ -218,7 +224,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 
 	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
-			return trace.NewNoopTracerProvider().Tracer("")
+			return noop.NewTracerProvider().Tracer("")
 		},
 	})
 
