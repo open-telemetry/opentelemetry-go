@@ -243,10 +243,11 @@ type Exemplar[N int64 | float64] struct {
 
 // Summary metric data are used to convey quantile summaries,
 // a Prometheus (see: https://prometheus.io/docs/concepts/metric_types/#summary)
-// and OpenMetrics (see: https://github.com/OpenObservability/OpenMetrics/blob/4dbf6075567ab43296eed941037c12951faafb92/protos/prometheus.proto#L45)
-// data type. These data points cannot always be merged in a meaningful way.
-// While they can be useful in some applications, histogram data points are
-// recommended for new applications.
+// data type.
+//
+// These data points cannot always be merged in a meaningful way. The Summary
+// type is only used by bridges from other metrics libraries, and cannot be
+// produced using OpenTelemetry instrumentation.
 type Summary struct {
 	// DataPoints are the individual aggregated measurements with unique
 	// attributes.
@@ -267,7 +268,7 @@ type SummaryDataPoint struct {
 	// Time is the time when the timeseries was recorded.
 	Time time.Time
 
-	// Count is the number of updates this histogram has been calculated with.
+	// Count is the number of updates this summary has been calculated with.
 	Count uint64
 
 	// Sum is the sum of the values recorded.
@@ -280,8 +281,9 @@ type SummaryDataPoint struct {
 
 // ValueAtQuantile the value at a given quantile of a distribution.
 type ValueAtQuantile struct {
-	// The quantile of a distribution. Must be in the interval
-	// [0.0, 1.0].
+	// The quantile of a distribution.
+	//
+	// Must be in the interval [0.0, 1.0].
 	Quantile float64
 
 	// The value at the given quantile of a distribution.
