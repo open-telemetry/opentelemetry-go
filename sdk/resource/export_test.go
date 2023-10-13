@@ -34,6 +34,4 @@ var (
 	RuntimeArch = runtimeArch
 )
 
-var (
-	MapRuntimeOSToSemconvOSType = mapRuntimeOSToSemconvOSType
-)
+var MapRuntimeOSToSemconvOSType = mapRuntimeOSToSemconvOSType

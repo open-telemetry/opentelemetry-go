@@ -56,7 +56,6 @@ func TestConvertMetrics(t *testing.T) {
 					},
 					TimeSeries: []*ocmetricdata.TimeSeries{
 						{
-
 							LabelValues: []ocmetricdata.LabelValue{
 								{
 									Value:   "hello",
@@ -370,7 +369,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "histogram without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -393,7 +393,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "sum without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -417,7 +418,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "gauge without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -439,7 +441,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "histogram with negative count",
 			input: []*ocmetricdata.Metric{
 				{
@@ -462,7 +465,8 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errNegativeDistributionCount,
-		}, {
+		},
+		{
 			desc: "histogram with negative bucket count",
 			input: []*ocmetricdata.Metric{
 				{
@@ -489,7 +493,8 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errNegativeBucketCount,
-		}, {
+		},
+		{
 			desc: "histogram with non-histogram datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -510,7 +515,8 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errMismatchedValueTypes,
-		}, {
+		},
+		{
 			desc: "sum with non-sum datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -531,7 +537,8 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errMismatchedValueTypes,
-		}, {
+		},
+		{
 			desc: "gauge with non-gauge datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -552,7 +559,8 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errMismatchedValueTypes,
-		}, {
+		},
+		{
 			desc: "unsupported Gauge Distribution type",
 			input: []*ocmetricdata.Metric{
 				{

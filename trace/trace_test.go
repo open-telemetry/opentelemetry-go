@@ -309,7 +309,7 @@ func TestSpanContextHasTraceID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasTraceID() bool{}
+			// proto: func (sc SpanContext) HasTraceID() bool{}
 			sc := SpanContext{traceID: testcase.tid}
 			have := sc.HasTraceID()
 			if have != testcase.want {
@@ -336,7 +336,7 @@ func TestSpanContextHasSpanID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (sc SpanContext) HasSpanID() bool {}
+			// proto: func (sc SpanContext) HasSpanID() bool {}
 			have := testcase.sc.HasSpanID()
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
@@ -435,7 +435,7 @@ func TestStringTraceID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (t TraceID) String() string {}
+			// proto: func (t TraceID) String() string {}
 			have := testcase.tid.String()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -462,7 +462,7 @@ func TestStringSpanID(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			//proto: func (t TraceID) String() string {}
+			// proto: func (t TraceID) String() string {}
 			have := testcase.sid.String()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -481,17 +481,14 @@ func TestValidateSpanKind(t *testing.T) {
 			SpanKindInternal,
 		},
 		{
-
 			SpanKindInternal,
 			SpanKindInternal,
 		},
 		{
-
 			SpanKindServer,
 			SpanKindServer,
 		},
 		{
-
 			SpanKindClient,
 			SpanKindClient,
 		},
@@ -521,17 +518,14 @@ func TestSpanKindString(t *testing.T) {
 			"unspecified",
 		},
 		{
-
 			SpanKindInternal,
 			"internal",
 		},
 		{
-
 			SpanKindServer,
 			"server",
 		},
 		{
-
 			SpanKindClient,
 			"client",
 		},

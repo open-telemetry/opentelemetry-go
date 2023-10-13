@@ -39,6 +39,7 @@ type invalidAggregation struct{}
 func (invalidAggregation) copy() Aggregation {
 	return invalidAggregation{}
 }
+
 func (invalidAggregation) err() error {
 	return nil
 }
@@ -155,7 +156,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	)
 
 	instruments := []Instrument{
-		{Name: "foo", Kind: InstrumentKind(0)}, //Unknown kind
+		{Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
 		{Name: "foo", Kind: InstrumentKindCounter},
 		{Name: "foo", Kind: InstrumentKindUpDownCounter},
 		{Name: "foo", Kind: InstrumentKindHistogram},

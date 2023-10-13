@@ -22,9 +22,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	lemonsKey = attribute.Key("ex.com/lemons")
-)
+var lemonsKey = attribute.Key("ex.com/lemons")
 
 // SubOperation is an example to demonstrate the use of named tracer.
 // It creates a named tracer with its package path.

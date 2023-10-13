@@ -27,9 +27,7 @@ import (
 	"time"
 )
 
-var (
-	stackTracePruneRE = regexp.MustCompile(`runtime\/debug|testing|internal\/matchers`)
-)
+var stackTracePruneRE = regexp.MustCompile(`runtime\/debug|testing|internal\/matchers`)
 
 type Expectation struct {
 	t      *testing.T

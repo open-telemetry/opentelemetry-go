@@ -285,6 +285,7 @@ func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
 		}
 	})
 }
+
 func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
 		ctx := context.Background()

@@ -34,10 +34,8 @@ const (
 	svcNameKey = "OTEL_SERVICE_NAME"
 )
 
-var (
-	// errMissingValue is returned when a resource value is missing.
-	errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
-)
+// errMissingValue is returned when a resource value is missing.
+var errMissingValue = fmt.Errorf("%w: missing value", ErrPartialResource)
 
 // fromEnv is a Detector that implements the Detector and collects
 // resources from environment.  This Detector is included as a

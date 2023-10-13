@@ -26,11 +26,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
-var (
-	// ErrInstrumentName indicates the created instrument has an invalid name.
-	// Valid names must consist of 255 or fewer characters including alphanumeric, _, ., -, / and start with a letter.
-	ErrInstrumentName = errors.New("invalid instrument name")
-)
+// ErrInstrumentName indicates the created instrument has an invalid name.
+// Valid names must consist of 255 or fewer characters including alphanumeric, _, ., -, / and start with a letter.
+var ErrInstrumentName = errors.New("invalid instrument name")
 
 // meter handles the creation and coordination of all metric instruments. A
 // meter represents a single instrumentation scope; all metric telemetry
@@ -268,9 +266,11 @@ func validateInstrumentName(name string) error {
 	}
 	return nil
 }
+
 func isAlpha(c rune) bool {
 	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 }
+
 func isAlphanumeric(c rune) bool {
 	return isAlpha(c) || ('0' <= c && c <= '9')
 }
