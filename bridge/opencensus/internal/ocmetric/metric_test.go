@@ -868,6 +868,10 @@ func TestConvertKV(t *testing.T) {
 			expected: attribute.IntValue(10),
 		},
 		{
+			value:    uint(math.MaxUint),
+			expected: attribute.StringValue(fmt.Sprintf("%v", uint(math.MaxUint))),
+		},
+		{
 			value:    []uint{10, 20},
 			expected: attribute.StringSliceValue([]string{"10", "20"}),
 		},
@@ -892,10 +896,6 @@ func TestConvertKV(t *testing.T) {
 			expected: attribute.IntValue(10),
 		},
 		{
-			value:    uint32(math.MaxUint32),
-			expected: attribute.Int64Value(math.MaxUint32),
-		},
-		{
 			value:    []uint32{10, 20},
 			expected: attribute.StringSliceValue([]string{"10", "20"}),
 		},
@@ -918,6 +918,14 @@ func TestConvertKV(t *testing.T) {
 		{
 			value:    []uintptr{10, 20},
 			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    float32(10),
+			expected: attribute.Float64Value(10),
+		},
+		{
+			value:    []float32{10, 20},
+			expected: attribute.Float64SliceValue([]float64{10, 20}),
 		},
 		{
 			value:    float64(10),

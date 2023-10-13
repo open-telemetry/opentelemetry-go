@@ -17,6 +17,7 @@ package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -305,9 +306,8 @@ func intSliceKV[N int8 | int16 | int32](key string, val []N) attribute.KeyValue 
 }
 
 func uintKV(key string, val uint) attribute.KeyValue {
-	const maxInt = ^uint(0) >> 1
-	if val > maxInt {
-		return uint64KV(key, uint64(val))
+	if val > uint(math.MaxInt) {
+		return attribute.String(key, strconv.FormatUint(uint64(val), 10))
 	}
 	return attribute.Int(key, int(val))
 }
