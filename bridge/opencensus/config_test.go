@@ -20,12 +20,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestNewTraceConfig(t *testing.T) {
-	globalTP := trace.NewNoopTracerProvider()
-	customTP := trace.NewNoopTracerProvider()
+	globalTP := noop.NewTracerProvider()
+	customTP := noop.NewTracerProvider()
 	otel.SetTracerProvider(globalTP)
 	for _, tc := range []struct {
 		desc     string
