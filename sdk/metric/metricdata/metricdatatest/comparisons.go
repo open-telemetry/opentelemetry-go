@@ -838,8 +838,8 @@ func hasAttributesSummary(summary metricdata.Summary, attrs ...attribute.KeyValu
 		}
 	}
 	return reasons
-
 }
+
 func hasAttributesSummaryDataPoint(dp metricdata.SummaryDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
