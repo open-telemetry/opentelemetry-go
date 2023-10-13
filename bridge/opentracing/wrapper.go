@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 // WrapperTracerProvider is an OpenTelemetry TracerProvider that wraps an
@@ -26,6 +27,8 @@ import (
 //
 // Deprecated: Use the TracerProvider from NewTracerProvider(...) instead.
 type WrapperTracerProvider struct {
+	embedded.TracerProvider
+
 	wTracer *WrapperTracer
 }
 
@@ -56,6 +59,8 @@ func NewWrappedTracerProvider(bridge *BridgeTracer, tracer trace.Tracer) *Wrappe
 // aware how to operate in environment where OpenTracing API is also
 // used.
 type WrapperTracer struct {
+	embedded.Tracer
+
 	bridge *BridgeTracer
 	tracer trace.Tracer
 }

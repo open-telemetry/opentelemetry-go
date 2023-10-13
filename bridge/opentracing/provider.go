@@ -18,11 +18,14 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 // TracerProvider is an OpenTelemetry TracerProvider that wraps an OpenTracing
 // Tracer.
 type TracerProvider struct {
+	embedded.TracerProvider
+
 	bridge   *BridgeTracer
 	provider trace.TracerProvider
 

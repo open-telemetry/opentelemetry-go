@@ -33,10 +33,11 @@ import (
 	iBaggage "go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var (
-	noopTracer = trace.NewNoopTracerProvider().Tracer("")
+	noopTracer = noop.NewTracerProvider().Tracer("")
 	noopSpan   = func() trace.Span {
 		_, s := noopTracer.Start(context.Background(), "")
 		return s
