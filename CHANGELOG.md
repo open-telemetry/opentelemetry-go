@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/trace/embedded` package to be embedded in the exported trace API interfaces. (#4620)
 - Add the `go.opentelemetry.io/otel/trace/noop` package as a default no-op implementation of the trace API. (#4620)
 - Add context propagation in `go.opentelemetry.io/otel/example/dice`. (#4644)
+- Add Summary, SummaryDataPoint, and ValueAtQuantile to `go.opentelemetry.io/sdk/metric/metricdata`. (#4622)
 
 ### Deprecated
 
