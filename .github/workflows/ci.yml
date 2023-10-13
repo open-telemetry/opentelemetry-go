@@ -32,7 +32,7 @@ jobs:
         env:
           cache-name: go-tools-cache
         with:
-          path: ~/.tools
+          path: .tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       - name: Generate
         run: make generate
