@@ -1,3 +1,4 @@
+// Deprecated: See go.opentelemetry.io/otel/example/dice instead.
 module go.opentelemetry.io/otel/example/fib
 
 go 1.20
