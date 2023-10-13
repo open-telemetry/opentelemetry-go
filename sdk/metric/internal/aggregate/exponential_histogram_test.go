@@ -676,7 +676,7 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](1024, 200, false, false)
+		agg := newExpoHistogramDataPoint[float64](1024, 20, false, false)
 		n := smallestNonZeroNormalFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
