@@ -6,7 +6,7 @@ retract v0.32.2 // Contains unresolvable dependencies.
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.42.0
@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.19.0
 	go.opentelemetry.io/proto/otlp v1.0.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 )
 
