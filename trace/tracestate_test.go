@@ -35,12 +35,24 @@ var testcases = []struct {
 	{
 		name: "duplicate with the same value",
 		in:   "foo=1,foo=1",
-		err:  errDuplicate,
+		out:  "foo=1",
+		tracestate: TraceState{list: []member{
+			{
+				Key:   "foo",
+				Value: "1",
+			},
+		}},
 	},
 	{
 		name: "duplicate with different values",
 		in:   "foo=1,foo=2",
-		err:  errDuplicate,
+		out:  "foo=1",
+		tracestate: TraceState{list: []member{
+			{
+				Key:   "foo",
+				Value: "1",
+			},
+		}},
 	},
 	{
 		name: "improperly formatted key/value pair",

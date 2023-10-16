@@ -36,7 +36,6 @@ const (
 	errInvalidValue  errorConst = "invalid tracestate value"
 	errInvalidMember errorConst = "invalid tracestate list-member"
 	errMemberNumber  errorConst = "too many list-members in tracestate"
-	errDuplicate     errorConst = "duplicate list-member in tracestate"
 )
 
 var (
@@ -121,7 +120,7 @@ func ParseTraceState(tracestate string) (TraceState, error) {
 		}
 
 		if _, ok := found[m.Key]; ok {
-			return TraceState{}, wrapErr(errDuplicate)
+			continue // Duplicate is ignored per https://github.com/w3c/trace-context/blob/551a5b0855171281e98b4c2a814bf9e1f837cd53/test/test.py#L563-L568.
 		}
 		found[m.Key] = struct{}{}
 
