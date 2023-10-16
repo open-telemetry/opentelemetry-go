@@ -6,7 +6,7 @@ on:
   workflow_dispatch: 
 
 env:
-  DEFAULT_GO_VERSION: "~1.21.3"
+  DEFAULT_GO_VERSION: "1.21"
 jobs:
   benchmark:
     name: Benchmarks
@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
       - name: Run benchmarks
         run: make benchmark | tee output.txt
       - name: Download previous benchmark data
