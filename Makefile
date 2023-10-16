@@ -192,6 +192,18 @@ test-coverage: | $(GOCOVMERGE)
 	done; \
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
+# Adding a directory will include all benchmarks in that direcotry if a filter is not specified.
+BENCHMARK_TARGETS := sdk/trace
+.PHONY: benchmark
+benchmark: $(BENCHMARK_TARGETS:%=benchmark/%)
+BENCHMARK_FILTER = .
+# You can override the filter for a particular directory by adding a rule here.
+benchmark/sdk/trace: BENCHMARK_FILTER = SpanWithAttributes_8/AlwaysSample
+benchmark/%:
+	@echo "$(GO) test -timeout $(TIMEOUT)s -run=xxxxxMatchNothingxxxxx -bench=$(BENCHMARK_FILTER) $*..." \
+		&& cd $* \
+		$(foreach filter, $(BENCHMARK_FILTER), && $(GO) test -timeout $(TIMEOUT)s -run=xxxxxMatchNothingxxxxx -bench=$(filter))
+
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint

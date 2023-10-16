@@ -45,6 +45,22 @@ jobs:
         run: make build
       - name: Check clean repository
         run: make check-clean-work-tree
+  test-bench:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+      - name: Run benchmarks to check functionality
+        run: make test-bench
 
   test-race:
     runs-on: ubuntu-latest

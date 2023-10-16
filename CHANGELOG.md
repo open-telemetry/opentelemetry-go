@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/otel/bridge/opencensus.NewTracer` in favor of `opencensus.InstallTraceBridge`. (#4567)
+- Deprecate `go.opentelemetry.io/otel/example/fib` package is in favor of `go.opentelemetry.io/otel/example/dice`. (#4618)
 
 ### Changed
 
