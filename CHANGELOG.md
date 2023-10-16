@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `go.opentelemetry.io/otel/bridge/opencensus.NewMetricProducer` returns a `*MetricProducer` struct instead of the metric.Producer interface. (#4583)
+- `ParseTraceState` in `go.opentelemetry.io/otel/trace` ignores duplicated tracestate keys. (#4638)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
