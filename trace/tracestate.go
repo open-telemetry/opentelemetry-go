@@ -86,8 +86,8 @@ func (m member) String() string {
 // (https://www.w3.org/TR/trace-context-1). All operations that create or copy
 // a TraceState do so by validating all input and will only produce TraceState
 // that conform to the specification. Specifically, this means that all
-// list-member's key/value pairs are valid, no duplicate list-members exist,
-// and the maximum number of list-members (32) is not exceeded.
+// list-member's key/value pairs are valid, and the maximum number of
+// list-members (32) is not exceeded.
 type TraceState struct { //nolint:revive // revive complains about stutter of `trace.TraceState`
 	// list is the members in order.
 	list []member
