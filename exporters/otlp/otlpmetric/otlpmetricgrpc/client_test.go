@@ -136,9 +136,11 @@ type clientShim struct {
 func (clientShim) Temporality(metric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
+
 func (clientShim) Aggregation(metric.InstrumentKind) metric.Aggregation {
 	return nil
 }
+
 func (clientShim) ForceFlush(ctx context.Context) error {
 	return ctx.Err()
 }

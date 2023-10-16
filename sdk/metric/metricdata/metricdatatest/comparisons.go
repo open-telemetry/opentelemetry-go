@@ -741,6 +741,7 @@ func hasAttributesScopeMetrics(sm metricdata.ScopeMetrics, attrs ...attribute.Ke
 	}
 	return reasons
 }
+
 func hasAttributesResourceMetrics(rm metricdata.ResourceMetrics, attrs ...attribute.KeyValue) (reasons []string) {
 	for n, sm := range rm.ScopeMetrics {
 		reas := hasAttributesScopeMetrics(sm, attrs...)

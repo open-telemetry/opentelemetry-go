@@ -40,8 +40,10 @@ func BenchmarkManualReader(b *testing.B) {
 	b.Run("Collect", benchReaderCollectFunc(NewManualReader()))
 }
 
-var deltaTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.DeltaTemporality }
-var cumulativeTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.CumulativeTemporality }
+var (
+	deltaTemporalitySelector      = func(InstrumentKind) metricdata.Temporality { return metricdata.DeltaTemporality }
+	cumulativeTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.CumulativeTemporality }
+)
 
 func TestManualReaderTemporality(t *testing.T) {
 	tests := []struct {

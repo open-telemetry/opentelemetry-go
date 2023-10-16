@@ -168,9 +168,11 @@ type testCountingFloatInstrument struct {
 func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
+
 func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
 	i.count++
 }
+
 func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric.RecordOption) {
 	i.count++
 }
@@ -190,9 +192,11 @@ type testCountingIntInstrument struct {
 func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
+
 func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOption) {
 	i.count++
 }
+
 func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.RecordOption) {
 	i.count++
 }
