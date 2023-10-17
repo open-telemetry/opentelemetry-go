@@ -65,7 +65,7 @@ a default.
 
 # API Implementations
 
-This package does not conform to the standard Go versioning policy, all of its
+This package does not conform to the standard Go versioning policy; all of its
 interfaces may have methods added to them without a package major version bump.
 This non-standard API evolution could surprise an uninformed implementation
 author. They could unknowingly build their implementation in a way that would
