@@ -161,8 +161,10 @@ type recordingSpan struct {
 	tracer *tracer
 }
 
-var _ ReadWriteSpan = (*recordingSpan)(nil)
-var _ runtimeTracer = (*recordingSpan)(nil)
+var (
+	_ ReadWriteSpan = (*recordingSpan)(nil)
+	_ runtimeTracer = (*recordingSpan)(nil)
+)
 
 // SpanContext returns the SpanContext of this span.
 func (s *recordingSpan) SpanContext() trace.SpanContext {

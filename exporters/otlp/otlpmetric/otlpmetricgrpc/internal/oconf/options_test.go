@@ -203,7 +203,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
-					//TODO: make sure gRPC's credentials actually works
+					// TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.

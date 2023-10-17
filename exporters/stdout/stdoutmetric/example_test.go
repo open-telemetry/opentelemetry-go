@@ -31,7 +31,7 @@ import (
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	now = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
 	res = resource.NewSchemaless(
 		semconv.ServiceName("stdoutmetric-example"),
@@ -158,7 +158,7 @@ func Example() {
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)
 
-	//Output:
+	// Output:
 	// {
 	//   "Resource": [
 	//     {

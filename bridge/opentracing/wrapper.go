@@ -65,8 +65,10 @@ type WrapperTracer struct {
 	tracer trace.Tracer
 }
 
-var _ trace.Tracer = &WrapperTracer{}
-var _ migration.DeferredContextSetupTracerExtension = &WrapperTracer{}
+var (
+	_ trace.Tracer                                  = &WrapperTracer{}
+	_ migration.DeferredContextSetupTracerExtension = &WrapperTracer{}
+)
 
 // NewWrapperTracer wraps the passed tracer and also talks to the
 // passed bridge tracer when setting up the context with the new
