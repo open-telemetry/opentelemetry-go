@@ -12,7 +12,7 @@ linters:
     - depguard
     - errcheck
     - godot
-    - gofmt
+    - gofumpt
     - goimports
     - gosimple
     - govet

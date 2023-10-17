@@ -54,8 +54,10 @@ type MockTracer struct {
 	rand     *rand.Rand
 }
 
-var _ trace.Tracer = &MockTracer{}
-var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+var (
+	_ trace.Tracer                                  = &MockTracer{}
+	_ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+)
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
@@ -195,8 +197,10 @@ type MockSpan struct {
 	Events       []MockEvent
 }
 
-var _ trace.Span = &MockSpan{}
-var _ migration.OverrideTracerSpanExtension = &MockSpan{}
+var (
+	_ trace.Span                            = &MockSpan{}
+	_ migration.OverrideTracerSpanExtension = &MockSpan{}
+)
 
 func (s *MockSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
