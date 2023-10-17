@@ -746,7 +746,7 @@ func TestDuplicateMetrics(t *testing.T) {
 
 			tc.recordMetrics(ctx, meterA, meterB)
 
-			var match = false
+			match := false
 			for _, filename := range tc.possibleExpectedFiles {
 				file, ferr := os.Open(filename)
 				require.NoError(t, ferr)

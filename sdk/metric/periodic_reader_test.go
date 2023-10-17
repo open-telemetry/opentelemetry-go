@@ -344,7 +344,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					return ctx.Err()
 				}
 				return nil
-			}})
+			},
+		})
 		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
@@ -396,7 +397,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					return ctx.Err()
 				}
 				return nil
-			}})
+			},
+		})
 		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
