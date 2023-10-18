@@ -61,7 +61,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	// Set up propagator.
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
-	
+
 	// Set up trace provider.
 	tracerProvider, err := newTraceProvider(res)
 	if err != nil {
@@ -97,7 +97,7 @@ func newPropagator() propagation.TextMapPropagator {
 		propagation.Baggage{},
 	)
 }
-				  
+
 func newTraceProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	traceExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint())
