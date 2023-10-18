@@ -70,7 +70,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
-	
+
 	// Set up meter provider.
 	meterProvider, err := newMeterProvider(res)
 	if err != nil {
