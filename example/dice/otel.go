@@ -51,18 +51,18 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	// Resource setup.
+	// Set up resource.
 	res, err := newResource(serviceName, serviceVersion)
 	if err != nil {
 		handleErr(err)
 		return
 	}
 
-	// Popagator setup.
+	// Set up propagator.
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 	
-	// Trace provider setup.
+	// Set up trace provider.
 	tracerProvider, err := newTraceProvider(res)
 	if err != nil {
 		handleErr(err)
@@ -71,7 +71,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 	
-	// Meter provider setup.
+	// Set up meter provider.
 	meterProvider, err := newMeterProvider(res)
 	if err != nil {
 		handleErr(err)
