@@ -242,7 +242,11 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPColle
 
 	mux := http.NewServeMux()
 	mux.Handle(u.Path, http.HandlerFunc(c.handler))
-	c.srv = &http.Server{Handler: mux}
+	c.srv = &http.Server{
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
 	if u.Scheme == "https" {
 		cert, err := weakCertificate()
 		if err != nil {

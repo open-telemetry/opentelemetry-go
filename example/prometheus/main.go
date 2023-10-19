@@ -91,7 +91,7 @@ func main() {
 func serveMetrics() {
 	log.Printf("serving metrics at localhost:2223/metrics")
 	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":2223", nil)
+	err := http.ListenAndServe(":2223", nil) //nolint:gosec // Ignoring G114: Use of net/http serve function that has no support for setting timeouts.
 	if err != nil {
 		fmt.Printf("error serving http: %v", err)
 		return
