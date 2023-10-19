@@ -20,7 +20,6 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -33,12 +32,10 @@ const (
 	instrumentationVersion = "0.1.0"
 )
 
-var (
-	tracer = otel.GetTracerProvider().Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(instrumentationVersion),
-		trace.WithSchemaURL(semconv.SchemaURL),
-	)
+var tracer = otel.GetTracerProvider().Tracer(
+	instrumentationName,
+	trace.WithInstrumentationVersion(instrumentationVersion),
+	trace.WithSchemaURL(semconv.SchemaURL),
 )
 
 func add(ctx context.Context, x, y int64) int64 {
@@ -66,8 +63,7 @@ func newResource() *resource.Resource {
 }
 
 func installExportPipeline(ctx context.Context) (func(context.Context) error, error) {
-	client := otlptracehttp.NewClient()
-	exporter, err := otlptrace.New(ctx, client)
+	exporter, err := otlptracehttp.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}

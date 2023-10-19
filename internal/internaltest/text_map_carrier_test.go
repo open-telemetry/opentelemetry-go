@@ -22,9 +22,7 @@ import (
 	"testing"
 )
 
-var (
-	key, value = "test", "true"
-)
+var key, value = "test", "true"
 
 func TestTextMapCarrierKeys(t *testing.T) {
 	tmc := NewTextMapCarrier(map[string]string{key: value})

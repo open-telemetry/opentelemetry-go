@@ -138,7 +138,8 @@ func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 			*rm = metricdata.ResourceMetrics{}
 			return assert.AnError
-		}})
+		},
+	})
 
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)

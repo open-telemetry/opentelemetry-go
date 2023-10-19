@@ -64,7 +64,8 @@ func TestMetricProducer(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version(),
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -112,7 +113,8 @@ func TestMetricProducer(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version(),
 				},
 				Metrics: []metricdata.Metrics{
 					{

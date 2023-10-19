@@ -39,16 +39,20 @@ var wrapBoolSliceValue = func(v interface{}) interface{} {
 	}
 	return nil
 }
+
 var wrapStringSliceValue = func(v interface{}) interface{} {
 	if vi, ok := v.([]string); ok {
 		return StringSliceValue(vi)
 	}
 	return nil
 }
-var wrapAsBoolSlice = func(v interface{}) interface{} { return AsBoolSlice(v) }
-var wrapAsInt64Slice = func(v interface{}) interface{} { return AsInt64Slice(v) }
-var wrapAsFloat64Slice = func(v interface{}) interface{} { return AsFloat64Slice(v) }
-var wrapAsStringSlice = func(v interface{}) interface{} { return AsStringSlice(v) }
+
+var (
+	wrapAsBoolSlice    = func(v interface{}) interface{} { return AsBoolSlice(v) }
+	wrapAsInt64Slice   = func(v interface{}) interface{} { return AsInt64Slice(v) }
+	wrapAsFloat64Slice = func(v interface{}) interface{} { return AsFloat64Slice(v) }
+	wrapAsStringSlice  = func(v interface{}) interface{} { return AsStringSlice(v) }
+)
 
 func TestSliceValue(t *testing.T) {
 	type args struct {

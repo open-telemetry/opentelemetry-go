@@ -13,13 +13,15 @@ jobs:
         ref: ${{ github.head_ref }}
     - uses: actions/setup-go@v4
       with:
-        go-version: '^1.21.1'
+        go-version: "~1.21.3"
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - uses: evantorrie/mott-the-tidier@v1-beta
       id: modtidy
       with:
         gomods: '**/go.mod'
         gomodsum_only: true
-    - uses: stefanzweifel/git-auto-commit-action@v4
+    - uses: stefanzweifel/git-auto-commit-action@v5
       id: autocommit
       with:
         commit_message: Auto-fix go.sum changes in dependent modules

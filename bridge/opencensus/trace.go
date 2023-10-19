@@ -26,8 +26,24 @@ import (
 // NewTracer returns an implementation of the OpenCensus Tracer interface which
 // uses OpenTelemetry APIs.  Using this implementation of Tracer "upgrades"
 // libraries that use OpenCensus to OpenTelemetry to facilitate a migration.
+//
+// Deprecated: Use InstallTraceBridge instead.
 func NewTracer(tracer trace.Tracer) octrace.Tracer {
 	return internal.NewTracer(tracer)
+}
+
+// InstallTraceBridge installs the OpenCensus trace bridge, which overwrites
+// the global OpenCensus tracer implementation. Once the bridge is installed,
+// spans recorded using OpenCensus are redirected to the OpenTelemetry SDK.
+func InstallTraceBridge(opts ...TraceOption) {
+	octrace.DefaultTracer = newTraceBridge(opts)
+}
+
+func newTraceBridge(opts []TraceOption) octrace.Tracer {
+	cfg := newTraceConfig(opts)
+	return internal.NewTracer(
+		cfg.tp.Tracer(scopeName, trace.WithInstrumentationVersion(Version())),
+	)
 }
 
 // OTelSpanContextToOC converts from an OpenTelemetry SpanContext to an

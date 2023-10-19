@@ -25,11 +25,8 @@ import (
 )
 
 var (
-	errConversion                   = errors.New("converting from OpenCensus to OpenTelemetry")
 	errAggregationType              = errors.New("unsupported OpenCensus aggregation type")
 	errMismatchedValueTypes         = errors.New("wrong value type for data point")
-	errNumberDataPoint              = errors.New("converting a number data point")
-	errHistogramDataPoint           = errors.New("converting a histogram data point")
 	errNegativeDistributionCount    = errors.New("distribution count is negative")
 	errNegativeBucketCount          = errors.New("distribution bucket count is negative")
 	errMismatchedAttributeKeyValues = errors.New("mismatched number of attribute keys and values")
@@ -38,14 +35,14 @@ var (
 // ConvertMetrics converts metric data from OpenCensus to OpenTelemetry.
 func ConvertMetrics(ocmetrics []*ocmetricdata.Metric) ([]metricdata.Metrics, error) {
 	otelMetrics := make([]metricdata.Metrics, 0, len(ocmetrics))
-	var errInfo []string
+	var err error
 	for _, ocm := range ocmetrics {
 		if ocm == nil {
 			continue
 		}
-		agg, err := convertAggregation(ocm)
-		if err != nil {
-			errInfo = append(errInfo, err.Error())
+		agg, aggregationErr := convertAggregation(ocm)
+		if aggregationErr != nil {
+			err = errors.Join(err, fmt.Errorf("error converting metric %v: %w", ocm.Descriptor.Name, aggregationErr))
 			continue
 		}
 		otelMetrics = append(otelMetrics, metricdata.Metrics{
@@ -55,11 +52,10 @@ func ConvertMetrics(ocmetrics []*ocmetricdata.Metric) ([]metricdata.Metrics, err
 			Data:        agg,
 		})
 	}
-	var aggregatedError error
-	if len(errInfo) > 0 {
-		aggregatedError = fmt.Errorf("%w: %q", errConversion, errInfo)
+	if err != nil {
+		return otelMetrics, fmt.Errorf("error converting from OpenCensus to OpenTelemetry: %w", err)
 	}
-	return otelMetrics, aggregatedError
+	return otelMetrics, nil
 }
 
 // convertAggregation produces an aggregation based on the OpenCensus Metric.
@@ -97,17 +93,17 @@ func convertSum[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocme
 // convertNumberDataPoints converts OpenCensus TimeSeries to OpenTelemetry DataPoints.
 func convertNumberDataPoints[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) ([]metricdata.DataPoint[N], error) {
 	var points []metricdata.DataPoint[N]
-	var errInfo []string
+	var err error
 	for _, t := range ts {
-		attrs, err := convertAttrs(labelKeys, t.LabelValues)
-		if err != nil {
-			errInfo = append(errInfo, err.Error())
+		attrs, attrsErr := convertAttrs(labelKeys, t.LabelValues)
+		if attrsErr != nil {
+			err = errors.Join(err, attrsErr)
 			continue
 		}
 		for _, p := range t.Points {
 			v, ok := p.Value.(N)
 			if !ok {
-				errInfo = append(errInfo, fmt.Sprintf("%v: %q", errMismatchedValueTypes, p.Value))
+				err = errors.Join(err, fmt.Errorf("%w: %q", errMismatchedValueTypes, p.Value))
 				continue
 			}
 			points = append(points, metricdata.DataPoint[N]{
@@ -118,37 +114,33 @@ func convertNumberDataPoints[N int64 | float64](labelKeys []ocmetricdata.LabelKe
 			})
 		}
 	}
-	var aggregatedError error
-	if len(errInfo) > 0 {
-		aggregatedError = fmt.Errorf("%w: %v", errNumberDataPoint, errInfo)
-	}
-	return points, aggregatedError
+	return points, err
 }
 
 // convertHistogram converts OpenCensus Distribution timeseries to an
 // OpenTelemetry Histogram aggregation.
 func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Histogram[float64], error) {
 	points := make([]metricdata.HistogramDataPoint[float64], 0, len(ts))
-	var errInfo []string
+	var err error
 	for _, t := range ts {
-		attrs, err := convertAttrs(labelKeys, t.LabelValues)
-		if err != nil {
-			errInfo = append(errInfo, err.Error())
+		attrs, attrsErr := convertAttrs(labelKeys, t.LabelValues)
+		if attrsErr != nil {
+			err = errors.Join(err, attrsErr)
 			continue
 		}
 		for _, p := range t.Points {
 			dist, ok := p.Value.(*ocmetricdata.Distribution)
 			if !ok {
-				errInfo = append(errInfo, fmt.Sprintf("%v: %d", errMismatchedValueTypes, p.Value))
+				err = errors.Join(err, fmt.Errorf("%w: %d", errMismatchedValueTypes, p.Value))
 				continue
 			}
-			bucketCounts, err := convertBucketCounts(dist.Buckets)
-			if err != nil {
-				errInfo = append(errInfo, err.Error())
+			bucketCounts, bucketErr := convertBucketCounts(dist.Buckets)
+			if bucketErr != nil {
+				err = errors.Join(err, bucketErr)
 				continue
 			}
 			if dist.Count < 0 {
-				errInfo = append(errInfo, fmt.Sprintf("%v: %d", errNegativeDistributionCount, dist.Count))
+				err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeDistributionCount, dist.Count))
 				continue
 			}
 			// TODO: handle exemplars
@@ -163,11 +155,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 			})
 		}
 	}
-	var aggregatedError error
-	if len(errInfo) > 0 {
-		aggregatedError = fmt.Errorf("%w: %v", errHistogramDataPoint, errInfo)
-	}
-	return metricdata.Histogram[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, aggregatedError
+	return metricdata.Histogram[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}, err
 }
 
 // convertBucketCounts converts from OpenCensus bucket counts to slice of uint64.

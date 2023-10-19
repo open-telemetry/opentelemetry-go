@@ -112,7 +112,7 @@ func WithoutUnits() Option {
 	})
 }
 
-// WithoutUnits disables exporter's addition _total suffixes on counters.
+// WithoutCounterSuffixes disables exporter's addition _total suffixes on counters.
 //
 // By default, metric names include a _total suffix to follow Prometheus naming
 // conventions. For example, the counter metric happy.people would become

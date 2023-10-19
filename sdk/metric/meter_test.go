@@ -1826,12 +1826,15 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 func testNilAggregationSelector(InstrumentKind) Aggregation {
 	return nil
 }
+
 func testDefaultAggregationSelector(InstrumentKind) Aggregation {
 	return AggregationDefault{}
 }
+
 func testUndefinedTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.Temporality(0)
 }
+
 func testInvalidTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.Temporality(255)
 }
