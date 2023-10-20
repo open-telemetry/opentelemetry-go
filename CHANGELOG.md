@@ -39,6 +39,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
   See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
 
+### Fixed
+
+- In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
+
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
 This release contains the first stable release of the OpenTelemetry Go [metric SDK].

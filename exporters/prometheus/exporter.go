@@ -148,6 +148,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics := metricdata.ResourceMetrics{}
 	err := c.reader.Collect(context.TODO(), &metrics)
 	if err != nil {
+		if err == metric.ErrReaderShutdown {
+			return
+		}
 		otel.Handle(err)
 		if err == metric.ErrReaderNotRegistered {
 			return
