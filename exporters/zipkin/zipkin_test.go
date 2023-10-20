@@ -120,7 +120,9 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 	require.NoError(t, err)
 	collector.url = fmt.Sprintf("http://%s", listener.Addr().String())
 	server := &http.Server{
-		Handler: http.HandlerFunc(collector.handler),
+		Handler:      http.HandlerFunc(collector.handler),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	collector.server = server
 	wg := &sync.WaitGroup{}

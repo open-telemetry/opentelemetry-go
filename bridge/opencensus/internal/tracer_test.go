@@ -24,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type handler struct{ err error }
@@ -38,6 +40,8 @@ func withHandler() (*handler, func()) {
 }
 
 type tracer struct {
+	embedded.Tracer
+
 	ctx  context.Context
 	name string
 	opts []trace.SpanStartOption
@@ -45,8 +49,8 @@ type tracer struct {
 
 func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	t.ctx, t.name, t.opts = ctx, name, opts
-	noop := trace.NewNoopTracerProvider().Tracer("testing")
-	return noop.Start(ctx, name, opts...)
+	sub := noop.NewTracerProvider().Tracer("testing")
+	return sub.Start(ctx, name, opts...)
 }
 
 type ctxKey string
@@ -110,11 +114,11 @@ func TestTracerFromContext(t *testing.T) {
 	})
 	ctx := trace.ContextWithSpanContext(context.Background(), sc)
 
-	noop := trace.NewNoopTracerProvider().Tracer("TestTracerFromContext")
+	tracer := noop.NewTracerProvider().Tracer("TestTracerFromContext")
 	// Test using the fact that the No-Op span will propagate a span context .
-	ctx, _ = noop.Start(ctx, "test")
+	ctx, _ = tracer.Start(ctx, "test")
 
-	got := internal.NewTracer(noop).FromContext(ctx).SpanContext()
+	got := internal.NewTracer(tracer).FromContext(ctx).SpanContext()
 	// Do not test the convedsion, only that the propagtion.
 	want := otel2oc.SpanContext(sc)
 	if got != want {
@@ -129,11 +133,11 @@ func TestTracerNewContext(t *testing.T) {
 	})
 	ctx := trace.ContextWithSpanContext(context.Background(), sc)
 
-	noop := trace.NewNoopTracerProvider().Tracer("TestTracerNewContext")
+	tracer := noop.NewTracerProvider().Tracer("TestTracerNewContext")
 	// Test using the fact that the No-Op span will propagate a span context .
-	_, s := noop.Start(ctx, "test")
+	_, s := tracer.Start(ctx, "test")
 
-	ocTracer := internal.NewTracer(noop)
+	ocTracer := internal.NewTracer(tracer)
 	ctx = ocTracer.NewContext(context.Background(), internal.NewSpan(s))
 	got := trace.SpanContextFromContext(ctx)
 

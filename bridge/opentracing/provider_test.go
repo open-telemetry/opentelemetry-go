@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 type namedMockTracer struct {
@@ -26,7 +27,7 @@ type namedMockTracer struct {
 	*internal.MockTracer
 }
 
-type namedMockTracerProvider struct{}
+type namedMockTracerProvider struct{ embedded.TracerProvider }
 
 var _ trace.TracerProvider = (*namedMockTracerProvider)(nil)
 

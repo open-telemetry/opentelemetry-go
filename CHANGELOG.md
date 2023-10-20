@@ -12,16 +12,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `go.opentelemetry.io/otel/bridge/opencensus.InstallTraceBridge`, which installs the OpenCensus trace bridge, and replaces `opencensus.NewTracer`. (#4567)
 - Add scope version to trace and metric bridges in `go.opentelemetry.io/otel/bridge/opencensus`. (#4584)
+- Add the `go.opentelemetry.io/otel/trace/embedded` package to be embedded in the exported trace API interfaces. (#4620)
+- Add the `go.opentelemetry.io/otel/trace/noop` package as a default no-op implementation of the trace API. (#4620)
+- Add context propagation in `go.opentelemetry.io/otel/example/dice`. (#4644)
 - Add `go.opentelemetry.io/otel/metric.WithExplicitBucketBoundaries`, which allows defining default explicit bucket boundaries when creating histogram instruments. (#4603)
 
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/otel/bridge/opencensus.NewTracer` in favor of `opencensus.InstallTraceBridge`. (#4567)
 - Deprecate `go.opentelemetry.io/otel/example/fib` package is in favor of `go.opentelemetry.io/otel/example/dice`. (#4618)
+- Deprecate `go.opentelemetry.io/otel/trace.NewNoopTracerProvider`.
+  Use the added `NewTracerProvider` function in `go.opentelemetry.io/otel/trace/noop` instead. (#4620)
 
 ### Changed
 
 - `go.opentelemetry.io/otel/bridge/opencensus.NewMetricProducer` returns a `*MetricProducer` struct instead of the metric.Producer interface. (#4583)
+- The `TracerProvider` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.TracerProvider` type.
+  This extends the `TracerProvider` interface and is is a breaking change for any existing implementation.
+  Implementors need to update their implementations based on what they want the default behavior of the interface to be.
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+- The `Tracer` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Tracer` type.
+  This extends the `Tracer` interface and is is a breaking change for any existing implementation.
+  Implementors need to update their implementations based on what they want the default behavior of the interface to be.
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+- The `Span` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Span` type.
+  This extends the `Span` interface and is is a breaking change for any existing implementation.
+  Implementors need to update their implementations based on what they want the default behavior of the interface to be.
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
