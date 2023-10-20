@@ -49,7 +49,7 @@ type Datatypes interface {
 		metricdata.ExponentialBucket |
 		metricdata.Summary |
 		metricdata.SummaryDataPoint |
-		metricdata.ValueAtQuantile
+		metricdata.QuantileValue
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -184,8 +184,8 @@ func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bo
 		r = equalSummary(e, aIface.(metricdata.Summary), cfg)
 	case metricdata.SummaryDataPoint:
 		r = equalSummaryDataPoint(e, aIface.(metricdata.SummaryDataPoint), cfg)
-	case metricdata.ValueAtQuantile:
-		r = equalValueAtQuantile(e, aIface.(metricdata.ValueAtQuantile), cfg)
+	case metricdata.QuantileValue:
+		r = equalQuantileValue(e, aIface.(metricdata.QuantileValue), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -264,7 +264,7 @@ func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.K
 		reasons = hasAttributesSummary(e, attrs...)
 	case metricdata.SummaryDataPoint:
 		reasons = hasAttributesSummaryDataPoint(e, attrs...)
-	case metricdata.ValueAtQuantile:
+	case metricdata.QuantileValue:
 		// Nothing to check.
 	default:
 		// We control all types passed to this, panic to signal developers

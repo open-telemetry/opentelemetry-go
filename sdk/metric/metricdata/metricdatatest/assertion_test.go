@@ -257,12 +257,11 @@ var (
 		Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64A},
 	}
 
-	sum            = 3.0
-	quantileValueA = metricdata.ValueAtQuantile{
+	quantileValueA = metricdata.QuantileValue{
 		Quantile: 0.0,
 		Value:    0.1,
 	}
-	quantileValueB = metricdata.ValueAtQuantile{
+	quantileValueB = metricdata.QuantileValue{
 		Quantile: 0.1,
 		Value:    0.2,
 	}
@@ -271,30 +270,30 @@ var (
 		StartTime:      startA,
 		Time:           endA,
 		Count:          2,
-		Sum:            &sum,
-		QuantileValues: []metricdata.ValueAtQuantile{quantileValueA},
+		Sum:            3,
+		QuantileValues: []metricdata.QuantileValue{quantileValueA},
 	}
 	summaryDataPointB = metricdata.SummaryDataPoint{
 		Attributes:     attrB,
 		StartTime:      startB,
 		Time:           endB,
 		Count:          3,
-		QuantileValues: []metricdata.ValueAtQuantile{quantileValueB},
+		QuantileValues: []metricdata.QuantileValue{quantileValueB},
 	}
 	summaryDataPointC = metricdata.SummaryDataPoint{
 		Attributes:     attrA,
 		StartTime:      startB,
 		Time:           endB,
 		Count:          2,
-		Sum:            &sum,
-		QuantileValues: []metricdata.ValueAtQuantile{quantileValueA},
+		Sum:            3,
+		QuantileValues: []metricdata.QuantileValue{quantileValueA},
 	}
 	summaryDataPointD = metricdata.SummaryDataPoint{
 		Attributes:     attrA,
 		StartTime:      startA,
 		Time:           endA,
 		Count:          3,
-		QuantileValues: []metricdata.ValueAtQuantile{quantileValueB},
+		QuantileValues: []metricdata.QuantileValue{quantileValueB},
 	}
 
 	exponentialBucket2 = metricdata.ExponentialBucket{
@@ -704,7 +703,7 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("ExponentialBuckets", testDatatype(exponentialBucket2, exponentialBucket3, equalExponentialBuckets))
 	t.Run("Summary", testDatatype(summaryA, summaryB, equalSummary))
 	t.Run("SummaryDataPoint", testDatatype(summaryDataPointA, summaryDataPointB, equalSummaryDataPoint))
-	t.Run("QuantileValues", testDatatype(quantileValueA, quantileValueB, equalValueAtQuantile))
+	t.Run("QuantileValues", testDatatype(quantileValueA, quantileValueB, equalQuantileValue))
 }
 
 func TestAssertEqualIgnoreTime(t *testing.T) {

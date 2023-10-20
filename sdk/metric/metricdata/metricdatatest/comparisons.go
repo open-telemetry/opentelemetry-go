@@ -467,12 +467,14 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 		if a.Count != b.Count {
 			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
 		}
-		reasons = append(reasons, equalSummarySum(a.Sum, b.Sum, cfg)...)
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
 		r := compareDiff(diffSlices(
 			a.QuantileValues,
 			a.QuantileValues,
-			func(a, b metricdata.ValueAtQuantile) bool {
-				r := equalValueAtQuantile(a, b, cfg)
+			func(a, b metricdata.QuantileValue) bool {
+				r := equalQuantileValue(a, b, cfg)
 				return len(r) == 0
 			},
 		))
@@ -483,19 +485,12 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 	return reasons
 }
 
-func equalValueAtQuantile(a, b metricdata.ValueAtQuantile, _ config) (reasons []string) {
+func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []string) {
 	if a.Quantile != b.Quantile {
 		reasons = append(reasons, notEqualStr("Quantile", a.Quantile, b.Quantile))
 	}
 	if a.Value != b.Value {
 		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
-	}
-	return reasons
-}
-
-func equalSummarySum(a, b *float64, _ config) (reasons []string) {
-	if a != b && ((a == nil || b == nil) || *a != *b) {
-		reasons = append(reasons, notEqualStr("Sum", a, b))
 	}
 	return reasons
 }

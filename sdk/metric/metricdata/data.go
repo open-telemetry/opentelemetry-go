@@ -272,21 +272,21 @@ type SummaryDataPoint struct {
 	Count uint64
 
 	// Sum is the sum of the values recorded.
-	Sum *float64
+	Sum float64
 
 	// (Optional) list of values at different quantiles of the distribution calculated
 	// from the current snapshot. The quantiles must be strictly increasing.
-	QuantileValues []ValueAtQuantile
+	QuantileValues []QuantileValue
 }
 
-// ValueAtQuantile the value at a given quantile of a distribution.
-type ValueAtQuantile struct {
-	// The quantile of a distribution.
+// QuantileValue is the value at a given quantile of a summary.
+type QuantileValue struct {
+	// Quantile is the quantile of this value.
 	//
 	// Must be in the interval [0.0, 1.0].
 	Quantile float64
 
-	// The value at the given quantile of a distribution.
+	// Value is the value at the given quantile of a summary.
 	//
 	// Quantile values must NOT be negative.
 	Value float64
