@@ -179,6 +179,45 @@ type parentBased struct {
 	config samplerConfig
 }
 
+// Custom URL / name sampler to ignore traces for a list of URLs / names
+type nameSampler struct {
+	ignoreNames map[string]bool
+}
+
+
+// Drop the trace if the Name is one of the Names to ignore. Else, record and sample the trace.
+func (ts nameSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	// Check if the main URL path of the trace is one of the URL paths to ignore
+	_, ok := ts.ignoreNames[p.Name]
+
+	var decision SamplingDecision
+
+	if ok {
+		decision = Drop
+	} else {
+		decision = RecordAndSample
+	}
+
+	return SamplingResult{
+		Decision: decision,
+	}
+}
+
+func (ts nameSampler) Description() string {
+	return "Ignore traces for a list of names / URLs."
+}
+
+func NameBased(ignoreNames []string) nameSampler {
+
+	// Make a map to speed up lookups later
+	m := make(map[string]bool)
+	for _, url := range ignoreNames {
+		m[url] = true
+	}
+	return nameSampler{ignoreNames: m}
+}
+
+
 func configureSamplersForParentBased(samplers []ParentBasedSamplerOption) samplerConfig {
 	c := samplerConfig{
 		remoteParentSampled:    AlwaysSample(),

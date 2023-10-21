@@ -257,3 +257,38 @@ func TestTracestateIsPassed(t *testing.T) {
 		})
 	}
 }
+
+func TestNameBasedSample(t *testing.T) {
+	sampler := NameBased([]string{"/api/health"})
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.ContextWithSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx, Name: "/api/v1/test"}).Decision != RecordAndSample {
+		t.Error("Sampling decision should be RecordAndSample")
+	}
+}
+
+func TestNameBasedDrop(t *testing.T) {
+	sampler := NameBased([]string{"/api/health"})
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.ContextWithSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx, Name: "/api/health"}).Decision != Drop {
+		t.Error("Sampling decision should be Drop")
+	}
+}
+
