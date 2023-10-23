@@ -13,4 +13,6 @@
 // limitations under the License.
 
 // Package main provides a code sample of using metric views to customize instruments.
+//
+// Deprecated: See [go.opentelemetry.io/otel/example/prometheus] instead.
 package main
