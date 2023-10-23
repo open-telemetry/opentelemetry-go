@@ -30,7 +30,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/retry"
@@ -89,7 +88,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 		return nil, err
 	}
 
-	userAgent := "OTel OTLP Exporter Go/" + otlpmetric.Version()
+	userAgent := "OTel Go OTLP over HTTP/protobuf metrics exporter/" + Version()
 	req.Header.Set("User-Agent", userAgent)
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
