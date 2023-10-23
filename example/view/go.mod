@@ -1,3 +1,4 @@
+// Deprecated: see go.opentelemetry.io/otel/example/prometheus instead.
 module go.opentelemetry.io/otel/example/view
 
 go 1.20
