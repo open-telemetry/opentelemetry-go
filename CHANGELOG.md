@@ -15,6 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/trace/embedded` package to be embedded in the exported trace API interfaces. (#4620)
 - Add the `go.opentelemetry.io/otel/trace/noop` package as a default no-op implementation of the trace API. (#4620)
 - Add context propagation in `go.opentelemetry.io/otel/example/dice`. (#4644)
+- Add view configuration to `go.opentelemetry.io/otel/example/prometheus`. (#4649)
+- Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4660)
+- Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4660)
 
 ### Deprecated
 
@@ -22,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Deprecate `go.opentelemetry.io/otel/example/fib` package is in favor of `go.opentelemetry.io/otel/example/dice`. (#4618)
 - Deprecate `go.opentelemetry.io/otel/trace.NewNoopTracerProvider`.
   Use the added `NewTracerProvider` function in `go.opentelemetry.io/otel/trace/noop` instead. (#4620)
+- Deprecate `go.opentelemetry.io/otel/example/view` package in favor of `go.opentelemetry.io/otel/example/prometheus`. (#4649)
 
 ### Changed
 
@@ -38,6 +42,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This extends the `Span` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
   See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 

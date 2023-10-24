@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main provides a code sample of using metric views to customize instruments.
-//
-// Deprecated: See [go.opentelemetry.io/otel/example/prometheus] instead.
-package main
+package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+
+// Version is the current release version of the OpenTelemetry OTLP over gRPC metrics exporter in use.
+func Version() string {
+	return "0.42.0"
+}
