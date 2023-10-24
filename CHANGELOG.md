@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/trace/embedded` package to be embedded in the exported trace API interfaces. (#4620)
 - Add the `go.opentelemetry.io/otel/trace/noop` package as a default no-op implementation of the trace API. (#4620)
 - Add context propagation in `go.opentelemetry.io/otel/example/dice`. (#4644)
+- Add view configuration to `go.opentelemetry.io/otel/example/prometheus`. (#4649)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4660)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4660)
 
@@ -24,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Deprecate `go.opentelemetry.io/otel/example/fib` package is in favor of `go.opentelemetry.io/otel/example/dice`. (#4618)
 - Deprecate `go.opentelemetry.io/otel/trace.NewNoopTracerProvider`.
   Use the added `NewTracerProvider` function in `go.opentelemetry.io/otel/trace/noop` instead. (#4620)
+- Deprecate `go.opentelemetry.io/otel/example/view` package in favor of `go.opentelemetry.io/otel/example/prometheus`. (#4649)
 
 ### Changed
 
