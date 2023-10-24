@@ -552,3 +552,13 @@ func TestTraceStateImmutable(t *testing.T) {
 	assert.Equal(t, v0, ts2.Get(k0))
 	assert.Equal(t, "", ts3.Get(k0))
 }
+
+func BenchmarkParseTraceState(b *testing.B) {
+	traceStateStr := "somewhatRealisticKeyLength=someValueAbcdefgh1234567890"
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = ParseTraceState(traceStateStr)
+	}
+}
