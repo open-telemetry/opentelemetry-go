@@ -45,6 +45,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 
+### Fixed
+
+- `baggage.NewMember` and `baggage.parseMember` use `url.PathUnescape` rather than `url.QueryUnescape`, preventing mangling of characters that are valid as baggage values but not query strings. (#3601)
+
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
 This release contains the first stable release of the OpenTelemetry Go [metric SDK].
