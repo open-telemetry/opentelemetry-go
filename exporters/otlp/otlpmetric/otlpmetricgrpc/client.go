@@ -61,7 +61,11 @@ func newClient(ctx context.Context, cfg oconf.Config) (*client, error) {
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
-		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)
+		userAgent := "OTel Go OTLP over gRPC metrics exporter/" + Version()
+		dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
+		dialOpts = append(dialOpts, cfg.DialOptions...)
+
+		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, dialOpts...)
 		if err != nil {
 			return nil, err
 		}
