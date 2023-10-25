@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add view configuration to `go.opentelemetry.io/otel/example/prometheus`. (#4649)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4660)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4660)
+- Add Summary, SummaryDataPoint, and QuantileValue to `go.opentelemetry.io/sdk/metric/metricdata`. (#4622)
 
 ### Deprecated
 
@@ -48,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - `baggage.NewMember` and `baggage.parseMember` use `url.PathUnescape` rather than `url.QueryUnescape`, preventing mangling of characters that are valid as baggage values but not query strings. (#3601)
+- In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
