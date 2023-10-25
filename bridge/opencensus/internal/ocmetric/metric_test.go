@@ -235,9 +235,9 @@ func TestConvertMetrics(t *testing.T) {
 									HasCountAndSum: true,
 									Snapshot: ocmetricdata.Snapshot{
 										Percentiles: map[float64]float64{
-											0.5: 1.0,
-											0.0: 0.1,
-											1.0: 10.4,
+											50.0:  1.0,
+											0.0:   0.1,
+											100.0: 10.4,
 										},
 									},
 								}),
@@ -245,9 +245,9 @@ func TestConvertMetrics(t *testing.T) {
 									Count: 12,
 									Snapshot: ocmetricdata.Snapshot{
 										Percentiles: map[float64]float64{
-											0.0: 0.2,
-											0.5: 1.1,
-											1.0: 10.5,
+											0.0:   0.2,
+											50.0:  1.1,
+											100.0: 10.5,
 										},
 									},
 								}),
@@ -782,7 +782,7 @@ func TestConvertMetrics(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			output, err := ConvertMetrics(tc.input)
 			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("convertAggregation(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
+				t.Errorf("ConvertMetrics(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
 			}
 			metricdatatest.AssertEqual[metricdata.ScopeMetrics](t,
 				metricdata.ScopeMetrics{Metrics: tc.expected},

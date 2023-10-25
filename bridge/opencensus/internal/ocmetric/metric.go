@@ -213,7 +213,9 @@ func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue
 	quantileValues := make([]metricdata.QuantileValue, 0, len(snapshot.Percentiles))
 	for quantile, value := range snapshot.Percentiles {
 		quantileValues = append(quantileValues, metricdata.QuantileValue{
-			Quantile: quantile,
+			// OpenCensus quantiles are range (0-100.0], but OpenTelemetry
+			// quantiles are range [0.0, 1.0].
+			Quantile: quantile / 100.0,
 			Value:    value,
 		})
 	}
