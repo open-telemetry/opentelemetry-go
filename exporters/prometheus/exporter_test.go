@@ -16,6 +16,7 @@ package prometheus
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -834,4 +835,37 @@ func TestIncompatibleMeterName(t *testing.T) {
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(errs))
+}
+
+func TestShutdownExporter(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+
+	for i := 0; i < 3; i++ {
+		exporter, err := New(WithRegisterer(registry))
+		require.NoError(t, err)
+		provider := metric.NewMeterProvider(
+			metric.WithResource(resource.Default()),
+			metric.WithReader(exporter))
+		meter := provider.Meter("testmeter")
+		cnt, err := meter.Int64Counter("foo")
+		require.NoError(t, err)
+		cnt.Add(ctx, 100)
+
+		// verify that metrics added to a previously shutdown MeterProvider
+		// do not conflict with metrics added in this loop.
+		_, err = registry.Gather()
+		require.NoError(t, err)
+
+		// Shutdown should cause future prometheus Gather() calls to no longer
+		// include metrics from this loop's MeterProvider.
+		err = provider.Shutdown(ctx)
+		require.NoError(t, err)
+	}
+	// ensure we aren't unnecessarily logging errors from the shutdown MeterProvider
+	require.NoError(t, handledError)
 }
