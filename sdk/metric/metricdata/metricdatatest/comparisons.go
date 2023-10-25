@@ -472,7 +472,7 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 		}
 		r := compareDiff(diffSlices(
 			a.QuantileValues,
-			a.QuantileValues,
+			b.QuantileValues,
 			func(a, b metricdata.QuantileValue) bool {
 				r := equalQuantileValue(a, b, cfg)
 				return len(r) == 0
