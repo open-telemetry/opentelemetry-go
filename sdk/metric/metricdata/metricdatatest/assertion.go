@@ -46,7 +46,10 @@ type Datatypes interface {
 		metricdata.ExponentialHistogram[int64] |
 		metricdata.ExponentialHistogramDataPoint[float64] |
 		metricdata.ExponentialHistogramDataPoint[int64] |
-		metricdata.ExponentialBucket
+		metricdata.ExponentialBucket |
+		metricdata.Summary |
+		metricdata.SummaryDataPoint |
+		metricdata.QuantileValue
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
@@ -177,6 +180,12 @@ func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bo
 		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[int64]), cfg)
 	case metricdata.ExponentialBucket:
 		r = equalExponentialBuckets(e, aIface.(metricdata.ExponentialBucket), cfg)
+	case metricdata.Summary:
+		r = equalSummary(e, aIface.(metricdata.Summary), cfg)
+	case metricdata.SummaryDataPoint:
+		r = equalSummaryDataPoint(e, aIface.(metricdata.SummaryDataPoint), cfg)
+	case metricdata.QuantileValue:
+		r = equalQuantileValue(e, aIface.(metricdata.QuantileValue), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -250,6 +259,12 @@ func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.K
 	case metricdata.ExponentialHistogramDataPoint[float64]:
 		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
 	case metricdata.ExponentialBucket:
+		// Nothing to check.
+	case metricdata.Summary:
+		reasons = hasAttributesSummary(e, attrs...)
+	case metricdata.SummaryDataPoint:
+		reasons = hasAttributesSummaryDataPoint(e, attrs...)
+	case metricdata.QuantileValue:
 		// Nothing to check.
 	default:
 		// We control all types passed to this, panic to signal developers
