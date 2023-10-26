@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add view configuration to `go.opentelemetry.io/otel/example/prometheus`. (#4649)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4660)
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4660)
+- Add Summary, SummaryDataPoint, and QuantileValue to `go.opentelemetry.io/sdk/metric/metricdata`. (#4622)
 
 ### Deprecated
 
@@ -44,6 +45,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
+
+### Fixed
+
+- In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
