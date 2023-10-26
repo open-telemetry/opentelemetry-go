@@ -458,7 +458,7 @@ func (p int64InstProvider) histogramAggs(name string, cfg metric.Int64HistogramC
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
-		// if boundaries are invalid, ignore them
+		// If boundaries are invalid, ignore them.
 		boundaries = nil
 	}
 	inst := Instrument{
@@ -502,7 +502,7 @@ func (p float64InstProvider) histogramAggs(name string, cfg metric.Float64Histog
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
-		// if boundaries are invalid, ignore them
+		// If boundaries are invalid, ignore them.
 		boundaries = nil
 	}
 	inst := Instrument{
