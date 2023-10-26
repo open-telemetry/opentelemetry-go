@@ -161,6 +161,7 @@ func ExampleMeter_histogram() {
 		"task.duration",
 		metric.WithDescription("The duration of task execution."),
 		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(.005, .01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10),
 	)
 	if err != nil {
 		panic(err)
