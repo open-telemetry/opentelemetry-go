@@ -58,5 +58,4 @@
 // There are known limitations to the metric bridge:
 //   - GaugeDistribution-typed metrics are dropped
 //   - Histogram's SumOfSquaredDeviation field is dropped
-//   - Exemplars on Histograms are dropped
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
