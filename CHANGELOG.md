@@ -48,7 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- `baggage.NewMember` and `baggage.parseMember` use `url.PathUnescape` rather than `url.QueryUnescape`, preventing mangling of characters that are valid as baggage values but not query strings. (#3601)
+- Fix improper parsing of characters such us `+`, `\` by `Parse` in `go.opentelemetry.io/otel/baggage` as they were rendered as a whitespace. (#4667)
 - In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
