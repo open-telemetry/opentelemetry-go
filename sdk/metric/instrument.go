@@ -205,9 +205,6 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 }
 
 func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
-	if err := ctx.Err(); err != nil {
-		return
-	}
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
@@ -238,9 +235,6 @@ func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.Re
 }
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
-	if err := ctx.Err(); err != nil {
-		return
-	}
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
