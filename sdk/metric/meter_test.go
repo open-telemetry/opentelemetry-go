@@ -167,6 +167,10 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
+	// The context used for the synchronous measurements can be done.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
 	attrs := attribute.NewSet(attribute.String("name", "alice"))
 	opt := metric.WithAttributeSet(attrs)
 	testCases := []struct {
@@ -339,7 +343,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 3)
+				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -358,7 +362,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 11)
+				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -377,7 +381,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Int64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(context.Background(), 7)
+				gauge.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -403,7 +407,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 3)
+				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -422,7 +426,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 11)
+				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -441,7 +445,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Float64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(context.Background(), 7)
+				gauge.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",

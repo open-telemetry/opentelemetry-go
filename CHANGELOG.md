@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
+- Record synchronous measurements when the passed context is done in `go.opentelemetry.io/otel/sdk/metric`. (#4671)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
 
