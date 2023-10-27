@@ -59,5 +59,4 @@
 //   - Summary-typed metrics are dropped
 //   - GaugeDistribution-typed metrics are dropped
 //   - Histogram's SumOfSquaredDeviation field is dropped
-//   - Exemplars on Histograms are dropped
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
