@@ -26,6 +26,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
@@ -44,6 +46,8 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
+	embedded.Tracer
+
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
@@ -184,6 +188,8 @@ type MockEvent struct {
 }
 
 type MockSpan struct {
+	embedded.Span
+
 	mockTracer     *MockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
@@ -295,4 +301,4 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }
+func (s *MockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }

@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 const (
@@ -342,8 +343,15 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 // create a Span and it is then up to the operation the Span represents to
 // properly end the Span when the operation itself ends.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Span interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.Span
+
 	// End completes the Span. The Span is considered complete and ready to be
 	// delivered through the rest of the telemetry pipeline after this method
 	// is called. Therefore, updates to the Span are not allowed after this
@@ -490,8 +498,15 @@ func (sk SpanKind) String() string {
 
 // Tracer is the creator of Spans.
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type Tracer interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.Tracer
+
 	// Start creates a span and a context.Context containing the newly-created span.
 	//
 	// If the context.Context provided in `ctx` contains a Span then the newly-created
@@ -522,8 +537,15 @@ type Tracer interface {
 // at runtime from its users or it can simply use the globally registered one
 // (see https://pkg.go.dev/go.opentelemetry.io/otel#GetTracerProvider).
 //
-// Warning: methods may be added to this interface in minor releases.
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type TracerProvider interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.TracerProvider
+
 	// Tracer returns a unique Tracer scoped to be used by instrumentation code
 	// to trace computational workflows. The scope and identity of that
 	// instrumentation code is uniquely defined by the name and options passed.
