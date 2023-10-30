@@ -21,7 +21,7 @@ The following environment variables can be used (instead of options objects) to 
 | Name | Description | Default | Override with |
 |------|-------------|---------|---------------|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint to which the exporter is going to send traces or metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true | `https://localhost:4317` | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, [WithEndpoint()] |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Endpoint to which the exporter is going to send metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true | `https://localhost:4317/v1/metrics` | |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Endpoint to which the exporter is going to send metrics. If the scheme is `http` or `unix` this will also set `OTEL_EXPORTER_OTLP_INSECURE` to true | `https://localhost:4317/v1/metrics` | [WithEndpoint()] and [WithURLPath()] |
 | `OTEL_EXPORTER_OTLP_INSECURE` | If set to true the connection will not attempt to use TLS when connecting | `false` | `OTEL_EXPORTER_OTLP_METRICS_INSECURE`, [WithInsecure()] |
 | `OTEL_EXPORTER_OTLP_METRICS_INSECURE` | If set to true the connection will not attempt to use TLS when connecting | `false` | [WithInsecure()] |
 | `OTEL_EXPORTER_OTLP_HEADERS` | A list of headers to send with each request | none | `OTEL_EXPORTER_OTLP_METRICS_HEADERS`, [WithHeaders()] |
@@ -33,6 +33,7 @@ The following environment variables can be used (instead of options objects) to 
 | `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | The aggregation temporality to use on the basis of instrument kind. Available values are `Cumulative`, `Delta`, and `LowMemory`.  See [The OTLP Exporter Specification] for more details | `Cumulative` | [WithTemporalitySelector()] |
 
 [WithEndpoint()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithEndpoint
+[WithURLPath()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithURLPath
 [WithInsecure()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithInsecure
 [WithHeaders()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithHeaders
 [WithCompression()]: https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp#WithCompression
