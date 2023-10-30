@@ -134,9 +134,9 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
-		rCh := make(chan otest.ExportResult, 3)
+		rCh := make(chan otest.ExportResult, 5)
 		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
-		// Both retryable errors.
+		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
 			Err:    emptyErr,
@@ -144,6 +144,14 @@ func TestConfig(t *testing.T) {
 		}}
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusTooManyRequests,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusGatewayTimeout,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusBadGateway,
 			Err:    emptyErr,
 		}}
 		rCh <- otest.ExportResult{}

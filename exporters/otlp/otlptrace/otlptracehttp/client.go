@@ -195,7 +195,10 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 			return nil
 
-		case sc == http.StatusTooManyRequests, sc == http.StatusServiceUnavailable:
+		case sc == http.StatusTooManyRequests,
+			sc == http.StatusBadGateway,
+			sc == http.StatusServiceUnavailable,
+			sc == http.StatusGatewayTimeout:
 			// Retry-able failures.  Drain the body to reuse the connection.
 			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
 				otel.Handle(err)

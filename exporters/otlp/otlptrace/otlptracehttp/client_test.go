@@ -94,7 +94,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503, 503},
+				InjectHTTPStatus: []int{503, 502},
 			},
 		},
 		{
@@ -109,7 +109,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503},
+				InjectHTTPStatus: []int{504},
 				InjectResponseHeader: []map[string]string{
 					{"Retry-After": "10"},
 				},
