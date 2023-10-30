@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel/sdk/metric
 go 1.20
 
 require (
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/stdr v1.2.2
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.19.0
