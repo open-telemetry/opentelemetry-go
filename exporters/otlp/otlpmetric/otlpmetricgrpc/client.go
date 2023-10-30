@@ -199,8 +199,8 @@ func retryableGRPCStatus(s *status.Status) (bool, time.Duration) {
 	return false, 0
 }
 
-// throttleDelay returns of the status is RetryInfo
-// and the its duration to wait for if an explicit throttle time.
+// throttleDelay returns if the status is RetryInfo
+// and the duration to wait for if an explicit throttle time is included.
 func throttleDelay(s *status.Status) (bool, time.Duration) {
 	for _, detail := range s.Details() {
 		if t, ok := detail.(*errdetails.RetryInfo); ok {
