@@ -187,7 +187,7 @@ func retryableGRPCStatus(s *status.Status) (bool, time.Duration) {
 		codes.OutOfRange,
 		codes.Unavailable,
 		codes.DataLoss:
-		// Additionally handle RetryInfo.
+		// Additionally, handle RetryInfo.
 		_, d := throttleDelay(s)
 		return true, d
 	case codes.ResourceExhausted:
