@@ -49,6 +49,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4670)
 - Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#4670)
+- Retry for `RESOURCE_EXHAUSTED` only if RetryInfo is returned in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4669)
+- Retry for `RESOURCE_EXHAUSTED` only if RetryInfo is returned in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#4669)
 
 ### Fixed
 
