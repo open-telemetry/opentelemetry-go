@@ -131,7 +131,7 @@ func TestRetryable(t *testing.T) {
 	}
 }
 
-func TestRetryableGRPCStatus_ResourceExhaustedWithRetryInfo(t *testing.T) {
+func TestRetryableGRPCStatusResourceExhaustedWithRetryInfo(t *testing.T) {
 	delay := 15 * time.Millisecond
 	s, err := status.New(codes.ResourceExhausted, "WithRetryInfo").WithDetails(
 		&errdetails.RetryInfo{
