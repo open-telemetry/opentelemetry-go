@@ -65,6 +65,13 @@ func TestClient(t *testing.T) {
 	t.Run("Integration", otest.RunClientTests(factory))
 }
 
+func TestNewWithInvalidEndpoint(t *testing.T) {
+	ctx := context.Background()
+	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
+	assert.Error(t, err)
+	assert.Nil(t, exp)
+}
+
 func TestConfig(t *testing.T) {
 	factoryFunc := func(ePt string, rCh <-chan otest.ExportResult, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
 		coll, err := otest.NewHTTPCollector(ePt, rCh)
@@ -113,7 +120,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+		assert.ErrorAs(t, err, new(retryableError))
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -127,9 +134,9 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
-		rCh := make(chan otest.ExportResult, 3)
+		rCh := make(chan otest.ExportResult, 5)
 		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
-		// Both retryable errors.
+		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
 			Err:    emptyErr,
@@ -137,6 +144,14 @@ func TestConfig(t *testing.T) {
 		}}
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusTooManyRequests,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusGatewayTimeout,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusBadGateway,
 			Err:    emptyErr,
 		}}
 		rCh <- otest.ExportResult{}
@@ -153,17 +168,6 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
-	})
-
-	t.Run("WithURLPath", func(t *testing.T) {
-		path := "/prefix/v2/metrics"
-		ePt := fmt.Sprintf("http://localhost:0%s", path)
-		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
-		ctx := context.Background()
-		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
-		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {

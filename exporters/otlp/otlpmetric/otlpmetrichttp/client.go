@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -147,6 +148,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 		request.reset(iCtx)
 		resp, err := c.httpClient.Do(request.Request)
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && urlErr.Temporary() {
+			return newResponseError(http.Header{})
+		}
 		if err != nil {
 			return err
 		}
@@ -178,7 +183,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				}
 			}
 			return nil
-		case sc == http.StatusTooManyRequests, sc == http.StatusServiceUnavailable:
+		case sc == http.StatusTooManyRequests,
+			sc == http.StatusBadGateway,
+			sc == http.StatusServiceUnavailable,
+			sc == http.StatusGatewayTimeout:
 			// Retry-able failure.
 			rErr = newResponseError(resp.Header)
 

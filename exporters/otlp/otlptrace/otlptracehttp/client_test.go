@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -95,7 +94,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503, 503},
+				InjectHTTPStatus: []int{503, 502},
 			},
 		},
 		{
@@ -110,7 +109,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503},
+				InjectHTTPStatus: []int{504},
 				InjectResponseHeader: []map[string]string{
 					{"Retry-After": "10"},
 				},
@@ -213,6 +212,7 @@ func TestTimeout(t *testing.T) {
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
 		otlptracehttp.WithTimeout(time.Nanosecond),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, client)
@@ -221,9 +221,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	unwrapped := errors.Unwrap(err)
-	assert.Equalf(t, true, os.IsTimeout(unwrapped), "expected timeout error, got: %v", unwrapped)
-	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
+	assert.ErrorContains(t, err, "retry-able request failure")
 }
 
 func TestNoRetry(t *testing.T) {
