@@ -57,6 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Fix improper parsing of characters such us `+`, `\` by `Parse` in `go.opentelemetry.io/otel/baggage` as they were rendered as a whitespace. (#4667)
 - In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
