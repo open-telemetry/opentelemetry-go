@@ -552,3 +552,37 @@ func TestTraceStateImmutable(t *testing.T) {
 	assert.Equal(t, v0, ts2.Get(k0))
 	assert.Equal(t, "", ts3.Get(k0))
 }
+
+func BenchmarkParseTraceState(b *testing.B) {
+	benches := []struct {
+		name string
+		in   string
+	}{
+		{
+			name: "single key",
+			in:   "somewhatRealisticKeyLength=someValueAbcdefgh1234567890",
+		},
+		{
+			name: "tenant single key",
+			in:   "somewhatRealisticKeyLength@someTenant=someValueAbcdefgh1234567890",
+		},
+		{
+			name: "three keys",
+			in:   "someKeyName.One=someValue1,someKeyName.Two=someValue2,someKeyName.Three=someValue3",
+		},
+		{
+			name: "tenant three keys",
+			in:   "someKeyName.One@tenant=someValue1,someKeyName.Two@tenant=someValue2,someKeyName.Three@tenant=someValue3",
+		},
+	}
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				_, _ = ParseTraceState(bench.in)
+			}
+		})
+	}
+}
