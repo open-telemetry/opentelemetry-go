@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	api "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -46,22 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	provider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
-		// View to customize histogram buckets and rename a single histogram instrument.
-		metric.WithView(metric.NewView(
-			metric.Instrument{
-				Name:  "baz",
-				Scope: instrumentation.Scope{Name: meterName},
-			},
-			metric.Stream{
-				Name: "new_baz",
-				Aggregation: metric.AggregationExplicitBucketHistogram{
-					Boundaries: []float64{64, 128, 256, 512, 1024, 2048, 4096},
-				},
-			},
-		)),
-	)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter(meterName)
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
@@ -93,7 +77,11 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.Float64Histogram("baz", api.WithDescription("a histogram with custom buckets and rename"))
+	histogram, err := meter.Float64Histogram(
+		"baz",
+		api.WithDescription("a histogram with custom buckets and rename"),
+		api.WithExplicitBucketBoundaries(64, 128, 256, 512, 1024, 2048, 4096),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
