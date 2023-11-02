@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Version` function in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4660)
 - Add Summary, SummaryDataPoint, and QuantileValue to `go.opentelemetry.io/sdk/metric/metricdata`. (#4622)
 - `go.opentelemetry.io/otel/bridge/opencensus.NewMetricProducer` now supports exemplars from OpenCensus. (#4585)
+- Add support for `WithExplicitBucketBoundaries` in `go.opentelemetry.io/otel/sdk/metric`. (#4605)
 - Add support for Summary metrics in `go.opentelemetry.io/otel/bridge/opencensus`. (#4668)
 
 ### Deprecated
@@ -48,9 +49,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
+- Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4670)
+- Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#4670)
+- Retry for `RESOURCE_EXHAUSTED` only if RetryInfo is returned in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4669)
+- Retry for `RESOURCE_EXHAUSTED` only if RetryInfo is returned in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#4669)
+- Retry temporary HTTP request failures in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4679)
+- Retry temporary HTTP request failures in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#4679)
 
 ### Fixed
 
+- Fix improper parsing of characters such us `+`, `\` by `Parse` in `go.opentelemetry.io/otel/baggage` as they were rendered as a whitespace. (#4667)
 - In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 
 ## [1.19.0/0.42.0/0.0.7] 2023-09-28
