@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Deprecate `go.opentelemetry.io/otel/trace.NewNoopTracerProvider`.
   Use the added `NewTracerProvider` function in `go.opentelemetry.io/otel/trace/noop` instead. (#4620)
 - Deprecate `go.opentelemetry.io/otel/example/view` package in favor of `go.opentelemetry.io/otel/example/prometheus`. (#4649)
+- Deprecate `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#TODO)
 
 ### Changed
 

@@ -17,4 +17,7 @@
 // the transformed data to OTLP receivers. The Exporter is configurable to use
 // different Clients, each using a distinct transport protocol to communicate
 // to an OTLP receiving endpoint.
+//
+// Deprecated: Use [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc]
+// or [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp] instead.
 package otlpmetric // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
