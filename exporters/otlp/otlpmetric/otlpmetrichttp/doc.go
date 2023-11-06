@@ -21,16 +21,16 @@ Exporter should be created using [New] and used with a [metric.PeriodicReader].
 The environment variables described below can be used for configuration.
 
 OTEL_EXPORTER_OTLP_ENDPOINT (default: "https://localhost:4318") -
-target base URL ("/v1/metrics" is appended) to which the exporter sends telemtry.
-The value must be a valid URL with scheme ("http" or "https") and host,
+target base URL ("/v1/metrics" is appended) to which the exporter sends telemetry.
+The value must contain a scheme ("http" or "https") and host.
 The value may additionally contain a port and a path.
 The value should not contain a query string or fragment.
 The configuration can be overridden by OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
 environment variable and by [WithEndpoint], [WithInsecure] options.
 
 OTEL_EXPORTER_OTLP_METRICS_ENDPOINT (default: "https://localhost:4318/v1/metrics") -
-target URL to which the exporter sends telemtry.
-The value must be a valid URL with scheme ("http" or "https") and host,
+target URL to which the exporter sends telemetry.
+The value must contain a scheme ("http" or "https") and host.
 The value may additionally contain a port and a path.
 The value should not contain a query string or fragment.
 The configuration can be overridden by [WithEndpoint], [WitnInsecure], [WithURLPath] options.
