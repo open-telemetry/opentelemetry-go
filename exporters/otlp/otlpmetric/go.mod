@@ -1,3 +1,4 @@
+// Deprecated: use go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc or go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp instead.
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric
 
 go 1.20
