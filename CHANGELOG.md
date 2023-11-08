@@ -59,7 +59,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix improper parsing of characters such us `+`, `\` by `Parse` in `go.opentelemetry.io/otel/baggage` as they were rendered as a whitespace. (#4667)
+- Fix improper parsing of characters such us `+`, `/` by `Parse` in `go.opentelemetry.io/otel/baggage` as they were rendered as a whitespace. (#4667)
+- Fix improper parsing of characters such us `+`, `/` passed via `OTEL_RESOURCE_ATTRIBUTES` in `go.opentelemetry.io/otel/sdk/resource` as they were rendered as a whitespace. (#4699)
+- Fix improper parsing of characters such us `+`, `/` passed via `OTEL_EXPORTER_OTLP_HEADERS` and `OTEL_EXPORTER_OTLP_METRICS_HEADERS` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` as they were rendered as a whitespace. (#4699)
+- Fix improper parsing of characters such us `+`, `/` passed via `OTEL_EXPORTER_OTLP_HEADERS` and `OTEL_EXPORTER_OTLP_METRICS_HEADERS` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` as they were rendered as a whitespace. (#4699)
+- Fix improper parsing of characters such us `+`, `/` passed via `OTEL_EXPORTER_OTLP_HEADERS` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracegrpc` as they were rendered as a whitespace. (#4699)
+- Fix improper parsing of characters such us `+`, `/` passed via `OTEL_EXPORTER_OTLP_HEADERS` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp` as they were rendered as a whitespace. (#4699)
 - In `go.opentelemetry.op/otel/exporters/prometheus`, the exporter no longer `Collect`s metrics after `Shutdown` is invoked. (#4648)
 - Fix documentation for `WithCompressor` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#4695)
 - Fix documentation for `WithCompressor` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4695)
