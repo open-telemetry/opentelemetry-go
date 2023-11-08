@@ -52,4 +52,5 @@ module-sets:
     modules:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
+  - go.opentelemetry.io/otel/design/log
   - go.opentelemetry.io/otel/internal/tools
