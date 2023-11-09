@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlptracehttp_test
+package otlptracegrpc_test
 
 import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func Example() {
 	ctx := context.Background()
-	exp, err := otlptracehttp.New(ctx)
+	exp, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		panic(err)
 	}
