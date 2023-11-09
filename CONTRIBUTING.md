@@ -90,7 +90,7 @@ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 Open a pull request against the main `opentelemetry-go` repo. Be sure to add the pull
 request ID to the entry you added to `CHANGELOG.md`.
 
-To help facilitate reviewing and merging your PR, please refrain from force-pushing (`git push --force/-f`) or manually rebasing (`git rebase -i HEAD~1`). Re-writing history makes it difficult to keep track of iterations during code review. All PRs are automatically squashed down to a single commit upon merge to `main`.
+To help facilitate reviewing and merging your PR, please refrain from force-pushing (`git push --force/-f`) or manually rebasing (`git rebase -i HEAD~1`). Re-writing history makes it difficult to keep track of iterations during code review (An exception would be when `reword`ing commits). All PRs are automatically squashed down to a single commit upon merge to `main`.
 
 ### How to Receive Comments
 
