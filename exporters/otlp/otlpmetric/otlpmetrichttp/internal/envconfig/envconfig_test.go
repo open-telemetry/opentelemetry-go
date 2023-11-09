@@ -427,12 +427,27 @@ func TestStringToHeader(t *testing.T) {
 			want:  map[string]string{"userId": "alice"},
 		},
 		{
-			name:  "multiples headers encoded",
+			name:  "simple header conforms to RFC 3986 spec",
+			value: " userId = alice+test ",
+			want:  map[string]string{"userId": "alice+test"},
+		},
+		{
+			name:  "multiple headers encoded",
 			value: "userId=alice,serverNode=DF%3A28,isProduction=false",
 			want: map[string]string{
 				"userId":       "alice",
 				"serverNode":   "DF:28",
 				"isProduction": "false",
+			},
+		},
+		{
+			name:  "multiple headers encoded per RFC 3986 spec",
+			value: "userId=alice+test,serverNode=DF%3A28,isProduction=false,namespace=localhost/test",
+			want: map[string]string{
+				"userId":       "alice+test",
+				"serverNode":   "DF:28",
+				"isProduction": "false",
+				"namespace":    "localhost/test",
 			},
 		},
 		{
