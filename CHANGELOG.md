@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [1.20.0/0.43.0] 2023-11-10
 
-This release brings a breaking change for custom trace API implementations. A `TraceProvider` implementation is advised to embed `embedded.TracerProvider` or `noop.TracerProvider`. You can find more information in [metric API] package documentation.
+This release brings a breaking change for custom trace API implementations. `go.opentelemetry.io/otel/trace.TraceProvider` interface now embeds the `go.opentelemetry.io/otel/trace/embedded.TracerProvider` type. Implementors need to update their `TracerProvider` implementations based on what they want the default behavior to be. See the "API Implementations" section of the [metric API] package documentation for more informatoin about how to accomplish this.
 
 ### Added
 
