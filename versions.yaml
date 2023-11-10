@@ -48,7 +48,7 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/prometheus
       - go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
   experimental-schema:
-    version: v0.0.8
+    version: v0.0.7
     modules:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
