@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove the deprecated `go.opentelemetry.io/otel/bridge/opencensus.NewTracer`. (#TBD)
+- Remove the deprecated `go.opentelemetry.io/otel/bridge/opencensus.NewTracer`. (#4706)
 
 ## [1.20.0/0.43.0] 2023-11-10
 
