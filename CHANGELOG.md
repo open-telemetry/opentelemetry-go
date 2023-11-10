@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [1.20.0/0.43.0] 2023-11-10
 
-This release brings a breaking change for custom trace API implementations. `go.opentelemetry.io/otel/trace.TraceProvider` interface now embeds the `go.opentelemetry.io/otel/trace/embedded.TracerProvider` type. Implementors need to update their `TracerProvider` implementations based on what they want the default behavior to be. See the "API Implementations" section of the [metric API] package documentation for more informatoin about how to accomplish this.
+This release brings a breaking change for custom trace API implementations. Some interfaces (`TracerProvider`, `Tracer`, `Span`) now embeds the `go.opentelemetry.io/otel/trace/embedded` types. Implementors need to update their implementations based on what they want the default behavior to be. See the "API Implementations" section of the [metric API] package documentation for more informatoin about how to accomplish this.
 
 ### Added
 
@@ -43,15 +43,15 @@ This release brings a breaking change for custom trace API implementations. `go.
 - The `TracerProvider` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.TracerProvider` type.
   This extends the `TracerProvider` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - The `Tracer` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Tracer` type.
   This extends the `Tracer` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - The `Span` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Span` type.
   This extends the `Span` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4670)
