@@ -10,6 +10,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [1.20.0/0.43.0] 2023-11-10
 
+This release brings a breaking change for custom trace API implementations.
+A `TraceProvider` implementation is advised to embed `embedded.TracerProvider`
+or `noop.TracerProvider`. You can find more information in
+[trace API docs](https://pkg.go.dev/go.opentelemetry.io/otel/trace#hdr-API_Implementations).
+
 ### Added
 
 - Add `go.opentelemetry.io/otel/bridge/opencensus.InstallTraceBridge`, which installs the OpenCensus trace bridge, and replaces `opencensus.NewTracer`. (#4567)
