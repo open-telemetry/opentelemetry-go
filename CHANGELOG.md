@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.20.0/0.43.0] 2023-11-10
+
+This release brings a breaking change for custom trace API implementations. Some interfaces (`TracerProvider`, `Tracer`, `Span`) now embed the `go.opentelemetry.io/otel/trace/embedded` types. Implementors need to update their implementations based on what they want the default behavior to be. See the "API Implementations" section of the [trace API] package documentation for more information about how to accomplish this.
+
 ### Added
 
 - Add `go.opentelemetry.io/otel/bridge/opencensus.InstallTraceBridge`, which installs the OpenCensus trace bridge, and replaces `opencensus.NewTracer`. (#4567)
@@ -39,15 +43,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `TracerProvider` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.TracerProvider` type.
   This extends the `TracerProvider` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - The `Tracer` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Tracer` type.
   This extends the `Tracer` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - The `Span` in `go.opentelemetry.io/otel/trace` now embeds the `go.opentelemetry.io/otel/trace/embedded.Span` type.
   This extends the `Span` interface and is is a breaking change for any existing implementation.
   Implementors need to update their implementations based on what they want the default behavior of the interface to be.
-  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more informatoin about how to accomplish this. (#4620)
+  See the "API Implementations" section of the `go.opentelemetry.io/otel/trace` package documentation for more information about how to accomplish this. (#4620)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` does no longer depend on `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#4660)
 - Retry for `502 Bad Gateway` and `504 Gateway Timeout` HTTP statuses in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4670)
@@ -2717,7 +2721,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.19.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.20.0...HEAD
+[1.20.0/0.43.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.20.0
 [1.19.0/0.42.0/0.0.7]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0
 [1.19.0-rc.1/0.42.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0-rc.1
 [1.18.0/0.41.0/0.0.6]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.18.0
@@ -2792,7 +2797,7 @@ It contains api and sdk for trace and meter.
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
-[Go 1.19]: https://go.dev/doc/go1.19
 
 [metric API]:https://pkg.go.dev/go.opentelemetry.io/otel/metric
 [metric SDK]:https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric
+[trace API]:https://pkg.go.dev/go.opentelemetry.io/otel/trace
