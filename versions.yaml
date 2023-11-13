@@ -41,7 +41,6 @@ module-sets:
       - go.opentelemetry.io/otel/bridge/opencensus/test
       - go.opentelemetry.io/otel/example/opencensus
       - go.opentelemetry.io/otel/example/prometheus
-      - go.opentelemetry.io/otel/example/view
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
       - go.opentelemetry.io/otel/exporters/prometheus
