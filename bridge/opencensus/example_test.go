@@ -15,20 +15,9 @@
 package opencensus_test
 
 import (
-	octrace "go.opencensus.io/trace"
-
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
-
-func ExampleNewTracer() {
-	// Create an OpenTelemetry Tracer to use to record spans.
-	tracer := otel.GetTracerProvider().Tracer("go.opentelemetry.io/otel/bridge/opencensus")
-	// Overwrite the OpenCensus DefaultTracer so that it uses OpenTelemetry
-	// rather than OpenCensus.
-	octrace.DefaultTracer = opencensus.NewTracer(tracer)
-}
 
 func ExampleNewMetricProducer() {
 	// Create the OpenCensus Metric bridge.
