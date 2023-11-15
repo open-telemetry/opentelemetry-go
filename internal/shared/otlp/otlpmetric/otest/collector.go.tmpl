@@ -267,8 +267,8 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...fun
 	return c, nil
 }
 
-// WithHTTPCollectorRespondingPlainText makes the HTTPCollector to return a
-// plaintext, instead of protobuf, response.
+// WithHTTPCollectorRespondingPlainText makes the HTTPCollector return
+// a plaintext, instead of protobuf, response.
 func WithHTTPCollectorRespondingPlainText() func(*HTTPCollector) {
 	return func(s *HTTPCollector) {
 		s.plainTextResponse = true
@@ -398,7 +398,7 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 	if c.plainTextResponse {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "OK")
+		_, _ = w.Write([]byte("OK"))
 		return
 	}
 
