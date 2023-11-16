@@ -62,7 +62,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 
 	var sb strings.Builder
 	sb.Grow(2 + 32 + 16 + 2 + 3)
-	sb.WriteString(versionPart)
+	_, _ = sb.WriteString(versionPart)
 	traceID := sc.TraceID()
 	spanID := sc.SpanID()
 	flagByte := [1]byte{byte(flags)}
@@ -72,7 +72,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 
 func writeTraceParent(sb *strings.Builder, srcs ...[]byte) {
 	for _, src := range srcs {
-		sb.WriteByte(parentDelimiter[0])
+		_, _ = sb.WriteByte(parentDelimiter[0])
 		writeHex(sb, src)
 	}
 }
@@ -80,7 +80,7 @@ func writeTraceParent(sb *strings.Builder, srcs ...[]byte) {
 func writeHex(sb *strings.Builder, src []byte) {
 	var dst [32]byte
 	n := hex.Encode(dst[:], src)
-	sb.Write(dst[:n])
+	_, _ = sb.Write(dst[:n])
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
@@ -146,7 +146,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	return sc
 }
 
-// upperHex detect hex is upper case
+// upperHex detect hex is upper case.
 func upperHex(v string) bool {
 	for _, c := range v {
 		if c >= 'A' && c <= 'F' {
