@@ -72,7 +72,7 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 
 func writeTraceParent(sb *strings.Builder, srcs ...[]byte) {
 	for _, src := range srcs {
-		_, _ = sb.WriteByte(parentDelimiter[0])
+		_ = sb.WriteByte(parentDelimiter[0])
 		writeHex(sb, src)
 	}
 }
