@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.21.0/0.44.0] 2023-11-16
+
 ### Removed
 
 - Remove the deprecated `go.opentelemetry.io/otel/bridge/opencensus.NewTracer`. (#4706)
@@ -2733,7 +2735,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.20.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.21.0...HEAD
+[1.21.0/0.44.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.21.0
 [1.20.0/0.43.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.20.0
 [1.19.0/0.42.0/0.0.7]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0
 [1.19.0-rc.1/0.42.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0-rc.1
