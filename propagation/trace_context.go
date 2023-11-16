@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"regexp"
+	"strings"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,6 +28,7 @@ const (
 	maxVersion        = 254
 	traceparentHeader = "traceparent"
 	tracestateHeader  = "tracestate"
+	parentDelimiter   = "-"
 )
 
 // TraceContext is a propagator that supports the W3C Trace Context format
@@ -41,8 +42,8 @@ const (
 type TraceContext struct{}
 
 var (
-	_              TextMapPropagator = TraceContext{}
-	traceCtxRegExp                   = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
+	_           TextMapPropagator = TraceContext{}
+	versionPart                   = fmt.Sprintf("%.2X", supportedVersion)
 )
 
 // Inject set tracecontext from the Context into the carrier.
@@ -59,12 +60,27 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 	// Clear all flags other than the trace-context supported sampling bit.
 	flags := sc.TraceFlags() & trace.FlagsSampled
 
-	h := fmt.Sprintf("%.2x-%s-%s-%s",
-		supportedVersion,
-		sc.TraceID(),
-		sc.SpanID(),
-		flags)
-	carrier.Set(traceparentHeader, h)
+	var sb strings.Builder
+	sb.Grow(2 + 32 + 16 + 2 + 3)
+	sb.WriteString(versionPart)
+	traceID := sc.TraceID()
+	spanID := sc.SpanID()
+	flagByte := [1]byte{byte(flags)}
+	writeTraceParent(&sb, traceID[:], spanID[:], flagByte[:])
+	carrier.Set(traceparentHeader, sb.String())
+}
+
+func writeTraceParent(sb *strings.Builder, srcs ...[]byte) {
+	for _, src := range srcs {
+		sb.WriteByte(parentDelimiter[0])
+		writeHex(sb, src)
+	}
+}
+
+func writeHex(sb *strings.Builder, src []byte) {
+	var dst [32]byte
+	n := hex.Encode(dst[:], src)
+	sb.Write(dst[:n])
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
@@ -86,21 +102,8 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	matches := traceCtxRegExp.FindStringSubmatch(h)
-
-	if len(matches) == 0 {
-		return trace.SpanContext{}
-	}
-
-	if len(matches) < 5 { // four subgroups plus the overall match
-		return trace.SpanContext{}
-	}
-
-	if len(matches[1]) != 2 {
-		return trace.SpanContext{}
-	}
-	ver, err := hex.DecodeString(matches[1])
-	if err != nil {
+	var ver [1]byte
+	if !extractPart(ver[:], &h, 2) {
 		return trace.SpanContext{}
 	}
 	version := int(ver[0])
@@ -108,36 +111,24 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	if version == 0 && len(matches) != 5 { // four subgroups plus the overall match
-		return trace.SpanContext{}
-	}
-
-	if len(matches[2]) != 32 {
-		return trace.SpanContext{}
-	}
-
 	var scc trace.SpanContextConfig
-
-	scc.TraceID, err = trace.TraceIDFromHex(matches[2][:32])
-	if err != nil {
+	if !extractPart(scc.TraceID[:], &h, 32) {
+		return trace.SpanContext{}
+	}
+	if !extractPart(scc.SpanID[:], &h, 16) {
 		return trace.SpanContext{}
 	}
 
-	if len(matches[3]) != 16 {
+	var opts [1]byte
+	if !extractPart(opts[:], &h, 2) {
 		return trace.SpanContext{}
 	}
-	scc.SpanID, err = trace.SpanIDFromHex(matches[3])
-	if err != nil {
+	if version == 0 && (h != "" || opts[0] > 2) {
+		// version 0 not allow extra
+		// version 0 not allow other flag
 		return trace.SpanContext{}
 	}
 
-	if len(matches[4]) != 2 {
-		return trace.SpanContext{}
-	}
-	opts, err := hex.DecodeString(matches[4])
-	if err != nil || len(opts) < 1 || (version == 0 && opts[0] > 2) {
-		return trace.SpanContext{}
-	}
 	// Clear all flags other than the trace-context supported sampling bit.
 	scc.TraceFlags = trace.TraceFlags(opts[0]) & trace.FlagsSampled
 
@@ -153,6 +144,29 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	}
 
 	return sc
+}
+
+// upperHex detect hex is upper case
+func upperHex(v string) bool {
+	for _, c := range v {
+		if c >= 'A' && c <= 'F' {
+			return true
+		}
+	}
+	return false
+}
+
+func extractPart(dst []byte, h *string, n int) bool {
+	part, left, _ := strings.Cut(*h, parentDelimiter)
+	*h = left
+	// hex.Decode support Upper hex, but we doesn't want it, so need exclude
+	if len(part) != n || upperHex(part) {
+		return false
+	}
+	if p, err := hex.Decode(dst, []byte(part)); err != nil || p != n/2 {
+		return false
+	}
+	return true
 }
 
 // Fields returns the keys who's values are set with Inject.
