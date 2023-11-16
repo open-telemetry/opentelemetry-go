@@ -38,13 +38,13 @@ type member struct {
 	Value string
 }
 
-// [\x20-\x2b\x2d-\x3c\x3e-\x7e]*
 func checkValueChar(v byte) bool {
+	// [\x20-\x2b\x2d-\x3c\x3e-\x7e]*
 	return v >= '\x20' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
-// [\x21-\x2b\x2d-\x3c\x3e-\x7e]
 func checkValueLast(v byte) bool {
+	// [\x21-\x2b\x2d-\x3c\x3e-\x7e]
 	return v >= '\x21' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
@@ -62,8 +62,8 @@ func checkValue(val string) bool {
 	return checkValueLast(val[n-1])
 }
 
-// [_0-9a-z\-\*\/]*
 func checkKeyRemain(key string) bool {
+	// [_0-9a-z\-\*\/]*
 	for _, v := range key {
 		if (v >= '0' && v <= '9') || (v >= 'a' && v <= 'z') {
 			continue
@@ -77,19 +77,25 @@ func checkKeyRemain(key string) bool {
 	return true
 }
 
-func checkKeyPart(key string, n int, tenant bool) bool {
+func checkKeyPart(key string, n int) bool {
 	if len(key) == 0 {
 		return false
 	}
 	first := key[0] // key first char
 	ret := len(key[1:]) <= n
-	if tenant {
-		// [a-z0-9]
-		ret = ret && ((first >= 'a' && first <= 'z') || (first >= '0' && first <= '9'))
-	} else {
-		// [a-z]
-		ret = ret && first >= 'a' && first <= 'z'
+	// [a-z]
+	ret = ret && first >= 'a' && first <= 'z'
+	return ret && checkKeyRemain(key[1:])
+}
+
+func checkKeyTenant(key string, n int) bool {
+	if len(key) == 0 {
+		return false
 	}
+	first := key[0] // key first char
+	ret := len(key[1:]) <= n
+	// [a-z0-9]
+	ret = ret && ((first >= 'a' && first <= 'z') || (first >= '0' && first <= '9'))
 	return ret && checkKeyRemain(key[1:])
 }
 
@@ -98,9 +104,9 @@ func checkKey(key string) bool {
 	// withTenantKeyFormat = `[a-z0-9][_0-9a-z\-\*\/]{0,240}@[a-z][_0-9a-z\-\*\/]{0,13}`
 	tenant, system, ok := strings.Cut(key, "@")
 	if !ok {
-		return checkKeyPart(key, 255, false)
+		return checkKeyPart(key, 255)
 	}
-	return checkKeyPart(tenant, 240, true) && checkKeyPart(system, 13, false)
+	return checkKeyTenant(tenant, 240) && checkKeyPart(system, 13)
 }
 
 // based on the W3C Trace Context specification, see
@@ -206,14 +212,14 @@ func (ts TraceState) String() string {
 		return ""
 	}
 	var sb strings.Builder
-	sb.WriteString(ts.list[0].Key)
-	sb.WriteByte('=')
-	sb.WriteString(ts.list[0].Value)
+	_, _ = sb.WriteString(ts.list[0].Key)
+	_ = sb.WriteByte('=')
+	_, _ = sb.WriteString(ts.list[0].Value)
 	for i := 1; i < len(ts.list); i++ {
-		sb.WriteByte(listDelimiters[0])
-		sb.WriteString(ts.list[i].Key)
-		sb.WriteByte('=')
-		sb.WriteString(ts.list[i].Value)
+		_ = sb.WriteByte(listDelimiters[0])
+		_, _ = sb.WriteString(ts.list[i].Key)
+		_ = sb.WriteByte('=')
+		_, _ = sb.WriteString(ts.list[i].Value)
 	}
 	return sb.String()
 }

@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Improve `go.opentelemetry.io/otel/trace.TraceState` 's performance (#4722)
+
 ### Removed
 
 - Remove the deprecated `go.opentelemetry.io/otel/bridge/opencensus.NewTracer`. (#4706)
@@ -1189,7 +1193,7 @@ We have updated the project minimum supported Go version to 1.16
 
 ### Fixed
 
-- json stdout exporter no longer crashes due to concurrency bug. (#2265)
+- JSON stdout exporter no longer crashes due to concurrency bug. (#2265)
 
 ## [Metrics 0.24.0] - 2021-10-01
 
@@ -1587,7 +1591,7 @@ with major version 0.
 
 ### Added
 
-- Added `Marshaler` config option to `otlphttp` to enable otlp over json or protobufs. (#1586)
+- Added `Marshaler` config option to `otlphttp` to enable otlp over JSON or protobufs. (#1586)
 - A `ForceFlush` method to the `"go.opentelemetry.io/otel/sdk/trace".TracerProvider` to flush all registered `SpanProcessor`s. (#1608)
 - Added `WithSampler` and `WithSpanLimits` to tracer provider. (#1633, #1702)
 - `"go.opentelemetry.io/otel/trace".SpanContext` now has a `remote` property, and `IsRemote()` predicate, that is true when the `SpanContext` has been extracted from remote context data. (#1701)
@@ -1890,7 +1894,7 @@ with major version 0.
 ### Changed
 
 - Add reconnecting udp connection type to Jaeger exporter.
-   This change adds a new optional implementation of the udp conn interface used to detect changes to an agent's host dns record.
+   This change adds a new optional implementation of the udp conn interface used to detect changes to an agent's host DNS record.
    It then adopts the new destination address to ensure the exporter doesn't get stuck. This change was ported from jaegertracing/jaeger-client-go#520. (#1063)
 - Replace `StartOption` and `EndOption` in `go.opentelemetry.io/otel/api/trace` with `SpanOption`.
    This change is matched by replacing the `StartConfig` and `EndConfig` with a unified `SpanConfig`. (#1108)
@@ -2066,7 +2070,7 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
 
 - A new Resource Detector interface is included to allow resources to be automatically detected and included. (#939)
 - A Detector to automatically detect resources from an environment variable. (#939)
-- Github action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
+- GitHub action to generate protobuf Go bindings locally in `internal/opentelemetry-proto-gen`. (#938)
 - OTLP .proto files from `open-telemetry/opentelemetry-proto` imported as a git submodule under `internal/opentelemetry-proto`.
    References to `github.com/open-telemetry/opentelemetry-proto` changed to `go.opentelemetry.io/otel/internal/opentelemetry-proto-gen`. (#942)
 
@@ -2089,7 +2093,7 @@ This release migrates the default OpenTelemetry SDK into its own Go module, deco
 - Add `peer.service` semantic attribute. (#898)
 - Add database-specific semantic attributes. (#899)
 - Add semantic convention for `faas.coldstart` and `container.id`. (#909)
-- Add http content size semantic conventions. (#905)
+- Add HTTP content size semantic conventions. (#905)
 - Include `http.request_content_length` in HTTP request basic attributes. (#905)
 - Add semantic conventions for operating system process resource attribute keys. (#919)
 - The Jaeger exporter now has a `WithBatchMaxCount` option to specify the maximum number of spans sent in a batch. (#931)
@@ -2153,7 +2157,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 - The othttp instrumentation now includes default metrics. (#861)
 - This CHANGELOG file to track all changes in the project going forward.
 - Support for array type attributes. (#798)
-- Apply transitive dependabot go.mod dependency updates as part of a new automatic Github workflow. (#844)
+- Apply transitive dependabot go.mod dependency updates as part of a new automatic GitHub workflow. (#844)
 - Timestamps are now passed to exporters for each export. (#835)
 - Add new `Accumulation` type to metric SDK to transport telemetry from `Accumulator`s to `Processor`s.
    This replaces the prior `Record` `struct` use for this purpose. (#835)
@@ -2284,7 +2288,7 @@ This release implements the v0.5.0 version of the OpenTelemetry specification.
 - Alias `api` types to root package of project. (#696)
 - Create basic `othttp.Transport` for simple client instrumentation. (#678)
 - `SetAttribute(string, interface{})` to the trace API. (#674)
-- Jaeger exporter option that allows user to specify custom http client. (#671)
+- Jaeger exporter option that allows user to specify custom HTTP client. (#671)
 - `Stringer` and `Infer` methods to `key`s. (#662)
 
 ### Changed
@@ -2711,7 +2715,7 @@ This release contains a Metrics SDK with stdout exporter and supports basic aggr
 ## [0.1.0] - 2019-11-04
 
 This is the first release of open-telemetry go library.
-It contains api and sdk for trace and meter.
+It contains API and SDK for trace and meter.
 
 ### Added
 

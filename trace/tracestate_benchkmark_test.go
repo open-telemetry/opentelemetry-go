@@ -24,13 +24,11 @@ func BenchmarkTraceStateParse(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				ParseTraceState(test.in)
+				_, _ = ParseTraceState(test.in)
 			}
 		})
 	}
 }
-
-// Insert 因为语义发生变化了，我们没有做正则校验，所以一定是比 otel 的实现快的，并且因为不平等，没必要再做 benchmark 了
 
 func BenchmarkTraceStateString(b *testing.B) {
 	for _, test := range testcases {
