@@ -20,7 +20,6 @@ module-sets:
       - go.opentelemetry.io/otel/bridge/opentracing
       - go.opentelemetry.io/otel/bridge/opentracing/test
       - go.opentelemetry.io/otel/example/dice
-      - go.opentelemetry.io/otel/example/fib
       - go.opentelemetry.io/otel/example/namedtracer
       - go.opentelemetry.io/otel/example/otel-collector
       - go.opentelemetry.io/otel/example/passthrough

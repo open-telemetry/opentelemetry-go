@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecated `go.opentelemetry.io/otel/bridge/opencensus.NewTracer`. (#4706)
 - Remove the deprecated `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` module. (#4707)
 - Remove the deprecated `go.opentelemetry.io/otel/example/view` module. (#4708)
+- Remove the deprecated `go.opentelemetry.io/otel/example/fib` module. (#4723)
 
 ### Fixed
 
