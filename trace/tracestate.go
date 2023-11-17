@@ -38,22 +38,27 @@ type member struct {
 	Value string
 }
 
+// chr      = %x20 / (nblk-char = %x21-2B / %x2D-3C / %x3E-7E)
+// => chr = %x20-2B / %x2D-3C / %x3E-7E
 func checkValueChar(v byte) bool {
-	// [\x20-\x2b\x2d-\x3c\x3e-\x7e]*
 	return v >= '\x20' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
+// nblk-chr = %x21-2B / %x2D-3C / %x3E-7E
 func checkValueLast(v byte) bool {
-	// [\x21-\x2b\x2d-\x3c\x3e-\x7e]
 	return v >= '\x21' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
+// based on the W3C Trace Context specification, see
+// https://www.w3.org/TR/trace-context-1/#value
+// value    = (0*255(chr)) nblk-chr
+// nblk-chr = %x21-2B / %x2D-3C / %x3E-7E
+// chr      = %x20 / nblk-chr
 func checkValue(val string) bool {
 	n := len(val)
 	if n == 0 || n > 256 {
 		return false
 	}
-	// valueFormat         = `[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]`
 	for i := 0; i < n-1; i++ {
 		if !checkValueChar(val[i]) {
 			return false
@@ -63,7 +68,7 @@ func checkValue(val string) bool {
 }
 
 func checkKeyRemain(key string) bool {
-	// [_0-9a-z\-\*\/]*
+	// ( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
 	for _, v := range key {
 		if (v >= '0' && v <= '9') || (v >= 'a' && v <= 'z') {
 			continue
@@ -77,31 +82,41 @@ func checkKeyRemain(key string) bool {
 	return true
 }
 
+// simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+// system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+// n is remain part length, should be 255 in simple-key or 13 in system-id
 func checkKeyPart(key string, n int) bool {
 	if len(key) == 0 {
 		return false
 	}
-	first := key[0] // key first char
+	first := key[0] // key's first char
 	ret := len(key[1:]) <= n
-	// [a-z]
 	ret = ret && first >= 'a' && first <= 'z'
 	return ret && checkKeyRemain(key[1:])
 }
 
+// tenant-id = ( lcalpha / DIGIT ) 0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
+// n is remain part length, should be 240 exactly
 func checkKeyTenant(key string, n int) bool {
 	if len(key) == 0 {
 		return false
 	}
-	first := key[0] // key first char
+	first := key[0] // key's first char
 	ret := len(key[1:]) <= n
-	// [a-z0-9]
 	ret = ret && ((first >= 'a' && first <= 'z') || (first >= '0' && first <= '9'))
 	return ret && checkKeyRemain(key[1:])
 }
 
+// based on the W3C Trace Context specification, see
+// https://www.w3.org/TR/trace-context-1/#tracestate-header
+//
+// key = simple-key / multi-tenant-key
+// simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+// multi-tenant-key = tenant-id "@" system-id
+// tenant-id = ( lcalpha / DIGIT ) (0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+// system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+// lcalpha    = %x61-7A ; a-z
 func checkKey(key string) bool {
-	// noTenantKeyFormat   = `[a-z][_0-9a-z\-\*\/]{0,255}`
-	// withTenantKeyFormat = `[a-z0-9][_0-9a-z\-\*\/]{0,240}@[a-z][_0-9a-z\-\*\/]{0,13}`
 	tenant, system, ok := strings.Cut(key, "@")
 	if !ok {
 		return checkKeyPart(key, 255)
@@ -109,8 +124,6 @@ func checkKey(key string) bool {
 	return checkKeyTenant(tenant, 240) && checkKeyPart(system, 13)
 }
 
-// based on the W3C Trace Context specification, see
-// https://www.w3.org/TR/trace-context-1/#tracestate-header
 func newMember(key, value string) (member, error) {
 	if !checkKey(key) {
 		return member{}, fmt.Errorf("%w: %s", errInvalidKey, key)

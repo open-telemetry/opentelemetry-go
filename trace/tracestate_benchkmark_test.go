@@ -44,3 +44,15 @@ func BenchmarkTraceStateString(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkTraceStateInsert(b *testing.B) {
+	for _, test := range insertTestcase {
+		b.Run(test.name, func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, _ = test.tracestate.Insert(test.key, test.value)
+			}
+		})
+	}
+}
