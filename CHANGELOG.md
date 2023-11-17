@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Improve `go.opentelemetry.io/otel/propagation.TraceContext` 's performance (#4721)
+- Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 
 ### Removed
 
