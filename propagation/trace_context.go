@@ -28,7 +28,7 @@ const (
 	maxVersion        = 254
 	traceparentHeader = "traceparent"
 	tracestateHeader  = "tracestate"
-	parentDelimiter   = "-"
+	delimiter         = "-"
 )
 
 // TraceContext is a propagator that supports the W3C Trace Context format
@@ -66,21 +66,13 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 	traceID := sc.TraceID()
 	spanID := sc.SpanID()
 	flagByte := [1]byte{byte(flags)}
-	writeTraceParent(&sb, traceID[:], spanID[:], flagByte[:])
-	carrier.Set(traceparentHeader, sb.String())
-}
-
-func writeTraceParent(sb *strings.Builder, srcs ...[]byte) {
-	for _, src := range srcs {
-		_ = sb.WriteByte(parentDelimiter[0])
-		writeHex(sb, src)
+	var buf [32]byte
+	for _, src := range [][]byte{traceID[:], spanID[:], flagByte[:]} {
+		_ = sb.WriteByte(delimiter[0])
+		n := hex.Encode(buf[:], src)
+		_, _ = sb.Write(buf[:n])
 	}
-}
-
-func writeHex(sb *strings.Builder, src []byte) {
-	var dst [32]byte
-	n := hex.Encode(dst[:], src)
-	_, _ = sb.Write(dst[:n])
+	carrier.Set(traceparentHeader, sb.String())
 }
 
 // Extract reads tracecontext from the carrier into a returned Context.
@@ -146,7 +138,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	return sc
 }
 
-// upperHex detect hex is upper case.
+// upperHex detect hex is upper case Unicode characters.
 func upperHex(v string) bool {
 	for _, c := range v {
 		if c >= 'A' && c <= 'F' {
@@ -157,7 +149,7 @@ func upperHex(v string) bool {
 }
 
 func extractPart(dst []byte, h *string, n int) bool {
-	part, left, _ := strings.Cut(*h, parentDelimiter)
+	part, left, _ := strings.Cut(*h, delimiter)
 	*h = left
 	// hex.Decode support Upper hex, but we doesn't want it, so need exclude
 	if len(part) != n || upperHex(part) {
