@@ -430,3 +430,24 @@ func TestOtherHTTPSuccess(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectorRespondingNonProtobufContent(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		InjectContentType: "application/octet-stream",
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	ctx := context.Background()
+	exporter, err := otlptrace.New(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(context.Background()))
+	}()
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	assert.NoError(t, err)
+	assert.Len(t, mc.GetSpans(), 1)
+}
