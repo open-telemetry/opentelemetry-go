@@ -70,7 +70,7 @@ func checkValue(val string) bool {
 func checkKeyRemain(key string) bool {
 	// ( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
 	for _, v := range key {
-		if (v >= '0' && v <= '9') || (v >= 'a' && v <= 'z') {
+		if isAlphaNum(byte(v)) {
 			continue
 		}
 		switch v {
@@ -95,16 +95,20 @@ func checkKeyPart(key string, n int) bool {
 	return ret && checkKeyRemain(key[1:])
 }
 
+func isAlphaNum(c byte) bool {
+	if c >= 'a' && c <= 'z' {
+		return true
+	}
+	return c >= '0' && c <= '9'
+}
+
 // tenant-id = ( lcalpha / DIGIT ) 0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
 // n is remain part length, should be 240 exactly
 func checkKeyTenant(key string, n int) bool {
 	if len(key) == 0 {
 		return false
 	}
-	first := key[0] // key's first char
-	ret := len(key[1:]) <= n
-	ret = ret && ((first >= 'a' && first <= 'z') || (first >= '0' && first <= '9'))
-	return ret && checkKeyRemain(key[1:])
+	return isAlphaNum(key[0]) && len(key[1:]) <= n && checkKeyRemain(key[1:])
 }
 
 // based on the W3C Trace Context specification, see
@@ -126,10 +130,10 @@ func checkKey(key string) bool {
 
 func newMember(key, value string) (member, error) {
 	if !checkKey(key) {
-		return member{}, fmt.Errorf("%w: %s", errInvalidKey, key)
+		return member{}, errInvalidKey
 	}
 	if !checkValue(value) {
-		return member{}, fmt.Errorf("%w: %s", errInvalidValue, value)
+		return member{}, errInvalidValue
 	}
 	return member{Key: key, Value: value}, nil
 }
@@ -141,11 +145,7 @@ func parseMember(m string) (member, error) {
 	}
 	key = strings.TrimLeft(key, " \t")
 	val = strings.TrimRight(val, " \t")
-	result, e := newMember(key, val)
-	if e != nil {
-		return member{}, fmt.Errorf("%w: %s", errInvalidMember, m)
-	}
-	return result, nil
+	return newMember(key, val)
 }
 
 // String encodes member into a string compliant with the W3C Trace Context
