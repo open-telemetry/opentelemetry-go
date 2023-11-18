@@ -38,22 +38,24 @@ type member struct {
 	Value string
 }
 
-// chr      = %x20 / (nblk-char = %x21-2B / %x2D-3C / %x3E-7E)
-// => chr = %x20-2B / %x2D-3C / %x3E-7E
+// according to (chr = %x20 / (nblk-char = %x21-2B / %x2D-3C / %x3E-7E) )
+// means (chr = %x20-2B / %x2D-3C / %x3E-7E) .
 func checkValueChar(v byte) bool {
 	return v >= '\x20' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
-// nblk-chr = %x21-2B / %x2D-3C / %x3E-7E
+// according to (nblk-chr = %x21-2B / %x2D-3C / %x3E-7E) .
 func checkValueLast(v byte) bool {
 	return v >= '\x21' && v <= '\x7e' && v != '\x2c' && v != '\x3d'
 }
 
-// based on the W3C Trace Context specification, see
-// https://www.w3.org/TR/trace-context-1/#value
-// value    = (0*255(chr)) nblk-chr
-// nblk-chr = %x21-2B / %x2D-3C / %x3E-7E
-// chr      = %x20 / nblk-chr
+// based on the W3C Trace Context specification
+//
+//	value    = (0*255(chr)) nblk-chr
+//	nblk-chr = %x21-2B / %x2D-3C / %x3E-7E
+//	chr      = %x20 / nblk-chr
+//
+// see https://www.w3.org/TR/trace-context-1/#value
 func checkValue(val string) bool {
 	n := len(val)
 	if n == 0 || n > 256 {
@@ -82,9 +84,12 @@ func checkKeyRemain(key string) bool {
 	return true
 }
 
-// simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
-// system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
-// n is remain part length, should be 255 in simple-key or 13 in system-id
+// according to
+//
+//	simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+//	system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+//
+// param n is remain part length, should be 255 in simple-key or 13 in system-id.
 func checkKeyPart(key string, n int) bool {
 	if len(key) == 0 {
 		return false
@@ -102,8 +107,11 @@ func isAlphaNum(c byte) bool {
 	return c >= '0' && c <= '9'
 }
 
-// tenant-id = ( lcalpha / DIGIT ) 0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
-// n is remain part length, should be 240 exactly
+// according to
+//
+//	tenant-id = ( lcalpha / DIGIT ) 0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" )
+//
+// param n is remain part length, should be 240 exactly.
 func checkKeyTenant(key string, n int) bool {
 	if len(key) == 0 {
 		return false
@@ -111,15 +119,16 @@ func checkKeyTenant(key string, n int) bool {
 	return isAlphaNum(key[0]) && len(key[1:]) <= n && checkKeyRemain(key[1:])
 }
 
-// based on the W3C Trace Context specification, see
-// https://www.w3.org/TR/trace-context-1/#tracestate-header
+// based on the W3C Trace Context specification
 //
-// key = simple-key / multi-tenant-key
-// simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
-// multi-tenant-key = tenant-id "@" system-id
-// tenant-id = ( lcalpha / DIGIT ) (0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
-// system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
-// lcalpha    = %x61-7A ; a-z
+//	key = simple-key / multi-tenant-key
+//	simple-key = lcalpha (0*255( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+//	multi-tenant-key = tenant-id "@" system-id
+//	tenant-id = ( lcalpha / DIGIT ) (0*240( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+//	system-id = lcalpha (0*13( lcalpha / DIGIT / "_" / "-"/ "*" / "/" ))
+//	lcalpha    = %x61-7A ; a-z
+//
+// see https://www.w3.org/TR/trace-context-1/#tracestate-header.
 func checkKey(key string) bool {
 	tenant, system, ok := strings.Cut(key, "@")
 	if !ok {
