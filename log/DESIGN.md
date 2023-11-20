@@ -1,8 +1,6 @@
 # Logs Bridge API
 
-Author: Robert Pająk
-
-Tracking issue at [#4696](https://github.com/open-telemetry/opentelemetry-go/issues/4696).
+OpenTelemetry Logs tracking issue at [#4696](https://github.com/open-telemetry/opentelemetry-go/issues/4696).
 
 ## Abstract
 
