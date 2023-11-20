@@ -6,14 +6,10 @@ Tracking issue at [#4696](https://github.com/open-telemetry/opentelemetry-go/iss
 
 ## Abstract
 
-<!-- A short summary of the proposal. -->
-
 We propose adding a `go.opentelemetry.io/otel/log` Go module which will provide
 [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
 
 ## Background
-
-<!-- An introduction of the necessary background and the problem being solved by the proposed change. -->
 
 They key challenge is to create a well-performant API compliant with the specification.
 Performance is seen as one of the most imporatant charactristics of logging libraries in Go.
@@ -144,8 +140,6 @@ because for the Go team it was also critical to create API that would be fast
 and interoperable with existing logging packages.[^1]
 
 ## Rationale
-
-<!-- A discussion of alternate approaches and the trade offs, advantages, and disadvantages of the specified approach. -->
 
 ### Logger.Emit definition
 
