@@ -54,6 +54,9 @@ type Logger interface{
 
 The `Logger` has `Emit(context.Context, options ...RecordOption` method.
 
+The options are used to set log record parameters e.g. `WithBody`, `WithTimestamp`.
+There would NOT be a `WithLogRecord` option.
+
 ### Record
 
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
@@ -166,6 +169,10 @@ The main reasons against this definition are that following:
 for creating instruments.
 2. It is unsure if anyone would like to reuse a record.
 3. Just passing options should be more-user friendly API.
+4. The user does not need to check if the record is valid.
+   The SDK handles the error returned from `NewRecord`.
+   If the API would accept a `Record` then the SDK would need to e.g. validate the Severity value.
+   Now the validation can be part of `NewRecord`.
 
 ### Rejected Alternative: Record as interface
 
