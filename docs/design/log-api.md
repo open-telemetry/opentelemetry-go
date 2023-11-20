@@ -26,6 +26,14 @@ This proposed design aims to:
 - have similar API to Trace and Metrics API,
 - take advantage of both OpenTelemetry and `slog` experience to achieve acceptable performance.
 
+### Module structure
+
+The Go module consits of the following packages:
+
+- `go.opentelemetry.io/otel/log`
+- `go.opentelemetry.io/otel/log/embedded`
+- `go.opentelemetry.io/otel/log/noop`
+
 ### LoggerProvider
 
 The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
@@ -33,6 +41,7 @@ is defined as an interface.
 
 ```go
 type LoggerProvider interface{
+	embedded.LoggerProvider
     Logger(name string, options ...LoggerOption) Logger
 }
 ```
@@ -44,6 +53,7 @@ is defined as an interface.
 
 ```go
 type Logger interface{
+	embedded.Logger
     Emit(ctx context.Context, options ...RecordOption)
 }
 ```
@@ -116,9 +126,11 @@ like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
 and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
 in order to achieve high-performance when accessing and setting attributes efficiently.
 
-The `NewRecord(...RecordOption) Record` is a factory function used to create records using provided options.
+The `NewRecord(...RecordOption) (Record, error)` is a factory function
+used to create records using provided options.
 
-`Record` has a `Clone` method to allow copying records so that the SDK can offer concurrency safety.
+`Record` has a `Clone` method to allow copying records
+so that the SDK can offer concurrency safety.
 
 ## Compatibility
 
@@ -129,15 +141,54 @@ that is already used in Trace API and Metrics API.
 
 The benchmarks takes inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
-and interoperable with existing logging packages. [^1] [^2]
+and interoperable with existing logging packages.[^1]
 
 ## Rationale
 
 <!-- A discussion of alternate approaches and the trade offs, advantages, and disadvantages of the specified approach. -->
 
-## Implementation
+### Logger.Emit definition
 
-<!-- A description of the steps in the implementation, who will do them, and when. -->
+One of the ideas was to have:
+
+```go
+type Logger interface{
+    Emit(ctx context.Context, record Record)
+}
+```
+
+This gives the advantage that the SDK would not need to call `NewRecord(options...)`.
+
+The user can still easily create a helper that could be easier to use:
+
+```go
+func log(ctx context.Context, l Logger, options ...RecordOption) {
+    r := log.NewRecord(options...)
+    l.Emit(ctx, r)
+}
+```
+
+The main reasons against this defintion are that following:
+
+1. The existing design is similar to the [Meter API](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
+for creating instruments.
+2. It is unsure if anyone would like to reuse a record.
+3. Just passing options should be more-user friendly API.
+
+### Record as struct
+
+`Record` is defined as a `struct` because of the following reasons.
+
+Log record is a value object without any behavior.
+It is used as data input for Logger methods.
+
+The log record resembles the instrument config structs like [metric.Float64CounterConfig](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64CounterConfig).
+
+Using `struct` instead of `interface` should have better the performance as e.g.
+indirect calls are less optimized,
+usage of intefaces tend to increase heap allocations.[^2]
+
+The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
 ## Open issues (if applicable)
 
