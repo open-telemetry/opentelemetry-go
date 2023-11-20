@@ -160,7 +160,7 @@ func log(ctx context.Context, l Logger, options ...RecordOption) {
 }
 ```
 
-The main reasons against this defintion are that following:
+The main reasons against this definition are that following:
 
 1. The existing design is similar to the [Meter API](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
 for creating instruments.
