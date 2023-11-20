@@ -139,7 +139,7 @@ and interoperable with existing logging packages.[^1]
 
 ## Rationale
 
-### Logger.Emit definition
+### Rejected Alternative: Record as explicit argument to Logger.Emit
 
 One of the ideas was to have:
 
@@ -167,7 +167,7 @@ for creating instruments.
 2. It is unsure if anyone would like to reuse a record.
 3. Just passing options should be more-user friendly API.
 
-### Record as struct
+### Rejected Alternative: Record as interface
 
 `Record` is defined as a `struct` because of the following reasons.
 
