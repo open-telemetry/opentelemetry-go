@@ -70,15 +70,18 @@ type Record struct {
 	SeverityText      string
 	Body              string
 
+	// The fields below are for optimizing the implementation of
+	// Attributes and AddAttributes.
+
 	// Allocation optimization: an inline array sized to hold
 	// the majority of log calls (based on examination of open-source
-	// code). It holds the start of the list of Attrs.
+	// code). It holds the start of the list of attributes.
 	front [nAttrsInline]attribute.KeyValue
 
-	// The number of Attrs in front.
+	// The number of attributes in front.
 	nFront int
 
-	// The list of Attrs except for those in front.
+	// The list of attributes except for those in front.
 	// Invariants:
 	//   - len(back) > 0 iff nFront == len(front)
 	//   - Unused array elements are zero. Used to detect mistakes.
