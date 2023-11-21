@@ -264,6 +264,20 @@ usage of intefaces tend to increase heap allocations.[^2]
 
 The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
+### Rejected Alternative: Reuse slog
+
+The API must not be coupled to [`slog`](https://pkg.go.dev/log/slog),
+nor any other logging library.
+
+The API needs to evolve orthogonally to `slog`.
+
+`slog` is not compliant with the [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
+and we cannot expect the Go team to make `slog` compliant with it.
+
+The interoperabilty can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
+
+You can read more about OpenTelemetry Logs design on [opentelemetry.io](https://opentelemetry.io/docs/concepts/signals/logs/).
+
 ## Open issues (if applicable)
 
 <!-- A discussion of issues relating to this proposal for which the author does not
