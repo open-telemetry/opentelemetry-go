@@ -127,10 +127,14 @@ and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
 in order to achieve high-performance when accessing and setting attributes efficiently.
 
 The `NewRecord(...RecordOption) (Record, error)` is a factory function
-used to create records using provided options.
+used to create a record using the passed options.
 
 `Record` has a `Clone` method to allow copying records
 so that the SDK can offer concurrency safety.
+
+The `Record` type and `NewRecord` function are needed for the SDK
+to process the options passed by the user via `Logger.Emit`.
+API users would not use it in their production code.
 
 ## Compatibility
 
@@ -157,7 +161,7 @@ type Logger interface{
 
 This gives the advantage that the SDK would not need to call `NewRecord(options...)`.
 
-The user can still easily create a helper that could be easier to use:
+The API user can still easily create a helper that could be easier to use:
 
 ```go
 func log(ctx context.Context, l Logger, options ...RecordOption) {
@@ -172,7 +176,7 @@ The main reasons against this definition are that following:
 for creating instruments.
 2. It is unsure if anyone would like to reuse a record.
 3. Just passing options should be more-user friendly API.
-4. The user does not need to check if the record is valid.
+4. The API user does not need to check if the record is valid.
    The SDK handles the error returned from `NewRecord`.
    If the API would accept a `Record` then the SDK would need to e.g. validate the Severity value.
    Now the validation can be part of `NewRecord`.
