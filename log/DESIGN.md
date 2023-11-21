@@ -52,7 +52,7 @@ type Logger interface{
 }
 ```
 
-The `Logger` has `Emit(context.Context, options ...RecordOption` method.
+The `Logger` has `Emit(context.Context, options ...RecordOption)` method.
 
 The options are used to set log record parameters e.g. `WithBody`, `WithTimestamp`.
 There would NOT be a `WithLogRecord` option.
