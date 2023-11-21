@@ -166,8 +166,11 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
 				return err
 			}
+			if respData.Len() == 0 {
+				return nil
+			}
 
-			if respData.Len() != 0 {
+			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
 				var respProto colmetricpb.ExportMetricsServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err

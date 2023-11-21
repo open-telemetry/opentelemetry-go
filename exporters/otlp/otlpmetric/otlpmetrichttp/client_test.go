@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type clientShim struct {
@@ -63,6 +64,23 @@ func TestClient(t *testing.T) {
 	}
 
 	t.Run("Integration", otest.RunClientTests(factory))
+}
+
+func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
+	ctx := context.Background()
+	coll, err := otest.NewHTTPCollector("", nil, otest.WithHTTPCollectorRespondingPlainText())
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics")
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
