@@ -36,7 +36,7 @@ is defined as an interface.
 ```go
 type LoggerProvider interface{
 	embedded.LoggerProvider
-    Logger(name string, options ...LoggerOption) Logger
+	Logger(name string, options ...LoggerOption) Logger
 }
 ```
 
@@ -48,7 +48,7 @@ is defined as an interface.
 ```go
 type Logger interface{
 	embedded.Logger
-    Emit(ctx context.Context, options ...RecordOption)
+	Emit(ctx context.Context, options ...RecordOption)
 }
 ```
 
@@ -129,12 +129,80 @@ in order to achieve high-performance when accessing and setting attributes effic
 The `NewRecord(...RecordOption) (Record, error)` is a factory function
 used to create a record using the passed options.
 
+`Record` has a `AttributesLen` method that returns
+the number of attributes to allow slice preallocation
+when converting records to a different representation.
+
 `Record` has a `Clone` method to allow copying records
 so that the SDK can offer concurrency safety.
 
 The `Record` type and `NewRecord` function are needed for the SDK
 to process the options passed by the user via `Logger.Emit`.
 API users would not use it in their production code.
+
+### Usage Example: Log Bridge implementation
+
+Excerpt of a [slog.Handler](https://pkg.go.dev/log/slog#Handler)
+naive implementation.
+
+```go
+type handler struct {
+	logger log.Logger
+	level  slog.Level
+	attrs  []attribute.KeyValue
+	prefix string
+}
+
+func (h *handler) Handle(ctx context.Context, r slog.Record) error {
+	lvl := convertLevel(r.Level)
+
+	attrs := make([]attribute.KeyValue, 0, len(r.NumAttrs()))
+	r.Attrs(func(a slog.Attr) bool {
+		attrs = append(attrs, convertAttr(h.prefix, a))
+		return true
+	})
+
+	h.logger.Emit(ctx,
+		log.WithTimestamp(r.Time),
+		log.WithSeverity(lvl),
+		log.WithBody(r.Message),
+		log.WithAttributes(attrs...),
+	)
+	return nil
+}
+```
+
+### Usage Example: Direct API usage
+
+The users may also chose to use the API directly.
+
+```go
+logger := otel.Logger("my-service")
+logger.Emit(ctx, log.WithSeverity(log.SeverityInfo), log.WithBody("Application started."))
+```
+
+### Usage Example: SDK implementation
+
+Excerpt of how SDK can implement the `Logger` interface.
+
+```go
+type Logger struct {
+	scope     instrumentation.Scope
+	processor Processor
+}
+
+func (l *Logger) Emit(ctx context.Context, opts ...log.RecordOption) {
+	r, err := log.NewRecord(opts...)
+	if err != nil {
+		otel.Handle(err)
+		return
+	}
+
+	// Create log record model.
+	record := toModel(r)
+	l.processor.Process(ctx, record)
+}
+```
 
 ## Compatibility
 
