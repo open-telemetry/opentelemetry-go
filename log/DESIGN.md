@@ -198,6 +198,9 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 The backwards compatibility is achieved using the `embedded` design pattern
 that is already used in Trace API and Metrics API.
 
+Additionally, the `Logger.Emit` functionality can be extended by
+adding new exported fields and methods to the `Record` struct.
+
 ## Benchmarking
 
 The benchmarks takes inspiration from [`slog`](https://pkg.go.dev/log/slog),
