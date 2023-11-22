@@ -48,14 +48,9 @@ is defined as an interface.
 ```go
 type Logger interface{
 	embedded.Logger
-	Emit(ctx context.Context, options ...RecordOption)
+	Emit(ctx context.Context, record Record)
 }
 ```
-
-The `Logger` has `Emit(context.Context, options ...RecordOption)` method.
-
-The options are used to set log record parameters e.g. `WithBody`, `WithTimestamp`.
-There would NOT be a `WithLogRecord` option.
 
 ### Record
 
@@ -126,19 +121,9 @@ like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
 and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
 in order to achieve high-performance when accessing and setting attributes efficiently.
 
-The `NewRecord(...RecordOption) (Record, error)` is a factory function
-used to create a record using the passed options.
-
 `Record` has a `AttributesLen` method that returns
 the number of attributes to allow slice preallocation
 when converting records to a different representation.
-
-`Record` has a `Clone` method to allow copying records
-so that the SDK can offer concurrency safety.
-
-The `Record` type and `NewRecord` function are needed for the SDK
-to process the options passed by the user via `Logger.Emit`.
-API users would not use it in their production code.
 
 ### Usage Example: Log Bridge implementation
 
@@ -156,18 +141,24 @@ type handler struct {
 func (h *handler) Handle(ctx context.Context, r slog.Record) error {
 	lvl := convertLevel(r.Level)
 
-	attrs := make([]attribute.KeyValue, 0, len(r.NumAttrs()))
-	r.Attrs(func(a slog.Attr) bool {
-		attrs = append(attrs, convertAttr(h.prefix, a))
-		return true
-	})
+	record := Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
 
-	h.logger.Emit(ctx,
-		log.WithTimestamp(r.Time),
-		log.WithSeverity(lvl),
-		log.WithBody(r.Message),
-		log.WithAttributes(attrs...),
-	)
+	if r.NumAttrs() > 5 {
+		attrs := make([]attribute.KeyValue, 0, len(r.NumAttrs()))
+		r.Attrs(func(a slog.Attr) bool {
+			attrs = append(attrs, convertAttr(a))
+			return true
+		})
+		record.AddAttributes(attrs...)
+	} else {
+		// special case that avoids heap allocations (hot path)
+		r.Attrs(func(a slog.Attr) bool {
+			record.AddAttributes(convertAttr(a))
+			return true
+		})
+	}
+
+	h.logger.Emit(ctx, record)
 	return nil
 }
 ```
@@ -178,7 +169,7 @@ The users may also chose to use the API directly.
 
 ```go
 logger := otel.Logger("my-service")
-logger.Emit(ctx, log.WithSeverity(log.SeverityInfo), log.WithBody("Application started."))
+logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."})
 ```
 
 ### Usage Example: SDK implementation
@@ -191,15 +182,13 @@ type Logger struct {
 	processor Processor
 }
 
-func (l *Logger) Emit(ctx context.Context, opts ...log.RecordOption) {
-	r, err := log.NewRecord(opts...)
+func (l *Logger) Emit(ctx context.Context, r log.Record) {
+	// Create log record model.
+	record, err := toModel(r)
 	if err != nil {
 		otel.Handle(err)
 		return
 	}
-
-	// Create log record model.
-	record := toModel(r)
 	l.processor.Process(ctx, record)
 }
 ```
@@ -213,41 +202,23 @@ that is already used in Trace API and Metrics API.
 
 The benchmarks takes inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
-and interoperable with existing logging packages.[^1]
+and interoperable with existing logging packages.[^1][^2]
 
 ## Rationale
 
-### Rejected Alternative: Record as explicit argument to Logger.Emit
+### Rejected Alternative: Reuse slog
 
-One of the ideas was to have:
+The API must not be coupled to [`slog`](https://pkg.go.dev/log/slog),
+nor any other logging library.
 
-```go
-type Logger interface{
-    Emit(ctx context.Context, record Record)
-}
-```
+The API needs to evolve orthogonally to `slog`.
 
-This gives the advantage that the SDK would not need to call `NewRecord(options...)`.
+`slog` is not compliant with the [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
+and we cannot expect the Go team to make `slog` compliant with it.
 
-The API user can still easily create a helper that could be easier to use:
+The interoperabilty can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
 
-```go
-func log(ctx context.Context, l Logger, options ...RecordOption) {
-    r := log.NewRecord(options...)
-    l.Emit(ctx, r)
-}
-```
-
-The main reasons against this definition are that following:
-
-1. The existing design is similar to the [Meter API](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
-for creating instruments.
-2. It is unsure if anyone would like to reuse a record.
-3. Just passing options should be more-user friendly API.
-4. The API user does not need to check if the record is valid.
-   The SDK handles the error returned from `NewRecord`.
-   If the API would accept a `Record` then the SDK would need to e.g. validate the Severity value.
-   Now the validation can be part of `NewRecord`.
+You can read more about OpenTelemetry Logs design on [opentelemetry.io](https://opentelemetry.io/docs/concepts/signals/logs/).
 
 ### Rejected Alternative: Record as interface
 
@@ -264,19 +235,43 @@ usage of intefaces tend to increase heap allocations.[^2]
 
 The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
-### Rejected Alternative: Reuse slog
+### Rejected Alternative: Options as parameter to Logger.Emit
 
-The API must not be coupled to [`slog`](https://pkg.go.dev/log/slog),
-nor any other logging library.
+One of the initial ideas was to have:
 
-The API needs to evolve orthogonally to `slog`.
+```go
+type Logger interface{
+	embedded.Logger
+	Emit(ctx context.Context, options ...RecordOption)
+}
+```
 
-`slog` is not compliant with the [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
-and we cannot expect the Go team to make `slog` compliant with it.
+The main reason was that design would be similar
+to the [Meter API](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
+for creating instruments.
 
-The interoperabilty can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
+However, passing `Record` directly, instead of using options,
+is more performant as it reduces heap allocations.[^3]
 
-You can read more about OpenTelemetry Logs design on [opentelemetry.io](https://opentelemetry.io/docs/concepts/signals/logs/).
+Another advantage of passing `Record` is that API would not have functions like `NewRecord(options...)`,
+which would be used by the SDK and not by the users.
+
+At last, the definition would be similar to [`slog.Handler.Handle`](https://pkg.go.dev/log/slog#Handler)
+that was designed to provide optimization opportunities.[^1]
+
+### Rejected Alternative: Passing record as pointer to Logger.Emit
+
+So far the benchmarks do not show differences that would
+favor passing the record via pointer (and vice versa).
+
+Passing via value feels safer because of the following reasons.
+
+It follows the design of [`slog.Handler`](https://pkg.go.dev/log/slog#Handler).
+
+It should reduce the possibility of a heap allocation.
+
+The user would not be able to pass `nil`.
+Therefore, it reduces the possiblity to have a nil pointer dereference.
 
 ## Open issues (if applicable)
 
@@ -285,3 +280,4 @@ know the solution. This section may be omitted if there are none. -->
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
+[^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
