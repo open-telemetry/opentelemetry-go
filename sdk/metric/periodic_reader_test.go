@@ -202,8 +202,6 @@ type periodicReaderTestSuite struct {
 }
 
 func (ts *periodicReaderTestSuite) SetupTest() {
-	ts.Reader = ts.Factory()
-
 	e := &fnExporter{
 		exportFunc:   func(context.Context, *metricdata.ResourceMetrics) error { return assert.AnError },
 		flushFunc:    func(context.Context) error { return assert.AnError },
