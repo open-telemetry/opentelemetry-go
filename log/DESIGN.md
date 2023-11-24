@@ -43,78 +43,12 @@ type LoggerProvider interface{
 ### Logger
 
 The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as an interface.
-
-```go
-type Logger interface{
-	embedded.Logger
-	Emit(ctx context.Context, record Record)
-}
-```
+is defined as an interface in [logger.go](logger.go).
 
 ### Record
 
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as a struct.
-
-```go
-type Record struct {
-	Timestamp         time.Time
-	ObservedTimestamp time.Time
-	Severity          Severity
-	SeverityText      string
-	Body              string
-
-	// The fields below are for optimizing the implementation of
-	// Attributes and AddAttributes.
-
-	// Allocation optimization: an inline array sized to hold
-	// the majority of log calls (based on examination of open-source
-	// code). It holds the start of the list of attributes.
-	front [nAttrsInline]attribute.KeyValue
-
-	// The number of attributes in front.
-	nFront int
-
-	// The list of attributes except for those in front.
-	// Invariants:
-	//   - len(back) > 0 iff nFront == len(front)
-	//   - Unused array elements are zero. Used to detect mistakes.
-	back []attribute.KeyValue
-}
-
-const nAttrsInline = 5
-
-type Severity int
-
-const (
-	SeverityUndefined Severity = iota
-	SeverityTrace
-	SeverityTrace2
-	SeverityTrace3
-	SeverityTrace4
-	SeverityDebug
-	SeverityDebug2
-	SeverityDebug3
-	SeverityDebug4
-	SeverityInfo
-	SeverityInfo2
-	SeverityInfo3
-	SeverityInfo4
-	SeverityWarn
-	SeverityWarn2
-	SeverityWarn3
-	SeverityWarn4
-	SeverityError
-	SeverityError2
-	SeverityError3
-	SeverityError4
-	SeverityFatal
-	SeverityFatal2
-	SeverityFatal3
-	SeverityFatal4
-)
-```
+is defined as a struct in [record.go](record.go).
 
 `Record` has `Attributes` and `AddAttributes` methods,
 like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
@@ -133,9 +67,6 @@ naive implementation.
 ```go
 type handler struct {
 	logger log.Logger
-	level  slog.Level
-	attrs  []attribute.KeyValue
-	prefix string
 }
 
 func (h *handler) Handle(ctx context.Context, r slog.Record) error {
@@ -143,8 +74,8 @@ func (h *handler) Handle(ctx context.Context, r slog.Record) error {
 
 	record := Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
 
-	if r.NumAttrs() > 5 {
-		attrs := make([]attribute.KeyValue, 0, len(r.NumAttrs()))
+	if r.AttributesLen() > 5 {
+		attrs := make([]attribute.KeyValue, 0, len(r.AttributesLen()))
 		r.Attrs(func(a slog.Attr) bool {
 			attrs = append(attrs, convertAttr(a))
 			return true
