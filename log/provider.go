@@ -51,6 +51,7 @@ type LoggerOption interface {
 
 // NewLoggerConfig creates a new LoggerConfig and applies
 // all the given options.
+// TODO: Add unit tests.
 func NewLoggerConfig(opts ...LoggerOption) LoggerConfig {
 	var config LoggerConfig
 	for _, o := range opts {
