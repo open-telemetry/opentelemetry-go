@@ -1,11 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Copyright 2022 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"errors"
-	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -117,12 +120,12 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 		end := r.back[:len(r.back)+1][len(r.back)]
 		if end.Valid() {
 			// Don't panic; copy and muddle through.
-			r.back = slices.Clip(r.back)
+			r.back = sliceClip(r.back)
 			otel.Handle(errUnsafeAddAttrs)
 		}
 	}
 	ne := countInvalidAttrs(attrs[i:])
-	r.back = slices.Grow(r.back, len(attrs[i:])-ne)
+	r.back = sliceGrow(r.back, len(attrs[i:])-ne)
 	for _, a := range attrs[i:] {
 		if a.Valid() {
 			r.back = append(r.back, a)
@@ -134,7 +137,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 // The original record and the clone can both be modified
 // without interfering with each other.
 func (r Record) Clone() Record {
-	r.back = slices.Clip(r.back) // prevent append from mutating shared array
+	r.back = sliceClip(r.back) // prevent append from mutating shared array
 	return r
 }
 
@@ -152,4 +155,27 @@ func countInvalidAttrs(as []attribute.KeyValue) int {
 		}
 	}
 	return n
+}
+
+// sliceGrow increases the slice's capacity, if necessary, to guarantee space for
+// another n elements. After Grow(n), at least n elements can be appended
+// to the slice without another allocation. If n is negative or too large to
+// allocate the memory, Grow panics.
+//
+// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
+func sliceGrow[S ~[]E, E any](s S, n int) S {
+	if n < 0 {
+		panic("cannot be negative")
+	}
+	if n -= cap(s) - len(s); n > 0 {
+		s = append(s[:cap(s)], make([]E, n)...)[:len(s)]
+	}
+	return s
+}
+
+// sliceClip removes unused capacity from the slice, returning s[:len(s):len(s)].
+//
+// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
+func sliceClip[S ~[]E, E any](s S) S {
+	return s[:len(s):len(s)]
 }
