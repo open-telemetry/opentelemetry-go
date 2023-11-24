@@ -31,14 +31,7 @@ The Go module consits of the following packages:
 ### LoggerProvider
 
 The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
-is defined as an interface.
-
-```go
-type LoggerProvider interface{
-	embedded.LoggerProvider
-	Logger(name string, options ...LoggerOption) Logger
-}
-```
+is defined as an interface [provider.go](provider.go).
 
 ### Logger
 
