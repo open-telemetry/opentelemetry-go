@@ -204,6 +204,26 @@ It should reduce the possibility of a heap allocation.
 The user would not be able to pass `nil`.
 Therefore, it reduces the possiblity to have a nil pointer dereference.
 
+### Rejected Alternative: Passing struct as parameter to LoggerProvider.Logger
+
+Similarly to `Logger.Emit`, we could have something like:
+
+```go
+type Logger interface{
+	embedded.Logger
+	Logger(name context.Context, config LoggerConfig)
+}
+```
+
+The drawback of this idea would be that this would be
+a different design from Trace and Metrics API.
+
+The performance of acquiring a logger is not as critical
+as the performance of emitting a log record. While a single
+HTTP/RPC handler could write hundreds of logs, it should not
+create a new logger for each log entry.
+The application should reuse loggers whenever possible.
+
 ## Open issues (if applicable)
 
 <!-- A discussion of issues relating to this proposal for which the author does not
