@@ -9,8 +9,8 @@ We propose adding a `go.opentelemetry.io/otel/log` Go module which will provide
 
 ## Background
 
-They key challenge is to create a well-performant API compliant with the specification.
-Performance is seen as one of the most imporatant charactristics of logging libraries in Go.
+The key challenge is to create a well-performant API compliant with the specification.
+Performance is seen as one of the most important characteristics of logging libraries in Go.
 
 ## Design
 
@@ -234,7 +234,7 @@ The log record resembles the instrument config structs like [metric.Float64Count
 
 Using `struct` instead of `interface` should have better the performance as e.g.
 indirect calls are less optimized,
-usage of intefaces tend to increase heap allocations.[^2]
+usage of interfaces tend to increase heap allocations.[^2]
 
 The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
