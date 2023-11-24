@@ -92,7 +92,11 @@ func (h *handler) Handle(ctx context.Context, r slog.Record) error {
 The users may also chose to use the API directly.
 
 ```go
-logger := otel.Logger("my-service")
+package app
+
+var logger = otel.Logger("my-service")
+
+// In some function:
 logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."})
 ```
 
