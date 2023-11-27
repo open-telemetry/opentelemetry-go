@@ -427,12 +427,13 @@ func TestPeriodicReaderMultipleForceFlush(t *testing.T) {
 	r.register(testSDKProducer{})
 	require.NoError(t, r.ForceFlush(ctx))
 	require.NoError(t, r.ForceFlush(ctx))
+	require.NoError(t, r.Shutdown(ctx))
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {
-	b.Run("Collect", benchReaderCollectFunc(
-		NewPeriodicReader(new(fnExporter)),
-	))
+	r := NewPeriodicReader(new(fnExporter))
+	b.Run("Collect", benchReaderCollectFunc(r))
+	require.NoError(b, r.Shutdown(context.Background()))
 }
 
 func TestPeriodiclReaderTemporality(t *testing.T) {
