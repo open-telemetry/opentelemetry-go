@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
@@ -189,21 +190,17 @@ func BenchmarkSlog(b *testing.B) {
 				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 				)
 			},
 		},
 		{
-			// The number should match nAttrsInline in record.go.
-			// This should exercise the code path where no allocations
-			// happen in Record or Attr. If there are allocations, they
-			// should only be from strconv used in writerLogger.
 			"5 attrs",
 			func() {
 				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 				)
@@ -215,12 +212,12 @@ func BenchmarkSlog(b *testing.B) {
 				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 				)
@@ -232,44 +229,156 @@ func BenchmarkSlog(b *testing.B) {
 				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
-					slog.Int("string", testInt),
+					slog.Int("int", testInt),
 					slog.Bool("bool", testBool),
 					slog.String("string", testString),
+				)
+			},
+		},
+	} {
+		b.Run(call.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				call.f()
+			}
+		})
+	}
+}
+
+func BenchmarkLogr(b *testing.B) {
+	logger := logr.New(&logrSink{noop.Logger{}})
+	for _, call := range []struct {
+		name string
+		f    func()
+	}{
+		{
+			"no attrs",
+			func() {
+				logger.Info(testBody)
+			},
+		},
+		{
+			"3 attrs",
+			func() {
+				logger.Info(testBody,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+				)
+			},
+		},
+		{
+			// The number should match nAttrsInline in record.go.
+			// This should exercise the code path where no allocations
+			// happen in Record or Attr. If there are allocations, they
+			// should only be from strconv used in writerLogger.
+			"5 attrs",
+			func() {
+				logger.Info(testBody,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+				)
+			},
+		},
+		{
+			"10 attrs",
+			func() {
+				logger.Info(testBody,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+				)
+			},
+		},
+		{
+			"40 attrs",
+			func() {
+				logger.Info(testBody,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
+					"string", testString,
+					"float", testFloat,
+					"int", testInt,
+					"bool", testBool,
+					"string", testString,
 				)
 			},
 		},

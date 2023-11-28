@@ -36,7 +36,7 @@ type slogHandler struct {
 }
 
 // Handle handles the Record.
-// It should avoid memory whenever possible allocations.
+// It should avoid memory allocations whenever possible.
 func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 	lvl := convertLevel(r.Level)
 
