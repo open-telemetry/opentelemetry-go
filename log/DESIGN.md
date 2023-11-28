@@ -58,6 +58,10 @@ A naive implementation of
 the [slog.Handler](https://pkg.go.dev/log/slog#Handler) interface
 is in [benchmark/slog_test.go](benchmark/slog_test.go).
 
+A naive implementation of
+the [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) interface
+is in [benchmark/logr_test.go](benchmark/slog_test.go).
+
 ### Usage Example: Direct API usage
 
 The users may also chose to use the API directly.
