@@ -5,6 +5,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// These benchmarks are based on slog/internal/benchmarks.
+//
+// They test a complete log record, from the user's call to its return.
+
 package benchmark
 
 import (
@@ -16,6 +20,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -29,10 +35,6 @@ var (
 	testBool      = true
 )
 
-// These benchmarks are based on slog/internal/benchmarks.
-//
-// They test a complete log record, from the user's call to its return.
-//
 // WriterLogger is an optimistic version of a real logger, doing real-world
 // tasks as fast as possible . This gives us an upper bound
 // on handler performance, so we can evaluate the (logger-independent) core
@@ -72,7 +74,7 @@ func BenchmarkEmit(b *testing.B) {
 					},
 				},
 				{
-					// The number should match nAttrsInline in record.go.
+					// The number should match nAttrsInline in record.go and in slog/record.go.
 					// This should exercise the code path where no allocations
 					// happen in Record or Attr. If there are allocations, they
 					// should only be from strconv used in writerLogger.
@@ -164,6 +166,118 @@ func BenchmarkEmit(b *testing.B) {
 						call.f()
 					}
 				})
+			}
+		})
+	}
+}
+
+func BenchmarkSlog(b *testing.B) {
+	logger := slog.New(&slogHandler{noop.Logger{}})
+	for _, call := range []struct {
+		name string
+		f    func()
+	}{
+		{
+			"no attrs",
+			func() {
+				logger.LogAttrs(ctx, slog.LevelInfo, testBody)
+			},
+		},
+		{
+			"3 attrs",
+			func() {
+				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+				)
+			},
+		},
+		{
+			// The number should match nAttrsInline in record.go.
+			// This should exercise the code path where no allocations
+			// happen in Record or Attr. If there are allocations, they
+			// should only be from strconv used in writerLogger.
+			"5 attrs",
+			func() {
+				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+				)
+			},
+		},
+		{
+			"10 attrs",
+			func() {
+				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+				)
+			},
+		},
+		{
+			"40 attrs",
+			func() {
+				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+					slog.String("string", testString),
+					slog.Float64("float", testFloat),
+					slog.Int("string", testInt),
+					slog.Bool("bool", testBool),
+					slog.String("string", testString),
+				)
+			},
+		},
+	} {
+		b.Run(call.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				call.f()
 			}
 		})
 	}

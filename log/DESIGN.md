@@ -54,38 +54,9 @@ when converting records to a different representation.
 
 ### Usage Example: Log Bridge implementation
 
-Excerpt of a [slog.Handler](https://pkg.go.dev/log/slog#Handler)
-naive implementation.
-
-```go
-type handler struct {
-	logger log.Logger
-}
-
-func (h *handler) Handle(ctx context.Context, r slog.Record) error {
-	lvl := convertLevel(r.Level)
-
-	record := Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
-
-	if r.AttributesLen() > 5 {
-		attrs := make([]attribute.KeyValue, 0, len(r.AttributesLen()))
-		r.Attrs(func(a slog.Attr) bool {
-			attrs = append(attrs, convertAttr(a))
-			return true
-		})
-		record.AddAttributes(attrs...)
-	} else {
-		// special case that avoids heap allocations (hot path)
-		r.Attrs(func(a slog.Attr) bool {
-			record.AddAttributes(convertAttr(a))
-			return true
-		})
-	}
-
-	h.logger.Emit(ctx, record)
-	return nil
-}
-```
+A naive implementation of
+the [slog.Handler](https://pkg.go.dev/log/slog#Handler) interface
+is in [benchmark/slog_test.go](benchmark/slog_test.go).
 
 ### Usage Example: Direct API usage
 
@@ -100,7 +71,7 @@ var logger = otel.Logger("my-service")
 logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."})
 ```
 
-### Usage Example: SDK implementation
+### Usage Example: API implementation
 
 Excerpt of how SDK can implement the `Logger` interface.
 
@@ -120,6 +91,9 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 	l.processor.Process(ctx, record)
 }
 ```
+
+A test implementation of the the `Logger` interface
+is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
 
 ## Compatibility
 
