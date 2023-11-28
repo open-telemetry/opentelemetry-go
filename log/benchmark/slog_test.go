@@ -57,7 +57,7 @@ func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 		})
 	}
 
-	h.Logger.Emit(ctx, record)
+	h.Logger.Emit(context.Background(), record)
 	return nil
 }
 
