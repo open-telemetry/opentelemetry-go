@@ -42,7 +42,7 @@ func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 
 	record := log.Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
 
-	if r.NumAttrs() > 5 {
+	if r.NumAttrs() > log.AttributesInlineCount {
 		attrs := make([]attribute.KeyValue, 0, r.NumAttrs())
 		r.Attrs(func(a slog.Attr) bool {
 			attrs = append(attrs, convertAttr(a))

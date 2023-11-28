@@ -55,7 +55,7 @@ func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 		panic("key without a value")
 	}
 	kvCount := len(keysAndValues) / 2
-	if kvCount > 5 {
+	if kvCount > log.AttributesInlineCount {
 		attrs := make([]attribute.KeyValue, 0, kvCount)
 		for i := 0; i < kvCount; i++ {
 			k, ok := keysAndValues[i*2].(string)
