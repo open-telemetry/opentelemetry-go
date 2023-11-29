@@ -86,7 +86,7 @@ type collector struct {
 	withoutCounterSuffixes   bool
 	disableScopeInfo         bool
 	namespace                string
-	resourceAttributesFilter *attribute.Filter
+	resourceAttributesFilter attribute.Filter
 
 	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
@@ -186,7 +186,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	var resourceAttrs []attribute.KeyValue
 	if c.resourceAttributesFilter != nil {
 		for _, kv := range metrics.Resource.Attributes() {
-			filter := *c.resourceAttributesFilter
+			filter := c.resourceAttributesFilter
 			if filter(kv) {
 				resourceAttrs = append(resourceAttrs, kv)
 			}

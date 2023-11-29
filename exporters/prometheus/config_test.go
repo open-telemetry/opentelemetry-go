@@ -21,7 +21,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -31,8 +30,6 @@ func TestNewConfig(t *testing.T) {
 
 	aggregationSelector := func(metric.InstrumentKind) metric.Aggregation { return nil }
 	producer := &noopProducer{}
-
-	filter := attribute.NewAllowKeysFilter("K")
 
 	testCases := []struct {
 		name       string
@@ -148,16 +145,6 @@ func TestNewConfig(t *testing.T) {
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
 				namespace:  "test_",
-			},
-		},
-		{
-			name: "with resource attributes filter",
-			options: []Option{
-				WithResourceAsConstantLabels(&filter),
-			},
-			wantConfig: config{
-				registerer:               prometheus.DefaultRegisterer,
-				resourceAttributesFilter: &filter,
 			},
 		},
 	}

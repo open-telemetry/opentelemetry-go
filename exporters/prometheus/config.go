@@ -32,7 +32,7 @@ type config struct {
 	readerOpts               []metric.ManualReaderOption
 	disableScopeInfo         bool
 	namespace                string
-	resourceAttributesFilter *attribute.Filter
+	resourceAttributesFilter attribute.Filter
 }
 
 // newConfig creates a validated config configured with options.
@@ -156,7 +156,7 @@ func WithNamespace(ns string) Option {
 
 // WithResourceAsConstantLabels adds resource attributes as metric attributes
 // for metrics exported by the Prometheus Exporter.
-func WithResourceAsConstantLabels(resourceFilter *attribute.Filter) Option {
+func WithResourceAsConstantLabels(resourceFilter attribute.Filter) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.resourceAttributesFilter = resourceFilter
 		return cfg

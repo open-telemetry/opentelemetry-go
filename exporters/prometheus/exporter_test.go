@@ -36,7 +36,6 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
-	filter := attribute.NewDenyKeysFilter()
 	testCases := []struct {
 		name               string
 		emptyResource      bool
@@ -373,7 +372,7 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "with resource attributes filter",
 			expectedFile: "testdata/with_resource_attributes_filter.txt",
 			options: []Option{
-				WithResourceAsConstantLabels(&filter),
+				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -387,6 +386,26 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, opt)
 				counter.Add(ctx, 10.1, opt)
 				counter.Add(ctx, 9.8, opt)
+			},
+		},
+		{
+			name:         "with some resource attributes filter",
+			expectedFile: "testdata/with_allow_resource_attributes_filter.txt",
+			options: []Option{
+				WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("service.name")),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 5.9, opt)
+				counter.Add(ctx, 5.3, opt)
 			},
 		},
 	}
