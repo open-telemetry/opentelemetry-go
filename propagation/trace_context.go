@@ -151,7 +151,7 @@ func upperHex(v string) bool {
 func extractPart(dst []byte, h *string, n int) bool {
 	part, left, _ := strings.Cut(*h, delimiter)
 	*h = left
-	// hex.Decode support Upper hex, but we doesn't want it, so need exclude
+	// hex.Decode decodes unsupported upper-case characters, so exclude explicitly.
 	if len(part) != n || upperHex(part) {
 		return false
 	}
