@@ -154,7 +154,11 @@ func parseMember(m string) (member, error) {
 	}
 	key = strings.TrimLeft(key, " \t")
 	val = strings.TrimRight(val, " \t")
-	return newMember(key, val)
+	result, e := newMember(key, val)
+	if e != nil {
+		return member{}, fmt.Errorf("%w: %s", errInvalidMember, m)
+	}
+	return result, nil
 }
 
 // String encodes member into a string compliant with the W3C Trace Context
