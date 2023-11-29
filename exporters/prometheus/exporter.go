@@ -78,6 +78,12 @@ func (e *Exporter) MarshalLog() interface{} {
 
 var _ metric.Reader = &Exporter{}
 
+// keyVals is used to store resource attribute key value pairs.
+type keyVals struct {
+	keys []string
+	vals []string
+}
+
 // collector is used to implement prometheus.Collector.
 type collector struct {
 	reader metric.Reader
@@ -94,6 +100,7 @@ type collector struct {
 	scopeInfos        map[instrumentation.Scope]prometheus.Metric
 	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
+	resourceKeyVals   map[*resource.Resource]keyVals
 }
 
 // prometheus counters MUST have a _total suffix by default:
@@ -161,6 +168,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	global.Debug("Prometheus exporter export", "Data", metrics)
 
+	var resourceKeys, resourceValues []string
+
 	// Initialize (once) targetInfo and disableTargetInfo.
 	func() {
 		c.mu.Lock()
@@ -183,11 +192,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.targetInfo
 	}
 
-	var resourceAttrs attribute.Set
-	var resourceKeys, resourceValues []string
 	if c.resourceAttributesFilter != nil {
-		resourceAttrs, _ = metrics.Resource.Set().Filter(c.resourceAttributesFilter)
-		resourceKeys, resourceValues = getAttrs(resourceAttrs, [2]string{}, [2]string{}, []string{}, []string{})
+		resourceKeys, resourceValues = c.resourceAttributes(metrics.Resource)
 	}
 
 	for _, scopeMetrics := range metrics.ScopeMetrics {
@@ -486,6 +492,22 @@ func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
 		return dto.MetricType_GAUGE.Enum()
 	}
 	return nil
+}
+
+func (c *collector) resourceAttributes(res *resource.Resource) ([]string, []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, ok := c.resourceKeyVals[res]; ok {
+		return c.resourceKeyVals[res].keys, c.resourceKeyVals[res].vals
+	}
+	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
+	resourceKeys, resourceValues := getAttrs(resourceAttrs, [2]string{}, [2]string{}, []string{}, []string{})
+	if c.resourceKeyVals == nil {
+		c.resourceKeyVals = make(map[*resource.Resource]keyVals, 1)
+	}
+	c.resourceKeyVals[res] = keyVals{keys: resourceKeys, vals: resourceValues}
+	return c.resourceKeyVals[res].keys, c.resourceKeyVals[res].vals
 }
 
 func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, error) {
