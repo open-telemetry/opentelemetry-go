@@ -183,14 +183,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.targetInfo
 	}
 
-	var resourceAttrs []attribute.KeyValue
+	var resourceAttrs attribute.Set
+	var resourceKeys, resourceValues []string
 	if c.resourceAttributesFilter != nil {
-		for _, kv := range metrics.Resource.Attributes() {
-			filter := c.resourceAttributesFilter
-			if filter(kv) {
-				resourceAttrs = append(resourceAttrs, kv)
-			}
-		}
+		resourceAttrs, _ = metrics.Resource.Set().Filter(c.resourceAttributesFilter)
+		resourceKeys, resourceValues = getAttrs(resourceAttrs, [2]string{}, [2]string{}, []string{}, []string{})
 	}
 
 	for _, scopeMetrics := range metrics.ScopeMetrics {
@@ -231,26 +228,26 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addHistogramMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addHistogramMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addSumMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addSumMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addGaugeMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, keys, values, name, resourceAttrs)
+				addGaugeMetric(ch, v, m, keys, values, name, resourceKeys, resourceValues)
 			}
 		}
 	}
 }
 
-func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceAttrs []attribute.KeyValue) {
+func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceKeys, resourceVals []string) {
 	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes, ks, vs, resourceAttrs)
+		keys, values := getAttrs(dp.Attributes, ks, vs, resourceKeys, resourceVals)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
@@ -269,14 +266,14 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 	}
 }
 
-func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceAttrs []attribute.KeyValue) {
+func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceKeys, resourceVals []string) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
 
 	for _, dp := range sum.DataPoints {
-		keys, values := getAttrs(dp.Attributes, ks, vs, resourceAttrs)
+		keys, values := getAttrs(dp.Attributes, ks, vs, resourceKeys, resourceVals)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
@@ -288,9 +285,9 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	}
 }
 
-func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceAttrs []attribute.KeyValue) {
+func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceKeys, resourceVals []string) {
 	for _, dp := range gauge.DataPoints {
-		keys, values := getAttrs(dp.Attributes, ks, vs, resourceAttrs)
+		keys, values := getAttrs(dp.Attributes, ks, vs, resourceKeys, resourceVals)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
@@ -305,7 +302,7 @@ func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metric
 // getAttrs parses the attribute.Set to two lists of matching Prometheus-style
 // keys and values. It sanitizes invalid characters and handles duplicate keys
 // (due to sanitization) by sorting and concatenating the values following the spec.
-func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceAttrs []attribute.KeyValue) ([]string, []string) {
+func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceKeys, resourceVals []string) ([]string, []string) {
 	keysMap := make(map[string][]string)
 	itr := attrs.Iter()
 	for itr.Next() {
@@ -329,21 +326,21 @@ func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceAttrs []attribute.K
 		values = append(values, strings.Join(vals, ";"))
 	}
 
-	for _, kv := range resourceAttrs {
-		key := strings.Map(sanitizeRune, string(kv.Key))
-		keys = append(keys, key)
-		values = append(values, kv.Value.Emit())
-	}
-
 	if ks[0] != "" {
 		keys = append(keys, ks[:]...)
 		values = append(values, vs[:]...)
 	}
+
+	for idx := range resourceKeys {
+		keys = append(keys, resourceKeys[idx])
+		values = append(values, resourceVals[idx])
+	}
+
 	return keys, values
 }
 
 func createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
-	keys, values := getAttrs(*res.Set(), [2]string{}, [2]string{}, []attribute.KeyValue{})
+	keys, values := getAttrs(*res.Set(), [2]string{}, [2]string{}, []string{}, []string{})
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
