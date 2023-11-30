@@ -154,8 +154,10 @@ func WithNamespace(ns string) Option {
 	})
 }
 
-// WithResourceAsConstantLabels adds resource attributes as metric attributes
-// on all metrics exported by the Prometheus Exporter.
+// WithResourceAsConstantLabels configures the Exporter to add the resource attributes the
+// resourceFilter returns true for as attributes on all exported metrics.
+//
+// The does not affect the target info generated from resource attributes.
 func WithResourceAsConstantLabels(resourceFilter attribute.Filter) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.resourceAttributesFilter = resourceFilter
