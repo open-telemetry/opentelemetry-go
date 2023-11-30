@@ -84,7 +84,6 @@ func TestCardinalityLimit(t *testing.T) {
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		t.Setenv(key, "false")
 		assert.False(t, CardinalityLimit.Enabled())
 
 		v, ok := CardinalityLimit.Lookup()
