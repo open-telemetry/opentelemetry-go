@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `go.opentelemetry.io/otel/semconv/v1.22.0` package.
+  The package contains semantic conventions from the `v1.22.0` version of the OpenTelemetry Semantic Conventions. (#4735)
+
 ### Changed
 
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
