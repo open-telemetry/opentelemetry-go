@@ -75,8 +75,12 @@ func (f Feature[T]) Key() string { return f.key }
 // user has enabled the feature. Otherwise, if the feature is not enabled, a
 // zero-value and false are returned.
 func (f Feature[T]) Lookup() (v T, ok bool) {
-	vRaw, present := os.LookupEnv(f.key)
-	if !present {
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/62effed618589a0bec416a87e559c0a9d96289bb/specification/configuration/sdk-environment-variables.md#parsing-empty-value
+	//
+	// > The SDK MUST interpret an empty value of an environment variable the
+	// > same way as when the variable is unset.
+	vRaw := os.Getenv(f.key)
+	if vRaw == "" {
 		return v, ok
 	}
 	return f.parse(vRaw)
