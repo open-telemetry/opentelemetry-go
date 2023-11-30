@@ -25,69 +25,54 @@ func TestExemplars(t *testing.T) {
 	const key = "OTEL_GO_X_EXEMPLAR"
 	require.Equal(t, key, Exemplars.Key())
 
-	t.Run("true", func(t *testing.T) {
-		t.Setenv(key, "true")
-		assert.True(t, Exemplars.Enabled())
-
-		v, ok := Exemplars.Lookup()
-		assert.True(t, ok)
-		assert.Equal(t, "true", v)
-	})
-
-	t.Run("false", func(t *testing.T) {
-		t.Setenv(key, "false")
-		assert.False(t, Exemplars.Enabled())
-
-		v, ok := Exemplars.Lookup()
-		assert.False(t, ok)
-		assert.Equal(t, "", v)
-	})
-
-	t.Run("empty", func(t *testing.T) {
-		assert.False(t, Exemplars.Enabled())
-
-		v, ok := Exemplars.Lookup()
-		assert.False(t, ok)
-		assert.Equal(t, "", v)
-	})
+	t.Run("true", run(setenv(key, "true"), evalEnabled(Exemplars, "true")))
+	t.Run("false", run(setenv(key, "false"), evalDisabled(Exemplars)))
+	t.Run("empty", run(evalDisabled(Exemplars)))
 }
 
 func TestCardinalityLimit(t *testing.T) {
 	const key = "OTEL_GO_X_CARDINALITY_LIMIT"
 	require.Equal(t, key, CardinalityLimit.Key())
 
-	t.Run("100", func(t *testing.T) {
-		t.Setenv(key, "100")
-		assert.True(t, CardinalityLimit.Enabled())
+	t.Run("100", run(setenv(key, "100"), evalEnabled(CardinalityLimit, 100)))
+	t.Run("-1", run(setenv(key, "-1"), evalEnabled(CardinalityLimit, -1)))
+	t.Run("false", run(setenv(key, "false"), evalDisabled(CardinalityLimit)))
+	t.Run("empty", run(evalDisabled(CardinalityLimit)))
+}
 
-		v, ok := CardinalityLimit.Lookup()
-		assert.True(t, ok)
-		assert.Equal(t, 100, v)
-	})
+func run(steps ...func(*testing.T)) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		for _, step := range steps {
+			step(t)
+		}
+	}
+}
 
-	t.Run("-1", func(t *testing.T) {
-		t.Setenv(key, "-1")
-		assert.True(t, CardinalityLimit.Enabled())
+func setenv(k, v string) func(t *testing.T) {
+	return func(t *testing.T) { t.Setenv(k, v) }
+}
 
-		v, ok := CardinalityLimit.Lookup()
-		assert.True(t, ok)
-		assert.Equal(t, -1, v)
-	})
+func evalEnabled[T any](f Feature[T], want T) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		assert.True(t, f.Enabled(), "not enabled")
 
-	t.Run("false", func(t *testing.T) {
-		t.Setenv(key, "false")
-		assert.False(t, CardinalityLimit.Enabled())
+		v, ok := f.Lookup()
+		assert.True(t, ok, "Lookup state")
+		assert.Equal(t, want, v, "Lookup value")
+	}
+}
 
-		v, ok := CardinalityLimit.Lookup()
-		assert.False(t, ok)
-		assert.Equal(t, 0, v)
-	})
+func evalDisabled[T any](f Feature[T]) func(*testing.T) {
+	var zero T
+	return func(t *testing.T) {
+		t.Helper()
 
-	t.Run("empty", func(t *testing.T) {
-		assert.False(t, CardinalityLimit.Enabled())
+		assert.False(t, f.Enabled(), "enabled")
 
-		v, ok := CardinalityLimit.Lookup()
-		assert.False(t, ok)
-		assert.Equal(t, 0, v)
-	})
+		v, ok := f.Lookup()
+		assert.False(t, ok, "Lookup state")
+		assert.Equal(t, zero, v, "Lookup value")
+	}
 }
