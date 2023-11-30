@@ -72,228 +72,260 @@ func ClientPort(val int) attribute.KeyValue {
 // These attributes may be used for any network related operation.
 const (
 	// NetHostNameKey is the attribute Key conforming to the "net.host.name"
-	// semantic conventions. It represents the deprecated, use
-	// `server.address`.
+	// semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'example.com'
+	// Deprecated: use `server.address`.
 	NetHostNameKey = attribute.Key("net.host.name")
 
 	// NetHostPortKey is the attribute Key conforming to the "net.host.port"
-	// semantic conventions. It represents the deprecated, use `server.port`.
+	// semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 8080
+	// Deprecated: use `server.port`.
 	NetHostPortKey = attribute.Key("net.host.port")
 
 	// NetPeerNameKey is the attribute Key conforming to the "net.peer.name"
-	// semantic conventions. It represents the deprecated, use `server.address`
-	// on client spans and `client.address` on server spans.
+	// semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'example.com'
+	// Deprecated: use `server.address` on client spans and `client.address` on
+	// server spans.
 	NetPeerNameKey = attribute.Key("net.peer.name")
 
 	// NetPeerPortKey is the attribute Key conforming to the "net.peer.port"
-	// semantic conventions. It represents the deprecated, use `server.port` on
-	// client spans and `client.port` on server spans.
+	// semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 8080
+	// Deprecated: use `server.port` on client spans and `client.port` on
+	// server spans.
 	NetPeerPortKey = attribute.Key("net.peer.port")
 
 	// NetProtocolNameKey is the attribute Key conforming to the
-	// "net.protocol.name" semantic conventions. It represents the deprecated,
-	// use `network.protocol.name`.
+	// "net.protocol.name" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'amqp', 'http', 'mqtt'
+	// Deprecated: use `network.protocol.name`.
 	NetProtocolNameKey = attribute.Key("net.protocol.name")
 
 	// NetProtocolVersionKey is the attribute Key conforming to the
-	// "net.protocol.version" semantic conventions. It represents the
-	// deprecated, use `network.protocol.version`.
+	// "net.protocol.version" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '3.1.1'
+	// Deprecated: use `network.protocol.version`.
 	NetProtocolVersionKey = attribute.Key("net.protocol.version")
 
 	// NetSockFamilyKey is the attribute Key conforming to the
-	// "net.sock.family" semantic conventions. It represents the deprecated,
-	// use `network.transport` and `network.type`.
+	// "net.sock.family" semantic conventions.
 	//
 	// Type: Enum
 	// RequirementLevel: Optional
 	// Stability: deprecated
+	// Deprecated: use `network.transport` and `network.type`.
 	NetSockFamilyKey = attribute.Key("net.sock.family")
 
 	// NetSockHostAddrKey is the attribute Key conforming to the
-	// "net.sock.host.addr" semantic conventions. It represents the deprecated,
-	// use `network.local.address`.
+	// "net.sock.host.addr" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '/var/my.sock'
+	// Deprecated: use `network.local.address`.
 	NetSockHostAddrKey = attribute.Key("net.sock.host.addr")
 
 	// NetSockHostPortKey is the attribute Key conforming to the
-	// "net.sock.host.port" semantic conventions. It represents the deprecated,
-	// use `network.local.port`.
+	// "net.sock.host.port" semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 8080
+	// Deprecated: use `network.local.port`.
 	NetSockHostPortKey = attribute.Key("net.sock.host.port")
 
 	// NetSockPeerAddrKey is the attribute Key conforming to the
-	// "net.sock.peer.addr" semantic conventions. It represents the deprecated,
-	// use `network.peer.address`.
+	// "net.sock.peer.addr" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '192.168.0.1'
+	// Deprecated: use `network.peer.address`.
 	NetSockPeerAddrKey = attribute.Key("net.sock.peer.addr")
 
 	// NetSockPeerNameKey is the attribute Key conforming to the
-	// "net.sock.peer.name" semantic conventions. It represents the deprecated,
-	// no replacement at this time.
+	// "net.sock.peer.name" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '/var/my.sock'
+	// Deprecated: no replacement at this time.
 	NetSockPeerNameKey = attribute.Key("net.sock.peer.name")
 
 	// NetSockPeerPortKey is the attribute Key conforming to the
-	// "net.sock.peer.port" semantic conventions. It represents the deprecated,
-	// use `network.peer.port`.
+	// "net.sock.peer.port" semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 65531
+	// Deprecated: use `network.peer.port`.
 	NetSockPeerPortKey = attribute.Key("net.sock.peer.port")
 
 	// NetTransportKey is the attribute Key conforming to the "net.transport"
-	// semantic conventions. It represents the deprecated, use
-	// `network.transport`.
+	// semantic conventions.
 	//
 	// Type: Enum
 	// RequirementLevel: Optional
 	// Stability: deprecated
+	// Deprecated: use `network.transport`.
 	NetTransportKey = attribute.Key("net.transport")
 )
 
 var (
 	// IPv4 address
+	//
+	// Deprecated: use `network.transport` and `network.type`.
 	NetSockFamilyInet = NetSockFamilyKey.String("inet")
 	// IPv6 address
+	//
+	// Deprecated: use `network.transport` and `network.type`.
 	NetSockFamilyInet6 = NetSockFamilyKey.String("inet6")
 	// Unix domain socket path
+	//
+	// Deprecated: use `network.transport` and `network.type`.
 	NetSockFamilyUnix = NetSockFamilyKey.String("unix")
 )
 
 var (
 	// ip_tcp
+	//
+	// Deprecated: use `network.transport`.
 	NetTransportTCP = NetTransportKey.String("ip_tcp")
 	// ip_udp
+	//
+	// Deprecated: use `network.transport`.
 	NetTransportUDP = NetTransportKey.String("ip_udp")
 	// Named or anonymous pipe
+	//
+	// Deprecated: use `network.transport`.
 	NetTransportPipe = NetTransportKey.String("pipe")
 	// In-process communication
+	//
+	// Deprecated: use `network.transport`.
 	NetTransportInProc = NetTransportKey.String("inproc")
 	// Something else (non IP-based)
+	//
+	// Deprecated: use `network.transport`.
 	NetTransportOther = NetTransportKey.String("other")
 )
 
 // NetHostName returns an attribute KeyValue conforming to the
-// "net.host.name" semantic conventions. It represents the deprecated, use
-// `server.address`.
+// "net.host.name" semantic conventions.
+//
+// Deprecated: use `server.address`.
 func NetHostName(val string) attribute.KeyValue {
 	return NetHostNameKey.String(val)
 }
 
 // NetHostPort returns an attribute KeyValue conforming to the
-// "net.host.port" semantic conventions. It represents the deprecated, use
-// `server.port`.
+// "net.host.port" semantic conventions.
+//
+// Deprecated: use `server.port`.
 func NetHostPort(val int) attribute.KeyValue {
 	return NetHostPortKey.Int(val)
 }
 
 // NetPeerName returns an attribute KeyValue conforming to the
-// "net.peer.name" semantic conventions. It represents the deprecated, use
-// `server.address` on client spans and `client.address` on server spans.
+// "net.peer.name" semantic conventions.
+//
+// Deprecated: use `server.address` on client spans and `client.address` on
+// server spans.
 func NetPeerName(val string) attribute.KeyValue {
 	return NetPeerNameKey.String(val)
 }
 
 // NetPeerPort returns an attribute KeyValue conforming to the
-// "net.peer.port" semantic conventions. It represents the deprecated, use
-// `server.port` on client spans and `client.port` on server spans.
+// "net.peer.port" semantic conventions.
+//
+// Deprecated: use `server.port` on client spans and `client.port` on server
+// spans.
 func NetPeerPort(val int) attribute.KeyValue {
 	return NetPeerPortKey.Int(val)
 }
 
 // NetProtocolName returns an attribute KeyValue conforming to the
-// "net.protocol.name" semantic conventions. It represents the deprecated, use
-// `network.protocol.name`.
+// "net.protocol.name" semantic conventions.
+//
+// Deprecated: use `network.protocol.name`.
 func NetProtocolName(val string) attribute.KeyValue {
 	return NetProtocolNameKey.String(val)
 }
 
 // NetProtocolVersion returns an attribute KeyValue conforming to the
-// "net.protocol.version" semantic conventions. It represents the deprecated,
-// use `network.protocol.version`.
+// "net.protocol.version" semantic conventions.
+//
+// Deprecated: use `network.protocol.version`.
 func NetProtocolVersion(val string) attribute.KeyValue {
 	return NetProtocolVersionKey.String(val)
 }
 
 // NetSockHostAddr returns an attribute KeyValue conforming to the
-// "net.sock.host.addr" semantic conventions. It represents the deprecated, use
-// `network.local.address`.
+// "net.sock.host.addr" semantic conventions.
+//
+// Deprecated: use `network.local.address`.
 func NetSockHostAddr(val string) attribute.KeyValue {
 	return NetSockHostAddrKey.String(val)
 }
 
 // NetSockHostPort returns an attribute KeyValue conforming to the
-// "net.sock.host.port" semantic conventions. It represents the deprecated, use
-// `network.local.port`.
+// "net.sock.host.port" semantic conventions.
+//
+// Deprecated: use `network.local.port`.
 func NetSockHostPort(val int) attribute.KeyValue {
 	return NetSockHostPortKey.Int(val)
 }
 
 // NetSockPeerAddr returns an attribute KeyValue conforming to the
-// "net.sock.peer.addr" semantic conventions. It represents the deprecated, use
-// `network.peer.address`.
+// "net.sock.peer.addr" semantic conventions.
+//
+// Deprecated: use `network.peer.address`.
 func NetSockPeerAddr(val string) attribute.KeyValue {
 	return NetSockPeerAddrKey.String(val)
 }
 
 // NetSockPeerName returns an attribute KeyValue conforming to the
-// "net.sock.peer.name" semantic conventions. It represents the deprecated, no
-// replacement at this time.
+// "net.sock.peer.name" semantic conventions.
+//
+// Deprecated: no replacement at this time.
 func NetSockPeerName(val string) attribute.KeyValue {
 	return NetSockPeerNameKey.String(val)
 }
 
 // NetSockPeerPort returns an attribute KeyValue conforming to the
-// "net.sock.peer.port" semantic conventions. It represents the deprecated, use
-// `network.peer.port`.
+// "net.sock.peer.port" semantic conventions.
+//
+// Deprecated: use `network.peer.port`.
 func NetSockPeerPort(val int) attribute.KeyValue {
 	return NetSockPeerPortKey.Int(val)
 }
@@ -1381,119 +1413,128 @@ func NetworkCarrierName(val string) attribute.KeyValue {
 // Describes deprecated HTTP attributes.
 const (
 	// HTTPMethodKey is the attribute Key conforming to the "http.method"
-	// semantic conventions. It represents the deprecated, use
-	// `http.request.method` instead.
+	// semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'GET', 'POST', 'HEAD'
+	// Deprecated: use `http.request.method` instead.
 	HTTPMethodKey = attribute.Key("http.method")
 
 	// HTTPRequestContentLengthKey is the attribute Key conforming to the
-	// "http.request_content_length" semantic conventions. It represents the
-	// deprecated, use `http.request.body.size` instead.
+	// "http.request_content_length" semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 3495
+	// Deprecated: use `http.request.body.size` instead.
 	HTTPRequestContentLengthKey = attribute.Key("http.request_content_length")
 
 	// HTTPResponseContentLengthKey is the attribute Key conforming to the
-	// "http.response_content_length" semantic conventions. It represents the
-	// deprecated, use `http.response.body.size` instead.
+	// "http.response_content_length" semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 3495
+	// Deprecated: use `http.response.body.size` instead.
 	HTTPResponseContentLengthKey = attribute.Key("http.response_content_length")
 
 	// HTTPSchemeKey is the attribute Key conforming to the "http.scheme"
-	// semantic conventions. It represents the deprecated, use `url.scheme`
-	// instead.
+	// semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'http', 'https'
+	// Deprecated: use `url.scheme` instead.
 	HTTPSchemeKey = attribute.Key("http.scheme")
 
 	// HTTPStatusCodeKey is the attribute Key conforming to the
-	// "http.status_code" semantic conventions. It represents the deprecated,
-	// use `http.response.status_code` instead.
+	// "http.status_code" semantic conventions.
 	//
 	// Type: int
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 200
+	// Deprecated: use `http.response.status_code` instead.
 	HTTPStatusCodeKey = attribute.Key("http.status_code")
 
 	// HTTPTargetKey is the attribute Key conforming to the "http.target"
-	// semantic conventions. It represents the deprecated, use `url.path` and
-	// `url.query` instead.
+	// semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '/search?q=OpenTelemetry#SemConv'
+	// Deprecated: use `url.path` and `url.query` instead.
 	HTTPTargetKey = attribute.Key("http.target")
 
 	// HTTPURLKey is the attribute Key conforming to the "http.url" semantic
-	// conventions. It represents the deprecated, use `url.full` instead.
+	// conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'https://www.foo.bar/search?q=OpenTelemetry#SemConv'
+	// Deprecated: use `url.full` instead.
 	HTTPURLKey = attribute.Key("http.url")
 )
 
 // HTTPMethod returns an attribute KeyValue conforming to the "http.method"
-// semantic conventions. It represents the deprecated, use
-// `http.request.method` instead.
+// semantic conventions.
+//
+// Deprecated: use `http.request.method` instead.
 func HTTPMethod(val string) attribute.KeyValue {
 	return HTTPMethodKey.String(val)
 }
 
 // HTTPRequestContentLength returns an attribute KeyValue conforming to the
-// "http.request_content_length" semantic conventions. It represents the
-// deprecated, use `http.request.body.size` instead.
+// "http.request_content_length" semantic conventions.
+//
+// Deprecated: use `http.request.body.size` instead.
 func HTTPRequestContentLength(val int) attribute.KeyValue {
 	return HTTPRequestContentLengthKey.Int(val)
 }
 
 // HTTPResponseContentLength returns an attribute KeyValue conforming to the
-// "http.response_content_length" semantic conventions. It represents the
-// deprecated, use `http.response.body.size` instead.
+// "http.response_content_length" semantic conventions.
+//
+// Deprecated: use `http.response.body.size` instead.
 func HTTPResponseContentLength(val int) attribute.KeyValue {
 	return HTTPResponseContentLengthKey.Int(val)
 }
 
 // HTTPScheme returns an attribute KeyValue conforming to the "http.scheme"
-// semantic conventions. It represents the deprecated, use `url.scheme`
-// instead.
+// semantic conventions.
+//
+// Deprecated: use `url.scheme` instead.
 func HTTPScheme(val string) attribute.KeyValue {
 	return HTTPSchemeKey.String(val)
 }
 
 // HTTPStatusCode returns an attribute KeyValue conforming to the
-// "http.status_code" semantic conventions. It represents the deprecated, use
-// `http.response.status_code` instead.
+// "http.status_code" semantic conventions.
+//
+// Deprecated: use `http.response.status_code` instead.
 func HTTPStatusCode(val int) attribute.KeyValue {
 	return HTTPStatusCodeKey.Int(val)
 }
 
 // HTTPTarget returns an attribute KeyValue conforming to the "http.target"
-// semantic conventions. It represents the deprecated, use `url.path` and
-// `url.query` instead.
+// semantic conventions.
+//
+// Deprecated: use `url.path` and `url.query` instead.
 func HTTPTarget(val string) attribute.KeyValue {
 	return HTTPTargetKey.String(val)
 }
 
 // HTTPURL returns an attribute KeyValue conforming to the "http.url"
-// semantic conventions. It represents the deprecated, use `url.full` instead.
+// semantic conventions.
+//
+// Deprecated: use `url.full` instead.
 func HTTPURL(val string) attribute.KeyValue {
 	return HTTPURLKey.String(val)
 }

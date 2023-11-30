@@ -2531,36 +2531,38 @@ func OTelScopeVersion(val string) attribute.KeyValue {
 // Scope's concepts.
 const (
 	// OTelLibraryNameKey is the attribute Key conforming to the
-	// "otel.library.name" semantic conventions. It represents the deprecated,
-	// use the `otel.scope.name` attribute.
+	// "otel.library.name" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: 'io.opentelemetry.contrib.mongodb'
+	// Deprecated: use the `otel.scope.name` attribute.
 	OTelLibraryNameKey = attribute.Key("otel.library.name")
 
 	// OTelLibraryVersionKey is the attribute Key conforming to the
-	// "otel.library.version" semantic conventions. It represents the
-	// deprecated, use the `otel.scope.version` attribute.
+	// "otel.library.version" semantic conventions.
 	//
 	// Type: string
 	// RequirementLevel: Optional
 	// Stability: deprecated
 	// Examples: '1.0.0'
+	// Deprecated: use the `otel.scope.version` attribute.
 	OTelLibraryVersionKey = attribute.Key("otel.library.version")
 )
 
 // OTelLibraryName returns an attribute KeyValue conforming to the
-// "otel.library.name" semantic conventions. It represents the deprecated, use
-// the `otel.scope.name` attribute.
+// "otel.library.name" semantic conventions.
+//
+// Deprecated: use the `otel.scope.name` attribute.
 func OTelLibraryName(val string) attribute.KeyValue {
 	return OTelLibraryNameKey.String(val)
 }
 
 // OTelLibraryVersion returns an attribute KeyValue conforming to the
-// "otel.library.version" semantic conventions. It represents the deprecated,
-// use the `otel.scope.version` attribute.
+// "otel.library.version" semantic conventions.
+//
+// Deprecated: use the `otel.scope.version` attribute.
 func OTelLibraryVersion(val string) attribute.KeyValue {
 	return OTelLibraryVersionKey.String(val)
 }
