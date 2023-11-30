@@ -237,7 +237,16 @@ func (ts TraceState) String() string {
 	if len(ts.list) == 0 {
 		return ""
 	}
+	var n int
+	n += len(ts.list)     // member delimiters: '='
+	n += len(ts.list) - 1 // list delimiters: ','
+	for _, mem := range ts.list {
+		n += len(mem.Key)
+		n += len(mem.Value)
+	}
+
 	var sb strings.Builder
+	sb.Grow(n)
 	_, _ = sb.WriteString(ts.list[0].Key)
 	_ = sb.WriteByte('=')
 	_, _ = sb.WriteString(ts.list[0].Value)
