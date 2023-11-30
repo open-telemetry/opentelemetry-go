@@ -89,9 +89,9 @@ const (
 	SeverityFatal4
 )
 
-// Attributes calls f on each [attribute.KeyValue] in the [Record].
+// WalkAttributes calls f on each [attribute.KeyValue] in the [Record].
 // Iteration stops if f returns false.
-func (r Record) Attributes(f func(attribute.KeyValue) bool) {
+func (r Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
 		if !f(r.front[i]) {
 			return

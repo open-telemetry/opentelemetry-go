@@ -43,7 +43,7 @@ is defined as an interface in [logger.go](logger.go).
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
 is defined as a struct in [record.go](record.go).
 
-`Record` has `Attributes` and `AddAttributes` methods,
+`Record` has `WalkAttributes` and `AddAttributes` methods,
 like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
 and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
 in order to achieve high-performance when accessing and setting attributes efficiently.

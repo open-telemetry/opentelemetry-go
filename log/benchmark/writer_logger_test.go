@@ -54,7 +54,7 @@ func (l *writerLogger) Emit(_ context.Context, r log.Record) {
 	l.write(" ")
 	l.write("body=")
 	l.write(r.Body)
-	r.Attributes(func(kv attribute.KeyValue) bool {
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		l.write(" ")
 		l.write(string(kv.Key))
 		l.write("=")
