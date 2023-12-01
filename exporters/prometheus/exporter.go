@@ -190,8 +190,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.targetInfo
 	}
 
-	if c.resourceAttributesFilter != nil {
-		c.resourceAttributes(metrics.Resource)
+	if c.resourceAttributesFilter != nil && len(c.resourceKeyVals.keys) == 0 {
+		c.createResourceAttributes(metrics.Resource)
 	}
 
 	for _, scopeMetrics := range metrics.ScopeMetrics {
@@ -492,13 +492,9 @@ func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
 	return nil
 }
 
-func (c *collector) resourceAttributes(res *resource.Resource) {
+func (c *collector) createResourceAttributes(res *resource.Resource) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	if len(c.resourceKeyVals.keys) > 0 {
-		return
-	}
 
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
 	resourceKeys, resourceValues := getAttrs(resourceAttrs, [2]string{}, [2]string{}, keyVals{})
