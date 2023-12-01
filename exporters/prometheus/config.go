@@ -19,18 +19,20 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // config contains options for the exporter.
 type config struct {
-	registerer             prometheus.Registerer
-	disableTargetInfo      bool
-	withoutUnits           bool
-	withoutCounterSuffixes bool
-	readerOpts             []metric.ManualReaderOption
-	disableScopeInfo       bool
-	namespace              string
+	registerer               prometheus.Registerer
+	disableTargetInfo        bool
+	withoutUnits             bool
+	withoutCounterSuffixes   bool
+	readerOpts               []metric.ManualReaderOption
+	disableScopeInfo         bool
+	namespace                string
+	resourceAttributesFilter attribute.Filter
 }
 
 // newConfig creates a validated config configured with options.
@@ -148,6 +150,17 @@ func WithNamespace(ns string) Option {
 		}
 
 		cfg.namespace = ns
+		return cfg
+	})
+}
+
+// WithResourceAsConstantLabels configures the Exporter to add the resource attributes the
+// resourceFilter returns true for as attributes on all exported metrics.
+//
+// The does not affect the target info generated from resource attributes.
+func WithResourceAsConstantLabels(resourceFilter attribute.Filter) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.resourceAttributesFilter = resourceFilter
 		return cfg
 	})
 }
