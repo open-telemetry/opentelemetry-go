@@ -12,14 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/otel/semconv/v1.22.0` package.
   The package contains semantic conventions from the `v1.22.0` version of the OpenTelemetry Semantic Conventions. (#4735)
+- Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
 
 ### Changed
 
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
-
-### Added
-
-- Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
 
 ## [1.21.0/0.44.0] 2023-11-16
 
