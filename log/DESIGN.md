@@ -213,7 +213,7 @@ when the record has more attribute than 5
 However, according to [^1], only ~5% of code emits log records
 with more than 5 attributes.
 Moreover, according to
-[the benchamrks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1413884476),
+[the benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1413884476),
 it would only save a few allocations
 when the number of attributes is greater than 5
 and the time execution tend to be slower for 5 attributes or less.
