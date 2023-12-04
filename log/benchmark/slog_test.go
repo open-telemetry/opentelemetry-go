@@ -42,20 +42,10 @@ func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 
 	record := log.Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
 
-	if r.NumAttrs() > log.AttributesInlineCount {
-		attrs := make([]attribute.KeyValue, 0, r.NumAttrs())
-		r.Attrs(func(a slog.Attr) bool {
-			attrs = append(attrs, convertAttr(a))
-			return true
-		})
-		record.AddAttributes(attrs...)
-	} else {
-		// special case that avoids heap allocations (hot path)
-		r.Attrs(func(a slog.Attr) bool {
-			record.AddAttributes(convertAttr(a))
-			return true
-		})
-	}
+	r.Attrs(func(a slog.Attr) bool {
+		record.AddAttributes(convertAttr(a))
+		return true
+	})
 
 	h.Logger.Emit(context.Background(), record)
 	return nil

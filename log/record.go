@@ -41,7 +41,7 @@ type Record struct {
 	// Allocation optimization: an inline array sized to hold
 	// the majority of log calls (based on examination of open-source
 	// code). It holds the start of the list of attributes.
-	front [AttributesInlineCount]attribute.KeyValue
+	front [attributesInlineCount]attribute.KeyValue
 
 	// The number of attributes in front.
 	nFront int
@@ -53,9 +53,7 @@ type Record struct {
 	back []attribute.KeyValue
 }
 
-// AttributesInlineCount TODO: comment that this should be used
-// by bridges to implement in order to reduce memory allocations.
-const AttributesInlineCount = 5
+const attributesInlineCount = 5
 
 // Severity TODO: comment.
 type Severity int

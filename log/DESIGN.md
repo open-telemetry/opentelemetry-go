@@ -202,6 +202,27 @@ HTTP/RPC handler could write hundreds of logs, it should not
 create a new logger for each log entry.
 The application should reuse loggers whenever possible.
 
+### Rejected Proposal: Export attributesInlineCount
+
+There was a proposal to export `attributesInlineCount`
+so the bridge implementation could use it
+to reduce the number of heap allocations
+when the record has more attribute than 5
+(the value of `attributesInlineCount`).
+
+However, according to [^1], only ~5% of code emits log records
+with more than 5 attributes.
+Moreover, according to
+[the benchamrks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1413884476),
+it would only save a few allocations
+when the number of attributes is greater than 5
+and the time execution tend to be slower for 5 attributes or less.
+
+At last, nothing prevents us to export this constant in future
+if it will occur that it could be helpful in some scenarios.
+However, without a strong reason, we prefer to hide the implementation detail
+and have smaller API surface.
+
 ## Open issues (if applicable)
 
 <!-- A discussion of issues relating to this proposal for which the author does not

@@ -55,27 +55,13 @@ func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 		panic("key without a value")
 	}
 	kvCount := len(keysAndValues) / 2
-	if kvCount > log.AttributesInlineCount {
-		attrs := make([]attribute.KeyValue, 0, kvCount)
-		for i := 0; i < kvCount; i++ {
-			k, ok := keysAndValues[i*2].(string)
-			if !ok {
-				panic("key is not a string")
-			}
-			kv := convertKV(k, keysAndValues[i*2+1])
-			attrs = append(attrs, kv)
+	for i := 0; i < kvCount; i++ {
+		k, ok := keysAndValues[i*2].(string)
+		if !ok {
+			panic("key is not a string")
 		}
-		record.AddAttributes(attrs...)
-	} else {
-		// special case that avoids heap allocations (hot path)
-		for i := 0; i < kvCount; i++ {
-			k, ok := keysAndValues[i*2].(string)
-			if !ok {
-				panic("key is not a string")
-			}
-			kv := convertKV(k, keysAndValues[i*2+1])
-			record.AddAttributes(kv)
-		}
+		kv := convertKV(k, keysAndValues[i*2+1])
+		record.AddAttributes(kv)
 	}
 
 	s.Logger.Emit(ctx, record)
