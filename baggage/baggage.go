@@ -33,14 +33,15 @@ const (
 	keyValueDelimiter = "="
 	propertyDelimiter = ";"
 
+	// if you update these 2 values you must update the static implementation below: keyReValidator and valReValidator
 	keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
 	valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
 	keyValueDef = `\s*` + keyDef + `\s*` + keyValueDelimiter + `\s*` + valueDef + `\s*`
 )
 
 var (
-	keyRe      = regexp.MustCompile(`^` + keyDef + `$`)
-	valueRe    = regexp.MustCompile(`^` + valueDef + `$`)
+	keyRe      = keyReValidator{}
+	valueRe    = valReValidator{}
 	propertyRe = regexp.MustCompile(`^(?:\s*` + keyDef + `\s*|` + keyValueDef + `)$`)
 )
 
@@ -549,4 +550,49 @@ func (b Baggage) String() string {
 		}.String())
 	}
 	return strings.Join(members, listDelimiter)
+}
+
+// They must follow the following rules (regex syntax):
+// keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
+// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
+type keyReValidator struct{}
+
+func (keyReValidator) MatchString(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, c := range s {
+		if !(c >= 0x23 && c <= 0x27) &&
+			!(c >= 0x30 && c <= 0x39) &&
+			!(c >= 0x41 && c <= 0x5a) &&
+			!(c >= 0x5e && c <= 0x7a) &&
+			c != 0x21 &&
+			c != 0x2a &&
+			c != 0x2b &&
+			c != 0x2d &&
+			c != 0x2e &&
+			c != 0x7c &&
+			c != 0x7e {
+			return false
+		}
+	}
+
+	return true
+}
+
+type valReValidator struct{}
+
+func (valReValidator) MatchString(s string) bool {
+	for _, c := range s {
+		if !(c >= 0x23 && c <= 0x2b) &&
+			!(c >= 0x2d && c <= 0x3a) &&
+			!(c >= 0x3c && c <= 0x5b) &&
+			!(c >= 0x5d && c <= 0x7e) &&
+			c != 0x21 {
+			return false
+		}
+	}
+
+	return true
 }
