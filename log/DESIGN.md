@@ -99,6 +99,11 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 A test implementation of the the `Logger` interface
 is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
 
+Canceling the context should not affect record processing.
+Among other things, log messages may be necessary to debug a
+cancellation-related problem.
+The context is used to pass request-scoped values such as Trace ID and Span ID.
+
 ## Compatibility
 
 The backwards compatibility is achieved using the `embedded` design pattern
