@@ -33,7 +33,7 @@ const (
 	keyValueDelimiter = "="
 	propertyDelimiter = ";"
 
-	// if you update these 2 values you must update the static implementation below: keyReValidator and valReValidator
+	// if you update these 2 values you must update the static implementation below: keyReValidator and valReValidator.
 	keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
 	valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
 	keyValueDef = `\s*` + keyDef + `\s*` + keyValueDelimiter + `\s*` + valueDef + `\s*`
@@ -554,7 +554,7 @@ func (b Baggage) String() string {
 
 // They must follow the following rules (regex syntax):
 // keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
-// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
+// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`.
 type keyReValidator struct{}
 
 func (keyReValidator) MatchString(s string) bool {
