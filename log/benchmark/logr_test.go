@@ -47,9 +47,12 @@ func (s *logrSink) Enabled(level int) bool {
 // Info logs a non-error message with the given key/value pairs as context.
 // It should avoid memory allocations whenever possible.
 func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
-	lvl := log.Severity(9 - level)
+	record := log.Record{}
 
-	record := log.Record{Severity: lvl, Body: msg}
+	record.SetBody(msg)
+
+	lvl := log.Severity(9 - level)
+	record.SetSeverity(lvl)
 
 	if len(keysAndValues)%2 == 1 {
 		panic("key without a value")

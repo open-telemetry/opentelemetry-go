@@ -38,9 +38,14 @@ type slogHandler struct {
 // Handle handles the Record.
 // It should avoid memory allocations whenever possible.
 func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
-	lvl := convertLevel(r.Level)
+	record := log.Record{}
 
-	record := log.Record{Timestamp: r.Time, Severity: lvl, Body: r.Message}
+	record.SetTimestamp(r.Time)
+
+	record.SetBody(r.Message)
+
+	lvl := convertLevel(r.Level)
+	record.SetSeverity(lvl)
 
 	r.Attrs(func(a slog.Attr) bool {
 		record.AddAttributes(convertAttr(a))

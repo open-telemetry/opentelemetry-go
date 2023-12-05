@@ -22,7 +22,10 @@ func TestWriterLogger(t *testing.T) {
 	sb := &strings.Builder{}
 	l := &writerLogger{w: sb}
 
-	r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+	r := log.Record{}
+	r.SetTimestamp(testTimestamp)
+	r.SetSeverity(testSeverity)
+	r.SetBody(testBody)
 	r.AddAttributes(
 		attribute.String("string", testString),
 		attribute.Float64("float", testFloat),
@@ -44,16 +47,16 @@ type writerLogger struct {
 }
 
 func (l *writerLogger) Emit(_ context.Context, r log.Record) {
-	if !r.Timestamp.IsZero() {
+	if !r.Timestamp().IsZero() {
 		l.write("timestamp=")
-		l.write(strconv.FormatInt(r.Timestamp.Unix(), 10))
+		l.write(strconv.FormatInt(r.Timestamp().Unix(), 10))
 		l.write(" ")
 	}
 	l.write("severity=")
-	l.write(strconv.FormatInt(int64(r.Severity), 10))
+	l.write(strconv.FormatInt(int64(r.Severity()), 10))
 	l.write(" ")
 	l.write("body=")
-	l.write(r.Body)
+	l.write(r.Body())
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		l.write(" ")
 		l.write(string(kv.Key))

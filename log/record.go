@@ -20,20 +20,11 @@ var errUnsafeAddAttrs = errors.New("unsafely called AddAttrs on copy of Record m
 // Record TODO: comment.
 // TODO: Add unit tests.
 type Record struct {
-	// TODO: comment.
-	Timestamp time.Time
-
-	// TODO: comment.
-	ObservedTimestamp time.Time
-
-	// TODO: comment.
-	Severity Severity
-
-	// TODO: comment.
-	SeverityText string
-
-	// TODO: comment.
-	Body string
+	timestamp         time.Time
+	observedTimestamp time.Time
+	severity          Severity
+	severityText      string
+	body              string
 
 	// The fields below are for optimizing the implementation of
 	// Attributes and AddAttributes.
@@ -86,6 +77,56 @@ const (
 	SeverityFatal3
 	SeverityFatal4
 )
+
+// Timestamp TODO: comment.
+func (r Record) Timestamp() time.Time {
+	return r.timestamp
+}
+
+// SetTimestamp TODO: comment.
+func (r *Record) SetTimestamp(t time.Time) {
+	r.timestamp = t
+}
+
+// ObservedTimestamp TODO: comment.
+func (r Record) ObservedTimestamp() time.Time {
+	return r.observedTimestamp
+}
+
+// SetObservedTimestamp TODO: comment.
+func (r *Record) SetObservedTimestamp(t time.Time) {
+	r.observedTimestamp = t
+}
+
+// Severity TODO: comment.
+func (r Record) Severity() Severity {
+	return r.severity
+}
+
+// SetSeverity TODO: comment.
+func (r *Record) SetSeverity(s Severity) {
+	r.severity = s
+}
+
+// SeverityText TODO: comment.
+func (r Record) SeverityText() string {
+	return r.severityText
+}
+
+// SetSeverityText TODO: comment.
+func (r *Record) SetSeverityText(s string) {
+	r.severityText = s
+}
+
+// Body TODO: comment.
+func (r Record) Body() string {
+	return r.body
+}
+
+// SetBody TODO: comment.
+func (r *Record) SetBody(s string) {
+	r.body = s
+}
 
 // WalkAttributes calls f on each [attribute.KeyValue] in the [Record].
 // Iteration stops if f returns false.

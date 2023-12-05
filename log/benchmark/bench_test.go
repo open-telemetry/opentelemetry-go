@@ -58,14 +58,20 @@ func BenchmarkEmit(b *testing.B) {
 				{
 					"no attrs",
 					func() {
-						r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						tc.logger.Emit(ctx, r)
 					},
 				},
 				{
 					"3 attrs",
 					func() {
-						r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
@@ -81,7 +87,10 @@ func BenchmarkEmit(b *testing.B) {
 					// should only be from strconv used in writerLogger.
 					"5 attrs",
 					func() {
-						r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
@@ -95,7 +104,10 @@ func BenchmarkEmit(b *testing.B) {
 				{
 					"10 attrs",
 					func() {
-						r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
@@ -114,7 +126,10 @@ func BenchmarkEmit(b *testing.B) {
 				{
 					"40 attrs",
 					func() {
-						r := log.Record{Timestamp: testTimestamp, Severity: testSeverity, Body: testBody}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),

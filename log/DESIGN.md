@@ -228,6 +228,20 @@ if it will occur that it could be helpful in some scenarios.
 However, without a strong reason, we prefer to hide the implementation detail
 and have smaller API surface.
 
+### Rejected Alternative: Record with exported fields
+
+There was a proposal that the timestamp,
+observed timestamp, severity number, severity text,
+body properties of the [Emit](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord)
+are exposed as exported fields of `Record` type.
+This was inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record)
+design.
+
+We find that exposing all properties via methods is be more consistent.
+Having access to attributes via methods
+and access to other properities via fields
+could be more confusing for the users.
+
 ## Open issues (if applicable)
 
 <!-- A discussion of issues relating to this proposal for which the author does not
