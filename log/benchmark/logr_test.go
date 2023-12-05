@@ -21,8 +21,8 @@ func TestLogrSink(t *testing.T) {
 
 	l.Info(testBody, "string", testString)
 
-	assert.Equal(t, testBody, spy.Record.Body)
-	assert.Equal(t, log.SeverityInfo, spy.Record.Severity)
+	assert.Equal(t, testBody, spy.Record.Body())
+	assert.Equal(t, log.SeverityInfo, spy.Record.Severity())
 	assert.Equal(t, 1, spy.Record.AttributesLen())
 	spy.Record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		assert.Equal(t, "string", string(kv.Key))
