@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/otel/internal/baggage"
@@ -32,15 +31,6 @@ const (
 	listDelimiter     = ","
 	keyValueDelimiter = "="
 	propertyDelimiter = ";"
-
-	// if you update these 2 values you must update the static implementation below: keyReValidator and valReValidator.
-	keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
-	valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
-	keyValueDef = `\s*` + keyDef + `\s*` + keyValueDelimiter + `\s*` + valueDef + `\s*`
-)
-
-var (
-	propertyRe = regexp.MustCompile(`^(?:\s*` + keyDef + `\s*|` + keyValueDef + `)$`)
 )
 
 var (
@@ -105,7 +95,7 @@ func parseProperty(property string) (Property, error) {
 		return newInvalidProperty(), nil
 	}
 
-	match := propertyRe.FindStringSubmatch(property)
+	match := propertyFindStringSubmatch(property)
 	if len(match) != 4 {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidProperty, property)
 	}
@@ -552,7 +542,72 @@ func (b Baggage) String() string {
 
 // They must follow the following rules (regex syntax):
 // keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
-// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`.
+// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
+// propertyRe ^(?:\s*([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)\s*|\s*([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)\s*=\s*([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)\s*)$.
+
+func propertyFindStringSubmatch(s string) []string {
+	index := skipSpace(s, 0)
+
+	keyStart := index
+	keyEnd := index
+	for _, c := range s[keyStart:] {
+		if !keyValidChar(c) {
+			break
+		}
+		keyEnd++
+	}
+
+	if keyStart == keyEnd {
+		return nil
+	}
+
+	index = skipSpace(s, keyEnd)
+
+	// this matches only the key
+	if index == len(s) {
+		return []string{s, s[keyStart:keyEnd], "", ""}
+	}
+
+	// now let see if it matches the key and the value
+	if s[index] != keyValueDelimiter[0] {
+		return nil
+	}
+
+	index = skipSpace(s, index+1)
+
+	valueStart := index
+	valueEnd := index
+	for _, c := range s[valueStart:] {
+		if !valueValidChar(c) {
+			break
+		}
+		valueEnd++
+	}
+
+	index = skipSpace(s, valueEnd)
+	if index != len(s) {
+		return nil
+	}
+
+	// value can be empty, so no need to do the same check here
+	return []string{s, "", s[keyStart:keyEnd], s[valueStart:valueEnd]}
+}
+
+func skipSpace(s string, offset int) int {
+	i := offset
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c != ' ' &&
+			c != '\t' &&
+			c != '\n' &&
+			c != '\v' &&
+			c != '\f' &&
+			c != '\r' {
+			break
+		}
+	}
+	return i
+}
 
 func keyMatchString(s string) bool {
 	if len(s) == 0 {
@@ -560,17 +615,7 @@ func keyMatchString(s string) bool {
 	}
 
 	for _, c := range s {
-		if !(c >= 0x23 && c <= 0x27) &&
-			!(c >= 0x30 && c <= 0x39) &&
-			!(c >= 0x41 && c <= 0x5a) &&
-			!(c >= 0x5e && c <= 0x7a) &&
-			c != 0x21 &&
-			c != 0x2a &&
-			c != 0x2b &&
-			c != 0x2d &&
-			c != 0x2e &&
-			c != 0x7c &&
-			c != 0x7e {
+		if !keyValidChar(c) {
 			return false
 		}
 	}
@@ -578,16 +623,34 @@ func keyMatchString(s string) bool {
 	return true
 }
 
+func keyValidChar(c int32) bool {
+	return (c >= 0x23 && c <= 0x27) ||
+		(c >= 0x30 && c <= 0x39) ||
+		(c >= 0x41 && c <= 0x5a) ||
+		(c >= 0x5e && c <= 0x7a) ||
+		c == 0x21 ||
+		c == 0x2a ||
+		c == 0x2b ||
+		c == 0x2d ||
+		c == 0x2e ||
+		c == 0x7c ||
+		c == 0x7e
+}
+
 func valueMatchString(s string) bool {
 	for _, c := range s {
-		if !(c >= 0x23 && c <= 0x2b) &&
-			!(c >= 0x2d && c <= 0x3a) &&
-			!(c >= 0x3c && c <= 0x5b) &&
-			!(c >= 0x5d && c <= 0x7e) &&
-			c != 0x21 {
+		if !valueValidChar(c) {
 			return false
 		}
 	}
 
 	return true
+}
+
+func valueValidChar(c int32) bool {
+	return (c >= 0x23 && c <= 0x2b) ||
+		(c >= 0x2d && c <= 0x3a) ||
+		(c >= 0x3c && c <= 0x5b) ||
+		(c >= 0x5d && c <= 0x7e) ||
+		c == 0x21
 }
