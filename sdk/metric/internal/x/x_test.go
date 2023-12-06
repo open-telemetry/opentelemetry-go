@@ -26,7 +26,10 @@ func TestExemplars(t *testing.T) {
 	require.Equal(t, key, Exemplars.Key())
 
 	t.Run("true", run(setenv(key, "true"), evalEnabled(Exemplars, "true")))
+	t.Run("True", run(setenv(key, "True"), evalEnabled(Exemplars, "True")))
+	t.Run("TRUE", run(setenv(key, "TRUE"), evalEnabled(Exemplars, "TRUE")))
 	t.Run("false", run(setenv(key, "false"), evalDisabled(Exemplars)))
+	t.Run("1", run(setenv(key, "1"), evalDisabled(Exemplars)))
 	t.Run("empty", run(evalDisabled(Exemplars)))
 }
 
