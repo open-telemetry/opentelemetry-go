@@ -40,8 +40,6 @@ const (
 )
 
 var (
-	keyRe      = keyReValidator{}
-	valueRe    = valReValidator{}
 	propertyRe = regexp.MustCompile(`^(?:\s*` + keyDef + `\s*|` + keyValueDef + `)$`)
 )
 
@@ -68,7 +66,7 @@ type Property struct {
 //
 // If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
-	if !keyRe.MatchString(key) {
+	if !keyMatchString(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -80,10 +78,10 @@ func NewKeyProperty(key string) (Property, error) {
 //
 // If key or value are invalid, an error will be returned.
 func NewKeyValueProperty(key, value string) (Property, error) {
-	if !keyRe.MatchString(key) {
+	if !keyMatchString(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueRe.MatchString(value) {
+	if !valueMatchString(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -131,10 +129,10 @@ func (p Property) validate() error {
 		return fmt.Errorf("invalid property: %w", err)
 	}
 
-	if !keyRe.MatchString(p.key) {
+	if !keyMatchString(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
-	if p.hasValue && !valueRe.MatchString(p.value) {
+	if p.hasValue && !valueMatchString(p.value) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	if !p.hasValue && p.value != "" {
@@ -306,10 +304,10 @@ func parseMember(member string) (Member, error) {
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
 	}
-	if !keyRe.MatchString(key) {
+	if !keyMatchString(key) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueRe.MatchString(value) {
+	if !valueMatchString(value) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -324,10 +322,10 @@ func (m Member) validate() error {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
 	}
 
-	if !keyRe.MatchString(m.key) {
+	if !keyMatchString(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
 	}
-	if !valueRe.MatchString(m.value) {
+	if !valueMatchString(m.value) {
 		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
@@ -555,9 +553,8 @@ func (b Baggage) String() string {
 // They must follow the following rules (regex syntax):
 // keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
 // valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`.
-type keyReValidator struct{}
 
-func (keyReValidator) MatchString(s string) bool {
+func keyMatchString(s string) bool {
 	if len(s) == 0 {
 		return false
 	}
@@ -581,9 +578,7 @@ func (keyReValidator) MatchString(s string) bool {
 	return true
 }
 
-type valReValidator struct{}
-
-func (valReValidator) MatchString(s string) bool {
+func valueMatchString(s string) bool {
 	for _, c := range s {
 		if !(c >= 0x23 && c <= 0x2b) &&
 			!(c >= 0x2d && c <= 0x3a) &&
