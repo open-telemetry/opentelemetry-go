@@ -26,20 +26,20 @@ import (
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
-	limit  int
+	limit  limiter[N]
 	values map[attribute.Set]N
 }
 
 func newValueMap[N int64 | float64](limit int) *valueMap[N] {
 	return &valueMap[N]{
-		limit:  limit,
+		limit:  newLimiter[N](limit),
 		values: make(map[attribute.Set]N),
 	}
 }
 
 func (s *valueMap[N]) measure(_ context.Context, value N, attr attribute.Set) {
 	s.Lock()
-	attr = limitAttr(attr, s.values, s.limit)
+	attr = s.limit.Attributes(attr, s.values)
 	s.values[attr] += value
 	s.Unlock()
 }

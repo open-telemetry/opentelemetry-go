@@ -21,17 +21,28 @@ import "go.opentelemetry.io/otel/attribute"
 // limit.
 var overflowSet = attribute.NewSet(attribute.Bool("otel.metric.overflow", true))
 
-// limtAttr checks if adding a measurement for a will exceed the limit of the
-// already measured values in m. If it will, overflowSet is returned.
-// Otherwise, if it will not exceed the limit, or the limit is not set (limit
-// <= 0), a is returned.
-func limitAttr[V any](a attribute.Set, m map[attribute.Set]V, limit int) attribute.Set {
-	if limit > 0 {
-		_, exists := m[a]
-		if !exists && len(m) >= limit-1 {
+// limiter limits aggregate values.
+type limiter[V any] struct {
+	// aggregation is the limit of unique attribute that can be aggregated.
+	aggregation int
+}
+
+// newLimiter returns a new Limiter with the provided aggregation limit.
+func newLimiter[V any](aggregation int) limiter[V] {
+	return limiter[V]{aggregation: aggregation}
+}
+
+// Attributes checks if adding a measurement for attrs will exceed the
+// aggregation cardinality limit for the existing measurements. If it will,
+// overflowSet is returned. Otherwise, if it will not exceed the limit, or the
+// limit is not set (limit <= 0), attr is returned.
+func (l limiter[V]) Attributes(attrs attribute.Set, measurements map[attribute.Set]V) attribute.Set {
+	if l.aggregation > 0 {
+		_, exists := measurements[attrs]
+		if !exists && len(measurements) >= l.aggregation-1 {
 			return overflowSet
 		}
 	}
 
-	return a
+	return attrs
 }

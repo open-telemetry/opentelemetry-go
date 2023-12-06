@@ -295,7 +295,7 @@ func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMa
 		maxSize:  int(maxSize),
 		maxScale: int(maxScale),
 
-		limit:  limit,
+		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
 		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
 
 		start: now(),
@@ -310,7 +310,7 @@ type expoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int
 
-	limit    int
+	limit    limiter[*expoHistogramDataPoint[N]]
 	values   map[attribute.Set]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
 
@@ -326,7 +326,7 @@ func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Se
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	attr = limitAttr(attr, e.values, e.limit)
+	attr = e.limit.Attributes(attr, e.values)
 	v, ok := e.values[attr]
 	if !ok {
 		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)

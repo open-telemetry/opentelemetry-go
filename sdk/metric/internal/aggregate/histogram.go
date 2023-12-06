@@ -54,7 +54,7 @@ type histValues[N int64 | float64] struct {
 	noSum  bool
 	bounds []float64
 
-	limit    int
+	limit    limiter[*buckets[N]]
 	values   map[attribute.Set]*buckets[N]
 	valuesMu sync.Mutex
 }
@@ -70,7 +70,7 @@ func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int) *
 	return &histValues[N]{
 		noSum:  noSum,
 		bounds: b,
-		limit:  limit,
+		limit:  newLimiter[*buckets[N]](limit),
 		values: make(map[attribute.Set]*buckets[N]),
 	}
 }
@@ -88,7 +88,7 @@ func (s *histValues[N]) measure(_ context.Context, value N, attr attribute.Set) 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
-	attr = limitAttr(attr, s.values, s.limit)
+	attr = s.limit.Attributes(attr, s.values)
 	b, ok := s.values[attr]
 	if !ok {
 		// N+1 buckets. For example:
