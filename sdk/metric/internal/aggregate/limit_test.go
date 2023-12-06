@@ -49,3 +49,18 @@ func TestLimiterAttributes(t *testing.T) {
 		assert.Equal(t, overflowSet, l.Attributes(bob, m))
 	})
 }
+
+var limitedAttr attribute.Set
+
+func BenchmarkLimiterAttributes(b *testing.B) {
+	m := map[attribute.Set]struct{}{alice: {}}
+	l := newLimiter[struct{}](2)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		limitedAttr = l.Attributes(alice, m)
+		limitedAttr = l.Attributes(bob, m)
+	}
+}
