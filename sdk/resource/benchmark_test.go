@@ -63,21 +63,27 @@ func benchmarkMergeResource(b *testing.B, size int) {
 func BenchmarkMergeResource_1(b *testing.B) {
 	benchmarkMergeResource(b, 1)
 }
+
 func BenchmarkMergeResource_2(b *testing.B) {
 	benchmarkMergeResource(b, 2)
 }
+
 func BenchmarkMergeResource_3(b *testing.B) {
 	benchmarkMergeResource(b, 3)
 }
+
 func BenchmarkMergeResource_4(b *testing.B) {
 	benchmarkMergeResource(b, 4)
 }
+
 func BenchmarkMergeResource_6(b *testing.B) {
 	benchmarkMergeResource(b, 6)
 }
+
 func BenchmarkMergeResource_8(b *testing.B) {
 	benchmarkMergeResource(b, 8)
 }
+
 func BenchmarkMergeResource_16(b *testing.B) {
 	benchmarkMergeResource(b, 16)
 }

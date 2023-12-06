@@ -16,6 +16,8 @@ package prometheus
 
 import (
 	"context"
+	"errors"
+	"io"
 	"os"
 	"sync"
 	"testing"
@@ -25,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -363,6 +366,46 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, opt)
 				counter.Add(ctx, 10.3, opt)
 				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name:         "with resource attributes filter",
+			expectedFile: "testdata/with_resource_attributes_filter.txt",
+			options: []Option{
+				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.1, opt)
+				counter.Add(ctx, 9.8, opt)
+			},
+		},
+		{
+			name:         "with some resource attributes filter",
+			expectedFile: "testdata/with_allow_resource_attributes_filter.txt",
+			options: []Option{
+				WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("service.name")),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 5.9, opt)
+				counter.Add(ctx, 5.3, opt)
 			},
 		},
 	}
@@ -744,7 +787,7 @@ func TestDuplicateMetrics(t *testing.T) {
 
 			tc.recordMetrics(ctx, meterA, meterB)
 
-			var match = false
+			match := false
 			for _, filename := range tc.possibleExpectedFiles {
 				file, ferr := os.Open(filename)
 				require.NoError(t, ferr)
@@ -790,6 +833,14 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 }
 
 func TestIncompatibleMeterName(t *testing.T) {
+	defer func(orig otel.ErrorHandler) {
+		otel.SetErrorHandler(orig)
+	}(otel.GetErrorHandler())
+
+	errs := []error{}
+	eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+	otel.SetErrorHandler(eh)
+
 	// This test checks that Prometheus exporter ignores
 	// when it encounters incompatible meter name.
 
@@ -815,4 +866,46 @@ func TestIncompatibleMeterName(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
+
+	assert.Equal(t, 1, len(errs))
+
+	// A second collect shouldn't trigger new errors
+	_, err = file.Seek(0, io.SeekStart)
+	assert.NoError(t, err)
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(errs))
+}
+
+func TestShutdownExporter(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+
+	ctx := context.Background()
+	registry := prometheus.NewRegistry()
+
+	for i := 0; i < 3; i++ {
+		exporter, err := New(WithRegisterer(registry))
+		require.NoError(t, err)
+		provider := metric.NewMeterProvider(
+			metric.WithResource(resource.Default()),
+			metric.WithReader(exporter))
+		meter := provider.Meter("testmeter")
+		cnt, err := meter.Int64Counter("foo")
+		require.NoError(t, err)
+		cnt.Add(ctx, 100)
+
+		// verify that metrics added to a previously shutdown MeterProvider
+		// do not conflict with metrics added in this loop.
+		_, err = registry.Gather()
+		require.NoError(t, err)
+
+		// Shutdown should cause future prometheus Gather() calls to no longer
+		// include metrics from this loop's MeterProvider.
+		err = provider.Shutdown(ctx)
+		require.NoError(t, err)
+	}
+	// ensure we aren't unnecessarily logging errors from the shutdown MeterProvider
+	require.NoError(t, handledError)
 }

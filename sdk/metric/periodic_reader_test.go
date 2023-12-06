@@ -202,8 +202,6 @@ type periodicReaderTestSuite struct {
 }
 
 func (ts *periodicReaderTestSuite) SetupTest() {
-	ts.Reader = ts.Factory()
-
 	e := &fnExporter{
 		exportFunc:   func(context.Context, *metricdata.ResourceMetrics) error { return assert.AnError },
 		flushFunc:    func(context.Context) error { return assert.AnError },
@@ -344,7 +342,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					return ctx.Err()
 				}
 				return nil
-			}})
+			},
+		})
 		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
@@ -396,7 +395,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					return ctx.Err()
 				}
 				return nil
-			}})
+			},
+		})
 		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
@@ -427,12 +427,13 @@ func TestPeriodicReaderMultipleForceFlush(t *testing.T) {
 	r.register(testSDKProducer{})
 	require.NoError(t, r.ForceFlush(ctx))
 	require.NoError(t, r.ForceFlush(ctx))
+	require.NoError(t, r.Shutdown(ctx))
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {
-	b.Run("Collect", benchReaderCollectFunc(
-		NewPeriodicReader(new(fnExporter)),
-	))
+	r := NewPeriodicReader(new(fnExporter))
+	b.Run("Collect", benchReaderCollectFunc(r))
+	require.NoError(b, r.Shutdown(context.Background()))
 }
 
 func TestPeriodiclReaderTemporality(t *testing.T) {

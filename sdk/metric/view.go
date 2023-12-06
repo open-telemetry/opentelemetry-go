@@ -42,10 +42,10 @@ type View func(Instrument) (Stream, bool)
 // view that matches no instruments is returned. If you need to match a
 // zero-value field, create a View directly.
 //
-// The Name field of criteria supports wildcard pattern matching. The wildcard
-// "*" is recognized as matching zero or more characters, and "?" is recognized
-// as matching exactly one character. For example, a pattern of "*" will match
-// all instrument names.
+// The Name field of criteria supports wildcard pattern matching. The "*"
+// wildcard is recognized as matching zero or more characters, and "?" is
+// recognized as matching exactly one character. For example, a pattern of "*"
+// matches all instrument names.
 //
 // The Stream mask only applies updates for non-zero-value fields. By default,
 // the Instrument the View matches against will be use for the Name,
@@ -107,11 +107,11 @@ func NewView(criteria Instrument, mask Stream) View {
 	return func(i Instrument) (Stream, bool) {
 		if matchFunc(i) {
 			return Stream{
-				Name:               nonZero(mask.Name, i.Name),
-				Description:        nonZero(mask.Description, i.Description),
-				Unit:               nonZero(mask.Unit, i.Unit),
-				Aggregation:        agg,
-				AllowAttributeKeys: mask.AllowAttributeKeys,
+				Name:            nonZero(mask.Name, i.Name),
+				Description:     nonZero(mask.Description, i.Description),
+				Unit:            nonZero(mask.Unit, i.Unit),
+				Aggregation:     agg,
+				AttributeFilter: mask.AttributeFilter,
 			}, true
 		}
 		return Stream{}, false

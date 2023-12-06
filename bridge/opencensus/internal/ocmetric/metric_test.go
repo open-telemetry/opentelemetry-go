@@ -16,10 +16,15 @@ package internal // import "go.opentelemetry.io/otel/bridge/opencensus/opencensu
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	ocmetricdata "go.opencensus.io/metric/metricdata"
+	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -28,6 +33,7 @@ import (
 
 func TestConvertMetrics(t *testing.T) {
 	endTime1 := time.Now()
+	exemplarTime := endTime1.Add(-10 * time.Second)
 	endTime2 := endTime1.Add(-time.Millisecond)
 	startTime := endTime2.Add(-time.Minute)
 	for _, tc := range []struct {
@@ -41,7 +47,7 @@ func TestConvertMetrics(t *testing.T) {
 			expected: []metricdata.Metrics{},
 		},
 		{
-			desc: "normal Histogram, gauges, and sums",
+			desc: "normal Histogram, summary, gauges, and sums",
 			input: []*ocmetricdata.Metric{
 				{
 					Descriptor: ocmetricdata.Descriptor{
@@ -56,7 +62,6 @@ func TestConvertMetrics(t *testing.T) {
 					},
 					TimeSeries: []*ocmetricdata.TimeSeries{
 						{
-
 							LabelValues: []ocmetricdata.LabelValue{
 								{
 									Value:   "hello",
@@ -74,9 +79,46 @@ func TestConvertMetrics(t *testing.T) {
 										Bounds: []float64{1.0, 2.0, 3.0},
 									},
 									Buckets: []ocmetricdata.Bucket{
-										{Count: 1},
-										{Count: 2},
-										{Count: 5},
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.8,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{1}),
+														SpanID:  octrace.SpanID([8]byte{2}),
+													},
+													"bool": true,
+												},
+											},
+										},
+										{
+											Count: 2,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     1.5,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{3}),
+														SpanID:  octrace.SpanID([8]byte{4}),
+													},
+												},
+											},
+										},
+										{
+											Count: 5,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     2.6,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{5}),
+														SpanID:  octrace.SpanID([8]byte{6}),
+													},
+												},
+											},
+										},
 									},
 								}),
 								ocmetricdata.NewDistributionPoint(endTime2, &ocmetricdata.Distribution{
@@ -86,9 +128,45 @@ func TestConvertMetrics(t *testing.T) {
 										Bounds: []float64{1.0, 2.0, 3.0},
 									},
 									Buckets: []ocmetricdata.Bucket{
-										{Count: 1},
-										{Count: 4},
-										{Count: 5},
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.9,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{7}),
+														SpanID:  octrace.SpanID([8]byte{8}),
+													},
+												},
+											},
+										},
+										{
+											Count: 4,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     1.1,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{9}),
+														SpanID:  octrace.SpanID([8]byte{10}),
+													},
+												},
+											},
+										},
+										{
+											Count: 5,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     2.7,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: octrace.SpanContext{
+														TraceID: octrace.TraceID([16]byte{11}),
+														SpanID:  octrace.SpanID([8]byte{12}),
+													},
+												},
+											},
+										},
 									},
 								}),
 							},
@@ -207,6 +285,54 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-a",
+						Description: "a testing summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+						LabelKeys: []ocmetricdata.LabelKey{
+							{Key: "g"},
+							{Key: "h"},
+						},
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							LabelValues: []ocmetricdata.LabelValue{
+								{
+									Value:   "ding",
+									Present: true,
+								}, {
+									Value:   "dong",
+									Present: true,
+								},
+							},
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											50.0:  1.0,
+											0.0:   0.1,
+											100.0: 10.4,
+										},
+									},
+								}),
+								ocmetricdata.NewSummaryPoint(endTime2, &ocmetricdata.Summary{
+									Count: 12,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0:   0.2,
+											50.0:  1.1,
+											100.0: 10.5,
+										},
+									},
+								}),
+							},
+						},
+					},
 				},
 			},
 			expected: []metricdata.Metrics{
@@ -230,6 +356,29 @@ func TestConvertMetrics(t *testing.T) {
 								Sum:          100.0,
 								Bounds:       []float64{1.0, 2.0, 3.0},
 								BucketCounts: []uint64{1, 2, 5},
+								Exemplars: []metricdata.Exemplar[float64]{
+									{
+										Time:    exemplarTime,
+										Value:   0.8,
+										TraceID: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{2, 0, 0, 0, 0, 0, 0, 0},
+										FilteredAttributes: []attribute.KeyValue{
+											attribute.Bool("bool", true),
+										},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   1.5,
+										TraceID: []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{4, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   2.6,
+										TraceID: []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{6, 0, 0, 0, 0, 0, 0, 0},
+									},
+								},
 							}, {
 								Attributes: attribute.NewSet(attribute.KeyValue{
 									Key:   attribute.Key("a"),
@@ -244,6 +393,26 @@ func TestConvertMetrics(t *testing.T) {
 								Sum:          110.0,
 								Bounds:       []float64{1.0, 2.0, 3.0},
 								BucketCounts: []uint64{1, 4, 5},
+								Exemplars: []metricdata.Exemplar[float64]{
+									{
+										Time:    exemplarTime,
+										Value:   0.9,
+										TraceID: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{8, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   1.1,
+										TraceID: []byte{9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{10, 0, 0, 0, 0, 0, 0, 0},
+									},
+									{
+										Time:    exemplarTime,
+										Value:   2.7,
+										TraceID: []byte{11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+										SpanID:  []byte{12, 0, 0, 0, 0, 0, 0, 0},
+									},
+								},
 							},
 						},
 						Temporality: metricdata.CumulativeTemporality,
@@ -368,9 +537,68 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Name:        "foo.com/summary-a",
+					Description: "a testing summary",
+					Unit:        "ms",
+					Data: metricdata.Summary{
+						DataPoints: []metricdata.SummaryDataPoint{
+							{
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime1,
+								Count: 10,
+								Sum:   13.2,
+								QuantileValues: []metricdata.QuantileValue{
+									{
+										Quantile: 0.0,
+										Value:    0.1,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.0,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.4,
+									},
+								},
+							}, {
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime2,
+								Count: 12,
+								QuantileValues: []metricdata.QuantileValue{
+									{
+										Quantile: 0.0,
+										Value:    0.2,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.1,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.5,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "histogram without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -393,7 +621,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "sum without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -417,7 +646,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "gauge without data points",
 			input: []*ocmetricdata.Metric{
 				{
@@ -439,7 +669,8 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			desc: "histogram with negative count",
 			input: []*ocmetricdata.Metric{
 				{
@@ -461,8 +692,9 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
-		}, {
+			expectedErr: errNegativeCount,
+		},
+		{
 			desc: "histogram with negative bucket count",
 			input: []*ocmetricdata.Metric{
 				{
@@ -488,8 +720,9 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
-		}, {
+			expectedErr: errNegativeBucketCount,
+		},
+		{
 			desc: "histogram with non-histogram datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -509,8 +742,125 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
-		}, {
+			expectedErr: errMismatchedValueTypes,
+		},
+		{
+			desc: "summary with mismatched attributes",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-mismatched",
+						Description: "a mismatched summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+						LabelKeys: []ocmetricdata.LabelKey{
+							{Key: "g"},
+						},
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							LabelValues: []ocmetricdata.LabelValue{
+								{
+									Value:   "ding",
+									Present: true,
+								}, {
+									Value:   "dong",
+									Present: true,
+								},
+							},
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.1,
+											0.5: 1.0,
+											1.0: 10.4,
+										},
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: errMismatchedAttributeKeyValues,
+		},
+		{
+			desc: "summary with negative count",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-negative",
+						Description: "a negative count summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          -10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.1,
+											0.5: 1.0,
+											1.0: 10.4,
+										},
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: errNegativeCount,
+		},
+		{
+			desc: "histogram with invalid span context exemplar",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/histogram-a",
+						Description: "a testing histogram",
+						Unit:        ocmetricdata.UnitDimensionless,
+						Type:        ocmetricdata.TypeCumulativeDistribution,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewDistributionPoint(endTime1, &ocmetricdata.Distribution{
+									Count: 8,
+									Sum:   100.0,
+									BucketOptions: &ocmetricdata.BucketOptions{
+										Bounds: []float64{1.0, 2.0, 3.0},
+									},
+									Buckets: []ocmetricdata.Bucket{
+										{
+											Count: 1,
+											Exemplar: &ocmetricdata.Exemplar{
+												Value:     0.8,
+												Timestamp: exemplarTime,
+												Attachments: map[string]interface{}{
+													ocmetricdata.AttachmentKeySpanContext: "notaspancontext",
+												},
+											},
+										},
+									},
+								}),
+							},
+							StartTime: startTime,
+						},
+					},
+				},
+			},
+			expectedErr: errInvalidExemplarSpanContext,
+		},
+		{
 			desc: "sum with non-sum datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -530,8 +880,9 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
-		}, {
+			expectedErr: errMismatchedValueTypes,
+		},
+		{
 			desc: "gauge with non-gauge datapoint type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -551,8 +902,31 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
-		}, {
+			expectedErr: errMismatchedValueTypes,
+		},
+		{
+			desc: "summary with non-summary datapoint type",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/bad-point",
+						Description: "a bad type",
+						Unit:        ocmetricdata.UnitDimensionless,
+						Type:        ocmetricdata.TypeSummary,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewDistributionPoint(endTime1, &ocmetricdata.Distribution{}),
+							},
+							StartTime: startTime,
+						},
+					},
+				},
+			},
+			expectedErr: errMismatchedValueTypes,
+		},
+		{
 			desc: "unsupported Gauge Distribution type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -564,13 +938,13 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errConversion,
+			expectedErr: errAggregationType,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			output, err := ConvertMetrics(tc.input)
 			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("convertAggregation(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
+				t.Errorf("ConvertMetrics(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
 			}
 			metricdatatest.AssertEqual[metricdata.ScopeMetrics](t,
 				metricdata.ScopeMetrics{Metrics: tc.expected},
@@ -629,6 +1003,179 @@ func TestConvertAttributes(t *testing.T) {
 			if !output.Equals(tc.expected) {
 				t.Errorf("convertAttrs(keys: %v, values: %v) = %+v, want %+v", tc.inputKeys, tc.inputValues, output.ToSlice(), tc.expected.ToSlice())
 			}
+		})
+	}
+}
+
+type fakeStringer string
+
+func (f fakeStringer) String() string {
+	return string(f)
+}
+
+func TestConvertKV(t *testing.T) {
+	key := "foo"
+	for _, tt := range []struct {
+		value    any
+		expected attribute.Value
+	}{
+		{
+			value:    bool(true),
+			expected: attribute.BoolValue(true),
+		},
+		{
+			value:    []bool{true, false},
+			expected: attribute.BoolSliceValue([]bool{true, false}),
+		},
+		{
+			value:    int(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []int{10, 20},
+			expected: attribute.IntSliceValue([]int{10, 20}),
+		},
+		{
+			value:    int8(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []int8{10, 20},
+			expected: attribute.IntSliceValue([]int{10, 20}),
+		},
+		{
+			value:    int16(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []int16{10, 20},
+			expected: attribute.IntSliceValue([]int{10, 20}),
+		},
+		{
+			value:    int32(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []int32{10, 20},
+			expected: attribute.IntSliceValue([]int{10, 20}),
+		},
+		{
+			value:    int64(10),
+			expected: attribute.Int64Value(10),
+		},
+		{
+			value:    []int64{10, 20},
+			expected: attribute.Int64SliceValue([]int64{10, 20}),
+		},
+		{
+			value:    uint(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    uint(math.MaxUint),
+			expected: attribute.StringValue(fmt.Sprintf("%v", uint(math.MaxUint))),
+		},
+		{
+			value:    []uint{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    uint8(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []uint8{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    uint16(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []uint16{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    uint32(10),
+			expected: attribute.IntValue(10),
+		},
+		{
+			value:    []uint32{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    uint64(10),
+			expected: attribute.Int64Value(10),
+		},
+		{
+			value:    uint64(math.MaxUint64),
+			expected: attribute.StringValue("18446744073709551615"),
+		},
+		{
+			value:    []uint64{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    uintptr(10),
+			expected: attribute.Int64Value(10),
+		},
+		{
+			value:    []uintptr{10, 20},
+			expected: attribute.StringSliceValue([]string{"10", "20"}),
+		},
+		{
+			value:    float32(10),
+			expected: attribute.Float64Value(10),
+		},
+		{
+			value:    []float32{10, 20},
+			expected: attribute.Float64SliceValue([]float64{10, 20}),
+		},
+		{
+			value:    float64(10),
+			expected: attribute.Float64Value(10),
+		},
+		{
+			value:    []float64{10, 20},
+			expected: attribute.Float64SliceValue([]float64{10, 20}),
+		},
+		{
+			value:    complex64(10),
+			expected: attribute.StringValue("(10+0i)"),
+		},
+		{
+			value:    []complex64{10, 20},
+			expected: attribute.StringSliceValue([]string{"(10+0i)", "(20+0i)"}),
+		},
+		{
+			value:    complex128(10),
+			expected: attribute.StringValue("(10+0i)"),
+		},
+		{
+			value:    []complex128{10, 20},
+			expected: attribute.StringSliceValue([]string{"(10+0i)", "(20+0i)"}),
+		},
+		{
+			value:    "string",
+			expected: attribute.StringValue("string"),
+		},
+		{
+			value:    []string{"string", "slice"},
+			expected: attribute.StringSliceValue([]string{"string", "slice"}),
+		},
+		{
+			value:    fakeStringer("stringer"),
+			expected: attribute.StringValue("stringer"),
+		},
+		{
+			value:    metricdata.Histogram[float64]{},
+			expected: attribute.StringValue("unhandled attribute value: {DataPoints:[] Temporality:undefinedTemporality}"),
+		},
+	} {
+		t.Run(fmt.Sprintf("%v(%+v)", reflect.TypeOf(tt.value), tt.value), func(t *testing.T) {
+			got := convertKV(key, tt.value)
+			assert.Equal(t, key, string(got.Key))
+			assert.Equal(t, tt.expected, got.Value)
 		})
 	}
 }

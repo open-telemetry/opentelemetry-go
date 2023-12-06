@@ -35,8 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type testOnlyTextMapReader struct {
-}
+type testOnlyTextMapReader struct{}
 
 func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
@@ -144,8 +143,7 @@ var (
 	spanID     trace.SpanID  = [8]byte{byte(11)}
 )
 
-type testTextMapPropagator struct {
-}
+type testTextMapPropagator struct{}
 
 func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
@@ -163,7 +161,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 		return ctx
 	}
 
-	var exist = false
+	exist := false
 
 	for _, key := range carrier.Keys() {
 		if strings.EqualFold(testHeader, key) {

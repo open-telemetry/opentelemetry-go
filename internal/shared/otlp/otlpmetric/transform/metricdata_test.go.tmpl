@@ -40,7 +40,7 @@ type unknownAggT struct {
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	start = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	start = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 	end   = start.Add(30 * time.Second)
 
 	alice = attribute.NewSet(attribute.String("user", "alice"))

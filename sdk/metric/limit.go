@@ -17,11 +17,9 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import "go.opentelemetry.io/otel/sdk/metric/internal/x"
 
 func cardinalityLimit() int {
-	if !x.Enabled(x.CardinalityLimit) {
-		return 0
+	if v, ok := x.CardinalityLimit.Lookup(); ok {
+		return v
 	}
-
-	// TODO: make this configurable.
 
 	// Default 2000.
 	return 2000

@@ -78,8 +78,7 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	otel.SetTracerProvider(tp)
 
 	log.Println("Installing the OpenCensus bridge to make OpenCensus libraries write spans using OpenTelemetry.")
-	tracer := tp.Tracer("simple")
-	octrace.DefaultTracer = opencensus.NewTracer(tracer)
+	opencensus.InstallTraceBridge()
 	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have no parent, since it is the first span.")
@@ -88,7 +87,7 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
-	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
+	ctx, otspan := tp.Tracer("simple").Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
 	tp.ForceFlush(ctx)
 
