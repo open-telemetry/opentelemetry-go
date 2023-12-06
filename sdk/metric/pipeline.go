@@ -557,12 +557,6 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 	return pipes
 }
 
-func (p pipelines) registerCallback(cback func(context.Context) error) {
-	for _, pipe := range p {
-		pipe.addCallback(cback)
-	}
-}
-
 func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {
 	unregs := make([]func(), len(p))
 	for i, pipe := range p {
