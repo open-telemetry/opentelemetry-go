@@ -95,9 +95,8 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 // distribution of int64 measurements during a computational operation.
 func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	cfg := metric.NewInt64HistogramConfig(options...)
-	const kind = InstrumentKindHistogram
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := p.lookupHistogram(name, cfg)
 	if err != nil {
 		return i, err
 	}
@@ -188,9 +187,8 @@ func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDow
 // distribution of float64 measurements during a computational operation.
 func (m *meter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	cfg := metric.NewFloat64HistogramConfig(options...)
-	const kind = InstrumentKindHistogram
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
+	i, err := p.lookupHistogram(name, cfg)
 	if err != nil {
 		return i, err
 	}
@@ -456,9 +454,33 @@ func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]ag
 	return p.int64Resolver.Aggregators(inst)
 }
 
+func (p int64InstProvider) histogramAggs(name string, cfg metric.Int64HistogramConfig) ([]aggregate.Measure[int64], error) {
+	boundaries := cfg.ExplicitBucketBoundaries()
+	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
+	if aggError != nil {
+		// If boundaries are invalid, ignore them.
+		boundaries = nil
+	}
+	inst := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindHistogram,
+		Scope:       p.scope,
+	}
+	measures, err := p.int64Resolver.HistogramAggregators(inst, boundaries)
+	return measures, errors.Join(aggError, err)
+}
+
 // lookup returns the resolved instrumentImpl.
 func (p int64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*int64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
+	return &int64Inst{measures: aggs}, err
+}
+
+// lookupHistogram returns the resolved instrumentImpl.
+func (p int64InstProvider) lookupHistogram(name string, cfg metric.Int64HistogramConfig) (*int64Inst, error) {
+	aggs, err := p.histogramAggs(name, cfg)
 	return &int64Inst{measures: aggs}, err
 }
 
@@ -476,9 +498,33 @@ func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]
 	return p.float64Resolver.Aggregators(inst)
 }
 
+func (p float64InstProvider) histogramAggs(name string, cfg metric.Float64HistogramConfig) ([]aggregate.Measure[float64], error) {
+	boundaries := cfg.ExplicitBucketBoundaries()
+	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
+	if aggError != nil {
+		// If boundaries are invalid, ignore them.
+		boundaries = nil
+	}
+	inst := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindHistogram,
+		Scope:       p.scope,
+	}
+	measures, err := p.float64Resolver.HistogramAggregators(inst, boundaries)
+	return measures, errors.Join(aggError, err)
+}
+
 // lookup returns the resolved instrumentImpl.
 func (p float64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*float64Inst, error) {
 	aggs, err := p.aggs(kind, name, desc, u)
+	return &float64Inst{measures: aggs}, err
+}
+
+// lookupHistogram returns the resolved instrumentImpl.
+func (p float64InstProvider) lookupHistogram(name string, cfg metric.Float64HistogramConfig) (*float64Inst, error) {
+	aggs, err := p.histogramAggs(name, cfg)
 	return &float64Inst{measures: aggs}, err
 }
 

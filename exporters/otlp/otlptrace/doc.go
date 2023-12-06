@@ -12,24 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
-
-import "fmt"
-
-// Fibonacci returns the n-th fibonacci number.
-func Fibonacci(n uint) (uint64, error) {
-	if n <= 1 {
-		return uint64(n), nil
-	}
-
-	if n > 93 {
-		return 0, fmt.Errorf("unsupported fibonacci number %d: too large", n)
-	}
-
-	var n2, n1 uint64 = 0, 1
-	for i := uint(2); i < n; i++ {
-		n2, n1 = n1, n1+n2
-	}
-
-	return n2 + n1, nil
-}
+/*
+Package otlptrace contains abstractions for OTLP span exporters.
+See the official OTLP span exporter implementations:
+  - [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc],
+  - [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp].
+*/
+package otlptrace // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace"

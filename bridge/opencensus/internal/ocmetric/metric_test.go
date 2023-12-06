@@ -47,7 +47,7 @@ func TestConvertMetrics(t *testing.T) {
 			expected: []metricdata.Metrics{},
 		},
 		{
-			desc: "normal Histogram, gauges, and sums",
+			desc: "normal Histogram, summary, gauges, and sums",
 			input: []*ocmetricdata.Metric{
 				{
 					Descriptor: ocmetricdata.Descriptor{
@@ -285,6 +285,54 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-a",
+						Description: "a testing summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+						LabelKeys: []ocmetricdata.LabelKey{
+							{Key: "g"},
+							{Key: "h"},
+						},
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							LabelValues: []ocmetricdata.LabelValue{
+								{
+									Value:   "ding",
+									Present: true,
+								}, {
+									Value:   "dong",
+									Present: true,
+								},
+							},
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											50.0:  1.0,
+											0.0:   0.1,
+											100.0: 10.4,
+										},
+									},
+								}),
+								ocmetricdata.NewSummaryPoint(endTime2, &ocmetricdata.Summary{
+									Count: 12,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0:   0.2,
+											50.0:  1.1,
+											100.0: 10.5,
+										},
+									},
+								}),
+							},
+						},
+					},
 				},
 			},
 			expected: []metricdata.Metrics{
@@ -489,6 +537,64 @@ func TestConvertMetrics(t *testing.T) {
 							},
 						},
 					},
+				}, {
+					Name:        "foo.com/summary-a",
+					Description: "a testing summary",
+					Unit:        "ms",
+					Data: metricdata.Summary{
+						DataPoints: []metricdata.SummaryDataPoint{
+							{
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime1,
+								Count: 10,
+								Sum:   13.2,
+								QuantileValues: []metricdata.QuantileValue{
+									{
+										Quantile: 0.0,
+										Value:    0.1,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.0,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.4,
+									},
+								},
+							}, {
+								Attributes: attribute.NewSet(attribute.KeyValue{
+									Key:   attribute.Key("g"),
+									Value: attribute.StringValue("ding"),
+								}, attribute.KeyValue{
+									Key:   attribute.Key("h"),
+									Value: attribute.StringValue("dong"),
+								}),
+								Time:  endTime2,
+								Count: 12,
+								QuantileValues: []metricdata.QuantileValue{
+									{
+										Quantile: 0.0,
+										Value:    0.2,
+									},
+									{
+										Quantile: 0.5,
+										Value:    1.1,
+									},
+									{
+										Quantile: 1.0,
+										Value:    10.5,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -586,7 +692,7 @@ func TestConvertMetrics(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errNegativeDistributionCount,
+			expectedErr: errNegativeCount,
 		},
 		{
 			desc: "histogram with negative bucket count",
@@ -637,6 +743,82 @@ func TestConvertMetrics(t *testing.T) {
 				},
 			},
 			expectedErr: errMismatchedValueTypes,
+		},
+		{
+			desc: "summary with mismatched attributes",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-mismatched",
+						Description: "a mismatched summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+						LabelKeys: []ocmetricdata.LabelKey{
+							{Key: "g"},
+						},
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							LabelValues: []ocmetricdata.LabelValue{
+								{
+									Value:   "ding",
+									Present: true,
+								}, {
+									Value:   "dong",
+									Present: true,
+								},
+							},
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.1,
+											0.5: 1.0,
+											1.0: 10.4,
+										},
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: errMismatchedAttributeKeyValues,
+		},
+		{
+			desc: "summary with negative count",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/summary-negative",
+						Description: "a negative count summary",
+						Unit:        ocmetricdata.UnitMilliseconds,
+						Type:        ocmetricdata.TypeSummary,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewSummaryPoint(endTime1, &ocmetricdata.Summary{
+									Count:          -10,
+									Sum:            13.2,
+									HasCountAndSum: true,
+									Snapshot: ocmetricdata.Snapshot{
+										Percentiles: map[float64]float64{
+											0.0: 0.1,
+											0.5: 1.0,
+											1.0: 10.4,
+										},
+									},
+								}),
+							},
+						},
+					},
+				},
+			},
+			expectedErr: errNegativeCount,
 		},
 		{
 			desc: "histogram with invalid span context exemplar",
@@ -723,6 +905,28 @@ func TestConvertMetrics(t *testing.T) {
 			expectedErr: errMismatchedValueTypes,
 		},
 		{
+			desc: "summary with non-summary datapoint type",
+			input: []*ocmetricdata.Metric{
+				{
+					Descriptor: ocmetricdata.Descriptor{
+						Name:        "foo.com/bad-point",
+						Description: "a bad type",
+						Unit:        ocmetricdata.UnitDimensionless,
+						Type:        ocmetricdata.TypeSummary,
+					},
+					TimeSeries: []*ocmetricdata.TimeSeries{
+						{
+							Points: []ocmetricdata.Point{
+								ocmetricdata.NewDistributionPoint(endTime1, &ocmetricdata.Distribution{}),
+							},
+							StartTime: startTime,
+						},
+					},
+				},
+			},
+			expectedErr: errMismatchedValueTypes,
+		},
+		{
 			desc: "unsupported Gauge Distribution type",
 			input: []*ocmetricdata.Metric{
 				{
@@ -740,7 +944,7 @@ func TestConvertMetrics(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			output, err := ConvertMetrics(tc.input)
 			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("convertAggregation(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
+				t.Errorf("ConvertMetrics(%+v) = err(%v), want err(%v)", tc.input, err, tc.expectedErr)
 			}
 			metricdatatest.AssertEqual[metricdata.ScopeMetrics](t,
 				metricdata.ScopeMetrics{Metrics: tc.expected},

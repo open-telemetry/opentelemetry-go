@@ -276,6 +276,48 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "single member no properties plus",
+			in:   "foo=1+1",
+			want: baggage.List{
+				"foo": {Value: "1+1"},
+			},
+		},
+		{
+			name: "single member no properties plus encoded",
+			in:   "foo=1%2B1",
+			want: baggage.List{
+				"foo": {Value: "1+1"},
+			},
+		},
+		{
+			name: "single member no properties slash",
+			in:   "foo=1/1",
+			want: baggage.List{
+				"foo": {Value: "1/1"},
+			},
+		},
+		{
+			name: "single member no properties slash encoded",
+			in:   "foo=1%2F1",
+			want: baggage.List{
+				"foo": {Value: "1/1"},
+			},
+		},
+		{
+			name: "single member no properties equals",
+			in:   "foo=1=1",
+			want: baggage.List{
+				"foo": {Value: "1=1"},
+			},
+		},
+		{
+			name: "single member no properties equals encoded",
+			in:   "foo=1%3D1",
+			want: baggage.List{
+				"foo": {Value: "1=1"},
+			},
+		},
+		{
 			name: "single member with spaces",
 			in:   " foo \t= 1\t\t ",
 			want: baggage.List{
@@ -438,6 +480,13 @@ func TestBaggageString(t *testing.T) {
 			out:  "foo=1%3D1",
 			baggage: baggage.List{
 				"foo": {Value: "1=1"},
+			},
+		},
+		{
+			name: "plus",
+			out:  "foo=1%2B1",
+			baggage: baggage.List{
+				"foo": {Value: "1+1"},
 			},
 		},
 		{

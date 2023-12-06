@@ -16,6 +16,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -555,6 +556,17 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
 		},
 		{
+			name: "Int64Histogram with invalid buckets",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Histogram("histogram", metric.WithExplicitBucketBoundaries(-1, 1, -5))
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: errors.Join(fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, []float64{-1, 1, -5})),
+		},
+		{
 			name: "Int64ObservableCounter with no validation issues",
 
 			fn: func(t *testing.T, m metric.Meter) error {
@@ -673,6 +685,17 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64Histogram with invalid buckets",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Histogram("histogram", metric.WithExplicitBucketBoundaries(-1, 1, -5))
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: errors.Join(fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, []float64{-1, 1, -5})),
 		},
 		{
 			name: "Float64ObservableCounter with no validation issues",
@@ -1971,6 +1994,66 @@ func TestMalformedSelectors(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
+		})
+	}
+}
+
+func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
+	defaultBuckets := []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}
+	aggregationSelector := func(InstrumentKind) Aggregation {
+		return AggregationExplicitBucketHistogram{Boundaries: []float64{0, 1, 2, 3, 4, 5}}
+	}
+	for _, tt := range []struct {
+		desc                     string
+		reader                   Reader
+		views                    []View
+		histogramOpts            []metric.Float64HistogramOption
+		expectedBucketBoundaries []float64
+	}{
+		{
+			desc:                     "default",
+			reader:                   NewManualReader(),
+			expectedBucketBoundaries: defaultBuckets,
+		},
+		{
+			desc:                     "custom reader aggregation overrides default",
+			reader:                   NewManualReader(WithAggregationSelector(aggregationSelector)),
+			expectedBucketBoundaries: []float64{0, 1, 2, 3, 4, 5},
+		},
+		{
+			desc:   "overridden by histogram option",
+			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
+			histogramOpts: []metric.Float64HistogramOption{
+				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
+			},
+			expectedBucketBoundaries: []float64{0, 2, 4, 6, 8, 10},
+		},
+		{
+			desc:   "overridden by view",
+			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
+			histogramOpts: []metric.Float64HistogramOption{
+				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
+			},
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{0, 3, 6, 9, 12, 15}},
+			})},
+			expectedBucketBoundaries: []float64{0, 3, 6, 9, 12, 15},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			meter := NewMeterProvider(WithView(tt.views...), WithReader(tt.reader)).Meter("TestHistogramBucketPrecedenceOrdering")
+			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram", tt.histogramOpts...)
+			require.NoError(t, err)
+			sfHistogram.Record(context.Background(), 1)
+			var rm metricdata.ResourceMetrics
+			err = tt.reader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+			gotHist, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+			require.Len(t, gotHist.DataPoints, 1)
+			assert.Equal(t, tt.expectedBucketBoundaries, gotHist.DataPoints[0].Bounds)
 		})
 	}
 }

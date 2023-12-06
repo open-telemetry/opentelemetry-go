@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Fib is the "Fibonacci" old getting started example application.
+// Package semconv implements OpenTelemetry semantic conventions.
 //
-// Deprecated: See [go.opentelemetry.io/otel/example/dice] instead.
-package main
+// OpenTelemetry semantic conventions are agreed standardized naming
+// patterns for OpenTelemetry things. This package represents the v1.22.0
+// version of the OpenTelemetry semantic conventions.
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.22.0"

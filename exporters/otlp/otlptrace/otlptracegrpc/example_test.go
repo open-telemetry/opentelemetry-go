@@ -12,7 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main provides a code sample of using metric views to customize instruments.
-//
-// Deprecated: See [go.opentelemetry.io/otel/example/prometheus] instead.
-package main
+package otlptracegrpc_test
+
+import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/trace"
+)
+
+func Example() {
+	ctx := context.Background()
+	exp, err := otlptracegrpc.New(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	tracerProvider := trace.NewTracerProvider(trace.WithBatcher(exp))
+	defer func() {
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}()
+	otel.SetTracerProvider(tracerProvider)
+
+	// From here, the tracerProvider can be used by instrumentation to collect
+	// telemetry.
+}
