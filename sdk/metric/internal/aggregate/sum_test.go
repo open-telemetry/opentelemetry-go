@@ -40,8 +40,9 @@ func TestSum(t *testing.T) {
 func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality: metricdata.DeltaTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.Sum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -125,14 +126,51 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+					},
+				},
+			},
+		},
 	})
 }
 
 func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.Sum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -204,14 +242,49 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: []arg[N]{
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      14,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      -8,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+					},
+				},
+			},
+		},
 	})
 }
 
 func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality: metricdata.DeltaTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -296,14 +369,51 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+					},
+				},
+			},
+		},
 	})
 }
 
 func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -385,6 +495,42 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 					IsMonotonic: mono,
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints:  []metricdata.DataPoint[N]{},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+					},
 				},
 			},
 		},
