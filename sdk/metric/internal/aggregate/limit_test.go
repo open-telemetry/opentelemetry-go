@@ -21,37 +21,31 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestLimiter(t *testing.T) {
-	t.Run("Attributes", testAttributes())
-}
-
-func testAttributes() func(*testing.T) {
+func TestLimiterAttributes(t *testing.T) {
 	m := map[attribute.Set]struct{}{alice: {}}
-	return func(t *testing.T) {
-		t.Run("NoLimit", func(t *testing.T) {
-			l := newLimiter[struct{}](0)
-			assert.Equal(t, alice, l.Attributes(alice, m))
-			assert.Equal(t, bob, l.Attributes(bob, m))
-		})
+	t.Run("NoLimit", func(t *testing.T) {
+		l := newLimiter[struct{}](0)
+		assert.Equal(t, alice, l.Attributes(alice, m))
+		assert.Equal(t, bob, l.Attributes(bob, m))
+	})
 
-		t.Run("NotAtLimit/Exists", func(t *testing.T) {
-			l := newLimiter[struct{}](3)
-			assert.Equal(t, alice, l.Attributes(alice, m))
-		})
+	t.Run("NotAtLimit/Exists", func(t *testing.T) {
+		l := newLimiter[struct{}](3)
+		assert.Equal(t, alice, l.Attributes(alice, m))
+	})
 
-		t.Run("NotAtLimit/DoesNotExist", func(t *testing.T) {
-			l := newLimiter[struct{}](3)
-			assert.Equal(t, bob, l.Attributes(bob, m))
-		})
+	t.Run("NotAtLimit/DoesNotExist", func(t *testing.T) {
+		l := newLimiter[struct{}](3)
+		assert.Equal(t, bob, l.Attributes(bob, m))
+	})
 
-		t.Run("AtLimit/Exists", func(t *testing.T) {
-			l := newLimiter[struct{}](2)
-			assert.Equal(t, alice, l.Attributes(alice, m))
-		})
+	t.Run("AtLimit/Exists", func(t *testing.T) {
+		l := newLimiter[struct{}](2)
+		assert.Equal(t, alice, l.Attributes(alice, m))
+	})
 
-		t.Run("AtLimit/DoesNotExist", func(t *testing.T) {
-			l := newLimiter[struct{}](2)
-			assert.Equal(t, overflowSet, l.Attributes(bob, m))
-		})
-	}
+	t.Run("AtLimit/DoesNotExist", func(t *testing.T) {
+		l := newLimiter[struct{}](2)
+		assert.Equal(t, overflowSet, l.Attributes(bob, m))
+	})
 }
