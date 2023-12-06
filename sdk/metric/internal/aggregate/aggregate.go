@@ -44,7 +44,13 @@ type Builder[N int64 | float64] struct {
 	// Filter is the attribute filter the aggregate function will use on the
 	// input of measurements.
 	Filter attribute.Filter
-	// TODO: doc
+	// AggregationLimit is the cardinality limit of measurement attributes. Any
+	// measurement for new attributes once the limit has been reached will be
+	// aggregated into a single aggregate for the "otel.metric.overflow"
+	// attribute.
+	//
+	// If AggregationLimit is less than or equal to zero there will not be an
+	// aggregation limit imposed (i.e. unlimited attribute sets).
 	AggregationLimit int
 }
 
