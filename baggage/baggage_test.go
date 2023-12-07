@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/internal/baggage"
 )
 
@@ -44,7 +45,7 @@ func TestKeyRegExp(t *testing.T) {
 	}
 
 	for _, ch := range invalidKeyRune {
-		assert.False(t, keyValidChar(ch))
+		assert.False(t, validateKeyChar(ch))
 	}
 }
 
@@ -59,7 +60,7 @@ func TestValueRegExp(t *testing.T) {
 	}
 
 	for _, ch := range invalidValueRune {
-		assert.False(t, valueValidChar(ch))
+		assert.False(t, validateValueChar(ch))
 	}
 }
 

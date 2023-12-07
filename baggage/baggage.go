@@ -56,7 +56,7 @@ type Property struct {
 //
 // If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
-	if !keyMatchString(key) {
+	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -68,10 +68,10 @@ func NewKeyProperty(key string) (Property, error) {
 //
 // If key or value are invalid, an error will be returned.
 func NewKeyValueProperty(key, value string) (Property, error) {
-	if !keyMatchString(key) {
+	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueMatchString(value) {
+	if !validateValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -95,18 +95,9 @@ func parseProperty(property string) (Property, error) {
 		return newInvalidProperty(), nil
 	}
 
-	match := propertyFindStringSubmatch(property)
-	if len(match) != 4 {
+	p, ok := parsePropertyInternal(property)
+	if !ok {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidProperty, property)
-	}
-
-	var p Property
-	if match[1] != "" {
-		p.key = match[1]
-	} else {
-		p.key = match[2]
-		p.value = match[3]
-		p.hasValue = true
 	}
 
 	return p, nil
@@ -119,10 +110,10 @@ func (p Property) validate() error {
 		return fmt.Errorf("invalid property: %w", err)
 	}
 
-	if !keyMatchString(p.key) {
+	if !validateKey(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
-	if p.hasValue && !valueMatchString(p.value) {
+	if p.hasValue && !validateValue(p.value) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	if !p.hasValue && p.value != "" {
@@ -294,10 +285,10 @@ func parseMember(member string) (Member, error) {
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
 	}
-	if !keyMatchString(key) {
+	if !validateKey(key) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueMatchString(value) {
+	if !validateValue(value) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -312,10 +303,10 @@ func (m Member) validate() error {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
 	}
 
-	if !keyMatchString(m.key) {
+	if !validateKey(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
 	}
-	if !valueMatchString(m.value) {
+	if !validateValue(m.value) {
 		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
@@ -540,45 +531,48 @@ func (b Baggage) String() string {
 	return strings.Join(members, listDelimiter)
 }
 
-// They must follow the following rules (regex syntax):
-// keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
-// valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
-// propertyRe ^(?:\s*([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)\s*|\s*([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)\s*=\s*([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)\s*)$.
-
-func propertyFindStringSubmatch(s string) []string {
+// parsePropertyInternal attempts to decode a Property from the passed string which must ensure it follows the spec
+// at https://www.w3.org/TR/baggage/
+func parsePropertyInternal(s string) (p Property, ok bool) {
 	index := skipSpace(s, 0)
 
 	keyStart := index
 	keyEnd := index
 	for _, c := range s[keyStart:] {
-		if !keyValidChar(c) {
+		if !validateKeyChar(c) {
 			break
 		}
 		keyEnd++
 	}
 
 	if keyStart == keyEnd {
-		return nil
+		return
 	}
 
 	index = skipSpace(s, keyEnd)
 
+	p.key = s[keyStart:keyEnd]
+
 	// this matches only the key
 	if index == len(s) {
-		return []string{s, s[keyStart:keyEnd], "", ""}
+		ok = true
+		return
 	}
 
 	// now let see if it matches the key and the value
 	if s[index] != keyValueDelimiter[0] {
-		return nil
+		return
 	}
+
+	// we set it to true as soon as we find the delimiter even if it is empty
+	p.hasValue = true
 
 	index = skipSpace(s, index+1)
 
 	valueStart := index
 	valueEnd := index
 	for _, c := range s[valueStart:] {
-		if !valueValidChar(c) {
+		if !validateValueChar(c) {
 			break
 		}
 		valueEnd++
@@ -586,11 +580,13 @@ func propertyFindStringSubmatch(s string) []string {
 
 	index = skipSpace(s, valueEnd)
 	if index != len(s) {
-		return nil
+		return
 	}
 
 	// value can be empty, so no need to do the same check here
-	return []string{s, "", s[keyStart:keyEnd], s[valueStart:valueEnd]}
+	ok = true
+	p.value = s[valueStart:valueEnd]
+	return
 }
 
 func skipSpace(s string, offset int) int {
@@ -609,13 +605,13 @@ func skipSpace(s string, offset int) int {
 	return i
 }
 
-func keyMatchString(s string) bool {
+func validateKey(s string) bool {
 	if len(s) == 0 {
 		return false
 	}
 
 	for _, c := range s {
-		if !keyValidChar(c) {
+		if !validateKeyChar(c) {
 			return false
 		}
 	}
@@ -623,7 +619,7 @@ func keyMatchString(s string) bool {
 	return true
 }
 
-func keyValidChar(c int32) bool {
+func validateKeyChar(c int32) bool {
 	return (c >= 0x23 && c <= 0x27) ||
 		(c >= 0x30 && c <= 0x39) ||
 		(c >= 0x41 && c <= 0x5a) ||
@@ -637,9 +633,9 @@ func keyValidChar(c int32) bool {
 		c == 0x7e
 }
 
-func valueMatchString(s string) bool {
+func validateValue(s string) bool {
 	for _, c := range s {
-		if !valueValidChar(c) {
+		if !validateValueChar(c) {
 			return false
 		}
 	}
@@ -647,7 +643,7 @@ func valueMatchString(s string) bool {
 	return true
 }
 
-func valueValidChar(c int32) bool {
+func validateValueChar(c int32) bool {
 	return (c >= 0x23 && c <= 0x2b) ||
 		(c >= 0x2d && c <= 0x3a) ||
 		(c >= 0x3c && c <= 0x5b) ||
