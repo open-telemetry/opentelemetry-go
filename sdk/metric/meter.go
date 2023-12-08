@@ -115,6 +115,7 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 		if err != nil {
 			return inst, err
 		}
+		// Drop aggregation
 		if len(in) == 0 {
 			continue
 		}
@@ -230,6 +231,7 @@ func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Fl
 		if err != nil {
 			return inst, err
 		}
+		// Drop aggregation
 		if len(in) == 0 {
 			continue
 		}
