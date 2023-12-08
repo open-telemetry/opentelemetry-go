@@ -546,7 +546,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	if keyStart == keyEnd {
-		// Invalid key.
+		// Empty string after skipping whitespaces.
 		return
 	}
 
