@@ -552,11 +552,10 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 
 	index = skipSpace(s, keyEnd)
 
-	p.key = s[keyStart:keyEnd]
-
 	if index == len(s) {
 		// There is only a key (no value).
 		ok = true
+		p.key = s[keyStart:keyEnd]
 		return
 	}
 
@@ -584,6 +583,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	ok = true
+	p.key = s[keyStart:keyEnd]
 	// If there is a delimiter, we set hasValue to true even if the value is empty.
 	p.hasValue = true
 	p.value = s[valueStart:valueEnd]
