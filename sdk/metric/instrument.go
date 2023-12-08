@@ -264,9 +264,9 @@ var (
 	_ metric.Float64ObservableGauge         = float64Observable{}
 )
 
-func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
+func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string) float64Observable {
 	return float64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable[float64](m, kind, name, desc, u),
 	}
 }
 
@@ -285,9 +285,9 @@ var (
 	_ metric.Int64ObservableGauge         = int64Observable{}
 )
 
-func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
+func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string) int64Observable {
 	return int64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable[int64](m, kind, name, desc, u),
 	}
 }
 
@@ -296,10 +296,10 @@ type observable[N int64 | float64] struct {
 	observablID[N]
 
 	meter    *meter
-	measures []aggregate.Measure[N]
+	measures measures[N]
 }
 
-func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
+func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
@@ -308,14 +308,24 @@ func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc,
 			unit:        u,
 			scope:       m.scope,
 		},
-		meter:    m,
-		measures: meas,
+		meter: m,
 	}
 }
 
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, s attribute.Set) {
-	for _, in := range o.measures {
+	o.measures.observe(val, s)
+}
+
+func (o *observable[N]) appendMeasures(meas []aggregate.Measure[N]) {
+	o.measures = append(o.measures, meas...)
+}
+
+type measures[N int64 | float64] []aggregate.Measure[N]
+
+// observe records the val for the set of attrs.
+func (m measures[N]) observe(val N, s attribute.Set) {
+	for _, in := range m {
 		in(context.Background(), val, s)
 	}
 }
