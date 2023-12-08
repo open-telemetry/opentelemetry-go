@@ -560,7 +560,6 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		return
 	}
 
-
 	if s[index] != keyValueDelimiter[0] {
 		// Bad key-value delimiter.
 		return
