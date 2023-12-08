@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/internal/baggage"
 )
 
@@ -33,7 +32,7 @@ func init() {
 	rng = rand.New(rand.NewSource(1))
 }
 
-func TestKeyRegExp(t *testing.T) {
+func TestKeyValidChar(t *testing.T) {
 	// ASCII only
 	invalidKeyRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
@@ -49,7 +48,7 @@ func TestKeyRegExp(t *testing.T) {
 	}
 }
 
-func TestValueRegExp(t *testing.T) {
+func TestValueValidChar(t *testing.T) {
 	// ASCII only
 	invalidValueRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
