@@ -591,6 +591,20 @@ this.
 
 [^3]: https://github.com/open-telemetry/opentelemetry-go/issues/3548
 
+### Honoring context cancellation
+
+The implementation of OpenTelemetry API that is responsible for telemetry recording
+(starting a span, making a synchronous metric measurement, emitting a log)
+must not honor the cancelation of the passed context.
+Among other things, the telemetry may be necessary to diagnose a
+cancellation-related problem.
+The context can be used to pass request-scoped values
+such as Trace ID and Span ID.
+
+For other use cases
+(exporting telemetry, force flushing telemetry, shutting down a signal provider)
+the context cancelation should be honored.
+
 ## Approvers and Maintainers
 
 ### Approvers
