@@ -32,7 +32,7 @@ func init() {
 	rng = rand.New(rand.NewSource(1))
 }
 
-func TestKeyValidChar(t *testing.T) {
+func TestValidateKeyChar(t *testing.T) {
 	// ASCII only
 	invalidKeyRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
@@ -48,7 +48,7 @@ func TestKeyValidChar(t *testing.T) {
 	}
 }
 
-func TestValueValidChar(t *testing.T) {
+func TestValidateValueChar(t *testing.T) {
 	// ASCII only
 	invalidValueRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
