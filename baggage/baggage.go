@@ -533,6 +533,7 @@ func (b Baggage) String() string {
 
 // parsePropertyInternal attempts to decode a Property from the passed string.
 func parsePropertyInternal(s string) (p Property, ok bool) {
+	// Attempting to parse the key.
 	index := skipSpace(s, 0)
 
 	keyStart := index
@@ -545,6 +546,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	if keyStart == keyEnd {
+		// Invalid key.
 		return
 	}
 
@@ -552,20 +554,19 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 
 	p.key = s[keyStart:keyEnd]
 
-	// this matches only the key
 	if index == len(s) {
+		// There is only a key (no value).
 		ok = true
 		return
 	}
 
-	// now let see if it matches the key and the value
+
 	if s[index] != keyValueDelimiter[0] {
+		// Bad key-value delimiter.
 		return
 	}
 
-	// we set it to true as soon as we find the delimiter even if it is empty
-	p.hasValue = true
-
+	// Attempting to parse the value.
 	index = skipSpace(s, index+1)
 
 	valueStart := index
@@ -579,11 +580,13 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 
 	index = skipSpace(s, valueEnd)
 	if index != len(s) {
+		// Invalid value.
 		return
 	}
 
-	// value can be empty, so no need to do the same check here
 	ok = true
+	// If there is a delimiter, we set hasValue to true even if the value is empty.
+	p.hasValue = true
 	p.value = s[valueStart:valueEnd]
 	return
 }
