@@ -18,7 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Record synchronous measurements when the passed context is done instead of dropping in `go.opentelemetry.io/otel/sdk/metric`. (#4671)
+- Record synchronous measurements when the passed context is canceled instead of dropping in `go.opentelemetry.io/otel/sdk/metric`.
+  If you do not want to make measurment in such scenario then you need to handle it yourself.
+  You can do it e.g. by adding `if ctx.Err() != nil` condition before making the measurement.
+  However, we believe that you rather not want it as the telemetry may be necessary to diagnose a cancellation-related problem. (#4671)
 - Improve `go.opentelemetry.io/otel/trace.TraceState`'s performance. (#4722)
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 
