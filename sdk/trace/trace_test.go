@@ -1133,6 +1133,18 @@ func TestNilSpanEnd(t *testing.T) {
 	span.End()
 }
 
+func TestSpanWithCanceledContext(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
+	span.End()
+
+	assert.Equal(t, 1, te.Len(), "span recording should ignore context cancelation")
+}
+
 func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
