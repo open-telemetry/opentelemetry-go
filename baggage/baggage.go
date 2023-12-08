@@ -531,7 +531,8 @@ func (b Baggage) String() string {
 	return strings.Join(members, listDelimiter)
 }
 
-// parsePropertyInternal attempts to decode a Property from the passed string.
+// parsePropertyInternal attempts to decode a Property from the passed string. It follows the spec at
+// https://www.w3.org/TR/baggage/#definition.
 func parsePropertyInternal(s string) (p Property, ok bool) {
 	// Attempting to parse the key.
 	index := skipSpace(s, 0)
