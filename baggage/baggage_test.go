@@ -415,8 +415,13 @@ func TestBaggageParse(t *testing.T) {
 			err:  errInvalidValue,
 		},
 		{
-			name: "invalid property: invalid key",
+			name: "invalid property: no key",
 			in:   "foo=1;=v",
+			err:  errInvalidProperty,
+		},
+		{
+			name: "invalid property: invalid key",
+			in:   "foo=1;key\\=v",
 			err:  errInvalidProperty,
 		},
 		{
