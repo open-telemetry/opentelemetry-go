@@ -1142,7 +1142,7 @@ func TestSpanWithCanceledContext(t *testing.T) {
 	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
 	span.End()
 
-	assert.Equal(t, 1, te.Len(), "span recording should ignore context cancelation")
+	assert.Equal(t, 1, te.Len(), "span recording must ignore context cancelation")
 }
 
 func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
