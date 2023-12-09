@@ -94,14 +94,6 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-// addCallback registers a single instrument callback to be run when
-// `produce()` is called.
-func (p *pipeline) addCallback(cback func(context.Context) error) {
-	p.Lock()
-	defer p.Unlock()
-	p.callbacks = append(p.callbacks, cback)
-}
-
 type multiCallback func(context.Context) error
 
 // addMultiCallback registers a multi-instrument callback to be run when
@@ -280,6 +272,14 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 		measures = append(measures, in)
 	}
 	return measures, errs.errorOrNil()
+}
+
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (i *inserter[N]) addCallback(cback func(context.Context) error) {
+	i.pipeline.Lock()
+	defer i.pipeline.Unlock()
+	i.pipeline.callbacks = append(i.pipeline.callbacks, cback)
 }
 
 var aggIDCount uint64
@@ -562,12 +562,6 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View) pipeli
 		pipes = append(pipes, p)
 	}
 	return pipes
-}
-
-func (p pipelines) registerCallback(cback func(context.Context) error) {
-	for _, pipe := range p {
-		pipe.addCallback(cback)
-	}
 }
 
 func (p pipelines) registerMultiCallback(c multiCallback) metric.Registration {

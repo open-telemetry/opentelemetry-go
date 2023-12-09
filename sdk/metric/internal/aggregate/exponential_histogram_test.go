@@ -913,6 +913,35 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 			},
 		},
 		{
+			input: []arg[N]{
+				{ctx, 2, alice},
+				{ctx, 3, alice},
+				{ctx, 8, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Count:      9,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        44,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 6, 2},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			input: []arg[N]{},
 			expect: output{
 				n: 1,
@@ -923,14 +952,14 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      6,
+							Count:      9,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        31,
+							Sum:        44,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
-								Counts: []uint64{1, 4, 1},
+								Counts: []uint64{1, 6, 2},
 							},
 						},
 					},
@@ -956,14 +985,14 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      6,
+							Count:      9,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        31,
+							Sum:        44,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
-								Counts: []uint64{1, 4, 1},
+								Counts: []uint64{1, 6, 2},
 							},
 						},
 						{
