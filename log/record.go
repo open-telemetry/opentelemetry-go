@@ -39,7 +39,7 @@ type Record struct {
 
 	// The list of attributes except for those in front.
 	// Invariants:
-	//   - len(back) > 0 iff nFront == len(front)
+	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero. Used to detect mistakes.
 	back []attribute.KeyValue
 }
