@@ -534,9 +534,12 @@ func (b Baggage) String() string {
 // parsePropertyInternal attempts to decode a Property from the passed string. It follows the spec at
 // https://www.w3.org/TR/baggage/#definition.
 func parsePropertyInternal(s string) (p Property, ok bool) {
+	// For the entire function we will use "   key    =    value  " as an example.
 	// Attempting to parse the key.
+	// First skip spaces at the beginning "<   >key    =    value  " (they could be empty).
 	index := skipSpace(s, 0)
 
+	// now parse the key: "   <key>    =    value  ".
 	keyStart := index
 	keyEnd := index
 	for _, c := range s[keyStart:] {
@@ -546,28 +549,32 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		keyEnd++
 	}
 
+	// if we couldn't find any valid key character, it means the key is either empty or invalid.
 	if keyStart == keyEnd {
-		// Empty string after skipping whitespaces.
 		return
 	}
 
+	// now skip spaces after the key: "   key<    >=    value  ".
 	index = skipSpace(s, keyEnd)
 
+	// a key could have no value, like: "   key    "
 	if index == len(s) {
-		// There is only a key (no value).
 		ok = true
 		p.key = s[keyStart:keyEnd]
 		return
 	}
 
+	// if we have not reached the end and we can't find the '=' delimiter, it means the property is invalid.
 	if s[index] != keyValueDelimiter[0] {
-		// Bad key-value delimiter or invalid key.
 		return
 	}
 
 	// Attempting to parse the value.
+	// now match: "   key    =<    >value  ".
 	index = skipSpace(s, index+1)
 
+	// now match the value string: "   key    =    <value>  ". A valid property can be: "   key    =". So, we don't have
+	// to check if the value is empty.
 	valueStart := index
 	valueEnd := index
 	for _, c := range s[valueStart:] {
@@ -577,15 +584,17 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		valueEnd++
 	}
 
+	// skip all trailing whitespaces: "   key    =    value<  >".
 	index = skipSpace(s, valueEnd)
+
+	// If after looking for the value and skipping whitespaces we have not reached the end, it means the property is
+	// invalid, something like: "   key    =    value  value1".
 	if index != len(s) {
-		// Invalid value.
 		return
 	}
 
 	ok = true
 	p.key = s[keyStart:keyEnd]
-	// If there is a delimiter, we set hasValue to true even if the value is empty.
 	p.hasValue = true
 	p.value = s[valueStart:valueEnd]
 	return
