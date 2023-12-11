@@ -1589,7 +1589,8 @@ func TestObservableExample(t *testing.T) {
 		)
 
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
-		reader := NewManualReader(WithTemporalitySelector(selector))
+		reader1 := NewManualReader(WithTemporalitySelector(selector))
+		reader2 := NewManualReader(WithTemporalitySelector(selector))
 
 		allowAll := attribute.NewDenyKeysFilter()
 		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: allowAll})
@@ -1597,7 +1598,7 @@ func TestObservableExample(t *testing.T) {
 		filter := attribute.NewDenyKeysFilter("tid")
 		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
 
-		mp := NewMeterProvider(WithReader(reader), WithView(noFiltered, filtered))
+		mp := NewMeterProvider(WithReader(reader1), WithReader(reader2), WithView(noFiltered, filtered))
 		meter := mp.Meter(scopeName)
 
 		observations := make(map[attribute.Set]int64)
@@ -1644,7 +1645,13 @@ func TestObservableExample(t *testing.T) {
 		collect := func(t *testing.T) {
 			t.Helper()
 			got := metricdata.ResourceMetrics{}
-			err := reader.Collect(context.Background(), &got)
+			err := reader1.Collect(context.Background(), &got)
+			require.NoError(t, err)
+			require.Len(t, got.ScopeMetrics, 1)
+			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+
+			got = metricdata.ResourceMetrics{}
+			err = reader2.Collect(context.Background(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
