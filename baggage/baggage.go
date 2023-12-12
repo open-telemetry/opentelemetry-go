@@ -604,12 +604,7 @@ func skipSpace(s string, offset int) int {
 	i := offset
 	for ; i < len(s); i++ {
 		c := s[i]
-		if c != ' ' &&
-			c != '\t' &&
-			c != '\n' &&
-			c != '\v' &&
-			c != '\f' &&
-			c != '\r' {
+		if c != ' ' && c != '\t' {
 			break
 		}
 	}
