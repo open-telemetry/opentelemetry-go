@@ -19,7 +19,7 @@ import (
 	"errors"
 	"strings"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.23.1"
 )
 
 type hostIDProvider func() (string, error)
