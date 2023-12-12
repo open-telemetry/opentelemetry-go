@@ -277,6 +277,6 @@ func ExampleMeter_attributes() {
 		statusCode := http.StatusOK
 
 		apiCounter.Add(r.Context(), 1,
-			metric.WithAttributes(semconv.HTTPStatusCode(statusCode)))
+			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
 	})
 }
