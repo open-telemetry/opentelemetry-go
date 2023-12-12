@@ -291,8 +291,8 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 				attribute.String("peer.hostname", "test-peer-hostname"),
-				attribute.String("net.sock.peer.addr", "1.2.3.4"),
-				attribute.Int64("net.sock.peer.port", 9876),
+				attribute.String("network.peer.address", "1.2.3.4"),
+				attribute.Int64("network.peer.port", 9876),
 			},
 			Events: []tracesdk.Event{
 				{
@@ -745,17 +745,17 @@ func TestModelConversion(t *testing.T) {
 				},
 			},
 			Tags: map[string]string{
-				"attr1":              "42",
-				"attr2":              "bar",
-				"net.sock.peer.addr": "1.2.3.4",
-				"net.sock.peer.port": "9876",
-				"peer.hostname":      "test-peer-hostname",
-				"otel.status_code":   "ERROR",
-				"error":              "404, file not found",
-				"service.name":       "model-test",
-				"service.version":    "0.1.0",
-				"resource-attr1":     "42",
-				"resource-attr2":     "[0,1,2]",
+				"attr1":                "42",
+				"attr2":                "bar",
+				"network.peer.address": "1.2.3.4",
+				"network.peer.port":    "9876",
+				"peer.hostname":        "test-peer-hostname",
+				"otel.status_code":     "ERROR",
+				"error":                "404, file not found",
+				"service.name":         "model-test",
+				"service.version":      "0.1.0",
+				"resource-attr1":       "42",
+				"resource-attr2":       "[0,1,2]",
 			},
 		},
 		// model for span data of producer kind
@@ -1096,8 +1096,8 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.PeerService("peer-service-test"),
-					semconv.NetPeerName("peer-name-test"),
-					semconv.NetSockPeerName("net-sock-peer-test"),
+					semconv.ServerAddress("peer-name-test"),
+					semconv.NetworkPeerAddress("10.1.2.80"),
 				},
 			},
 			want: &zkmodel.Endpoint{
@@ -1105,16 +1105,16 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "net-sock-peer-rank",
+			name: "network-peer-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetSockPeerName("net-sock-peer-test"),
+					semconv.NetworkPeerAddress("10.1.2.80"),
 					semconv.DBName("db-name-test"),
 				},
 			},
 			want: &zkmodel.Endpoint{
-				ServiceName: "net-sock-peer-test",
+				IPv4: net.ParseIP("10.1.2.80"),
 			},
 		},
 		{
@@ -1162,7 +1162,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetSockPeerAddr("INVALID"),
+					semconv.NetworkPeerAddress("INVALID"),
 				},
 			},
 			want: nil,
@@ -1172,7 +1172,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetSockPeerAddr("0:0:1:5ee:bad:c0de:0:0"),
+					semconv.NetworkPeerAddress("0:0:1:5ee:bad:c0de:0:0"),
 				},
 			},
 			want: &zkmodel.Endpoint{
@@ -1184,8 +1184,8 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.NetSockPeerAddr("1.2.3.4"),
-					semconv.NetSockPeerPort(9876),
+					semconv.NetworkPeerAddress("1.2.3.4"),
+					semconv.NetworkPeerPort(9876),
 				},
 			},
 			want: &zkmodel.Endpoint{
