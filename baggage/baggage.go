@@ -567,7 +567,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 
 	// If we have not reached the end and we can't find the '=' delimiter,
 	// it means the property is invalid.
-	if s[index] != keyValueDelimiter[0] {	
+	if s[index] != keyValueDelimiter[0] {
 		return
 	}
 
