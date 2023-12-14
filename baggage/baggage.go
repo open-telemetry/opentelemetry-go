@@ -325,7 +325,7 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // specification.
 func (m Member) String() string {
 	// A key is just an ASCII string, but a value is URL encoded UTF-8.
-	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, url.QueryEscape(m.value))
+	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, url.PathEscape(m.value))
 	if len(m.properties) > 0 {
 		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
 	}

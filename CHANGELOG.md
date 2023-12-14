@@ -24,6 +24,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 - Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
 
+### Fixed
+
+- Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#????)
+
 ## [1.21.0/0.44.0] 2023-11-16
 
 ### Removed

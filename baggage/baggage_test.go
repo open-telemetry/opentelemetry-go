@@ -383,6 +383,13 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "= value",
+			in:   "key==",
+			want: baggage.List{
+				"key": {Value: "="},
+			},
+		},
+		{
 			name: "url encoded value",
 			in:   "key1=val%252",
 			want: baggage.List{
@@ -482,16 +489,23 @@ func TestBaggageString(t *testing.T) {
 		},
 		{
 			name: "URL encoded value",
-			out:  "foo=1%3D1",
+			out:  "foo=%20%22%2C%3B%5C%25%0D%0A%09",
 			baggage: baggage.List{
-				"foo": {Value: "1=1"},
+				"foo": {Value: " \",;\\%\r\n\t"}, // characters to be precent-escaped according to https://www.w3.org/TR/baggage/#definition
 			},
 		},
 		{
 			name: "plus",
-			out:  "foo=1%2B1",
+			out:  "foo=1+1",
 			baggage: baggage.List{
 				"foo": {Value: "1+1"},
+			},
+		},
+		{
+			name: "equal",
+			out:  "foo=1=1",
+			baggage: baggage.List{
+				"foo": {Value: "1=1"},
 			},
 		},
 		{
@@ -556,8 +570,10 @@ func TestBaggageString(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		b := Baggage{tc.baggage}
-		assert.Equal(t, tc.out, orderer(b.String()))
+		t.Run(tc.name, func(t *testing.T) {
+			b := Baggage{tc.baggage}
+			assert.Equal(t, orderer(b.String()), tc.out)
+		})
 	}
 }
 
@@ -858,9 +874,9 @@ func TestMemberString(t *testing.T) {
 	memberStr := member.String()
 	assert.Equal(t, memberStr, "key=value")
 	// encoded key
-	member, _ = NewMember("key", "%3B")
+	member, _ = NewMember("key", "%3B%20")
 	memberStr = member.String()
-	assert.Equal(t, memberStr, "key=%3B")
+	assert.Equal(t, memberStr, "key=%3B%20")
 }
 
 var benchBaggage Baggage
