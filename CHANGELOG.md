@@ -26,7 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#????)
+- Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#4756)
 
 ## [1.21.0/0.44.0] 2023-11-16
 
