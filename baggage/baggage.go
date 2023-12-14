@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/otel/internal/baggage"
@@ -32,16 +31,6 @@ const (
 	listDelimiter     = ","
 	keyValueDelimiter = "="
 	propertyDelimiter = ";"
-
-	keyDef      = `([\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5a\x5e-\x7a\x7c\x7e]+)`
-	valueDef    = `([\x21\x23-\x2b\x2d-\x3a\x3c-\x5B\x5D-\x7e]*)`
-	keyValueDef = `\s*` + keyDef + `\s*` + keyValueDelimiter + `\s*` + valueDef + `\s*`
-)
-
-var (
-	keyRe      = regexp.MustCompile(`^` + keyDef + `$`)
-	valueRe    = regexp.MustCompile(`^` + valueDef + `$`)
-	propertyRe = regexp.MustCompile(`^(?:\s*` + keyDef + `\s*|` + keyValueDef + `)$`)
 )
 
 var (
@@ -67,7 +56,7 @@ type Property struct {
 //
 // If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
-	if !keyRe.MatchString(key) {
+	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -79,10 +68,10 @@ func NewKeyProperty(key string) (Property, error) {
 //
 // If key or value are invalid, an error will be returned.
 func NewKeyValueProperty(key, value string) (Property, error) {
-	if !keyRe.MatchString(key) {
+	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueRe.MatchString(value) {
+	if !validateValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -106,18 +95,9 @@ func parseProperty(property string) (Property, error) {
 		return newInvalidProperty(), nil
 	}
 
-	match := propertyRe.FindStringSubmatch(property)
-	if len(match) != 4 {
+	p, ok := parsePropertyInternal(property)
+	if !ok {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidProperty, property)
-	}
-
-	var p Property
-	if match[1] != "" {
-		p.key = match[1]
-	} else {
-		p.key = match[2]
-		p.value = match[3]
-		p.hasValue = true
 	}
 
 	return p, nil
@@ -130,10 +110,10 @@ func (p Property) validate() error {
 		return fmt.Errorf("invalid property: %w", err)
 	}
 
-	if !keyRe.MatchString(p.key) {
+	if !validateKey(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
-	if p.hasValue && !valueRe.MatchString(p.value) {
+	if p.hasValue && !validateValue(p.value) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	if !p.hasValue && p.value != "" {
@@ -305,10 +285,10 @@ func parseMember(member string) (Member, error) {
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
 	}
-	if !keyRe.MatchString(key) {
+	if !validateKey(key) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !valueRe.MatchString(value) {
+	if !validateValue(value) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -323,10 +303,10 @@ func (m Member) validate() error {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
 	}
 
-	if !keyRe.MatchString(m.key) {
+	if !validateKey(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
 	}
-	if !valueRe.MatchString(m.value) {
+	if !validateValue(m.value) {
 		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
@@ -549,4 +529,134 @@ func (b Baggage) String() string {
 		}.String())
 	}
 	return strings.Join(members, listDelimiter)
+}
+
+// parsePropertyInternal attempts to decode a Property from the passed string.
+// It follows the spec at https://www.w3.org/TR/baggage/#definition.
+func parsePropertyInternal(s string) (p Property, ok bool) {
+	// For the entire function we will use "   key    =    value  " as an example.
+	// Attempting to parse the key.
+	// First skip spaces at the beginning "<   >key    =    value  " (they could be empty).
+	index := skipSpace(s, 0)
+
+	// Parse the key: "   <key>    =    value  ".
+	keyStart := index
+	keyEnd := index
+	for _, c := range s[keyStart:] {
+		if !validateKeyChar(c) {
+			break
+		}
+		keyEnd++
+	}
+
+	// If we couldn't find any valid key character,
+	// it means the key is either empty or invalid.
+	if keyStart == keyEnd {
+		return
+	}
+
+	// Skip spaces after the key: "   key<    >=    value  ".
+	index = skipSpace(s, keyEnd)
+
+	if index == len(s) {
+		// A key can have no value, like: "   key    ".
+		ok = true
+		p.key = s[keyStart:keyEnd]
+		return
+	}
+
+	// If we have not reached the end and we can't find the '=' delimiter,
+	// it means the property is invalid.
+	if s[index] != keyValueDelimiter[0] {
+		return
+	}
+
+	// Attempting to parse the value.
+	// Match: "   key    =<    >value  ".
+	index = skipSpace(s, index+1)
+
+	// Match the value string: "   key    =    <value>  ".
+	// A valid property can be: "   key    =".
+	// Therefore, we don't have to check if the value is empty.
+	valueStart := index
+	valueEnd := index
+	for _, c := range s[valueStart:] {
+		if !validateValueChar(c) {
+			break
+		}
+		valueEnd++
+	}
+
+	// Skip all trailing whitespaces: "   key    =    value<  >".
+	index = skipSpace(s, valueEnd)
+
+	// If after looking for the value and skipping whitespaces
+	// we have not reached the end, it means the property is
+	// invalid, something like: "   key    =    value  value1".
+	if index != len(s) {
+		return
+	}
+
+	ok = true
+	p.key = s[keyStart:keyEnd]
+	p.hasValue = true
+	p.value = s[valueStart:valueEnd]
+	return
+}
+
+func skipSpace(s string, offset int) int {
+	i := offset
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c != ' ' && c != '\t' {
+			break
+		}
+	}
+	return i
+}
+
+func validateKey(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, c := range s {
+		if !validateKeyChar(c) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func validateKeyChar(c int32) bool {
+	return (c >= 0x23 && c <= 0x27) ||
+		(c >= 0x30 && c <= 0x39) ||
+		(c >= 0x41 && c <= 0x5a) ||
+		(c >= 0x5e && c <= 0x7a) ||
+		c == 0x21 ||
+		c == 0x2a ||
+		c == 0x2b ||
+		c == 0x2d ||
+		c == 0x2e ||
+		c == 0x7c ||
+		c == 0x7e
+}
+
+func validateValue(s string) bool {
+	for _, c := range s {
+		if !validateValueChar(c) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func validateValueChar(c int32) bool {
+	return (c >= 0x23 && c <= 0x2b) ||
+		(c >= 0x2d && c <= 0x3a) ||
+		(c >= 0x3c && c <= 0x5b) ||
+		(c >= 0x5d && c <= 0x7e) ||
+		c == 0x21
 }
