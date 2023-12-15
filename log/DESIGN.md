@@ -242,6 +242,23 @@ Having access to attributes via methods
 and access to other properities via fields
 could be more confusing for the users.
 
+### Rejected Alternative: Logger.WithAttributes
+
+The was to add `WithAttributes` to the `Logger` interface.
+Then `Record` could be a simple struct with only exported fields. 
+The idea was that the SDK would implement the performance improvements
+instead of doing it in the API.
+This would allow having different optimisation strategies.
+
+The main problem of this proposal was that the variadic slice passed to
+an interface method is always heap allocated.
+
+Moreover, the logger returned by `WithAttribute` was allocated on the heap.
+
+At last, the proposal was not specification compliant.
+
+The proposal analysis was done [here](https://github.com/pellared/opentelemetry-go/pull/3).	
+
 ## Open issues (if applicable)
 
 <!-- A discussion of issues relating to this proposal for which the author does not
