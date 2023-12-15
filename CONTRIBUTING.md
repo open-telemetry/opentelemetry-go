@@ -591,19 +591,25 @@ this.
 
 [^3]: https://github.com/open-telemetry/opentelemetry-go/issues/3548
 
-### Honoring context cancellation
+### Ignoring context cancellation
 
-The implementation of OpenTelemetry API that is responsible for telemetry recording
-(starting a span, making a synchronous metric measurement, emitting a log)
-must not honor the cancelation of the passed context.
-Among other things, the telemetry may be necessary to diagnose a
-cancellation-related problem.
-The context can be used to pass request-scoped values
-such as Trace ID and Span ID.
+OpenTelemetry API implementations need to ignore the cancellation of the context that are
+passed when recording a value (e.g. starting a span, recording a measurement, emitting a log).
+Recording methods should not return an error describing the cancellation state of the context
+when they complete, nor should they abort any work.
 
-For other use cases
-(exporting telemetry, force flushing telemetry, shutting down a signal provider)
-the context cancelation should be honored.
+This rule may not apply if the OpenTelemetry specification defines a timeout mechanism for
+the method. In that case the context cancellation can be used for the timeout with the
+restriction that this behavior is documented for the method. Otherwise, timeouts
+are expected to be handled by the user calling the API, not the implementation.
+
+Stoppage of the telemetry pipeline is handled by calling the appropriate `Shutdown` method
+of a provider. It is assumed the context passed from a user is not used for this purpose.
+
+Outside of the direct recording of telemetry from the API (e.g. exporting telemetry,
+force flushing telemetry, shutting down a signal provider) the context cancellation
+should be honored. This means all work done on behalf of the user provided context
+should be canceled.
 
 ## Approvers and Maintainers
 
