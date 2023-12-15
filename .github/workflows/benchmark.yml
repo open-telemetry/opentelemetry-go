@@ -1,21 +1,26 @@
 name: Benchmark
 on:
   push:
-    branches:
-      - main
+    tags:
+      - v1.* 
+  workflow_dispatch: 
+
 env:
-  DEFAULT_GO_VERSION: "1.20"
+  DEFAULT_GO_VERSION: "~1.21.3"
 jobs:
   benchmark:
     name: Benchmarks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
       - name: Run benchmarks
-        run: make test-bench | tee output.txt
+        run: make benchmark | tee output.txt
       - name: Download previous benchmark data
         uses: actions/cache@v3
         with:
@@ -28,6 +33,8 @@ jobs:
           tool: 'go'
           output-file-path: output.txt
           external-data-json-path: ./benchmarks/data.json
-          auto-push: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: benchmarks
+          auto-push: true
           fail-on-alert: false
           alert-threshold: "400%"

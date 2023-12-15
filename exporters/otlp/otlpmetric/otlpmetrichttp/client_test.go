@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type clientShim struct {
@@ -40,9 +41,11 @@ type clientShim struct {
 func (clientShim) Temporality(metric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
+
 func (clientShim) Aggregation(metric.InstrumentKind) metric.Aggregation {
 	return nil
 }
+
 func (clientShim) ForceFlush(ctx context.Context) error {
 	return ctx.Err()
 }
@@ -61,6 +64,30 @@ func TestClient(t *testing.T) {
 	}
 
 	t.Run("Integration", otest.RunClientTests(factory))
+}
+
+func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
+	ctx := context.Background()
+	coll, err := otest.NewHTTPCollector("", nil, otest.WithHTTPCollectorRespondingPlainText())
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics")
+}
+
+func TestNewWithInvalidEndpoint(t *testing.T) {
+	ctx := context.Background()
+	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
+	assert.Error(t, err)
+	assert.Nil(t, exp)
 }
 
 func TestConfig(t *testing.T) {
@@ -91,7 +118,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, exp.Shutdown(ctx))
 
 		got := coll.Headers()
-		require.Regexp(t, "OTel OTLP Exporter Go/[01]\\..*", got)
+		require.Regexp(t, "OTel Go OTLP over HTTP/protobuf metrics exporter/[01]\\..*", got)
 		require.Contains(t, got, key)
 		assert.Equal(t, got[key], []string{headers[key]})
 	})
@@ -111,7 +138,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+		assert.ErrorAs(t, err, new(retryableError))
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -125,9 +152,9 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
-		rCh := make(chan otest.ExportResult, 3)
+		rCh := make(chan otest.ExportResult, 5)
 		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
-		// Both retryable errors.
+		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
 			Err:    emptyErr,
@@ -135,6 +162,14 @@ func TestConfig(t *testing.T) {
 		}}
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusTooManyRequests,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusGatewayTimeout,
+			Err:    emptyErr,
+		}}
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusBadGateway,
 			Err:    emptyErr,
 		}}
 		rCh <- otest.ExportResult{}
@@ -151,17 +186,6 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
-	})
-
-	t.Run("WithURLPath", func(t *testing.T) {
-		path := "/prefix/v2/metrics"
-		ePt := fmt.Sprintf("http://localhost:0%s", path)
-		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
-		ctx := context.Background()
-		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
-		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {

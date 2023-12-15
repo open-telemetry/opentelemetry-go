@@ -31,7 +31,7 @@ import (
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	now = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
 	res = resource.NewSchemaless(
 		semconv.ServiceName("stdoutmetric-example"),
@@ -41,7 +41,7 @@ var (
 		Resource: res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "example", Version: "v0.0.1"},
+				Scope: instrumentation.Scope{Name: "example", Version: "0.0.1"},
 				Metrics: []metricdata.Metrics{
 					{
 						Name:        "requests",
@@ -158,7 +158,7 @@ func Example() {
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)
 
-	//Output:
+	// Output:
 	// {
 	//   "Resource": [
 	//     {
@@ -173,7 +173,7 @@ func Example() {
 	//     {
 	//       "Scope": {
 	//         "Name": "example",
-	//         "Version": "v0.0.1",
+	//         "Version": "0.0.1",
 	//         "SchemaURL": ""
 	//       },
 	//       "Metrics": [

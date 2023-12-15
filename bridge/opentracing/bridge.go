@@ -33,10 +33,11 @@ import (
 	iBaggage "go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var (
-	noopTracer = trace.NewNoopTracerProvider().Tracer("")
+	noopTracer = noop.NewTracerProvider().Tracer("")
 	noopSpan   = func() trace.Span {
 		_, s := noopTracer.Start(context.Background(), "")
 		return s
@@ -317,8 +318,10 @@ type BridgeTracer struct {
 	propagator propagation.TextMapPropagator
 }
 
-var _ ot.Tracer = &BridgeTracer{}
-var _ ot.TracerContextWithSpanExtension = &BridgeTracer{}
+var (
+	_ ot.Tracer                         = &BridgeTracer{}
+	_ ot.TracerContextWithSpanExtension = &BridgeTracer{}
+)
 
 // NewBridgeTracer creates a new BridgeTracer. The new tracer forwards
 // the calls to the OpenTelemetry Noop tracer, so it should be
@@ -829,15 +832,13 @@ func newTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
 	return t, nil
 }
 
-type textMapWriter struct {
-}
+type textMapWriter struct{}
 
 func (t *textMapWriter) Set(key string, value string) {
 	// maybe print a warning log.
 }
 
-type textMapReader struct {
-}
+type textMapReader struct{}
 
 func (t *textMapReader) ForeachKey(handler func(key, val string) error) error {
 	return nil // maybe print a warning log.

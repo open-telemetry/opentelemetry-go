@@ -18,7 +18,6 @@ package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata
 
 import (
 	"fmt"
-	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -47,15 +46,33 @@ type Datatypes interface {
 		metricdata.ExponentialHistogram[int64] |
 		metricdata.ExponentialHistogramDataPoint[float64] |
 		metricdata.ExponentialHistogramDataPoint[int64] |
-		metricdata.ExponentialBucket
+		metricdata.ExponentialBucket |
+		metricdata.Summary |
+		metricdata.SummaryDataPoint |
+		metricdata.QuantileValue
 
 	// Interface types are not allowed in union types, therefore the
 	// Aggregation and Value type from metricdata are not included here.
 }
 
+// TestingT is an interface that implements [testing.T], but without the
+// private method of [testing.TB], so other testing packages can rely on it as
+// well.
+// The methods in this interface must match the [testing.TB] interface.
+type TestingT interface {
+	Helper()
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
+	Error(...any)
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+}
+
 type config struct {
 	ignoreTimestamp bool
 	ignoreExemplars bool
+	ignoreValue     bool
 }
 
 func newConfig(opts []Option) config {
@@ -93,9 +110,23 @@ func IgnoreExemplars() Option {
 	})
 }
 
+// IgnoreValue disables checking if values are different. This can be
+// useful for non-deterministic values, like measured durations.
+//
+// This will ignore the value and trace information for Exemplars;
+// the buckets, zero count, scale, sum, max, min, and counts of
+// ExponentialHistogramDataPoints; the buckets, sum, count, max,
+// and min of HistogramDataPoints; the value of DataPoints.
+func IgnoreValue() Option {
+	return fnOption(func(cfg config) config {
+		cfg.ignoreValue = true
+		return cfg
+	})
+}
+
 // AssertEqual asserts that the two concrete data-types from the metricdata
 // package are equal.
-func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) bool {
+func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -149,6 +180,12 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 		r = equalExponentialHistogramDataPoints(e, aIface.(metricdata.ExponentialHistogramDataPoint[int64]), cfg)
 	case metricdata.ExponentialBucket:
 		r = equalExponentialBuckets(e, aIface.(metricdata.ExponentialBucket), cfg)
+	case metricdata.Summary:
+		r = equalSummary(e, aIface.(metricdata.Summary), cfg)
+	case metricdata.SummaryDataPoint:
+		r = equalSummaryDataPoint(e, aIface.(metricdata.SummaryDataPoint), cfg)
+	case metricdata.QuantileValue:
+		r = equalQuantileValue(e, aIface.(metricdata.QuantileValue), cfg)
 	default:
 		// We control all types passed to this, panic to signal developers
 		// early they changed things in an incompatible way.
@@ -163,7 +200,7 @@ func AssertEqual[T Datatypes](t *testing.T, expected, actual T, opts ...Option) 
 }
 
 // AssertAggregationsEqual asserts that two Aggregations are equal.
-func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregation, opts ...Option) bool {
+func AssertAggregationsEqual(t TestingT, expected, actual metricdata.Aggregation, opts ...Option) bool {
 	t.Helper()
 
 	cfg := newConfig(opts)
@@ -175,7 +212,7 @@ func AssertAggregationsEqual(t *testing.T, expected, actual metricdata.Aggregati
 }
 
 // AssertHasAttributes asserts that all Datapoints or HistogramDataPoints have all passed attrs.
-func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute.KeyValue) bool {
+func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.KeyValue) bool {
 	t.Helper()
 
 	var reasons []string
@@ -222,6 +259,12 @@ func AssertHasAttributes[T Datatypes](t *testing.T, actual T, attrs ...attribute
 	case metricdata.ExponentialHistogramDataPoint[float64]:
 		reasons = hasAttributesExponentialHistogramDataPoints(e, attrs...)
 	case metricdata.ExponentialBucket:
+		// Nothing to check.
+	case metricdata.Summary:
+		reasons = hasAttributesSummary(e, attrs...)
+	case metricdata.SummaryDataPoint:
+		reasons = hasAttributesSummaryDataPoint(e, attrs...)
+	case metricdata.QuantileValue:
 		// Nothing to check.
 	default:
 		// We control all types passed to this, panic to signal developers

@@ -420,84 +420,85 @@ func TestTraceStateDelete(t *testing.T) {
 	}
 }
 
+var insertTS = TraceState{list: []member{
+	{Key: "key1", Value: "val1"},
+	{Key: "key2", Value: "val2"},
+	{Key: "key3", Value: "val3"},
+}}
+
+var insertTestcase = []struct {
+	name       string
+	tracestate TraceState
+	key, value string
+	expected   TraceState
+	err        error
+}{
+	{
+		name:       "add new",
+		tracestate: insertTS,
+		key:        "key4@vendor",
+		value:      "val4",
+		expected: TraceState{list: []member{
+			{Key: "key4@vendor", Value: "val4"},
+			{Key: "key1", Value: "val1"},
+			{Key: "key2", Value: "val2"},
+			{Key: "key3", Value: "val3"},
+		}},
+	},
+	{
+		name:       "replace",
+		tracestate: insertTS,
+		key:        "key2",
+		value:      "valX",
+		expected: TraceState{list: []member{
+			{Key: "key2", Value: "valX"},
+			{Key: "key1", Value: "val1"},
+			{Key: "key3", Value: "val3"},
+		}},
+	},
+	{
+		name:       "invalid key",
+		tracestate: insertTS,
+		key:        "key!",
+		value:      "val",
+		expected:   insertTS,
+		err:        errInvalidKey,
+	},
+	{
+		name:       "invalid value",
+		tracestate: insertTS,
+		key:        "key",
+		value:      "v=l",
+		expected:   insertTS,
+		err:        errInvalidValue,
+	},
+	{
+		name:       "invalid key/value",
+		tracestate: insertTS,
+		key:        "key!",
+		value:      "v=l",
+		expected:   insertTS,
+		err:        errInvalidKey,
+	},
+	{
+		name:       "drop the right-most member(oldest) in queue",
+		tracestate: maxMembers,
+		key:        "keyx",
+		value:      "valx",
+		expected: func() TraceState {
+			// Prepend the new element and remove the oldest one, which is over capacity.
+			return TraceState{
+				list: append(
+					[]member{{Key: "keyx", Value: "valx"}},
+					maxMembers.list[:len(maxMembers.list)-1]...,
+				),
+			}
+		}(),
+	},
+}
+
 func TestTraceStateInsert(t *testing.T) {
-	ts := TraceState{list: []member{
-		{Key: "key1", Value: "val1"},
-		{Key: "key2", Value: "val2"},
-		{Key: "key3", Value: "val3"},
-	}}
-
-	testCases := []struct {
-		name       string
-		tracestate TraceState
-		key, value string
-		expected   TraceState
-		err        error
-	}{
-		{
-			name:       "add new",
-			tracestate: ts,
-			key:        "key4@vendor",
-			value:      "val4",
-			expected: TraceState{list: []member{
-				{Key: "key4@vendor", Value: "val4"},
-				{Key: "key1", Value: "val1"},
-				{Key: "key2", Value: "val2"},
-				{Key: "key3", Value: "val3"},
-			}},
-		},
-		{
-			name:       "replace",
-			tracestate: ts,
-			key:        "key2",
-			value:      "valX",
-			expected: TraceState{list: []member{
-				{Key: "key2", Value: "valX"},
-				{Key: "key1", Value: "val1"},
-				{Key: "key3", Value: "val3"},
-			}},
-		},
-		{
-			name:       "invalid key",
-			tracestate: ts,
-			key:        "key!",
-			value:      "val",
-			expected:   ts,
-			err:        errInvalidKey,
-		},
-		{
-			name:       "invalid value",
-			tracestate: ts,
-			key:        "key",
-			value:      "v=l",
-			expected:   ts,
-			err:        errInvalidValue,
-		},
-		{
-			name:       "invalid key/value",
-			tracestate: ts,
-			key:        "key!",
-			value:      "v=l",
-			expected:   ts,
-			err:        errInvalidKey,
-		},
-		{
-			name:       "drop the right-most member(oldest) in queue",
-			tracestate: maxMembers,
-			key:        "keyx",
-			value:      "valx",
-			expected: func() TraceState {
-				// Prepend the new element and remove the oldest one, which is over capacity.
-				return TraceState{
-					list: append(
-						[]member{{Key: "keyx", Value: "valx"}},
-						maxMembers.list[:len(maxMembers.list)-1]...,
-					),
-				}
-			}(),
-		}}
-
-	for _, tc := range testCases {
+	for _, tc := range insertTestcase {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := tc.tracestate.Insert(tc.key, tc.value)
 			assert.ErrorIs(t, err, tc.err, tc.name)
@@ -550,4 +551,38 @@ func TestTraceStateImmutable(t *testing.T) {
 	assert.Equal(t, v0, ts1.Get(k0))
 	assert.Equal(t, v0, ts2.Get(k0))
 	assert.Equal(t, "", ts3.Get(k0))
+}
+
+func BenchmarkParseTraceState(b *testing.B) {
+	benches := []struct {
+		name string
+		in   string
+	}{
+		{
+			name: "single key",
+			in:   "somewhatRealisticKeyLength=someValueAbcdefgh1234567890",
+		},
+		{
+			name: "tenant single key",
+			in:   "somewhatRealisticKeyLength@someTenant=someValueAbcdefgh1234567890",
+		},
+		{
+			name: "three keys",
+			in:   "someKeyName.One=someValue1,someKeyName.Two=someValue2,someKeyName.Three=someValue3",
+		},
+		{
+			name: "tenant three keys",
+			in:   "someKeyName.One@tenant=someValue1,someKeyName.Two@tenant=someValue2,someKeyName.Three@tenant=someValue3",
+		},
+	}
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				_, _ = ParseTraceState(bench.in)
+			}
+		})
+	}
 }

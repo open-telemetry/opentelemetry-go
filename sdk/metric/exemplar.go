@@ -28,7 +28,7 @@ import (
 // Note: This will only return non-nil values when the experimental exemplar
 // feature is enabled.
 func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir[N] {
-	if !x.Enabled(x.Exemplars) {
+	if !x.Exemplars.Enabled() {
 		return nil
 	}
 

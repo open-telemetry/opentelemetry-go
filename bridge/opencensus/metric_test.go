@@ -16,7 +16,6 @@ package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -27,10 +26,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestMetricProducer(t *testing.T) {
@@ -67,7 +64,8 @@ func TestMetricProducer(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version(),
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -115,7 +113,8 @@ func TestMetricProducer(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version(),
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -159,128 +158,4 @@ type fakeOCProducer struct {
 
 func (f *fakeOCProducer) Read() []*ocmetricdata.Metric {
 	return f.metrics
-}
-
-func TestPushMetricsExporter(t *testing.T) {
-	now := time.Now()
-	for _, tc := range []struct {
-		desc          string
-		input         []*ocmetricdata.Metric
-		inputResource *resource.Resource
-		exportErr     error
-		expected      *metricdata.ResourceMetrics
-		expectErr     bool
-	}{
-		{
-			desc: "empty batch isn't sent",
-		},
-		{
-			desc:      "export error",
-			exportErr: fmt.Errorf("failed to export"),
-			input: []*ocmetricdata.Metric{
-				{
-					Resource: &ocresource.Resource{
-						Labels: map[string]string{
-							"R1": "V1",
-							"R2": "V2",
-						},
-					},
-					TimeSeries: []*ocmetricdata.TimeSeries{
-						{
-							StartTime: now,
-							Points: []ocmetricdata.Point{
-								{Value: int64(123), Time: now},
-							},
-						},
-					},
-				},
-			},
-			expectErr: true,
-		},
-		{
-			desc: "success",
-			input: []*ocmetricdata.Metric{
-				{
-					Resource: &ocresource.Resource{
-						Labels: map[string]string{
-							"R1": "V1",
-							"R2": "V2",
-						},
-					},
-					TimeSeries: []*ocmetricdata.TimeSeries{
-						{
-							StartTime: now,
-							Points: []ocmetricdata.Point{
-								{Value: int64(123), Time: now},
-							},
-						},
-					},
-				},
-			},
-			inputResource: resource.NewSchemaless(
-				attribute.String("R1", "V1"),
-				attribute.String("R2", "V2"),
-			),
-			expected: &metricdata.ResourceMetrics{
-				Resource: resource.NewSchemaless(
-					attribute.String("R1", "V1"),
-					attribute.String("R2", "V2"),
-				),
-				ScopeMetrics: []metricdata.ScopeMetrics{
-					{
-						Scope: instrumentation.Scope{
-							Name: scopeName,
-						},
-						Metrics: []metricdata.Metrics{
-							{
-								Name:        "",
-								Description: "",
-								Unit:        "",
-								Data: metricdata.Gauge[int64]{
-									DataPoints: []metricdata.DataPoint[int64]{
-										{
-											Attributes: attribute.NewSet(),
-											StartTime:  now,
-											Time:       now,
-											Value:      123,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	} {
-		t.Run(tc.desc, func(t *testing.T) {
-			fake := &fakeExporter{err: tc.exportErr}
-			exporter := NewMetricExporter(fake, tc.inputResource)
-			err := exporter.ExportMetrics(context.Background(), tc.input)
-			if tc.expectErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-			if tc.expected != nil {
-				require.NotNil(t, fake.data)
-				metricdatatest.AssertEqual(t, *tc.expected, *fake.data)
-			} else {
-				require.Nil(t, fake.data)
-			}
-		})
-	}
-}
-
-type fakeExporter struct {
-	metric.Exporter
-	data *metricdata.ResourceMetrics
-	err  error
-}
-
-func (f *fakeExporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
-	if f.err == nil {
-		f.data = data
-	}
-	return f.err
 }

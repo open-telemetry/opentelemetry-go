@@ -39,6 +39,7 @@ type invalidAggregation struct{}
 func (invalidAggregation) copy() Aggregation {
 	return invalidAggregation{}
 }
+
 func (invalidAggregation) err() error {
 	return nil
 }
@@ -155,7 +156,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	)
 
 	instruments := []Instrument{
-		{Name: "foo", Kind: InstrumentKind(0)}, //Unknown kind
+		{Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
 		{Name: "foo", Kind: InstrumentKindCounter},
 		{Name: "foo", Kind: InstrumentKindUpDownCounter},
 		{Name: "foo", Kind: InstrumentKindHistogram},
@@ -350,7 +351,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			var c cache[string, instID]
 			p := newPipeline(nil, tt.reader, tt.views)
 			i := newInserter[N](p, &c)
-			input, err := i.Instrument(tt.inst)
+			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind)
+			input, err := i.Instrument(tt.inst, readerAggregation)
 			var comps []aggregate.ComputeAggregation
 			for _, instSyncs := range p.aggregations {
 				for _, i := range instSyncs {
@@ -374,7 +376,8 @@ func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 		Name: "foo",
 		Kind: InstrumentKind(255),
 	}
-	_, _ = i.Instrument(inst)
+	readerAggregation := i.readerDefaultAggregation(inst.Kind)
+	_, _ = i.Instrument(inst, readerAggregation)
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {
@@ -459,6 +462,8 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 			p := newPipelines(resource.Empty(), tt.readers, tt.views)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
+			testPipelineRegistryResolveIntHistogramAggregators(t, p, tt.wantCount)
+			testPipelineRegistryResolveFloatHistogramAggregators(t, p, tt.wantCount)
 		})
 	}
 }
@@ -478,6 +483,26 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
+	assert.NoError(t, err)
+
+	require.Len(t, aggs, wantCount)
+}
+
+func testPipelineRegistryResolveIntHistogramAggregators(t *testing.T, p pipelines, wantCount int) {
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	var c cache[string, instID]
+	r := newResolver[int64](p, &c)
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
+	assert.NoError(t, err)
+
+	require.Len(t, aggs, wantCount)
+}
+
+func testPipelineRegistryResolveFloatHistogramAggregators(t *testing.T, p pipelines, wantCount int) {
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	var c cache[string, instID]
+	r := newResolver[float64](p, &c)
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -510,6 +535,14 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(inst)
+	assert.Error(t, err)
+	assert.Len(t, floatAggs, 0)
+
+	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3})
+	assert.Error(t, err)
+	assert.Len(t, intAggs, 0)
+
+	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }

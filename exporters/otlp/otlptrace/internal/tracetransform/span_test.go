@@ -213,12 +213,14 @@ func TestSpanData(t *testing.T) {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Events: []tracesdk.Event{
-			{Time: startTime,
+			{
+				Time: startTime,
 				Attributes: []attribute.KeyValue{
 					attribute.Int64("CompressedByteSize", 512),
 				},
 			},
-			{Time: endTime,
+			{
+				Time: endTime,
 				Attributes: []attribute.KeyValue{
 					attribute.String("EventType", "Recv"),
 				},

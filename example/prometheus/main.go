@@ -32,6 +32,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+const meterName = "github.com/open-telemetry/opentelemetry-go/example/prometheus"
+
 func main() {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	ctx := context.Background()
@@ -44,7 +46,7 @@ func main() {
 		log.Fatal(err)
 	}
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
-	meter := provider.Meter("github.com/open-telemetry/opentelemetry-go/example/prometheus")
+	meter := provider.Meter(meterName)
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
 	go serveMetrics()
@@ -75,14 +77,18 @@ func main() {
 	}
 
 	// This is the equivalent of prometheus.NewHistogramVec
-	histogram, err := meter.Float64Histogram("baz", api.WithDescription("a very nice histogram"))
+	histogram, err := meter.Float64Histogram(
+		"baz",
+		api.WithDescription("a histogram with custom buckets and rename"),
+		api.WithExplicitBucketBoundaries(64, 128, 256, 512, 1024, 2048, 4096),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	histogram.Record(ctx, 23, opt)
-	histogram.Record(ctx, 7, opt)
-	histogram.Record(ctx, 101, opt)
-	histogram.Record(ctx, 105, opt)
+	histogram.Record(ctx, 136, opt)
+	histogram.Record(ctx, 64, opt)
+	histogram.Record(ctx, 701, opt)
+	histogram.Record(ctx, 830, opt)
 
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt)
 	<-ctx.Done()
@@ -91,7 +97,7 @@ func main() {
 func serveMetrics() {
 	log.Printf("serving metrics at localhost:2223/metrics")
 	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":2223", nil)
+	err := http.ListenAndServe(":2223", nil) //nolint:gosec // Ignoring G114: Use of net/http serve function that has no support for setting timeouts.
 	if err != nil {
 		fmt.Printf("error serving http: %v", err)
 		return
