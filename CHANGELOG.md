@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   However, we believe that you rather not want it as the telemetry may be necessary to diagnose a cancellation-related problem. (#4671)
 - Improve `go.opentelemetry.io/otel/trace.TraceState`'s performance. (#4722)
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
+- Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
 
 ## [1.21.0/0.44.0] 2023-11-16
 
