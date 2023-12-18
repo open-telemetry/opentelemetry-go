@@ -322,7 +322,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	h.measure(context.Background(), 5, alice)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	h.cumulative(&data)
+	h.cumulative(&data, nil)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 	hdp.Bounds[1] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the Aggregation bounds should not change the bounds")
@@ -333,7 +333,7 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 	h.measure(context.Background(), 5, alice)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	h.cumulative(&data)
+	h.cumulative(&data, nil)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
 	require.Equal(t, hdp.BucketCounts, h.values[alice].counts)
@@ -350,25 +350,25 @@ func TestDeltaHistogramReset(t *testing.T) {
 	h := newHistogram[int64](bounds, noMinMax, false, 0)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	require.Equal(t, 0, h.delta(&data))
+	require.Equal(t, 0, h.delta(&data, nil))
 	require.Len(t, data.(metricdata.Histogram[int64]).DataPoints, 0)
 
 	h.measure(context.Background(), 1, alice)
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1)}
-	h.delta(&data)
+	h.delta(&data, nil)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	assert.Equal(t, 0, h.delta(&data))
+	assert.Equal(t, 0, h.delta(&data, nil))
 	assert.Len(t, data.(metricdata.Histogram[int64]).DataPoints, 0)
 
 	// Aggregating another set should not affect the original (alice).
 	h.measure(context.Background(), 1, bob)
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1)}
-	h.delta(&data)
+	h.delta(&data, nil)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 }
 

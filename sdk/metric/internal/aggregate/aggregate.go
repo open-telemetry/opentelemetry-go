@@ -54,15 +54,8 @@ type Builder[N int64 | float64] struct {
 	AggregationLimit int
 }
 
-func (b Builder[N]) filter(f Measure[N]) Measure[N] {
-	if b.Filter != nil {
-		fltr := b.Filter // Copy to make it immutable after assignment.
-		return func(ctx context.Context, n N, a attribute.Set) {
-			fAttr, _ := a.Filter(fltr)
-			f(ctx, n, fAttr)
-		}
-	}
-	return f
+func (b Builder[N]) filter(f func(*metricdata.Aggregation, attribute.Filter) int) ComputeAggregation {
+	return func(dest *metricdata.Aggregation) int { return f(dest, b.Filter) }
 }
 
 // LastValue returns a last-value aggregate function input and output.
@@ -73,11 +66,11 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// a last-value aggregate.
 	lv := newLastValue[N](b.AggregationLimit)
 
-	return b.filter(lv.measure), func(dest *metricdata.Aggregation) int {
+	return lv.measure, func(dest *metricdata.Aggregation) int {
 		// Ignore if dest is not a metricdata.Gauge. The chance for memory
 		// reuse of the DataPoints is missed (better luck next time).
 		gData, _ := (*dest).(metricdata.Gauge[N])
-		lv.computeAggregation(&gData.DataPoints)
+		lv.computeAggregation(&gData.DataPoints, b.Filter)
 		*dest = gData
 
 		return len(gData.DataPoints)
@@ -90,9 +83,9 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 	s := newPrecomputedSum[N](monotonic, b.AggregationLimit)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(s.measure), s.delta
+		return s.measure, b.filter(s.delta)
 	default:
-		return b.filter(s.measure), s.cumulative
+		return s.measure, b.filter(s.cumulative)
 	}
 }
 
@@ -101,9 +94,9 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 	s := newSum[N](monotonic, b.AggregationLimit)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(s.measure), s.delta
+		return s.measure, b.filter(s.delta)
 	default:
-		return b.filter(s.measure), s.cumulative
+		return s.measure, b.filter(s.cumulative)
 	}
 }
 
@@ -113,9 +106,10 @@ func (b Builder[N]) ExplicitBucketHistogram(boundaries []float64, noMinMax, noSu
 	h := newHistogram[N](boundaries, noMinMax, noSum, b.AggregationLimit)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(h.measure), h.delta
+		return h.measure, b.filter(h.delta)
 	default:
-		return b.filter(h.measure), h.cumulative
+		// TODO: filter returned ComputeAggregation
+		return h.measure, b.filter(h.cumulative)
 	}
 }
 
@@ -125,9 +119,9 @@ func (b Builder[N]) ExponentialBucketHistogram(maxSize, maxScale int32, noMinMax
 	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit)
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(h.measure), h.delta
+		return h.measure, b.filter(h.delta)
 	default:
-		return b.filter(h.measure), h.cumulative
+		return h.measure, b.filter(h.cumulative)
 	}
 }
 

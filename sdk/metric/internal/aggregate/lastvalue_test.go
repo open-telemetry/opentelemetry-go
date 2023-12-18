@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -127,4 +128,11 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 func BenchmarkLastValue(b *testing.B) {
 	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.LastValue))
 	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.LastValue))
+
+	b.Run("Filtered/Int64", benchmarkFiltered(func(f attribute.Filter) (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{Filter: f}.LastValue()
+	}))
+	b.Run("Filtered/Float64", benchmarkFiltered(func(f attribute.Filter) (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{Filter: f}.LastValue()
+	}))
 }

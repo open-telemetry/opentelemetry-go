@@ -29,6 +29,13 @@ type datapoint[N int64 | float64] struct {
 	value     N
 }
 
+func (d datapoint[N]) merge(o datapoint[N]) datapoint[N] {
+	if d.timestamp.After(o.timestamp) {
+		return d
+	}
+	return o
+}
+
 func newLastValue[N int64 | float64](limit int) *lastValue[N] {
 	return &lastValue[N]{
 		limit:  newLimiter[datapoint[N]](limit),
@@ -52,9 +59,13 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, attr attribute.Set)
 	s.Unlock()
 }
 
-func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
+func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N], fltr attribute.Filter) {
 	s.Lock()
 	defer s.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	n := len(s.values)
 	*dest = reset(*dest, n, n)
@@ -69,5 +80,16 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 		// Do not report stale values.
 		delete(s.values, a)
 		i++
+	}
+}
+
+func (s *lastValue[N]) filterLocked(fltr attribute.Filter) {
+	// Assumes caller holds s.Lock.
+	for a, v := range s.values {
+		f, _ := a.Filter(fltr)
+		if !f.Equals(&a) {
+			s.values[f] = s.values[f].merge(v)
+			delete(s.values, a)
+		}
 	}
 }

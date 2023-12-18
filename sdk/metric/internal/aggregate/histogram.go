@@ -128,7 +128,7 @@ type histogram[N int64 | float64] struct {
 	start    time.Time
 }
 
-func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
+func (s *histogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Histogram, memory reuse is missed. In that
@@ -177,7 +177,7 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 	return n
 }
 
-func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
+func (s *histogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Histogram, memory reuse is missed. In that

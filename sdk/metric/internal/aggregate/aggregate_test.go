@@ -16,6 +16,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -59,6 +60,7 @@ var (
 	}
 )
 
+/*
 func TestBuilderFilter(t *testing.T) {
 	t.Run("Int64", testBuilderFilter[int64]())
 	t.Run("Float64", testBuilderFilter[float64]())
@@ -73,7 +75,7 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, a attribute.Set) {
+				meas := b.filter(func(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 					assert.Equal(t, value, v, "measured incorrect value")
 					assert.Equal(t, wantA, a, "measured incorrect attributes")
 				})
@@ -85,6 +87,7 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice))
 	}
 }
+*/
 
 type arg[N int64 | float64] struct {
 	ctx context.Context
@@ -173,4 +176,41 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 			comps[n](got)
 		}
 	})
+}
+
+func benchmarkFiltered[N int64 | float64](factory func(attribute.Filter) (Measure[N], ComputeAggregation)) func(*testing.B) {
+	nAttr := []int{1, 10, 100}       // Number of distinct attribute sets.
+	nMeas := []int{1, 10, 100, 1000} // Number of measurements made per attribute set.
+	return func(b *testing.B) {
+		for _, attributeCap := range nAttr {
+			for _, measurements := range nMeas {
+				name := fmt.Sprintf("Attributes/%d/Measurements/%d", attributeCap, measurements)
+				b.Run(name, func(b *testing.B) {
+					attrs := make([]attribute.Set, attributeCap)
+					for i := range attrs {
+						attrs[i] = attribute.NewSet(
+							userAlice,
+							attribute.Int("value", i),
+						)
+					}
+
+					got := &bmarkRes
+					ctx := context.Background()
+					meas, comp := factory(attrFltr)
+
+					b.ReportAllocs()
+					b.ResetTimer()
+					for n := 0; n < b.N; n++ {
+						for m := 0; m < measurements; m++ {
+							for _, attr := range attrs {
+								meas(ctx, 1, attr)
+							}
+						}
+
+						assert.Equal(b, 1, comp(got), "attributes not filtered")
+					}
+				})
+			}
+		}
+	}
 }

@@ -335,7 +335,7 @@ func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Se
 	v.record(value)
 }
 
-func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
+func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
@@ -383,7 +383,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 	return n
 }
 
-func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
+func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.

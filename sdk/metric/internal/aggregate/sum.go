@@ -63,7 +63,7 @@ type sum[N int64 | float64] struct {
 	start     time.Time
 }
 
-func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
+func (s *sum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
@@ -97,7 +97,7 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 	return n
 }
 
-func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
+func (s *sum[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
@@ -152,7 +152,7 @@ type precomputedSum[N int64 | float64] struct {
 	reported map[attribute.Set]N
 }
 
-func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
+func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 	newReported := make(map[attribute.Set]N)
 
@@ -193,7 +193,7 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 	return n
 }
 
-func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
+func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
