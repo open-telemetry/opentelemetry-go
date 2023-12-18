@@ -178,9 +178,11 @@ func BenchmarkEmit(b *testing.B) {
 			} {
 				b.Run(call.name, func(b *testing.B) {
 					b.ReportAllocs()
-					for i := 0; i < b.N; i++ {
-						call.f()
-					}
+					b.RunParallel(func(pb *testing.PB) {
+						for pb.Next() {
+							call.f()
+						}
+					})
 				})
 			}
 		})
@@ -288,9 +290,11 @@ func BenchmarkSlog(b *testing.B) {
 	} {
 		b.Run(call.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				call.f()
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					call.f()
+				}
+			})
 		})
 	}
 }
@@ -400,9 +404,11 @@ func BenchmarkLogr(b *testing.B) {
 	} {
 		b.Run(call.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				call.f()
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					call.f()
+				}
+			})
 		})
 	}
 }
