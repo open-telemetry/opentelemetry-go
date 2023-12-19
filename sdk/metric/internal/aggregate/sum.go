@@ -44,6 +44,17 @@ func (s *valueMap[N]) measure(_ context.Context, value N, attr attribute.Set) {
 	s.Unlock()
 }
 
+func (s *valueMap[N]) filterLocked(fltr attribute.Filter) {
+	// Assumes caller holds s.Lock.
+	for a, v := range s.values {
+		f, _ := a.Filter(fltr)
+		if !f.Equals(&a) {
+			s.values[f] += v
+			delete(s.values, a)
+		}
+	}
+}
+
 // newSum returns an aggregator that summarizes a set of measurements as their
 // arithmetic sum. Each sum is scoped by attributes and the aggregation cycle
 // the measurements were made in.
@@ -63,7 +74,7 @@ type sum[N int64 | float64] struct {
 	start     time.Time
 }
 
-func (s *sum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *sum[N]) delta(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
@@ -74,6 +85,10 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 
 	s.Lock()
 	defer s.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	n := len(s.values)
 	dPts := reset(sData.DataPoints, n, n)
@@ -97,7 +112,7 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
 	return n
 }
 
-func (s *sum[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *sum[N]) cumulative(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
@@ -108,6 +123,10 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) in
 
 	s.Lock()
 	defer s.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	n := len(s.values)
 	dPts := reset(sData.DataPoints, n, n)
@@ -152,7 +171,7 @@ type precomputedSum[N int64 | float64] struct {
 	reported map[attribute.Set]N
 }
 
-func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 	newReported := make(map[attribute.Set]N)
 
@@ -164,6 +183,10 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filt
 
 	s.Lock()
 	defer s.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	n := len(s.values)
 	dPts := reset(sData.DataPoints, n, n)
@@ -193,7 +216,7 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation, _ attribute.Filt
 	return n
 }
 
-func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Sum, memory reuse is missed. In that case,
@@ -204,6 +227,10 @@ func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation, _ attribute
 
 	s.Lock()
 	defer s.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	n := len(s.values)
 	dPts := reset(sData.DataPoints, n, n)
