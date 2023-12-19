@@ -117,6 +117,7 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 		}
 		// Drop aggregation
 		if len(in) == 0 {
+			inst.dropAggregation = true
 			continue
 		}
 		inst.appendMeasures(in)
@@ -233,6 +234,7 @@ func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Fl
 		}
 		// Drop aggregation
 		if len(in) == 0 {
+			inst.dropAggregation = true
 			continue
 		}
 		inst.appendMeasures(in)
@@ -436,6 +438,11 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		return
 	}
 
+	if oImpl.dropAggregation {
+		// Drop aggregation
+		return
+	}
+
 	if _, registered := r.float64[oImpl.observablID]; !registered {
 		global.Error(errUnregObserver, "failed to record",
 			"name", oImpl.name,
@@ -466,6 +473,11 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 		}
 	default:
 		global.Error(errUnknownObserver, "failed to record")
+		return
+	}
+
+	if oImpl.dropAggregation {
+		// Drop aggregation
 		return
 	}
 
