@@ -384,9 +384,9 @@ func TestBaggageParse(t *testing.T) {
 		},
 		{
 			name: "url encoded value",
-			in:   "key1=val%252",
+			in:   "key1=val%252%2C",
 			want: baggage.List{
-				"key1": {Value: "val%2"},
+				"key1": {Value: "val%2,"},
 			},
 		},
 		{
@@ -412,6 +412,11 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid member: invalid value",
 			in:   "foo=\\",
+			err:  errInvalidValue,
+		},
+		{
+			name: "invalid member: improper url encoded value",
+			in:   "key1=val%",
 			err:  errInvalidValue,
 		},
 		{
