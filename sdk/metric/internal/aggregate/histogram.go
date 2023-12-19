@@ -48,6 +48,21 @@ func (b *buckets[N]) bin(idx int, value N) {
 	}
 }
 
+// merge merges o into b. This assumes both b and o use the same bounds.
+func (b *buckets[N]) merge(o *buckets[N]) {
+	for i := range b.counts {
+		b.counts[i] += o.counts[i]
+	}
+	b.count += o.count
+	b.total += o.total
+	if o.min < b.min {
+		b.min = o.min
+	}
+	if o.max > b.max {
+		b.max = o.max
+	}
+}
+
 // histValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type histValues[N int64 | float64] struct {
@@ -109,6 +124,23 @@ func (s *histValues[N]) measure(_ context.Context, value N, attr attribute.Set) 
 	}
 }
 
+func (s *histValues[N]) filterLocked(fltr attribute.Filter) {
+	// Assumes caller holds s.Lock.
+	for a, v := range s.values {
+		f, _ := a.Filter(fltr)
+		if !f.Equals(&a) {
+			target, ok := s.values[f]
+			if !ok {
+				target = v
+			} else {
+				target.merge(v)
+			}
+			s.values[f] = target
+			delete(s.values, a)
+		}
+	}
+}
+
 // newHistogram returns an Aggregator that summarizes a set of measurements as
 // an histogram.
 func newHistogram[N int64 | float64](boundaries []float64, noMinMax, noSum bool, limit int) *histogram[N] {
@@ -128,7 +160,7 @@ type histogram[N int64 | float64] struct {
 	start    time.Time
 }
 
-func (s *histogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *histogram[N]) delta(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Histogram, memory reuse is missed. In that
@@ -138,6 +170,10 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) i
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
@@ -177,7 +213,7 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) i
 	return n
 }
 
-func (s *histogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (s *histogram[N]) cumulative(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.Histogram, memory reuse is missed. In that
@@ -187,6 +223,10 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filt
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
+
+	if fltr != nil {
+		s.filterLocked(fltr)
+	}
 
 	// Do not allow modification of our copy of bounds.
 	bounds := make([]float64, len(s.bounds))
