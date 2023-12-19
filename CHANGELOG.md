@@ -16,7 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.23.0` version of the OpenTelemetry Semantic Conventions. (#4746)
 - The `go.opentelemetry.io/otel/semconv/v1.23.1` package.
   The package contains semantic conventions from the `v1.23.1` version of the OpenTelemetry Semantic Conventions. (#4749)
+- The `go.opentelemetry.io/otel/semconv/v1.24.0` package.
+  The package contains semantic conventions from the `v1.24.0` version of the OpenTelemetry Semantic Conventions. (#4770)
 - Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
+- Experimental cardinality limiting is added to the metric SDK.
+  See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
 
 ### Changed
 
@@ -25,6 +29,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve `go.opentelemetry.io/otel/trace.TraceState`'s performance. (#4722)
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 - Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
+
+### Fixed
+
+- Fix `Parse` in `go.opentelemetry.io/otel/baggage` to validate member value before percent-decoding. (#4755)
 
 ## [1.21.0/0.44.0] 2023-11-16
 

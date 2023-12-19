@@ -43,6 +43,9 @@ var (
 	//
 	// To enable this feature set the OTEL_GO_X_CARDINALITY_LIMIT environment
 	// variable to the integer limit value you want to use.
+	//
+	// Setting OTEL_GO_X_CARDINALITY_LIMIT to a value less than or equal to 0
+	// will disable the cardinality limits.
 	CardinalityLimit = newFeature("CARDINALITY_LIMIT", func(v string) (int, bool) {
 		n, err := strconv.Atoi(v)
 		if err != nil {
