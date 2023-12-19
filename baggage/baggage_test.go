@@ -33,7 +33,7 @@ func init() {
 	rng = rand.New(rand.NewSource(1))
 }
 
-func TestKeyRegExp(t *testing.T) {
+func TestValidateKeyChar(t *testing.T) {
 	// ASCII only
 	invalidKeyRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
@@ -45,11 +45,11 @@ func TestKeyRegExp(t *testing.T) {
 	}
 
 	for _, ch := range invalidKeyRune {
-		assert.NotRegexp(t, keyDef, fmt.Sprintf("%c", ch))
+		assert.False(t, validateKeyChar(ch))
 	}
 }
 
-func TestValueRegExp(t *testing.T) {
+func TestValidateValueChar(t *testing.T) {
 	// ASCII only
 	invalidValueRune := []rune{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
@@ -60,7 +60,7 @@ func TestValueRegExp(t *testing.T) {
 	}
 
 	for _, ch := range invalidValueRune {
-		assert.NotRegexp(t, `^`+valueDef+`$`, fmt.Sprintf("invalid-%c-value", ch))
+		assert.False(t, validateValueChar(ch))
 	}
 }
 
@@ -384,9 +384,9 @@ func TestBaggageParse(t *testing.T) {
 		},
 		{
 			name: "url encoded value",
-			in:   "key1=val%252",
+			in:   "key1=val%252%2C",
 			want: baggage.List{
-				"key1": {Value: "val%2"},
+				"key1": {Value: "val%2,"},
 			},
 		},
 		{
@@ -415,8 +415,18 @@ func TestBaggageParse(t *testing.T) {
 			err:  errInvalidValue,
 		},
 		{
-			name: "invalid property: invalid key",
+			name: "invalid member: improper url encoded value",
+			in:   "key1=val%",
+			err:  errInvalidValue,
+		},
+		{
+			name: "invalid property: no key",
 			in:   "foo=1;=v",
+			err:  errInvalidProperty,
+		},
+		{
+			name: "invalid property: invalid key",
+			in:   "foo=1;key\\=v",
 			err:  errInvalidProperty,
 		},
 		{

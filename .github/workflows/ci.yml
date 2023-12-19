@@ -98,7 +98,7 @@ jobs:
           fail_ci_if_error: true
           verbose: true
       - name: Store coverage test output
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: opentelemetry-go-test-output
           path: ${{ env.TEST_RESULTS }}
