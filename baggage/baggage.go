@@ -254,11 +254,7 @@ func parseMember(member string) (Member, error) {
 		return newInvalidMember(), fmt.Errorf("%w: %d", errMemberBytes, n)
 	}
 
-	var (
-		key, value string
-		props      properties
-	)
-
+	var props properties
 	keyValue, properties, found := strings.Cut(member, propertyDelimiter)
 	if found {
 		// Parse the member properties.
@@ -279,19 +275,19 @@ func parseMember(member string) (Member, error) {
 	}
 	// "Leading and trailing whitespaces are allowed but MUST be trimmed
 	// when converting the header into a data structure."
-	key = strings.TrimSpace(k)
-	var err error
-	value, err = url.PathUnescape(strings.TrimSpace(v))
-	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %q", err, value)
-	}
+	key := strings.TrimSpace(k)
 	if !validateKey(key) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !validateValue(value) {
-		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
-	}
 
+	val := strings.TrimSpace(v)
+	if !validateValue(val) {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
+	}
+	value, err := url.PathUnescape(val)
+	if err != nil {
+		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidValue, err)
+	}
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
