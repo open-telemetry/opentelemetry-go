@@ -107,21 +107,11 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
 	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
-		if p.scale-scaleDelta < expoMinScale {
-			// With a scale of -10 there is only two buckets for the whole range of float64 values.
-			// This can only happen if there is a max size of 1.
-			otel.Handle(errors.New("exponential histogram scale underflow"))
-			return
-		}
-		// Downscale
-		p.scale -= scaleDelta
-		p.posBuckets.downscale(scaleDelta)
-		p.negBuckets.downscale(scaleDelta)
-
+		p.downscale(scaleDelta)
 		bin = p.getBin(absV)
 	}
 
-	bucket.record(bin)
+	bucket.record(bin, 1)
 }
 
 // getBin returns the bin v should be recorded into.
@@ -174,23 +164,129 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin, length int) int {
 		return 0
 	}
 
-	low := startBin
-	high := bin
+	hl := highLow{low: startBin, high: bin}
 	if startBin >= bin {
-		low = bin
-		high = startBin + length - 1
+		hl.low = bin
+		hl.high = startBin + length - 1
 	}
 
-	count := 0
-	for high-low >= p.maxSize {
-		low = low >> 1
-		high = high >> 1
+	return hl.scale(p.maxSize)
+}
+
+// merge merges o into p.
+func (p *expoHistogramDataPoint[N]) merge(o *expoHistogramDataPoint[N]) {
+	if !p.noMinMax {
+		if p.count == 0 {
+			p.min, p.max = o.min, o.max
+		} else if o.count != 0 {
+			if o.min < p.min {
+				p.min = o.min
+			}
+			if o.max > p.max {
+				p.max = o.max
+			}
+		}
+	}
+
+	if !p.noSum {
+		p.sum += o.sum
+	}
+
+	p.count += o.count
+	p.zeroCount += o.zeroCount
+
+	minScale := p.minScale(o)
+	p.downscale(p.scale - minScale)
+
+	p.mergeBuckets(p.posBuckets, o.posBuckets, o.scale-minScale)
+	p.mergeBuckets(p.negBuckets, o.negBuckets, o.scale-minScale)
+}
+
+// minScale returns the minimum scale needed to combine o into p.
+func (p *expoHistogramDataPoint[N]) minScale(o *expoHistogramDataPoint[N]) int {
+	scale := p.scale
+	if o.scale < scale {
+		scale = o.scale
+	}
+
+	hlPos := newHighLow(p.posBuckets, p.scale-scale)
+	hlPos = hlPos.merge(newHighLow(o.posBuckets, o.scale-scale))
+
+	hlNeg := newHighLow(p.negBuckets, p.scale-scale)
+	hlNeg = hlNeg.merge(newHighLow(o.negBuckets, p.scale-scale))
+
+	posS := scale - hlPos.scale(p.maxSize)
+	negS := scale - hlNeg.scale(p.maxSize)
+	if posS < negS {
+		return posS
+	}
+	return negS
+}
+
+type highLow struct {
+	high, low int
+}
+
+func newHighLow(b expoBuckets, shift int) highLow {
+	if len(b.counts) == 0 {
+		return highLow{low: 0, high: -1}
+	}
+	endBin := b.startBin + len(b.counts) - 1
+	return highLow{
+		low:  b.startBin >> shift,
+		high: endBin >> shift,
+	}
+}
+
+func (h highLow) merge(o highLow) highLow {
+	if h.low > o.low {
+		h.low = o.low
+	}
+	if h.high < o.high {
+		h.high = o.high
+	}
+	return h
+}
+
+func (h highLow) scale(maxSize int) int {
+	var count int
+	for h.high-h.low >= maxSize {
+		h.low = h.low >> 1
+		h.high = h.high >> 1
 		count++
 		if count > expoMaxScale-expoMinScale {
 			return count
 		}
 	}
 	return count
+}
+
+// downscale subtracts delta from the current mapping scale.
+func (p *expoHistogramDataPoint[N]) downscale(delta int) {
+	if delta == 0 {
+		return
+	}
+	if delta < 0 {
+		// Should be impossible to get here. There is a bug if so.
+		panic("negative downscale delta")
+	}
+	if p.scale-delta < expoMinScale {
+		// With a scale of -10 there is only two buckets for the whole range of
+		// float64 values. This can only happen if there is a max size of 1.
+		otel.Handle(errors.New("exponential histogram scale underflow"))
+		return
+	}
+
+	p.posBuckets.downscale(delta)
+	p.negBuckets.downscale(delta)
+	p.scale -= delta
+}
+
+func (p *expoHistogramDataPoint[N]) mergeBuckets(b expoBuckets, otherB expoBuckets, delta int) {
+	for i, v := range otherB.counts {
+		index := (otherB.startBin + i) >> delta
+		b.record(index, v)
+	}
 }
 
 // expoBuckets is a set of buckets in an exponential histogram.
@@ -201,9 +297,13 @@ type expoBuckets struct {
 
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
-func (b *expoBuckets) record(bin int) {
+func (b *expoBuckets) record(bin int, incr uint64) {
+	if incr == 0 {
+		return
+	}
+
 	if len(b.counts) == 0 {
-		b.counts = []uint64{1}
+		b.counts = []uint64{incr}
 		b.startBin = bin
 		return
 	}
@@ -215,6 +315,7 @@ func (b *expoBuckets) record(bin int) {
 		b.counts[bin-b.startBin]++
 		return
 	}
+	// FIXME: this doesn't take into account the maxSize.
 	// if the new bin is before the current start add spaces to the counts
 	if bin < b.startBin {
 		origLen := len(b.counts)
@@ -231,7 +332,7 @@ func (b *expoBuckets) record(bin int) {
 			b.counts[i] = 0
 		}
 		b.startBin = bin
-		b.counts[0] = 1
+		b.counts[0] = incr
 		return
 	}
 	// if the new is after the end add spaces to the end
@@ -241,13 +342,13 @@ func (b *expoBuckets) record(bin int) {
 			for i := endBin + 1 - b.startBin; i < len(b.counts); i++ {
 				b.counts[i] = 0
 			}
-			b.counts[bin-b.startBin] = 1
+			b.counts[bin-b.startBin] = incr
 			return
 		}
 
 		end := make([]uint64, bin-b.startBin-len(b.counts)+1)
 		b.counts = append(b.counts, end...)
-		b.counts[bin-b.startBin] = 1
+		b.counts[bin-b.startBin] = incr
 	}
 }
 
@@ -335,7 +436,24 @@ func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Se
 	v.record(value)
 }
 
-func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (e *expoHistogram[N]) filterLocked(fltr attribute.Filter) {
+	// Assumes caller holds e.valuesMu.Lock.
+	for a, v := range e.values {
+		f, _ := a.Filter(fltr)
+		if !f.Equals(&a) {
+			target, ok := e.values[f]
+			if !ok {
+				target = v
+			} else {
+				target.merge(v)
+			}
+			e.values[f] = target
+			delete(e.values, a)
+		}
+	}
+}
+
+func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
@@ -345,6 +463,10 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filte
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
+
+	if fltr != nil {
+		e.filterLocked(fltr)
+	}
 
 	n := len(e.values)
 	hDPts := reset(h.DataPoints, n, n)
@@ -383,7 +505,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation, _ attribute.Filte
 	return n
 }
 
-func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.Filter) int {
+func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation, fltr attribute.Filter) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
@@ -393,6 +515,10 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation, _ attribute.
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
+
+	if fltr != nil {
+		e.filterLocked(fltr)
+	}
 
 	n := len(e.values)
 	hDPts := reset(h.DataPoints, n, n)
