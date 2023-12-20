@@ -130,6 +130,106 @@ func TestSetDedup(t *testing.T) {
 	}
 }
 
+func TestFiltering(t *testing.T) {
+	a := attribute.String("A", "a")
+	b := attribute.String("B", "b")
+	c := attribute.String("C", "c")
+
+	tests := []struct {
+		name       string
+		in         []attribute.KeyValue
+		filter     attribute.Filter
+		kept, drop []attribute.KeyValue
+	}{
+		{
+			name:   "A",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "A" },
+			kept:   []attribute.KeyValue{a},
+			drop:   []attribute.KeyValue{b, c},
+		},
+		{
+			name:   "B",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "B" },
+			kept:   []attribute.KeyValue{b},
+			drop:   []attribute.KeyValue{a, c},
+		},
+		{
+			name:   "C",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "C" },
+			kept:   []attribute.KeyValue{c},
+			drop:   []attribute.KeyValue{a, b},
+		},
+		{
+			name: "A||B",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "A" || kv.Key == "B"
+			},
+			kept: []attribute.KeyValue{a, b},
+			drop: []attribute.KeyValue{c},
+		},
+		{
+			name: "B||C",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "B" || kv.Key == "C"
+			},
+			kept: []attribute.KeyValue{b, c},
+			drop: []attribute.KeyValue{a},
+		},
+		{
+			name: "A||C",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "A" || kv.Key == "C"
+			},
+			kept: []attribute.KeyValue{a, c},
+			drop: []attribute.KeyValue{b},
+		},
+		{
+			name:   "None",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return false },
+			kept:   nil,
+			drop:   []attribute.KeyValue{a, b, c},
+		},
+		{
+			name:   "All",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return true },
+			kept:   []attribute.KeyValue{a, b, c},
+			drop:   nil,
+		},
+		{
+			name:   "Empty",
+			in:     []attribute.KeyValue{},
+			filter: func(kv attribute.KeyValue) bool { return true },
+			kept:   nil,
+			drop:   nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("NewSetWithFiltered", func(t *testing.T) {
+				fltr, drop := attribute.NewSetWithFiltered(test.in, test.filter)
+				assert.Equal(t, test.kept, fltr.ToSlice(), "filtered")
+				assert.ElementsMatch(t, test.drop, drop, "dropped")
+			})
+
+			t.Run("Set.Filter", func(t *testing.T) {
+				s := attribute.NewSet(test.in...)
+				fltr, drop := s.Filter(test.filter)
+				assert.Equal(t, test.kept, fltr.ToSlice(), "filtered")
+				assert.ElementsMatch(t, test.drop, drop, "dropped")
+			})
+		})
+	}
+}
+
 func TestUniqueness(t *testing.T) {
 	short := []attribute.KeyValue{
 		attribute.String("A", "0"),
@@ -224,4 +324,46 @@ func args(m reflect.Method) []reflect.Value {
 		out[i] = reflect.New(aType).Elem()
 	}
 	return out
+}
+
+func BenchmarkFiltering(b *testing.B) {
+	var kvs [26]attribute.KeyValue
+	buf := [1]byte{'A' - 1}
+	for i := range kvs {
+		buf[0]++ // A, B, C ... Z
+		kvs[i] = attribute.String(string(buf[:]), "")
+	}
+
+	var result struct {
+		set     attribute.Set
+		dropped []attribute.KeyValue
+	}
+
+	run := func(fltr attribute.Filter) func(*testing.B) {
+		return func(b *testing.B) {
+			b.Helper()
+			b.Run("Set.Filter", func(b *testing.B) {
+				s := attribute.NewSet(kvs[:]...)
+				b.ResetTimer()
+				b.ReportAllocs()
+				for n := 0; n < b.N; n++ {
+					result.set, result.dropped = s.Filter(fltr)
+				}
+			})
+
+			b.Run("NewSetWithFiltered", func(b *testing.B) {
+				attrs := kvs[:]
+				b.ResetTimer()
+				b.ReportAllocs()
+				for n := 0; n < b.N; n++ {
+					result.set, result.dropped = attribute.NewSetWithFiltered(attrs, fltr)
+				}
+			})
+		}
+	}
+
+	b.Run("NoFilter", run(nil))
+	b.Run("NoFiltered", run(func(attribute.KeyValue) bool { return true }))
+	b.Run("Filtered", run(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
+	b.Run("AllDropped", run(func(attribute.KeyValue) bool { return false }))
 }
