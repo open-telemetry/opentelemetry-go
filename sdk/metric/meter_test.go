@@ -2172,6 +2172,26 @@ func TestObservableDropAggregation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "drop unregistered observable",
+			views: []View{
+				func(i Instrument) (Stream, bool) {
+					if strings.HasPrefix(i.Name, "unregistered.observable") {
+						return Stream{Aggregation: AggregationDrop{}}, true
+					}
+					return Stream{}, false
+				},
+			},
+			expectedObservableName: []string{
+				"observable.int64.counter",
+				"observable.int64.up.down.counter",
+				"observable.int64.gauge",
+				"observable.float64.counter",
+				"observable.float64.up.down.counter",
+				"observable.float64.gauge",
+			},
+			expectedLogs: []map[string]interface{}{},
+		},
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
