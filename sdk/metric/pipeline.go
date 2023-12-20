@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -361,6 +362,12 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 			Temporality: i.pipeline.reader.temporality(kind),
 		}
 		b.Filter = stream.AttributeFilter
+		// A value less than or equal to zero will disable the aggregation
+		// limits for the builder (an all the created aggregates).
+		// CardinalityLimit.Lookup returns 0 by default if unset (or
+		// unrecognized input). Use that value directly.
+		b.AggregationLimit, _ = x.CardinalityLimit.Lookup()
+
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{0, nil, err}

@@ -31,11 +31,15 @@ var (
 	keyUser    = "user"
 	userAlice  = attribute.String(keyUser, "Alice")
 	userBob    = attribute.String(keyUser, "Bob")
+	userCarol  = attribute.String(keyUser, "Carol")
+	userDave   = attribute.String(keyUser, "Dave")
 	adminTrue  = attribute.Bool("admin", true)
 	adminFalse = attribute.Bool("admin", false)
 
 	alice = attribute.NewSet(userAlice, adminTrue)
 	bob   = attribute.NewSet(userBob, adminFalse)
+	carol = attribute.NewSet(userCarol, adminFalse)
+	dave  = attribute.NewSet(userDave, adminFalse)
 
 	// Filtered.
 	attrFltr = func(kv attribute.KeyValue) bool {

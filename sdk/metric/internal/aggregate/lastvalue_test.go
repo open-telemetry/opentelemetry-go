@@ -29,7 +29,10 @@ func TestLastValue(t *testing.T) {
 }
 
 func testLastValue[N int64 | float64]() func(*testing.T) {
-	in, out := Builder[N]{Filter: attrFltr}.LastValue()
+	in, out := Builder[N]{
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -83,6 +86,36 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 							Attributes: fltrBob,
 							Time:       staticTime,
 							Value:      3,
+						},
+					},
+				},
+			},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							Time:       staticTime,
+							Value:      1,
 						},
 					},
 				},
