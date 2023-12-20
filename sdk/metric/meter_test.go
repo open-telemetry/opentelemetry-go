@@ -26,8 +26,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -2070,35 +2068,46 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 }
 
 func TestObservableDropAggregation(t *testing.T) {
+	const (
+		intPrefix         = "observable.int64."
+		intCntName        = "observable.int64.counter"
+		intUDCntName      = "observable.int64.up.down.counter"
+		intGaugeName      = "observable.int64.gauge"
+		floatPrefix       = "observable.float64."
+		floatCntName      = "observable.float64.counter"
+		floatUDCntName    = "observable.float64.up.down.counter"
+		floatGaugeName    = "observable.float64.gauge"
+		unregPrefix       = "unregistered.observable."
+		unregIntCntName   = "unregistered.observable.int64.counter"
+		unregFloatCntName = "unregistered.observable.float64.counter"
+	)
+
+	type log struct {
+		name   string
+		number string
+	}
+
 	testcases := []struct {
-		name                   string
-		views                  []View
-		expectedObservableName []string
-		expectedLogs           []map[string]interface{}
+		name            string
+		views           []View
+		wantObservables []string
+		wantUnregLogs   []log
 	}{
 		{
 			name:  "default",
-			views: []View{},
-			expectedObservableName: []string{
-				"observable.int64.counter",
-				"observable.int64.up.down.counter",
-				"observable.int64.gauge",
-				"observable.float64.counter",
-				"observable.float64.up.down.counter",
-				"observable.float64.gauge",
+			views: nil,
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
+				floatCntName, floatUDCntName, floatGaugeName,
 			},
-			expectedLogs: []map[string]interface{}{
+			wantUnregLogs: []log{
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.int64.counter",
-					"number": "int64",
+					name:   unregIntCntName,
+					number: "int64",
 				},
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.float64.counter",
-					"number": "float64",
+					name:   unregFloatCntName,
+					number: "float64",
 				},
 			},
 		},
@@ -2109,36 +2118,30 @@ func TestObservableDropAggregation(t *testing.T) {
 					return Stream{Aggregation: AggregationDrop{}}, true
 				},
 			},
-			expectedObservableName: []string{},
-			expectedLogs:           []map[string]interface{}{},
+			wantObservables: nil,
+			wantUnregLogs:   nil,
 		},
 		{
 			name: "drop float64 observable",
 			views: []View{
 				func(i Instrument) (Stream, bool) {
-					if strings.HasPrefix(i.Name, "observable.float64") {
+					if strings.HasPrefix(i.Name, floatPrefix) {
 						return Stream{Aggregation: AggregationDrop{}}, true
 					}
 					return Stream{}, false
 				},
 			},
-			expectedObservableName: []string{
-				"observable.int64.counter",
-				"observable.int64.up.down.counter",
-				"observable.int64.gauge",
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
 			},
-			expectedLogs: []map[string]interface{}{
+			wantUnregLogs: []log{
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.int64.counter",
-					"number": "int64",
+					name:   unregIntCntName,
+					number: "int64",
 				},
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.float64.counter",
-					"number": "float64",
+					name:   unregFloatCntName,
+					number: "float64",
 				},
 			},
 		},
@@ -2146,29 +2149,23 @@ func TestObservableDropAggregation(t *testing.T) {
 			name: "drop int64 observable",
 			views: []View{
 				func(i Instrument) (Stream, bool) {
-					if strings.HasPrefix(i.Name, "observable.int64") {
+					if strings.HasPrefix(i.Name, intPrefix) {
 						return Stream{Aggregation: AggregationDrop{}}, true
 					}
 					return Stream{}, false
 				},
 			},
-			expectedObservableName: []string{
-				"observable.float64.counter",
-				"observable.float64.up.down.counter",
-				"observable.float64.gauge",
+			wantObservables: []string{
+				floatCntName, floatUDCntName, floatGaugeName,
 			},
-			expectedLogs: []map[string]interface{}{
+			wantUnregLogs: []log{
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.int64.counter",
-					"number": "int64",
+					name:   unregIntCntName,
+					number: "int64",
 				},
 				{
-					"error":  "observable instrument not registered for callback",
-					"msg":    "failed to record",
-					"name":   "unregistered.observable.float64.counter",
-					"number": "float64",
+					name:   unregFloatCntName,
+					number: "float64",
 				},
 			},
 		},
@@ -2176,74 +2173,83 @@ func TestObservableDropAggregation(t *testing.T) {
 			name: "drop unregistered observable",
 			views: []View{
 				func(i Instrument) (Stream, bool) {
-					if strings.HasPrefix(i.Name, "unregistered.observable") {
+					if strings.HasPrefix(i.Name, unregPrefix) {
 						return Stream{Aggregation: AggregationDrop{}}, true
 					}
 					return Stream{}, false
 				},
 			},
-			expectedObservableName: []string{
-				"observable.int64.counter",
-				"observable.int64.up.down.counter",
-				"observable.int64.gauge",
-				"observable.float64.counter",
-				"observable.float64.up.down.counter",
-				"observable.float64.gauge",
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
+				floatCntName, floatUDCntName, floatGaugeName,
 			},
-			expectedLogs: []map[string]interface{}{},
+			wantUnregLogs: nil,
 		},
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			logEntries := []map[string]interface{}{}
+			var unregLogs []log
 			global.SetLogger(
 				funcr.NewJSON(
 					func(obj string) {
 						var entry map[string]interface{}
 						_ = json.Unmarshal([]byte(obj), &entry)
-						logEntries = append(logEntries, entry)
+
+						// All unregistered observables should log `errUnregObserver` error.
+						// A observable with drop aggregation is also unregistered,
+						// however this is expected and should not log an error.
+						require.Equal(t, errUnregObserver.Error(), entry["error"])
+
+						unregLogs = append(unregLogs, log{
+							name:   fmt.Sprintf("%v", entry["name"]),
+							number: fmt.Sprintf("%v", entry["number"]),
+						})
 					},
 					funcr.Options{Verbosity: 0},
 				),
 			)
+			defer global.SetLogger(logr.Discard())
 
 			reader := NewManualReader()
 			meter := NewMeterProvider(WithView(tt.views...), WithReader(reader)).Meter("TestObservableDropAggregation")
 
-			aiCounter, err := meter.Int64ObservableCounter("observable.int64.counter")
+			intCnt, err := meter.Int64ObservableCounter(intCntName)
 			require.NoError(t, err)
-			aiUpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+			intUDCnt, err := meter.Int64ObservableUpDownCounter(intUDCntName)
 			require.NoError(t, err)
-			aiGauge, err := meter.Int64ObservableGauge("observable.int64.gauge")
-			require.NoError(t, err)
-
-			afCounter, err := meter.Float64ObservableCounter("observable.float64.counter")
-			require.NoError(t, err)
-			afUpDownCounter, err := meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
-			require.NoError(t, err)
-			afGauge, err := meter.Float64ObservableGauge("observable.float64.gauge")
+			intGaugeCnt, err := meter.Int64ObservableGauge(intGaugeName)
 			require.NoError(t, err)
 
-			unregisterediCounter, err := meter.Int64ObservableCounter("unregistered.observable.int64.counter")
+			floatCnt, err := meter.Float64ObservableCounter(floatCntName)
 			require.NoError(t, err)
-			unregisteredfCounter, err := meter.Float64ObservableCounter("unregistered.observable.float64.counter")
+			floatUDCnt, err := meter.Float64ObservableUpDownCounter(floatUDCntName)
+			require.NoError(t, err)
+			floatGaugeCnt, err := meter.Float64ObservableGauge(floatGaugeName)
+			require.NoError(t, err)
+
+			unregIntCnt, err := meter.Int64ObservableCounter(unregIntCntName)
+			require.NoError(t, err)
+			unregFloatCnt, err := meter.Float64ObservableCounter(unregFloatCntName)
 			require.NoError(t, err)
 
 			_, err = meter.RegisterCallback(
 				func(ctx context.Context, obs metric.Observer) error {
-					obs.ObserveInt64(aiCounter, 1)
-					obs.ObserveInt64(aiUpDownCounter, 1)
-					obs.ObserveInt64(aiGauge, 1)
-					obs.ObserveFloat64(afCounter, 1)
-					obs.ObserveFloat64(afUpDownCounter, 1)
-					obs.ObserveFloat64(afGauge, 1)
-
-					obs.ObserveInt64(unregisterediCounter, 1)
-					obs.ObserveFloat64(unregisteredfCounter, 1)
+					obs.ObserveInt64(intCnt, 1)
+					obs.ObserveInt64(intUDCnt, 1)
+					obs.ObserveInt64(intGaugeCnt, 1)
+					obs.ObserveFloat64(floatCnt, 1)
+					obs.ObserveFloat64(floatUDCnt, 1)
+					obs.ObserveFloat64(floatGaugeCnt, 1)
+					// We deliberately call observe to unregistered observables
+					obs.ObserveInt64(unregIntCnt, 1)
+					obs.ObserveFloat64(unregFloatCnt, 1)
 
 					return nil
 				},
-				aiCounter, aiUpDownCounter, aiGauge, afCounter, afUpDownCounter, afGauge,
+				intCnt, intUDCnt, intGaugeCnt,
+				floatCnt, floatUDCnt, floatGaugeCnt,
+				// We deliberately do not register `unregIntCnt` and `unregFloatCnt`
+				// to test that `errUnregObserver` is logged when observed by callback.
 			)
 			require.NoError(t, err)
 
@@ -2251,25 +2257,18 @@ func TestObservableDropAggregation(t *testing.T) {
 			err = reader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			if len(tt.expectedObservableName) == 0 {
+			if len(tt.wantObservables) == 0 {
 				require.Len(t, rm.ScopeMetrics, 0)
 				return
 			}
 
 			require.Len(t, rm.ScopeMetrics, 1)
-			require.Len(t, rm.ScopeMetrics[0].Metrics, len(tt.expectedObservableName))
+			require.Len(t, rm.ScopeMetrics[0].Metrics, len(tt.wantObservables))
 
 			for i, m := range rm.ScopeMetrics[0].Metrics {
-				assert.Equal(t, tt.expectedObservableName[i], m.Name)
+				assert.Equal(t, tt.wantObservables[i], m.Name)
 			}
-
-			if diff := cmp.Diff(logEntries, tt.expectedLogs,
-				cmpopts.IgnoreMapEntries(func(_ string, v interface{}) bool {
-					return v.(string) == "" // skip comparing empty values
-				}),
-			); diff != "" {
-				t.Errorf("Diff%v", diff)
-			}
+			assert.Equal(t, tt.wantUnregLogs, unregLogs)
 		})
 	}
 }
