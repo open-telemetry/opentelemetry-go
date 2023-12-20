@@ -493,7 +493,7 @@ func TestBaggageString(t *testing.T) {
 			},
 		},
 		{
-			name: "URL encoded value",
+			name: "Encoded value",
 			out:  "foo=%20%22%2C%3B%5C%25%0D%0A%09",
 			baggage: baggage.List{
 				"foo": {Value: " \",;\\%\r\n\t"}, // characters to be precent-escaped according to https://www.w3.org/TR/baggage/#definition
