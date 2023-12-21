@@ -683,7 +683,6 @@ func valueEscape(s string) string {
 	required := len(s) + 2*hexCount
 	if required <= len(buf) {
 		t = buf[:required]
-		t = make([]byte, required)
 	} else {
 		t = make([]byte, required)
 	}
