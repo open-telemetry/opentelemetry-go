@@ -390,10 +390,17 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
-			name: "url encoded value",
+			name: "encoded ASCII string",
 			in:   "key1=val%252%2C",
 			want: baggage.List{
 				"key1": {Value: "val%2,"},
+			},
+		},
+		{
+			name: "encoded UTF-8 string",
+			in:   "foo=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"foo": {Value: "ąść"},
 			},
 		},
 		{
@@ -511,6 +518,13 @@ func TestBaggageString(t *testing.T) {
 					}
 					return string(b[:])
 				}()},
+			},
+		},
+		{
+			name: "non-ASCII UTF-8 string",
+			out:  "foo=%C4%85%C5%9B%C4%87",
+			baggage: baggage.List{
+				"foo": {Value: "ąść"},
 			},
 		},
 		{
