@@ -383,6 +383,13 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "= value",
+			in:   "key==",
+			want: baggage.List{
+				"key": {Value: "="},
+			},
+		},
+		{
 			name: "url encoded value",
 			in:   "key1=val%252%2C",
 			want: baggage.List{
@@ -486,17 +493,44 @@ func TestBaggageString(t *testing.T) {
 			},
 		},
 		{
-			name: "URL encoded value",
-			out:  "foo=1%3D1",
+			name: "Encoded value",
+			// Allowed value characters are:
+			//
+			//   %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+			//
+			// Meaning, US-ASCII characters excluding CTLs, whitespace,
+			// DQUOTE, comma, semicolon, and backslash. All excluded
+			// characters need to be percent encoded.
+			//
+			// Ideally, the want result is:
+			// out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20!%22#$%25&'()*+%2C-./0123456789:%3B<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[%5C]^_%60abcdefghijklmnopqrstuvwxyz{|}~%7F",
+			// However, the following characters are escaped:
+			// !#'()*/<>?[]^{|}
+			// It is not necessary, but still provides a correct result.
+			out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F0123456789:%3B%3C=%3E%3F@ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%7F",
 			baggage: baggage.List{
-				"foo": {Value: "1=1"},
+				"foo": {Value: func() string {
+					// All US-ASCII characters.
+					b := [128]byte{}
+					for i := range b {
+						b[i] = byte(i)
+					}
+					return string(b[:])
+				}()},
 			},
 		},
 		{
 			name: "plus",
-			out:  "foo=1%2B1",
+			out:  "foo=1+1",
 			baggage: baggage.List{
 				"foo": {Value: "1+1"},
+			},
+		},
+		{
+			name: "equal",
+			out:  "foo=1=1",
+			baggage: baggage.List{
+				"foo": {Value: "1=1"},
 			},
 		},
 		{
@@ -561,8 +595,10 @@ func TestBaggageString(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		b := Baggage{tc.baggage}
-		assert.Equal(t, tc.out, orderer(b.String()))
+		t.Run(tc.name, func(t *testing.T) {
+			b := Baggage{tc.baggage}
+			assert.Equal(t, tc.out, orderer(b.String()))
+		})
 	}
 }
 
@@ -863,9 +899,9 @@ func TestMemberString(t *testing.T) {
 	memberStr := member.String()
 	assert.Equal(t, memberStr, "key=value")
 	// encoded key
-	member, _ = NewMember("key", "%3B")
+	member, _ = NewMember("key", "%3B%20")
 	memberStr = member.String()
-	assert.Equal(t, memberStr, "key=%3B")
+	assert.Equal(t, memberStr, "key=%3B%20")
 }
 
 var benchBaggage Baggage
