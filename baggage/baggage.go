@@ -323,7 +323,7 @@ func (m Member) String() string {
 	// A key is just an ASCII string. A value is restricted to be
 	// US-ASCII characters excluding CTLs, whitespace,
 	// DQUOTE, comma, semicolon, and backslash.
-	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, url.PathEscape(m.value))
+	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, valueEscape(m.value))
 	if len(m.properties) > 0 {
 		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
 	}
@@ -652,9 +652,63 @@ func validateValue(s string) bool {
 }
 
 func validateValueChar(c int32) bool {
-	return (c >= 0x23 && c <= 0x2b) ||
+	return c == 0x21 ||
+		(c >= 0x23 && c <= 0x2b) ||
 		(c >= 0x2d && c <= 0x3a) ||
 		(c >= 0x3c && c <= 0x5b) ||
-		(c >= 0x5d && c <= 0x7e) ||
-		c == 0x21
+		(c >= 0x5d && c <= 0x7e)
 }
+
+// valueEscape escapes the string so it can be safely placed inside a baggage value,
+// replacing special characters with %XX sequences as needed.
+func valueEscape(s string) string {
+	hexCount := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if shouldEscape(c) {
+			hexCount++
+		}
+	}
+
+	if hexCount == 0 {
+		return s
+	}
+
+	var buf [64]byte
+	var t []byte
+
+	required := len(s) + 2*hexCount
+	if required <= len(buf) {
+		t = buf[:required]
+	} else {
+		t = make([]byte, required)
+	}
+
+	j := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if shouldEscape(s[i]) {
+			t[j] = '%'
+			t[j+1] = upperhex[c>>4]
+			t[j+2] = upperhex[c&15]
+			j += 3
+		} else {
+			t[j] = c
+			j++
+		}
+	}
+
+	return string(t)
+}
+
+// shouldEscape returns true if the specified byte should be escaped when
+// appearing in a baggage value string.
+func shouldEscape(c byte) bool {
+	if c == '%' {
+		// The percent character must be encoded so that percent-encoding can work.
+		return true
+	}
+	return !validateValueChar(int32(c))
+}
+
+const upperhex = "0123456789ABCDEF"
