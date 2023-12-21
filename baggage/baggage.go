@@ -691,6 +691,7 @@ func valueEscape(s string) string {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if shouldEscape(s[i]) {
+			const upperhex = "0123456789ABCDEF"
 			t[j] = '%'
 			t[j+1] = upperhex[c>>4]
 			t[j+2] = upperhex[c&15]
@@ -713,5 +714,3 @@ func shouldEscape(c byte) bool {
 	}
 	return !validateValueChar(int32(c))
 }
-
-const upperhex = "0123456789ABCDEF"
