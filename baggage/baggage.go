@@ -661,6 +661,9 @@ func validateValueChar(c int32) bool {
 
 // valueEscape escapes the string so it can be safely placed inside a baggage value,
 // replacing special characters with %XX sequences as needed.
+//
+// The implementation is based on:
+// https://github.com/golang/go/blob/f6509cf5cdbb5787061b784973782933c47f1782/src/net/url/url.go#L285.
 func valueEscape(s string) string {
 	hexCount := 0
 	for i := 0; i < len(s); i++ {
@@ -680,6 +683,7 @@ func valueEscape(s string) string {
 	required := len(s) + 2*hexCount
 	if required <= len(buf) {
 		t = buf[:required]
+		t = make([]byte, required)
 	} else {
 		t = make([]byte, required)
 	}

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/internal/baggage"
 )
@@ -943,5 +944,45 @@ func BenchmarkParse(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
+	}
+}
+
+func BenchmarkString(b *testing.B) {
+	var members []Member
+	addMember := func(k, v string) {
+		m, err := NewMember(k, valueEscape(v))
+		require.NoError(b, err)
+		members = append(members, m)
+	}
+
+	addMember("key1", "val1")
+	addMember("key2", " ;,%")
+	addMember("key3", "Witaj świecie!")
+	addMember("key4", strings.Repeat("Hello world!", 10))
+
+	bg, err := New(members...)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = bg.String()
+	}
+}
+
+func BenchmarkValueEscape(b *testing.B) {
+	testCases := []string{
+		"value",
+		" ;,%",
+		strings.Repeat("Hello world!", 20),
+	}
+
+	for _, v := range testCases {
+		b.Run(v, func(b *testing.B) {
+			b.ReportAllocs()
+
+			_ = valueEscape(v)
+		})
 	}
 }
