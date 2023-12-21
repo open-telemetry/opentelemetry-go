@@ -214,9 +214,9 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 		{
 			name: "values with escaped chars",
 			mems: members{
-				{Key: "key2", Value: "val3=4"},
+				{Key: "key2", Value: "val3,4"},
 			},
-			wantInHeader: []string{"key2=val3%3D4"},
+			wantInHeader: []string{"key2=val3%2C4"},
 		},
 		{
 			name: "with properties",
