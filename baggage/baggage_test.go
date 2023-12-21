@@ -972,18 +972,21 @@ func BenchmarkString(b *testing.B) {
 }
 
 func BenchmarkValueEscape(b *testing.B) {
-	testCases := []string{
-		"value",
-		" ;,%",
-		strings.Repeat("Hello world!", 20),
+	testCases := []struct {
+		name string
+		in   string
+	}{
+		{name: "nothing to escape", in: "value"},
+		{name: "requires escaping", in: " ;,%"},
+		{name: "long value", in: strings.Repeat("Hello world!", 20)},
 	}
 
-	for _, v := range testCases {
-		b.Run(v, func(b *testing.B) {
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
 
 			for i := 0; i < b.N; i++ {
-				_ = valueEscape(v)
+				_ = valueEscape(tc.in)
 			}
 		})
 	}
