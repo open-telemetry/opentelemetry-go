@@ -2189,7 +2189,7 @@ func TestObservableDropAggregation(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var unregLogs []log
-			global.SetLogger(
+			otel.SetLogger(
 				funcr.NewJSON(
 					func(obj string) {
 						var entry map[string]interface{}
@@ -2198,7 +2198,7 @@ func TestObservableDropAggregation(t *testing.T) {
 						// All unregistered observables should log `errUnregObserver` error.
 						// A observable with drop aggregation is also unregistered,
 						// however this is expected and should not log an error.
-						require.Equal(t, errUnregObserver.Error(), entry["error"])
+						assert.Equal(t, errUnregObserver.Error(), entry["error"])
 
 						unregLogs = append(unregLogs, log{
 							name:   fmt.Sprintf("%v", entry["name"]),
@@ -2208,7 +2208,7 @@ func TestObservableDropAggregation(t *testing.T) {
 					funcr.Options{Verbosity: 0},
 				),
 			)
-			defer global.SetLogger(logr.Discard())
+			defer otel.SetLogger(logr.Discard())
 
 			reader := NewManualReader()
 			meter := NewMeterProvider(WithView(tt.views...), WithReader(reader)).Meter("TestObservableDropAggregation")
