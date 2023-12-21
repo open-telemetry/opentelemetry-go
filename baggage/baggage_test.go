@@ -982,7 +982,9 @@ func BenchmarkValueEscape(b *testing.B) {
 		b.Run(v, func(b *testing.B) {
 			b.ReportAllocs()
 
-			_ = valueEscape(v)
+			for i := 0; i < b.N; i++ {
+				_ = valueEscape(v)
+			}
 		})
 	}
 }
