@@ -575,7 +575,7 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 	})
 }
 
-func TestBridgeCarrierBaggagePropagaton(t *testing.T) {
+func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	testCases := []struct {
 		name             string
 		format           ot.BuiltinFormat
