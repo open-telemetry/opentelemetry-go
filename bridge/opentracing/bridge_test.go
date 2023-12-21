@@ -574,3 +574,89 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 		assert.True(t, spanContext.(spanContextProvider).HasTraceID())
 	})
 }
+
+func TestBridgeCarrierBaggagePropagaton(t *testing.T) {
+	testCases := []struct {
+		name             string
+		format           ot.BuiltinFormat
+		carrier          interface{}
+		baggageItems     []bipBaggage
+		wantBaggageItems []bipBaggage
+	}{
+		{
+			name:    "HTTPHeadersCarrier",
+			format:  ot.HTTPHeaders,
+			carrier: ot.HTTPHeadersCarrier(http.Header{}),
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+			},
+			wantBaggageItems: []bipBaggage{
+				{
+					key:   "Foo",
+					value: "bar",
+				},
+			},
+		},
+		{
+			name:    "TextMapCarrier",
+			format:  ot.TextMap,
+			carrier: ot.TextMapCarrier(map[string]string{}),
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+				{
+					key:   "foo2",
+					value: "bar2",
+				},
+			},
+			wantBaggageItems: []bipBaggage{
+				{
+					key:   "Foo",
+					value: "bar",
+				},
+				{
+					key:   "Foo2",
+					value: "bar2",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockOtelTracer := internal.NewMockTracer()
+			b, _ := NewTracerPair(mockOtelTracer)
+			b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+				propagation.TraceContext{},
+				propagation.Baggage{}), // Required for baggage propagation.
+			)
+
+			// Set baggage items.
+			span := b.StartSpan("test")
+			for _, bi := range tc.baggageItems {
+				span.SetBaggageItem(bi.key, bi.value)
+			}
+			defer span.Finish()
+
+			err := b.Inject(span.Context(), tc.format, tc.carrier)
+			assert.NoError(t, err)
+
+			spanContext, err := b.Extract(tc.format, tc.carrier)
+			assert.NoError(t, err)
+
+			// Check baggage items.
+			bsc, ok := spanContext.(*bridgeSpanContext)
+			assert.True(t, ok)
+			assert.Equal(t, len(tc.wantBaggageItems), bsc.bag.Len())
+			for i, m := range bsc.bag.Members() {
+				assert.Equal(t, tc.wantBaggageItems[i].key, m.Key())
+				assert.Equal(t, tc.wantBaggageItems[i].value, m.Value())
+			}
+		})
+	}
+}
