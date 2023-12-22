@@ -279,12 +279,10 @@ func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
 		}
 	}
 
-	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), attr)
+	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), semconv.NetworkPeerPortKey, attr)
 }
 
-// Handles `net.peer.ip` remote endpoint separately (should include `net.peer.ip`
-// as well, if available).
-func remoteEndpointPeerIPWithPort(peerIP string, attrs []attribute.KeyValue) *zkmodel.Endpoint {
+func remoteEndpointPeerIPWithPort(peerIP string, portKey attribute.Key, attrs []attribute.KeyValue) *zkmodel.Endpoint {
 	ip := net.ParseIP(peerIP)
 	if ip == nil {
 		return nil
@@ -299,7 +297,7 @@ func remoteEndpointPeerIPWithPort(peerIP string, attrs []attribute.KeyValue) *zk
 	}
 
 	for _, kv := range attrs {
-		if kv.Key == semconv.NetworkPeerPortKey {
+		if kv.Key == portKey {
 			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
 			endpoint.Port = uint16(port)
 			return endpoint
