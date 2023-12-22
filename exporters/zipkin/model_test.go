@@ -1110,11 +1110,25 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.ServerAddress("server-address-test"),
+					attribute.String("net.peer.name", "net-peer-name-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 				},
 			},
 			want: &zkmodel.Endpoint{
 				ServiceName: "server-address-test",
+			},
+		},
+		{
+			name: "net.peer.name-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("net.peer.name", "net-peer-name-test"),
+					semconv.NetworkPeerAddress("10.1.2.80"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "net-peer-name-test",
 			},
 		},
 		{
@@ -1125,10 +1139,70 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 					keyPeerHostname.String("peer-hostname-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 					semconv.DBName("db-name-test"),
+					attribute.String("server.socket.domain", "server-socket-domain-test"),
 				},
 			},
 			want: &zkmodel.Endpoint{
 				IPv4: net.ParseIP("10.1.2.80"),
+			},
+		},
+		{
+			name: "server.socket.domain-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
+					semconv.DBName("db-name-test"),
+					attribute.String("server.socket.domain", "server-socket-domain-test"),
+					attribute.String("server.socket.address", "10.2.3.4"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "server-socket-domain-test",
+			},
+		},
+		{
+			name: "server.socket.address-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
+					semconv.DBName("db-name-test"),
+					attribute.String("net.sock.peer.name", "server-socket-domain-test"),
+					attribute.String("server.socket.address", "10.2.3.4"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("10.2.3.4"),
+			},
+		},
+		{
+			name: "net.sock.peer.name-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
+					semconv.DBName("db-name-test"),
+					attribute.String("net.sock.peer.name", "server-socket-domain-test"),
+					attribute.String("net.sock.peer.addr", "10.4.8.12"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "net.sock.peer.name",
+			},
+		},
+		{
+			name: "net.sock.peer.addr-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
+					semconv.DBName("db-name-test"),
+					attribute.String("net.sock.peer.addr", "10.4.8.12"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("10.4.8.12"),
 			},
 		},
 		{
@@ -1200,11 +1274,45 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					semconv.NetworkPeerAddress("1.2.3.4"),
 					semconv.NetworkPeerPort(9876),
+					attribute.Int("server.socket.port", 5432),
+					attribute.Int("net.sock.peer.port", 2345),
 				},
 			},
 			want: &zkmodel.Endpoint{
 				IPv4: net.ParseIP("1.2.3.4"),
 				Port: 9876,
+			},
+		},
+		{
+			name: "server.socket.address-ipv4-port",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("server.socket.address", "1.2.3.4"),
+					semconv.NetworkPeerPort(9876),
+					attribute.Int("server.socket.port", 5432),
+					attribute.Int("net.sock.peer.port", 2345),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("1.2.3.4"),
+				Port: 5432,
+			},
+		},
+		{
+			name: "net.sock.peer.addr-ipv4-port",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("net.sock.peer.addr", "1.2.3.4"),
+					semconv.NetworkPeerPort(9876),
+					attribute.Int("server.socket.port", 5432),
+					attribute.Int("net.sock.peer.port", 2345),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				IPv4: net.ParseIP("1.2.3.4"),
+				Port: 2345,
 			},
 		},
 	}
