@@ -1091,12 +1091,12 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "peer-service-rank",
+			name: "peer.service-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
 					semconv.PeerService("peer-service-test"),
-					semconv.ServerAddress("peer-name-test"),
+					semconv.ServerAddress("server-address-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 				},
 			},
@@ -1105,10 +1105,24 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "network-peer-rank",
+			name: "server.address-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
+					semconv.ServerAddress("server-address-test"),
+					semconv.NetworkPeerAddress("10.1.2.80"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "server-address-test",
+			},
+		},
+		{
+			name: "network.peer.address-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					keyPeerHostname.String("peer-hostname-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 					semconv.DBName("db-name-test"),
 				},
@@ -1118,20 +1132,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "db-name-rank",
-			data: tracetest.SpanStub{
-				SpanKind: trace.SpanKindProducer,
-				Attributes: []attribute.KeyValue{
-					attribute.String("foo", "bar"),
-					semconv.DBName("db-name-test"),
-				},
-			},
-			want: &zkmodel.Endpoint{
-				ServiceName: "db-name-test",
-			},
-		},
-		{
-			name: "peer-hostname-rank",
+			name: "peer.hostname-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
@@ -1145,7 +1146,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "peer-address-rank",
+			name: "peer.address-rank",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
@@ -1158,7 +1159,20 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "net-peer-invalid-ip",
+			name: "db.name-rank",
+			data: tracetest.SpanStub{
+				SpanKind: trace.SpanKindProducer,
+				Attributes: []attribute.KeyValue{
+					attribute.String("foo", "bar"),
+					semconv.DBName("db-name-test"),
+				},
+			},
+			want: &zkmodel.Endpoint{
+				ServiceName: "db-name-test",
+			},
+		},
+		{
+			name: "network.peer.address-invalid-ip",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
@@ -1168,7 +1182,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "net-peer-ipv6-no-port",
+			name: "network.peer.address-ipv6-no-port",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
@@ -1180,7 +1194,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			},
 		},
 		{
-			name: "net-peer-ipv4-port",
+			name: "network.peer.address-ipv4-port",
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
