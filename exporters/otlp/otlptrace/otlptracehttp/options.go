@@ -100,6 +100,12 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{otlpconfig.WithHeaders(headers)}
 }
 
+// WithHostHeader allows one to tell the driver to override HTTP host header.
+// If value is unset Endpoint's host is used as Host header.
+func WithHostHeader(host string) Option {
+	return wrappedOption{otlpconfig.WithHostHeader(host)}
+}
+
 // WithTimeout tells the driver the max waiting time for the backend to process
 // each spans batch.  If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {

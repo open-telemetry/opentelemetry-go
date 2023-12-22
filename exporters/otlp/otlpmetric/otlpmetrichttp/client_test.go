@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -121,6 +121,19 @@ func TestConfig(t *testing.T) {
 		require.Regexp(t, "OTel Go OTLP over HTTP/protobuf metrics exporter/[01]\\..*", got)
 		require.Contains(t, got, key)
 		assert.Equal(t, got[key], []string{headers[key]})
+	})
+
+	t.Run("WithHostHeader", func(t *testing.T) {
+		hostHeader := "test-host"
+		exp, coll := factoryFunc("", nil, WithHostHeader(hostHeader))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.HostHeader()
+		assert.Equal(t, got, hostHeader)
 	})
 
 	t.Run("WithTimeout", func(t *testing.T) {

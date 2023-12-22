@@ -149,6 +149,12 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
+// WithHostHeader overrides Host header in HTTP requests.
+// If unset, the target Endpoint's host will be used as Host header
+func WithHostHeader(host string) Option {
+	return wrappedOption{oconf.WithHostHeader(host)}
+}
+
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
 //
 // This takes precedence over any retry settings defined by WithRetry. Once

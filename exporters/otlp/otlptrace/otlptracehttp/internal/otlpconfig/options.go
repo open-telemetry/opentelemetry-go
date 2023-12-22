@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+package otlpconfig
 
 import (
 	"crypto/tls"
@@ -49,6 +49,7 @@ type (
 		Insecure    bool
 		TLSCfg      *tls.Config
 		Headers     map[string]string
+		HostHeader  string
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
@@ -313,6 +314,13 @@ func WithSecure() GenericOption {
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Headers = headers
+		return cfg
+	})
+}
+
+func WithHostHeader(host string) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.HostHeader = host
 		return cfg
 	})
 }

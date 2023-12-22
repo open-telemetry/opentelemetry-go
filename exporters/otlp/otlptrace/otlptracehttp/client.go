@@ -228,6 +228,10 @@ func (d *client) newRequest(body []byte) (request, error) {
 	}
 	r.Header.Set("Content-Type", contentTypeProto)
 
+	if d.cfg.HostHeader != "" {
+		r.Host = d.cfg.HostHeader
+	}
+
 	req := request{Request: r}
 	switch Compression(d.cfg.Compression) {
 	case NoCompression:

@@ -50,8 +50,9 @@ type mockCollector struct {
 	partial              *collectortracepb.ExportTracePartialSuccess
 	delay                <-chan struct{}
 
-	clientTLSConfig *tls.Config
-	expectedHeaders map[string]string
+	clientTLSConfig    *tls.Config
+	expectedHeaders    map[string]string
+	expectedHostHeader string
 }
 
 func (c *mockCollector) Stop() error {
@@ -95,6 +96,11 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if c.expectedHostHeader != "" && c.expectedHostHeader != r.Host {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	response := collectortracepb.ExportTraceServiceResponse{
 		PartialSuccess: c.partial,
 	}
@@ -215,6 +221,7 @@ type mockCollectorConfig struct {
 	Delay                <-chan struct{}
 	WithTLS              bool
 	ExpectedHeaders      map[string]string
+	ExpectedHostHeader   string
 }
 
 func (c *mockCollectorConfig) fillInDefaults() {
@@ -238,6 +245,7 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 		partial:              cfg.Partial,
 		delay:                cfg.Delay,
 		expectedHeaders:      cfg.ExpectedHeaders,
+		expectedHostHeader:   cfg.ExpectedHostHeader,
 	}
 	mux := http.NewServeMux()
 	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))

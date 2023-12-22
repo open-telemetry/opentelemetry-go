@@ -197,9 +197,10 @@ func (e *HTTPResponseError) Unwrap() error { return e.Err }
 type HTTPCollector struct {
 	plainTextResponse bool
 
-	headersMu sync.Mutex
-	headers   http.Header
-	storage   *Storage
+	headersMu  sync.Mutex
+	headers    http.Header
+	hostHeader string
+	storage    *Storage
 
 	resultCh <-chan ExportResult
 	listener net.Listener
@@ -299,6 +300,10 @@ func (c *HTTPCollector) Headers() map[string][]string {
 	return c.headers.Clone()
 }
 
+func (c *HTTPCollector) HostHeader() string {
+   return c.hostHeader
+}
+
 func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.respond(w, c.record(r))
 }
@@ -333,6 +338,8 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 		}
 	}
 	c.headersMu.Unlock()
+
+	c.hostHeader = r.Host
 
 	if c.resultCh != nil {
 		return <-c.resultCh
