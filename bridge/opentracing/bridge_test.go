@@ -576,17 +576,30 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 }
 
 func TestBridgeCarrierBaggagePropagation(t *testing.T) {
+	carriers := []struct {
+		name    string
+		carrier interface{}
+		format  ot.BuiltinFormat
+	}{
+		{
+			name:    "TextMapCarrier",
+			carrier: ot.TextMapCarrier{},
+			format:  ot.TextMap,
+		},
+		{
+			name:    "HTTPHeadersCarrier",
+			carrier: ot.HTTPHeadersCarrier{},
+			format:  ot.HTTPHeaders,
+		},
+	}
+
 	testCases := []struct {
 		name             string
-		format           ot.BuiltinFormat
-		carrier          interface{}
 		baggageItems     []bipBaggage
 		wantBaggageItems []bipBaggage
 	}{
 		{
-			name:    "HTTPHeadersCarrier",
-			format:  ot.HTTPHeaders,
-			carrier: ot.HTTPHeadersCarrier(http.Header{}),
+			name: "single baggage item",
 			baggageItems: []bipBaggage{
 				{
 					key:   "foo",
@@ -601,9 +614,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 			},
 		},
 		{
-			name:    "TextMapCarrier",
-			format:  ot.TextMap,
-			carrier: ot.TextMapCarrier(map[string]string{}),
+			name: "multiple baggage items",
 			baggageItems: []bipBaggage{
 				{
 					key:   "foo",
@@ -627,36 +638,37 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockOtelTracer := internal.NewMockTracer()
-			b, _ := NewTracerPair(mockOtelTracer)
-			b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-				propagation.TraceContext{},
-				propagation.Baggage{}), // Required for baggage propagation.
-			)
+	for _, c := range carriers {
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
+				mockOtelTracer := internal.NewMockTracer()
+				b, _ := NewTracerPair(mockOtelTracer)
+				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+					propagation.TraceContext{},
+					propagation.Baggage{}), // Required for baggage propagation.
+				)
 
-			// Set baggage items.
-			span := b.StartSpan("test")
-			for _, bi := range tc.baggageItems {
-				span.SetBaggageItem(bi.key, bi.value)
-			}
-			defer span.Finish()
+				// Set baggage items.
+				span := b.StartSpan("test")
+				for _, bi := range tc.baggageItems {
+					span.SetBaggageItem(bi.key, bi.value)
+				}
+				defer span.Finish()
 
-			err := b.Inject(span.Context(), tc.format, tc.carrier)
-			assert.NoError(t, err)
+				err := b.Inject(span.Context(), c.format, c.carrier)
+				assert.NoError(t, err)
 
-			spanContext, err := b.Extract(tc.format, tc.carrier)
-			assert.NoError(t, err)
+				spanContext, err := b.Extract(c.format, c.carrier)
+				assert.NoError(t, err)
 
-			// Check baggage items.
-			bsc, ok := spanContext.(*bridgeSpanContext)
-			assert.True(t, ok)
-			assert.Equal(t, len(tc.wantBaggageItems), bsc.bag.Len())
-			for i, m := range bsc.bag.Members() {
-				assert.Equal(t, tc.wantBaggageItems[i].key, m.Key())
-				assert.Equal(t, tc.wantBaggageItems[i].value, m.Value())
-			}
-		})
+				// Check baggage items.
+				bsc, ok := spanContext.(*bridgeSpanContext)
+				assert.True(t, ok)
+				assert.Equal(t, len(tc.wantBaggageItems), bsc.bag.Len())
+				for _, bi := range tc.wantBaggageItems {
+					assert.Equal(t, bi.value, bsc.bag.Member(bi.key).Value())
+				}
+			})
+		}
 	}
 }
