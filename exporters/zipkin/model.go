@@ -240,17 +240,17 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 // Rank determines selection order for remote endpoint. See the specification
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.28.0/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
 var remoteEndpointKeyRank = map[attribute.Key]int{
-	semconv.PeerServiceKey:            0,
-	semconv.ServerAddressKey:          1,
-	semconv120.NetPeerNameKey:         2,
-	semconv.NetworkPeerAddressKey:     3,
-	semconv121.ServerSocketDomainKey:  4,
-	semconv121.ServerSocketAddressKey: 5,
-	semconv120.NetSockPeerNameKey:     6,
-	semconv120.NetSockPeerAddrKey:     7,
-	keyPeerHostname:                   8,
-	keyPeerAddress:                    9,
-	semconv.DBNameKey:                 10,
+	semconv.PeerServiceKey:            1,
+	semconv.ServerAddressKey:          2,
+	semconv120.NetPeerNameKey:         3,
+	semconv.NetworkPeerAddressKey:     4,
+	semconv121.ServerSocketDomainKey:  5,
+	semconv121.ServerSocketAddressKey: 6,
+	semconv120.NetSockPeerNameKey:     7,
+	semconv120.NetSockPeerAddrKey:     8,
+	keyPeerHostname:                   9,
+	keyPeerAddress:                    10,
+	semconv.DBNameKey:                 11,
 }
 
 func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
