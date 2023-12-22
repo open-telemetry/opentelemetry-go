@@ -28,6 +28,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv120 "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -238,12 +240,17 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 // Rank determines selection order for remote endpoint. See the specification
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.28.0/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
 var remoteEndpointKeyRank = map[attribute.Key]int{
-	semconv.PeerServiceKey:        0,
-	semconv.ServerAddressKey:      1,
-	semconv.NetworkPeerAddressKey: 2,
-	keyPeerHostname:               3,
-	keyPeerAddress:                4,
-	semconv.DBNameKey:             5,
+	semconv.PeerServiceKey:            0,
+	semconv.ServerAddressKey:          1,
+	semconv120.NetPeerNameKey:         2,
+	semconv.NetworkPeerAddressKey:     3,
+	semconv121.ServerSocketDomainKey:  4,
+	semconv121.ServerSocketAddressKey: 5,
+	semconv120.NetSockPeerNameKey:     6,
+	semconv120.NetSockPeerAddrKey:     7,
+	keyPeerHostname:                   8,
+	keyPeerAddress:                    9,
+	semconv.DBNameKey:                 10,
 }
 
 func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
@@ -272,14 +279,20 @@ func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
 		return nil
 	}
 
-	if endpointAttr.Key != semconv.NetworkPeerAddressKey &&
-		endpointAttr.Value.Type() == attribute.STRING {
-		return &zkmodel.Endpoint{
-			ServiceName: endpointAttr.Value.AsString(),
-		}
+	v := endpointAttr.Value.AsString()
+
+	switch endpointAttr.Key {
+	case semconv.NetworkPeerAddressKey:
+		return remoteEndpointPeerIPWithPort(v, semconv.NetworkPeerPortKey, attr)
+	case semconv121.ServerSocketAddressKey:
+		return remoteEndpointPeerIPWithPort(v, semconv121.ServerSocketPortKey, attr)
+	case semconv120.NetSockPeerAddrKey:
+		return remoteEndpointPeerIPWithPort(v, semconv121.NetSockPeerPortKey, attr)
 	}
 
-	return remoteEndpointPeerIPWithPort(endpointAttr.Value.AsString(), semconv.NetworkPeerPortKey, attr)
+	return &zkmodel.Endpoint{
+		ServiceName: v,
+	}
 }
 
 func remoteEndpointPeerIPWithPort(peerIP string, portKey attribute.Key, attrs []attribute.KeyValue) *zkmodel.Endpoint {

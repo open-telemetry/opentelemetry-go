@@ -1183,12 +1183,12 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 				Attributes: []attribute.KeyValue{
 					keyPeerHostname.String("peer-hostname-test"),
 					semconv.DBName("db-name-test"),
-					attribute.String("net.sock.peer.name", "server-socket-domain-test"),
+					attribute.String("net.sock.peer.name", "net-sock-peer-name-test"),
 					attribute.String("net.sock.peer.addr", "10.4.8.12"),
 				},
 			},
 			want: &zkmodel.Endpoint{
-				ServiceName: "net.sock.peer.name",
+				ServiceName: "net-sock-peer-name-test",
 			},
 		},
 		{
