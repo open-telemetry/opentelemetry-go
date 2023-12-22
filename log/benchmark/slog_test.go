@@ -6,7 +6,9 @@ package benchmark
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
@@ -21,18 +23,28 @@ func TestSlogHandler(t *testing.T) {
 
 	l.Info(testBody, "string", testString)
 
-	assert.Equal(t, testBody, spy.Record.Body())
-	assert.Equal(t, log.SeverityInfo, spy.Record.Severity())
-	assert.Equal(t, 1, spy.Record.AttributesLen())
-	spy.Record.WalkAttributes(func(kv attribute.KeyValue) bool {
-		assert.Equal(t, "string", string(kv.Key))
-		assert.Equal(t, testString, kv.Value.AsString())
-		return true
-	})
+	want := log.Record{
+		Body:     testBody,
+		Severity: log.SeverityInfo,
+		Attributes: []attribute.KeyValue{
+			attribute.String("string", testString),
+		},
+	}
+
+	assert.NotZero(t, spy.Record.Timestamp, "should set a timestamp")
+	spy.Record.Timestamp = time.Time{}
+	assert.Equal(t, want, spy.Record)
 }
 
 type slogHandler struct {
 	Logger log.Logger
+}
+
+var slogAttrPool = sync.Pool{
+	New: func() interface{} {
+		attr := make([]attribute.KeyValue, 0, 5)
+		return &attr
+	},
 }
 
 // Handle handles the Record.
@@ -40,17 +52,24 @@ type slogHandler struct {
 func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 	record := log.Record{}
 
-	record.SetTimestamp(r.Time)
+	record.Timestamp = r.Time
 
-	record.SetBody(r.Message)
+	record.Body = r.Message
 
 	lvl := convertLevel(r.Level)
-	record.SetSeverity(lvl)
+	record.Severity = lvl
 
+	ptr := slogAttrPool.Get().(*[]attribute.KeyValue)
+	attrs := *ptr
+	defer func() {
+		*ptr = attrs[:0]
+		slogAttrPool.Put(ptr)
+	}()
 	r.Attrs(func(a slog.Attr) bool {
-		record.AddAttributes(convertAttr(a))
+		attrs = append(attrs, convertAttr(a))
 		return true
 	})
+	record.Attributes = attrs
 
 	h.Logger.Emit(context.Background(), record)
 	return nil

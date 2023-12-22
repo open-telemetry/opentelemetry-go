@@ -43,16 +43,9 @@ is defined as an interface in [logger.go](logger.go).
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
 is defined as a struct in [record.go](record.go).
 
-`Record` has `WalkAttributes` and `AddAttributes` methods,
-like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
-and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
-in order to achieve high-performance when accessing and setting attributes efficiently.
+## Usage examples
 
-`Record` has a `AttributesLen` method that returns
-the number of attributes to allow slice preallocation
-when converting records to a different representation.
-
-### Usage Example: Log Bridge implementation
+### Log Bridge implementation
 
 A naive implementation of
 the [slog.Handler](https://pkg.go.dev/log/slog#Handler) interface
@@ -62,7 +55,10 @@ A naive implementation of
 the [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) interface
 is in [benchmark/logr_test.go](benchmark/slog_test.go).
 
-### Usage Example: Direct API usage
+The log bridges can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+for reducing the number of allocations when mapping attributes.
+
+### Direct API usage
 
 The users may also chose to use the API directly.
 
@@ -75,7 +71,7 @@ var logger = otel.Logger("my-service")
 logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."})
 ```
 
-### Usage Example: API implementation
+### API implementation
 
 Excerpt of how SDK can implement the `Logger` interface.
 
@@ -99,6 +95,10 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 A test implementation of the the `Logger` interface
 is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
 
+If the record is processed asynchronously,
+then the processor has to copy record attributes,
+in order to avoid use after free bugs and race condition.
+
 Canceling the context should not affect record processing.
 Among other things, log messages may be necessary to debug a
 cancellation-related problem.
@@ -110,7 +110,7 @@ The backwards compatibility is achieved using the `embedded` design pattern
 that is already used in Trace API and Metrics API.
 
 Additionally, the `Logger.Emit` functionality can be extended by
-adding new exported fields and methods to the `Record` struct.
+adding new exported fields to the `Record` struct.
 
 ## Benchmarking
 
@@ -118,9 +118,9 @@ The benchmarks takes inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
 and interoperable with existing logging packages.[^1][^2]
 
-## Rationale
+## Rejected Alternatives
 
-### Rejected Alternative: Reuse slog
+### Reuse slog
 
 The API must not be coupled to [`slog`](https://pkg.go.dev/log/slog),
 nor any other logging library.
@@ -134,7 +134,7 @@ The interoperabilty can be achieved using [a log bridge](https://opentelemetry.i
 
 You can read more about OpenTelemetry Logs design on [opentelemetry.io](https://opentelemetry.io/docs/concepts/signals/logs/).
 
-### Rejected Alternative: Record as interface
+### Record as interface
 
 `Record` is defined as a `struct` because of the following reasons.
 
@@ -149,7 +149,7 @@ usage of interfaces tend to increase heap allocations.[^2]
 
 The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
-### Rejected Alternative: Options as parameter to Logger.Emit
+### Options as parameter to Logger.Emit
 
 One of the initial ideas was to have:
 
@@ -173,7 +173,7 @@ which would be used by the SDK and not by the users.
 At last, the definition would be similar to [`slog.Handler.Handle`](https://pkg.go.dev/log/slog#Handler)
 that was designed to provide optimization opportunities.[^1]
 
-### Rejected Alternative: Passing record as pointer to Logger.Emit
+### Passing record as pointer to Logger.Emit
 
 So far the benchmarks do not show differences that would
 favor passing the record via pointer (and vice versa).
@@ -187,7 +187,7 @@ It should reduce the possibility of a heap allocation.
 The user would not be able to pass `nil`.
 Therefore, it reduces the possiblity to have a nil pointer dereference.
 
-### Rejected Alternative: Passing struct as parameter to LoggerProvider.Logger
+### Passing struct as parameter to LoggerProvider.Logger
 
 Similarly to `Logger.Emit`, we could have something like:
 
@@ -207,57 +207,67 @@ HTTP/RPC handler could write hundreds of logs, it should not
 create a new logger for each log entry.
 The application should reuse loggers whenever possible.
 
-### Rejected Proposal: Export attributesInlineCount
+### Logger.WithAttributes
 
-There was a proposal to export `attributesInlineCount`
-so the bridge implementation could use it
-to reduce the number of heap allocations
-when the record has more attribute than 5
-(the value of `attributesInlineCount`).
-
-However, according to [^1], only ~5% of code emits log records
-with more than 5 attributes.
-Moreover, according to
-[the benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1413884476),
-it would only save a few allocations
-when the number of attributes is greater than 5
-and the time execution tend to be slower for 5 attributes or less.
-
-At last, nothing prevents us to export this constant in future
-if it will occur that it could be helpful in some scenarios.
-However, without a strong reason, we prefer to hide the implementation detail
-and have smaller API surface.
-
-### Rejected Alternative: Record with exported fields
-
-There was a proposal that the timestamp,
-observed timestamp, severity number, severity text,
-body properties of the [Emit](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord)
-are exposed as exported fields of `Record` type.
-This was inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record)
-design.
-
-We find that exposing all properties via methods is be more consistent.
-Having access to attributes via methods
-and access to other properities via fields
-could be more confusing for the users.
-
-### Rejected Alternative: Logger.WithAttributes
-
-The was to add `WithAttributes` to the `Logger` interface.
+We could add `WithAttributes` to the `Logger` interface.
 Then `Record` could be a simple struct with only exported fields.
 The idea was that the SDK would implement the performance improvements
 instead of doing it in the API.
 This would allow having different optimisation strategies.
 
-The main problem of this proposal was that the variadic slice passed to
-an interface method is always heap allocated.
+During the analysis[^4], it occurred that the main problem of this proposal
+is that the variadic slice passed to an interface method is always heap allocated.
 
 Moreover, the logger returned by `WithAttribute` was allocated on the heap.
 
 At last, the proposal was not specification compliant.
 
-The proposal analysis was done [here](https://github.com/pellared/opentelemetry-go/pull/3).
+### Record attributes like in slog.Record
+
+To reduce the number of allocations of the attributes,
+the `Record` could be modeled similarly to [`slog.Record`](https://pkg.go.dev/log/slog#Record).
+`Record` could have `WalkAttributes` and `AddAttributes` methods,
+like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
+and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
+in order to achieve high-performance when accessing and setting attributes efficiently.
+`Record` would have a `AttributesLen` method that returns
+the number of attributes to allow slice preallocation
+when converting records to a different representation.
+
+However, during the analysis[^5] we decided that having
+a simple slice in `Record` is more flexible.
+
+It is possible to achieve better performance, by using [`sync.Pool`](https://pkg.go.dev/sync#Pool).
+
+Having a simple `Record` without any logic makes it possible
+that the optimisations can be done in API implementation
+and bridge implementations.
+For instance, in order to reduce the heap allocations of attributes,
+the bridge implementation can use a `sync.Pool`.
+In such case, the API implementation (SDK) would need to copy the attributes
+when the records are processed asynchrounsly,
+in order to avoid use after free bugs and race conditions.
+
+For reference, here is the reason why `slog` does not use `sync.Pool`[^2]:
+
+> We can use a sync pool for records though we decided not to.
+You can but it's a bad idea for us. Why?
+Because users have control of Records.
+Handler writers can get their hands on a record
+and we'd have to ask them to free it
+or try to free it magically at some some point.
+But either way, they could get themselves in trouble by freeing it twice
+or holding on to one after they free it.
+That's a use after free bug and that's why `zerolog` was problematic for us.
+`zerolog` as as part of its speed exposes a pool allocated value to users
+if you use `zerolog` the normal way, that you'll see in all the examples,
+you will never encounter a problem.
+But if you do something a little out of the ordinary you can get
+use after free bugs and we just didn't want to put that in the standard library.
+
+We took a different decision, because the key difference is that `slog`
+is a logging library and Logs Bridge API is only a logging abstraction.
+We want to provide more flexibility and offer better speed.
 
 ## Open issues (if applicable)
 
@@ -267,3 +277,5 @@ know the solution. This section may be omitted if there are none. -->
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
 [^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
+[^4]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
+[^5]: [Record attributes as field and use sync.Pool for reducing allocations analysis](https://github.com/pellared/opentelemetry-go/pull/4)

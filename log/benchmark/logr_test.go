@@ -5,6 +5,7 @@ package benchmark
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -21,18 +22,26 @@ func TestLogrSink(t *testing.T) {
 
 	l.Info(testBody, "string", testString)
 
-	assert.Equal(t, testBody, spy.Record.Body())
-	assert.Equal(t, log.SeverityInfo, spy.Record.Severity())
-	assert.Equal(t, 1, spy.Record.AttributesLen())
-	spy.Record.WalkAttributes(func(kv attribute.KeyValue) bool {
-		assert.Equal(t, "string", string(kv.Key))
-		assert.Equal(t, testString, kv.Value.AsString())
-		return true
-	})
+	want := log.Record{
+		Body:     testBody,
+		Severity: log.SeverityInfo,
+		Attributes: []attribute.KeyValue{
+			attribute.String("string", testString),
+		},
+	}
+
+	assert.Equal(t, want, spy.Record)
 }
 
 type logrSink struct {
 	Logger log.Logger
+}
+
+var logrAttrPool = sync.Pool{
+	New: func() interface{} {
+		attr := make([]attribute.KeyValue, 0, 5)
+		return &attr
+	},
 }
 
 // Init is implementated as a dummy.
@@ -49,23 +58,30 @@ func (s *logrSink) Enabled(level int) bool {
 func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 	record := log.Record{}
 
-	record.SetBody(msg)
+	record.Body = msg
 
 	lvl := log.Severity(9 - level)
-	record.SetSeverity(lvl)
+	record.Severity = lvl
 
 	if len(keysAndValues)%2 == 1 {
 		panic("key without a value")
 	}
 	kvCount := len(keysAndValues) / 2
+	ptr := logrAttrPool.Get().(*[]attribute.KeyValue)
+	attrs := *ptr
+	defer func() {
+		*ptr = attrs[:0]
+		logrAttrPool.Put(ptr)
+	}()
 	for i := 0; i < kvCount; i++ {
 		k, ok := keysAndValues[i*2].(string)
 		if !ok {
 			panic("key is not a string")
 		}
 		kv := convertKV(k, keysAndValues[i*2+1])
-		record.AddAttributes(kv)
+		attrs = append(attrs, kv)
 	}
+	record.Attributes = attrs
 
 	s.Logger.Emit(ctx, record)
 }

@@ -22,16 +22,17 @@ func TestWriterLogger(t *testing.T) {
 	sb := &strings.Builder{}
 	l := &writerLogger{w: sb}
 
-	r := log.Record{}
-	r.SetTimestamp(testTimestamp)
-	r.SetSeverity(testSeverity)
-	r.SetBody(testBody)
-	r.AddAttributes(
-		attribute.String("string", testString),
-		attribute.Float64("float", testFloat),
-		attribute.Int("int", testInt),
-		attribute.Bool("bool", testBool),
-	)
+	r := log.Record{
+		Timestamp: testTimestamp,
+		Severity:  testSeverity,
+		Body:      testBody,
+		Attributes: []attribute.KeyValue{
+			attribute.String("string", testString),
+			attribute.Float64("float", testFloat),
+			attribute.Int("int", testInt),
+			attribute.Bool("bool", testBool),
+		},
+	}
 	l.Emit(ctx, r)
 
 	want := "timestamp=595728000 severity=9 body=log message string=7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190 float=1.2345 int=32768 bool=true\n"
@@ -47,23 +48,22 @@ type writerLogger struct {
 }
 
 func (l *writerLogger) Emit(_ context.Context, r log.Record) {
-	if !r.Timestamp().IsZero() {
+	if !r.Timestamp.IsZero() {
 		l.write("timestamp=")
-		l.write(strconv.FormatInt(r.Timestamp().Unix(), 10))
+		l.write(strconv.FormatInt(r.Timestamp.Unix(), 10))
 		l.write(" ")
 	}
 	l.write("severity=")
-	l.write(strconv.FormatInt(int64(r.Severity()), 10))
+	l.write(strconv.FormatInt(int64(r.Severity), 10))
 	l.write(" ")
 	l.write("body=")
-	l.write(r.Body())
-	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+	l.write(r.Body)
+	for _, kv := range r.Attributes {
 		l.write(" ")
 		l.write(string(kv.Key))
 		l.write("=")
 		l.appendValue(kv.Value)
-		return true
-	})
+	}
 	l.write("\n")
 }
 
