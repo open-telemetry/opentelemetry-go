@@ -38,6 +38,13 @@ is defined as an interface [provider.go](provider.go).
 The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
 is defined as an interface in [logger.go](logger.go).
 
+Canceling the context pass to `Emit` should not affect record processing.
+Among other things, log messages may be necessary to debug a
+cancellation-related problem.
+The context is used to pass request-scoped values.
+The API implementation should handle the trace context passed
+in `ctx` to the `Emit` method.
+
 ### Record
 
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
@@ -47,6 +54,30 @@ is defined as a struct in [record.go](record.go).
 
 ### Log Bridge implementation
 
+The log bridges can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+for reducing the number of allocations when mapping attributes.
+
+The bridge implementation should do its best to pass
+the `ctx` containing the trace context from the call-site
+so it can later passed via `Emit`.
+Re-constructing a `context.Context` with [`trace.ContextWithSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#ContextWithSpanContext)
+and [`trace.NewSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#NewSpanContext)
+would usually involve more memory allocations.
+
+The logging libraries which have recording methods that accepts `context.Context`,
+such us [`slog`](https://pkg.go.dev/log/slog),
+[`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus)
+[`zerolog`](https://pkg.go.dev/github.com/rs/zerolog),
+makes passing the trace context trivial.
+
+However, some libraries do not accept a `context.Context` in their recording methods.
+Structured logging libraries,
+such as [`logr`](https://pkg.go.dev/github.com/go-logr/logr)
+and [`zap`](https://pkg.go.dev/go.uber.org/zap),
+offer passing `any` type as a log attribute/field.
+Therefore, their bridge implementations can define a "special" log attributes/field
+that will be used to capture the trace context.
+
 A naive implementation of
 the [slog.Handler](https://pkg.go.dev/log/slog#Handler) interface
 is in [benchmark/slog_test.go](benchmark/slog_test.go).
@@ -54,9 +85,6 @@ is in [benchmark/slog_test.go](benchmark/slog_test.go).
 A naive implementation of
 the [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) interface
 is in [benchmark/logr_test.go](benchmark/slog_test.go).
-
-The log bridges can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
-for reducing the number of allocations when mapping attributes.
 
 ### Direct API usage
 
@@ -92,17 +120,12 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 }
 ```
 
-A test implementation of the the `Logger` interface
-is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
-
 If the record is processed asynchronously,
 then the processor has to copy record attributes,
 in order to avoid use after free bugs and race condition.
 
-Canceling the context should not affect record processing.
-Among other things, log messages may be necessary to debug a
-cancellation-related problem.
-The context is used to pass request-scoped values such as Trace ID and Span ID.
+A test implementation of the the `Logger` interface
+is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
 
 ## Compatibility
 
