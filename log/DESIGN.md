@@ -135,7 +135,7 @@ adding new exported fields to the `Record` struct.
 
 ## Benchmarking
 
-The benchmarks takes inspiration from [`slog`](https://pkg.go.dev/log/slog),
+The benchmarks take inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
 and interoperable with existing logging packages.[^1][^2]
 
