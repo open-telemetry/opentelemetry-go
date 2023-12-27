@@ -4,6 +4,7 @@
 package benchmark
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -20,7 +21,7 @@ func TestLogrSink(t *testing.T) {
 
 	l := logr.New(&logrSink{spy})
 
-	l.Info(testBody, "string", testString)
+	l.Info(testBody, "string", testString, "ctx", ctx)
 
 	want := log.Record{
 		Body:     testBody,
@@ -31,6 +32,7 @@ func TestLogrSink(t *testing.T) {
 	}
 
 	assert.Equal(t, want, spy.Record)
+	assert.Equal(t, ctx, spy.Context)
 }
 
 type logrSink struct {
@@ -73,12 +75,19 @@ func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 		*ptr = attrs[:0]
 		logrAttrPool.Put(ptr)
 	}()
+	ctx := context.Background()
 	for i := 0; i < kvCount; i++ {
 		k, ok := keysAndValues[i*2].(string)
 		if !ok {
 			panic("key is not a string")
 		}
-		kv := convertKV(k, keysAndValues[i*2+1])
+		v := keysAndValues[i*2+1]
+		if vCtx, ok := v.(context.Context); ok {
+			// Special case when a field is of context.Context type.
+			ctx = vCtx
+			continue
+		}
+		kv := convertKV(k, v)
 		attrs = append(attrs, kv)
 	}
 	record.Attributes = attrs
