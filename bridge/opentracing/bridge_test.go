@@ -608,7 +608,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 			},
 			wantBaggageItems: []bipBaggage{
 				{
-					key:   "Foo",
+					key:   "foo",
 					value: "bar",
 				},
 			},
@@ -627,11 +627,11 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 			},
 			wantBaggageItems: []bipBaggage{
 				{
-					key:   "Foo",
+					key:   "foo",
 					value: "bar",
 				},
 				{
-					key:   "Foo2",
+					key:   "foo2",
 					value: "bar2",
 				},
 			},
