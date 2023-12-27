@@ -9,7 +9,7 @@
 //
 // They test a complete log record, from the user's call to its return.
 
-package benchmark
+package internal
 
 import (
 	"context"

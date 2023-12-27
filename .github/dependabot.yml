@@ -227,7 +227,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /log/benchmark
+    directory: /log/internal
     labels:
       - dependencies
       - go

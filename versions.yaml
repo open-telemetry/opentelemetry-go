@@ -51,4 +51,4 @@ module-sets:
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
   - go.opentelemetry.io/otel/log
-  - go.opentelemetry.io/otel/log/benchmark
+  - go.opentelemetry.io/otel/log/internal

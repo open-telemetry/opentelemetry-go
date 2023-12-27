@@ -81,8 +81,8 @@ that will be used to capture the trace context.
 
 [The prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725)
 has a naive implementation of
-[slog.Handler](https://pkg.go.dev/log/slog#Handler) in `benchmark/slog_test.go`
-and [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) in `benchmark/logr_test.go`.
+[slog.Handler](https://pkg.go.dev/log/slog#Handler) in `log/internal/slog.go`
+and [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) in `log/internal/logr.go`.
 
 ### Direct API usage
 
@@ -123,7 +123,7 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 ```
 
 A test implementation of the the `Logger` interface
-is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
+used for benchmarking is in [internal/writer_logger.go](internal/writer_logger.go).
 
 ## Compatibility
 

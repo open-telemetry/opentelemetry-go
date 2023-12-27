@@ -1,4 +1,4 @@
-module go.opentelemetry.io/otel/log/benchmark
+module go.opentelemetry.io/otel/log/internal
 
 go 1.20
 
