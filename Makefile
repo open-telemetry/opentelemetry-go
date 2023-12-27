@@ -315,4 +315,4 @@ add-tags: | $(MULTIMOD)
 
 .PHONY: lint-markdown
 lint-markdown: 
-	docker run -v "$(CURDIR):$(WORKDIR)" docker://avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md

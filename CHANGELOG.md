@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `go.opentelemetry.io/otel/log` OpenTelemetry Bridge API module. (#4798)
 - The `go.opentelemetry.io/otel/semconv/v1.22.0` package.
   The package contains semantic conventions from the `v1.22.0` version of the OpenTelemetry Semantic Conventions. (#4735)
 - The `go.opentelemetry.io/otel/semconv/v1.23.0` package.

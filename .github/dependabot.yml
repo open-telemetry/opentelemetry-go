@@ -218,6 +218,24 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /log
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /log/internal
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /metric
     labels:
       - dependencies

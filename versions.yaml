@@ -48,5 +48,10 @@ module-sets:
     version: v0.0.7
     modules:
       - go.opentelemetry.io/otel/schema
+  experimental-logs:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/otel/log
+      - go.opentelemetry.io/otel/log/internal
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
