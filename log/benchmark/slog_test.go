@@ -21,7 +21,7 @@ func TestSlogHandler(t *testing.T) {
 	spy := &spyLogger{}
 	l := slog.New(&slogHandler{spy})
 
-	l.Info(testBody, "string", testString)
+	l.InfoContext(ctx, testBody, "string", testString)
 
 	want := log.Record{
 		Body:     testBody,
@@ -34,6 +34,7 @@ func TestSlogHandler(t *testing.T) {
 	assert.NotZero(t, spy.Record.Timestamp, "should set a timestamp")
 	spy.Record.Timestamp = time.Time{}
 	assert.Equal(t, want, spy.Record)
+	assert.Equal(t, ctx, spy.Context)
 }
 
 type slogHandler struct {
@@ -49,7 +50,7 @@ var slogAttrPool = sync.Pool{
 
 // Handle handles the Record.
 // It should avoid memory allocations whenever possible.
-func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
+func (h *slogHandler) Handle(ctx context.Context, r slog.Record) error {
 	record := log.Record{}
 
 	record.Timestamp = r.Time
@@ -71,7 +72,7 @@ func (h *slogHandler) Handle(_ context.Context, r slog.Record) error {
 	})
 	record.Attributes = attrs
 
-	h.Logger.Emit(context.Background(), record)
+	h.Logger.Emit(ctx, record)
 	return nil
 }
 

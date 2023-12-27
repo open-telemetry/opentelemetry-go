@@ -21,13 +21,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/exp/slog"
 )
 
 var (
-	ctx           = context.Background()
+	ctx           = trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{TraceID: [16]byte{1}, SpanID: [8]byte{42}}))
 	testTimestamp = time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC)
 	testBody      = "log message"
 	testSeverity  = log.SeverityInfo

@@ -12,9 +12,11 @@ import (
 
 type spyLogger struct {
 	embedded.Logger
-	Record log.Record
+	Context context.Context
+	Record  log.Record
 }
 
-func (l *spyLogger) Emit(_ context.Context, r log.Record) {
+func (l *spyLogger) Emit(ctx context.Context, r log.Record) {
+	l.Context = ctx
 	l.Record = r
 }

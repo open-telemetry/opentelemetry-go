@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestWriterLogger(t *testing.T) {
@@ -35,7 +36,7 @@ func TestWriterLogger(t *testing.T) {
 	}
 	l.Emit(ctx, r)
 
-	want := "timestamp=595728000 severity=9 body=log message string=7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190 float=1.2345 int=32768 bool=true\n"
+	want := "timestamp=595728000 severity=9 body=log message string=7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190 float=1.2345 int=32768 bool=true traced=true\n"
 	assert.Equal(t, want, sb.String())
 }
 
@@ -47,7 +48,7 @@ type writerLogger struct {
 	w io.Writer
 }
 
-func (l *writerLogger) Emit(_ context.Context, r log.Record) {
+func (l *writerLogger) Emit(ctx context.Context, r log.Record) {
 	if !r.Timestamp.IsZero() {
 		l.write("timestamp=")
 		l.write(strconv.FormatInt(r.Timestamp.Unix(), 10))
@@ -64,6 +65,12 @@ func (l *writerLogger) Emit(_ context.Context, r log.Record) {
 		l.write("=")
 		l.appendValue(kv.Value)
 	}
+
+	span := trace.SpanContextFromContext(ctx)
+	if span.IsValid() {
+		l.write(" traced=true")
+	}
+
 	l.write("\n")
 }
 
