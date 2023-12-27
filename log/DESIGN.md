@@ -1,11 +1,12 @@
 # Logs Bridge API
 
-OpenTelemetry Logs tracking issue at [#4696](https://github.com/open-telemetry/opentelemetry-go/issues/4696).
-
 ## Abstract
 
-We propose adding a `go.opentelemetry.io/otel/log` Go module which will provide
+`go.opentelemetry.io/otel/log` provides
 [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
+
+The initial version of the design and the prototype
+was created in [#4725](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
 
 ## Background
 
@@ -78,13 +79,10 @@ offer passing `any` type as a log attribute/field.
 Therefore, their bridge implementations can define a "special" log attributes/field
 that will be used to capture the trace context.
 
-A naive implementation of
-the [slog.Handler](https://pkg.go.dev/log/slog#Handler) interface
-is in [benchmark/slog_test.go](benchmark/slog_test.go).
-
-A naive implementation of
-the [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) interface
-is in [benchmark/logr_test.go](benchmark/slog_test.go).
+[The prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725)
+has a naive implementation of
+[slog.Handler](https://pkg.go.dev/log/slog#Handler) in `benchmark/slog_test.go`
+and [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) in `benchmark/logr_test.go`.
 
 ### Direct API usage
 
@@ -101,6 +99,10 @@ logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."
 
 ### API implementation
 
+If the implementation processes the asynchronously,
+then it has to copy record attributes,
+in order to avoid use after free bugs and race condition.
+
 Excerpt of how SDK can implement the `Logger` interface.
 
 ```go
@@ -116,13 +118,9 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 		otel.Handle(err)
 		return
 	}
-	l.processor.Process(ctx, record)
+	l.processor.Process(ctx, record) // Note: A batch processor copies the attributes.
 }
 ```
-
-If the record is processed asynchronously,
-then the processor has to copy record attributes,
-in order to avoid use after free bugs and race condition.
 
 A test implementation of the the `Logger` interface
 is in [benchmark/writer_logger_test.go](benchmark/writer_logger_test.go).
@@ -291,11 +289,6 @@ use after free bugs and we just didn't want to put that in the standard library.
 We took a different decision, because the key difference is that `slog`
 is a logging library and Logs Bridge API is only a logging abstraction.
 We want to provide more flexibility and offer better speed.
-
-## Open issues (if applicable)
-
-<!-- A discussion of issues relating to this proposal for which the author does not
-know the solution. This section may be omitted if there are none. -->
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
