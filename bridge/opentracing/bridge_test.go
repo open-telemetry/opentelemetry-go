@@ -653,7 +653,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 					got = append(got, bipBaggage{m.Key(), m.Value()})
 				}
 
-				assert.Equal(t, tc.baggageItems, got)
+				assert.ElementsMatch(t, tc.baggageItems, got)
 			})
 		}
 	}
