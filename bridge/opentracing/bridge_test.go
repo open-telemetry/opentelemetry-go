@@ -574,3 +574,87 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 		assert.True(t, spanContext.(spanContextProvider).HasTraceID())
 	})
 }
+
+func TestBridgeCarrierBaggagePropagation(t *testing.T) {
+	carriers := []struct {
+		name    string
+		carrier interface{}
+		format  ot.BuiltinFormat
+	}{
+		{
+			name:    "TextMapCarrier",
+			carrier: ot.TextMapCarrier{},
+			format:  ot.TextMap,
+		},
+		{
+			name:    "HTTPHeadersCarrier",
+			carrier: ot.HTTPHeadersCarrier{},
+			format:  ot.HTTPHeaders,
+		},
+	}
+
+	testCases := []struct {
+		name         string
+		baggageItems []bipBaggage
+	}{
+		{
+			name: "single baggage item",
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+			},
+		},
+		{
+			name: "multiple baggage items",
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+				{
+					key:   "foo2",
+					value: "bar2",
+				},
+			},
+		},
+	}
+
+	for _, c := range carriers {
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
+				mockOtelTracer := internal.NewMockTracer()
+				b, _ := NewTracerPair(mockOtelTracer)
+				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+					propagation.TraceContext{},
+					propagation.Baggage{}), // Required for baggage propagation.
+				)
+
+				// Set baggage items.
+				span := b.StartSpan("test")
+				for _, bi := range tc.baggageItems {
+					span.SetBaggageItem(bi.key, bi.value)
+				}
+				defer span.Finish()
+
+				err := b.Inject(span.Context(), c.format, c.carrier)
+				assert.NoError(t, err)
+
+				spanContext, err := b.Extract(c.format, c.carrier)
+				assert.NoError(t, err)
+
+				// Check baggage items.
+				bsc, ok := spanContext.(*bridgeSpanContext)
+				assert.True(t, ok)
+
+				var got []bipBaggage
+				for _, m := range bsc.bag.Members() {
+					got = append(got, bipBaggage{m.Key(), m.Value()})
+				}
+
+				assert.ElementsMatch(t, tc.baggageItems, got)
+			})
+		}
+	}
+}
