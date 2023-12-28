@@ -594,9 +594,8 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name             string
-		baggageItems     []bipBaggage
-		wantBaggageItems []bipBaggage
+		name         string
+		baggageItems []bipBaggage
 	}{
 		{
 			name: "single baggage item",
@@ -606,26 +605,10 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 					value: "bar",
 				},
 			},
-			wantBaggageItems: []bipBaggage{
-				{
-					key:   "foo",
-					value: "bar",
-				},
-			},
 		},
 		{
 			name: "multiple baggage items",
 			baggageItems: []bipBaggage{
-				{
-					key:   "foo",
-					value: "bar",
-				},
-				{
-					key:   "foo2",
-					value: "bar2",
-				},
-			},
-			wantBaggageItems: []bipBaggage{
 				{
 					key:   "foo",
 					value: "bar",
@@ -664,10 +647,13 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 				// Check baggage items.
 				bsc, ok := spanContext.(*bridgeSpanContext)
 				assert.True(t, ok)
-				assert.Equal(t, len(tc.wantBaggageItems), bsc.bag.Len())
-				for _, bi := range tc.wantBaggageItems {
-					assert.Equal(t, bi.value, bsc.bag.Member(bi.key).Value())
+
+				var got []bipBaggage
+				for _, m := range bsc.bag.Members() {
+					got = append(got, bipBaggage{m.Key(), m.Value()})
 				}
+
+				assert.Equal(t, tc.baggageItems, got)
 			})
 		}
 	}
