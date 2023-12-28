@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `Parse` in `go.opentelemetry.io/otel/baggage` to validate member value before percent-decoding. (#4755)
 - Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#4756)
-- Fix baggage item key is canonicalized in `go.opentelemetry.io/otel/bridge/opentracing`. (#4799)
+- Fix baggage item key so that is not canonicalized in `go.opentelemetry.io/otel/bridge/opentracing`. (#4776)
 
 ## [1.21.0/0.44.0] 2023-11-16
 
