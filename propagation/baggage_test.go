@@ -40,13 +40,13 @@ type member struct {
 func (m member) Member(t *testing.T) baggage.Member {
 	props := make([]baggage.Property, 0, len(m.Properties))
 	for _, p := range m.Properties {
-		p, err := baggage.NewKeyValueProperty(p.Key, p.Value)
+		p, err := baggage.NewKeyValuePropertyRaw(p.Key, p.Value)
 		if err != nil {
 			t.Fatal(err)
 		}
 		props = append(props, p)
 	}
-	bMember, err := baggage.NewMember(m.Key, m.Value, props...)
+	bMember, err := baggage.NewMemberRaw(m.Key, m.Value, props...)
 	if err != nil {
 		t.Fatal(err)
 	}

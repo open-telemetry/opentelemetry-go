@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
 - Experimental cardinality limiting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
+- Add `NewMemberRaw` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage`. (#4804)
 
 ### Changed
 
@@ -30,8 +31,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 - Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
 - `Member.String` in `go.opentelemetry.io/otel/baggage` percent-encodes only when necessary. (#4775)
-- `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` does no longer require percent-encoding of values. Make sure to not precent-encode the value yourself (e.g. by using `url.PathEscape`) before passing it to `NewMember` and `NewKeyValueProperty`. `Member.String` and `Property.String` are encoding the value when necessary. (#4804)
 - `Property.Value` in `go.opentelemetry.io/otel/baggage` now returns a vanilla string instead of a percent-encoded value. (#4804)
+
+### Deprecated
+
+- `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` are deprecated. Use `NewMemberRaw` and `NewKeyValuePropertyRaw` instead which do not require percent-encoding of the value. (#4804)
 
 ### Fixed
 

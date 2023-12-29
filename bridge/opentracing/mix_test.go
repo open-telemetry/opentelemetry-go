@@ -515,7 +515,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 
 	otSpan.SetBaggageItem(otKey, value)
 
-	m, err := baggage.NewMember(otelKey, value)
+	m, err := baggage.NewMemberRaw(otelKey, value)
 	if err != nil {
 		t.Error(err)
 		return ctx

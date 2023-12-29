@@ -143,11 +143,25 @@ func TestNewKeyProperty(t *testing.T) {
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
-	p, err := NewKeyValueProperty(" ", "")
+	p, err := NewKeyValueProperty(" ", "value")
 	assert.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
-	p, err = NewKeyValueProperty("key", "Witaj Świecie!")
+	p, err = NewKeyValueProperty("key", ";")
+	assert.ErrorIs(t, err, errInvalidValue)
+	assert.Equal(t, Property{}, p)
+
+	p, err = NewKeyValueProperty("key", "value")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
+}
+
+func TestNewKeyValuePropertyRaw(t *testing.T) {
+	p, err := NewKeyValuePropertyRaw(" ", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
+
+	p, err = NewKeyValuePropertyRaw("key", "Witaj Świecie!")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "Witaj Świecie!", hasValue: true}, p)
 }
@@ -879,6 +893,45 @@ func TestNewMember(t *testing.T) {
 	}
 	assert.Equal(t, expected, m)
 
+	// wrong value with wrong decoding
+	val = "%zzzzz"
+	_, err = NewMember(key, val, p)
+	assert.ErrorIs(t, err, errInvalidValue)
+
+	// value should be decoded
+	val = "%3B"
+	m, err = NewMember(key, val, p)
+	expected = Member{
+		key:        key,
+		value:      ";",
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, m)
+
+	// Ensure new member is immutable.
+	p.key = "bar"
+	assert.Equal(t, expected, m)
+}
+
+func TestNewMemberRaw(t *testing.T) {
+	m, err := NewMemberRaw("", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Member{hasData: false}, m)
+
+	key, val := "k", "v"
+	p := Property{key: "foo"}
+	m, err = NewMemberRaw(key, val, p)
+	assert.NoError(t, err)
+	expected := Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.Equal(t, expected, m)
+
 	// Ensure new member is immutable.
 	p.key = "bar"
 	assert.Equal(t, expected, m)
@@ -897,12 +950,12 @@ func TestPropertiesValidate(t *testing.T) {
 
 func TestMemberString(t *testing.T) {
 	// normal key value pair
-	member, _ := NewMember("key", "value")
+	member, _ := NewMemberRaw("key", "value")
 	memberStr := member.String()
 	assert.Equal(t, memberStr, "key=value")
 
 	// encoded value
-	member, _ = NewMember("key", "; ")
+	member, _ = NewMemberRaw("key", "; ")
 	memberStr = member.String()
 	assert.Equal(t, memberStr, "key=%3B%20")
 }
@@ -910,10 +963,10 @@ func TestMemberString(t *testing.T) {
 var benchBaggage Baggage
 
 func BenchmarkNew(b *testing.B) {
-	mem1, _ := NewMember("key1", "val1")
-	mem2, _ := NewMember("key2", "val2")
-	mem3, _ := NewMember("key3", "val3")
-	mem4, _ := NewMember("key4", "val4")
+	mem1, _ := NewMemberRaw("key1", "val1")
+	mem2, _ := NewMemberRaw("key2", "val2")
+	mem3, _ := NewMemberRaw("key3", "val3")
+	mem4, _ := NewMemberRaw("key4", "val4")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -929,7 +982,7 @@ func BenchmarkNewMember(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchMember, _ = NewMember("key", "value")
+		benchMember, _ = NewMemberRaw("key", "value")
 	}
 }
 
@@ -944,7 +997,7 @@ func BenchmarkParse(b *testing.B) {
 func BenchmarkString(b *testing.B) {
 	var members []Member
 	addMember := func(k, v string) {
-		m, err := NewMember(k, valueEscape(v))
+		m, err := NewMemberRaw(k, valueEscape(v))
 		require.NoError(b, err)
 		members = append(members, m)
 	}

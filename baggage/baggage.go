@@ -67,7 +67,24 @@ func NewKeyProperty(key string) (Property, error) {
 // NewKeyValueProperty returns a new Property for key with value.
 //
 // If key or value are invalid, an error will be returned.
+//
+// Deprecated: Use NewKeyValuePropertyRaw instead
+// that does not require precent-encoding of the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
+	if !validateValue(value) {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	decodedValue, err := url.PathUnescape(value)
+	if err != nil {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	return NewKeyValuePropertyRaw(key, decodedValue)
+}
+
+// NewKeyValuePropertyRaw returns a new Property for key with value.
+//
+// If key or value are invalid, an error will be returned.
+func NewKeyValuePropertyRaw(key, value string) (Property, error) {
 	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
@@ -128,7 +145,7 @@ func (p Property) Value() (string, bool) {
 	return p.value, p.hasValue
 }
 
-// String encodes Property into a string compliant with the W3C Baggage
+// String encodes Property into a header string compliant with the W3C Baggage
 // specification.
 func (p Property) String() string {
 	if p.hasValue {
@@ -192,7 +209,7 @@ func (p properties) validate() error {
 	return nil
 }
 
-// String encodes properties into a string compliant with the W3C Baggage
+// String encodes properties into a header string compliant with the W3C Baggage
 // specification.
 func (p properties) String() string {
 	props := make([]string, len(p))
@@ -214,10 +231,27 @@ type Member struct {
 	hasData bool
 }
 
-// NewMember returns a new Member from the passed arguments. An error
+// NewMemberRaw returns a new Member from the passed arguments. An error
 // is returned if the created Member would be invalid according to the W3C
 // Baggage specification.
+//
+// Deprecated: Use NewMemberRaw instead
+// that does not require precent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
+	if !validateValue(value) {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	decodedValue, err := url.PathUnescape(value)
+	if err != nil {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	return NewMemberRaw(key, decodedValue, props...)
+}
+
+// NewMemberRaw returns a new Member from the passed arguments. An error
+// is returned if the created Member would be invalid according to the W3C
+// Baggage specification.
+func NewMemberRaw(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
 		value:      value,
@@ -303,7 +337,7 @@ func (m Member) Value() string { return m.value }
 // Properties returns a copy of the Member properties.
 func (m Member) Properties() []Property { return m.properties.Copy() }
 
-// String encodes Member into a string compliant with the W3C Baggage
+// String encodes Member into a header string compliant with the W3C Baggage
 // specification.
 func (m Member) String() string {
 	// A key is just an ASCII string. A value is restricted to be
@@ -500,9 +534,8 @@ func (b Baggage) Len() int {
 	return len(b.list)
 }
 
-// String encodes Baggage into a string compliant with the W3C Baggage
-// specification. The returned string will be invalid if the Baggage contains
-// any invalid list-members.
+// String encodes Baggage into a header string compliant with the W3C Baggage
+// specification.
 func (b Baggage) String() string {
 	members := make([]string, 0, len(b.list))
 	for k, v := range b.list {
