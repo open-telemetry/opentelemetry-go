@@ -30,12 +30,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve `go.opentelemetry.io/otel/propagation.TraceContext`'s performance. (#4721)
 - Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
 - `Member.String` in `go.opentelemetry.io/otel/baggage` percent-encodes only when necessary. (#4775)
+- `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` does no longer require percent-encoding of values. Make sure to not precent-encode the value yourself (e.g. by using `url.PathEscape`) before passing it to `NewMember` and `NewKeyValueProperty`. `Member.String` and `Property.String` are encoding the value when necessary. (#4804)
+- `Property.Value` in `go.opentelemetry.io/otel/baggage` now returns a vanilla string instead of a percent-encoded value. (#4804)
 
 ### Fixed
 
 - Fix `Parse` in `go.opentelemetry.io/otel/baggage` to validate member value before percent-decoding. (#4755)
 - Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#4756)
 - Fix baggage item key so that it is not canonicalized in `go.opentelemetry.io/otel/bridge/opentracing`. (#4776)
+- Fix `go.opentelemetry.io/otel/bridge/opentracing` to properly handle baggage values that requires escaping during propagation. (#4804)
 
 ## [1.21.0/0.44.0] 2023-11-16
 

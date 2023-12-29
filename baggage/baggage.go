@@ -71,9 +71,6 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !validateValue(value) {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
-	}
 
 	p := Property{
 		key:      key,
@@ -113,9 +110,6 @@ func (p Property) validate() error {
 	if !validateKey(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
-	if p.hasValue && !validateValue(p.value) {
-		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
-	}
 	if !p.hasValue && p.value != "" {
 		return errFunc(errors.New("inconsistent value"))
 	}
@@ -138,7 +132,7 @@ func (p Property) Value() (string, bool) {
 // specification.
 func (p Property) String() string {
 	if p.hasValue {
-		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, p.value)
+		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, valueEscape(p.value))
 	}
 	return p.key
 }
@@ -220,8 +214,7 @@ type Member struct {
 	hasData bool
 }
 
-// NewMember returns a new Member from the passed arguments. The key will be
-// used directly while the value will be url decoded after validation. An error
+// NewMember returns a new Member from the passed arguments. An error
 // is returned if the created Member would be invalid according to the W3C
 // Baggage specification.
 func NewMember(key, value string, props ...Property) (Member, error) {
@@ -234,11 +227,6 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
 	}
-	decodedValue, err := url.PathUnescape(value)
-	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
-	}
-	m.value = decodedValue
 	return m, nil
 }
 
@@ -284,6 +272,8 @@ func parseMember(member string) (Member, error) {
 	if !validateValue(val) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
 	}
+
+	// Decode a precent-encoded value.
 	value, err := url.PathUnescape(val)
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidValue, err)
@@ -292,8 +282,7 @@ func parseMember(member string) (Member, error) {
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
-// A key is just an ASCII string, but a value must be URL encoded UTF-8,
-// returning an error otherwise.
+// A key must be an ASCII string, returning an error otherwise.
 func (m Member) validate() error {
 	if !m.hasData {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
@@ -301,9 +290,6 @@ func (m Member) validate() error {
 
 	if !validateKey(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
-	}
-	if !validateValue(m.value) {
-		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
 }
@@ -595,10 +581,17 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		return
 	}
 
+	// Decode a precent-encoded value.
+	value, err := url.PathUnescape(s[valueStart:valueEnd])
+	if err != nil {
+		return
+	}
+
 	ok = true
 	p.key = s[keyStart:keyEnd]
 	p.hasValue = true
-	p.value = s[valueStart:valueEnd]
+
+	p.value = value
 	return
 }
 
