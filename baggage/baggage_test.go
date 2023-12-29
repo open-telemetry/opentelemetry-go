@@ -978,7 +978,7 @@ func BenchmarkNew(b *testing.B) {
 
 var benchMember Member
 
-func BenchmarkNewMember(b *testing.B) {
+func BenchmarkNewMemberRaw(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
