@@ -16,6 +16,7 @@ package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"crypto/tls"
+	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
@@ -74,6 +75,24 @@ func (w wrappedOption) applyHTTPOption(cfg oconf.Config) oconf.Config {
 // passed, "localhost:4318" will be used.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{oconf.WithEndpoint(endpoint)}
+}
+
+// WithEndpointURL sets the target endpoint URL the Exporter will connect to.
+//
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// will take precedence.
+//
+// If both this option and WithEndpoint are used, the last used option will
+// take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, "localhost:4317" will be used.
+//
+// This option has no effect if WithGRPCConn is used.
+func WithEndpointURL(u *url.URL) Option {
+	return wrappedOption{oconf.WithEndpointURL(u)}
 }
 
 // WithCompression sets the compression strategy the Exporter will use to

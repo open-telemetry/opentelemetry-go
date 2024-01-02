@@ -16,6 +16,7 @@ package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"google.golang.org/grpc"
@@ -80,12 +81,33 @@ func WithInsecure() Option {
 // value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
 // will take precedence.
 //
+// If both this option and WithEndpointURL are used, the last used option will
+// take precedence.
+//
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4317" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{oconf.WithEndpoint(endpoint)}
+}
+
+// WithEndpointURL sets the target endpoint URL the Exporter will connect to.
+//
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// will take precedence.
+//
+// If both this option and WithEndpoint are used, the last used option will
+// take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, "localhost:4317" will be used.
+//
+// This option has no effect if WithGRPCConn is used.
+func WithEndpointURL(u *url.URL) Option {
+	return wrappedOption{oconf.WithEndpointURL(u)}
 }
 
 // WithReconnectionPeriod set the minimum amount of time between connection

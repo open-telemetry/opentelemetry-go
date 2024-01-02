@@ -19,6 +19,7 @@ package oconf
 
 import (
 	"errors"
+	"net/url"
 	"testing"
 	"time"
 
@@ -100,6 +101,28 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+			},
+		},
+		{
+			name: "Test With Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL(&url.URL{Host: "someendpoint", Path: "/somepath"}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "/somepath", c.Metrics.URLPath)
+				assert.Equal(t, true, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test With Insecure Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL(&url.URL{Scheme: "https", Host: "someendpoint", Path: "/somepath"}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "/somepath", c.Metrics.URLPath)
+				assert.Equal(t, false, c.Metrics.Insecure)
 			},
 		},
 		{

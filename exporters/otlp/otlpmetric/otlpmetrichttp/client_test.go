@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -106,6 +107,22 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		return exp, coll
 	}
+
+	t.Run("WithEndpointURL", func(t *testing.T) {
+		coll, err := otest.NewHTTPCollector("", nil)
+		require.NoError(t, err)
+		ctx := context.Background()
+		u, err := url.Parse("http://" + coll.Addr().String())
+		require.NoError(t, err)
+
+		exp, err := New(ctx, WithEndpointURL(u))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
 
 	t.Run("WithHeaders", func(t *testing.T) {
 		key := http.CanonicalHeaderKey("my-custom-header")
