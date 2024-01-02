@@ -36,7 +36,7 @@ and the package structure is the same as for Trace API and Metrics API.
 ### LoggerProvider
 
 The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
-is defined as an interface [provider.go](provider.go).
+is defined as an interface in `provider.go`.
 
 ### Logger
 
@@ -53,7 +53,7 @@ in `ctx` to the `Emit` method.
 ### Record
 
 The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as a struct in [record.go](record.go).
+is defined as a struct in `record.go`.
 
 ## Usage examples
 
@@ -127,7 +127,7 @@ func (l *Logger) Emit(ctx context.Context, r log.Record) {
 ```
 
 A test implementation of the the `Logger` interface
-used for benchmarking is in [internal/writer_logger.go](internal/writer_logger.go).
+used for benchmarking is in `internal/writer_logger.go`.
 
 ## Compatibility
 
