@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -95,6 +96,26 @@ func TestNewEndToEnd(t *testing.T) {
 			newExporterEndToEndTest(t, test.additionalOpts)
 		})
 	}
+}
+
+func TestWithEndpointURL(t *testing.T) {
+	mc := runMockCollector(t)
+
+	ctx := context.Background()
+	u, err := url.Parse("http://" + mc.endpoint)
+	require.NoError(t, err)
+	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpointURL(u),
+	}...)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
+		defer cancel()
+
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	// RunEndToEndTest closes mc.
+	otlptracetest.RunEndToEndTest(ctx, t, exp, mc)
 }
 
 func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlptracegrpc.Option) *otlptrace.Exporter {

@@ -19,6 +19,7 @@ package otlpconfig
 
 import (
 	"errors"
+	"net/url"
 	"testing"
 	"time"
 
@@ -98,6 +99,28 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+			},
+		},
+		{
+			name: "Test With Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL(&url.URL{Host: "someendpoint", Path: "/somepath"}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "/somepath", c.Traces.URLPath)
+				assert.Equal(t, true, c.Traces.Insecure)
+			},
+		},
+		{
+			name: "Test With Insecure Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL(&url.URL{Scheme: "https", Host: "someendpoint", Path: "/somepath"}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "/somepath", c.Traces.URLPath)
+				assert.Equal(t, false, c.Traces.Insecure)
 			},
 		},
 		{
