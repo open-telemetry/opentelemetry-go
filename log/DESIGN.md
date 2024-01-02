@@ -41,7 +41,7 @@ is defined as an interface in `provider.go`.
 ### Logger
 
 The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as an interface in [logger.go](logger.go).
+is defined as an interface in `logger.go`.
 
 Canceling the context pass to `Emit` should not affect record processing.
 Among other things, log messages may be necessary to debug a
