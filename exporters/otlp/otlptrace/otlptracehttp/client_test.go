@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -171,9 +170,7 @@ func TestEndToEnd(t *testing.T) {
 			allOpts := []otlptracehttp.Option{}
 
 			if tc.withURLEndpoint {
-				u, err := url.Parse("http://" + mc.Endpoint())
-				require.NoError(t, err)
-				allOpts = append(allOpts, otlptracehttp.WithEndpointURL(u))
+				allOpts = append(allOpts, otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()))
 			} else {
 				allOpts = append(allOpts, otlptracehttp.WithEndpoint(mc.Endpoint()))
 			}

@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -112,10 +111,8 @@ func TestConfig(t *testing.T) {
 		coll, err := otest.NewHTTPCollector("", nil)
 		require.NoError(t, err)
 		ctx := context.Background()
-		u, err := url.Parse("http://" + coll.Addr().String())
-		require.NoError(t, err)
 
-		exp, err := New(ctx, WithEndpointURL(u))
+		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })

@@ -19,7 +19,6 @@ package oconf
 
 import (
 	"errors"
-	"net/url"
 	"testing"
 	"time"
 
@@ -106,7 +105,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Endpoint URL",
 			opts: []GenericOption{
-				WithEndpointURL(&url.URL{Host: "someendpoint", Path: "/somepath"}),
+				WithEndpointURL("http://someendpoint/somepath"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
@@ -115,14 +114,28 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test With Insecure Endpoint URL",
+			name: "Test With Secure Endpoint URL",
 			opts: []GenericOption{
-				WithEndpointURL(&url.URL{Scheme: "https", Host: "someendpoint", Path: "/somepath"}),
+				WithEndpointURL("https://someendpoint/somepath"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
 				assert.Equal(t, "/somepath", c.Metrics.URLPath)
 				assert.Equal(t, false, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test With Invalid Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("%invalid"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Metrics.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Metrics.Endpoint)
+				}
+				assert.Equal(t, "/v1/metrics", c.Metrics.URLPath)
 			},
 		},
 		{

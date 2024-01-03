@@ -16,7 +16,6 @@ package otlptracegrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"google.golang.org/grpc"
@@ -65,23 +64,41 @@ func WithInsecure() Option {
 	return wrappedOption{otlpconfig.WithInsecure()}
 }
 
-// WithEndpoint sets the target endpoint the exporter will connect to.
+// WithEndpointURL sets the target endpoint URL the Exporter will connect to.
 //
-// If both this option and WithEndpointURL are used, the last used one will take precedence.
-// If none of the options are used, localhost:4317 will be used as a default.
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. If both are set, OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+// will take precedence.
+//
+// If both this option and WithEndpointURL are used, the last used option will
+// take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, "localhost:4317" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
 	return wrappedOption{otlpconfig.WithEndpoint(endpoint)}
 }
 
-// WithEndpointURL sets the target URL the exporter will connect to.
+// WithEndpoint sets the target endpoint URL the Exporter will connect to.
 //
-// If both this option and WithEndpoint are used, the last used one will take precedence.
-// If none of the options are used, localhost:4317 will be used as a default.
+// If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+// environment variable is set, and this option is not passed, that variable
+// value will be used. If both are set, OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+// will take precedence.
+//
+// If both this option and WithEndpoint are used, the last used option will
+// take precedence.
+//
+// If an invalid URL is provided, the default value will be kept.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, "localhost:4317" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
-func WithEndpointURL(u *url.URL) Option {
+func WithEndpointURL(u string) Option {
 	return wrappedOption{otlpconfig.WithEndpointURL(u)}
 }
 

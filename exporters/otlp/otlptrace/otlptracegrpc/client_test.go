@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -102,10 +101,8 @@ func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
 	ctx := context.Background()
-	u, err := url.Parse("http://" + mc.endpoint)
-	require.NoError(t, err)
 	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
-		otlptracegrpc.WithEndpointURL(u),
+		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
 	}...)
 	t.Cleanup(func() {
 		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)

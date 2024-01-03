@@ -16,7 +16,6 @@ package otlpmetricgrpc
 
 import (
 	"context"
-	"net/url"
 	"testing"
 	"time"
 
@@ -206,10 +205,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(coll.Shutdown)
 
 		ctx := context.Background()
-		u, err := url.Parse("http://" + coll.Addr().String())
-		require.NoError(t, err)
-
-		exp, err := New(ctx, WithEndpointURL(u))
+		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 

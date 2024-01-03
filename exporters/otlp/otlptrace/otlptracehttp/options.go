@@ -16,7 +16,6 @@ package otlptracehttp // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 
 import (
 	"crypto/tls"
-	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
@@ -89,11 +88,13 @@ func WithEndpoint(endpoint string) Option {
 // If both this option and WithEndpoint are used, the last used option will
 // take precedence.
 //
+// If an invalid URL is provided, the default value will be kept.
+//
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4317" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
-func WithEndpointURL(u *url.URL) Option {
+func WithEndpointURL(u string) Option {
 	return wrappedOption{otlpconfig.WithEndpointURL(u)}
 }
 

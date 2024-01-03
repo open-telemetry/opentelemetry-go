@@ -280,12 +280,14 @@ func WithEndpoint(endpoint string) GenericOption {
 	})
 }
 
-func WithEndpointURL(u *url.URL) GenericOption {
+func WithEndpointURL(r string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		cfg.Metrics.Endpoint = u.Host
-		cfg.Metrics.URLPath = u.Path
-		if u.Scheme != "https" {
-			cfg.Metrics.Insecure = true
+		if u, err := url.Parse(r); err == nil {
+			cfg.Metrics.Endpoint = u.Host
+			cfg.Metrics.URLPath = u.Path
+			if u.Scheme != "https" {
+				cfg.Metrics.Insecure = true
+			}
 		}
 
 		return cfg

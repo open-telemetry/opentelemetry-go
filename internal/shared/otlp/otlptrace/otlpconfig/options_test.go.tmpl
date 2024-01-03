@@ -19,7 +19,6 @@ package otlpconfig
 
 import (
 	"errors"
-	"net/url"
 	"testing"
 	"time"
 
@@ -104,7 +103,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Endpoint URL",
 			opts: []GenericOption{
-				WithEndpointURL(&url.URL{Host: "someendpoint", Path: "/somepath"}),
+				WithEndpointURL("http://someendpoint/somepath"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
@@ -113,14 +112,28 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test With Insecure Endpoint URL",
+			name: "Test With Secure Endpoint URL",
 			opts: []GenericOption{
-				WithEndpointURL(&url.URL{Scheme: "https", Host: "someendpoint", Path: "/somepath"}),
+				WithEndpointURL("https://someendpoint/somepath"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
 				assert.Equal(t, "/somepath", c.Traces.URLPath)
 				assert.Equal(t, false, c.Traces.Insecure)
+			},
+		},
+		{
+			name: "Test With Invalid Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("%invalid"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Traces.Endpoint)
+				}
+				assert.Equal(t, "/v1/traces", c.Traces.URLPath)
 			},
 		},
 		{
