@@ -276,6 +276,10 @@ The benchmarks take inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
 and interoperable with existing logging packages.[^1][^2]
 
+## Prototype
+
+The prototype can be found [here](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
+
 ## Rejected Alternatives
 
 ### Reuse slog
