@@ -339,7 +339,7 @@ func BenchmarkFiltering(b *testing.B) {
 		dropped []attribute.KeyValue
 	}
 
-	run := func(fltr attribute.Filter) func(*testing.B) {
+	benchFn := func(fltr attribute.Filter) func(*testing.B) {
 		return func(b *testing.B) {
 			b.Helper()
 			b.Run("Set.Filter", func(b *testing.B) {
@@ -362,8 +362,8 @@ func BenchmarkFiltering(b *testing.B) {
 		}
 	}
 
-	b.Run("NoFilter", run(nil))
-	b.Run("NoFiltered", run(func(attribute.KeyValue) bool { return true }))
-	b.Run("Filtered", run(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
-	b.Run("AllDropped", run(func(attribute.KeyValue) bool { return false }))
+	b.Run("NoFilter", benchFn(nil))
+	b.Run("NoFiltered", benchFn(func(attribute.KeyValue) bool { return true }))
+	b.Run("Filtered", benchFn(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
+	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
 }
