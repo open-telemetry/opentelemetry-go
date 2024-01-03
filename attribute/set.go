@@ -289,7 +289,7 @@ func NewSetWithSortableFiltered(kvs []KeyValue, tmp *Sortable, filter Filter) (S
 	return Set{equivalent: computeDistinct(kvs)}, nil
 }
 
-// filteredToFront filters slice in-place using f. All KeyValues that need to
+// filteredToFront filters slice in-place using keep function. All KeyValues that need to
 // be removed are moved to the front. All KeyValues that need to be kept are
 // moved (in-order) to the back. The index for the first KeyValue to be kept is
 // returned.
@@ -339,6 +339,7 @@ func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 		// attribute above that needs to be filtered out.
 		return Set{equivalent: computeDistinct(slice[1:])}, slice[:1]
 	}
+
 	// Move the filtered slice[first] to the front (preserving order).
 	kv := slice[first]
 	copy(slice[1:first+1], slice[:first])
