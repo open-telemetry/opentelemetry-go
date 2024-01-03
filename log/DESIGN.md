@@ -88,10 +88,10 @@ func (cfg LoggerConfig) SchemaURL() string {
 	return cfg.schemaURL
 }
 
-// LoggerOption is an interface for applying Meter options.
+// LoggerOption is an interface for applying Logger options.
 type LoggerOption interface {
-	// applyMeter is used to set a LoggerOption value of a LoggerConfig.
-	applyMeter(LoggerConfig) LoggerConfig
+	// applyLogger is used to set a LoggerOption value of a LoggerConfig.
+	applyLogger(LoggerConfig) LoggerConfig
 }
 
 // NewLoggerConfig creates a new LoggerConfig and applies
@@ -99,14 +99,14 @@ type LoggerOption interface {
 func NewLoggerConfig(opts ...LoggerOption) LoggerConfig {
 	var config LoggerConfig
 	for _, o := range opts {
-		config = o.applyMeter(config)
+		config = o.applyLogger(config)
 	}
 	return config
 }
 
 type loggerOptionFunc func(LoggerConfig) LoggerConfig
 
-func (fn loggerOptionFunc) applyMeter(cfg LoggerConfig) LoggerConfig {
+func (fn loggerOptionFunc) applyLogger(cfg LoggerConfig) LoggerConfig {
 	return fn(cfg)
 }
 
