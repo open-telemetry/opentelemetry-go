@@ -32,6 +32,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 
 	"{{ .retryImportPath }}"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -280,14 +281,18 @@ func WithEndpoint(endpoint string) GenericOption {
 	})
 }
 
-func WithEndpointURL(r string) GenericOption {
+func WithEndpointURL(v string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
-		if u, err := url.Parse(r); err == nil {
-			cfg.Metrics.Endpoint = u.Host
-			cfg.Metrics.URLPath = u.Path
-			if u.Scheme != "https" {
-				cfg.Metrics.Insecure = true
-			}
+		u, err := url.Parse(v)
+		if err != nil {
+			global.Error(err, "otlpmetric: parse endpoint url", "url", v)
+			return cfg
+		}
+
+		cfg.Metrics.Endpoint = u.Host
+		cfg.Metrics.URLPath = u.Path
+		if u.Scheme != "https" {
+			cfg.Metrics.Insecure = true
 		}
 
 		return cfg
