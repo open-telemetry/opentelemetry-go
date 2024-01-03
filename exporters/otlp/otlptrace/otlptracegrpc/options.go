@@ -77,7 +77,7 @@ func WithEndpoint(endpoint string) Option {
 
 // WithEndpointURL sets the target URL the exporter will connect to.
 //
-// If both this option and WithEndpointURL are used, the last used one will take precedence.
+// If both this option and WithEndpoint are used, the last used one will take precedence.
 // If none of the options are used, localhost:4317 will be used as a default.
 //
 // This option has no effect if WithGRPCConn is used.
