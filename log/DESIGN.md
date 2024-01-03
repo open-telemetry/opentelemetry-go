@@ -10,7 +10,8 @@ was created in [#4725](https://github.com/open-telemetry/opentelemetry-go/pull/4
 
 ## Background
 
-The key challenge is to create a well-performant API compliant with the specification.
+The key challenge is to create a performant API compliant with the [specification](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/)
+with an intuitive and user friendly design.
 Performance is seen as one of the most important characteristics of logging libraries in Go.
 
 ## Design
@@ -23,44 +24,230 @@ This proposed design aims to:
 
 ### Module structure
 
+The API is published as a single `go.opentelemetry.io/otel/log` Go module.
+
+The module name is compliant with
+[Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
+and the package structure is the same as for Trace API and Metrics API.
+
 The Go module consits of the following packages:
 
 - `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/log/embedded`
 - `go.opentelemetry.io/otel/log/noop`
 
-The module name is compliant with
-[Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
-and the package structure is the same as for Trace API and Metrics API.
-
 ### LoggerProvider
 
 The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
-is defined as an interface in `provider.go`.
+is defined as an interface:
+
+```go
+// LoggerProvider provides access to named [Logger] instances.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
+type LoggerProvider interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.LoggerProvider
+
+	// Logger returns a new [Logger] with the provided name and configuration.
+	//
+	// This method should:
+	//   - be safe to call concurrently,
+	//   - use some default name if the passed name is empty.
+	Logger(name string, options ...LoggerOption) Logger
+}
+
+// LoggerConfig contains options for Logger.
+type LoggerConfig struct {
+	instrumentationVersion string
+	schemaURL              string
+	attrs                  attribute.Set
+
+	// Ensure forward compatibility by explicitly making this not comparable.
+	noCmp [0]func() //nolint: unused  // This is indeed used.
+}
+
+// InstrumentationVersion returns the version of the library providing
+// instrumentation.
+func (cfg LoggerConfig) InstrumentationVersion() string {
+	return cfg.instrumentationVersion
+}
+
+// InstrumentationAttributes returns the attributes associated with the library
+// providing instrumentation.
+func (cfg LoggerConfig) InstrumentationAttributes() attribute.Set {
+	return cfg.attrs
+}
+
+// SchemaURL is the schema_url of the library providing instrumentation.
+func (cfg LoggerConfig) SchemaURL() string {
+	return cfg.schemaURL
+}
+
+// LoggerOption is an interface for applying Meter options.
+type LoggerOption interface {
+	// applyMeter is used to set a LoggerOption value of a LoggerConfig.
+	applyMeter(LoggerConfig) LoggerConfig
+}
+
+// NewLoggerConfig creates a new LoggerConfig and applies
+// all the given options.
+func NewLoggerConfig(opts ...LoggerOption) LoggerConfig {
+	var config LoggerConfig
+	for _, o := range opts {
+		config = o.applyMeter(config)
+	}
+	return config
+}
+
+type loggerOptionFunc func(LoggerConfig) LoggerConfig
+
+func (fn loggerOptionFunc) applyMeter(cfg LoggerConfig) LoggerConfig {
+	return fn(cfg)
+}
+
+// WithInstrumentationVersion sets the instrumentation version.
+func WithInstrumentationVersion(version string) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.instrumentationVersion = version
+		return config
+	})
+}
+
+// WithInstrumentationAttributes sets the instrumentation attributes.
+//
+// The passed attributes will be de-duplicated.
+func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.attrs = attribute.NewSet(attr...)
+		return config
+	})
+}
+
+// WithSchemaURL sets the schema URL.
+func WithSchemaURL(schemaURL string) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.schemaURL = schemaURL
+		return config
+	})
+}
+```
+
+The provider design follows the Trace and Metrics API design
+to make it more familiar for the users.
 
 ### Logger
 
 The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as an interface in `logger.go`.
+is defined as an interface:
 
-Canceling the context pass to `Emit` should not affect record processing.
-Among other things, log messages may be necessary to debug a
-cancellation-related problem.
-The context is used to pass request-scoped values.
-The API implementation should handle the trace context passed
-in `ctx` to the `Emit` method.
+```go
+// Logger emits log records.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
+type Logger interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.Logger
 
-### Record
+	// Emit emits a log record.
+	//
+	// This method should:
+	//   - be safe to call concurrently,
+	//   - not interrupt the record processing if the context is canceled,
+	//   - handle the trace context passed via ctx argument,
+	//   - not modify the record's attributes,
+	//   - copy the record's attributes in case of asynchronous processing,
+	//   - use the current time as observed timestamp if the passed is empty.
+	Emit(ctx context.Context, record Record)
+}
+```
 
-The [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as a struct in `record.go`.
+Calls to `Emit` are supposed to be on the hot path.
+Therefore, in order to reduce the number of heap allocations,
+the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord),
+is defined as a `struct`:
 
-## Usage examples
+```go
+// Record represents a log record.
+type Record struct {
+	Timestamp         time.Time
+	ObservedTimestamp time.Time
+	Severity          Severity
+	SeverityText      string
+	Body              string
+	Attributes        []attribute.KeyValue
+}
 
-### Log Bridge implementation
+// Severity represents a log record severity.
+// Smaller numerical values correspond to less severe log records (such as debug events),
+// larger numerical values correspond to more severe log records (such as errors and critical events).
+type Severity int
 
-The log bridges can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
-for reducing the number of allocations when passing attributes.
+// Severity values defined by OpenTelemetry.
+const (
+	// A fine-grained debugging log record. Typically disabled in default configurations.
+	SeverityTrace Severity = iota + 1
+	SeverityTrace2
+	SeverityTrace3
+	SeverityTrace4
+
+	// A debugging log record.
+	SeverityDebug
+	SeverityDebug2
+	SeverityDebug3
+	SeverityDebug4
+
+	// An informational log record. Indicates that an event happened.
+	SeverityInfo
+	SeverityInfo2
+	SeverityInfo3
+	SeverityInfo4
+
+	// A warning log record. Not an error but is likely more important than an informational event.
+	SeverityWarn
+	SeverityWarn2
+	SeverityWarn3
+	SeverityWarn4
+
+	// An error log record. Something went wrong.
+	SeverityError
+	SeverityError2
+	SeverityError3
+	SeverityError4
+
+	// A fatal log record such as application or system crash.
+	SeverityFatal
+	SeverityFatal2
+	SeverityFatal3
+	SeverityFatal4
+)
+```
+
+The users can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+for reducing the number of allocations when passing record attributes.
+
+## Compatibility
+
+The backwards compatibility is achieved using the `embedded` design pattern
+that is already used in Trace API and Metrics API.
+This is our way to introduce new methods to the interfaces.
+
+The `LoggerProvider.Logger` functionality can be extended by
+adding new `LoggerOption` options
+and adding new exported fields to the `LoggerConfig` struct.
+
+The `Logger.Emit` functionality can be extended by
+adding new exported fields to the `Record` struct.
+
+## Trace context correlation
 
 The bridge implementation should do its best to pass
 the `ctx` containing the trace context from the caller
@@ -82,60 +269,6 @@ and [`zap`](https://pkg.go.dev/go.uber.org/zap),
 offer passing `any` type as a log attribute/field.
 Therefore, their bridge implementations can define a "special" log attributes/field
 that will be used to capture the trace context.
-
-[The prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725)
-has a naive implementation of
-[slog.Handler](https://pkg.go.dev/log/slog#Handler) in `log/internal/slog.go`
-and [logr.LogSink](https://pkg.go.dev/github.com/go-logr/logr#LogSink) in `log/internal/logr.go`.
-
-### Direct API usage
-
-The users may also chose to use the API directly.
-
-```go
-package app
-
-var logger = otel.Logger("my-service")
-
-// In some function:
-logger.Emit(ctx, Record{Severity: log.SeverityInfo, Body: "Application started."})
-```
-
-### API implementation
-
-If the implementation processes the record asynchronously,
-then it has to copy record attributes,
-in order to avoid use after free bugs and race condition.
-
-Excerpt of how SDK can implement the `Logger` interface.
-
-```go
-type Logger struct {
-	scope     instrumentation.Scope
-	processor Processor
-}
-
-func (l *Logger) Emit(ctx context.Context, r log.Record) {
-	// Create log record model.
-	record, err := toModel(r)
-	if err != nil {
-		otel.Handle(err)
-		return
-	}
-	l.processor.Process(ctx, record) // Note: A batch processor copies the attributes.
-}
-```
-
-A test implementation of the the `Logger` interface
-used for benchmarking is in `internal/writer_logger.go`.
-
-## Compatibility
-
-The backwards compatibility is achieved using the `embedded` design pattern
-that is already used in Trace API and Metrics API.
-
-Additionally, the `Logger.Emit` functionality can be extended by
-adding new exported fields to the `Record` struct.
 
 ## Benchmarking
 
@@ -168,11 +301,9 @@ It is used as data input for Logger methods.
 
 The log record resembles the instrument config structs like [metric.Float64CounterConfig](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Float64CounterConfig).
 
-Using `struct` instead of `interface` should have better the performance as e.g.
+Using `struct` instead of `interface` improves the performance as e.g.
 indirect calls are less optimized,
 usage of interfaces tend to increase heap allocations.[^2]
-
-The `Record` design is inspired by [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 
 ### Options as parameter to Logger.Emit
 
