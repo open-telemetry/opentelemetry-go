@@ -66,7 +66,8 @@ func NewKeyProperty(key string) (Property, error) {
 
 // NewKeyValueProperty returns a new Property for key with value.
 //
-// If key or value are invalid, an error will be returned.
+// The passed key must be compliant with W3C Baggage specification.
+// The passed value must be precent-encoded as defined in W3C Baggage specification.
 //
 // Deprecated: Use NewKeyValuePropertyRaw instead
 // that does not require precent-encoding of the value.
@@ -83,7 +84,7 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 
 // NewKeyValuePropertyRaw returns a new Property for key with value.
 //
-// If key or value are invalid, an error will be returned.
+// The passed key must be compliant with W3C Baggage specification.
 func NewKeyValuePropertyRaw(key, value string) (Property, error) {
 	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
@@ -231,9 +232,10 @@ type Member struct {
 	hasData bool
 }
 
-// NewMemberRaw returns a new Member from the passed arguments. An error
-// is returned if the created Member would be invalid according to the W3C
-// Baggage specification.
+// NewMemberRaw returns a new Member from the passed arguments.
+//
+// The passed key must be compliant with W3C Baggage specification.
+// The passed value must be precent-encoded as defined in W3C Baggage specification.
 //
 // Deprecated: Use NewMemberRaw instead
 // that does not require precent-encoding of the value.
@@ -248,9 +250,9 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	return NewMemberRaw(key, decodedValue, props...)
 }
 
-// NewMemberRaw returns a new Member from the passed arguments. An error
-// is returned if the created Member would be invalid according to the W3C
-// Baggage specification.
+// NewMemberRaw returns a new Member from the passed arguments.
+//
+// The passed key must be compliant with W3C Baggage specification.
 func NewMemberRaw(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
