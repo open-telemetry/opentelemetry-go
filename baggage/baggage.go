@@ -69,7 +69,7 @@ func NewKeyProperty(key string) (Property, error) {
 // The passed key must be compliant with W3C Baggage specification.
 // The passed value must be precent-encoded as defined in W3C Baggage specification.
 //
-// Deprecated: Use NewKeyValuePropertyRaw instead
+// Notice: Consider using [NewKeyValuePropertyRaw] instead
 // that does not require precent-encoding of the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
 	if !validateValue(value) {
@@ -237,7 +237,7 @@ type Member struct {
 // The passed key must be compliant with W3C Baggage specification.
 // The passed value must be precent-encoded as defined in W3C Baggage specification.
 //
-// Deprecated: Use NewMemberRaw instead
+// Notice: Consider using [NewMemberRaw] instead
 // that does not require precent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
 	if !validateValue(value) {

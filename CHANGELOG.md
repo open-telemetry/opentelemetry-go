@@ -33,10 +33,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `Member.String` in `go.opentelemetry.io/otel/baggage` percent-encodes only when necessary. (#4775)
 - `Property.Value` in `go.opentelemetry.io/otel/baggage` now returns a vanilla string instead of a percent-encoded value. (#4804)
 
-### Deprecated
-
-- `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` are deprecated. Use `NewMemberRaw` and `NewKeyValuePropertyRaw` instead which do not require percent-encoding of the value. (#4804)
-
 ### Fixed
 
 - Fix `Parse` in `go.opentelemetry.io/otel/baggage` to validate member value before percent-decoding. (#4755)
