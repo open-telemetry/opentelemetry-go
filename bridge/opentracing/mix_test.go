@@ -334,7 +334,7 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 				value: "two",
 			},
 			{
-				key:   "Third",
+				key:   "third",
 				value: "three",
 			},
 		},
@@ -427,7 +427,7 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 				value: "two",
 			},
 			{
-				key:   "Third",
+				key:   "third",
 				value: "three",
 			},
 		},
