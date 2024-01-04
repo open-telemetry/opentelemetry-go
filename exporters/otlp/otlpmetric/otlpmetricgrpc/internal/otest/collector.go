@@ -301,7 +301,7 @@ func (c *HTTPCollector) Headers() map[string][]string {
 }
 
 func (c *HTTPCollector) HostHeader() string {
-   return c.hostHeader
+	return c.hostHeader
 }
 
 func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
