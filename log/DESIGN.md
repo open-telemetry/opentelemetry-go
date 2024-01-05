@@ -405,7 +405,7 @@ and bridge implementations.
 For instance, in order to reduce the heap allocations of attributes,
 the bridge implementation can use a `sync.Pool`.
 In such case, the API implementation (SDK) would need to copy the attributes
-when the records are processed asynchrounsly,
+when the records are processed asynchronously,
 in order to avoid use after free bugs and race conditions.
 
 For reference, here is the reason why `slog` does not use `sync.Pool`[^2]:
