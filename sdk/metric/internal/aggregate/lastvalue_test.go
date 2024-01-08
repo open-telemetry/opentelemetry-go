@@ -32,7 +32,7 @@ func TestLastValue(t *testing.T) {
 func testLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
 		Filter:           attrFltr,
-		AggregationLimit: 3,
+		AggregationLimit: 4,
 	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -95,12 +95,13 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 			input: []arg[N]{
 				{ctx, 1, alice},
 				{ctx, 1, bob},
-				// These will exceed cardinality limit.
 				{ctx, 1, carol},
+				// These will exceed cardinality limit.
 				{ctx, 1, dave},
+				{ctx, 1, eve},
 			},
 			expect: output{
-				n: 3,
+				n: 4,
 				agg: metricdata.Gauge[N]{
 					DataPoints: []metricdata.DataPoint[N]{
 						{
@@ -110,6 +111,11 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 						},
 						{
 							Attributes: fltrBob,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrCarol,
 							Time:       staticTime,
 							Value:      1,
 						},
