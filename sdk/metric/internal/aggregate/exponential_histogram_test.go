@@ -914,9 +914,9 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 3, alice},
-				{ctx, 8, alice},
+				{ctx, 2, fltrAlice},
+				{ctx, 3, fltrAlice},
+				{ctx, 8, fltrAlice},
 			},
 			expect: output{
 				n: 1,
