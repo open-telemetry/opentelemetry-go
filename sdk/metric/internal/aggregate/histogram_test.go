@@ -142,7 +142,7 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	in, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
-		AggregationLimit: 3,
+		AggregationLimit: 4,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -177,8 +177,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 10, bob},
+				{ctx, 2, fltrAlice},
+				{ctx, 10, fltrBob},
 			},
 			expect: output{
 				n: 2,
@@ -206,17 +206,19 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				// These will exceed cardinality limit.
 				{ctx, 1, carol},
+				// These will exceed cardinality limit.
 				{ctx, 1, dave},
+				{ctx, 1, eve},
 			},
 			expect: output{
-				n: 3,
+				n: 4,
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
 						c.hPt(fltrAlice, 2, 4),
 						c.hPt(fltrBob, 10, 3),
+						c.hPt(fltrCarol, 1, 1),
 						c.hPt(overflowSet, 1, 2),
 					},
 				},
