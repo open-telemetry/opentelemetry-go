@@ -34,6 +34,7 @@ var (
 	userBob    = attribute.String(keyUser, "Bob")
 	userCarol  = attribute.String(keyUser, "Carol")
 	userDave   = attribute.String(keyUser, "Dave")
+	userEve    = attribute.String(keyUser, "Eve")
 	adminTrue  = attribute.Bool("admin", true)
 	adminFalse = attribute.Bool("admin", false)
 
@@ -41,6 +42,7 @@ var (
 	bob   = attribute.NewSet(userBob, adminFalse)
 	carol = attribute.NewSet(userCarol, adminFalse)
 	dave  = attribute.NewSet(userDave, adminFalse)
+	eve   = attribute.NewSet(userEve, adminFalse)
 
 	// Filtered.
 	attrFltr = func(kv attribute.KeyValue) bool {
@@ -48,6 +50,7 @@ var (
 	}
 	fltrAlice = attribute.NewSet(userAlice)
 	fltrBob   = attribute.NewSet(userBob)
+	fltrCarol = attribute.NewSet(userCarol)
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime    = time.Unix(946684800, 0)
