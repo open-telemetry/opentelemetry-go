@@ -439,6 +439,11 @@ func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Se
 func (e *expoHistogram[N]) filterLocked(fltr attribute.Filter) {
 	// Assumes caller holds e.valuesMu.Lock.
 	for a, v := range e.values {
+		if a.Equals(&overflowSet) {
+			// Do not filter signal to user of overflow.
+			continue
+		}
+
 		f, _ := a.Filter(fltr)
 		if !f.Equals(&a) {
 			target, ok := e.values[f]

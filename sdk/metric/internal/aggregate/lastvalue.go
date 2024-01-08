@@ -86,6 +86,11 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N], fltr 
 func (s *lastValue[N]) filterLocked(fltr attribute.Filter) {
 	// Assumes caller holds s.Lock.
 	for a, v := range s.values {
+		if a.Equals(&overflowSet) {
+			// Do not filter signal to user of overflow.
+			continue
+		}
+
 		f, _ := a.Filter(fltr)
 		if !f.Equals(&a) {
 			s.values[f] = s.values[f].merge(v)

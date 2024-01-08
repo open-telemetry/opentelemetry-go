@@ -47,6 +47,11 @@ func (s *valueMap[N]) measure(_ context.Context, value N, attr attribute.Set) {
 func (s *valueMap[N]) filterLocked(fltr attribute.Filter) {
 	// Assumes caller holds s.Lock.
 	for a, v := range s.values {
+		if a.Equals(&overflowSet) {
+			// Do not filter signal to user of overflow.
+			continue
+		}
+
 		f, _ := a.Filter(fltr)
 		if !f.Equals(&a) {
 			s.values[f] += v
