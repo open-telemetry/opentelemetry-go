@@ -150,7 +150,7 @@ func WithHeaders(headers map[string]string) Option {
 }
 
 // WithHostHeader overrides Host header in HTTP requests.
-// If unset, the target Endpoint's host will be used as Host header
+// If unset, the target Endpoint's host will be used as Host header.
 func WithHostHeader(host string) Option {
 	return wrappedOption{oconf.WithHostHeader(host)}
 }
