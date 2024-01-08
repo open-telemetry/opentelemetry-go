@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
 - Experimental cardinality limiting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
-- Add `WithHostHeader` config option to override Host header in opentelemetry requests (#4777)
+- Add `WithHostHeader` config option to override Host header in opentelemetry requests (#4780)
 
 ### Changed
 
