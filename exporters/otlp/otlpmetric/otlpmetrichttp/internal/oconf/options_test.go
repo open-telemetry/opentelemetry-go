@@ -303,6 +303,15 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, map[string]string{"m1": "mv1"}, c.Metrics.Headers)
 			},
 		},
+		{
+			name: "Test WithHeaders",
+			opts: []GenericOption{
+				WithHostHeader("th"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "th", c.Metrics.HostHeader)
+			},
+		},
 
 		// Compression Tests
 		{

@@ -300,6 +300,17 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		// Host header test
+		{
+			name: "Test With Host Header",
+			opts: []GenericOption{
+				WithHostHeader("th"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "th", c.Traces.HostHeader)
+			},
+		},
+
 		// Compression Tests
 		{
 			name: "Test With Compression",
