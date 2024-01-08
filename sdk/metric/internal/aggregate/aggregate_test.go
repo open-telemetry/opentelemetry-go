@@ -63,7 +63,6 @@ var (
 	}
 )
 
-/*
 func TestBuilderFilter(t *testing.T) {
 	t.Run("Int64", testBuilderFilter[int64]())
 	t.Run("Float64", testBuilderFilter[float64]())
@@ -73,24 +72,33 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
-		value, attr := N(1), alice
 		run := func(b Builder[N], wantA attribute.Set) func(*testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(dest *metricdata.Aggregation, fltr attribute.Filter) int {
-					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantA, a, "measured incorrect attributes")
+				type customAgg struct {
+					metricdata.Aggregation
+
+					Attributes attribute.Set
+				}
+				var agg metricdata.Aggregation = customAgg{Attributes: alice}
+
+				comp := b.filter(func(dest *metricdata.Aggregation, fltr attribute.Filter) int {
+					agg := (*dest).(customAgg)
+					agg.Attributes, _ = agg.Attributes.Filter(fltr)
+					*dest = agg
+					return 0
 				})
-				meas(context.Background(), value, attr)
+				comp(&agg)
+
+				assert.Equal(t, wantA, agg.(customAgg).Attributes, "filter not applied")
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{}, attr))
+		t.Run("NoFilter", run(Builder[N]{}, alice))
 		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice))
 	}
 }
-*/
 
 type arg[N int64 | float64] struct {
 	ctx context.Context
