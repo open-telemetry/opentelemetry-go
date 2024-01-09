@@ -18,7 +18,6 @@ require (
 require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
-	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/sys v0.16.0 // indirect
 )
 
