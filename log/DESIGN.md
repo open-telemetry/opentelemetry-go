@@ -148,8 +148,9 @@ const (
 )
 ```
 
+Log record attributes are defined a regular slice of `attribute.KeyValue`.
 The users can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
-for reducing the number of allocations when passing record attributes.
+for reducing the number of allocations when passing attributes.
 
 Implementation requirements:
 
