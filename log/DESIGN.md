@@ -117,7 +117,12 @@ type Record struct {
 	Body              string
 	Attributes        []attribute.KeyValue
 }
+```
 
+The API defines [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
+as a type and constants:
+
+```go
 type Severity int
 
 const (
@@ -148,7 +153,8 @@ const (
 )
 ```
 
-Log record attributes are defined a regular slice of `attribute.KeyValue`.
+[Log record attributes](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
+are defined a regular slice of `attribute.KeyValue`.
 The users can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
 for reducing the number of allocations when passing attributes.
 
