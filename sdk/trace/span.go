@@ -25,6 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"golang.org/x/exp/slices"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -242,6 +244,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 
 	// Otherwise, add without deduplication. When attributes are read they
 	// will be deduplicated, optimizing the operation.
+	s.attributes = slices.Grow(s.attributes, len(attributes))
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
@@ -277,6 +280,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
+	s.attributes = slices.Grow(s.attributes, max(0, limit-len(s.attributes)))
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
