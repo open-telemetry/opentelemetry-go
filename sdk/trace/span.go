@@ -280,7 +280,9 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
-	s.attributes = slices.Grow(s.attributes, max(0, limit-len(s.attributes)))
+	if limit-len(s.attributes) > 0 {
+		s.attributes = slices.Grow(s.attributes, limit-len(s.attributes))
+	}
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
