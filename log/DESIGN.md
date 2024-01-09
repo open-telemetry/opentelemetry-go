@@ -426,6 +426,10 @@ use after free bugs and we just didn't want to put that in the standard library.
 We took a different decision, because the key difference is that `slog`
 is a logging library and Logs Bridge API is only a logging abstraction.
 We want to provide more flexibility and offer better speed.
+Unlike `zerolog`, we are not using a `sync.Pool` in the logger implementation,
+which would expose to the issue described above.
+Instead, we the `sync.Pool` should be used bridges, which are the users,
+rather than implementers, of the API.
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
