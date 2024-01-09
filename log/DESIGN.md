@@ -428,7 +428,7 @@ is a logging library and Logs Bridge API is only a logging abstraction.
 We want to provide more flexibility and offer better speed.
 Unlike `zerolog`, we are not using a `sync.Pool` in the logger implementation,
 which would expose to the issue described above.
-Instead, we the `sync.Pool` should be used bridges, which are the users,
+Instead, `sync.Pool` is used by bridges, which are the users,
 rather than implementers, of the API.
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
