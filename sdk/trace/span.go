@@ -25,8 +25,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"golang.org/x/exp/slices"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -210,6 +208,14 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 	s.status = status
 }
 
+// ensureAttributesCapacity inlines functionality from golang.org/x/exp/slices.Grow
+// so that we can avoid needing to import golang.org/x/exp
+func (s *recordingSpan) ensureAttributesCapacity(minCapacity int) {
+	if n := cap(s.attributes) - minCapacity; n > 0 {
+		s.attributes = append(s.attributes[:cap(s.attributes)], make([]attribute.KeyValue, n)...)[:len(s.attributes)]
+	}
+}
+
 // SetAttributes sets attributes of this span.
 //
 // If a key from attributes already exists the value associated with that key
@@ -244,7 +250,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 
 	// Otherwise, add without deduplication. When attributes are read they
 	// will be deduplicated, optimizing the operation.
-	s.attributes = slices.Grow(s.attributes, len(attributes))
+	s.ensureAttributesCapacity(len(s.attributes) + len(attributes))
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
@@ -281,7 +287,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
 	if limit-len(s.attributes) > 0 {
-		s.attributes = slices.Grow(s.attributes, limit-len(s.attributes))
+		s.ensureAttributesCapacity(limit)
 	}
 	for _, a := range attrs {
 		if !a.Valid() {
