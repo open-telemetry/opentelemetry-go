@@ -209,7 +209,8 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 }
 
 // ensureAttributesCapacity inlines functionality from golang.org/x/exp/slices.Grow
-// so that we can avoid needing to import golang.org/x/exp
+// so that we can avoid needing to import golang.org/x/exp for go1.20.
+// Once support for go1.20 is dropped, we can use slices.Grow in 1.21+ instead.
 func (s *recordingSpan) ensureAttributesCapacity(minCapacity int) {
 	if n := cap(s.attributes) - minCapacity; n > 0 {
 		s.attributes = append(s.attributes[:cap(s.attributes)], make([]attribute.KeyValue, n)...)[:len(s.attributes)]
