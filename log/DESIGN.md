@@ -197,7 +197,12 @@ Rejected alternatives:
 - [Logger.WithAttributes](#loggerwithattributes)
 - [Record attributes like in slog.Record](#record-attributes-like-in-slogrecord)
 
-## Trace context correlation
+### noop package
+
+The `go.opentelemetry.io/otel/log/noop` package provides
+[Logs Bridge API No-Op Implementation](https://opentelemetry.io/docs/specs/otel/logs/noop/).
+
+### Trace context correlation
 
 The bridge implementation should do its best to pass
 the `ctx` containing the trace context from the caller
