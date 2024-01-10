@@ -8,11 +8,22 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 )
 
-// LoggerProvider TODO: comment.
+// LoggerProvider provides access to named [Logger] instances.
+//
+// Warning: Methods may be added to this interface in minor releases. See
+// package documentation on API implementation for information on how to set
+// default behavior for unimplemented methods.
 type LoggerProvider interface {
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
 	embedded.LoggerProvider
 
-	// Logger TODO: comment.
+	// Logger returns a new [Logger] with the provided name and configuration.
+	//
+	// This method should:
+	//   - be safe to call concurrently,
+	//   - use some default name if the passed name is empty.
 	Logger(name string, options ...LoggerOption) Logger
 }
 
@@ -43,26 +54,25 @@ func (cfg LoggerConfig) SchemaURL() string {
 	return cfg.schemaURL
 }
 
-// LoggerOption is an interface for applying Meter options.
+// LoggerOption is an interface for applying Logger options.
 type LoggerOption interface {
-	// applyMeter is used to set a LoggerOption value of a LoggerConfig.
-	applyMeter(LoggerConfig) LoggerConfig
+	// applyLogger is used to set a LoggerOption value of a LoggerConfig.
+	applyLogger(LoggerConfig) LoggerConfig
 }
 
 // NewLoggerConfig creates a new LoggerConfig and applies
 // all the given options.
-// TODO: Add unit tests.
 func NewLoggerConfig(opts ...LoggerOption) LoggerConfig {
 	var config LoggerConfig
 	for _, o := range opts {
-		config = o.applyMeter(config)
+		config = o.applyLogger(config)
 	}
 	return config
 }
 
 type loggerOptionFunc func(LoggerConfig) LoggerConfig
 
-func (fn loggerOptionFunc) applyMeter(cfg LoggerConfig) LoggerConfig {
+func (fn loggerOptionFunc) applyLogger(cfg LoggerConfig) LoggerConfig {
 	return fn(cfg)
 }
 
