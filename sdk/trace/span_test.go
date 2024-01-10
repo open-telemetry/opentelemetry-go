@@ -246,6 +246,7 @@ func TestTruncateAttr(t *testing.T) {
 }
 
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
+	b.ReportAllocs()
 	tp := NewTracerProvider(WithSampler(AlwaysSample()))
 	tracer := tp.Tracer("tracer")
 	var attrs []attribute.KeyValue
