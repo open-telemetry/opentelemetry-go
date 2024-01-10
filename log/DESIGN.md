@@ -176,7 +176,9 @@ const (
 is defined as `string` type.
 
 [`Body`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
-is defined as `string` type.
+is defined as `string` type as the specification says:
+
+> First-party Applications SHOULD use a string message.
 
 [Log record attributes](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
 are defined a regular slice of `attribute.KeyValue`.
@@ -213,6 +215,7 @@ Rejected alternatives:
 - [Passing record as pointer to Logger.Emit](#passing-record-as-pointer-to-loggeremit)
 - [Logger.WithAttributes](#loggerwithattributes)
 - [Record attributes like in slog.Record](#record-attributes-like-in-slogrecord)
+- [Record.Body as any](#recordbody-as-any)
 
 ### noop package
 
@@ -403,8 +406,30 @@ which would expose to the issue described above.
 Instead, `sync.Pool` is used by bridges, which are the users,
 rather than implementers, of the API.
 
+### Record.Body as any
+
+[Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/data-model.md#field-body)
+defines Body to be `any`.
+We could define `Body` as `any` instead of `string`.
+This could result in a more flexible API
+that could support logging libraries which model log records as any objects.
+
+However, using `any` decreases the performance.[^6]
+
+Additionally, we are not aware of any popular Go logging library
+that uses any objects as log records.
+
+At last, the specification recommends using `string` in Bridge API:
+
+> First-party Applications SHOULD use a string message."
+
+As accroding to [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
+First-party Applications are supposed to use the log bridges
+that integrates with the SDK through Bridge API.
+
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
 [^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
 [^4]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
 [^5]: [Record attributes as field and use sync.Pool for reducing allocations analysis](https://github.com/pellared/opentelemetry-go/pull/4)
+[^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
