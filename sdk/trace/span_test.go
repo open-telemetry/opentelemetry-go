@@ -255,6 +255,7 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 	}
 
 	ctx := context.Background()
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		_, span := tracer.Start(ctx, "span")
 		span.SetAttributes(attrs...)
