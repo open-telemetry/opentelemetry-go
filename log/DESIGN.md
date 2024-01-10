@@ -421,7 +421,7 @@ that uses any objects as log records.
 
 At last, the specification recommends using `string` in Bridge API:
 
-> First-party Applications SHOULD use a string message."
+> First-party Applications SHOULD use a string message.
 
 As accroding to [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
 First-party Applications are supposed to use the log bridges
@@ -430,7 +430,7 @@ that integrates with the SDK through Bridge API.
 We can always add an additional `StructuredBody any` field in a future release
 if we would need to support structured bodies. This approach would be
 backwards-compatible and should not have such a negative impact on performance
-for the most common scenarios where `Body` is a `string`.
+for the most common scenario where `Body` is a `string`.
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
