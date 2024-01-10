@@ -227,7 +227,10 @@ The `go.opentelemetry.io/otel/log/noop` package provides
 The bridge implementation should do its best to pass
 the `ctx` containing the trace context from the caller
 so it can later be passed via `Logger.Emit`.
-Re-constructing a `context.Context` with [`trace.ContextWithSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#ContextWithSpanContext)
+
+It is not expected that users (caller or bridge implementation) reconstruct
+a `context.Context`. Reconstructing a `context.Context` with
+[`trace.ContextWithSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#ContextWithSpanContext)
 and [`trace.NewSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#NewSpanContext)
 would usually involve more memory allocations.
 
@@ -244,6 +247,9 @@ and [`zap`](https://pkg.go.dev/go.uber.org/zap),
 offer passing `any` type as a log attribute/field.
 Therefore, their bridge implementations can define a "special" log attributes/field
 that will be used to capture the trace context.
+
+[The prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725)
+has bridge implementations that handle trace context correlation efficiently.
 
 ## Benchmarking
 
