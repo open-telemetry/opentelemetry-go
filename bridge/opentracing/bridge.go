@@ -17,7 +17,6 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -74,8 +73,7 @@ func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
-	crk := http.CanonicalHeaderKey(restrictedKey)
-	m, err := baggage.NewMember(crk, value)
+	m, err := baggage.NewMemberRaw(restrictedKey, value)
 	if err != nil {
 		return
 	}
@@ -83,8 +81,7 @@ func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
-	crk := http.CanonicalHeaderKey(restrictedKey)
-	return c.bag.Member(crk)
+	return c.bag.Member(restrictedKey)
 }
 
 type bridgeSpan struct {

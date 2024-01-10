@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/internal/baggage"
 )
@@ -142,7 +143,7 @@ func TestNewKeyProperty(t *testing.T) {
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
-	p, err := NewKeyValueProperty(" ", "")
+	p, err := NewKeyValueProperty(" ", "value")
 	assert.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
@@ -155,6 +156,16 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
 }
 
+func TestNewKeyValuePropertyRaw(t *testing.T) {
+	p, err := NewKeyValuePropertyRaw(" ", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
+
+	p, err = NewKeyValuePropertyRaw("key", "Witaj Świecie!")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "key", value: "Witaj Świecie!", hasValue: true}, p)
+}
+
 func TestPropertyValidate(t *testing.T) {
 	p := Property{}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
@@ -162,13 +173,10 @@ func TestPropertyValidate(t *testing.T) {
 	p.key = "k"
 	assert.NoError(t, p.validate())
 
-	p.value = ";"
+	p.value = "v"
 	assert.EqualError(t, p.validate(), "invalid property: inconsistent value")
 
 	p.hasValue = true
-	assert.ErrorIs(t, p.validate(), errInvalidValue)
-
-	p.value = "v"
 	assert.NoError(t, p.validate())
 }
 
@@ -390,10 +398,26 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
-			name: "url encoded value",
+			name: "encoded ASCII string",
 			in:   "key1=val%252%2C",
 			want: baggage.List{
 				"key1": {Value: "val%2,"},
+			},
+		},
+		{
+			name: "encoded property",
+			in:   "key1=;bar=val%252%2C",
+			want: baggage.List{
+				"key1": {
+					Properties: []baggage.Property{{Key: "bar", HasValue: true, Value: "val%2,"}},
+				},
+			},
+		},
+		{
+			name: "encoded UTF-8 string",
+			in:   "foo=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"foo": {Value: "ąść"},
 			},
 		},
 		{
@@ -501,13 +525,7 @@ func TestBaggageString(t *testing.T) {
 			// Meaning, US-ASCII characters excluding CTLs, whitespace,
 			// DQUOTE, comma, semicolon, and backslash. All excluded
 			// characters need to be percent encoded.
-			//
-			// Ideally, the want result is:
-			// out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20!%22#$%25&'()*+%2C-./0123456789:%3B<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[%5C]^_%60abcdefghijklmnopqrstuvwxyz{|}~%7F",
-			// However, the following characters are escaped:
-			// !#'()*/<>?[]^{|}
-			// It is not necessary, but still provides a correct result.
-			out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F0123456789:%3B%3C=%3E%3F@ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%7F",
+			out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20!%22#$%25&'()*+%2C-./0123456789:%3B<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[%5C]^_`abcdefghijklmnopqrstuvwxyz{|}~%7F",
 			baggage: baggage.List{
 				"foo": {Value: func() string {
 					// All US-ASCII characters.
@@ -517,6 +535,24 @@ func TestBaggageString(t *testing.T) {
 					}
 					return string(b[:])
 				}()},
+			},
+		},
+		{
+			name: "non-ASCII UTF-8 string",
+			out:  "foo=%C4%85%C5%9B%C4%87",
+			baggage: baggage.List{
+				"foo": {Value: "ąść"},
+			},
+		},
+		{
+			name: "Encoded property value",
+			out:  "foo=;bar=%20",
+			baggage: baggage.List{
+				"foo": {
+					Properties: []baggage.Property{
+						{Key: "bar", Value: " ", HasValue: true},
+					},
+				},
 			},
 		},
 		{
@@ -837,9 +873,6 @@ func TestMemberValidation(t *testing.T) {
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
 	m.key, m.value = "k", "\\"
-	assert.ErrorIs(t, m.validate(), errInvalidValue)
-
-	m.value = "v"
 	assert.NoError(t, m.validate())
 }
 
@@ -882,6 +915,28 @@ func TestNewMember(t *testing.T) {
 	assert.Equal(t, expected, m)
 }
 
+func TestNewMemberRaw(t *testing.T) {
+	m, err := NewMemberRaw("", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Member{hasData: false}, m)
+
+	key, val := "k", "v"
+	p := Property{key: "foo"}
+	m, err = NewMemberRaw(key, val, p)
+	assert.NoError(t, err)
+	expected := Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.Equal(t, expected, m)
+
+	// Ensure new member is immutable.
+	p.key = "bar"
+	assert.Equal(t, expected, m)
+}
+
 func TestPropertiesValidate(t *testing.T) {
 	p := properties{{}}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
@@ -895,11 +950,12 @@ func TestPropertiesValidate(t *testing.T) {
 
 func TestMemberString(t *testing.T) {
 	// normal key value pair
-	member, _ := NewMember("key", "value")
+	member, _ := NewMemberRaw("key", "value")
 	memberStr := member.String()
 	assert.Equal(t, memberStr, "key=value")
-	// encoded key
-	member, _ = NewMember("key", "%3B%20")
+
+	// encoded value
+	member, _ = NewMemberRaw("key", "; ")
 	memberStr = member.String()
 	assert.Equal(t, memberStr, "key=%3B%20")
 }
@@ -907,10 +963,10 @@ func TestMemberString(t *testing.T) {
 var benchBaggage Baggage
 
 func BenchmarkNew(b *testing.B) {
-	mem1, _ := NewMember("key1", "val1")
-	mem2, _ := NewMember("key2", "val2")
-	mem3, _ := NewMember("key3", "val3")
-	mem4, _ := NewMember("key4", "val4")
+	mem1, _ := NewMemberRaw("key1", "val1")
+	mem2, _ := NewMemberRaw("key2", "val2")
+	mem3, _ := NewMemberRaw("key3", "val3")
+	mem4, _ := NewMemberRaw("key4", "val4")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -922,11 +978,11 @@ func BenchmarkNew(b *testing.B) {
 
 var benchMember Member
 
-func BenchmarkNewMember(b *testing.B) {
+func BenchmarkNewMemberRaw(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchMember, _ = NewMember("key", "value")
+		benchMember, _ = NewMemberRaw("key", "value")
 	}
 }
 
@@ -935,5 +991,50 @@ func BenchmarkParse(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
+	}
+}
+
+func BenchmarkString(b *testing.B) {
+	var members []Member
+	addMember := func(k, v string) {
+		m, err := NewMemberRaw(k, valueEscape(v))
+		require.NoError(b, err)
+		members = append(members, m)
+	}
+
+	addMember("key1", "val1")
+	addMember("key2", " ;,%")
+	addMember("key3", "Witaj świecie!")
+	addMember("key4", strings.Repeat("Hello world!", 10))
+
+	bg, err := New(members...)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = bg.String()
+	}
+}
+
+func BenchmarkValueEscape(b *testing.B) {
+	testCases := []struct {
+		name string
+		in   string
+	}{
+		{name: "nothing to escape", in: "value"},
+		{name: "requires escaping", in: " ;,%"},
+		{name: "long value", in: strings.Repeat("Hello world!", 20)},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				_ = valueEscape(tc.in)
+			}
+		})
 	}
 }
