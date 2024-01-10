@@ -54,7 +54,7 @@ type LoggerProvider interface {
 
 The specification may add new operations to `LoggerProvider`.
 The interface may have methods added without a package major version bump.
-The embedds `embedded.LoggerProvider` to help inform an API implementation
+This embeds `embedded.LoggerProvider` to help inform an API implementation
 author about this non-standard API evolution.
 This approach is already used in Trace API and Metrics API.
 
@@ -105,7 +105,7 @@ type Logger interface {
 
 The specification may add new operations to `Logger`.
 The interface may have methods added without a package major version bump.
-The embedds `embedded.Logger` to help inform an API implementation
+This embeds `embedded.Logger` to help inform an API implementation
 author about this non-standard API evolution.
 This approach is already used in Trace API and Metrics API.
 
@@ -226,7 +226,7 @@ The `go.opentelemetry.io/otel/log/noop` package provides
 
 The bridge implementation should do its best to pass
 the `ctx` containing the trace context from the caller
-so it can later passed via `Logger.Emit`.
+so it can later be passed via `Logger.Emit`.
 Re-constructing a `context.Context` with [`trace.ContextWithSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#ContextWithSpanContext)
 and [`trace.NewSpanContext`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#NewSpanContext)
 would usually involve more memory allocations.
@@ -346,7 +346,7 @@ We could add `WithAttributes` to the `Logger` interface.
 Then `Record` could be a simple struct with only exported fields.
 The idea was that the SDK would implement the performance improvements
 instead of doing it in the API.
-This would allow having different optimisation strategies.
+This would allow having different optimization strategies.
 
 During the analysis[^4], it occurred that the main problem of this proposal
 is that the variadic slice passed to an interface method is always heap allocated.
