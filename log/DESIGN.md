@@ -62,6 +62,14 @@ This approach is already used in Trace API and Metrics API.
 
 The `Logger` method implements the [`Get a Logger` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#get-a-logger).
 
+The following options are defined to support optional parameters:
+
+```go
+func WithInstrumentationVersion(version string) LoggerOption
+func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption
+func WithSchemaURL(schemaURL string) LoggerOption
+```
+
 Implementation requirements:
 
 - The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#concurrency-requirements)
