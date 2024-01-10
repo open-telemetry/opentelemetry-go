@@ -66,13 +66,28 @@ func NewKeyProperty(key string) (Property, error) {
 
 // NewKeyValueProperty returns a new Property for key with value.
 //
-// If key or value are invalid, an error will be returned.
+// The passed key must be compliant with W3C Baggage specification.
+// The passed value must be precent-encoded as defined in W3C Baggage specification.
+//
+// Notice: Consider using [NewKeyValuePropertyRaw] instead
+// that does not require precent-encoding of the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
-	if !validateKey(key) {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
-	}
 	if !validateValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	decodedValue, err := url.PathUnescape(value)
+	if err != nil {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	return NewKeyValuePropertyRaw(key, decodedValue)
+}
+
+// NewKeyValuePropertyRaw returns a new Property for key with value.
+//
+// The passed key must be compliant with W3C Baggage specification.
+func NewKeyValuePropertyRaw(key, value string) (Property, error) {
+	if !validateKey(key) {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
 	p := Property{
@@ -113,9 +128,6 @@ func (p Property) validate() error {
 	if !validateKey(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
-	if p.hasValue && !validateValue(p.value) {
-		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
-	}
 	if !p.hasValue && p.value != "" {
 		return errFunc(errors.New("inconsistent value"))
 	}
@@ -134,11 +146,11 @@ func (p Property) Value() (string, bool) {
 	return p.value, p.hasValue
 }
 
-// String encodes Property into a string compliant with the W3C Baggage
+// String encodes Property into a header string compliant with the W3C Baggage
 // specification.
 func (p Property) String() string {
 	if p.hasValue {
-		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, p.value)
+		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, valueEscape(p.value))
 	}
 	return p.key
 }
@@ -198,7 +210,7 @@ func (p properties) validate() error {
 	return nil
 }
 
-// String encodes properties into a string compliant with the W3C Baggage
+// String encodes properties into a header string compliant with the W3C Baggage
 // specification.
 func (p properties) String() string {
 	props := make([]string, len(p))
@@ -220,11 +232,28 @@ type Member struct {
 	hasData bool
 }
 
-// NewMember returns a new Member from the passed arguments. The key will be
-// used directly while the value will be url decoded after validation. An error
-// is returned if the created Member would be invalid according to the W3C
-// Baggage specification.
+// NewMemberRaw returns a new Member from the passed arguments.
+//
+// The passed key must be compliant with W3C Baggage specification.
+// The passed value must be precent-encoded as defined in W3C Baggage specification.
+//
+// Notice: Consider using [NewMemberRaw] instead
+// that does not require precent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
+	if !validateValue(value) {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	decodedValue, err := url.PathUnescape(value)
+	if err != nil {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+	return NewMemberRaw(key, decodedValue, props...)
+}
+
+// NewMemberRaw returns a new Member from the passed arguments.
+//
+// The passed key must be compliant with W3C Baggage specification.
+func NewMemberRaw(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
 		value:      value,
@@ -234,11 +263,6 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err := m.validate(); err != nil {
 		return newInvalidMember(), err
 	}
-	decodedValue, err := url.PathUnescape(value)
-	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
-	}
-	m.value = decodedValue
 	return m, nil
 }
 
@@ -284,6 +308,8 @@ func parseMember(member string) (Member, error) {
 	if !validateValue(val) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
 	}
+
+	// Decode a precent-encoded value.
 	value, err := url.PathUnescape(val)
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidValue, err)
@@ -292,8 +318,7 @@ func parseMember(member string) (Member, error) {
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
-// A key is just an ASCII string, but a value must be URL encoded UTF-8,
-// returning an error otherwise.
+// A key must be an ASCII string, returning an error otherwise.
 func (m Member) validate() error {
 	if !m.hasData {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
@@ -301,9 +326,6 @@ func (m Member) validate() error {
 
 	if !validateKey(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
-	}
-	if !validateValue(m.value) {
-		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
 }
@@ -317,7 +339,7 @@ func (m Member) Value() string { return m.value }
 // Properties returns a copy of the Member properties.
 func (m Member) Properties() []Property { return m.properties.Copy() }
 
-// String encodes Member into a string compliant with the W3C Baggage
+// String encodes Member into a header string compliant with the W3C Baggage
 // specification.
 func (m Member) String() string {
 	// A key is just an ASCII string. A value is restricted to be
@@ -514,9 +536,8 @@ func (b Baggage) Len() int {
 	return len(b.list)
 }
 
-// String encodes Baggage into a string compliant with the W3C Baggage
-// specification. The returned string will be invalid if the Baggage contains
-// any invalid list-members.
+// String encodes Baggage into a header string compliant with the W3C Baggage
+// specification.
 func (b Baggage) String() string {
 	members := make([]string, 0, len(b.list))
 	for k, v := range b.list {
@@ -595,10 +616,17 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		return
 	}
 
+	// Decode a precent-encoded value.
+	value, err := url.PathUnescape(s[valueStart:valueEnd])
+	if err != nil {
+		return
+	}
+
 	ok = true
 	p.key = s[keyStart:keyEnd]
 	p.hasValue = true
-	p.value = s[valueStart:valueEnd]
+
+	p.value = value
 	return
 }
 
