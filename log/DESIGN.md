@@ -62,6 +62,8 @@ This approach is already used in Trace API and Metrics API.
 
 The `Logger` method implements the [`Get a Logger` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#get-a-logger).
 
+The required `name` parameter is accepted as a `string` method argument.
+
 The following options are defined to support optional parameters:
 
 ```go
@@ -111,6 +113,9 @@ This approach is already used in Trace API and Metrics API.
 
 The `Emit` method implements the [`Emit a LogRecord` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord).
 
+[`Context` associated with the `LogRecord`](https://opentelemetry.io/docs/specs/otel/context/)
+is accepted as a `context.Context` method argument.
+
 Calls to `Emit` are supposed to be on the hot path.
 Therefore, in order to reduce the number of heap allocations,
 the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord),
@@ -127,8 +132,14 @@ type Record struct {
 }
 ```
 
-The API defines [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
-as a type and constants:
+[`Timestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-timestamp)
+is defined as `time.Time` type.
+
+[`ObservedTimestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-observedtimestamp)
+is defined as `time.Time` type.
+
+[`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
+is defined as a type and constants:
 
 ```go
 type Severity int
@@ -160,6 +171,12 @@ const (
 	SeverityFatal4
 )
 ```
+
+[`SeverityText`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitytext)
+is defined as `string` type.
+
+[`Body`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
+is defined as `string` type.
 
 [Log record attributes](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
 are defined a regular slice of `attribute.KeyValue`.
