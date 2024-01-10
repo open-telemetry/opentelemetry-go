@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
@@ -438,18 +439,15 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		return
 	}
 
-	if oImpl.dropAggregation {
-		// Drop aggregation
-		return
-	}
-
 	if _, registered := r.float64[oImpl.observablID]; !registered {
-		global.Error(errUnregObserver, "failed to record",
-			"name", oImpl.name,
-			"description", oImpl.description,
-			"unit", oImpl.unit,
-			"number", fmt.Sprintf("%T", float64(0)),
-		)
+		if !oImpl.dropAggregation {
+			global.Error(errUnregObserver, "failed to record",
+				"name", oImpl.name,
+				"description", oImpl.description,
+				"unit", oImpl.unit,
+				"number", fmt.Sprintf("%T", float64(0)),
+			)
+		}
 		return
 	}
 	c := metric.NewObserveConfig(opts)
@@ -476,18 +474,15 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 		return
 	}
 
-	if oImpl.dropAggregation {
-		// Drop aggregation
-		return
-	}
-
 	if _, registered := r.int64[oImpl.observablID]; !registered {
-		global.Error(errUnregObserver, "failed to record",
-			"name", oImpl.name,
-			"description", oImpl.description,
-			"unit", oImpl.unit,
-			"number", fmt.Sprintf("%T", int64(0)),
-		)
+		if !oImpl.dropAggregation {
+			global.Error(errUnregObserver, "failed to record",
+				"name", oImpl.name,
+				"description", oImpl.description,
+				"unit", oImpl.unit,
+				"number", fmt.Sprintf("%T", int64(0)),
+			)
+		}
 		return
 	}
 	c := metric.NewObserveConfig(opts)
