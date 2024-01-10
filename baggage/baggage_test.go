@@ -143,7 +143,7 @@ func TestNewKeyProperty(t *testing.T) {
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
-	p, err := NewKeyValueProperty(" ", "")
+	p, err := NewKeyValueProperty(" ", "value")
 	assert.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
@@ -156,6 +156,16 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
 }
 
+func TestNewKeyValuePropertyRaw(t *testing.T) {
+	p, err := NewKeyValuePropertyRaw(" ", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
+
+	p, err = NewKeyValuePropertyRaw("key", "Witaj Świecie!")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "key", value: "Witaj Świecie!", hasValue: true}, p)
+}
+
 func TestPropertyValidate(t *testing.T) {
 	p := Property{}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
@@ -163,13 +173,10 @@ func TestPropertyValidate(t *testing.T) {
 	p.key = "k"
 	assert.NoError(t, p.validate())
 
-	p.value = ";"
+	p.value = "v"
 	assert.EqualError(t, p.validate(), "invalid property: inconsistent value")
 
 	p.hasValue = true
-	assert.ErrorIs(t, p.validate(), errInvalidValue)
-
-	p.value = "v"
 	assert.NoError(t, p.validate())
 }
 
@@ -398,6 +405,15 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "encoded property",
+			in:   "key1=;bar=val%252%2C",
+			want: baggage.List{
+				"key1": {
+					Properties: []baggage.Property{{Key: "bar", HasValue: true, Value: "val%2,"}},
+				},
+			},
+		},
+		{
 			name: "encoded UTF-8 string",
 			in:   "foo=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
@@ -526,6 +542,17 @@ func TestBaggageString(t *testing.T) {
 			out:  "foo=%C4%85%C5%9B%C4%87",
 			baggage: baggage.List{
 				"foo": {Value: "ąść"},
+			},
+		},
+		{
+			name: "Encoded property value",
+			out:  "foo=;bar=%20",
+			baggage: baggage.List{
+				"foo": {
+					Properties: []baggage.Property{
+						{Key: "bar", Value: " ", HasValue: true},
+					},
+				},
 			},
 		},
 		{
@@ -846,9 +873,6 @@ func TestMemberValidation(t *testing.T) {
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
 	m.key, m.value = "k", "\\"
-	assert.ErrorIs(t, m.validate(), errInvalidValue)
-
-	m.value = "v"
 	assert.NoError(t, m.validate())
 }
 
@@ -891,6 +915,28 @@ func TestNewMember(t *testing.T) {
 	assert.Equal(t, expected, m)
 }
 
+func TestNewMemberRaw(t *testing.T) {
+	m, err := NewMemberRaw("", "")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Member{hasData: false}, m)
+
+	key, val := "k", "v"
+	p := Property{key: "foo"}
+	m, err = NewMemberRaw(key, val, p)
+	assert.NoError(t, err)
+	expected := Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.Equal(t, expected, m)
+
+	// Ensure new member is immutable.
+	p.key = "bar"
+	assert.Equal(t, expected, m)
+}
+
 func TestPropertiesValidate(t *testing.T) {
 	p := properties{{}}
 	assert.ErrorIs(t, p.validate(), errInvalidKey)
@@ -904,11 +950,12 @@ func TestPropertiesValidate(t *testing.T) {
 
 func TestMemberString(t *testing.T) {
 	// normal key value pair
-	member, _ := NewMember("key", "value")
+	member, _ := NewMemberRaw("key", "value")
 	memberStr := member.String()
 	assert.Equal(t, memberStr, "key=value")
-	// encoded key
-	member, _ = NewMember("key", "%3B%20")
+
+	// encoded value
+	member, _ = NewMemberRaw("key", "; ")
 	memberStr = member.String()
 	assert.Equal(t, memberStr, "key=%3B%20")
 }
@@ -916,10 +963,10 @@ func TestMemberString(t *testing.T) {
 var benchBaggage Baggage
 
 func BenchmarkNew(b *testing.B) {
-	mem1, _ := NewMember("key1", "val1")
-	mem2, _ := NewMember("key2", "val2")
-	mem3, _ := NewMember("key3", "val3")
-	mem4, _ := NewMember("key4", "val4")
+	mem1, _ := NewMemberRaw("key1", "val1")
+	mem2, _ := NewMemberRaw("key2", "val2")
+	mem3, _ := NewMemberRaw("key3", "val3")
+	mem4, _ := NewMemberRaw("key4", "val4")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -931,11 +978,11 @@ func BenchmarkNew(b *testing.B) {
 
 var benchMember Member
 
-func BenchmarkNewMember(b *testing.B) {
+func BenchmarkNewMemberRaw(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchMember, _ = NewMember("key", "value")
+		benchMember, _ = NewMemberRaw("key", "value")
 	}
 }
 
@@ -950,7 +997,7 @@ func BenchmarkParse(b *testing.B) {
 func BenchmarkString(b *testing.B) {
 	var members []Member
 	addMember := func(k, v string) {
-		m, err := NewMember(k, valueEscape(v))
+		m, err := NewMemberRaw(k, valueEscape(v))
 		require.NoError(b, err)
 		members = append(members, m)
 	}

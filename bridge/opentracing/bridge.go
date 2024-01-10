@@ -73,7 +73,7 @@ func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 }
 
 func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
-	m, err := baggage.NewMember(restrictedKey, value)
+	m, err := baggage.NewMemberRaw(restrictedKey, value)
 	if err != nil {
 		return
 	}
