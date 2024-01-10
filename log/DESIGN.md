@@ -423,7 +423,7 @@ At last, the specification recommends using `string` in Bridge API:
 
 > First-party Applications SHOULD use a string message.
 
-As accroding to [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
+As according to [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
 First-party Applications are supposed to use the log bridges
 that integrates with the SDK through Bridge API.
 
