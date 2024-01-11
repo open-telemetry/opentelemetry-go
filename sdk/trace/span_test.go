@@ -246,7 +246,6 @@ func TestTruncateAttr(t *testing.T) {
 }
 
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
-
 	var attrs []attribute.KeyValue
 	for i := 0; i < 100; i++ {
 		attr := attribute.String(fmt.Sprintf("hello.attrib%d", i), fmt.Sprintf("goodbye.attrib%d", i))
