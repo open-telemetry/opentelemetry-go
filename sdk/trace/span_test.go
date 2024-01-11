@@ -246,9 +246,7 @@ func TestTruncateAttr(t *testing.T) {
 }
 
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
-	b.ReportAllocs()
-	tp := NewTracerProvider(WithSampler(AlwaysSample()))
-	tracer := tp.Tracer("tracer")
+
 	var attrs []attribute.KeyValue
 	for i := 0; i < 100; i++ {
 		attr := attribute.String(fmt.Sprintf("hello.attrib%d", i), fmt.Sprintf("goodbye.attrib%d", i))
@@ -256,10 +254,22 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 	}
 
 	ctx := context.Background()
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		_, span := tracer.Start(ctx, "span")
-		span.SetAttributes(attrs...)
-		span.End()
+	for _, limit := range []bool{false, true} {
+		b.Run(fmt.Sprintf("WithLimit/%t", limit), func(b *testing.B) {
+			b.ReportAllocs()
+			sl := NewSpanLimits()
+			if limit {
+				sl.AttributeCountLimit = 50
+			}
+			tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSpanLimits(sl))
+			tracer := tp.Tracer("tracer")
+
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				_, span := tracer.Start(ctx, "span")
+				span.SetAttributes(attrs...)
+				span.End()
+			}
+		})
 	}
 }
