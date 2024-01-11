@@ -578,17 +578,17 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	carriers := []struct {
 		name    string
-		carrier interface{}
+		factory func() interface{}
 		format  ot.BuiltinFormat
 	}{
 		{
 			name:    "TextMapCarrier",
-			carrier: ot.TextMapCarrier{},
+			factory: func() interface{} { return ot.TextMapCarrier{} },
 			format:  ot.TextMap,
 		},
 		{
 			name:    "HTTPHeadersCarrier",
-			carrier: ot.HTTPHeadersCarrier{},
+			factory: func() interface{} { return ot.HTTPHeadersCarrier{} },
 			format:  ot.HTTPHeaders,
 		},
 	}
@@ -619,6 +619,19 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "with characters escaped by baggage propagator",
+			baggageItems: []bipBaggage{
+				{
+					key:   "space",
+					value: "Hello world!",
+				},
+				{
+					key:   "utf8",
+					value: "Świat",
+				},
+			},
+		},
 	}
 
 	for _, c := range carriers {
@@ -638,10 +651,11 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 				}
 				defer span.Finish()
 
-				err := b.Inject(span.Context(), c.format, c.carrier)
+				carrier := c.factory()
+				err := b.Inject(span.Context(), c.format, carrier)
 				assert.NoError(t, err)
 
-				spanContext, err := b.Extract(c.format, c.carrier)
+				spanContext, err := b.Extract(c.format, carrier)
 				assert.NoError(t, err)
 
 				// Check baggage items.

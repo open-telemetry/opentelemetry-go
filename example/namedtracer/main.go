@@ -67,8 +67,8 @@ func main() {
 	ctx := context.Background()
 	defer func() { _ = tp.Shutdown(ctx) }()
 
-	m0, _ := baggage.NewMember(string(fooKey), "foo1")
-	m1, _ := baggage.NewMember(string(barKey), "bar1")
+	m0, _ := baggage.NewMemberRaw(string(fooKey), "foo1")
+	m1, _ := baggage.NewMemberRaw(string(barKey), "bar1")
 	b, _ := baggage.New(m0, m1)
 	ctx = baggage.ContextWithBaggage(ctx, b)
 
