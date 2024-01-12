@@ -630,9 +630,9 @@ should be canceled.
 
 ### Emeritus
 
+- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Josh MacDonald](https://github.com/jmacd), LightStep
-- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 
 ### Become an Approver or a Maintainer
 
