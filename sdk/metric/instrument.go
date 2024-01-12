@@ -295,8 +295,9 @@ type observable[N int64 | float64] struct {
 	metric.Observable
 	observablID[N]
 
-	meter    *meter
-	measures measures[N]
+	meter           *meter
+	measures        measures[N]
+	dropAggregation bool
 }
 
 func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string) *observable[N] {
