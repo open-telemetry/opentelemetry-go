@@ -634,7 +634,6 @@ should be canceled.
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 
-
 ### Become an Approver or a Maintainer
 
 See the [community membership document in OpenTelemetry community
