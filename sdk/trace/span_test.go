@@ -16,6 +16,7 @@ package trace
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"testing"
 
@@ -240,6 +241,34 @@ func TestTruncateAttr(t *testing.T) {
 		name := fmt.Sprintf("%s->%s(limit:%d)", test.attr.Key, test.attr.Value.Emit(), test.limit)
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, test.want, truncateAttr(test.limit, test.attr))
+		})
+	}
+}
+
+func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
+	var attrs []attribute.KeyValue
+	for i := 0; i < 100; i++ {
+		attr := attribute.String(fmt.Sprintf("hello.attrib%d", i), fmt.Sprintf("goodbye.attrib%d", i))
+		attrs = append(attrs, attr)
+	}
+
+	ctx := context.Background()
+	for _, limit := range []bool{false, true} {
+		b.Run(fmt.Sprintf("WithLimit/%t", limit), func(b *testing.B) {
+			b.ReportAllocs()
+			sl := NewSpanLimits()
+			if limit {
+				sl.AttributeCountLimit = 50
+			}
+			tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSpanLimits(sl))
+			tracer := tp.Tracer("tracer")
+
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				_, span := tracer.Start(ctx, "span")
+				span.SetAttributes(attrs...)
+				span.End()
+			}
 		})
 	}
 }
