@@ -15,6 +15,7 @@
 package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -163,6 +164,8 @@ var (
 	minInt64B, maxInt64B     = metricdata.NewExtrema[int64](3), metricdata.NewExtrema[int64](99)
 	minFloat64C              = metricdata.NewExtrema(-1.)
 	minInt64C                = metricdata.NewExtrema[int64](-1)
+
+	minFloat64D = metricdata.NewExtrema(-9.999999)
 
 	histogramDataPointInt64A = metricdata.HistogramDataPoint[int64]{
 		Attributes:   attrA,
@@ -1009,4 +1012,23 @@ func TestAssertAttributesFail(t *testing.T) {
 		},
 	}
 	assert.False(t, AssertHasAttributes(fakeT, sum, attribute.Bool("A", true)))
+}
+
+func AssertMarshal[N int64 | float64](t *testing.T, expected string, i *metricdata.Extrema[N]) {
+	t.Helper()
+
+	b, err := json.Marshal(i)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, string(b))
+}
+
+func TestAssertMarshal(t *testing.T) {
+	AssertMarshal(t, "-1", &minFloat64A)
+	AssertMarshal(t, "3", &minFloat64B)
+	AssertMarshal(t, "-9.999999", &minFloat64D)
+	AssertMarshal(t, "99", &maxFloat64B)
+
+	AssertMarshal(t, "-1", &minInt64A)
+	AssertMarshal(t, "3", &minInt64B)
+	AssertMarshal(t, "99", &maxInt64B)
 }
