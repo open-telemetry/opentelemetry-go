@@ -34,12 +34,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve `go.opentelemetry.io/otel/baggage` performance. (#4743)
 - Improve performance of the `(*Set).Filter` method in `go.opentelemetry.io/otel/attribute` when the passed filter does not filter out any attributes from the set. (#4774)
 - `Member.String` in `go.opentelemetry.io/otel/baggage` percent-encodes only when necessary. (#4775)
+- Improve `go.opentelemetry.io/otel/trace.Span`'s performance when adding multiple attributes. (#4818)
 - `Property.Value` in `go.opentelemetry.io/otel/baggage` now returns a raw string instead of a percent-encoded value. (#4804)
 
 ### Fixed
 
 - Fix `Parse` in `go.opentelemetry.io/otel/baggage` to validate member value before percent-decoding. (#4755)
 - Fix whitespace encoding of `Member.String` in `go.opentelemetry.io/otel/baggage`. (#4756)
+- Fix observable not registered error when the asynchronous instrument has a drop aggregation in `go.opentelemetry.io/otel/sdk/metric`. (#4772)
 - Fix baggage item key so that it is not canonicalized in `go.opentelemetry.io/otel/bridge/opentracing`. (#4776)
 - Fix `go.opentelemetry.io/otel/bridge/opentracing` to properly handle baggage values that requires escaping during propagation. (#4804)
 
