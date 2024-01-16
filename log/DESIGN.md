@@ -139,7 +139,8 @@ is defined as `time.Time` type.
 is defined as `time.Time` type.
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
-is defined as a type and constants:
+is defined as a type and constants based on
+[Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity):
 
 ```go
 type Severity int
