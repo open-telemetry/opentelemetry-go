@@ -623,10 +623,10 @@ should be canceled.
 
 ### Maintainers
 
+- [David Ashpole](https://github.com/dashpole), Google
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
-- [David Ashpole](https://github.com/dashpole), Google
 
 ### Emeritus
 
