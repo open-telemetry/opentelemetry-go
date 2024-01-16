@@ -617,7 +617,6 @@ should be canceled.
 
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
-- [David Ashpole](https://github.com/dashpole), Google
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
@@ -627,6 +626,7 @@ should be canceled.
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
+- [David Ashpole](https://github.com/dashpole), Google
 
 ### Emeritus
 
