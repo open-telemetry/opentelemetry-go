@@ -75,15 +75,15 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 	*dest = reset(*dest, n, n)
 
 	var i int
-	for attr, val := range s.values {
-		(*dest)[i].Attributes = attr
+	for a, v := range s.values {
+		(*dest)[i].Attributes = a
 		// The event time is the only meaningful timestamp, StartTime is
 		// ignored.
-		(*dest)[i].Time = val.timestamp
-		(*dest)[i].Value = val.value
-		val.res.Flush(&(*dest)[i].Exemplars, attr)
+		(*dest)[i].Time = v.timestamp
+		(*dest)[i].Value = v.value
+		v.res.Flush(&(*dest)[i].Exemplars, a)
 		// Do not report stale values.
-		delete(s.values, attr)
+		delete(s.values, a)
 		i++
 	}
 }

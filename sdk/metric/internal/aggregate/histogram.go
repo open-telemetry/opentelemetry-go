@@ -157,27 +157,27 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for attr, val := range s.values {
-		hDPts[i].Attributes = attr
+	for a, b := range s.values {
+		hDPts[i].Attributes = a
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count
+		hDPts[i].Count = b.count
 		hDPts[i].Bounds = bounds
-		hDPts[i].BucketCounts = val.counts
+		hDPts[i].BucketCounts = b.counts
 
 		if !s.noSum {
-			hDPts[i].Sum = val.total
+			hDPts[i].Sum = b.total
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(b.min)
+			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		val.res.Flush(&hDPts[i].Exemplars, attr)
+		b.res.Flush(&hDPts[i].Exemplars, a)
 
 		// Unused attribute sets do not report.
-		delete(s.values, attr)
+		delete(s.values, a)
 		i++
 	}
 	// The delta collection cycle resets.
@@ -208,32 +208,32 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for attr, val := range s.values {
+	for a, b := range s.values {
 		// The HistogramDataPoint field values returned need to be copies of
 		// the buckets value as we will keep updating them.
 		//
 		// TODO (#3047): Making copies for bounds and counts incurs a large
 		// memory allocation footprint. Alternatives should be explored.
-		counts := make([]uint64, len(val.counts))
-		copy(counts, val.counts)
+		counts := make([]uint64, len(b.counts))
+		copy(counts, b.counts)
 
-		hDPts[i].Attributes = attr
+		hDPts[i].Attributes = a
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count
+		hDPts[i].Count = b.count
 		hDPts[i].Bounds = bounds
 		hDPts[i].BucketCounts = counts
 
 		if !s.noSum {
-			hDPts[i].Sum = val.total
+			hDPts[i].Sum = b.total
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(b.min)
+			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		val.res.Collect(&hDPts[i].Exemplars, attr)
+		b.res.Collect(&hDPts[i].Exemplars, a)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there

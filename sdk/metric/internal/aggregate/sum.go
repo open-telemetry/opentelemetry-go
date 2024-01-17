@@ -133,12 +133,12 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, val := range s.values {
+	for attr, value := range s.values {
 		dPts[i].Attributes = attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
-		val.res.Collect(&dPts[i].Exemplars, attr)
+		dPts[i].Value = value.n
+		value.res.Collect(&dPts[i].Exemplars, attr)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
@@ -190,16 +190,16 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for attr, val := range s.values {
-		delta := val.n - s.reported[attr]
+	for attr, value := range s.values {
+		delta := value.n - s.reported[attr]
 
 		dPts[i].Attributes = attr
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
-		val.res.Flush(&dPts[i].Exemplars, attr)
+		value.res.Flush(&dPts[i].Exemplars, attr)
 
-		newReported[attr] = val.n
+		newReported[attr] = value.n
 		// Unused attribute sets do not report.
 		delete(s.values, attr)
 		i++

@@ -360,33 +360,33 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for attr, val := range e.values {
-		hDPts[i].Attributes = attr
+	for a, b := range e.values {
+		hDPts[i].Attributes = a
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Scale = int32(val.scale)
-		hDPts[i].ZeroCount = val.zeroCount
+		hDPts[i].Count = b.count
+		hDPts[i].Scale = int32(b.scale)
+		hDPts[i].ZeroCount = b.zeroCount
 		hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = int32(val.posBuckets.startBin)
-		hDPts[i].PositiveBucket.Counts = reset(hDPts[i].PositiveBucket.Counts, len(val.posBuckets.counts), len(val.posBuckets.counts))
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		hDPts[i].PositiveBucket.Offset = int32(b.posBuckets.startBin)
+		hDPts[i].PositiveBucket.Counts = reset(hDPts[i].PositiveBucket.Counts, len(b.posBuckets.counts), len(b.posBuckets.counts))
+		copy(hDPts[i].PositiveBucket.Counts, b.posBuckets.counts)
 
-		hDPts[i].NegativeBucket.Offset = int32(val.negBuckets.startBin)
-		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(val.negBuckets.counts), len(val.negBuckets.counts))
+		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
+		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			hDPts[i].Sum = b.sum
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(b.min)
+			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		val.res.Flush(&hDPts[i].Exemplars, attr)
+		b.res.Flush(&hDPts[i].Exemplars, a)
 
-		delete(e.values, attr)
+		delete(e.values, a)
 		i++
 	}
 	e.start = t
@@ -410,31 +410,31 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for attr, val := range e.values {
-		hDPts[i].Attributes = attr
+	for a, b := range e.values {
+		hDPts[i].Attributes = a
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Scale = int32(val.scale)
-		hDPts[i].ZeroCount = val.zeroCount
+		hDPts[i].Count = b.count
+		hDPts[i].Scale = int32(b.scale)
+		hDPts[i].ZeroCount = b.zeroCount
 		hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = int32(val.posBuckets.startBin)
-		hDPts[i].PositiveBucket.Counts = reset(hDPts[i].PositiveBucket.Counts, len(val.posBuckets.counts), len(val.posBuckets.counts))
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		hDPts[i].PositiveBucket.Offset = int32(b.posBuckets.startBin)
+		hDPts[i].PositiveBucket.Counts = reset(hDPts[i].PositiveBucket.Counts, len(b.posBuckets.counts), len(b.posBuckets.counts))
+		copy(hDPts[i].PositiveBucket.Counts, b.posBuckets.counts)
 
-		hDPts[i].NegativeBucket.Offset = int32(val.negBuckets.startBin)
-		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(val.negBuckets.counts), len(val.negBuckets.counts))
+		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
+		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			hDPts[i].Sum = b.sum
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(b.min)
+			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		val.res.Collect(&hDPts[i].Exemplars, attr)
+		b.res.Collect(&hDPts[i].Exemplars, a)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there
