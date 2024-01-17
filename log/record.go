@@ -31,38 +31,47 @@ type Severity int
 // Severity values defined by OpenTelemetry.
 const (
 	// A fine-grained debugging log record. Typically disabled in default configurations.
-	SeverityTrace Severity = iota + 1
+	SeverityTrace1 Severity = iota + 1
 	SeverityTrace2
 	SeverityTrace3
 	SeverityTrace4
 
 	// A debugging log record.
-	SeverityDebug
+	SeverityDebug1
 	SeverityDebug2
 	SeverityDebug3
 	SeverityDebug4
 
 	// An informational log record. Indicates that an event happened.
-	SeverityInfo
+	SeverityInfo1
 	SeverityInfo2
 	SeverityInfo3
 	SeverityInfo4
 
 	// A warning log record. Not an error but is likely more important than an informational event.
-	SeverityWarn
+	SeverityWarn1
 	SeverityWarn2
 	SeverityWarn3
 	SeverityWarn4
 
 	// An error log record. Something went wrong.
-	SeverityError
+	SeverityError1
 	SeverityError2
 	SeverityError3
 	SeverityError4
 
 	// A fatal log record such as application or system crash.
-	SeverityFatal
+	SeverityFatal1
 	SeverityFatal2
 	SeverityFatal3
 	SeverityFatal4
+)
+
+const (
+	SeverityTrace = SeverityTrace1
+	SeverityDebug = SeverityDebug1
+	SeverityInfo  = SeverityInfo1
+	SeverityWarn  = SeverityWarn1
+	SeverityError = SeverityError1
+	SeverityFatal = SeverityFatal1
 )
