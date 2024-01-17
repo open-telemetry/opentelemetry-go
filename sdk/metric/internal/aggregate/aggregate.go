@@ -51,6 +51,14 @@ type Builder[N int64 | float64] struct {
 	// If this is not provided a default factory function that returns an
 	// exemplar.Drop reservoir will be used.
 	ReservoirFunc func() exemplar.Reservoir[N]
+	// AggregationLimit is the cardinality limit of measurement attributes. Any
+	// measurement for new attributes once the limit has been reached will be
+	// aggregated into a single aggregate for the "otel.metric.overflow"
+	// attribute.
+	//
+	// If AggregationLimit is less than or equal to zero there will not be an
+	// aggregation limit imposed (i.e. unlimited attribute sets).
+	AggregationLimit int
 }
 
 func (b Builder[N]) resFunc() func() exemplar.Reservoir[N] {
@@ -82,7 +90,7 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	// Delta temporality is the only temporality that makes semantic sense for
 	// a last-value aggregate.
-	lv := newLastValue[N](b.resFunc())
+	lv := newLastValue[N](b.AggregationLimit, b.resFunc())
 
 	return b.filter(lv.measure), func(dest *metricdata.Aggregation) int {
 		// Ignore if dest is not a metricdata.Gauge. The chance for memory
@@ -98,7 +106,7 @@ func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
 func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregation) {
-	s := newPrecomputedSum[N](monotonic, b.resFunc())
+	s := newPrecomputedSum[N](monotonic, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		return b.filter(s.measure), s.delta
@@ -109,7 +117,7 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 
 // Sum returns a sum aggregate function input and output.
 func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
-	s := newSum[N](monotonic, b.resFunc())
+	s := newSum[N](monotonic, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		return b.filter(s.measure), s.delta
@@ -121,7 +129,7 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 // ExplicitBucketHistogram returns a histogram aggregate function input and
 // output.
 func (b Builder[N]) ExplicitBucketHistogram(boundaries []float64, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
-	h := newHistogram[N](boundaries, noMinMax, noSum, b.resFunc())
+	h := newHistogram[N](boundaries, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		return b.filter(h.measure), h.delta
@@ -133,7 +141,7 @@ func (b Builder[N]) ExplicitBucketHistogram(boundaries []float64, noMinMax, noSu
 // ExponentialBucketHistogram returns a histogram aggregate function input and
 // output.
 func (b Builder[N]) ExponentialBucketHistogram(maxSize, maxScale int32, noMinMax, noSum bool) (Measure[N], ComputeAggregation) {
-	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.resFunc())
+	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		return b.filter(h.measure), h.delta

@@ -26,16 +26,16 @@ import (
 
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
-	attr      attribute.Set
 	timestamp time.Time
 	value     N
 	res       exemplar.Reservoir[N]
 }
 
-func newLastValue[N int64 | float64](r func() exemplar.Reservoir[N]) *lastValue[N] {
+func newLastValue[N int64 | float64](limit int, r func() exemplar.Reservoir[N]) *lastValue[N] {
 	return &lastValue[N]{
-		values: make(map[attribute.Distinct]datapoint[N]),
 		newRes: r,
+		limit:  newLimiter[datapoint[N]](limit),
+		values: make(map[attribute.Set]datapoint[N]),
 	}
 }
 
@@ -43,20 +43,20 @@ func newLastValue[N int64 | float64](r func() exemplar.Reservoir[N]) *lastValue[
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
-	values map[attribute.Distinct]datapoint[N]
 	newRes func() exemplar.Reservoir[N]
+	limit  limiter[datapoint[N]]
+	values map[attribute.Set]datapoint[N]
 }
 
 func (s *lastValue[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
 	t := now()
-	key := fltrAttr.Equivalent()
 
 	s.Lock()
 	defer s.Unlock()
 
-	d, ok := s.values[key]
+	attr := s.limit.Attributes(fltrAttr, s.values)
+	d, ok := s.values[attr]
 	if !ok {
-		d.attr = fltrAttr
 		d.res = s.newRes()
 	}
 
@@ -64,7 +64,7 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, origAttr, fltrAttr 
 	d.value = value
 	d.res.Offer(ctx, t, value, origAttr)
 
-	s.values[key] = d
+	s.values[attr] = d
 }
 
 func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
@@ -75,15 +75,15 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 	*dest = reset(*dest, n, n)
 
 	var i int
-	for key, val := range s.values {
-		(*dest)[i].Attributes = val.attr
+	for attr, val := range s.values {
+		(*dest)[i].Attributes = attr
 		// The event time is the only meaningful timestamp, StartTime is
 		// ignored.
 		(*dest)[i].Time = val.timestamp
 		(*dest)[i].Value = val.value
-		val.res.Flush(&(*dest)[i].Exemplars, val.attr)
+		val.res.Flush(&(*dest)[i].Exemplars, attr)
 		// Do not report stale values.
-		delete(s.values, key)
+		delete(s.values, attr)
 		i++
 	}
 }

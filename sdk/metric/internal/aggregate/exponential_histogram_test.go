@@ -183,11 +183,11 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[int64](4, 20, false, false, dropExemplars[int64])
+			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, alice)
 			}
-			dp := h.values[alice.Equivalent()]
+			dp := h.values[alice]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -225,11 +225,11 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[float64](4, 20, false, false, dropExemplars[float64])
+			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, alice)
 			}
-			dp := h.values[alice.Equivalent()]
+			dp := h.values[alice]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -747,8 +747,9 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 
 func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality: metricdata.DeltaTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 2,
 	}.ExponentialBucketHistogram(4, 20, false, false)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -805,13 +806,67 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: []arg[N]{
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 2, alice},
+				{ctx, 16, alice},
+				{ctx, 1, alice},
+				// These will exceed the cardinality limit.
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 2, carol},
+				{ctx, 16, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Count:      6,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        31,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Count:      6,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        31,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+						},
+					},
+				},
+			},
+		},
 	})
 }
 
 func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 2,
 	}.ExponentialBucketHistogram(4, 20, false, false)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -905,6 +960,53 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 6, 2},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				// These will exceed the cardinality limit.
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 2, carol},
+				{ctx, 16, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Count:      9,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        44,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 6, 2},
+							},
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Count:      6,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        31,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
 							},
 						},
 					},

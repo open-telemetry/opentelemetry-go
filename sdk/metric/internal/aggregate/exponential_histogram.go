@@ -41,8 +41,7 @@ const (
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
-	attr attribute.Set
-	res  exemplar.Reservoir[N]
+	res exemplar.Reservoir[N]
 
 	count uint64
 	min   N
@@ -292,7 +291,7 @@ func (b *expoBuckets) downscale(delta int) {
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, r func() exemplar.Reservoir[N]) *expoHistogram[N] {
+func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int, r func() exemplar.Reservoir[N]) *expoHistogram[N] {
 	return &expoHistogram[N]{
 		noSum:    noSum,
 		noMinMax: noMinMax,
@@ -300,7 +299,8 @@ func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMa
 		maxScale: int(maxScale),
 
 		newRes: r,
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
+		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
 
 		start: now(),
 	}
@@ -315,7 +315,8 @@ type expoHistogram[N int64 | float64] struct {
 	maxScale int
 
 	newRes   func() exemplar.Reservoir[N]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
+	limit    limiter[*expoHistogramDataPoint[N]]
+	values   map[attribute.Set]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
 
 	start time.Time
@@ -328,18 +329,17 @@ func (e *expoHistogram[N]) measure(ctx context.Context, value N, origAttr, fltrA
 	}
 
 	t := now()
-	key := fltrAttr.Equivalent()
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	v, ok := e.values[key]
+	attr := e.limit.Attributes(fltrAttr, e.values)
+	v, ok := e.values[attr]
 	if !ok {
 		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-		v.attr = fltrAttr
 		v.res = e.newRes()
 
-		e.values[key] = v
+		e.values[attr] = v
 	}
 	v.record(value)
 	v.res.Offer(ctx, t, value, origAttr)
@@ -360,8 +360,8 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for key, val := range e.values {
-		hDPts[i].Attributes = val.attr
+	for attr, val := range e.values {
+		hDPts[i].Attributes = attr
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count
@@ -384,9 +384,9 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(val.max)
 		}
 
-		val.res.Flush(&hDPts[i].Exemplars, val.attr)
+		val.res.Flush(&hDPts[i].Exemplars, attr)
 
-		delete(e.values, key)
+		delete(e.values, attr)
 		i++
 	}
 	e.start = t
@@ -410,8 +410,8 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attr
+	for attr, val := range e.values {
+		hDPts[i].Attributes = attr
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count
@@ -434,7 +434,7 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(val.max)
 		}
 
-		val.res.Collect(&hDPts[i].Exemplars, val.attr)
+		val.res.Collect(&hDPts[i].Exemplars, attr)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there

@@ -53,8 +53,9 @@ type conf[N int64 | float64] struct {
 
 func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality: metricdata.DeltaTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -114,13 +115,34 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Histogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[N]{
+						c.hPt(fltrAlice, 1, 1),
+						c.hPt(fltrBob, 1, 1),
+						c.hPt(overflowSet, 1, 2),
+					},
+				},
+			},
+		},
 	})
 }
 
 func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality: metricdata.CumulativeTemporality,
-		Filter:      attrFltr,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -178,6 +200,24 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[N]{
 						c.hPt(fltrAlice, 2, 4),
 						c.hPt(fltrBob, 10, 3),
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Histogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[N]{
+						c.hPt(fltrAlice, 2, 4),
+						c.hPt(fltrBob, 10, 3),
+						c.hPt(overflowSet, 1, 2),
 					},
 				},
 			},
@@ -273,7 +313,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	cpB := make([]float64, len(b))
 	copy(cpB, b)
 
-	h := newHistogram[int64](b, false, false, dropExemplars[int64])
+	h := newHistogram[int64](b, false, false, 0, dropExemplars[int64])
 	require.Equal(t, cpB, h.bounds)
 
 	b[0] = 10
@@ -289,26 +329,25 @@ func TestHistogramImmutableBounds(t *testing.T) {
 }
 
 func TestCumulativeHistogramImutableCounts(t *testing.T) {
-	h := newHistogram[int64](bounds, noMinMax, false, dropExemplars[int64])
+	h := newHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
 	h.measure(context.Background(), 5, alice, alice)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.cumulative(&data)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
-	key := alice.Equivalent()
-	require.Equal(t, hdp.BucketCounts, h.values[key].counts)
+	require.Equal(t, hdp.BucketCounts, h.values[alice].counts)
 
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
-	assert.Equal(t, cpCounts, h.values[key].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+	assert.Equal(t, cpCounts, h.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
 }
 
 func TestDeltaHistogramReset(t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	h := newHistogram[int64](bounds, noMinMax, false, dropExemplars[int64])
+	h := newHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	require.Equal(t, 0, h.delta(&data))
