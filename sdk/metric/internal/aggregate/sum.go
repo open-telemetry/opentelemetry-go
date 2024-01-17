@@ -45,7 +45,7 @@ func newValueMap[N int64 | float64](limit int, r func() exemplar.Reservoir[N]) *
 	}
 }
 
-func (s *valueMap[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
+func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	t := now()
 
 	s.Lock()
@@ -58,7 +58,7 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, origAttr, fltrAttr a
 	}
 
 	v.n += value
-	v.res.Offer(ctx, t, value, origAttr)
+	v.res.Offer(ctx, t, value, droppedAttr)
 
 	s.values[attr] = v
 }
@@ -103,7 +103,7 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = val.n
-		val.res.Flush(&dPts[i].Exemplars, attr)
+		val.res.Flush(&dPts[i].Exemplars)
 		// Do not report stale values.
 		delete(s.values, attr)
 		i++
@@ -138,7 +138,7 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = value.n
-		value.res.Collect(&dPts[i].Exemplars, attr)
+		value.res.Collect(&dPts[i].Exemplars)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
@@ -197,7 +197,7 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
-		value.res.Flush(&dPts[i].Exemplars, attr)
+		value.res.Flush(&dPts[i].Exemplars)
 
 		newReported[attr] = value.n
 		// Unused attribute sets do not report.
@@ -236,7 +236,7 @@ func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = val.n
-		val.res.Collect(&dPts[i].Exemplars, attr)
+		val.res.Collect(&dPts[i].Exemplars)
 
 		// Unused attribute sets do not report.
 		delete(s.values, attr)

@@ -50,7 +50,7 @@ type randRes[N int64 | float64] struct {
 	w float64
 }
 
-func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a attribute.Set) {
+func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.KeyValue) {
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
@@ -89,12 +89,12 @@ func (r *randRes[N]) advance() {
 	r.next += int64(math.Log(rng.Float64())/math.Log(1-r.w)) + 1
 }
 
-func (r *randRes[N]) Collect(dest *[]metricdata.Exemplar[N], attrs attribute.Set) {
-	r.fixedRes.Collect(dest, attrs)
+func (r *randRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
+	r.fixedRes.Collect(dest)
 	r.reset()
 }
 
-func (r *randRes[N]) Flush(dest *[]metricdata.Exemplar[N], attrs attribute.Set) {
-	r.fixedRes.Flush(dest, attrs)
+func (r *randRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
+	r.fixedRes.Flush(dest)
 	r.reset()
 }

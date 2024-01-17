@@ -27,12 +27,12 @@ func Drop[N int64 | float64]() Reservoir[N] { return &dropRes[N]{} }
 
 type dropRes[N int64 | float64] struct{}
 
-func (r *dropRes[N]) Offer(context.Context, time.Time, N, attribute.Set) {}
+func (r *dropRes[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {}
 
-func (r *dropRes[N]) Collect(dest *[]metricdata.Exemplar[N], _ attribute.Set) {
+func (r *dropRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:0]
 }
 
-func (r *dropRes[N]) Flush(dest *[]metricdata.Exemplar[N], _ attribute.Set) {
+func (r *dropRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:0]
 }

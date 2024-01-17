@@ -74,21 +74,21 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 		t.Helper()
 
 		value, attr := N(1), alice
-		run := func(b Builder[N], wantO, wantF attribute.Set) func(*testing.T) {
+		run := func(b Builder[N], wantF attribute.Set, wantD []attribute.KeyValue) func(*testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, o, f attribute.Set) {
+				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantO, o, "measured incorrect original attributes")
 					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
 				})
 				meas(context.Background(), value, attr)
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{}, attr, attr))
-		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, alice, fltrAlice))
+		t.Run("NoFilter", run(Builder[N]{}, attr, nil))
+		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
 	}
 }
 

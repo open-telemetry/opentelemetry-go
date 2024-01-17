@@ -48,7 +48,7 @@ type lastValue[N int64 | float64] struct {
 	values map[attribute.Set]datapoint[N]
 }
 
-func (s *lastValue[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
+func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	t := now()
 
 	s.Lock()
@@ -62,7 +62,7 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, origAttr, fltrAttr 
 
 	d.timestamp = t
 	d.value = value
-	d.res.Offer(ctx, t, value, origAttr)
+	d.res.Offer(ctx, t, value, droppedAttr)
 
 	s.values[attr] = d
 }
@@ -81,7 +81,7 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 		// ignored.
 		(*dest)[i].Time = v.timestamp
 		(*dest)[i].Value = v.value
-		v.res.Flush(&(*dest)[i].Exemplars, a)
+		v.res.Flush(&(*dest)[i].Exemplars)
 		// Do not report stale values.
 		delete(s.values, a)
 		i++

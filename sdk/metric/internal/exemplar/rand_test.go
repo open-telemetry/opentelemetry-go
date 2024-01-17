@@ -46,7 +46,7 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 
 	r := FixedSize[float64](sampleSize)
 	for _, value := range data {
-		r.Offer(context.Background(), staticTime, value, alice)
+		r.Offer(context.Background(), staticTime, value, nil)
 	}
 
 	var sum float64

@@ -322,7 +322,7 @@ type expoHistogram[N int64 | float64] struct {
 	start time.Time
 }
 
-func (e *expoHistogram[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
+func (e *expoHistogram[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
 		return
@@ -342,7 +342,7 @@ func (e *expoHistogram[N]) measure(ctx context.Context, value N, origAttr, fltrA
 		e.values[attr] = v
 	}
 	v.record(value)
-	v.res.Offer(ctx, t, value, origAttr)
+	v.res.Offer(ctx, t, value, droppedAttr)
 }
 
 func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
@@ -384,7 +384,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Flush(&hDPts[i].Exemplars, a)
+		b.res.Flush(&hDPts[i].Exemplars)
 
 		delete(e.values, a)
 		i++
@@ -434,7 +434,7 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Collect(&hDPts[i].Exemplars, a)
+		b.res.Collect(&hDPts[i].Exemplars)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there

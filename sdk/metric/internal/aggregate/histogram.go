@@ -82,7 +82,7 @@ func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int, r
 
 // Aggregate records the measurement value, scoped by attr, and aggregates it
 // into a histogram.
-func (s *histValues[N]) measure(ctx context.Context, value N, origAttr, fltrAttr attribute.Set) {
+func (s *histValues[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
 	// of s.bounds. This aligns with the buckets in that the length of buckets
@@ -116,7 +116,7 @@ func (s *histValues[N]) measure(ctx context.Context, value N, origAttr, fltrAttr
 	if !s.noSum {
 		b.sum(value)
 	}
-	b.res.Offer(ctx, t, value, origAttr)
+	b.res.Offer(ctx, t, value, droppedAttr)
 }
 
 // newHistogram returns an Aggregator that summarizes a set of measurements as
@@ -174,7 +174,7 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Flush(&hDPts[i].Exemplars, a)
+		b.res.Flush(&hDPts[i].Exemplars)
 
 		// Unused attribute sets do not report.
 		delete(s.values, a)
@@ -233,7 +233,7 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Collect(&hDPts[i].Exemplars, a)
+		b.res.Collect(&hDPts[i].Exemplars)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there

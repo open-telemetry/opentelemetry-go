@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -36,7 +35,7 @@ func newFixedRes[N int64 | float64](n int) *fixedRes[N] {
 	return &fixedRes[N]{store: make([]measurement[N], n)}
 }
 
-func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N], attrs attribute.Set) {
+func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for _, m := range r.store {
@@ -44,13 +43,13 @@ func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N], attrs attribute.Se
 			continue
 		}
 
-		m.Exemplar(&(*dest)[n], attrs)
+		m.Exemplar(&(*dest)[n])
 		n++
 	}
 	*dest = (*dest)[:n]
 }
 
-func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N], attrs attribute.Set) {
+func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for i, m := range r.store {
@@ -58,7 +57,7 @@ func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N], attrs attribute.Set)
 			continue
 		}
 
-		m.Exemplar(&(*dest)[n], attrs)
+		m.Exemplar(&(*dest)[n])
 		n++
 
 		// Reset.
@@ -69,7 +68,7 @@ func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N], attrs attribute.Set)
 
 // measurement is a measurement made by a telemetry system.
 type measurement[N int64 | float64] struct {
-	Attributes  attribute.Set
+	Attributes  []attribute.KeyValue
 	Time        time.Time
 	Value       N
 	SpanContext trace.SpanContext
@@ -78,9 +77,9 @@ type measurement[N int64 | float64] struct {
 }
 
 // newMeasurement returns a new non-empty Measurement.
-func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, measuredAttr attribute.Set) measurement[N] {
+func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, droppedAttr []attribute.KeyValue) measurement[N] {
 	return measurement[N]{
-		Attributes:  measuredAttr,
+		Attributes:  droppedAttr,
 		Time:        ts,
 		Value:       v,
 		SpanContext: trace.SpanContextFromContext(ctx),
@@ -93,13 +92,8 @@ func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, m
 func (m measurement[N]) Empty() bool { return !m.valid }
 
 // Exemplar returns m as a [metricdata.Exemplar].
-func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N], recorded attribute.Set) {
-	// Note: A more optimal solution would be to store the filtered attributes
-	// when the exemplar is recorded, instead of re-calculating here. That
-	// approach isn't implemented though because it contrary to the OTel
-	// specification definition of a Reservoir, which is defined to accept the
-	// complete set of measured attributes.
-	dropped(&dest.FilteredAttributes, m.Attributes, recorded)
+func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N]) {
+	dest.FilteredAttributes = m.Attributes
 	dest.Time = m.Time
 	dest.Value = m.Value
 
@@ -115,49 +109,6 @@ func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N], recorded attribut
 		dest.SpanID = spanID[:]
 	} else {
 		dest.SpanID = dest.SpanID[:0]
-	}
-}
-
-// dropped returns the attribute that were measured, but not included in the
-// recorded attributes.
-func dropped(dest *[]attribute.KeyValue, measured, recorded attribute.Set) {
-	measN := measured.Len()
-	recN := recorded.Len()
-
-	n := measN - recN
-	switch {
-	case n < 0:
-		// recorded should only ever be the filtered set of measured. Abandon
-		// instead of panicking.
-		global.Warn(
-			"invalid measured attributes for exemplar, dropping",
-			"measured", measured,
-			"recorded", recorded,
-		)
-		fallthrough
-	case n == 0:
-		// Nothing dropped.
-		*dest = (*dest)[:0]
-		return
-	}
-	*dest = reset(*dest, n, n)
-
-	measIter := measured.Iter()
-	recIter := recorded.Iter()
-
-	var i int
-	recIter.Next()
-	for measIter.Next() {
-		m := measIter.Attribute()
-		r := recIter.Attribute()
-
-		if m == r {
-			recIter.Next()
-			continue
-		}
-
-		(*dest)[i] = m
-		i++
 	}
 }
 

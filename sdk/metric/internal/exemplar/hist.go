@@ -42,6 +42,6 @@ type histRes[N int64 | float64] struct {
 	bounds []float64
 }
 
-func (r *histRes[N]) Offer(ctx context.Context, t time.Time, n N, a attribute.Set) {
+func (r *histRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.KeyValue) {
 	r.store[sort.SearchFloat64s(r.bounds, float64(n))] = newMeasurement(ctx, t, n, a)
 }

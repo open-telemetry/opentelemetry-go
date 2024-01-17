@@ -16,7 +16,6 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exempla
 
 import (
 	"context"
-	"math"
 	"testing"
 	"time"
 
@@ -44,14 +43,8 @@ func TestAlwaysSample(t *testing.T) {
 func testAlwaysSample[N int64 | float64](t *testing.T) {
 	ctx := context.Background()
 
-	assert.True(t, AlwaysSample[N](ctx, 0, alice))
-	assert.True(t, AlwaysSample[N](ctx, 0, fltrAlice))
-	assert.True(t, AlwaysSample[N](sample(ctx), 0, alice))
-	assert.True(t, AlwaysSample[N](ctx, math.MaxInt64, alice))
-	assert.True(t, AlwaysSample[N](ctx, math.MinInt64, alice))
-	assert.True(t, AlwaysSample[N](ctx, N(math.NaN()), alice))
-	assert.True(t, AlwaysSample[N](ctx, N(math.Inf(-1)), alice))
-	assert.True(t, AlwaysSample[N](ctx, N(math.Inf(1)), alice))
+	assert.True(t, AlwaysSample[N](ctx))
+	assert.True(t, AlwaysSample[N](sample(ctx)))
 }
 
 func TestNeverSample(t *testing.T) {
@@ -62,14 +55,8 @@ func TestNeverSample(t *testing.T) {
 func testNeverSample[N int64 | float64](t *testing.T) {
 	ctx := context.Background()
 
-	assert.False(t, NeverSample[N](ctx, 0, alice))
-	assert.False(t, NeverSample[N](ctx, 0, fltrAlice))
-	assert.False(t, NeverSample[N](sample(ctx), 0, alice))
-	assert.False(t, NeverSample[N](ctx, math.MaxInt64, alice))
-	assert.False(t, NeverSample[N](ctx, math.MinInt64, alice))
-	assert.False(t, NeverSample[N](ctx, N(math.NaN()), alice))
-	assert.False(t, NeverSample[N](ctx, N(math.Inf(-1)), alice))
-	assert.False(t, NeverSample[N](ctx, N(math.Inf(1)), alice))
+	assert.False(t, NeverSample[N](ctx))
+	assert.False(t, NeverSample[N](sample(ctx)))
 }
 
 func TestTraceBasedSample(t *testing.T) {
@@ -80,14 +67,8 @@ func TestTraceBasedSample(t *testing.T) {
 func testTraceBasedSample[N int64 | float64](t *testing.T) {
 	ctx := context.Background()
 
-	assert.False(t, TraceBasedSample[N](ctx, 0, alice))
-	assert.False(t, TraceBasedSample[N](ctx, 0, fltrAlice))
-	assert.True(t, TraceBasedSample[N](sample(ctx), 0, alice))
-	assert.False(t, TraceBasedSample[N](ctx, math.MaxInt64, alice))
-	assert.False(t, TraceBasedSample[N](ctx, math.MinInt64, alice))
-	assert.False(t, TraceBasedSample[N](ctx, N(math.NaN()), alice))
-	assert.False(t, TraceBasedSample[N](ctx, N(math.Inf(-1)), alice))
-	assert.False(t, TraceBasedSample[N](ctx, N(math.Inf(1)), alice))
+	assert.False(t, TraceBasedSample[N](ctx))
+	assert.True(t, TraceBasedSample[N](sample(ctx)))
 }
 
 type res[N int64 | float64] struct {
@@ -96,15 +77,15 @@ type res[N int64 | float64] struct {
 	FlushCalled   bool
 }
 
-func (r *res[N]) Offer(context.Context, time.Time, N, attribute.Set) {
+func (r *res[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {
 	r.OfferCalled = true
 }
 
-func (r *res[N]) Collect(*[]metricdata.Exemplar[N], attribute.Set) {
+func (r *res[N]) Collect(*[]metricdata.Exemplar[N]) {
 	r.CollectCalled = true
 }
 
-func (r *res[N]) Flush(*[]metricdata.Exemplar[N], attribute.Set) {
+func (r *res[N]) Flush(*[]metricdata.Exemplar[N]) {
 	r.FlushCalled = true
 }
 
@@ -117,20 +98,20 @@ func testFilteredReservoir[N int64 | float64](t *testing.T) {
 	under := &res[N]{}
 
 	var called bool
-	fltr := func(context.Context, N, attribute.Set) bool {
+	fltr := func(context.Context) bool {
 		called = true
 		return true
 	}
 
 	r := Filtered[N](under, fltr)
 
-	r.Offer(context.Background(), staticTime, 0, alice)
+	r.Offer(context.Background(), staticTime, 0, nil)
 	assert.True(t, called, "filter not called on Offer")
 	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
 
-	r.Collect(nil, alice)
+	r.Collect(nil)
 	assert.True(t, under.CollectCalled, "underlying Reservoir Collect not called")
 
-	r.Flush(nil, alice)
+	r.Flush(nil)
 	assert.True(t, under.FlushCalled, "underlying Reservoir Flush not called")
 }

@@ -28,12 +28,7 @@ import (
 )
 
 var (
-	keyUser   = "user"
-	userAlice = attribute.String(keyUser, "Alice")
 	adminTrue = attribute.Bool("admin", true)
-
-	alice     = attribute.NewSet(userAlice, adminTrue)
-	fltrAlice = attribute.NewSet(userAlice)
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
 	staticTime = time.Unix(946684800, 0)
@@ -63,10 +58,10 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 			})
 			ctx := trace.ContextWithSpanContext(ctx, sc)
 
-			r.Offer(ctx, staticTime, 10, alice)
+			r.Offer(ctx, staticTime, 10, nil)
 
 			var dest []metricdata.Exemplar[N]
-			r.Collect(&dest, alice)
+			r.Collect(&dest)
 
 			want := metricdata.Exemplar[N]{
 				Time:    staticTime,
@@ -86,10 +81,10 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
 
-			r.Offer(ctx, staticTime, 10, alice)
+			r.Offer(ctx, staticTime, 10, []attribute.KeyValue{adminTrue})
 
 			var dest []metricdata.Exemplar[N]
-			r.Collect(&dest, fltrAlice)
+			r.Collect(&dest)
 
 			want := metricdata.Exemplar[N]{
 				FilteredAttributes: []attribute.KeyValue{adminTrue},
@@ -108,14 +103,14 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
 
-			r.Offer(ctx, staticTime, 10, alice)
+			r.Offer(ctx, staticTime, 10, nil)
 
 			var dest []metricdata.Exemplar[N]
-			r.Collect(&dest, alice)
+			r.Collect(&dest)
 			require.Len(t, dest, 1, "number of collected exemplars")
 
 			dest = dest[:0]
-			r.Collect(&dest, alice)
+			r.Collect(&dest)
 			assert.Len(t, dest, 1, "Collect flushed reservoir")
 		})
 
@@ -127,13 +122,13 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
 
-			r.Offer(ctx, staticTime, 10, alice)
+			r.Offer(ctx, staticTime, 10, nil)
 
 			var dest []metricdata.Exemplar[N]
-			r.Flush(&dest, alice)
+			r.Flush(&dest)
 			require.Len(t, dest, 1, "number of flushed exemplars")
 
-			r.Flush(&dest, alice)
+			r.Flush(&dest)
 			assert.Len(t, dest, 0, "Flush did not flush reservoir")
 		})
 
@@ -147,21 +142,21 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 
 			for i := 0; i < n+1; i++ {
 				v := N(i)
-				r.Offer(ctx, staticTime, v, alice)
+				r.Offer(ctx, staticTime, v, nil)
 			}
 
 			var dest []metricdata.Exemplar[N]
-			r.Flush(&dest, alice)
+			r.Flush(&dest)
 			assert.Len(t, dest, n, "multiple offers did not fill reservoir")
 
 			// Ensure the flush reset also resets any couting state.
 			for i := 0; i < n+1; i++ {
 				v := N(2 * i)
-				r.Offer(ctx, staticTime, v, alice)
+				r.Offer(ctx, staticTime, v, nil)
 			}
 
 			dest = dest[:0]
-			r.Flush(&dest, alice)
+			r.Flush(&dest)
 			assert.Len(t, dest, n, "internal count state not reset")
 		})
 
@@ -173,15 +168,15 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity greater than 0:", n)
 			}
 
-			r.Offer(context.Background(), staticTime, 10, alice)
+			r.Offer(context.Background(), staticTime, 10, nil)
 
 			dest := []metricdata.Exemplar[N]{{}} // Should be reset to empty.
-			r.Collect(&dest, alice)
+			r.Collect(&dest)
 			assert.Len(t, dest, 0, "no exemplars should be collected")
 
-			r.Offer(context.Background(), staticTime, 10, alice)
+			r.Offer(context.Background(), staticTime, 10, nil)
 			dest = []metricdata.Exemplar[N]{{}} // Should be reset to empty.
-			r.Flush(&dest, alice)
+			r.Flush(&dest)
 			assert.Len(t, dest, 0, "no exemplars should be flushed")
 		})
 	}

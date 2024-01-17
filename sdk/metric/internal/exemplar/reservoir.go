@@ -32,22 +32,22 @@ type Reservoir[N int64 | float64] interface {
 	// when the measurement was made. This information may be used by the
 	// Reservoir in making a sampling decision.
 	//
-	// The time t is the time when the measurement was made. The val and attrs
-	// parameters are the value and complete (unfiltered) attribute set of the
+	// The time t is the time when the measurement was made. The val and attr
+	// parameters are the value and dropped (filtered) attributes of the
 	// measurement respectively.
-	Offer(ctx context.Context, t time.Time, val N, attrs attribute.Set)
+	Offer(ctx context.Context, t time.Time, val N, attr []attribute.KeyValue)
 
 	// Collect returns all the held exemplars with each exemplars dropped
 	// attributes updated to include any attributes the Filter filters out.
 	//
 	// The Reservoir state is preserved after this call. See Flush to
 	// copy-and-clear instead.
-	Collect(dest *[]metricdata.Exemplar[N], attrs attribute.Set)
+	Collect(dest *[]metricdata.Exemplar[N])
 
 	// Flush returns all the held exemplars with each exemplars dropped
 	// attributes updated to include any attributes the Filter filters out.
 	//
 	// The Reservoir state is reset after this call. See Collect to preserve
 	// the state instead.
-	Flush(dest *[]metricdata.Exemplar[N], attrs attribute.Set)
+	Flush(dest *[]metricdata.Exemplar[N])
 }
