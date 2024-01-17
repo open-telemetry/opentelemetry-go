@@ -140,36 +140,51 @@ is defined as `time.Time` type.
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
 is defined as a type and constants based on
-[Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity):
+[Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity).
+Additionally, `Severity[Level]1` constants are defined to make the API more readable and user friendly.
 
 ```go
 type Severity int
 
 const (
-	SeverityTrace Severity = iota + 1
+	SeverityTrace1 Severity = iota + 1
 	SeverityTrace2
 	SeverityTrace3
 	SeverityTrace4
-	SeverityDebug
+
+	SeverityDebug1
 	SeverityDebug2
 	SeverityDebug3
 	SeverityDebug4
-	SeverityInfo
+
+	SeverityInfo1
 	SeverityInfo2
 	SeverityInfo3
 	SeverityInfo4
-	SeverityWarn
+
+	SeverityWarn1
 	SeverityWarn2
 	SeverityWarn3
 	SeverityWarn4
-	SeverityError
+
+	SeverityError1
 	SeverityError2
 	SeverityError3
 	SeverityError4
-	SeverityFatal
+
+	SeverityFatal1
 	SeverityFatal2
 	SeverityFatal3
 	SeverityFatal4
+)
+
+const (
+	SeverityTrace = SeverityTrace1
+	SeverityDebug = SeverityDebug1
+	SeverityInfo  = SeverityInfo1
+	SeverityWarn  = SeverityWarn1
+	SeverityError = SeverityError1
+	SeverityFatal = SeverityFatal1
 )
 ```
 
