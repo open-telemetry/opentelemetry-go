@@ -27,7 +27,15 @@ type Reservoir[N int64 | float64] interface {
 	// Offer accepts the parameters associated with a measurement. The
 	// parameters will be stored as an exemplar if the Reservoir decides to
 	// sample the measurement.
-	Offer(context.Context, time.Time, N, attribute.Set)
+	//
+	// The passed ctx needs to contain any baggage or span that were active
+	// when the measurement was made. This information may be used by the
+	// Reservoir in making a sampling decision.
+	//
+	// The time t is the time when the measurement was made. The val and attrs
+	// parameters are the value and complete (unfiltered) attribute set of the
+	// measurement respectively.
+	Offer(ctx context.Context, t time.Time, val N, attrs attribute.Set)
 
 	// Collect returns all the held exemplars with each exemplars dropped
 	// attributes updated to include any attributes the Filter filters out.
