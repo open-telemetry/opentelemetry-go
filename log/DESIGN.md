@@ -261,11 +261,11 @@ for reducing the number of allocations when passing attributes.
 The caller must not subsequently mutate the record passed to `Emit`.
 This would allow the implementation to not clone the record,
 but simply retain, modify or discard it.
-The implementation may still choose clone the record copy or copy its attributes
+The implementation may still choose to clone the record or copy its attributes
 if it needs to retain or modify it,
 e.g. in case of asynchronous processing to eliminiate the possibility of data races,
-because the user can technically reuse the record and add new attributes after the call
-(even when the documentation says that the caller must not do it).
+because the user can technically reuse the record and add new attributes
+after the call (even when the documentation says that the caller must not do it).
 
 Implementation requirements:
 
