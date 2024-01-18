@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed missing Mix and Max values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for type `Extrema` in `go.opentelemetry.io/sdk/metric/metricdata` (#4826)
+
 ## [1.22.0/0.45.0] 2024-01-17
 
 ### Added
@@ -24,7 +28,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Experimental cardinality limiting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
 - Add `NewMemberRaw` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage`. (#4804)
-- Add `MarshalText` and `MarshalJSON` in `go.opentelemetry.io/otel/sdk/metric/metricdata`.  (#4826)
 
 ### Changed
 
