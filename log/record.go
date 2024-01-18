@@ -8,70 +8,191 @@
 package log // import "go.opentelemetry.io/otel/log"
 
 import (
+	"errors"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
 // Record represents a log record.
 type Record struct {
-	Timestamp         time.Time
-	ObservedTimestamp time.Time
-	Severity          Severity
-	SeverityText      string
-	Body              string
-	Attributes        []attribute.KeyValue
+	timestamp         time.Time
+	observedTimestamp time.Time
+	severity          Severity
+	severityText      string
+	body              string
+
+	// The fields below are for optimizing the implementation of
+	// Attributes and AddAttributes.
+
+	// Allocation optimization: an inline array sized to hold
+	// the majority of log calls (based on examination of open-source
+	// code). It holds the start of the list of attributes.
+	front [attributesInlineCount]attribute.KeyValue
+
+	// The number of attributes in front.
+	nFront int
+
+	// The list of attributes except for those in front.
+	// Invariants:
+	//   - len(back) > 0 if nFront == len(front)
+	//   - Unused array elements are zero. Used to detect mistakes.
+	back []attribute.KeyValue
 }
 
-// Severity represents a log record severity.
-// Smaller numerical values correspond to less severe log records (such as debug events),
-// larger numerical values correspond to more severe log records (such as errors and critical events).
-type Severity int
+const attributesInlineCount = 5
 
-// Severity values defined by OpenTelemetry.
-const (
-	// A fine-grained debugging log record. Typically disabled in default configurations.
-	SeverityTrace1 Severity = iota + 1
-	SeverityTrace2
-	SeverityTrace3
-	SeverityTrace4
+// Timestamp returns the time when the log record occurred.
+func (r Record) Timestamp() time.Time {
+	return r.timestamp
+}
 
-	// A debugging log record.
-	SeverityDebug1
-	SeverityDebug2
-	SeverityDebug3
-	SeverityDebug4
+// SetTimestamp sets the time when the log record occurred.
+func (r *Record) SetTimestamp(t time.Time) {
+	r.timestamp = t
+}
 
-	// An informational log record. Indicates that an event happened.
-	SeverityInfo1
-	SeverityInfo2
-	SeverityInfo3
-	SeverityInfo4
+// ObservedTimestamp returns the time when the log record was observed.
+// If unset the implementation should set it equal to the current time.
+func (r Record) ObservedTimestamp() time.Time {
+	return r.observedTimestamp
+}
 
-	// A warning log record. Not an error but is likely more important than an informational event.
-	SeverityWarn1
-	SeverityWarn2
-	SeverityWarn3
-	SeverityWarn4
+// SetObservedTimestamp sets the time when the log record was observed.
+// If unset the implementation should set it equal to the current time.
+func (r *Record) SetObservedTimestamp(t time.Time) {
+	r.observedTimestamp = t
+}
 
-	// An error log record. Something went wrong.
-	SeverityError1
-	SeverityError2
-	SeverityError3
-	SeverityError4
+// Severity returns the [Severity] of the log record.
+func (r Record) Severity() Severity {
+	return r.severity
+}
 
-	// A fatal log record such as application or system crash.
-	SeverityFatal1
-	SeverityFatal2
-	SeverityFatal3
-	SeverityFatal4
-)
+// SetSeverity sets the [Severity] of the log record.
+// Use the values defined as constants.
+func (r *Record) SetSeverity(s Severity) {
+	r.severity = s
+}
 
-const (
-	SeverityTrace = SeverityTrace1
-	SeverityDebug = SeverityDebug1
-	SeverityInfo  = SeverityInfo1
-	SeverityWarn  = SeverityWarn1
-	SeverityError = SeverityError1
-	SeverityFatal = SeverityFatal1
-)
+// SeverityText returns severity (also known as log level) text.
+// This is the original string representation of the severity
+// as it is known at the source.
+func (r Record) SeverityText() string {
+	return r.severityText
+}
+
+// SetSeverityText sets severity (also known as log level) text.
+// This is the original string representation of the severity
+// as it is known at the source.
+func (r *Record) SetSeverityText(s string) {
+	r.severityText = s
+}
+
+// Body returns the value containing the body of the log record
+// as a human-readable string message (including multi-line)
+// describing the log record.
+func (r Record) Body() string {
+	return r.body
+}
+
+// SetBody sets the value containing the body of the log record
+// as a human-readable string message (including multi-line)
+// describing the log record.
+func (r *Record) SetBody(s string) {
+	r.body = s
+}
+
+// WalkAttributes calls f on each [attribute.KeyValue] in the [Record].
+// Iteration stops if f returns false.
+func (r Record) WalkAttributes(f func(attribute.KeyValue) bool) {
+	for i := 0; i < r.nFront; i++ {
+		if !f(r.front[i]) {
+			return
+		}
+	}
+	for _, a := range r.back {
+		if !f(a) {
+			return
+		}
+	}
+}
+
+var errUnsafeAddAttrs = errors.New("unsafely called AddAttributes on copy of Record made without using Record.Clone")
+
+// AddAttributes appends the given [attribute.KeyValue] to the [Record]'s
+// list of [attribute.KeyValue].
+// It omits invalid attributes.
+func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
+	var i int
+	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
+		a := attrs[i]
+		if !a.Valid() {
+			continue
+		}
+		r.front[r.nFront] = a
+		r.nFront++
+	}
+	// Check if a copy was modified by slicing past the end
+	// and seeing if the attribute there is non-zero.
+	if cap(r.back) > len(r.back) {
+		end := r.back[:len(r.back)+1][len(r.back)]
+		if end.Valid() {
+			// Don't panic; copy and muddle through.
+			r.back = sliceClip(r.back)
+			otel.Handle(errUnsafeAddAttrs)
+		}
+	}
+	ne := countInvalidAttrs(attrs[i:])
+	r.back = sliceGrow(r.back, len(attrs[i:])-ne)
+	for _, a := range attrs[i:] {
+		if a.Valid() {
+			r.back = append(r.back, a)
+		}
+	}
+}
+
+// Clone returns a copy of the record with no shared state.
+// The original record and the clone can both be modified
+// without interfering with each other.
+func (r Record) Clone() Record {
+	r.back = sliceClip(r.back) // prevent append from mutating shared array
+	return r
+}
+
+// AttributesLen returns the number of attributes in the Record.
+func (r Record) AttributesLen() int {
+	return r.nFront + len(r.back)
+}
+
+// countInvalidAttrs returns the number of invalid attributes.
+func countInvalidAttrs(as []attribute.KeyValue) int {
+	n := 0
+	for _, a := range as {
+		if !a.Valid() {
+			n++
+		}
+	}
+	return n
+}
+
+// sliceGrow increases the slice's capacity, if necessary, to guarantee space
+// for another n elements. After Grow(n), at least n elements can be appended
+// to the slice without another allocation. If n is negative or too large to
+// allocate the memory, Grow panics.
+//
+// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
+func sliceGrow[S ~[]E, E any](s S, n int) S {
+	if n -= cap(s) - len(s); n > 0 {
+		s = append(s[:cap(s)], make([]E, n)...)[:len(s)]
+	}
+	return s
+}
+
+// sliceClip removes unused capacity from the slice, returning s[:len(s):len(s)].
+//
+// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
+func sliceClip[S ~[]E, E any](s S) S {
+	return s[:len(s):len(s)]
+}

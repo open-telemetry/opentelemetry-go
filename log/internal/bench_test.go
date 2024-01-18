@@ -14,7 +14,6 @@ package internal
 import (
 	"context"
 	"io"
-	"sync"
 	"testing"
 	"time"
 
@@ -45,13 +44,6 @@ var (
 // slow logger implementation is skewing the results. The writerLogger
 // allocates memory only when using strconv.
 func BenchmarkEmit(b *testing.B) {
-	attrPool := sync.Pool{
-		New: func() interface{} {
-			attr := make([]attribute.KeyValue, 0, 5)
-			return &attr
-		},
-	}
-
 	for _, tc := range []struct {
 		name   string
 		logger log.Logger
@@ -67,34 +59,25 @@ func BenchmarkEmit(b *testing.B) {
 				{
 					"no attrs",
 					func() {
-						r := log.Record{
-							Timestamp: testTimestamp,
-							Severity:  testSeverity,
-							Body:      testBody,
-						}
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
 						tc.logger.Emit(ctx, r)
 					},
 				},
 				{
 					"3 attrs",
 					func() {
-						ptr := attrPool.Get().(*[]attribute.KeyValue)
-						attrs := *ptr
-						defer func() {
-							*ptr = attrs[:0]
-							attrPool.Put(ptr)
-						}()
-						attrs = append(attrs,
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
+						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
 							attribute.Int("int", testInt),
 						)
-						r := log.Record{
-							Timestamp:  testTimestamp,
-							Severity:   testSeverity,
-							Body:       testBody,
-							Attributes: attrs,
-						}
 						tc.logger.Emit(ctx, r)
 					},
 				},
@@ -105,38 +88,28 @@ func BenchmarkEmit(b *testing.B) {
 					// should only be from strconv used in writerLogger.
 					"5 attrs",
 					func() {
-						ptr := attrPool.Get().(*[]attribute.KeyValue)
-						attrs := *ptr
-						defer func() {
-							*ptr = attrs[:0]
-							attrPool.Put(ptr)
-						}()
-						attrs = append(attrs,
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
+						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
 							attribute.Int("int", testInt),
 							attribute.Bool("bool", testBool),
 							attribute.String("string", testString),
 						)
-						r := log.Record{
-							Timestamp:  testTimestamp,
-							Severity:   testSeverity,
-							Body:       testBody,
-							Attributes: attrs,
-						}
 						tc.logger.Emit(ctx, r)
 					},
 				},
 				{
 					"10 attrs",
 					func() {
-						ptr := attrPool.Get().(*[]attribute.KeyValue)
-						attrs := *ptr
-						defer func() {
-							*ptr = attrs[:0]
-							attrPool.Put(ptr)
-						}()
-						attrs = append(attrs,
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
+						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
 							attribute.Int("int", testInt),
@@ -148,25 +121,17 @@ func BenchmarkEmit(b *testing.B) {
 							attribute.Bool("bool", testBool),
 							attribute.String("string", testString),
 						)
-						r := log.Record{
-							Timestamp:  testTimestamp,
-							Severity:   testSeverity,
-							Body:       testBody,
-							Attributes: attrs,
-						}
 						tc.logger.Emit(ctx, r)
 					},
 				},
 				{
 					"40 attrs",
 					func() {
-						ptr := attrPool.Get().(*[]attribute.KeyValue)
-						attrs := *ptr
-						defer func() {
-							*ptr = attrs[:0]
-							attrPool.Put(ptr)
-						}()
-						attrs = append(attrs,
+						r := log.Record{}
+						r.SetTimestamp(testTimestamp)
+						r.SetSeverity(testSeverity)
+						r.SetBody(testBody)
+						r.AddAttributes(
 							attribute.String("string", testString),
 							attribute.Float64("float", testFloat),
 							attribute.Int("int", testInt),
@@ -208,12 +173,6 @@ func BenchmarkEmit(b *testing.B) {
 							attribute.Bool("bool", testBool),
 							attribute.String("string", testString),
 						)
-						r := log.Record{
-							Timestamp:  testTimestamp,
-							Severity:   testSeverity,
-							Body:       testBody,
-							Attributes: attrs,
-						}
 						tc.logger.Emit(ctx, r)
 					},
 				},

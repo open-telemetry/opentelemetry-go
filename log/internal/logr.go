@@ -6,7 +6,6 @@ package internal // import "go.opentelemetry.io/otel/log/internal"
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 
@@ -18,18 +17,11 @@ type logrSink struct {
 	Logger log.Logger
 }
 
-var logrAttrPool = sync.Pool{
-	New: func() interface{} {
-		attr := make([]attribute.KeyValue, 0, 5)
-		return &attr
-	},
-}
-
-// Init is implementated as a dummy.
+// Init is implemented as a dummy.
 func (s *logrSink) Init(info logr.RuntimeInfo) {
 }
 
-// Enabled is implementated as a dummy.
+// Enabled is implemented as a dummy.
 func (s *logrSink) Enabled(level int) bool {
 	return true
 }
@@ -39,21 +31,15 @@ func (s *logrSink) Enabled(level int) bool {
 func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 	record := log.Record{}
 
-	record.Body = msg
+	record.SetBody(msg)
 
 	lvl := log.Severity(9 - level)
-	record.Severity = lvl
+	record.SetSeverity(lvl)
 
 	if len(keysAndValues)%2 == 1 {
 		panic("key without a value")
 	}
 	kvCount := len(keysAndValues) / 2
-	ptr := logrAttrPool.Get().(*[]attribute.KeyValue)
-	attrs := *ptr
-	defer func() {
-		*ptr = attrs[:0]
-		logrAttrPool.Put(ptr)
-	}()
 	ctx := context.Background()
 	for i := 0; i < kvCount; i++ {
 		k, ok := keysAndValues[i*2].(string)
@@ -67,23 +53,22 @@ func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 			continue
 		}
 		kv := convertKV(k, v)
-		attrs = append(attrs, kv)
+		record.AddAttributes(kv)
 	}
-	record.Attributes = attrs
 
 	s.Logger.Emit(ctx, record)
 }
 
-// Error is implementated as a dummy.
+// Error is implemented as a dummy.
 func (s *logrSink) Error(err error, msg string, keysAndValues ...any) {
 }
 
-// WithValues is implementated as a dummy.
+// WithValues is implemented as a dummy.
 func (s *logrSink) WithValues(keysAndValues ...any) logr.LogSink {
 	return s
 }
 
-// WithName is implementated as a dummy.
+// WithName is implemented as a dummy.
 func (s *logrSink) WithName(name string) logr.LogSink {
 	return s
 }

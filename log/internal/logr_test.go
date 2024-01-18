@@ -20,14 +20,17 @@ func TestLogrSink(t *testing.T) {
 
 	l.Info(testBody, "string", testString, "ctx", ctx)
 
-	want := log.Record{
-		Body:     testBody,
-		Severity: log.SeverityInfo,
-		Attributes: []attribute.KeyValue{
-			attribute.String("string", testString),
-		},
-	}
+	want := log.Record{}
+	want.SetBody(testBody)
+	want.SetSeverity(log.SeverityInfo)
+	want.AddAttributes(attribute.String("string", testString))
 
-	assert.Equal(t, want, spy.Record)
-	assert.Equal(t, ctx, spy.Context)
+	assert.Equal(t, testBody, spy.Record.Body())
+	assert.Equal(t, log.SeverityInfo, spy.Record.Severity())
+	assert.Equal(t, 1, spy.Record.AttributesLen())
+	spy.Record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		assert.Equal(t, "string", string(kv.Key))
+		assert.Equal(t, testString, kv.Value.AsString())
+		return true
+	})
 }

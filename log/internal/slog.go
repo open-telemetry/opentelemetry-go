@@ -6,7 +6,6 @@ package internal // import "go.opentelemetry.io/otel/log/internal"
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
@@ -18,52 +17,38 @@ type slogHandler struct {
 	Logger log.Logger
 }
 
-var slogAttrPool = sync.Pool{
-	New: func() interface{} {
-		attr := make([]attribute.KeyValue, 0, 5)
-		return &attr
-	},
-}
-
 // Handle handles the Record.
 // It should avoid memory allocations whenever possible.
 func (h *slogHandler) Handle(ctx context.Context, r slog.Record) error {
 	record := log.Record{}
 
-	record.Timestamp = r.Time
+	record.SetTimestamp(r.Time)
 
-	record.Body = r.Message
+	record.SetBody(r.Message)
 
 	lvl := convertLevel(r.Level)
-	record.Severity = lvl
+	record.SetSeverity(lvl)
 
-	ptr := slogAttrPool.Get().(*[]attribute.KeyValue)
-	attrs := *ptr
-	defer func() {
-		*ptr = attrs[:0]
-		slogAttrPool.Put(ptr)
-	}()
 	r.Attrs(func(a slog.Attr) bool {
-		attrs = append(attrs, convertAttr(a))
+		record.AddAttributes(convertAttr(a))
 		return true
 	})
-	record.Attributes = attrs
 
 	h.Logger.Emit(ctx, record)
 	return nil
 }
 
-// Enabled is implementated as a dummy.
+// Enabled is implemented as a dummy.
 func (h *slogHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
-// WithAttrs is implementated as a dummy.
+// WithAttrs is implemented as a dummy.
 func (h *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return h
 }
 
-// WithGroup is implementated as a dummy.
+// WithGroup is implemented as a dummy.
 func (h *slogHandler) WithGroup(name string) slog.Handler {
 	return h
 }

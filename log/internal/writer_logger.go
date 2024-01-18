@@ -24,22 +24,23 @@ type writerLogger struct {
 }
 
 func (l *writerLogger) Emit(ctx context.Context, r log.Record) {
-	if !r.Timestamp.IsZero() {
+	if !r.Timestamp().IsZero() {
 		l.write("timestamp=")
-		l.write(strconv.FormatInt(r.Timestamp.Unix(), 10))
+		l.write(strconv.FormatInt(r.Timestamp().Unix(), 10))
 		l.write(" ")
 	}
 	l.write("severity=")
-	l.write(strconv.FormatInt(int64(r.Severity), 10))
+	l.write(strconv.FormatInt(int64(r.Severity()), 10))
 	l.write(" ")
 	l.write("body=")
-	l.write(r.Body)
-	for _, kv := range r.Attributes {
+	l.write(r.Body())
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		l.write(" ")
 		l.write(string(kv.Key))
 		l.write("=")
 		l.appendValue(kv.Value)
-	}
+		return true
+	})
 
 	span := trace.SpanContextFromContext(ctx)
 	if span.IsValid() {
