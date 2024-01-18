@@ -119,27 +119,49 @@ is accepted as a `context.Context` method argument.
 Calls to `Emit` are supposed to be on the hot path.
 Therefore, in order to reduce the number of heap allocations,
 the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord),
-is defined as a `struct`:
+is defined as a `Record` type:
 
 ```go
 type Record struct {
-	Timestamp         time.Time
-	ObservedTimestamp time.Time
-	Severity          Severity
-	SeverityText      string
-	Body              string
-	Attributes        []attribute.KeyValue
+	timestamp         time.Time
+	observedTimestamp time.Time
+	severity          Severity
+	severityText      string
+	body              string
+
+	// The fields below are for optimizing the implementation of
+	// attributes.
+	front [5]attribute.KeyValue
+	nFront int // The number of attributes in front.
+	back []attribute.KeyValue
 }
 ```
 
 [`Timestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-timestamp)
-is defined as `time.Time` type.
+is accessed using following methods:
+
+```go
+func (r Record) Timestamp() time.Time 
+func (r *Record) SetTimestamp(t time.Time) 
+```
 
 [`ObservedTimestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-observedtimestamp)
-is defined as `time.Time` type.
+is accessed using following methods:
+
+```go
+func (r Record) ObservedTimestamp() time.Time 
+func (r *Record) SetObservedTimestamp(t time.Time) 
+```
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
-is defined as a type and constants based on
+is accessed using following methods:
+
+```go
+func (r Record) Severity() Severity
+func (r *Record) SetSeverity(s Severity)
+```
+
+`Severity` type is defined and constants are based on
 [Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity).
 Additionally, `Severity[Level]1` constants are defined to make the API more readable and user friendly.
 
@@ -187,16 +209,53 @@ const (
 ```
 
 [`SeverityText`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitytext)
-is defined as `string` type.
+is accessed using following methods:
+
+```go
+func (r Record) SeverityText() string
+func (r *Record) SetSeverityText(s string)
+```
 
 [`Body`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
-is defined as `string` type as the specification says:
+is accessed using following methods:
+
+```go
+func (r Record) Body() string
+func (r *Record) SetBody(s string)
+```
+
+It is using `string` type as the specification says:
 
 > First-party Applications SHOULD use a string message.
 
 [Log record attributes](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
-are defined a regular slice of `attribute.KeyValue`.
-The users can use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+are accessed using following methods:
+
+```go
+func (r Record) WalkAttributes(f func(attribute.KeyValue) bool)
+func (r *Record) AddAttributes(attrs ...attribute.KeyValue)
+```
+
+`Record` has a `AttributesLen` method that returns
+the number of attributes to allow slice preallocation
+when converting records to a different representation:
+
+```go
+func (r Record) AttributesLen() int
+```
+
+Additionally, `Record` has a `Clone` method facilities
+coping a record with no shared state (attributes "back" slice):
+
+```go
+func (r Record) Clone() Record
+```
+
+The records attributes design and implemntation is based on
+[`slog.Record`](https://pkg.go.dev/log/slog#Record).
+It allows achieving high-performance access and manipulation of the attributes
+while keeping the API user friendly.
+It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
 
 Implementation requirements:
@@ -213,9 +272,9 @@ Implementation requirements:
 
 - The method should not modify the record's attribute as it may be reused by caller.
 
-- The method should copy the record's attributes in case of asynchronous processing
-  as otherwise it may lead to data races as the user may modify the passed attributes
-  e.g. because of using `sync.Pool` to reduce the number of allocation.
+- The method should copy the record's attributes (e.g. by cloning the record)
+  in case of asynchronous processing as otherwise it may lead to data races,
+  because the user may reuse the record and add new attributes after the call.
 
 - The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord)
   use the current time as observed timestamp if the passed is empty.
@@ -228,7 +287,7 @@ Rejected alternatives:
 - [Options as parameter to Logger.Emit](#options-as-parameter-to-loggeremit)
 - [Passing record as pointer to Logger.Emit](#passing-record-as-pointer-to-loggeremit)
 - [Logger.WithAttributes](#loggerwithattributes)
-- [Record attributes like in slog.Record](#record-attributes-like-in-slogrecord)
+- [Record attributes as slice](#record-attributes-as-slice)
 - [Record.Body as any](#recordbody-as-any)
 
 ### noop package
@@ -375,33 +434,36 @@ Moreover, the logger returned by `WithAttribute` was allocated on the heap.
 
 At last, the proposal was not specification compliant.
 
-### Record attributes like in slog.Record
+### Record attributes as slice
 
-To reduce the number of allocations of the attributes,
-the `Record` could be modeled similarly to [`slog.Record`](https://pkg.go.dev/log/slog#Record).
-`Record` could have `WalkAttributes` and `AddAttributes` methods,
-like [`slog.Record.Attrs`](https://pkg.go.dev/log/slog#Record.Attrs)
-and [`slog.Record.AddAttrs`](https://pkg.go.dev/log/slog#Record.AddAttrs),
-in order to achieve high-performance when accessing and setting attributes efficiently.
-`Record` would have a `AttributesLen` method that returns
-the number of attributes to allow slice preallocation
-when converting records to a different representation.
+One of the proposals[^5] was to have `Record` as a simple struct:
 
-However, during the analysis[^5] we decided that having
-a simple slice in `Record` is more flexible.
+```go
+type Record struct {
+	Timestamp         time.Time
+	ObservedTimestamp time.Time
+	Severity          Severity
+	SeverityText      string
+	Body              string
+	Attributes        []attribute.KeyValue
+```
 
-It is possible to achieve better performance, by using [`sync.Pool`](https://pkg.go.dev/sync#Pool).
+The users and bridges could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+for reducing the number of allocations when passing attributes.
 
-Having a simple `Record` without any logic makes it possible
-that the optimisations can be done in API implementation
-and bridge implementations.
-For instance, in order to reduce the heap allocations of attributes,
-the bridge implementation can use a `sync.Pool`.
-In such case, the API implementation (SDK) would need to copy the attributes
-when the records are processed asynchronously,
-in order to avoid use after free bugs and race conditions.
+The benchmarks results were better.
 
-For reference, here is the reason why `slog` does not use `sync.Pool`[^2]:
+In such a design, most bridges would have a `sync.Pool`
+to reduce the number of heap allocations.
+However, the `sync.Pool` will not work correctly with API implementations
+that would take ownership of the record
+(e.g. implementations that do not copy records for asynchronous processing).
+The current design, even in case of improper API implementation,
+has lower  chances of encountering a bug as most bridges would
+create a record, pass it, and forget about it.
+
+For reference, here is the reason why `slog` does not use `sync.Pool`[^2]
+as well:
 
 > We can use a sync pool for records though we decided not to.
 You can but it's a bad idea for us. Why?
@@ -418,13 +480,10 @@ you will never encounter a problem.
 But if you do something a little out of the ordinary you can get
 use after free bugs and we just didn't want to put that in the standard library.
 
-We took a different decision, because the key difference is that `slog`
-is a logging library and Logs Bridge API is only a logging abstraction.
-We want to provide more flexibility and offer better speed.
-Unlike `zerolog`, we are not using a `sync.Pool` in the logger implementation,
-which would expose to the issue described above.
-Instead, `sync.Pool` is used by bridges, which are the users,
-rather than implementers, of the API.
+Therefore, we decided to not follow the proposal as it is
+less user friendly (users and bridges would use e.g. a `sync.Pool` to reduce
+the number of heap allocation), less safe (more prone to use after free bugs
+and race conditions), and the benchmark differences were not significant.
 
 ### Record.Body as any
 
