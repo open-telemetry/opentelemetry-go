@@ -25,7 +25,8 @@ type Logger interface {
 	//
 	// This method should:
 	//   - be safe to call concurrently,
-	//   - handle the trace context passed via ctx argument,
-	//   - use the current time as observed timestamp if the passed is empty.
+	//   - ignore the cancellation of the context,
+	//   - handle the trace context passed via context,
+	//   - use the current time as observed timestamp if it is a zero value.
 	Emit(ctx context.Context, record Record)
 }
