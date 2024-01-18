@@ -289,6 +289,7 @@ Rejected alternatives:
 - [Logger.WithAttributes](#loggerwithattributes)
 - [Record attributes as slice](#record-attributes-as-slice)
 - [Record.Body as any](#recordbody-as-any)
+- [Severity type encapsulating number and text](#severity-type-encapsulating-number-and-text)
 
 ### noop package
 
@@ -487,7 +488,7 @@ and race conditions), and the benchmark differences were not significant.
 
 ### Record.Body as any
 
-[Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/data-model.md#field-body)
+[Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
 defines Body to be `any`.
 We could define `Body` as `any` instead of `string`.
 This could result in a more flexible API
@@ -510,6 +511,23 @@ We can always add an additional `StructuredBody any` field in a future release
 if we would need to support structured bodies. This approach would be
 backwards-compatible and should not have such a negative impact on performance
 for the most common scenario where `Body` is a `string`.
+
+### Severity type encapsulating number and text
+
+We could combine severity into a single field defining a type:
+
+```go
+type Severity struct {
+	Number SeverityNumber
+	Text string
+}
+```
+
+However, the [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#log-and-event-record-definition)
+define it as independent fields.
+It should be more user friendly to have them separated.
+Especially when having getter and setter methods, setting one value
+when the other is already set would be unpleasant.
 
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
