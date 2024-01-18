@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Experimental cardinality limiting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
 - Add `NewMemberRaw` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage`. (#4804)
+- Add `MarshalText` and `MarshalJSON` in `go.opentelemetry.io/otel/sdk/metric/metricdata`.  (#4826)
 
 ### Changed
 
