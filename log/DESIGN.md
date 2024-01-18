@@ -258,6 +258,10 @@ while keeping the API user friendly.
 It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
 
+The caller must not subsequently mutate the record passed to `Emit`.
+This would allow the API implementation to not clone the record,
+but simply retain it e.g. in case of asynchronous processing.
+
 Implementation requirements:
 
 - The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#concurrency-requirements)
@@ -272,9 +276,10 @@ Implementation requirements:
 
 - The method should not modify the record's attribute as it may be reused by caller.
 
-- The method should copy the record's attributes (e.g. by cloning the record)
-  in case of asynchronous processing as otherwise it may lead to data races,
-  because the user may reuse the record and add new attributes after the call.
+- The method may clone the record copy or copy its attributes if it needs to retain it,
+  e.g. in case of asynchronous processing, to the possibility data races,
+  because the user may reuse the record and add new attributes after the call
+  (even when the documentation says that the caller must not do it).
 
 - The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord)
   use the current time as observed timestamp if the passed is empty.
