@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fixed missing Mix and Max values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for type `Extrema` in `go.opentelemetry.io/sdk/metric/metricdata` (#4826)
+- Fixed missing Mix and Max values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for type `Extrema` in `go.opentelemetry.io/sdk/metric/metricdata`. (#4826)
 
 ## [1.22.0/0.45.0] 2024-01-17
 
