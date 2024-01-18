@@ -21,12 +21,11 @@ type Logger interface {
 	embedded.Logger
 
 	// Emit emits a log record.
+	// The caller must not subsequently mutate the record.
 	//
 	// This method should:
 	//   - be safe to call concurrently,
 	//   - handle the trace context passed via ctx argument,
-	//   - not modify the record's attributes,
-	//   - copy the record's attributes in case of asynchronous processing,
 	//   - use the current time as observed timestamp if the passed is empty.
 	Emit(ctx context.Context, record Record)
 }
