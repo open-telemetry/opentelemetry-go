@@ -27,25 +27,11 @@ import (
 // environment variables.
 //
 // Note: This will only return non-nil values when the experimental exemplar
-// feature is enabled.
+// feature is enabled and the OTEL_METRICS_EXEMPLAR_FILTER environment variable
+// is not set to always_off.
 func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir[N] {
 	if !x.Exemplars.Enabled() {
 		return nil
-	}
-
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
-	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
-
-	var fltr exemplar.Filter[N]
-	switch os.Getenv(filterEnvKey) {
-	case "always_on":
-		fltr = exemplar.AlwaysSample[N]
-	case "always_off":
-		fltr = exemplar.NeverSample[N]
-	case "trace_based":
-		fallthrough
-	default:
-		fltr = exemplar.TraceBasedSample[N]
 	}
 
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/metrics/sdk.md#exemplar-defaults
@@ -89,9 +75,22 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir
 		return func() exemplar.Reservoir[N] {
 			return exemplar.FixedSize[N](n)
 		}
-	}()
+	}
 
-	return func() exemplar.Reservoir[N] {
-		return exemplar.Filtered[N](resF(), fltr)
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
+	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
+
+	switch os.Getenv(filterEnvKey) {
+	case "always_on":
+		return resF()
+	case "always_off":
+		return exemplar.Drop[N]
+	case "trace_based":
+		fallthrough
+	default:
+		newR := resF()
+		return func() exemplar.Reservoir[N] {
+			return exemplar.SampledFilter(newR())
+		}
 	}
 }

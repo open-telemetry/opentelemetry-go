@@ -35,42 +35,6 @@ func sample(parent context.Context) context.Context {
 	return trace.ContextWithSpanContext(parent, sc)
 }
 
-func TestAlwaysSample(t *testing.T) {
-	t.Run("Int64", testAlwaysSample[int64])
-	t.Run("Float64", testAlwaysSample[float64])
-}
-
-func testAlwaysSample[N int64 | float64](t *testing.T) {
-	ctx := context.Background()
-
-	assert.True(t, AlwaysSample[N](ctx))
-	assert.True(t, AlwaysSample[N](sample(ctx)))
-}
-
-func TestNeverSample(t *testing.T) {
-	t.Run("Int64", testNeverSample[int64])
-	t.Run("Float64", testNeverSample[float64])
-}
-
-func testNeverSample[N int64 | float64](t *testing.T) {
-	ctx := context.Background()
-
-	assert.False(t, NeverSample[N](ctx))
-	assert.False(t, NeverSample[N](sample(ctx)))
-}
-
-func TestTraceBasedSample(t *testing.T) {
-	t.Run("Int64", testTraceBasedSample[int64])
-	t.Run("Float64", testTraceBasedSample[float64])
-}
-
-func testTraceBasedSample[N int64 | float64](t *testing.T) {
-	ctx := context.Background()
-
-	assert.False(t, TraceBasedSample[N](ctx))
-	assert.True(t, TraceBasedSample[N](sample(ctx)))
-}
-
 type res[N int64 | float64] struct {
 	OfferCalled   bool
 	CollectCalled bool
@@ -89,24 +53,20 @@ func (r *res[N]) Flush(*[]metricdata.Exemplar[N]) {
 	r.FlushCalled = true
 }
 
-func TestFilteredReservoir(t *testing.T) {
-	t.Run("Int64", testFilteredReservoir[int64])
-	t.Run("Float64", testFilteredReservoir[float64])
+func TestSampledFilter(t *testing.T) {
+	t.Run("Int64", testSampledFiltered[int64])
+	t.Run("Float64", testSampledFiltered[float64])
 }
 
-func testFilteredReservoir[N int64 | float64](t *testing.T) {
+func testSampledFiltered[N int64 | float64](t *testing.T) {
 	under := &res[N]{}
 
-	var called bool
-	fltr := func(context.Context) bool {
-		called = true
-		return true
-	}
+	r := SampledFilter[N](under)
 
-	r := Filtered[N](under, fltr)
-
-	r.Offer(context.Background(), staticTime, 0, nil)
-	assert.True(t, called, "filter not called on Offer")
+	ctx := context.Background()
+	r.Offer(ctx, staticTime, 0, nil)
+	assert.False(t, under.OfferCalled, "underlying Reservoir Offer called")
+	r.Offer(sample(ctx), staticTime, 0, nil)
 	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
 
 	r.Collect(nil)

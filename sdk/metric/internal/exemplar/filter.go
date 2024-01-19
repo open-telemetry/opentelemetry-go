@@ -22,45 +22,19 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Filter determines filters measurements passed to a [Reservoir]. If true is
-// return, the measurement will be considered for sampling.
-//
-// See [Filtered] for how to create a [Reservoir] that uses a Filter.
-type Filter[N int64 | float64] func(context.Context) bool
-
-// AlwaysSample is a Filter that always signals measurements should be
-// considered for sampling by a [Reservoir].
-func AlwaysSample[N int64 | float64](context.Context) bool {
-	return true
-}
-
-// NeverSample is a Filter that always signals measurements should not be
-// considered for sampling by a [Reservoir].
-func NeverSample[N int64 | float64](context.Context) bool {
-	return false
-}
-
-// TraceBasedSample is a Filter that signals measurements should be considered
-// for sampling by a [Reservoir] if the ctx contains a
-// [go.opentelemetry.io/otel/trace.SpanContext] that is sampled.
-func TraceBasedSample[N int64 | float64](ctx context.Context) bool {
-	return trace.SpanContextFromContext(ctx).IsSampled()
-}
-
-// Filtered returns a [Reservoir] wrapping r that will only offer measurements
-// to r if f returns true.
-func Filtered[N int64 | float64](r Reservoir[N], f Filter[N]) Reservoir[N] {
-	return filtered[N]{Reservoir: r, Filter: f}
+// SampledFilter returns a [Reservoir] wrapping r that will only offer measurements
+// to r if the passed context associated with the measurement contains a sampled
+// [go.opentelemetry.io/otel/trace.SpanContext].
+func SampledFilter[N int64 | float64](r Reservoir[N]) Reservoir[N] {
+	return filtered[N]{Reservoir: r}
 }
 
 type filtered[N int64 | float64] struct {
 	Reservoir[N]
-
-	Filter Filter[N]
 }
 
 func (f filtered[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.KeyValue) {
-	if f.Filter(ctx) {
+	if trace.SpanContextFromContext(ctx).IsSampled() {
 		f.Reservoir.Offer(ctx, t, n, a)
 	}
 }
