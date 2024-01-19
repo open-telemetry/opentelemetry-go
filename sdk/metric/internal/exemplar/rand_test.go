@@ -24,11 +24,11 @@ import (
 )
 
 func TestFixedSize(t *testing.T) {
-	t.Run("Int64", testReservoir[int64](func(n int) (Reservoir[int64], int) {
+	t.Run("Int64", ReservoirTest[int64](func(n int) (Reservoir[int64], int) {
 		return FixedSize[int64](n), n
 	}))
 
-	t.Run("Float64", testReservoir[float64](func(n int) (Reservoir[float64], int) {
+	t.Run("Float64", ReservoirTest[float64](func(n int) (Reservoir[float64], int) {
 		return FixedSize[float64](n), n
 	}))
 }

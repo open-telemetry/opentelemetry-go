@@ -32,7 +32,7 @@ var staticTime = time.Unix(946684800, 0)
 
 type factory[N int64 | float64] func(requstedCap int) (r Reservoir[N], actualCap int)
 
-func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
+func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
