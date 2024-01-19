@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// fixedRes is the storage for [Reservoir] implementations.
 type fixedRes[N int64 | float64] struct {
 	// store are the measurements sampled.
 	//
@@ -76,9 +77,13 @@ func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 
 // measurement is a measurement made by a telemetry system.
 type measurement[N int64 | float64] struct {
-	Attributes  []attribute.KeyValue
-	Time        time.Time
-	Value       N
+	// FilteredAttributes are the attributes dropped during the measurement.
+	FilteredAttributes []attribute.KeyValue
+	// Time is the time when the measurement was made.
+	Time time.Time
+	// Value is the value of the measurement.
+	Value N
+	// SpanContext is the SpanContext active when a measurement was made.
 	SpanContext trace.SpanContext
 
 	valid bool
@@ -87,11 +92,11 @@ type measurement[N int64 | float64] struct {
 // newMeasurement returns a new non-empty Measurement.
 func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, droppedAttr []attribute.KeyValue) measurement[N] {
 	return measurement[N]{
-		Attributes:  droppedAttr,
-		Time:        ts,
-		Value:       v,
-		SpanContext: trace.SpanContextFromContext(ctx),
-		valid:       true,
+		FilteredAttributes: droppedAttr,
+		Time:               ts,
+		Value:              v,
+		SpanContext:        trace.SpanContextFromContext(ctx),
+		valid:              true,
 	}
 }
 
@@ -101,7 +106,7 @@ func (m measurement[N]) Valid() bool { return m.valid }
 
 // Exemplar returns m as a [metricdata.Exemplar].
 func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N]) {
-	dest.FilteredAttributes = m.Attributes
+	dest.FilteredAttributes = m.FilteredAttributes
 	dest.Time = m.Time
 	dest.Value = m.Value
 
