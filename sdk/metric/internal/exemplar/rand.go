@@ -67,6 +67,9 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 	// Vitter, Jeffrey S. (1 March 1985). "Random sampling with a reservoir"
 	// (http://www.cs.umd.edu/~samir/498/vitter.pdf)) which has an asymptotic
 	// runtime of O(n).
+	//
+	// See https://github.com/MrAlias/reservoir-sampling for a comparison of
+	// reservoir sampling algorithms (including performance benchmarks).
 
 	if int(r.count) < cap(r.store) {
 		r.store[r.count] = newMeasurement(ctx, t, n, a)
