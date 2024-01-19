@@ -35,13 +35,13 @@ var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 // there are more than n, the Reservoir will then randomly sample all
 // additional measurement with a decreasing probability.
 func FixedSize[N int64 | float64](n int) Reservoir[N] {
-	r := &randRes[N]{fixedRes: newFixedRes[N](n)}
+	r := &randRes[N]{fixedRes: newStorage[N](n)}
 	r.reset()
 	return r
 }
 
 type randRes[N int64 | float64] struct {
-	*fixedRes[N]
+	*storage[N]
 
 	// count is the number of measurement seen.
 	count int64

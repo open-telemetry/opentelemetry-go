@@ -31,12 +31,12 @@ func Histogram[N int64 | float64](bounds []float64) Reservoir[N] {
 	sort.Float64s(bounds)
 	return &histRes[N]{
 		bounds:   bounds,
-		fixedRes: newFixedRes[N](len(bounds) + 1),
+		fixedRes: newStorage[N](len(bounds) + 1),
 	}
 }
 
 type histRes[N int64 | float64] struct {
-	*fixedRes[N]
+	*storage[N]
 
 	// bounds are bucket bounds in ascending order.
 	bounds []float64

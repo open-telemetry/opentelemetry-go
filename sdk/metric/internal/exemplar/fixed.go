@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// fixedRes is the storage for [Reservoir] implementations.
-type fixedRes[N int64 | float64] struct {
+// storage is an exemplar storage for [Reservoir] implementations.
+type storage[N int64 | float64] struct {
 	// store are the measurements sampled.
 	//
 	// This does not use []metricdata.Exemplar because it potentially would
@@ -32,15 +32,15 @@ type fixedRes[N int64 | float64] struct {
 	store []measurement[N]
 }
 
-func newFixedRes[N int64 | float64](n int) *fixedRes[N] {
-	return &fixedRes[N]{store: make([]measurement[N], n)}
+func newStorage[N int64 | float64](n int) *storage[N] {
+	return &storage[N]{store: make([]measurement[N], n)}
 }
 
 // Collect returns all the held exemplars.
 //
 // The Reservoir state is preserved after this call. See Flush to
 // copy-and-clear instead.
-func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
+func (r *storage[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for _, m := range r.store {
@@ -58,7 +58,7 @@ func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 //
 // The Reservoir state is reset after this call. See Collect to preserve the
 // state instead.
-func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
+func (r *storage[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for i, m := range r.store {
