@@ -26,6 +26,29 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func TestSampledFilter(t *testing.T) {
+	t.Run("Int64", testSampledFiltered[int64])
+	t.Run("Float64", testSampledFiltered[float64])
+}
+
+func testSampledFiltered[N int64 | float64](t *testing.T) {
+	under := &res[N]{}
+
+	r := SampledFilter[N](under)
+
+	ctx := context.Background()
+	r.Offer(ctx, staticTime, 0, nil)
+	assert.False(t, under.OfferCalled, "underlying Reservoir Offer called")
+	r.Offer(sample(ctx), staticTime, 0, nil)
+	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
+
+	r.Collect(nil)
+	assert.True(t, under.CollectCalled, "underlying Reservoir Collect not called")
+
+	r.Flush(nil)
+	assert.True(t, under.FlushCalled, "underlying Reservoir Flush not called")
+}
+
 func sample(parent context.Context) context.Context {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},
@@ -51,27 +74,4 @@ func (r *res[N]) Collect(*[]metricdata.Exemplar[N]) {
 
 func (r *res[N]) Flush(*[]metricdata.Exemplar[N]) {
 	r.FlushCalled = true
-}
-
-func TestSampledFilter(t *testing.T) {
-	t.Run("Int64", testSampledFiltered[int64])
-	t.Run("Float64", testSampledFiltered[float64])
-}
-
-func testSampledFiltered[N int64 | float64](t *testing.T) {
-	under := &res[N]{}
-
-	r := SampledFilter[N](under)
-
-	ctx := context.Background()
-	r.Offer(ctx, staticTime, 0, nil)
-	assert.False(t, under.OfferCalled, "underlying Reservoir Offer called")
-	r.Offer(sample(ctx), staticTime, 0, nil)
-	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
-
-	r.Collect(nil)
-	assert.True(t, under.CollectCalled, "underlying Reservoir Collect not called")
-
-	r.Flush(nil)
-	assert.True(t, under.FlushCalled, "underlying Reservoir Flush not called")
 }
