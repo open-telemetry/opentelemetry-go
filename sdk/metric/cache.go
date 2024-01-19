@@ -53,6 +53,16 @@ func (c *cache[K, V]) Lookup(key K, f func() V) V {
 	return val
 }
 
+// HasKey returns true if Lookup has previously been called with that key
+//
+// HasKey is safe to call concurrently.
+func (c *cache[K, V]) HasKey(key K) bool {
+	c.Lock()
+	defer c.Unlock()
+	_, ok := c.data[key]
+	return ok
+}
+
 // cacheWithErr is a locking storage used to quickly return already computed values and an error.
 //
 // The zero value of a cacheWithErr is empty and ready to use.
@@ -69,11 +79,11 @@ type valAndErr[V any] struct {
 	err error
 }
 
-// Lookup returns the value stored in the cache with the associated key if it
-// exists. Otherwise, f is called and its returned value is set in the cache
-// for key and returned.
+// Lookup returns the value stored in the cacheWithErr with the associated key
+// if it exists. Otherwise, f is called and its returned value is set in the
+// cacheWithErr for key and returned.
 //
-// Lookup is safe to call concurrently. It will hold the cache lock, so f
+// Lookup is safe to call concurrently. It will hold the cacheWithErr lock, so f
 // should not block excessively.
 func (c *cacheWithErr[K, V]) Lookup(key K, f func() (V, error)) (V, error) {
 	combined := c.cache.Lookup(key, func() valAndErr[V] {
@@ -81,4 +91,11 @@ func (c *cacheWithErr[K, V]) Lookup(key K, f func() (V, error)) (V, error) {
 		return valAndErr[V]{val: val, err: err}
 	})
 	return combined.val, combined.err
+}
+
+// HasKey returns true if Lookup has previously been called with that key
+//
+// HasKey is safe to call concurrently.
+func (c *cacheWithErr[K, V]) HasKey(key K) bool {
+	return c.cache.HasKey(key)
 }

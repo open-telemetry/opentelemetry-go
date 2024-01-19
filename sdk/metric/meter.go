@@ -122,12 +122,16 @@ func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOpti
 // int64ObservableInstrument returns a new observable identified by the Instrument.
 // It registers callbacks for each reader's pipeline.
 func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int64Callback) (int64Observable, error) {
-	return m.int64ObservableInsts.Lookup(instID{
+	key := instID{
 		Name:        id.Name,
 		Description: id.Description,
 		Unit:        id.Unit,
 		Kind:        id.Kind,
-	}, func() (int64Observable, error) {
+	}
+	if m.int64ObservableInsts.HasKey(key) && len(callbacks) > 0 {
+		warnRepeatedObservableCallbacks(id)
+	}
+	return m.int64ObservableInsts.Lookup(key, func() (int64Observable, error) {
 		inst := newInt64Observable(m, id.Kind, id.Name, id.Description, id.Unit)
 		for _, insert := range m.int64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
@@ -246,12 +250,16 @@ func (m *meter) Float64Histogram(name string, options ...metric.Float64Histogram
 // float64ObservableInstrument returns a new observable identified by the Instrument.
 // It registers callbacks for each reader's pipeline.
 func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Float64Callback) (float64Observable, error) {
-	return m.float64ObservableInsts.Lookup(instID{
+	key := instID{
 		Name:        id.Name,
 		Description: id.Description,
 		Unit:        id.Unit,
 		Kind:        id.Kind,
-	}, func() (float64Observable, error) {
+	}
+	if m.int64ObservableInsts.HasKey(key) && len(callbacks) > 0 {
+		warnRepeatedObservableCallbacks(id)
+	}
+	return m.float64ObservableInsts.Lookup(key, func() (float64Observable, error) {
 		inst := newFloat64Observable(m, id.Kind, id.Name, id.Description, id.Unit)
 		for _, insert := range m.float64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
@@ -350,6 +358,16 @@ func isAlpha(c rune) bool {
 
 func isAlphanumeric(c rune) bool {
 	return isAlpha(c) || ('0' <= c && c <= '9')
+}
+
+func warnRepeatedObservableCallbacks(id Instrument) {
+	inst := fmt.Sprintf(
+		"Instrument{Name: %q, Description: %q, Kind: %q, Unit: %q}",
+		id.Name, id.Description, "InstrumentKind"+id.Kind.String(), id.Unit,
+	)
+	global.Warn("Repeated observable instrument creation with callbacks. Ignoring new provided callbacks to avoid leaking memory. Use meter.RegisterCallback and Registration.Unregister to manage callbacks.",
+		"instrument", inst,
+	)
 }
 
 // RegisterCallback registers f to be called each collection cycle so it will
@@ -583,12 +601,6 @@ func (p int64InstProvider) lookupHistogram(name string, cfg metric.Int64Histogra
 
 // float64InstProvider provides float64 OpenTelemetry instruments.
 type float64InstProvider struct{ *meter }
-
-// float64InstVal is the cached value in an instrument cache.
-type float64InstVal struct {
-	instrument *float64Inst
-	err        error
-}
 
 func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[float64], error) {
 	inst := Instrument{
