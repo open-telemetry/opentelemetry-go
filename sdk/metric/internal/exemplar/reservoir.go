@@ -37,15 +37,13 @@ type Reservoir[N int64 | float64] interface {
 	// measurement respectively.
 	Offer(ctx context.Context, t time.Time, val N, attr []attribute.KeyValue)
 
-	// Collect returns all the held exemplars with each exemplars dropped
-	// attributes updated to include any attributes the Filter filters out.
+	// Collect returns all the held exemplars.
 	//
 	// The Reservoir state is preserved after this call. See Flush to
 	// copy-and-clear instead.
 	Collect(dest *[]metricdata.Exemplar[N])
 
-	// Flush returns all the held exemplars with each exemplars dropped
-	// attributes updated to include any attributes the Filter filters out.
+	// Flush returns all the held exemplars.
 	//
 	// The Reservoir state is reset after this call. See Collect to preserve
 	// the state instead.
