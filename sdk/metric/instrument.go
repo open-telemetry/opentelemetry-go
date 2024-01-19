@@ -265,16 +265,9 @@ var (
 )
 
 func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string) float64Observable {
-	return m.float64ObservableInsts.Lookup(instID{
-		Name:        name,
-		Description: desc,
-		Unit:        u,
-		Kind:        kind,
-	}, func() float64Observable {
-		return float64Observable{
-			observable: newObservable[float64](m, kind, name, desc, u),
-		}
-	})
+	return float64Observable{
+		observable: newObservable[float64](m, kind, name, desc, u),
+	}
 }
 
 type int64Observable struct {
@@ -293,16 +286,9 @@ var (
 )
 
 func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string) int64Observable {
-	return m.int64ObservableInsts.Lookup(instID{
-		Name:        name,
-		Description: desc,
-		Unit:        u,
-		Kind:        kind,
-	}, func() int64Observable {
-		return int64Observable{
-			observable: newObservable[int64](m, kind, name, desc, u),
-		}
-	})
+	return int64Observable{
+		observable: newObservable[int64](m, kind, name, desc, u),
+	}
 }
 
 type observable[N int64 | float64] struct {
