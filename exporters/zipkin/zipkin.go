@@ -190,7 +190,7 @@ func (e *Exporter) errf(format string, args ...interface{}) error {
 	return fmt.Errorf(format, args...)
 }
 
-// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+// MarshalLog is the marshaling function used by the logging system to represent this Exporter.
 func (e *Exporter) MarshalLog() interface{} {
 	return struct {
 		Type string
