@@ -257,8 +257,8 @@ func Example() {
 	//                   6,
 	//                   0
 	//                 ],
-	//                 "Min": {},
-	//                 "Max": {},
+	//                 "Min": null,
+	//                 "Max": null,
 	//                 "Sum": 57
 	//               }
 	//             ],

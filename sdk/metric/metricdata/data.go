@@ -215,7 +215,7 @@ type Extrema[N int64 | float64] struct {
 // MarshalText converts the Extrema value to text.
 func (e Extrema[N]) MarshalText() ([]byte, error) {
 	if !e.valid {
-		return nil, nil
+		return json.Marshal(nil)
 	}
 	return json.Marshal(e.value)
 }
