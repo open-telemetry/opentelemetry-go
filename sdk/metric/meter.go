@@ -159,6 +159,11 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 // configured with options. The instrument is used to asynchronously record
 // increasing int64 measurements once per a measurement collection cycle.
 // Only the measurements recorded during the collection cycle are exported.
+//
+// If Int64ObservableCounter is invoked repeatedly with the same Name,
+// Description, and Unit, only the first set of callbacks provided are used.
+// Use meter.RegisterCallback and Registration.Unregister to manage callbacks
+// if instrumentation can be created multiple times with different callbacks.
 func (m *meter) Int64ObservableCounter(name string, options ...metric.Int64ObservableCounterOption) (metric.Int64ObservableCounter, error) {
 	cfg := metric.NewInt64ObservableCounterConfig(options...)
 	id := Instrument{
@@ -287,6 +292,11 @@ func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Fl
 // configured with options. The instrument is used to asynchronously record
 // increasing float64 measurements once per a measurement collection cycle.
 // Only the measurements recorded during the collection cycle are exported.
+//
+// If Float64ObservableCounter is invoked repeatedly with the same Name,
+// Description, and Unit, only the first set of callbacks provided are used.
+// Use meter.RegisterCallback and Registration.Unregister to manage callbacks
+// if instrumentation can be created multiple times with different callbacks.
 func (m *meter) Float64ObservableCounter(name string, options ...metric.Float64ObservableCounterOption) (metric.Float64ObservableCounter, error) {
 	cfg := metric.NewFloat64ObservableCounterConfig(options...)
 	id := Instrument{
@@ -365,7 +375,7 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 		"Instrument{Name: %q, Description: %q, Kind: %q, Unit: %q}",
 		id.Name, id.Description, "InstrumentKind"+id.Kind.String(), id.Unit,
 	)
-	global.Warn("Repeated observable instrument creation with callbacks. Ignoring new provided callbacks to avoid leaking memory. Use meter.RegisterCallback and Registration.Unregister to manage callbacks.",
+	global.Warn("Repeated observable instrument creation with callbacks. Ignoring new callbacks. Use meter.RegisterCallback and Registration.Unregister to manage callbacks.",
 		"instrument", inst,
 	)
 }
