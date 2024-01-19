@@ -27,12 +27,15 @@ func Drop[N int64 | float64]() Reservoir[N] { return &dropRes[N]{} }
 
 type dropRes[N int64 | float64] struct{}
 
+// Offer does nothing, all measurements offered will be dropped.
 func (r *dropRes[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {}
 
+// Collect resets dest. No exemplars will ever be returned.
 func (r *dropRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:0]
 }
 
+// Flush resets dest. No exemplars will ever be returned.
 func (r *dropRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:0]
 }
