@@ -35,11 +35,15 @@ func newFixedRes[N int64 | float64](n int) *fixedRes[N] {
 	return &fixedRes[N]{store: make([]measurement[N], n)}
 }
 
+// Collect returns all the held exemplars.
+//
+// The Reservoir state is preserved after this call. See Flush to
+// copy-and-clear instead.
 func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for _, m := range r.store {
-		if m.Empty() {
+		if !m.Valid() {
 			continue
 		}
 
@@ -49,11 +53,15 @@ func (r *fixedRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:n]
 }
 
+// Flush returns all the held exemplars.
+//
+// The Reservoir state is reset after this call. See Collect to preserve the
+// state instead.
 func (r *fixedRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for i, m := range r.store {
-		if m.Empty() {
+		if !m.Valid() {
 			continue
 		}
 
@@ -87,9 +95,9 @@ func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, d
 	}
 }
 
-// Empty returns false if m represents a measurement made by a telemetry
-// system, otherwise it returns true when m is its zero-value.
-func (m measurement[N]) Empty() bool { return !m.valid }
+// Valid returns true if m represents a measurement made by a telemetry
+// system (created with newMeasurement), otherwise it returns false.
+func (m measurement[N]) Valid() bool { return m.valid }
 
 // Exemplar returns m as a [metricdata.Exemplar].
 func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N]) {
