@@ -27,12 +27,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	adminTrue = attribute.Bool("admin", true)
-
-	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	staticTime = time.Unix(946684800, 0)
-)
+// Sat Jan 01 2000 00:00:00 GMT+0000.
+var staticTime = time.Unix(946684800, 0)
 
 type factory[N int64 | float64] func(requstedCap int) (r Reservoir[N], actualCap int)
 
@@ -81,6 +77,7 @@ func testReservoir[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
 
+			adminTrue := attribute.Bool("admin", true)
 			r.Offer(ctx, staticTime, 10, []attribute.KeyValue{adminTrue})
 
 			var dest []metricdata.Exemplar[N]
