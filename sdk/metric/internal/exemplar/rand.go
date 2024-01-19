@@ -24,13 +24,16 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// rng is used to make sampling decisions.
+//
+// Do not use crypto/rand. There is no reason for the decrease in performance
+// given this is not a security sensitive decision.
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // FixedSize returns a [Reservoir] that samples at most n exemplars. If there
-// are n or less number of measurements made, the Reservoir will sample each
-// one. If there are more than n number of measurements made, the Reservoir
-// will then randomly sample all additional measurement with a decreasing
-// probability.
+// are n or less measurements made, the Reservoir will sample each one. If
+// there are more than n, the Reservoir will then randomly sample all
+// additional measurement with a decreasing probability.
 func FixedSize[N int64 | float64](n int) Reservoir[N] {
 	r := &randRes[N]{fixedRes: newFixedRes[N](n)}
 	r.reset()
