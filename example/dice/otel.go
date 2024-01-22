@@ -85,7 +85,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 
 func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
 	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
+		resource.NewSchemaless(
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(serviceVersion),
 		))
