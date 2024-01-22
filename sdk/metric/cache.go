@@ -92,10 +92,3 @@ func (c *cacheWithErr[K, V]) Lookup(key K, f func() (V, error)) (V, error) {
 	})
 	return combined.val, combined.err
 }
-
-// HasKey returns true if Lookup has previously been called with that key
-//
-// HasKey is safe to call concurrently.
-func (c *cacheWithErr[K, V]) HasKey(key K) bool {
-	return c.cache.HasKey(key)
-}
