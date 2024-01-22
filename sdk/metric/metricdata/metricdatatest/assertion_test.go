@@ -1023,6 +1023,8 @@ func AssertMarshal[N int64 | float64](t *testing.T, expected string, i *metricda
 }
 
 func TestAssertMarshal(t *testing.T) {
+	AssertMarshal(t, "null", &metricdata.Extrema[int64]{})
+
 	AssertMarshal(t, "-1", &minFloat64A)
 	AssertMarshal(t, "3", &minFloat64B)
 	AssertMarshal(t, "-9.999999", &minFloat64D)
