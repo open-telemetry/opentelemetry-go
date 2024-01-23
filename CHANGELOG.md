@@ -280,6 +280,7 @@ This release drops the compatibility guarantee of [Go 1.19].
 - Do not append `_total` if the counter already has that suffix for the Prometheus exproter in `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
 - Use the first-seen instrument name during instrument name conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4428)
+- Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
 
 ### Deprecated
 
