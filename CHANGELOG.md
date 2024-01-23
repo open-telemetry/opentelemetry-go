@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `WithEndpointURL` option to the `exporters/otlp/otlpmetric/otlpmetricgrpc`, `exporters/otlp/otlpmetric/otlpmetrichttp`, `exporters/otlp/otlptrace/otlptracegrpc` and `exporters/otlp/otlptrace/otlptracehttp` packages. (#4808)
 
+### Fixed
+
+- Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
+
 ## [1.23.0-rc.1] 2024-01-18
 
 This is a release candidate for the v1.23.0 release.
@@ -280,7 +284,6 @@ This release drops the compatibility guarantee of [Go 1.19].
 - Do not append `_total` if the counter already has that suffix for the Prometheus exproter in `go.opentelemetry.io/otel/exporter/prometheus`. (#4373)
 - Fix resource detection data race in `go.opentelemetry.io/otel/sdk/resource`. (#4409)
 - Use the first-seen instrument name during instrument name conflicts in `go.opentelemetry.io/otel/sdk/metric`. (#4428)
-- Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
 
 ### Deprecated
 
