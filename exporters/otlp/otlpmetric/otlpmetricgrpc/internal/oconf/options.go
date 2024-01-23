@@ -20,6 +20,7 @@ package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlp
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -30,8 +31,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/retry"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -122,7 +123,6 @@ func cleanPath(urlPath string, defaultPath string) string {
 // NewGRPCConfig returns a new Config with all settings applied from opts and
 // any unset setting using the default gRPC config values.
 func NewGRPCConfig(opts ...GRPCOption) Config {
-	userAgent := "OTel OTLP Exporter Go/" + otlpmetric.Version()
 	cfg := Config{
 		Metrics: SignalConfig{
 			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorGRPCPort),
@@ -134,7 +134,6 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			AggregationSelector: metric.DefaultAggregationSelector,
 		},
 		RetryConfig: retry.DefaultConfig,
-		DialOptions: []grpc.DialOption{grpc.WithUserAgent(userAgent)},
 	}
 	cfg = ApplyGRPCEnvConfigs(cfg)
 	for _, opt := range opts {
@@ -157,9 +156,6 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 	}
 	if cfg.Metrics.Compression == GzipCompression {
 		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
-	}
-	if len(cfg.DialOptions) != 0 {
-		cfg.DialOptions = append(cfg.DialOptions, cfg.DialOptions...)
 	}
 	if cfg.ReconnectionPeriod != 0 {
 		p := grpc.ConnectParams{
@@ -281,6 +277,24 @@ func NewGRPCOption(fn func(cfg Config) Config) GRPCOption {
 func WithEndpoint(endpoint string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Endpoint = endpoint
+		return cfg
+	})
+}
+
+func WithEndpointURL(v string) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		u, err := url.Parse(v)
+		if err != nil {
+			global.Error(err, "otlpmetric: parse endpoint url", "url", v)
+			return cfg
+		}
+
+		cfg.Metrics.Endpoint = u.Host
+		cfg.Metrics.URLPath = u.Path
+		if u.Scheme != "https" {
+			cfg.Metrics.Insecure = true
+		}
+
 		return cfg
 	})
 }

@@ -15,8 +15,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -405,18 +403,6 @@ func TestNewViewReplace(t *testing.T) {
 			},
 		},
 		{
-			name: "AttributeKeys",
-			mask: Stream{AllowAttributeKeys: []attribute.Key{"test"}},
-			want: func(i Instrument) Stream {
-				return Stream{
-					Name:               i.Name,
-					Description:        i.Description,
-					Unit:               i.Unit,
-					AllowAttributeKeys: []attribute.Key{"test"},
-				}
-			},
-		},
-		{
 			name: "Complete",
 			mask: Stream{
 				Name:        alt,
@@ -442,6 +428,23 @@ func TestNewViewReplace(t *testing.T) {
 			assert.Equal(t, test.want(completeIP), got)
 		})
 	}
+
+	// Go does not allow for the comparison of function values, even their
+	// addresses. Therefore, the AttributeFilter field needs an alternative
+	// testing strategy.
+	t.Run("AttributeFilter", func(t *testing.T) {
+		allowed := attribute.String("key", "val")
+		filter := func(kv attribute.KeyValue) bool {
+			return kv == allowed
+		}
+		mask := Stream{AttributeFilter: filter}
+		got, match := NewView(completeIP, mask)(completeIP)
+		require.True(t, match, "view did not match exact criteria")
+		require.NotNil(t, got.AttributeFilter, "AttributeFilter not set")
+		assert.True(t, got.AttributeFilter(allowed), "wrong AttributeFilter")
+		other := attribute.String("key", "other val")
+		assert.False(t, got.AttributeFilter(other), "wrong AttributeFilter")
+	})
 }
 
 type badAgg struct {
@@ -487,135 +490,4 @@ func TestNewViewMultiInstMatchErrorLogged(t *testing.T) {
 		Name: "non-empty",
 	})
 	assert.Contains(t, got, errMultiInst.Error())
-}
-
-func ExampleNewView() {
-	// Create a view that renames the "latency" instrument from the v0.34.0
-	// version of the "http" instrumentation library as "request.latency".
-	view := NewView(Instrument{
-		Name: "latency",
-		Scope: instrumentation.Scope{
-			Name:    "http",
-			Version: "v0.34.0",
-		},
-	}, Stream{Name: "request.latency"})
-
-	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
-
-	stream, _ := view(Instrument{
-		Name:        "latency",
-		Description: "request latency",
-		Unit:        "ms",
-		Kind:        InstrumentKindCounter,
-		Scope: instrumentation.Scope{
-			Name:      "http",
-			Version:   "v0.34.0",
-			SchemaURL: "https://opentelemetry.io/schemas/1.0.0",
-		},
-	})
-	fmt.Println("name:", stream.Name)
-	fmt.Println("description:", stream.Description)
-	fmt.Println("unit:", stream.Unit)
-	// Output:
-	// name: request.latency
-	// description: request latency
-	// unit: ms
-}
-
-func ExampleNewView_drop() {
-	// Create a view that sets the drop aggregator for all instrumentation from
-	// the "db" library, effectively turning-off all instrumentation from that
-	// library.
-	view := NewView(
-		Instrument{Scope: instrumentation.Scope{Name: "db"}},
-		Stream{Aggregation: AggregationDrop{}},
-	)
-
-	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
-
-	stream, _ := view(Instrument{
-		Name:  "queries",
-		Kind:  InstrumentKindCounter,
-		Scope: instrumentation.Scope{Name: "db", Version: "v0.4.0"},
-	})
-	fmt.Println("name:", stream.Name)
-	fmt.Printf("aggregation: %#v", stream.Aggregation)
-	// Output:
-	// name: queries
-	// aggregation: metric.AggregationDrop{}
-}
-
-func ExampleNewView_wildcard() {
-	// Create a view that sets unit to milliseconds for any instrument with a
-	// name suffix of ".ms".
-	view := NewView(
-		Instrument{Name: "*.ms"},
-		Stream{Unit: "ms"},
-	)
-
-	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view
-	// function in the SDK for certain instruments.
-
-	stream, _ := view(Instrument{
-		Name: "computation.time.ms",
-		Unit: "1",
-	})
-	fmt.Println("name:", stream.Name)
-	fmt.Println("unit:", stream.Unit)
-	// Output:
-	// name: computation.time.ms
-	// unit: ms
-}
-
-func ExampleView() {
-	// The NewView function provides convenient creation of common Views
-	// construction. However, it is limited in what it can create.
-	//
-	// When NewView is not able to provide the functionally needed, a custom
-	// View can be constructed directly. Here a custom View is constructed that
-	// uses Go's regular expression matching to ensure all data stream names
-	// have a suffix of the units it uses.
-
-	re := regexp.MustCompile(`[._](ms|byte)$`)
-	var view View = func(i Instrument) (Stream, bool) {
-		s := Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
-		// Any instrument that does not have a unit suffix defined, but has a
-		// dimensional unit defined, update the name with a unit suffix.
-		if re.MatchString(i.Name) {
-			return s, false
-		}
-		switch i.Unit {
-		case "ms":
-			s.Name += ".ms"
-		case "By":
-			s.Name += ".byte"
-		default:
-			return s, false
-		}
-		return s, true
-	}
-
-	// The created view can then be registered with the OpenTelemetry metric
-	// SDK using the WithView option. Below is an example of how the view will
-	// function in the SDK for certain instruments.
-
-	stream, _ := view(Instrument{
-		Name: "computation.time.ms",
-		Unit: "ms",
-	})
-	fmt.Println("name:", stream.Name)
-
-	stream, _ = view(Instrument{
-		Name: "heap.size",
-		Unit: "By",
-	})
-	fmt.Println("name:", stream.Name)
-	// Output:
-	// name: computation.time.ms
-	// name: heap.size.byte
 }

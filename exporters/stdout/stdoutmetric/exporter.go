@@ -106,9 +106,7 @@ func redactTimestamps(orig *metricdata.ResourceMetrics) {
 	}
 }
 
-var (
-	errUnknownAggType = errors.New("unknown aggregation type")
-)
+var errUnknownAggType = errors.New("unknown aggregation type")
 
 func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggregation {
 	switch a := orig.(type) {

@@ -146,31 +146,14 @@ type Stream struct {
 	Unit string
 	// Aggregation the stream uses for an instrument.
 	Aggregation Aggregation
-	// AllowAttributeKeys are an allow-list of attribute keys that will be
-	// preserved for the stream. Any attribute recorded for the stream with a
-	// key not in this slice will be dropped.
+	// AttributeFilter is an attribute Filter applied to the attributes
+	// recorded for an instrument's measurement. If the filter returns false
+	// the attribute will not be recorded, otherwise, if it returns true, it
+	// will record the attribute.
 	//
-	// If this slice is empty, all attributes will be kept.
-	AllowAttributeKeys []attribute.Key
-}
-
-// attributeFilter returns an attribute.Filter that only allows attributes
-// with keys in s.AttributeKeys.
-//
-// If s.AttributeKeys is empty an accept-all filter is returned.
-func (s Stream) attributeFilter() attribute.Filter {
-	if len(s.AllowAttributeKeys) <= 0 {
-		return func(kv attribute.KeyValue) bool { return true }
-	}
-
-	allowed := make(map[attribute.Key]struct{})
-	for _, k := range s.AllowAttributeKeys {
-		allowed[k] = struct{}{}
-	}
-	return func(kv attribute.KeyValue) bool {
-		_, ok := allowed[kv.Key]
-		return ok
-	}
+	// Use NewAllowKeysFilter from "go.opentelemetry.io/otel/attribute" to
+	// provide an allow-list of attribute keys here.
+	AttributeFilter attribute.Filter
 }
 
 // instID are the identifying properties of a instrument.
@@ -205,9 +188,11 @@ type int64Inst struct {
 	embedded.Int64Histogram
 }
 
-var _ metric.Int64Counter = (*int64Inst)(nil)
-var _ metric.Int64UpDownCounter = (*int64Inst)(nil)
-var _ metric.Int64Histogram = (*int64Inst)(nil)
+var (
+	_ metric.Int64Counter       = (*int64Inst)(nil)
+	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
+	_ metric.Int64Histogram     = (*int64Inst)(nil)
+)
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
@@ -220,9 +205,6 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 }
 
 func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
-	if err := ctx.Err(); err != nil {
-		return
-	}
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
@@ -236,9 +218,11 @@ type float64Inst struct {
 	embedded.Float64Histogram
 }
 
-var _ metric.Float64Counter = (*float64Inst)(nil)
-var _ metric.Float64UpDownCounter = (*float64Inst)(nil)
-var _ metric.Float64Histogram = (*float64Inst)(nil)
+var (
+	_ metric.Float64Counter       = (*float64Inst)(nil)
+	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
+	_ metric.Float64Histogram     = (*float64Inst)(nil)
+)
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
@@ -251,9 +235,6 @@ func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.Re
 }
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
-	if err := ctx.Err(); err != nil {
-		return
-	}
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
@@ -277,13 +258,15 @@ type float64Observable struct {
 	embedded.Float64ObservableGauge
 }
 
-var _ metric.Float64ObservableCounter = float64Observable{}
-var _ metric.Float64ObservableUpDownCounter = float64Observable{}
-var _ metric.Float64ObservableGauge = float64Observable{}
+var (
+	_ metric.Float64ObservableCounter       = float64Observable{}
+	_ metric.Float64ObservableUpDownCounter = float64Observable{}
+	_ metric.Float64ObservableGauge         = float64Observable{}
+)
 
-func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[float64]) float64Observable {
+func newFloat64Observable(m *meter, kind InstrumentKind, name, desc, u string) float64Observable {
 	return float64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable[float64](m, kind, name, desc, u),
 	}
 }
 
@@ -296,13 +279,15 @@ type int64Observable struct {
 	embedded.Int64ObservableGauge
 }
 
-var _ metric.Int64ObservableCounter = int64Observable{}
-var _ metric.Int64ObservableUpDownCounter = int64Observable{}
-var _ metric.Int64ObservableGauge = int64Observable{}
+var (
+	_ metric.Int64ObservableCounter       = int64Observable{}
+	_ metric.Int64ObservableUpDownCounter = int64Observable{}
+	_ metric.Int64ObservableGauge         = int64Observable{}
+)
 
-func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[int64]) int64Observable {
+func newInt64Observable(m *meter, kind InstrumentKind, name, desc, u string) int64Observable {
 	return int64Observable{
-		observable: newObservable(m, kind, name, desc, u, meas),
+		observable: newObservable[int64](m, kind, name, desc, u),
 	}
 }
 
@@ -310,11 +295,12 @@ type observable[N int64 | float64] struct {
 	metric.Observable
 	observablID[N]
 
-	meter    *meter
-	measures []aggregate.Measure[N]
+	meter           *meter
+	measures        measures[N]
+	dropAggregation bool
 }
 
-func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string, meas []aggregate.Measure[N]) *observable[N] {
+func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc, u string) *observable[N] {
 	return &observable[N]{
 		observablID: observablID[N]{
 			name:        name,
@@ -323,14 +309,24 @@ func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc,
 			unit:        u,
 			scope:       m.scope,
 		},
-		meter:    m,
-		measures: meas,
+		meter: m,
 	}
 }
 
 // observe records the val for the set of attrs.
 func (o *observable[N]) observe(val N, s attribute.Set) {
-	for _, in := range o.measures {
+	o.measures.observe(val, s)
+}
+
+func (o *observable[N]) appendMeasures(meas []aggregate.Measure[N]) {
+	o.measures = append(o.measures, meas...)
+}
+
+type measures[N int64 | float64] []aggregate.Measure[N]
+
+// observe records the val for the set of attrs.
+func (m measures[N]) observe(val N, s attribute.Set) {
+	for _, in := range m {
 		in(context.Background(), val, s)
 	}
 }

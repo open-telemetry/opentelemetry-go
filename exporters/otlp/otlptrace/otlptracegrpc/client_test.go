@@ -97,6 +97,24 @@ func TestNewEndToEnd(t *testing.T) {
 	}
 }
 
+func TestWithEndpointURL(t *testing.T) {
+	mc := runMockCollector(t)
+
+	ctx := context.Background()
+	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
+	}...)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
+		defer cancel()
+
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	// RunEndToEndTest closes mc.
+	otlptracetest.RunEndToEndTest(ctx, t, exp, mc)
+}
+
 func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlptracegrpc.Option) *otlptrace.Exporter {
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithInsecure(),
@@ -188,7 +206,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, endpoint)
-	_ = exp.Shutdown(ctx)
+	require.NoError(t, exp.Shutdown(ctx))
 }
 
 func TestNewWithEndpoint(t *testing.T) {
@@ -197,7 +215,7 @@ func TestNewWithEndpoint(t *testing.T) {
 
 	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
-	_ = exp.Shutdown(ctx)
+	require.NoError(t, exp.Shutdown(ctx))
 }
 
 func TestNewWithHeaders(t *testing.T) {

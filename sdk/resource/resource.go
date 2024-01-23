@@ -98,7 +98,7 @@ func (r *Resource) String() string {
 	return r.attrs.Encoded(attribute.DefaultEncoder())
 }
 
-// MarshalLog is the marshaling function used by the logging system to represent this exporter.
+// MarshalLog is the marshaling function used by the logging system to represent this Resource.
 func (r *Resource) MarshalLog() interface{} {
 	return struct {
 		Attributes attribute.Set

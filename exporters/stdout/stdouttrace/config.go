@@ -71,7 +71,7 @@ func (o writerOption) apply(cfg config) config {
 	return cfg
 }
 
-// WithPrettyPrint sets the export stream format to use JSON.
+// WithPrettyPrint prettifies the emitted output.
 func WithPrettyPrint() Option {
 	return prettyPrintOption(true)
 }

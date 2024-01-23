@@ -38,43 +38,6 @@ const (
 	minInt64 int64 = math.MinInt64
 )
 
-// expoHistogramValues summarizes a set of measurements as expoHistogramDataPoints using
-// dynamically scaled buckets.
-type expoHistogramValues[N int64 | float64] struct {
-	noSum    bool
-	noMinMax bool
-	maxSize  int
-	maxScale int
-
-	values   map[attribute.Set]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
-}
-
-func newExpoHistValues[N int64 | float64](maxSize, maxScale int, noMinMax, noSum bool) *expoHistogramValues[N] {
-	return &expoHistogramValues[N]{
-		noSum:    noSum,
-		noMinMax: noMinMax,
-		maxSize:  maxSize,
-		maxScale: maxScale,
-
-		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
-	}
-}
-
-// Aggregate records the measurement, scoped by attr, and aggregates it
-// into an aggregation.
-func (e *expoHistogramValues[N]) measure(_ context.Context, value N, attr attribute.Set) {
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	v, ok := e.values[attr]
-	if !ok {
-		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-		e.values[attr] = v
-	}
-	v.record(value)
-}
-
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	count uint64
@@ -113,11 +76,6 @@ func newExpoHistogramDataPoint[N int64 | float64](maxSize, maxScale int, noMinMa
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
-	// Ignore NaN and infinity.
-	if math.IsInf(float64(v), 0) || math.IsNaN(float64(v)) {
-		return
-	}
-
 	p.count++
 
 	if !p.noMinMax {
@@ -139,7 +97,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 		return
 	}
 
-	bin := getBin(absV, p.scale)
+	bin := p.getBin(absV)
 
 	bucket := &p.posBuckets
 	if v < 0 {
@@ -148,29 +106,28 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := scaleChange(bin, bucket.startBin, len(bucket.counts), p.maxSize); scaleDelta > 0 {
+	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
 		if p.scale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
 			otel.Handle(errors.New("exponential histogram scale underflow"))
 			return
 		}
-		//Downscale
+		// Downscale
 		p.scale -= scaleDelta
 		p.posBuckets.downscale(scaleDelta)
 		p.negBuckets.downscale(scaleDelta)
 
-		bin = getBin(absV, p.scale)
+		bin = p.getBin(absV)
 	}
 
 	bucket.record(bin)
 }
 
-// getBin returns the bin of the bucket that the value v should be recorded
-// into at the given scale.
-func getBin(v float64, scale int) int {
+// getBin returns the bin v should be recorded into.
+func (p *expoHistogramDataPoint[N]) getBin(v float64) int {
 	frac, exp := math.Frexp(v)
-	if scale <= 0 {
+	if p.scale <= 0 {
 		// Because of the choice of fraction is always 1 power of two higher than we want.
 		correction := 1
 		if frac == .5 {
@@ -178,9 +135,9 @@ func getBin(v float64, scale int) int {
 			// will be one higher than we want.
 			correction = 2
 		}
-		return (exp - correction) >> (-scale)
+		return (exp - correction) >> (-p.scale)
 	}
-	return exp<<scale + int(math.Log(frac)*scaleFactors[scale]) - 1
+	return exp<<p.scale + int(math.Log(frac)*scaleFactors[p.scale]) - 1
 }
 
 // scaleFactors are constants used in calculating the logarithm index. They are
@@ -209,8 +166,9 @@ var scaleFactors = [21]float64{
 	math.Ldexp(math.Log2E, 20),
 }
 
-// scaleChange returns the magnitude of the scale change needed to fit bin in the bucket.
-func scaleChange(bin, startBin, length, maxSize int) int {
+// scaleChange returns the magnitude of the scale change needed to fit bin in
+// the bucket. If no scale change is needed 0 is returned.
+func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin, length int) int {
 	if length == 0 {
 		// No need to rescale if there are no buckets.
 		return 0
@@ -224,7 +182,7 @@ func scaleChange(bin, startBin, length, maxSize int) int {
 	}
 
 	count := 0
-	for high-low >= maxSize {
+	for high-low >= p.maxSize {
 		low = low >> 1
 		high = high >> 1
 		count++
@@ -330,14 +288,16 @@ func (b *expoBuckets) downscale(delta int) {
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool) *expoHistogram[N] {
+func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int) *expoHistogram[N] {
 	return &expoHistogram[N]{
-		expoHistogramValues: newExpoHistValues[N](
-			int(maxSize),
-			int(maxScale),
-			noMinMax,
-			noSum,
-		),
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: int(maxScale),
+
+		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
+		values: make(map[attribute.Set]*expoHistogramDataPoint[N]),
+
 		start: now(),
 	}
 }
@@ -345,9 +305,34 @@ func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMa
 // expoHistogram summarizes a set of measurements as an histogram with exponentially
 // defined buckets.
 type expoHistogram[N int64 | float64] struct {
-	*expoHistogramValues[N]
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int
+
+	limit    limiter[*expoHistogramDataPoint[N]]
+	values   map[attribute.Set]*expoHistogramDataPoint[N]
+	valuesMu sync.Mutex
 
 	start time.Time
+}
+
+func (e *expoHistogram[N]) measure(_ context.Context, value N, attr attribute.Set) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	attr = e.limit.Attributes(attr, e.values)
+	v, ok := e.values[attr]
+	if !ok {
+		v = newExpoHistogramDataPoint[N](e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		e.values[attr] = v
+	}
+	v.record(value)
 }
 
 func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {

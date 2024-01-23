@@ -15,6 +15,7 @@
 package stdoutmetric_test // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -101,6 +102,43 @@ func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 
 func deltaSelector(metric.InstrumentKind) metricdata.Temporality {
 	return metricdata.DeltaTemporality
+}
+
+func TestExportWithOptions(t *testing.T) {
+	var (
+		data = new(metricdata.ResourceMetrics)
+		ctx  = context.Background()
+	)
+
+	for _, tt := range []struct {
+		name string
+		opts []stdoutmetric.Option
+
+		expectedData string
+	}{
+		{
+			name:         "with no options",
+			expectedData: "{\"Resource\":null,\"ScopeMetrics\":null}\n",
+		},
+		{
+			name: "with pretty print",
+			opts: []stdoutmetric.Option{
+				stdoutmetric.WithPrettyPrint(),
+			},
+			expectedData: "{\n\t\"Resource\": null,\n\t\"ScopeMetrics\": null\n}\n",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var b bytes.Buffer
+			opts := append(tt.opts, stdoutmetric.WithWriter(&b))
+
+			exp, err := stdoutmetric.New(opts...)
+			require.NoError(t, err)
+			require.NoError(t, exp.Export(ctx, data))
+
+			assert.Equal(t, tt.expectedData, b.String())
+		})
+	}
 }
 
 func TestTemporalitySelector(t *testing.T) {

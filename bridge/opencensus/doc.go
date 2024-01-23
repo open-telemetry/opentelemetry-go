@@ -13,23 +13,49 @@
 // limitations under the License.
 
 // Package opencensus provides a migration bridge from OpenCensus to
-// OpenTelemetry. The NewTracer function should be used to create an
-// OpenCensus Tracer from an OpenTelemetry Tracer. This Tracer can be use in
-// place of any existing OpenCensus Tracer and will generate OpenTelemetry
-// spans for traces. These spans will be exported by the OpenTelemetry
-// TracerProvider the original OpenTelemetry Tracer came from.
+// OpenTelemetry for metrics and traces. The bridge incorporates metrics and
+// traces from OpenCensus into the OpenTelemetry SDK, combining them with
+// metrics and traces from OpenTelemetry instrumentation.
 //
-// There are known limitations to this bridge:
+// # Migration Guide
 //
-// - The AddLink method for OpenCensus Spans is not compatible with the
-// OpenTelemetry Span. No link can be added to an OpenTelemetry Span once it
-// is started. Any calls to this method for the OpenCensus Span will result
-// in an error being sent to the OpenTelemetry default ErrorHandler.
+// For most applications, it would be difficult to migrate an application
+// from OpenCensus to OpenTelemetry all-at-once. Libraries used by the
+// application may still be using OpenCensus, and the application itself may
+// have many lines of instrumentation.
 //
-// - The NewContext method of the OpenCensus Tracer cannot embed an OpenCensus
-// Span in a context unless that Span was created by that Tracer.
+// Bridges help in this situation by allowing your application to have "mixed"
+// instrumentation, while incorporating all instrumentation into a single
+// export path. To migrate with bridges, a user would:
 //
-// - Conversion of custom OpenCensus Samplers to OpenTelemetry is not
-// implemented. An error will be sent to the OpenTelemetry default
-// ErrorHandler if this is attempted.
+//  1. Configure the OpenTelemetry SDK for metrics and traces, with the OpenTelemetry exporters matching to your current OpenCensus exporters.
+//  2. Install this OpenCensus bridge, which sends OpenCensus telemetry to your new OpenTelemetry exporters.
+//  3. Over time, migrate your instrumentation from OpenCensus to OpenTelemetry.
+//  4. Once all instrumentation is migrated, remove the OpenCensus bridge.
+//
+// With this approach, you can migrate your telemetry, including in dependent
+// libraries over time without disruption.
+//
+// # Warnings
+//
+// Installing a metric or tracing bridge will cause OpenCensus telemetry to be
+// exported by OpenTelemetry exporters. Since OpenCensus telemetry uses globals,
+// installing a bridge will result in telemetry collection from _all_ libraries
+// that use OpenCensus, including some you may not expect, such as the
+// telemetry exporter itself.
+//
+// # Limitations
+//
+// There are known limitations to the trace bridge:
+//
+//   - The AddLink method for OpenCensus Spans is ignored, and an error is sent
+//     to the OpenTelemetry ErrorHandler.
+//   - The NewContext method of the OpenCensus Tracer cannot embed an OpenCensus
+//     Span in a context unless that Span was created by that Tracer.
+//   - Conversion of custom OpenCensus Samplers to OpenTelemetry is not
+//     implemented, and An error will be sent to the OpenTelemetry ErrorHandler.
+//
+// There are known limitations to the metric bridge:
+//   - GaugeDistribution-typed metrics are dropped
+//   - Histogram's SumOfSquaredDeviation field is dropped
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"

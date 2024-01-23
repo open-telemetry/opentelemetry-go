@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -241,7 +242,9 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	mux := http.NewServeMux()
 	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))
 	server := &http.Server{
-		Handler: mux,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	if cfg.WithTLS {
 		pem, err := generateWeakCertificate()

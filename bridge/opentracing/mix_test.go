@@ -334,7 +334,7 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 				value: "two",
 			},
 			{
-				key:   "Third",
+				key:   "third",
 				value: "three",
 			},
 		},
@@ -427,7 +427,7 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 				value: "two",
 			},
 			{
-				key:   "Third",
+				key:   "third",
 				value: "three",
 			},
 		},
@@ -515,7 +515,7 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 
 	otSpan.SetBaggageItem(otKey, value)
 
-	m, err := baggage.NewMember(otelKey, value)
+	m, err := baggage.NewMemberRaw(otelKey, value)
 	if err != nil {
 		t.Error(err)
 		return ctx

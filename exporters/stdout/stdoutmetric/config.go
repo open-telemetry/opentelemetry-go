@@ -15,6 +15,7 @@ package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdout
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -22,6 +23,7 @@ import (
 
 // config contains options for the exporter.
 type config struct {
+	prettyPrint         bool
 	encoder             *encoderHolder
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
@@ -37,8 +39,13 @@ func newConfig(options ...Option) config {
 
 	if cfg.encoder == nil {
 		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "\t")
 		cfg.encoder = &encoderHolder{encoder: enc}
+	}
+
+	if cfg.prettyPrint {
+		if e, ok := cfg.encoder.encoder.(*json.Encoder); ok {
+			e.SetIndent("", "\t")
+		}
 	}
 
 	if cfg.temporalitySelector == nil {
@@ -70,6 +77,22 @@ func WithEncoder(encoder Encoder) Option {
 		if encoder != nil {
 			c.encoder = &encoderHolder{encoder: encoder}
 		}
+		return c
+	})
+}
+
+// WithWriter sets the export stream destination.
+// Using this option overrides any previously set encoder.
+func WithWriter(w io.Writer) Option {
+	return WithEncoder(json.NewEncoder(w))
+}
+
+// WithPrettyPrint prettifies the emitted output.
+// This option only works if the encoder is a *json.Encoder, as is the case
+// when using `WithWriter`.
+func WithPrettyPrint() Option {
+	return optionFunc(func(c config) config {
+		c.prettyPrint = true
 		return c
 	})
 }

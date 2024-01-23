@@ -48,8 +48,8 @@ func (AggregationDrop) err() error { return nil }
 // make an aggregation selection based on instrument kind that differs from
 // the default. This Aggregation ensures the default is used.
 //
-// See the "go.opentelemetry.io/otel/sdk/metric".DefaultAggregationSelector
-// for information about the default instrument kind selection mapping.
+// See the [DefaultAggregationSelector] for information about the default
+// instrument kind selection mapping.
 type AggregationDefault struct{} // AggregationDefault has no parameters.
 
 var _ Aggregation = AggregationDefault{}
@@ -161,7 +161,7 @@ type AggregationBase2ExponentialHistogram struct {
 	// signed 32-bit integer index could be used.
 	//
 	// MaxScale has a minimum value of -10. Using a value of -10 means only
-	// two buckets will be use.
+	// two buckets will be used.
 	MaxScale int32
 
 	// NoMinMax indicates whether to not record the min and max of the

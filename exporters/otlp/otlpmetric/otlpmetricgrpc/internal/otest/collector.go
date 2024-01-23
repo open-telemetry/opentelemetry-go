@@ -195,6 +195,8 @@ func (e *HTTPResponseError) Unwrap() error { return e.Err }
 
 // HTTPCollector is an OTLP HTTP server that collects all requests it receives.
 type HTTPCollector struct {
+	plainTextResponse bool
+
 	headersMu sync.Mutex
 	headers   http.Header
 	storage   *Storage
@@ -217,7 +219,7 @@ type HTTPCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPCollector, error) {
+func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...func(*HTTPCollector)) (*HTTPCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -234,6 +236,9 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPColle
 		storage:  NewStorage(),
 		resultCh: resultCh,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
 
 	c.listener, err = net.Listen("tcp", u.Host)
 	if err != nil {
@@ -242,7 +247,11 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPColle
 
 	mux := http.NewServeMux()
 	mux.Handle(u.Path, http.HandlerFunc(c.handler))
-	c.srv = &http.Server{Handler: mux}
+	c.srv = &http.Server{
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
 	if u.Scheme == "https" {
 		cert, err := weakCertificate()
 		if err != nil {
@@ -256,6 +265,14 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult) (*HTTPColle
 		go func() { _ = c.srv.Serve(c.listener) }()
 	}
 	return c, nil
+}
+
+// WithHTTPCollectorRespondingPlainText makes the HTTPCollector return
+// a plaintext, instead of protobuf, response.
+func WithHTTPCollectorRespondingPlainText() func(*HTTPCollector) {
+	return func(s *HTTPCollector) {
+		s.plainTextResponse = true
+	}
 }
 
 // Shutdown shuts down the HTTP server closing all open connections and
@@ -375,6 +392,13 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintln(w, resp.Err.Error())
 		}
+		return
+	}
+
+	if c.plainTextResponse {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
 		return
 	}
 
