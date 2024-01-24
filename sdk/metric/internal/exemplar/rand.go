@@ -61,12 +61,7 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 	//
 	// It is used because of its balance of simplicity and performance. In
 	// particular it has an asymptotic runtime of O(k(1 + log(n/k)) where n is
-	// the number of measurements offered and k is the reservoir size. This is
-	// much more optimal for large measurement sets than the algorithm
-	// recommended by the OTel spcification ("Algorithm R" as described in
-	// Vitter, Jeffrey S. (1 March 1985). "Random sampling with a reservoir"
-	// (http://www.cs.umd.edu/~samir/498/vitter.pdf)) which has an asymptotic
-	// runtime of O(n).
+	// the number of measurements offered and k is the reservoir size.
 	//
 	// See https://github.com/MrAlias/reservoir-sampling for a comparison of
 	// reservoir sampling algorithms (including performance benchmarks).
