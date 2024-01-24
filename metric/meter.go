@@ -46,6 +46,9 @@ type MeterProvider interface {
 
 // Meter provides access to instrument instances for recording metrics.
 //
+// All function calls of Meter always return a callable first value, even
+// if the second return value of the function is a non-nil error.
+//
 // Warning: Methods may be added to this interface in minor releases. See
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
