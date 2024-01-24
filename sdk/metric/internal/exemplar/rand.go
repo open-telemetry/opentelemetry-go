@@ -45,7 +45,7 @@ type randRes[N int64 | float64] struct {
 
 	// count is the number of measurement seen.
 	count int64
-	// next is the next count that will store a measurement at a randon index
+	// next is the next count that will store a measurement at a random index
 	// once the reservoir has been filled.
 	next int64
 	// w is the largest random number in a distribution that is used to compute
