@@ -78,20 +78,39 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 	r.count++
 }
 
+// reset resets r to the initial state.
 func (r *randRes[N]) reset() {
+	// This resets the number of exemplars known.
 	r.count = 0
+	// Random index inserts should only happen after the storage is full.
 	r.next = int64(cap(r.store))
+
+	// Initial random number in the series used to generate r.next.
+	//
+	// This is set before r.advance to reset or initialize the random number
+	// series. Without doing so it would always be 0 or never restart a new
+	// random number series.
 	r.w = math.Exp(math.Log(rng.Float64()) / float64(cap(r.store)))
+
+	// Calculate the next random index a measurement will become an exemplar.
 	r.advance()
 }
 
+// advance updates the random number series of r and the next insert index.
 func (r *randRes[N]) advance() {
+	// Next value in the random number series based on the existing r.w.
 	r.w *= math.Exp(math.Log(rng.Float64()) / float64(cap(r.store)))
+	// Use the new random number in the series to calculate the index of the
+	// next measurement that will be stored.
 	r.next += int64(math.Log(rng.Float64())/math.Log(1-r.w)) + 1
 }
 
 func (r *randRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	r.storage.Collect(dest)
+	// Call reset here even though it will reset r.count and restart the random
+	// number series. This will persist any old exemplars as long as no new
+	// measurements are offered, but it will also prioritize those new
+	// measurements that are made over the older collection cycle ones.
 	r.reset()
 }
 
