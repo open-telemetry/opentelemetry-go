@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -31,7 +30,7 @@ func (s *logrSink) Enabled(level int) bool {
 func (s *logrSink) Info(level int, msg string, keysAndValues ...any) {
 	record := log.Record{}
 
-	record.SetBody(msg)
+	record.SetBody(log.StringValue(msg))
 
 	lvl := log.Severity(9 - level)
 	record.SetSeverity(lvl)
@@ -73,16 +72,16 @@ func (s *logrSink) WithName(name string) logr.LogSink {
 	return s
 }
 
-func convertKV(k string, v interface{}) attribute.KeyValue {
+func convertKV(k string, v interface{}) log.KeyValue {
 	switch val := v.(type) {
 	case bool:
-		return attribute.Bool(k, val)
+		return log.Bool(k, val)
 	case float64:
-		return attribute.Float64(k, val)
+		return log.Float64(k, val)
 	case int:
-		return attribute.Int(k, val)
+		return log.Int(k, val)
 	case string:
-		return attribute.String(k, val)
+		return log.String(k, val)
 	default:
 		panic(fmt.Sprintf("unhandled value type: %T", val))
 	}

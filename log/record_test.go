@@ -1,6 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Copyright 2022 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package log
 
 import (
@@ -10,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -56,30 +59,31 @@ func TestRecordSeverityText(t *testing.T) {
 
 func TestRecordBody(t *testing.T) {
 	r := Record{}
+	body := StringValue(testString)
 
-	r.SetBody(testString)
+	r.SetBody(body)
 
-	assert.Equal(t, testString, r.Body())
+	assert.Equal(t, body, r.Body())
 }
 
 func TestRecordAttributes(t *testing.T) {
 	r := Record{}
-	attrs := []attribute.KeyValue{
-		attribute.String("k1", testString),
-		attribute.Float64("k2", testFloat),
-		attribute.Int("k3", testInt),
-		attribute.Bool("k4", testBool),
-		attribute.String("k5", testString),
-		attribute.Float64("k6", testFloat),
-		attribute.Int("k7", testInt),
-		attribute.Bool("k8", testBool),
+	attrs := []KeyValue{
+		String("k1", testString),
+		Float64("k2", testFloat),
+		Int("k3", testInt),
+		Bool("k4", testBool),
+		String("k5", testString),
+		Float64("k6", testFloat),
+		Int("k7", testInt),
+		Bool("k8", testBool),
 	}
 	r.AddAttributes(attrs...)
 
 	assert.Equal(t, len(attrs), r.AttributesLen())
 
-	var got []attribute.KeyValue
-	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+	var got []KeyValue
+	r.WalkAttributes(func(kv KeyValue) bool {
 		got = append(got, kv)
 		return true
 	})
@@ -100,7 +104,7 @@ func TestRecordAttributes(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		i := 0
-		r.WalkAttributes(func(kv attribute.KeyValue) bool {
+		r.WalkAttributes(func(kv KeyValue) bool {
 			i++
 			return i < tc.index
 		})
@@ -110,14 +114,14 @@ func TestRecordAttributes(t *testing.T) {
 
 func TestRecordAttributesInvalid(t *testing.T) {
 	r := Record{}
-	attrs := []attribute.KeyValue{
-		attribute.String("k1", testString),
+	attrs := []KeyValue{
+		String("k1", testString),
 		{},
-		attribute.Int("k3", testInt),
-		attribute.Bool("k4", testBool),
-		attribute.String("k5", testString),
-		attribute.Float64("k6", testFloat),
-		attribute.Int("k7", testInt),
+		Int("k3", testInt),
+		Bool("k4", testBool),
+		String("k5", testString),
+		Float64("k6", testFloat),
+		Int("k7", testInt),
 		{},
 	}
 	r.AddAttributes(attrs...)
@@ -138,11 +142,11 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	// creating a slice in r.back.
 	r1 := Record{}
 	for i := 0; i < attributesInlineCount+1; i++ {
-		r1.AddAttributes(attribute.Int("k", i))
+		r1.AddAttributes(Int("k", i))
 	}
 
 	// Ensure that r1.back's capacity exceeds its length.
-	b := make([]attribute.KeyValue, len(r1.back), len(r1.back)+1)
+	b := make([]KeyValue, len(r1.back), len(r1.back)+1)
 	copy(b, r1.back)
 	r1.back = b
 
@@ -150,27 +154,27 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	// Adding to both should emit an special error for the second call.
 	r2 := r1
 	r1AttrsBefore := attrsSlice(r1)
-	r1.AddAttributes(attribute.Int("p", 0))
+	r1.AddAttributes(Int("p", 0))
 	assert.Zero(t, errs)
-	r2.AddAttributes(attribute.Int("p", 1))
+	r2.AddAttributes(Int("p", 1))
 	assert.Equal(t, []error{errUnsafeAddAttrs}, errs, "sends an error via ErrorHandler when a dirty AddAttribute is detected")
 	errs = nil
-	assert.Equal(t, append(r1AttrsBefore, attribute.Int("p", 0)), attrsSlice(r1))
-	assert.Equal(t, append(r1AttrsBefore, attribute.Int("p", 1)), attrsSlice(r2))
+	assert.Equal(t, append(r1AttrsBefore, Int("p", 0)), attrsSlice(r1))
+	assert.Equal(t, append(r1AttrsBefore, Int("p", 1)), attrsSlice(r2))
 
 	// Adding to a clone is fine.
 	r1Attrs := attrsSlice(r1)
 	r3 := r1.Clone()
 	assert.Equal(t, r1Attrs, attrsSlice(r3))
-	r3.AddAttributes(attribute.Int("p", 2))
+	r3.AddAttributes(Int("p", 2))
 	assert.Zero(t, errs)
 	assert.Equal(t, r1Attrs, attrsSlice(r1), "r1 is unchanged")
-	assert.Equal(t, append(r1Attrs, attribute.Int("p", 2)), attrsSlice(r3))
+	assert.Equal(t, append(r1Attrs, Int("p", 2)), attrsSlice(r3))
 }
 
-func attrsSlice(r Record) []attribute.KeyValue {
-	var attrs []attribute.KeyValue
-	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+func attrsSlice(r Record) []KeyValue {
+	var attrs []KeyValue
+	r.WalkAttributes(func(kv KeyValue) bool {
 		attrs = append(attrs, kv)
 		return true
 	})

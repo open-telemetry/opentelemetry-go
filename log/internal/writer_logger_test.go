@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -22,10 +21,10 @@ func TestWriterLogger(t *testing.T) {
 	r.SetSeverity(testSeverity)
 	r.SetBody(testBody)
 	r.AddAttributes(
-		attribute.String("string", testString),
-		attribute.Float64("float", testFloat),
-		attribute.Int("int", testInt),
-		attribute.Bool("bool", testBool),
+		log.String("string", testString),
+		log.Float64("float", testFloat),
+		log.Int("int", testInt),
+		log.Bool("bool", testBool),
 	)
 	l.Emit(ctx, r)
 

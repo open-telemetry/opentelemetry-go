@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/trace"
@@ -27,14 +26,15 @@ import (
 )
 
 var (
-	ctx           = trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{TraceID: [16]byte{1}, SpanID: [8]byte{42}}))
-	testTimestamp = time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC)
-	testBody      = "log message"
-	testSeverity  = log.SeverityInfo
-	testFloat     = 1.2345
-	testString    = "7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190"
-	testInt       = 32768
-	testBool      = true
+	ctx            = trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{TraceID: [16]byte{1}, SpanID: [8]byte{42}}))
+	testTimestamp  = time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC)
+	testBodyString = "log message"
+	testBody       = log.StringValue(testBodyString)
+	testSeverity   = log.SeverityInfo
+	testFloat      = 1.2345
+	testString     = "7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190"
+	testInt        = 32768
+	testBool       = true
 )
 
 // WriterLogger is an optimistic version of a real logger, doing real-world
@@ -74,9 +74,9 @@ func BenchmarkEmit(b *testing.B) {
 						r.SetSeverity(testSeverity)
 						r.SetBody(testBody)
 						r.AddAttributes(
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
 						)
 						tc.logger.Emit(ctx, r)
 					},
@@ -93,11 +93,11 @@ func BenchmarkEmit(b *testing.B) {
 						r.SetSeverity(testSeverity)
 						r.SetBody(testBody)
 						r.AddAttributes(
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
 						)
 						tc.logger.Emit(ctx, r)
 					},
@@ -110,16 +110,16 @@ func BenchmarkEmit(b *testing.B) {
 						r.SetSeverity(testSeverity)
 						r.SetBody(testBody)
 						r.AddAttributes(
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
 						)
 						tc.logger.Emit(ctx, r)
 					},
@@ -132,46 +132,46 @@ func BenchmarkEmit(b *testing.B) {
 						r.SetSeverity(testSeverity)
 						r.SetBody(testBody)
 						r.AddAttributes(
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
-							attribute.String("string", testString),
-							attribute.Float64("float", testFloat),
-							attribute.Int("int", testInt),
-							attribute.Bool("bool", testBool),
-							attribute.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
+							log.String("string", testString),
+							log.Float64("float", testFloat),
+							log.Int("int", testInt),
+							log.Bool("bool", testBool),
+							log.String("string", testString),
 						)
 						tc.logger.Emit(ctx, r)
 					},
@@ -199,13 +199,13 @@ func BenchmarkSlog(b *testing.B) {
 		{
 			"no attrs",
 			func() {
-				logger.LogAttrs(ctx, slog.LevelInfo, testBody)
+				logger.LogAttrs(ctx, slog.LevelInfo, testBodyString)
 			},
 		},
 		{
 			"3 attrs",
 			func() {
-				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+				logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
 					slog.Int("int", testInt),
@@ -215,7 +215,7 @@ func BenchmarkSlog(b *testing.B) {
 		{
 			"5 attrs",
 			func() {
-				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+				logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
 					slog.Int("int", testInt),
@@ -227,7 +227,7 @@ func BenchmarkSlog(b *testing.B) {
 		{
 			"10 attrs",
 			func() {
-				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+				logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
 					slog.Int("int", testInt),
@@ -244,7 +244,7 @@ func BenchmarkSlog(b *testing.B) {
 		{
 			"40 attrs",
 			func() {
-				logger.LogAttrs(ctx, slog.LevelInfo, testBody,
+				logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 					slog.String("string", testString),
 					slog.Float64("float", testFloat),
 					slog.Int("int", testInt),
@@ -309,13 +309,13 @@ func BenchmarkLogr(b *testing.B) {
 		{
 			"no attrs",
 			func() {
-				logger.Info(testBody)
+				logger.Info(testBodyString)
 			},
 		},
 		{
 			"3 attrs",
 			func() {
-				logger.Info(testBody,
+				logger.Info(testBodyString,
 					"string", testString,
 					"float", testFloat,
 					"int", testInt,
@@ -329,7 +329,7 @@ func BenchmarkLogr(b *testing.B) {
 			// should only be from strconv used in writerLogger.
 			"5 attrs",
 			func() {
-				logger.Info(testBody,
+				logger.Info(testBodyString,
 					"string", testString,
 					"float", testFloat,
 					"int", testInt,
@@ -341,7 +341,7 @@ func BenchmarkLogr(b *testing.B) {
 		{
 			"10 attrs",
 			func() {
-				logger.Info(testBody,
+				logger.Info(testBodyString,
 					"string", testString,
 					"float", testFloat,
 					"int", testInt,
@@ -358,7 +358,7 @@ func BenchmarkLogr(b *testing.B) {
 		{
 			"40 attrs",
 			func() {
-				logger.Info(testBody,
+				logger.Info(testBodyString,
 					"string", testString,
 					"float", testFloat,
 					"int", testInt,

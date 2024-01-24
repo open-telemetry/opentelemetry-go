@@ -9,7 +9,6 @@ import (
 	"io"
 	"strconv"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/trace"
@@ -32,9 +31,13 @@ func (l *writerLogger) Emit(ctx context.Context, r log.Record) {
 	l.write("severity=")
 	l.write(strconv.FormatInt(int64(r.Severity()), 10))
 	l.write(" ")
-	l.write("body=")
-	l.write(r.Body())
-	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+
+	if !r.Body().Empty() {
+		l.write("body=")
+		l.appendValue(r.Body())
+	}
+
+	r.WalkAttributes(func(kv log.KeyValue) bool {
 		l.write(" ")
 		l.write(string(kv.Key))
 		l.write("=")
@@ -50,18 +53,24 @@ func (l *writerLogger) Emit(ctx context.Context, r log.Record) {
 	l.write("\n")
 }
 
-func (l *writerLogger) appendValue(v attribute.Value) {
-	switch v.Type() {
-	case attribute.STRING:
-		l.write(v.AsString())
-	case attribute.INT64:
-		l.write(strconv.FormatInt(v.AsInt64(), 10)) // strconv.FormatInt allocates memory.
-	case attribute.FLOAT64:
-		l.write(strconv.FormatFloat(v.AsFloat64(), 'g', -1, 64)) // strconv.FormatFloat allocates memory.
-	case attribute.BOOL:
-		l.write(strconv.FormatBool(v.AsBool()))
+func (l *writerLogger) appendValue(v log.Value) {
+	switch v.Kind() {
+	case log.KindString:
+		l.write(v.String())
+	case log.KindInt64:
+		l.write(strconv.FormatInt(v.Int64(), 10)) // strconv.FormatInt allocates memory.
+	case log.KindFloat64:
+		l.write(strconv.FormatFloat(v.Float64(), 'g', -1, 64)) // strconv.FormatFloat allocates memory.
+	case log.KindBool:
+		l.write(strconv.FormatBool(v.Bool()))
+	case log.KindBytes:
+		l.write(fmt.Sprint(v.Bytes()))
+	case log.KindMap:
+		l.write(fmt.Sprint(v.Map()))
+	case log.KindEmpty:
+		l.write("<nil>")
 	default:
-		panic(fmt.Sprintf("unhandled attribute type: %s", v.Type()))
+		panic(fmt.Sprintf("unhandled value kind: %s", v.Kind()))
 	}
 }
 

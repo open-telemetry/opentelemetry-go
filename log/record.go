@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // Record represents a log record.
@@ -21,7 +20,7 @@ type Record struct {
 	observedTimestamp time.Time
 	severity          Severity
 	severityText      string
-	body              string
+	body              Value
 
 	// The fields below are for optimizing the implementation of
 	// Attributes and AddAttributes.
@@ -29,7 +28,7 @@ type Record struct {
 	// Allocation optimization: an inline array sized to hold
 	// the majority of log calls (based on examination of open-source
 	// code). It holds the start of the list of attributes.
-	front [attributesInlineCount]attribute.KeyValue
+	front [attributesInlineCount]KeyValue
 
 	// The number of attributes in front.
 	nFront int
@@ -38,7 +37,7 @@ type Record struct {
 	// Invariants:
 	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero. Used to detect mistakes.
-	back []attribute.KeyValue
+	back []KeyValue
 }
 
 const attributesInlineCount = 5
@@ -90,23 +89,19 @@ func (r *Record) SetSeverityText(s string) {
 	r.severityText = s
 }
 
-// Body returns the value containing the body of the log record
-// as a human-readable string message (including multi-line)
-// describing the log record.
-func (r Record) Body() string {
+// Body returns the the body of the log record as a strucutured value.
+func (r Record) Body() Value {
 	return r.body
 }
 
-// SetBody sets the value containing the body of the log record
-// as a human-readable string message (including multi-line)
-// describing the log record.
-func (r *Record) SetBody(s string) {
-	r.body = s
+// SetBody sets the the body of the log record as a strucutured value.
+func (r *Record) SetBody(v Value) {
+	r.body = v
 }
 
-// WalkAttributes calls f on each [attribute.KeyValue] in the [Record].
+// WalkAttributes calls f on each [KeyValue] in the [Record].
 // Iteration stops if f returns false.
-func (r Record) WalkAttributes(f func(attribute.KeyValue) bool) {
+func (r Record) WalkAttributes(f func(KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
 		if !f(r.front[i]) {
 			return
@@ -124,11 +119,11 @@ var errUnsafeAddAttrs = errors.New("unsafely called AddAttributes on copy of Rec
 // AddAttributes appends the given [attribute.KeyValue] to the [Record]'s
 // list of [attribute.KeyValue].
 // It omits invalid attributes.
-func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
+func (r *Record) AddAttributes(attrs ...KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
-		if !a.Valid() {
+		if a.Invalid() {
 			continue
 		}
 		r.front[r.nFront] = a
@@ -138,7 +133,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 	// and seeing if the attribute there is non-zero.
 	if cap(r.back) > len(r.back) {
 		end := r.back[:len(r.back)+1][len(r.back)]
-		if end.Valid() {
+		if !end.Invalid() {
 			// Don't panic; copy and muddle through.
 			r.back = sliceClip(r.back)
 			otel.Handle(errUnsafeAddAttrs)
@@ -147,9 +142,10 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 	ne := countInvalidAttrs(attrs[i:])
 	r.back = sliceGrow(r.back, len(attrs[i:])-ne)
 	for _, a := range attrs[i:] {
-		if a.Valid() {
-			r.back = append(r.back, a)
+		if a.Invalid() {
+			continue
 		}
+		r.back = append(r.back, a)
 	}
 }
 
@@ -167,32 +163,12 @@ func (r Record) AttributesLen() int {
 }
 
 // countInvalidAttrs returns the number of invalid attributes.
-func countInvalidAttrs(as []attribute.KeyValue) int {
+func countInvalidAttrs(as []KeyValue) int {
 	n := 0
 	for _, a := range as {
-		if !a.Valid() {
+		if a.Invalid() {
 			n++
 		}
 	}
 	return n
-}
-
-// sliceGrow increases the slice's capacity, if necessary, to guarantee space
-// for another n elements. After Grow(n), at least n elements can be appended
-// to the slice without another allocation. If n is negative or too large to
-// allocate the memory, Grow panics.
-//
-// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
-func sliceGrow[S ~[]E, E any](s S, n int) S {
-	if n -= cap(s) - len(s); n > 0 {
-		s = append(s[:cap(s)], make([]E, n)...)[:len(s)]
-	}
-	return s
-}
-
-// sliceClip removes unused capacity from the slice, returning s[:len(s):len(s)].
-//
-// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
-func sliceClip[S ~[]E, E any](s S) S {
-	return s[:len(s):len(s)]
 }
