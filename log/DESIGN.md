@@ -670,4 +670,3 @@ as some languages already use common attributes for defining log attributes.[^8]
 [^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
 [^7]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
 [^8]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
-
