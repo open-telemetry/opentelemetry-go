@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 var meter = otel.Meter("my-service-meter")
@@ -161,6 +161,7 @@ func ExampleMeter_histogram() {
 		"task.duration",
 		metric.WithDescription("The duration of task execution."),
 		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(.005, .01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10),
 	)
 	if err != nil {
 		panic(err)
@@ -276,6 +277,6 @@ func ExampleMeter_attributes() {
 		statusCode := http.StatusOK
 
 		apiCounter.Add(r.Context(), 1,
-			metric.WithAttributes(semconv.HTTPStatusCode(statusCode)))
+			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
 	})
 }

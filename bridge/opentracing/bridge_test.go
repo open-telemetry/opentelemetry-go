@@ -35,8 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type testOnlyTextMapReader struct {
-}
+type testOnlyTextMapReader struct{}
 
 func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
@@ -144,8 +143,7 @@ var (
 	spanID     trace.SpanID  = [8]byte{byte(11)}
 )
 
-type testTextMapPropagator struct {
-}
+type testTextMapPropagator struct{}
 
 func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
@@ -163,7 +161,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 		return ctx
 	}
 
-	var exist = false
+	exist := false
 
 	for _, key := range carrier.Keys() {
 		if strings.EqualFold(testHeader, key) {
@@ -575,4 +573,102 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 		assert.True(t, spanContext.(spanContextProvider).HasSpanID())
 		assert.True(t, spanContext.(spanContextProvider).HasTraceID())
 	})
+}
+
+func TestBridgeCarrierBaggagePropagation(t *testing.T) {
+	carriers := []struct {
+		name    string
+		factory func() interface{}
+		format  ot.BuiltinFormat
+	}{
+		{
+			name:    "TextMapCarrier",
+			factory: func() interface{} { return ot.TextMapCarrier{} },
+			format:  ot.TextMap,
+		},
+		{
+			name:    "HTTPHeadersCarrier",
+			factory: func() interface{} { return ot.HTTPHeadersCarrier{} },
+			format:  ot.HTTPHeaders,
+		},
+	}
+
+	testCases := []struct {
+		name         string
+		baggageItems []bipBaggage
+	}{
+		{
+			name: "single baggage item",
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+			},
+		},
+		{
+			name: "multiple baggage items",
+			baggageItems: []bipBaggage{
+				{
+					key:   "foo",
+					value: "bar",
+				},
+				{
+					key:   "foo2",
+					value: "bar2",
+				},
+			},
+		},
+		{
+			name: "with characters escaped by baggage propagator",
+			baggageItems: []bipBaggage{
+				{
+					key:   "space",
+					value: "Hello world!",
+				},
+				{
+					key:   "utf8",
+					value: "Świat",
+				},
+			},
+		},
+	}
+
+	for _, c := range carriers {
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
+				mockOtelTracer := internal.NewMockTracer()
+				b, _ := NewTracerPair(mockOtelTracer)
+				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+					propagation.TraceContext{},
+					propagation.Baggage{}), // Required for baggage propagation.
+				)
+
+				// Set baggage items.
+				span := b.StartSpan("test")
+				for _, bi := range tc.baggageItems {
+					span.SetBaggageItem(bi.key, bi.value)
+				}
+				defer span.Finish()
+
+				carrier := c.factory()
+				err := b.Inject(span.Context(), c.format, carrier)
+				assert.NoError(t, err)
+
+				spanContext, err := b.Extract(c.format, carrier)
+				assert.NoError(t, err)
+
+				// Check baggage items.
+				bsc, ok := spanContext.(*bridgeSpanContext)
+				assert.True(t, ok)
+
+				var got []bipBaggage
+				for _, m := range bsc.bag.Members() {
+					got = append(got, bipBaggage{m.Key(), m.Value()})
+				}
+
+				assert.ElementsMatch(t, tc.baggageItems, got)
+			})
+		}
+	}
 }

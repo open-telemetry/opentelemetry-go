@@ -38,12 +38,15 @@ type testGRPCServer struct{}
 func (*testGRPCServer) UnaryCall(ctx context.Context, r *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
 	return &testpb.SimpleResponse{Payload: r.Payload * 2}, nil
 }
+
 func (*testGRPCServer) StreamingOutputCall(*testpb.SimpleRequest, testpb.TestService_StreamingOutputCallServer) error {
 	return nil
 }
+
 func (*testGRPCServer) StreamingInputCall(testpb.TestService_StreamingInputCallServer) error {
 	return nil
 }
+
 func (*testGRPCServer) StreamingBidirectionalCall(testpb.TestService_StreamingBidirectionalCallServer) error {
 	return nil
 }

@@ -74,7 +74,7 @@ type Reader interface {
 	// the SDK and stores it in out. An error is returned if this is called
 	// after Shutdown or if out is nil.
 	//
-	// This method needs to be concurrent safe, and the cancelation of the
+	// This method needs to be concurrent safe, and the cancellation of the
 	// passed context is expected to be honored.
 	Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error
 	// DO NOT CHANGE: any modification will not be backwards compatible and

@@ -155,6 +155,12 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, "ExponentialHistogram not equal:")
 			reasons = append(reasons, r...)
 		}
+	case metricdata.Summary:
+		r := equalSummary(v, b.(metricdata.Summary), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Summary not equal:")
+			reasons = append(reasons, r...)
+		}
 	default:
 		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
@@ -422,6 +428,69 @@ func equalExponentialBuckets(a, b metricdata.ExponentialBucket, _ config) (reaso
 	}
 	if !equalSlices(a.Counts, b.Counts) {
 		reasons = append(reasons, notEqualStr("Counts", a.Counts, b.Counts))
+	}
+	return reasons
+}
+
+func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
+	r := compareDiff(diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(a, b metricdata.SummaryDataPoint) bool {
+			r := equalSummaryDataPoint(a, b, cfg)
+			return len(r) == 0
+		},
+	))
+	if r != "" {
+		reasons = append(reasons, fmt.Sprintf("Summary DataPoints not equal:\n%s", r))
+	}
+	return reasons
+}
+
+func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reasons []string) {
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.Encoded(attribute.DefaultEncoder()),
+			b.Attributes.Encoded(attribute.DefaultEncoder()),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+		r := compareDiff(diffSlices(
+			a.QuantileValues,
+			b.QuantileValues,
+			func(a, b metricdata.QuantileValue) bool {
+				r := equalQuantileValue(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, r)
+		}
+	}
+	return reasons
+}
+
+func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []string) {
+	if a.Quantile != b.Quantile {
+		reasons = append(reasons, notEqualStr("Quantile", a.Quantile, b.Quantile))
+	}
+	if a.Value != b.Value {
+		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
 	}
 	return reasons
 }
@@ -716,6 +785,8 @@ func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.Key
 		reasons = hasAttributesExponentialHistogram(agg, attrs...)
 	case metricdata.ExponentialHistogram[float64]:
 		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.Summary:
+		reasons = hasAttributesSummary(agg, attrs...)
 	default:
 		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
 	}
@@ -741,12 +812,38 @@ func hasAttributesScopeMetrics(sm metricdata.ScopeMetrics, attrs ...attribute.Ke
 	}
 	return reasons
 }
+
 func hasAttributesResourceMetrics(rm metricdata.ResourceMetrics, attrs ...attribute.KeyValue) (reasons []string) {
 	for n, sm := range rm.ScopeMetrics {
 		reas := hasAttributesScopeMetrics(sm, attrs...)
 		if len(reas) > 0 {
 			reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics %d:\n", n))
 			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummary(summary metricdata.Summary, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range summary.DataPoints {
+		reas := hasAttributesSummaryDataPoint(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("summary datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummaryDataPoint(dp metricdata.SummaryDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
 		}
 	}
 	return reasons

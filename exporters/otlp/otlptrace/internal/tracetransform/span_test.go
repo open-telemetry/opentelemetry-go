@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -213,12 +213,14 @@ func TestSpanData(t *testing.T) {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Events: []tracesdk.Event{
-			{Time: startTime,
+			{
+				Time: startTime,
 				Attributes: []attribute.KeyValue{
 					attribute.Int64("CompressedByteSize", 512),
 				},
 			},
-			{Time: endTime,
+			{
+				Time: endTime,
 				Attributes: []attribute.KeyValue{
 					attribute.String("EventType", "Recv"),
 				},

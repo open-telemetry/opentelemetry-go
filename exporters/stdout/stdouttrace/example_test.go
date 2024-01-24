@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,12 +32,10 @@ const (
 	instrumentationVersion = "0.1.0"
 )
 
-var (
-	tracer = otel.GetTracerProvider().Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(instrumentationVersion),
-		trace.WithSchemaURL(semconv.SchemaURL),
-	)
+var tracer = otel.GetTracerProvider().Tracer(
+	instrumentationName,
+	trace.WithInstrumentationVersion(instrumentationVersion),
+	trace.WithSchemaURL(semconv.SchemaURL),
 )
 
 func add(ctx context.Context, x, y int64) int64 {

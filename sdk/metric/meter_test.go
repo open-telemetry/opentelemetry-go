@@ -16,12 +16,15 @@ package metric
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -167,6 +170,10 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
+	// The synchronous measurement methods must ignore the context cancelation.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
 	attrs := attribute.NewSet(attribute.String("name", "alice"))
 	opt := metric.WithAttributeSet(attrs)
 	testCases := []struct {
@@ -339,7 +346,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 3)
+				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -358,7 +365,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 11)
+				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -377,7 +384,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Int64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(context.Background(), 7)
+				gauge.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -403,7 +410,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 3)
+				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -422,7 +429,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				ctr.Add(context.Background(), 11)
+				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -441,7 +448,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				gauge, err := m.Float64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(context.Background(), 7)
+				gauge.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -549,6 +556,17 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Int64Histogram with invalid buckets",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Int64Histogram("histogram", metric.WithExplicitBucketBoundaries(-1, 1, -5))
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: errors.Join(fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, []float64{-1, 1, -5})),
 		},
 		{
 			name: "Int64ObservableCounter with no validation issues",
@@ -669,6 +687,17 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("%w: _: must start with a letter", ErrInstrumentName),
+		},
+		{
+			name: "Float64Histogram with invalid buckets",
+
+			fn: func(t *testing.T, m metric.Meter) error {
+				i, err := m.Float64Histogram("histogram", metric.WithExplicitBucketBoundaries(-1, 1, -5))
+				assert.NotNil(t, i)
+				return err
+			},
+
+			wantErr: errors.Join(fmt.Errorf("%w: non-monotonic boundaries: %v", errHist, []float64{-1, 1, -5})),
 		},
 		{
 			name: "Float64ObservableCounter with no validation issues",
@@ -1566,7 +1595,8 @@ func TestObservableExample(t *testing.T) {
 		)
 
 		selector := func(InstrumentKind) metricdata.Temporality { return temp }
-		reader := NewManualReader(WithTemporalitySelector(selector))
+		reader1 := NewManualReader(WithTemporalitySelector(selector))
+		reader2 := NewManualReader(WithTemporalitySelector(selector))
 
 		allowAll := attribute.NewDenyKeysFilter()
 		noFiltered := NewView(Instrument{Name: instName}, Stream{Name: instName, AttributeFilter: allowAll})
@@ -1574,7 +1604,7 @@ func TestObservableExample(t *testing.T) {
 		filter := attribute.NewDenyKeysFilter("tid")
 		filtered := NewView(Instrument{Name: instName}, Stream{Name: filteredStream, AttributeFilter: filter})
 
-		mp := NewMeterProvider(WithReader(reader), WithView(noFiltered, filtered))
+		mp := NewMeterProvider(WithReader(reader1), WithReader(reader2), WithView(noFiltered, filtered))
 		meter := mp.Meter(scopeName)
 
 		observations := make(map[attribute.Set]int64)
@@ -1621,7 +1651,13 @@ func TestObservableExample(t *testing.T) {
 		collect := func(t *testing.T) {
 			t.Helper()
 			got := metricdata.ResourceMetrics{}
-			err := reader.Collect(context.Background(), &got)
+			err := reader1.Collect(context.Background(), &got)
+			require.NoError(t, err)
+			require.Len(t, got.ScopeMetrics, 1)
+			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+
+			got = metricdata.ResourceMetrics{}
+			err = reader2.Collect(context.Background(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
@@ -1826,12 +1862,15 @@ func BenchmarkInstrumentCreation(b *testing.B) {
 func testNilAggregationSelector(InstrumentKind) Aggregation {
 	return nil
 }
+
 func testDefaultAggregationSelector(InstrumentKind) Aggregation {
 	return AggregationDefault{}
 }
+
 func testUndefinedTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.Temporality(0)
 }
+
 func testInvalidTemporalitySelector(InstrumentKind) metricdata.Temporality {
 	return metricdata.Temporality(255)
 }
@@ -1964,6 +2003,381 @@ func TestMalformedSelectors(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 12)
+		})
+	}
+}
+
+func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
+	defaultBuckets := []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}
+	aggregationSelector := func(InstrumentKind) Aggregation {
+		return AggregationExplicitBucketHistogram{Boundaries: []float64{0, 1, 2, 3, 4, 5}}
+	}
+	for _, tt := range []struct {
+		desc                     string
+		reader                   Reader
+		views                    []View
+		histogramOpts            []metric.Float64HistogramOption
+		expectedBucketBoundaries []float64
+	}{
+		{
+			desc:                     "default",
+			reader:                   NewManualReader(),
+			expectedBucketBoundaries: defaultBuckets,
+		},
+		{
+			desc:                     "custom reader aggregation overrides default",
+			reader:                   NewManualReader(WithAggregationSelector(aggregationSelector)),
+			expectedBucketBoundaries: []float64{0, 1, 2, 3, 4, 5},
+		},
+		{
+			desc:   "overridden by histogram option",
+			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
+			histogramOpts: []metric.Float64HistogramOption{
+				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
+			},
+			expectedBucketBoundaries: []float64{0, 2, 4, 6, 8, 10},
+		},
+		{
+			desc:   "overridden by view",
+			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
+			histogramOpts: []metric.Float64HistogramOption{
+				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
+			},
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{0, 3, 6, 9, 12, 15}},
+			})},
+			expectedBucketBoundaries: []float64{0, 3, 6, 9, 12, 15},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			meter := NewMeterProvider(WithView(tt.views...), WithReader(tt.reader)).Meter("TestHistogramBucketPrecedenceOrdering")
+			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram", tt.histogramOpts...)
+			require.NoError(t, err)
+			sfHistogram.Record(context.Background(), 1)
+			var rm metricdata.ResourceMetrics
+			err = tt.reader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+			gotHist, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+			require.Len(t, gotHist.DataPoints, 1)
+			assert.Equal(t, tt.expectedBucketBoundaries, gotHist.DataPoints[0].Bounds)
+		})
+	}
+}
+
+func TestObservableDropAggregation(t *testing.T) {
+	const (
+		intPrefix         = "observable.int64."
+		intCntName        = "observable.int64.counter"
+		intUDCntName      = "observable.int64.up.down.counter"
+		intGaugeName      = "observable.int64.gauge"
+		floatPrefix       = "observable.float64."
+		floatCntName      = "observable.float64.counter"
+		floatUDCntName    = "observable.float64.up.down.counter"
+		floatGaugeName    = "observable.float64.gauge"
+		unregPrefix       = "unregistered.observable."
+		unregIntCntName   = "unregistered.observable.int64.counter"
+		unregFloatCntName = "unregistered.observable.float64.counter"
+	)
+
+	type log struct {
+		name   string
+		number string
+	}
+
+	testcases := []struct {
+		name            string
+		views           []View
+		wantObservables []string
+		wantUnregLogs   []log
+	}{
+		{
+			name:  "default",
+			views: nil,
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
+				floatCntName, floatUDCntName, floatGaugeName,
+			},
+			wantUnregLogs: []log{
+				{
+					name:   unregIntCntName,
+					number: "int64",
+				},
+				{
+					name:   unregFloatCntName,
+					number: "float64",
+				},
+			},
+		},
+		{
+			name: "drop all metrics",
+			views: []View{
+				func(i Instrument) (Stream, bool) {
+					return Stream{Aggregation: AggregationDrop{}}, true
+				},
+			},
+			wantObservables: nil,
+			wantUnregLogs:   nil,
+		},
+		{
+			name: "drop float64 observable",
+			views: []View{
+				func(i Instrument) (Stream, bool) {
+					if strings.HasPrefix(i.Name, floatPrefix) {
+						return Stream{Aggregation: AggregationDrop{}}, true
+					}
+					return Stream{}, false
+				},
+			},
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
+			},
+			wantUnregLogs: []log{
+				{
+					name:   unregIntCntName,
+					number: "int64",
+				},
+				{
+					name:   unregFloatCntName,
+					number: "float64",
+				},
+			},
+		},
+		{
+			name: "drop int64 observable",
+			views: []View{
+				func(i Instrument) (Stream, bool) {
+					if strings.HasPrefix(i.Name, intPrefix) {
+						return Stream{Aggregation: AggregationDrop{}}, true
+					}
+					return Stream{}, false
+				},
+			},
+			wantObservables: []string{
+				floatCntName, floatUDCntName, floatGaugeName,
+			},
+			wantUnregLogs: []log{
+				{
+					name:   unregIntCntName,
+					number: "int64",
+				},
+				{
+					name:   unregFloatCntName,
+					number: "float64",
+				},
+			},
+		},
+		{
+			name: "drop unregistered observable",
+			views: []View{
+				func(i Instrument) (Stream, bool) {
+					if strings.HasPrefix(i.Name, unregPrefix) {
+						return Stream{Aggregation: AggregationDrop{}}, true
+					}
+					return Stream{}, false
+				},
+			},
+			wantObservables: []string{
+				intCntName, intUDCntName, intGaugeName,
+				floatCntName, floatUDCntName, floatGaugeName,
+			},
+			wantUnregLogs: nil,
+		},
+	}
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			var unregLogs []log
+			otel.SetLogger(
+				funcr.NewJSON(
+					func(obj string) {
+						var entry map[string]interface{}
+						_ = json.Unmarshal([]byte(obj), &entry)
+
+						// All unregistered observables should log `errUnregObserver` error.
+						// A observable with drop aggregation is also unregistered,
+						// however this is expected and should not log an error.
+						assert.Equal(t, errUnregObserver.Error(), entry["error"])
+
+						unregLogs = append(unregLogs, log{
+							name:   fmt.Sprintf("%v", entry["name"]),
+							number: fmt.Sprintf("%v", entry["number"]),
+						})
+					},
+					funcr.Options{Verbosity: 0},
+				),
+			)
+			defer otel.SetLogger(logr.Discard())
+
+			reader := NewManualReader()
+			meter := NewMeterProvider(WithView(tt.views...), WithReader(reader)).Meter("TestObservableDropAggregation")
+
+			intCnt, err := meter.Int64ObservableCounter(intCntName)
+			require.NoError(t, err)
+			intUDCnt, err := meter.Int64ObservableUpDownCounter(intUDCntName)
+			require.NoError(t, err)
+			intGaugeCnt, err := meter.Int64ObservableGauge(intGaugeName)
+			require.NoError(t, err)
+
+			floatCnt, err := meter.Float64ObservableCounter(floatCntName)
+			require.NoError(t, err)
+			floatUDCnt, err := meter.Float64ObservableUpDownCounter(floatUDCntName)
+			require.NoError(t, err)
+			floatGaugeCnt, err := meter.Float64ObservableGauge(floatGaugeName)
+			require.NoError(t, err)
+
+			unregIntCnt, err := meter.Int64ObservableCounter(unregIntCntName)
+			require.NoError(t, err)
+			unregFloatCnt, err := meter.Float64ObservableCounter(unregFloatCntName)
+			require.NoError(t, err)
+
+			_, err = meter.RegisterCallback(
+				func(ctx context.Context, obs metric.Observer) error {
+					obs.ObserveInt64(intCnt, 1)
+					obs.ObserveInt64(intUDCnt, 1)
+					obs.ObserveInt64(intGaugeCnt, 1)
+					obs.ObserveFloat64(floatCnt, 1)
+					obs.ObserveFloat64(floatUDCnt, 1)
+					obs.ObserveFloat64(floatGaugeCnt, 1)
+					// We deliberately call observe to unregistered observables
+					obs.ObserveInt64(unregIntCnt, 1)
+					obs.ObserveFloat64(unregFloatCnt, 1)
+
+					return nil
+				},
+				intCnt, intUDCnt, intGaugeCnt,
+				floatCnt, floatUDCnt, floatGaugeCnt,
+				// We deliberately do not register `unregIntCnt` and `unregFloatCnt`
+				// to test that `errUnregObserver` is logged when observed by callback.
+			)
+			require.NoError(t, err)
+
+			var rm metricdata.ResourceMetrics
+			err = reader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			if len(tt.wantObservables) == 0 {
+				require.Len(t, rm.ScopeMetrics, 0)
+				return
+			}
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, len(tt.wantObservables))
+
+			for i, m := range rm.ScopeMetrics[0].Metrics {
+				assert.Equal(t, tt.wantObservables[i], m.Name)
+			}
+			assert.Equal(t, tt.wantUnregLogs, unregLogs)
+		})
+	}
+}
+
+func TestDuplicateInstrumentCreation(t *testing.T) {
+	for _, tt := range []struct {
+		desc             string
+		createInstrument func(metric.Meter) error
+	}{
+		{
+			desc: "Int64ObservableCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableCounter("observable.int64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64ObservableUpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64ObservableGauge",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableGauge("observable.int64.gauge")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableCounter("observable.float64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableUpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableGauge",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableGauge("observable.float64.gauge")
+				return err
+			},
+		},
+		{
+			desc: "Int64Counter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64Counter("sync.int64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64UpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64UpDownCounter("sync.int64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64Histogram",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64Histogram("sync.int64.histogram")
+				return err
+			},
+		},
+		{
+			desc: "Float64Counter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64Counter("sync.float64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64UpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64UpDownCounter("sync.float64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64Histogram",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64Histogram("sync.float64.histogram")
+				return err
+			},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			reader := NewManualReader()
+			defer func() {
+				require.NoError(t, reader.Shutdown(context.Background()))
+			}()
+
+			m := NewMeterProvider(WithReader(reader)).Meter("TestDuplicateInstrumentCreation")
+			for i := 0; i < 3; i++ {
+				require.NoError(t, tt.createInstrument(m))
+			}
+			internalMeter, ok := m.(*meter)
+			require.True(t, ok)
+			// check that multiple calls to create the same instrument only create 1 instrument
+			numInstruments := len(internalMeter.int64Insts.data) + len(internalMeter.float64Insts.data) + len(internalMeter.int64ObservableInsts.data) + len(internalMeter.float64ObservableInsts.data)
+			require.Equal(t, 1, numInstruments)
 		})
 	}
 }

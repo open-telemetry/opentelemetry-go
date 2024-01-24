@@ -24,8 +24,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
@@ -44,6 +46,8 @@ type MockContextKeyValue struct {
 }
 
 type MockTracer struct {
+	embedded.Tracer
+
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
@@ -54,8 +58,10 @@ type MockTracer struct {
 	rand     *rand.Rand
 }
 
-var _ trace.Tracer = &MockTracer{}
-var _ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+var (
+	_ trace.Tracer                                  = &MockTracer{}
+	_ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+)
 
 func NewMockTracer() *MockTracer {
 	return &MockTracer{
@@ -182,6 +188,8 @@ type MockEvent struct {
 }
 
 type MockSpan struct {
+	embedded.Span
+
 	mockTracer     *MockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
@@ -195,8 +203,10 @@ type MockSpan struct {
 	Events       []MockEvent
 }
 
-var _ trace.Span = &MockSpan{}
-var _ migration.OverrideTracerSpanExtension = &MockSpan{}
+var (
+	_ trace.Span                            = &MockSpan{}
+	_ migration.OverrideTracerSpanExtension = &MockSpan{}
+)
 
 func (s *MockSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
@@ -291,4 +301,4 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }
+func (s *MockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }
