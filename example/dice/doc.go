@@ -12,5 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Dice is the "Roll the dice" getting started example application.
+// Dice is the "Roll the dice" application.
+//
+// [Getting Started] uses this example to demonstrate OpenTelemetry Go.
+//
+// [Getting Started]: https://opentelemetry.io/docs/languages/net/automatic/getting-started/
 package main
