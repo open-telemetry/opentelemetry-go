@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
+- Fix `go.opentelemetry.io/otel/sdk/metric` to cache instruments to avoid leaking memory when the same instrument is created multiple times. (#4820)
 
 ## [1.23.0-rc.1] 2024-01-18
 
