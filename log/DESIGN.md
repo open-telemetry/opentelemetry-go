@@ -127,13 +127,13 @@ type Record struct {
 	observedTimestamp time.Time
 	severity          Severity
 	severityText      string
-	body              string
+	body              Value
 
 	// The fields below are for optimizing the implementation of
 	// attributes.
-	front [5]attribute.KeyValue
+	front [5]KeyValue
 	nFront int // The number of attributes in front.
-	back []attribute.KeyValue
+	back []KeyValue
 }
 ```
 
@@ -220,20 +220,16 @@ func (r *Record) SetSeverityText(s string)
 is accessed using following methods:
 
 ```go
-func (r Record) Body() string
-func (r *Record) SetBody(s string)
+func (r Record) Body() Value
+func (r *Record) SetBody(v Value)
 ```
-
-It is using `string` type as the specification says:
-
-> First-party Applications SHOULD use a string message.
 
 [Log record attributes](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
 are accessed using following methods:
 
 ```go
-func (r Record) WalkAttributes(f func(attribute.KeyValue) bool)
-func (r *Record) AddAttributes(attrs ...attribute.KeyValue)
+func (r Record) WalkAttributes(f func(KeyValue) bool)
+func (r *Record) AddAttributes(attrs ...KeyValue)
 ```
 
 `Record` has a `AttributesLen` method that returns
@@ -257,6 +253,110 @@ It allows achieving high-performance access and manipulation of the attributes
 while keeping the API user friendly.
 It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
+
+The following defintions are implementing the abstractions
+described in [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs):
+
+```
+type Value struct{}
+
+type Kind int
+
+const (
+	KindEmpty Kind = iota
+	KindBool
+	KindFloat64
+	KindInt64
+	KindString
+	KindBytes
+	KindList
+	KindMap
+)
+
+func (v Value) Kind() Kind
+
+func StringValue(value string)
+
+func IntValue(v int) Value
+
+func Int64Value(v int64) Value
+
+func Float64Value(v float64) Value
+
+func BoolValue(v bool) Value
+
+func BytesValue(v []byte) Value
+
+func ListValue(vs ...Value) Value
+
+func MapValue(kvs ...KeyValue) Value
+
+func (v Value) Any() any
+
+func (v Value) String() string
+
+func (v Value) Int64() int64
+
+func (v Value) Bool() bool
+
+func (v Value) Float64() float64
+
+func (v Value) Bytes() []byte
+
+func (v Value) List() []Value
+
+func (v Value) Map() []KeyValue 
+
+func (v Value) Empty() bool
+
+func (v Value) Equal(w Value) bool
+
+type KeyValue struct {
+	Key   string
+	Value Value
+}
+
+func String(key, value string)
+
+func Int64(key string, value int64) KeyValue
+
+func Int(key string, value int) KeyValue
+
+func Float64(key string, v float64) KeyValue
+
+func Bool(key string, v bool) KeyValue
+
+func Bytes(key string, v []byte) KeyValue
+
+func List(key string, args ...Value) KeyValue
+
+func Map(key string, args ...KeyValue) KeyValue
+
+func (a KeyValue) Invalid() bool
+
+func (a KeyValue) Equal(b KeyValue) bool
+```
+
+`Value` is representing `any`.
+`KeyValue` is represneting a key(string)-value(`any`) pair.
+
+`Kind` is an enumeration used for specifying the underlying value type.
+`KindEmpty` is used for an empty (zero) value.
+`KindBool` is used for boolean value.
+`KindFloat64` is used for a double precision floating point (IEEE 754-1985) value.
+`KindInt64` is used for a signed integer value.
+`KindString` is used for a string value.
+`KindBytes` is used for a slice of bytes (in spec: A byte array).
+`KindList` is used for a slice of values (in spec: an array (a list) of any values).
+`KindMap` is used for a slice of key-value pairs (in spec: `map<string, any>`).
+
+These types are defined in `go.opentelemetry.io/otel/log` package
+as their are tightly coupled with the API and different from common attributes.
+
+The implementation of `Value` is implemntation is based on
+[`slog.Value`](https://pkg.go.dev/log/slog#Value).
+The benchmarks[^7] show that implementation is more performant than
+[`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
 The caller must not subsequently mutate the record passed to `Emit`.
 This would allow the implementation to not clone the record,
@@ -293,6 +393,7 @@ Rejected alternatives:
 - [Record attributes as slice](#record-attributes-as-slice)
 - [Record.Body as any](#recordbody-as-any)
 - [Severity type encapsulating number and text](#severity-type-encapsulating-number-and-text)
+- [Reuse attribute package](#reuse-attribute-package)
 
 ### noop package
 
@@ -336,7 +437,7 @@ and interoperable with existing logging packages.[^1][^2]
 
 The benchmark results can be found in [the prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
 
-## Rejected Alternatives
+## Rejected alternatives
 
 ### Reuse slog
 
@@ -532,9 +633,35 @@ It should be more user friendly to have them separated.
 Especially when having getter and setter methods, setting one value
 when the other is already set would be unpleasant.
 
+## Reuse attribute package
+
+It was tempting to reuse the existing
+[https://pkg.go.dev/go.opentelemetry.io/otel/attribute] package
+for defining log attributes and body.
+
+However, this would be wrong because [the log attribute definition](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
+is different from [the common attribute definition](https://opentelemetry.io/docs/specs/otel/common/#attribute).
+
+Moreover, it there is nothing telling that [the body defintion](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
+has anything in common with a common attribute value.
+
+Therefore, we define new types representing the abstract types defined
+in the [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#definitions-used-in-this-document).
+
+## Open issues
+
+### Reusing common attributes
+
+Currently, logs attributes are different from common (resource, trace, metrics) attributes.
+However, there may be a desire to make unify them
+as some languages already use common attributes for defining log attributes.[^8]
+
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
 [^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
 [^4]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
 [^5]: [Record attributes as field and use sync.Pool for reducing allocations analysis](https://github.com/pellared/opentelemetry-go/pull/4)
 [^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
+[^7]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
+[^8]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
+
