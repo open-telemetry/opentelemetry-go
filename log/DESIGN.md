@@ -656,6 +656,12 @@ Currently, logs attributes are different from common (resource, trace, metrics) 
 However, there may be a desire to make unify them
 as some languages already use common attributes for defining log attributes.[^8]
 
+### Other issues
+
+- [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
+- [Clarify scalar value types in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3836)
+- [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
+
 [^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
 [^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
