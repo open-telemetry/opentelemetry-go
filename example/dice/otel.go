@@ -26,12 +26,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shutdown func(context.Context) error, err error) {
+func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	// shutdown calls cleanup functions registered via shutdownFuncs.
@@ -52,11 +51,7 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	}
 
 	// Set up resource.
-	res, err := newResource(serviceName, serviceVersion)
-	if err != nil {
-		handleErr(err)
-		return
-	}
+	res := newResource()
 
 	// Set up propagator.
 	prop := newPropagator()
@@ -83,12 +78,8 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shut
 	return
 }
 
-func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
-			semconv.ServiceVersion(serviceVersion),
-		))
+func newResource() *resource.Resource {
+	return resource.Default()
 }
 
 func newPropagator() propagation.TextMapPropagator {
