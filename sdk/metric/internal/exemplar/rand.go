@@ -70,6 +70,7 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 		r.store[r.count] = newMeasurement(ctx, t, n, a)
 	} else {
 		if r.count == r.next {
+			// Overwrite a random existing measurement with the one offered.
 			idx := int(rng.Int63n(int64(cap(r.store))))
 			r.store[idx] = newMeasurement(ctx, t, n, a)
 			r.advance()
