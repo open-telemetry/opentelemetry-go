@@ -2272,3 +2272,112 @@ func TestObservableDropAggregation(t *testing.T) {
 		})
 	}
 }
+
+func TestDuplicateInstrumentCreation(t *testing.T) {
+	for _, tt := range []struct {
+		desc             string
+		createInstrument func(metric.Meter) error
+	}{
+		{
+			desc: "Int64ObservableCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableCounter("observable.int64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64ObservableUpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64ObservableGauge",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64ObservableGauge("observable.int64.gauge")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableCounter("observable.float64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableUpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableUpDownCounter("observable.float64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64ObservableGauge",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64ObservableGauge("observable.float64.gauge")
+				return err
+			},
+		},
+		{
+			desc: "Int64Counter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64Counter("sync.int64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64UpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64UpDownCounter("sync.int64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Int64Histogram",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Int64Histogram("sync.int64.histogram")
+				return err
+			},
+		},
+		{
+			desc: "Float64Counter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64Counter("sync.float64.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64UpDownCounter",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64UpDownCounter("sync.float64.up.down.counter")
+				return err
+			},
+		},
+		{
+			desc: "Float64Histogram",
+			createInstrument: func(meter metric.Meter) error {
+				_, err := meter.Float64Histogram("sync.float64.histogram")
+				return err
+			},
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			reader := NewManualReader()
+			defer func() {
+				require.NoError(t, reader.Shutdown(context.Background()))
+			}()
+
+			m := NewMeterProvider(WithReader(reader)).Meter("TestDuplicateInstrumentCreation")
+			for i := 0; i < 3; i++ {
+				require.NoError(t, tt.createInstrument(m))
+			}
+			internalMeter, ok := m.(*meter)
+			require.True(t, ok)
+			// check that multiple calls to create the same instrument only create 1 instrument
+			numInstruments := len(internalMeter.int64Insts.data) + len(internalMeter.float64Insts.data) + len(internalMeter.int64ObservableInsts.data) + len(internalMeter.float64ObservableInsts.data)
+			require.Equal(t, 1, numInstruments)
+		})
+	}
+}
