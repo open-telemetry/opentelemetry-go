@@ -199,6 +199,20 @@ func TestConfig(t *testing.T) {
 		return exp, coll
 	}
 
+	t.Run("WithEndpointURL", func(t *testing.T) {
+		coll, err := otest.NewGRPCCollector("", nil)
+		require.NoError(t, err)
+		t.Cleanup(coll.Shutdown)
+
+		ctx := context.Background()
+		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
 	t.Run("WithHeaders", func(t *testing.T) {
 		key := "my-custom-header"
 		headers := map[string]string{key: "custom-value"}
