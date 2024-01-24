@@ -36,8 +36,8 @@ func ParseFile(path string) (*Schema, error) {
 
 // Parse parses a Schema read from r.
 //
-// If r contains a Schema with a file format version higher than FileFormat, an
-// error will be returned.
+// If r contains a Schema with a file format version outside FileFormatRange,
+// an error will be returned.
 //
 // If r contains an invalid schema URL an error will be returned.
 func Parse(r io.Reader) (*Schema, error) {

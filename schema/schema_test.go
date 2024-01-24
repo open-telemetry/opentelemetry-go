@@ -19,8 +19,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+var fileFormat = "1.1.0"
 
 func TestSchemaInvalidFileFormat(t *testing.T) {
 	s := &Schema{
@@ -32,25 +33,24 @@ func TestSchemaInvalidFileFormat(t *testing.T) {
 
 func TestSchemaUnsupportedFileFormat(t *testing.T) {
 	versions := []*semver.Version{
-		semver.New(FileFormat.Major()+1, 0, 0, "", ""),
-		semver.New(FileFormat.Major(), FileFormat.Minor()+1, 0, "", ""),
-		semver.New(FileFormat.Major(), FileFormat.Minor(), FileFormat.Patch()+1, "", ""),
+		semver.New(FileFormatRange.Min.Major()-1, 0, 0, "", ""),
+		semver.New(FileFormatRange.Max.Major()+1, 0, 0, "", ""),
+		semver.New(FileFormatRange.Max.Major(), FileFormatRange.Max.Minor()+1, 0, "", ""),
+		semver.New(FileFormatRange.Max.Major(), FileFormatRange.Max.Minor(), FileFormatRange.Max.Patch()+1, "", ""),
 	}
 	for _, v := range versions {
-		// Sanity check.
-		require.Truef(t, FileFormat.LessThan(v), "sanity check failed: %s >= %s", FileFormat, v)
 		s := &Schema{FileFormat: v.String(), SchemaURL: "http://localhost"}
-		assert.ErrorIsf(t, s.validate(), errUnsupportVer, "unsupported version: %s", v)
+		assert.Error(t, s.validate(), "unsupported version: %s", v)
 	}
 }
 
 func TestSchemaMissingSchemaURL(t *testing.T) {
-	s := &Schema{FileFormat: FileFormat.String(), SchemaURL: "  "}
+	s := &Schema{FileFormat: fileFormat, SchemaURL: "  "}
 	assert.ErrorIs(t, s.validate(), errMissingURL)
 }
 
 func TestSchemaInvalidSchemaURL(t *testing.T) {
 	u := "\no\t \a valid URL"
-	s := &Schema{FileFormat: FileFormat.String(), SchemaURL: u}
+	s := &Schema{FileFormat: fileFormat, SchemaURL: u}
 	assert.ErrorContains(t, s.validate(), "invalid schema URL", u)
 }

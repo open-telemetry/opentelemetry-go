@@ -23,9 +23,14 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-// FileFormat is the highest schema file format version this package is
+// FileFormatRange defines the file format version range this package is
 // compatible with.
-var FileFormat = semver.New(1, 1, 0, "", "")
+var FileFormatRange = struct {
+	Min, Max *semver.Version
+}{
+	Min: semver.New(1, 0, 0, "", ""),
+	Max: semver.New(1, 1, 0, "", ""),
+}
 
 // Schema represents an OpenTelemetry [Schema file].
 //
@@ -66,7 +71,7 @@ func (s *Schema) validate() error {
 		return fmt.Errorf("invalid file format version: %q: %w", s.FileFormat, err)
 	}
 
-	if FileFormat.LessThan(ffVer) {
+	if FileFormatRange.Max.LessThan(ffVer) || FileFormatRange.Min.GreaterThan(ffVer) {
 		return fmt.Errorf("%w: %q", errUnsupportVer, ffVer)
 	}
 
