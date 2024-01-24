@@ -642,7 +642,7 @@ for defining log attributes and body.
 However, this would be wrong because [the log attribute definition](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-attributes)
 is different from [the common attribute definition](https://opentelemetry.io/docs/specs/otel/common/#attribute).
 
-Moreover, it there is nothing telling that [the body defintion](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
+Moreover, it there is nothing telling that [the body definition](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
 has anything in common with a common attribute value.
 
 Therefore, we define new types representing the abstract types defined
