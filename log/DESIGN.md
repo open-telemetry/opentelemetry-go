@@ -257,7 +257,7 @@ for reducing the number of allocations when passing attributes.
 The following defintions are implementing the abstractions
 described in [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs):
 
-```
+```go
 type Value struct{}
 
 type Kind int
@@ -355,7 +355,7 @@ as their are tightly coupled with the API and different from common attributes.
 
 The implementation of `Value` is implemntation is based on
 [`slog.Value`](https://pkg.go.dev/log/slog#Value).
-The benchmarks[^7] show that implementation is more performant than
+The benchmarks[^1] show that implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
 The caller must not subsequently mutate the record passed to `Emit`.
@@ -433,7 +433,7 @@ has bridge implementations that handle trace context correlation efficiently.
 
 The benchmarks take inspiration from [`slog`](https://pkg.go.dev/log/slog),
 because for the Go team it was also critical to create API that would be fast
-and interoperable with existing logging packages.[^1][^2]
+and interoperable with existing logging packages.[^2][^3]
 
 The benchmark results can be found in [the prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
 
@@ -464,7 +464,7 @@ The log record resembles the instrument config structs like [metric.Float64Count
 
 Using `struct` instead of `interface` improves the performance as e.g.
 indirect calls are less optimized,
-usage of interfaces tend to increase heap allocations.[^2]
+usage of interfaces tend to increase heap allocations.[^3]
 
 ### Options as parameter to Logger.Emit
 
@@ -482,13 +482,13 @@ to the [Meter API](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
 for creating instruments.
 
 However, passing `Record` directly, instead of using options,
-is more performant as it reduces heap allocations.[^3]
+is more performant as it reduces heap allocations.[^4]
 
 Another advantage of passing `Record` is that API would not have functions like `NewRecord(options...)`,
 which would be used by the SDK and not by the users.
 
 At last, the definition would be similar to [`slog.Handler.Handle`](https://pkg.go.dev/log/slog#Handler)
-that was designed to provide optimization opportunities.[^1]
+that was designed to provide optimization opportunities.[^2]
 
 ### Passing record as pointer to Logger.Emit
 
@@ -532,7 +532,7 @@ The idea was that the SDK would implement the performance improvements
 instead of doing it in the API.
 This would allow having different optimization strategies.
 
-During the analysis[^4], it occurred that the main problem of this proposal
+During the analysis[^5], it occurred that the main problem of this proposal
 is that the variadic slice passed to an interface method is always heap allocated.
 
 Moreover, the logger returned by `WithAttribute` was allocated on the heap.
@@ -541,7 +541,7 @@ At last, the proposal was not specification compliant.
 
 ### Record attributes as slice
 
-One of the proposals[^5] was to have `Record` as a simple struct:
+One of the proposals[^6] was to have `Record` as a simple struct:
 
 ```go
 type Record struct {
@@ -567,7 +567,7 @@ The current design, even in case of improper API implementation,
 has lower  chances of encountering a bug as most bridges would
 create a record, pass it, and forget about it.
 
-For reference, here is the reason why `slog` does not use `sync.Pool`[^2]
+For reference, here is the reason why `slog` does not use `sync.Pool`[^3]
 as well:
 
 > We can use a sync pool for records though we decided not to.
@@ -598,7 +598,7 @@ We could define `Body` as `any` instead of `string`.
 This could result in a more flexible API
 that could support logging libraries which model log records as any objects.
 
-However, using `any` decreases the performance.[^6]
+However, using `any` decreases the performance.[^7]
 
 Additionally, we are not aware of any popular Go logging library
 that uses any objects as log records.
@@ -654,7 +654,7 @@ in the [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-mode
 
 Currently, logs attributes are different from common (resource, trace, metrics) attributes.
 However, there may be a desire to make unify them
-as some languages already use common attributes for defining log attributes.[^8]
+as some languages already use common attributes for defining log attributes.[^7]
 
 ### Other issues
 
@@ -662,11 +662,10 @@ as some languages already use common attributes for defining log attributes.[^8]
 - [Clarify scalar value types in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3836)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
 
-[^1]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
-[^2]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
-[^3]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
-[^4]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
-[^5]: [Record attributes as field and use sync.Pool for reducing allocations analysis](https://github.com/pellared/opentelemetry-go/pull/4)
+[^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
+[^2]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
+[^3]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
+[^4]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
+[^5]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
 [^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
-[^7]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
-[^8]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
+[^7]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
