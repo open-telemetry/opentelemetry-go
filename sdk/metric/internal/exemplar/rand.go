@@ -30,6 +30,33 @@ import (
 // given this is not a security sensitive decision.
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+// random returns, as a float64, a uniform pseudo-random number in the open
+// interval (0.0,1.0).
+func random() float64 {
+	// TODO: This does not return a uniform number. rng.Float64 returns
+	// uniformly random int in [0,2^53) that is divided by 2^53. Meaning it
+	// returns multiples of 2^-53, and not all floating point numbers between 0
+	// and 1 (i.e. for values less than 2^-4 the 4 last bits of the significand
+	// are always going to be 0).
+	//
+	// An alternative algorithm should be considered that will actually return
+	// a uniform number in the interval (0,1). For example, since the default
+	// rand source provides a uniform distribution for Int63, this can be
+	// converted following the prototypical code of Mersenne Twister 64 (Takuji
+	// Nishimura and Makoto Matsumoto:
+	// http://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/VERSIONS/C-LANG/mt19937-64.c)
+	//
+	//   (float64(rng.Int63()>>11) + 0.5) * (1.0 / 4503599627370496.0)
+	//
+	// There are likely many other methods to explore here as well.
+
+	f := rng.Float64()
+	for f == 0 {
+		f = rng.Float64()
+	}
+	return f
+}
+
 // FixedSize returns a [Reservoir] that samples at most n exemplars. If there
 // are n or less measurements made, the Reservoir will sample each one. If
 // there are more than n, the Reservoir will then randomly sample all
@@ -59,9 +86,10 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
 	// 481–493 (https://dl.acm.org/doi/10.1145/198429.198435).
 	//
-	// It is used because of its balance of simplicity and performance. In
-	// particular it has an asymptotic runtime of O(k(1 + log(n/k)) where n is
-	// the number of measurements offered and k is the reservoir size.
+	// This algorithm is used because of its balance of simplicity and
+	// performance. In particular it has an asymptotic runtime of O(k(1 +
+	// log(n/k)) where n is the number of measurements offered and k is the
+	// reservoir size.
 	//
 	// See https://github.com/MrAlias/reservoir-sampling for a comparison of
 	// reservoir sampling algorithms (including performance benchmarks).
@@ -91,7 +119,7 @@ func (r *randRes[N]) reset() {
 	// This is set before r.advance to reset or initialize the random number
 	// series. Without doing so it would always be 0 or never restart a new
 	// random number series.
-	r.w = math.Exp(math.Log(rng.Float64()) / float64(cap(r.store)))
+	r.w = math.Exp(math.Log(random()) / float64(cap(r.store)))
 
 	// Calculate the next random index a measurement will become an exemplar.
 	r.advance()
@@ -100,10 +128,10 @@ func (r *randRes[N]) reset() {
 // advance updates the random number series of r and the next insert index.
 func (r *randRes[N]) advance() {
 	// Next value in the random number series based on the existing r.w.
-	r.w *= math.Exp(math.Log(rng.Float64()) / float64(cap(r.store)))
+	r.w *= math.Exp(math.Log(random()) / float64(cap(r.store)))
 	// Use the new random number in the series to calculate the index of the
 	// next measurement that will be stored.
-	r.next += int64(math.Log(rng.Float64())/math.Log(1-r.w)) + 1
+	r.next += int64(math.Log(random())/math.Log(1-r.w)) + 1
 }
 
 func (r *randRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
