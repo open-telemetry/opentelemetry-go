@@ -33,7 +33,7 @@ var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 // random returns, as a float64, a uniform pseudo-random number in the open
 // interval (0.0,1.0).
 func random() float64 {
-	// TODO: This does not return a uniform number. rng.Float64 returns
+	// TODO: This does not return a uniform number. rng.Float64 returns a
 	// uniformly random int in [0,2^53) that is divided by 2^53. Meaning it
 	// returns multiples of 2^-53, and not all floating point numbers between 0
 	// and 1 (i.e. for values less than 2^-4 the 4 last bits of the significand
