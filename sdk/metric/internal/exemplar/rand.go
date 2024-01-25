@@ -57,12 +57,12 @@ func random() float64 {
 	return f
 }
 
-// FixedSize returns a [Reservoir] that samples at most n exemplars. If there
-// are n or less measurements made, the Reservoir will sample each one. If
-// there are more than n, the Reservoir will then randomly sample all
+// FixedSize returns a [Reservoir] that samples at most k exemplars. If there
+// are k or less measurements made, the Reservoir will sample each one. If
+// there are more than k, the Reservoir will then randomly sample all
 // additional measurement with a decreasing probability.
-func FixedSize[N int64 | float64](n int) Reservoir[N] {
-	r := &randRes[N]{storage: newStorage[N](n)}
+func FixedSize[N int64 | float64](k int) Reservoir[N] {
+	r := &randRes[N]{storage: newStorage[N](k)}
 	r.reset()
 	return r
 }
@@ -86,13 +86,41 @@ func (r *randRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
 	// 481–493 (https://dl.acm.org/doi/10.1145/198429.198435).
 	//
-	// This algorithm is used because of its balance of simplicity and
-	// performance. In particular it has an asymptotic runtime of O(k(1 +
-	// log(n/k)) where n is the number of measurements offered and k is the
-	// reservoir size.
+	// A high-level overview of "Algorithm L":
+	//   0) Pre-calculate the random count greater than the storage size when
+	//      an exemplar will be replaced.
+	//   1) Accept all measurements offered until the configured storage size is
+	//      reached.
+	//   2) Loop:
+	//      a) When the pre-calculate count is reached, replace a random
+	//         existing exemplar with the offered measurement.
+	//      b) Calculate the next random count greater than the existing one
+	//         which will replace another exemplars
 	//
-	// See https://github.com/MrAlias/reservoir-sampling for a comparison of
-	// reservoir sampling algorithms (including performance benchmarks).
+	// The way a "replacement" count is computed is by looking at `n` number of
+	// independent random numbers each corresponding to an offered measurement.
+	// Of these numbers the smallest `k` (the same size as the storage
+	// capacity) of them are kept as a subset. The maximum value in this
+	// subset, called `w` is used to weight another random number generation
+	// for the next count that will be considered.
+	//
+	// By weighting the next count computation like described, it is able to
+	// perform a uniformly-weighted sampling algorithm based on the number of
+	// samples the reservoir has seen so far. The sampling will "slow down" as
+	// more and more samples are offered so as to reduce a bias towards those
+	// offered just prior to the end of the collection.
+	//
+	// This algorithm is preferred because of its balance of simplicity and
+	// performance. It will compute three random numbers (the bulk of
+	// computation time) for each item that becomes part of the reservoir, but
+	// it does not spend any time on items that do not. In particular it has an
+	// asymptotic runtime of O(k(1 + log(n/k)) where n is the number of
+	// measurements offered and k is the reservoir size.
+	//
+	// See https://en.wikipedia.org/wiki/Reservoir_sampling for an overview of
+	// this and other reservoir sampling algorithms. See
+	// https://github.com/MrAlias/reservoir-sampling for a performance
+	// comparison of reservoir sampling algorithms.
 
 	if int(r.count) < cap(r.store) {
 		r.store[r.count] = newMeasurement(ctx, t, n, a)
@@ -119,18 +147,41 @@ func (r *randRes[N]) reset() {
 	// This is set before r.advance to reset or initialize the random number
 	// series. Without doing so it would always be 0 or never restart a new
 	// random number series.
+	//
+	// This maps the uniform random number in (0,1) to a geometric distribution
+	// over the same interval. The mean of the distribution is inversely
+	// proportional to the storage capacity.
 	r.w = math.Exp(math.Log(random()) / float64(cap(r.store)))
 
-	// Calculate the next random index a measurement will become an exemplar.
 	r.advance()
 }
 
-// advance updates the random number series of r and the next insert index.
+// advance updates the count at which the offered measurement will overwrite an
+// existing exemplar.
 func (r *randRes[N]) advance() {
-	// Next value in the random number series based on the existing r.w.
+	// Calculate the next value in the random number series.
+	//
+	// The current value of r.w is based on the max of a distribution of random
+	// numbers (i.e. `w = max(u_1,u_2,...,u_k)` for `k` equal to the capacity
+	// of the storage and each `u` in the interval (0,w)). To calculate the
+	// next r.w we use the fact that when the next exemplar is selected to be
+	// included in the storage an existing one will be dropped, and the
+	// corresponding random number in the set used to calculate r.w will also
+	// be replaced. The replacement random number will also be within (0,w),
+	// therefore the next r.w will be based on the same distribution (i.e.
+	// `max(u_1,u_2,...,u_k)`). Therefore, we can sample the next r.w by
+	// computing the next random number `u` and take r.w as `w * u^(1/k)`.
 	r.w *= math.Exp(math.Log(random()) / float64(cap(r.store)))
-	// Use the new random number in the series to calculate the index of the
+	// Use the new random number in the series to calculate the count of the
 	// next measurement that will be stored.
+	//
+	// Given 0 < r.w < 1, each iteration will result in subsequent r.w being
+	// smaller. This translates here into the next next being being selected
+	// against a distribution with a higher mean (i.e. the expected value will
+	// increase and replacements become less likely)
+	//
+	// Important to note, the new r.next will always be at least 1 more than
+	// the last r.next.
 	r.next += int64(math.Log(random())/math.Log(1-r.w)) + 1
 }
 
