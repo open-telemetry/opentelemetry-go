@@ -39,9 +39,7 @@ func run() (err error) {
 	defer stop()
 
 	// Set up OpenTelemetry.
-	serviceName := "dice"
-	serviceVersion := "0.1.0"
-	otelShutdown, err := setupOTelSDK(ctx, serviceName, serviceVersion)
+	otelShutdown, err := setupOTelSDK(ctx)
 	if err != nil {
 		return
 	}
