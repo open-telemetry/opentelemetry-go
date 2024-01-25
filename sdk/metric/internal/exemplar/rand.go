@@ -176,9 +176,9 @@ func (r *randRes[N]) advance() {
 	// next measurement that will be stored.
 	//
 	// Given 0 < r.w < 1, each iteration will result in subsequent r.w being
-	// smaller. This translates here into the next next being being selected
-	// against a distribution with a higher mean (i.e. the expected value will
-	// increase and replacements become less likely)
+	// smaller. This translates here into the next next being selected against
+	// a distribution with a higher mean (i.e. the expected value will increase
+	// and replacements become less likely)
 	//
 	// Important to note, the new r.next will always be at least 1 more than
 	// the last r.next.
