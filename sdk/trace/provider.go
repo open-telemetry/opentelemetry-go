@@ -233,11 +233,13 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 		}
 	}
 	if stopOnce != nil {
-		stopOnce.state.Do(func() {
-			if err := sp.Shutdown(context.Background()); err != nil {
-				otel.Handle(err)
-			}
-		})
+		stopOnce.state.Do(
+			func() {
+				if err := sp.Shutdown(context.Background()); err != nil {
+					otel.Handle(err)
+				}
+			},
+		)
 	}
 	if len(spss) > 1 {
 		copy(spss[idx:], spss[idx+1:])
@@ -294,9 +296,11 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		}
 
 		var err error
-		sps.state.Do(func() {
-			err = sps.sp.Shutdown(ctx)
-		})
+		sps.state.Do(
+			func() {
+				err = sps.sp.Shutdown(ctx)
+			},
+		)
 		if err != nil {
 			if retErr == nil {
 				retErr = err
@@ -345,10 +349,12 @@ func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProvide
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
 func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.processors = append(cfg.processors, sp)
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			cfg.processors = append(cfg.processors, sp)
+			return cfg
+		},
+	)
 }
 
 // WithResource returns a TracerProviderOption that will configure the
@@ -359,14 +365,29 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // If this option is not used, the TracerProvider will use the
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		var err error
-		cfg.resource, err = resource.Merge(resource.Environment(), r)
-		if err != nil {
-			otel.Handle(err)
-		}
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			var err error
+			cfg.resource, err = resource.Merge(resource.Environment(), r)
+			if err != nil {
+				otel.Handle(err)
+			}
+			return cfg
+		},
+	)
+}
+
+func WithEntity(r *resource.Resource) TracerProviderOption {
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			var err error
+			cfg.resource, err = resource.Merge(resource.Environment(), r)
+			if err != nil {
+				otel.Handle(err)
+			}
+			return cfg
+		},
+	)
 }
 
 // WithIDGenerator returns a TracerProviderOption that will configure the
@@ -377,12 +398,14 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 // If this option is not used, the TracerProvider will use a random number
 // IDGenerator by default.
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		if g != nil {
-			cfg.idGenerator = g
-		}
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			if g != nil {
+				cfg.idGenerator = g
+			}
+			return cfg
+		},
+	)
 }
 
 // WithSampler returns a TracerProviderOption that will configure the Sampler
@@ -396,12 +419,14 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 // contains invalid/unsupported configuration, the TracerProvider will use a
 // ParentBased(AlwaysSample) Sampler by default.
 func WithSampler(s Sampler) TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		if s != nil {
-			cfg.sampler = s
-		}
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			if s != nil {
+				cfg.sampler = s
+			}
+			return cfg
+		},
+	)
 }
 
 // WithSpanLimits returns a TracerProviderOption that configures a
@@ -438,10 +463,12 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	if sl.AttributePerLinkCountLimit <= 0 {
 		sl.AttributePerLinkCountLimit = DefaultAttributePerLinkCountLimit
 	}
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.spanLimits = sl
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			cfg.spanLimits = sl
+			return cfg
+		},
+	)
 }
 
 // WithRawSpanLimits returns a TracerProviderOption that configures a
@@ -460,10 +487,12 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // limits defined by environment variables, or the defaults if unset. Refer to
 // the NewSpanLimits documentation for information about this relationship.
 func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.spanLimits = limits
-		return cfg
-	})
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			cfg.spanLimits = limits
+			return cfg
+		},
+	)
 }
 
 func applyTracerProviderEnvConfigs(cfg tracerProviderConfig) tracerProviderConfig {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+package entity // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
 	"context"
@@ -23,61 +23,33 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-type Entity struct {
-	// Defines the producing entity type of this resource, e.g "service", "k8s.pod", etc.
-	// Empty for legacy Resources that are not entity-aware.
-	typ string
-	// Set of attributes that identify the producing entity.
-	// Note that the identifying attributes may be also recorded in the "attributes" field.
-	id attribute.Set
-}
-
-func (e *Entity) Type() string {
-	return e.typ
-}
-
-func (e *Entity) IdIter() attribute.Iterator {
-	return e.id.Iter()
-}
-
-// Resource describes an entity about which identifying information
-// and metadata is exposed.  Resource is an immutable object,
+// Entity describes an entity about which identifying information
+// and metadata is exposed.  Entity is an immutable object,
 // equivalent to a map from key to unique value.
 //
 // Resources should be passed and stored as pointers
-// (`*resource.Resource`).  The `nil` value is equivalent to an empty
-// Resource.
-type Resource struct {
+// (`*resource.Entity`).  The `nil` value is equivalent to an empty
+// Entity.
+type Entity struct {
 	attrs     attribute.Set
 	schemaURL string
-
-	entity Entity
 }
 
 var (
-	defaultResource     *Resource
+	defaultResource     *Entity
 	defaultResourceOnce sync.Once
 )
 
 var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
 
-// New returns a Resource combined from the user-provided detectors.
-func New(ctx context.Context, opts ...Option) (*Resource, error) {
+// New returns a Entity combined from the user-provided detectors.
+func New(ctx context.Context, opts ...Option) (*Entity, error) {
 	cfg := config{}
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
 	}
 
-	entityId, _ := attribute.NewSetWithFiltered(
-		cfg.entityId, func(kv attribute.KeyValue) bool {
-			return kv.Valid()
-		},
-	)
-
-	r := &Resource{
-		schemaURL: cfg.schemaURL,
-		entity:    Entity{typ: cfg.entityType, id: entityId},
-	}
+	r := &Entity{schemaURL: cfg.schemaURL}
 	return r, detect(ctx, r, cfg.detectors)
 }
 
@@ -85,35 +57,10 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 // schema URL. If attrs contains duplicate keys, the last value will be used. If attrs
 // contains any invalid items those items will be dropped. The attrs are assumed to be
 // in a schema identified by schemaURL.
-func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource {
+func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Entity {
 	resource := NewSchemaless(attrs...)
 	resource.schemaURL = schemaURL
 	return resource
-}
-
-// NewSchemaless creates a resource from attrs. If attrs contains duplicate keys,
-// the last value will be used. If attrs contains any invalid items those items will
-// be dropped. The resource will not be associated with a schema URL. If the schema
-// of the attrs is known use NewWithAttributes instead.
-func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
-	if len(attrs) == 0 {
-		return &Resource{}
-	}
-
-	// Ensure attributes comply with the specification:
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
-	s, _ := attribute.NewSetWithFiltered(
-		attrs, func(kv attribute.KeyValue) bool {
-			return kv.Valid()
-		},
-	)
-
-	// If attrs only contains invalid entries do not allocate a new resource.
-	if s.Len() == 0 {
-		return &Resource{}
-	}
-
-	return &Resource{attrs: s} //nolint
 }
 
 // String implements the Stringer interface and provides a
@@ -121,15 +68,15 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 //
 // Avoid using this representation as the key in a map of resources,
 // use Equivalent() as the key instead.
-func (r *Resource) String() string {
+func (r *Entity) String() string {
 	if r == nil {
 		return ""
 	}
 	return r.attrs.Encoded(attribute.DefaultEncoder())
 }
 
-// MarshalLog is the marshaling function used by the logging system to represent this Resource.
-func (r *Resource) MarshalLog() interface{} {
+// MarshalLog is the marshaling function used by the logging system to represent this Entity.
+func (r *Entity) MarshalLog() interface{} {
 	return struct {
 		Attributes attribute.Set
 		SchemaURL  string
@@ -141,39 +88,23 @@ func (r *Resource) MarshalLog() interface{} {
 
 // Attributes returns a copy of attributes from the resource in a sorted order.
 // To avoid allocating a new slice, use an iterator.
-func (r *Resource) Attributes() []attribute.KeyValue {
+func (r *Entity) Attributes() []attribute.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
 	return r.attrs.ToSlice()
 }
 
-// SchemaURL returns the schema URL associated with Resource r.
-func (r *Resource) SchemaURL() string {
+// SchemaURL returns the schema URL associated with Entity r.
+func (r *Entity) SchemaURL() string {
 	if r == nil {
 		return ""
 	}
 	return r.schemaURL
 }
 
-func (r *Resource) Entity() Entity {
-	if r == nil {
-		return Entity{}
-	}
-	return r.entity
-}
-
-// Iter returns an iterator of the Resource attributes.
-// This is ideal to use if you do not want a copy of the attributes.
-func (r *Resource) Iter() attribute.Iterator {
-	if r == nil {
-		r = Empty()
-	}
-	return r.attrs.Iter()
-}
-
-// Equal returns true when a Resource is equivalent to this Resource.
-func (r *Resource) Equal(eq *Resource) bool {
+// Equal returns true when a Entity is equivalent to this Entity.
+func (r *Entity) Equal(eq *Entity) bool {
 	if r == nil {
 		r = Empty()
 	}
@@ -193,7 +124,7 @@ func (r *Resource) Equal(eq *Resource) bool {
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 // If the resources have different non-empty schemaURL an empty resource and an error
 // will be returned.
-func Merge(a, b *Resource) (*Resource, error) {
+func Merge(a, b *Entity) (*Entity, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
 	}
@@ -228,15 +159,15 @@ func Merge(a, b *Resource) (*Resource, error) {
 	return merged, nil
 }
 
-// Empty returns an instance of Resource with no attributes. It is
-// equivalent to a `nil` Resource.
-func Empty() *Resource {
-	return &Resource{}
+// Empty returns an instance of Entity with no attributes. It is
+// equivalent to a `nil` Entity.
+func Empty() *Entity {
+	return &Entity{}
 }
 
-// Default returns an instance of Resource with a default
+// Default returns an instance of Entity with a default
 // "service.name" and OpenTelemetrySDK attributes.
-func Default() *Resource {
+func Default() *Entity {
 	defaultResourceOnce.Do(
 		func() {
 			var err error
@@ -251,16 +182,16 @@ func Default() *Resource {
 			}
 			// If Detect did not return a valid resource, fall back to emptyResource.
 			if defaultResource == nil {
-				defaultResource = &Resource{}
+				defaultResource = &Entity{}
 			}
 		},
 	)
 	return defaultResource
 }
 
-// Environment returns an instance of Resource with attributes
+// Environment returns an instance of Entity with attributes
 // extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
-func Environment() *Resource {
+func Environment() *Entity {
 	detector := &fromEnv{}
 	resource, err := detector.Detect(context.Background())
 	if err != nil {
@@ -272,37 +203,21 @@ func Environment() *Resource {
 // Equivalent returns an object that can be compared for equality
 // between two resources. This value is suitable for use as a key in
 // a map.
-func (r *Resource) Equivalent() attribute.Distinct {
+func (r *Entity) Equivalent() attribute.Distinct {
 	return r.Set().Equivalent()
-}
-
-// Set returns the equivalent *attribute.Set of this resource's attributes.
-func (r *Resource) Set() *attribute.Set {
-	if r == nil {
-		r = Empty()
-	}
-	return &r.attrs
 }
 
 // MarshalJSON encodes the resource attributes as a JSON list of { "Key":
 // "...", "Value": ... } pairs in order sorted by key.
-func (r *Resource) MarshalJSON() ([]byte, error) {
+func (r *Entity) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		r = Empty()
 	}
 	return r.attrs.MarshalJSON()
 }
 
-// Len returns the number of unique key-values in this Resource.
-func (r *Resource) Len() int {
-	if r == nil {
-		return 0
-	}
-	return r.attrs.Len()
-}
-
 // Encoded returns an encoded representation of the resource.
-func (r *Resource) Encoded(enc attribute.Encoder) string {
+func (r *Entity) Encoded(enc attribute.Encoder) string {
 	if r == nil {
 		return ""
 	}

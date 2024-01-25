@@ -26,6 +26,9 @@ type config struct {
 	detectors []Detector
 	// SchemaURL to associate with the Resource.
 	schemaURL string
+
+	entityType string
+	entityId   []attribute.KeyValue
 }
 
 // Option is the interface that applies a configuration option.
@@ -90,6 +93,22 @@ type schemaURLOption string
 
 func (o schemaURLOption) apply(cfg config) config {
 	cfg.schemaURL = string(o)
+	return cfg
+}
+
+// WithEntity sets the schema URL for the configured resource.
+func WithEntity(entityType string, entityId ...attribute.KeyValue) Option {
+	return entityOption{entityType, entityId}
+}
+
+type entityOption struct {
+	entityType string
+	entityId   []attribute.KeyValue
+}
+
+func (o entityOption) apply(cfg config) config {
+	cfg.entityType = o.entityType
+	cfg.entityId = o.entityId
 	return cfg
 }
 
