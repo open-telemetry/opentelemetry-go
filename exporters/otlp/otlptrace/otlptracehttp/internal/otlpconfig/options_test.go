@@ -101,6 +101,42 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("http://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "/somepath", c.Traces.URLPath)
+				assert.Equal(t, true, c.Traces.Insecure)
+			},
+		},
+		{
+			name: "Test With Secure Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "/somepath", c.Traces.URLPath)
+				assert.Equal(t, false, c.Traces.Insecure)
+			},
+		},
+		{
+			name: "Test With Invalid Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("%invalid"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "localhost:4317", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "localhost:4318", c.Traces.Endpoint)
+				}
+				assert.Equal(t, "/v1/traces", c.Traces.URLPath)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",

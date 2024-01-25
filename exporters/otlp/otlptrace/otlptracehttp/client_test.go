@@ -51,14 +51,19 @@ var (
 
 func TestEndToEnd(t *testing.T) {
 	tests := []struct {
-		name  string
-		opts  []otlptracehttp.Option
-		mcCfg mockCollectorConfig
-		tls   bool
+		name            string
+		opts            []otlptracehttp.Option
+		mcCfg           mockCollectorConfig
+		tls             bool
+		withURLEndpoint bool
 	}{
 		{
 			name: "no extra options",
 			opts: nil,
+		},
+		{
+			name:            "with URL endpoint",
+			withURLEndpoint: true,
 		},
 		{
 			name: "with gzip compression",
@@ -162,8 +167,12 @@ func TestEndToEnd(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mc := runMockCollector(t, tc.mcCfg)
 			defer mc.MustStop(t)
-			allOpts := []otlptracehttp.Option{
-				otlptracehttp.WithEndpoint(mc.Endpoint()),
+			allOpts := []otlptracehttp.Option{}
+
+			if tc.withURLEndpoint {
+				allOpts = append(allOpts, otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()))
+			} else {
+				allOpts = append(allOpts, otlptracehttp.WithEndpoint(mc.Endpoint()))
 			}
 			if tc.tls {
 				tlsConfig := mc.ClientTLSConfig()
