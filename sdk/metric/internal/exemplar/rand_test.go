@@ -39,7 +39,7 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
-		data[i] = (-1.0 / intensity) * math.Log(rng.Float64())
+		data[i] = (-1.0 / intensity) * math.Log(random())
 	}
 	// Sort to avoid position bias.
 	sort.Float64s(data)
