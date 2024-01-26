@@ -58,5 +58,5 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
-	assert.InDelta(t, 1/mean, intensity, 0.01)
+	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
 }
