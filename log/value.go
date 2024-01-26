@@ -5,6 +5,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:generate stringer -type=Kind -trimprefix=Kind
+
 package log // import "go.opentelemetry.io/otel/log"
 
 import (
@@ -49,25 +51,7 @@ const (
 	KindMap
 )
 
-var kindStrings = []string{
-	"Empty",
-	"Bool",
-	"Float64",
-	"Int64",
-	"String",
-	"Bytes",
-	"List",
-	"Map",
-}
-
 var emptyString = []byte("<nil>")
-
-func (k Kind) String() string {
-	if k >= 0 && int(k) < len(kindStrings) {
-		return kindStrings[k]
-	}
-	return "<unknown log.Kind>"
-}
 
 // Kind returns v's Kind.
 func (v Value) Kind() Kind {
