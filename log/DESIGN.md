@@ -291,21 +291,21 @@ func ListValue(vs ...Value) Value
 
 func MapValue(kvs ...KeyValue) Value
 
-func (v Value) Any() any
+func (v Value) AsAny() any
 
-func (v Value) String() string
+func (v Value) AsString() string
 
-func (v Value) Int64() int64
+func (v Value) AsInt64() int64
 
-func (v Value) Bool() bool
+func (v Value) AsBool() bool
 
-func (v Value) Float64() float64
+func (v Value) AsFloat64() float64
 
-func (v Value) Bytes() []byte
+func (v Value) AsBytes() []byte
 
-func (v Value) List() []Value
+func (v Value) AsList() []Value
 
-func (v Value) Map() []KeyValue 
+func (v Value) AsMap() []KeyValue 
 
 func (v Value) Empty() bool
 
@@ -353,9 +353,11 @@ func (a KeyValue) Equal(b KeyValue) bool
 These types are defined in `go.opentelemetry.io/otel/log` package
 as their are tightly coupled with the API and different from common attributes.
 
-The implementation of `Value` is implemntation is based on
-[`slog.Value`](https://pkg.go.dev/log/slog#Value).
-The benchmarks[^1] show that implementation is more performant than
+The internal implementation of `Value` is based on
+[`slog.Value`](https://pkg.go.dev/log/slog#Value)
+and the API is mostly inspired by
+[`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
+The benchmarks[^1] show that the implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
 The caller must not subsequently mutate the record passed to `Emit`.
