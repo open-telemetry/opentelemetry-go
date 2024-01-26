@@ -134,8 +134,8 @@ func MapValue(kvs ...KeyValue) Value {
 	return Value{num: uint64(len(kvs)), any: mapptr(unsafe.SliceData(kvs))}
 }
 
-// Any returns v's value as an any.
-func (v Value) Any() any {
+// AsAny returns v's value as an any.
+func (v Value) AsAny() any {
 	switch v.Kind() {
 	case KindMap:
 		return v.mapValue()
@@ -158,33 +158,31 @@ func (v Value) Any() any {
 	}
 }
 
-// String returns Value's value as a string, formatted like [fmt.Sprint]. Unlike
-// the methods Int64, Float64, and so on, which panic if v is of the
-// wrong kind, String never panics.
-func (v Value) String() string {
+// AsString returns Value's value as a string, formatted like [fmt.Sprint]. It panics
+// if v is not a string.
+func (v Value) AsString() string {
 	if sp, ok := v.any.(stringptr); ok {
 		return unsafe.String(sp, v.num)
 	}
-	var buf []byte
-	return string(v.append(buf))
+	panic("AsString: bad kind")
 }
 
 func (v Value) str() string {
 	return unsafe.String(v.any.(stringptr), v.num)
 }
 
-// Int64 returns v's value as an int64. It panics
+// AsInt64 returns v's value as an int64. It panics
 // if v is not a signed integer.
-func (v Value) Int64() int64 {
+func (v Value) AsInt64() int64 {
 	if g, w := v.Kind(), KindInt64; g != w {
 		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
 	}
 	return int64(v.num)
 }
 
-// Bool returns v's value as a bool. It panics
+// AsBool returns v's value as a bool. It panics
 // if v is not a bool.
-func (v Value) Bool() bool {
+func (v Value) AsBool() bool {
 	if g, w := v.Kind(), KindBool; g != w {
 		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
 	}
@@ -195,9 +193,9 @@ func (v Value) bool() bool {
 	return v.num == 1
 }
 
-// Float64 returns v's value as a float64. It panics
+// AsFloat64 returns v's value as a float64. It panics
 // if v is not a float64.
-func (v Value) Float64() float64 {
+func (v Value) AsFloat64() float64 {
 	if g, w := v.Kind(), KindFloat64; g != w {
 		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
 	}
@@ -209,39 +207,39 @@ func (v Value) float() float64 {
 	return math.Float64frombits(v.num)
 }
 
-// Map returns v's value as a []byte.
+// AsBytes returns v's value as a []byte.
 // It panics if v's [Kind] is not [KindBytes].
-func (v Value) Bytes() []byte {
+func (v Value) AsBytes() []byte {
 	if sp, ok := v.any.(bytesptr); ok {
 		return unsafe.Slice((*byte)(sp), v.num)
 	}
-	panic("Bytes: bad kind")
+	panic("AsBytes: bad kind")
 }
 
 func (v Value) bytes() []byte {
 	return unsafe.Slice((*byte)(v.any.(bytesptr)), v.num)
 }
 
-// List returns v's value as a []Value.
+// AsList returns v's value as a []Value.
 // It panics if v's [Kind] is not [KindList].
-func (v Value) List() []Value {
+func (v Value) AsList() []Value {
 	if sp, ok := v.any.(listptr); ok {
 		return unsafe.Slice((*Value)(sp), v.num)
 	}
-	panic("List: bad kind")
+	panic("AsList: bad kind")
 }
 
 func (v Value) list() []Value {
 	return unsafe.Slice((*Value)(v.any.(listptr)), v.num)
 }
 
-// Map returns v's value as a []KeyValue.
+// AsMap returns v's value as a []KeyValue.
 // It panics if v's [Kind] is not [KindMap].
-func (v Value) Map() []KeyValue {
+func (v Value) AsMap() []KeyValue {
 	if sp, ok := v.any.(mapptr); ok {
 		return unsafe.Slice((*KeyValue)(sp), v.num)
 	}
-	panic("Map: bad kind")
+	panic("AsMap: bad kind")
 }
 
 func (v Value) mapValue() []KeyValue {
@@ -278,6 +276,17 @@ func (v Value) Equal(w Value) bool {
 	default:
 		panic(fmt.Sprintf("bad kind: %s", k1))
 	}
+}
+
+// String returns Value's value as a string, formatted like [fmt.Sprint]. Unlike
+// the methods Int64, Float64, and so on, which panic if v is of the
+// wrong kind, String never panics.
+func (v Value) String() string {
+	if sp, ok := v.any.(stringptr); ok {
+		return unsafe.String(sp, v.num)
+	}
+	var buf []byte
+	return string(v.append(buf))
 }
 
 // append appends a text representation of v to dst.

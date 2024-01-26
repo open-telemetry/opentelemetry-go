@@ -56,17 +56,17 @@ func (l *writerLogger) Emit(ctx context.Context, r log.Record) {
 func (l *writerLogger) appendValue(v log.Value) {
 	switch v.Kind() {
 	case log.KindString:
-		l.write(v.String())
+		l.write(v.AsString())
 	case log.KindInt64:
-		l.write(strconv.FormatInt(v.Int64(), 10)) // strconv.FormatInt allocates memory.
+		l.write(strconv.FormatInt(v.AsInt64(), 10)) // strconv.FormatInt allocates memory.
 	case log.KindFloat64:
-		l.write(strconv.FormatFloat(v.Float64(), 'g', -1, 64)) // strconv.FormatFloat allocates memory.
+		l.write(strconv.FormatFloat(v.AsFloat64(), 'g', -1, 64)) // strconv.FormatFloat allocates memory.
 	case log.KindBool:
-		l.write(strconv.FormatBool(v.Bool()))
+		l.write(strconv.FormatBool(v.AsBool()))
 	case log.KindBytes:
-		l.write(fmt.Sprint(v.Bytes()))
+		l.write(fmt.Sprint(v.AsBytes()))
 	case log.KindMap:
-		l.write(fmt.Sprint(v.Map()))
+		l.write(fmt.Sprint(v.AsMap()))
 	case log.KindEmpty:
 		l.write("<nil>")
 	default:

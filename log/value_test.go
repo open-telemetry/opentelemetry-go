@@ -76,11 +76,11 @@ func TestValueNoAlloc(t *testing.T) {
 	)
 	bytes := []byte{1, 3, 4}
 	a := int(testing.AllocsPerRun(5, func() {
-		i = Int64Value(1).Int64()
-		f = Float64Value(1).Float64()
-		b = BoolValue(true).Bool()
-		by = BytesValue(bytes).Bytes()
-		s = StringValue("foo").String()
+		i = Int64Value(1).AsInt64()
+		f = Float64Value(1).AsFloat64()
+		b = BoolValue(true).AsBool()
+		by = BytesValue(bytes).AsBytes()
+		s = StringValue("foo").AsString()
 	}))
 	assert.Zero(t, a)
 	_ = i
@@ -101,11 +101,11 @@ func TestKeyValueNoAlloc(t *testing.T) {
 	)
 	bytes := []byte{1, 3, 4}
 	a := int(testing.AllocsPerRun(5, func() {
-		i = Int64("key", 1).Value.Int64()
-		f = Float64("key", 1).Value.Float64()
-		b = Bool("key", true).Value.Bool()
-		by = Bytes("key", bytes).Value.Bytes()
-		s = String("key", "foo").Value.String()
+		i = Int64("key", 1).Value.AsInt64()
+		f = Float64("key", 1).Value.AsFloat64()
+		b = Bool("key", true).Value.AsBool()
+		by = Bytes("key", bytes).Value.AsBytes()
+		s = String("key", "foo").Value.AsString()
 	}))
 	assert.Zero(t, a)
 	_ = i
@@ -130,20 +130,20 @@ func TestValueAny(t *testing.T) {
 		{[]KeyValue{Int("i", 3)}, MapValue(Int("i", 3))},
 		{nil, Value{}},
 	} {
-		got := test.in.Any()
+		got := test.in.AsAny()
 		assert.Equal(t, test.want, got)
 	}
 }
 
 func TestEmptyMap(t *testing.T) {
 	g := Map("g")
-	got := g.Value.Map()
+	got := g.Value.AsMap()
 	assert.Nil(t, got)
 }
 
 func TestEmptyList(t *testing.T) {
 	l := ListValue()
-	got := l.List()
+	got := l.AsList()
 	assert.Nil(t, got)
 }
 
@@ -153,7 +153,7 @@ func TestMapValueWithEmptyMaps(t *testing.T) {
 		Int("a", 1),
 		Map("g1", Map("g2")),
 		Map("g3", Map("g4", Int("b", 2))))
-	got := g.Map()
+	got := g.AsMap()
 	want := []KeyValue{Int("a", 1), Map("g1", Map("g2")), Map("g3", Map("g4", Int("b", 2)))}
 	assert.Equal(t, want, got)
 }
@@ -161,7 +161,7 @@ func TestMapValueWithEmptyMaps(t *testing.T) {
 func TestListValueWithEmptyValues(t *testing.T) {
 	// Preserve empty values.
 	l := ListValue(Value{})
-	got := l.List()
+	got := l.AsList()
 	want := []Value{{}}
 	assert.Equal(t, want, got)
 }
@@ -184,7 +184,7 @@ func BenchmarkUnsafeStrings(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		copy(dst, src)
 		for _, a := range dst {
-			d = a.String()
+			d = a.AsString()
 		}
 	}
 	_ = d

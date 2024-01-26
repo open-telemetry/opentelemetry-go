@@ -28,7 +28,7 @@ func TestSlogHandler(t *testing.T) {
 	assert.Equal(t, 1, spy.Record.AttributesLen())
 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
 		assert.Equal(t, "string", string(kv.Key))
-		assert.Equal(t, testString, kv.Value.String())
+		assert.Equal(t, testString, kv.Value.AsString())
 		return true
 	})
 }
