@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Dice is the "Roll the dice" application.
-//
-// [Getting Started] uses this example to demonstrate OpenTelemetry Go.
-//
-// [Getting Started]: https://opentelemetry.io/docs/languages/net/automatic/getting-started/
-package main
+package exemplar
+
+import (
+	"testing"
+)
+
+func TestDrop(t *testing.T) {
+	t.Run("Int64", ReservoirTest[int64](func(int) (Reservoir[int64], int) {
+		return Drop[int64](), 0
+	}))
+
+	t.Run("Float64", ReservoirTest[float64](func(int) (Reservoir[float64], int) {
+		return Drop[float64](), 0
+	}))
+}
