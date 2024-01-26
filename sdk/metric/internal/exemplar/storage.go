@@ -44,7 +44,7 @@ func (r *storage[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for _, m := range r.store {
-		if !m.Valid() {
+		if !m.valid {
 			continue
 		}
 
@@ -62,7 +62,7 @@ func (r *storage[N]) Flush(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
 	for i, m := range r.store {
-		if !m.Valid() {
+		if !m.valid {
 			continue
 		}
 
@@ -99,10 +99,6 @@ func newMeasurement[N int64 | float64](ctx context.Context, ts time.Time, v N, d
 		valid:              true,
 	}
 }
-
-// Valid returns true if m represents a measurement made by a telemetry
-// system (created with newMeasurement), otherwise it returns false.
-func (m measurement[N]) Valid() bool { return m.valid }
 
 // Exemplar returns m as a [metricdata.Exemplar].
 func (m measurement[N]) Exemplar(dest *metricdata.Exemplar[N]) {
