@@ -170,6 +170,8 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	assert.Zero(t, errs)
 	assert.Equal(t, r1Attrs, attrsSlice(r1), "r1 is unchanged")
 	assert.Equal(t, append(r1Attrs, Int("p", 2)), attrsSlice(r3))
+	r3.SetSeverity(SeverityDebug)
+	assert.NotEqual(t, r3.Severity(), r1.Severity(), "r1 is unchanged")
 }
 
 func attrsSlice(r Record) []KeyValue {

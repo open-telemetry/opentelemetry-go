@@ -43,7 +43,7 @@ type Record struct {
 const attributesInlineCount = 5
 
 // Timestamp returns the time when the log record occurred.
-func (r Record) Timestamp() time.Time {
+func (r *Record) Timestamp() time.Time {
 	return r.timestamp
 }
 
@@ -54,7 +54,7 @@ func (r *Record) SetTimestamp(t time.Time) {
 
 // ObservedTimestamp returns the time when the log record was observed.
 // If unset the implementation should set it equal to the current time.
-func (r Record) ObservedTimestamp() time.Time {
+func (r *Record) ObservedTimestamp() time.Time {
 	return r.observedTimestamp
 }
 
@@ -65,7 +65,7 @@ func (r *Record) SetObservedTimestamp(t time.Time) {
 }
 
 // Severity returns the [Severity] of the log record.
-func (r Record) Severity() Severity {
+func (r *Record) Severity() Severity {
 	return r.severity
 }
 
@@ -78,7 +78,7 @@ func (r *Record) SetSeverity(s Severity) {
 // SeverityText returns severity (also known as log level) text.
 // This is the original string representation of the severity
 // as it is known at the source.
-func (r Record) SeverityText() string {
+func (r *Record) SeverityText() string {
 	return r.severityText
 }
 
@@ -90,7 +90,7 @@ func (r *Record) SetSeverityText(s string) {
 }
 
 // Body returns the the body of the log record as a strucutured value.
-func (r Record) Body() Value {
+func (r *Record) Body() Value {
 	return r.body
 }
 
@@ -101,7 +101,7 @@ func (r *Record) SetBody(v Value) {
 
 // WalkAttributes calls f on each [KeyValue] in the [Record].
 // Iteration stops if f returns false.
-func (r Record) WalkAttributes(f func(KeyValue) bool) {
+func (r *Record) WalkAttributes(f func(KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
 		if !f(r.front[i]) {
 			return
@@ -152,13 +152,13 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 // Clone returns a copy of the record with no shared state.
 // The original record and the clone can both be modified
 // without interfering with each other.
-func (r Record) Clone() Record {
+func (r *Record) Clone() Record {
 	r.back = sliceClip(r.back) // prevent append from mutating shared array
-	return r
+	return *r
 }
 
 // AttributesLen returns the number of attributes in the Record.
-func (r Record) AttributesLen() int {
+func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
 }
 
