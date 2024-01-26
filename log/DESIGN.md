@@ -700,7 +700,7 @@ or all value methods. Google's Go Style Decisions even goes further and says:
 > When the performance does matter, it is important to profile both approaches
 > with a realistic benchmark before deciding that one approach outperforms the other.
 
-Becasue, the benchmarks[^9] do not proof any performance difference
+Because, the benchmarks[^9] do not proof any performance difference
 and the general recommendation is to not mix receiver types,
 we decided to use pointer receivers for all `Record` methods.
 
