@@ -39,9 +39,10 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
+		// Generate exponentially distributed data.
 		data[i] = (-1.0 / intensity) * math.Log(random())
 	}
-	// Sort to avoid position bias.
+	// Sort to test position bias.
 	sort.Float64s(data)
 
 	r := FixedSize[float64](sampleSize)
@@ -55,5 +56,7 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	}
 	mean := sum / float64(sampleSize)
 
+	// Check the intensity/rate of the sampled distribution is preserved
+	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.01)
 }
