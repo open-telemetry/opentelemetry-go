@@ -360,6 +360,11 @@ and the API is mostly inspired by
 The benchmarks[^1] show that the implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
+The `Severity`, `Kind`, `Value`, `KeyValue` may implement
+the [`fmt.Stringer`](https://pkg.go.dev/fmt#Stringer) interface.
+However, it is not needed for the first stable release
+and the `String` methods can be added later.
+
 The caller must not subsequently mutate the record passed to `Emit`.
 This would allow the implementation to not clone the record,
 but simply retain, modify or discard it.
