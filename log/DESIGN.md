@@ -497,12 +497,15 @@ favor passing the record via pointer (and vice versa).
 
 Passing via value feels safer because of the following reasons.
 
-It follows the design of [`slog.Handler`](https://pkg.go.dev/log/slog#Handler).
+The user would not be able to pass `nil`.
+Therefore, it reduces the possiblity to have a nil pointer dereference.
 
 It should reduce the possibility of a heap allocation.
 
-The user would not be able to pass `nil`.
-Therefore, it reduces the possiblity to have a nil pointer dereference.
+It follows the design of [`slog.Handler`](https://pkg.go.dev/log/slog#Handler).
+
+If follows one of Google's Go Style Decisions
+to prefer [passing values](https://google.github.io/styleguide/go/decisions#pass-values).
 
 ### Passing struct as parameter to LoggerProvider.Logger
 
