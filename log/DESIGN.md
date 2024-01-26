@@ -141,7 +141,7 @@ type Record struct {
 is accessed using following methods:
 
 ```go
-func (r Record) Timestamp() time.Time 
+func (r *Record) Timestamp() time.Time 
 func (r *Record) SetTimestamp(t time.Time) 
 ```
 
@@ -149,7 +149,7 @@ func (r *Record) SetTimestamp(t time.Time)
 is accessed using following methods:
 
 ```go
-func (r Record) ObservedTimestamp() time.Time 
+func (r *Record) ObservedTimestamp() time.Time 
 func (r *Record) SetObservedTimestamp(t time.Time) 
 ```
 
@@ -157,7 +157,7 @@ func (r *Record) SetObservedTimestamp(t time.Time)
 is accessed using following methods:
 
 ```go
-func (r Record) Severity() Severity
+func (r *Record) Severity() Severity
 func (r *Record) SetSeverity(s Severity)
 ```
 
@@ -212,7 +212,7 @@ const (
 is accessed using following methods:
 
 ```go
-func (r Record) SeverityText() string
+func (r *Record) SeverityText() string
 func (r *Record) SetSeverityText(s string)
 ```
 
@@ -220,7 +220,7 @@ func (r *Record) SetSeverityText(s string)
 is accessed using following methods:
 
 ```go
-func (r Record) Body() Value
+func (r *Record) Body() Value
 func (r *Record) SetBody(v Value)
 ```
 
@@ -228,7 +228,7 @@ func (r *Record) SetBody(v Value)
 are accessed using following methods:
 
 ```go
-func (r Record) WalkAttributes(f func(KeyValue) bool)
+func (r *Record) WalkAttributes(f func(KeyValue) bool)
 func (r *Record) AddAttributes(attrs ...KeyValue)
 ```
 
@@ -237,14 +237,14 @@ the number of attributes to allow slice preallocation
 when converting records to a different representation:
 
 ```go
-func (r Record) AttributesLen() int
+func (r *Record) AttributesLen() int
 ```
 
 Additionally, `Record` has a `Clone` method facilities
 coping a record with no shared state (attributes "back" slice):
 
 ```go
-func (r Record) Clone() Record
+func (r *Record) Clone() Record
 ```
 
 The records attributes design and implemntation is based on
@@ -394,6 +394,7 @@ Rejected alternatives:
 - [Record.Body as any](#recordbody-as-any)
 - [Severity type encapsulating number and text](#severity-type-encapsulating-number-and-text)
 - [Reuse attribute package](#reuse-attribute-package)
+- [Mix receiver types for Record](#mix-receiver-types-for-record)
 
 ### noop package
 
@@ -651,6 +652,58 @@ has anything in common with a common attribute value.
 Therefore, we define new types representing the abstract types defined
 in the [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#definitions-used-in-this-document).
 
+## Mix receiver types for Record
+
+Methods of [`slog.Record`](https://pkg.go.dev/log/slog#Record)
+have different receiver types.
+
+In `log/slog` GitHub issue we can only find that the reason is:[^8]
+
+>> some receiver of Record struct is by value
+> Passing Records by value means they incur no heap allocation.
+> That improves performance overall, even though they are copied.
+
+However, the benchmarks do not show any noticeable differences.[^9]
+
+The compiler is smart-enough to not make a heap allocation for any of these methods.
+The use of a pointer receiver does not cause any heap allocation.
+From Go FAQ[^10]:
+
+> In the current compilers, if a variable has its address taken,
+> that variable is a candidate for allocation on the heap.
+> However, a basic escape analysis recognizes some cases
+> when such variables will not live past the return from the function
+> and can reside on the stack.
+
+The [Understanding Allocations: the Stack and the Heap](https://www.youtube.com/watch?v=ZMZpH4yT7M0)
+presentation by Jacob Walker describes the escape analysis with details.
+
+Moreover, also from Go FAQ[^10]:
+
+> Also, if a local variable is very large,
+> it might make more sense to store it on the heap rather than the stack.
+
+Therefore, even if we use a value receiver and the value is very large
+it may be heap allocated.
+
+Both [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments#receiver-type)
+and [Google's Go Style Decisions](https://google.github.io/styleguide/go/decisions#receiver-type)
+highly recommend making the methods for a type either all pointer methods
+or all value methods. Google's Go Style Decisions even goes further and says:
+
+> There is a lot of misinformation about whether passing a value or a pointer
+> to a function can affect performance.
+> The compiler can choose to pass pointers to values on the stack
+> as well as copying values on the stack,
+> but these considerations should not outweigh the readability
+> and correctness of the code in most circumstances.
+> When the performance does matter, it is important to profile both approaches
+> with a realistic benchmark before deciding that one approach outperforms the other.
+
+Becasue, the benchmarks[^9] do not proof any performance difference
+and the general recommendation is to not mix receiver types,
+we decided to use pointer receivers for all `Record` methods.
+
 ## Open issues
 
 ### Reusing common attributes
@@ -672,3 +725,6 @@ as some languages already use common attributes for defining log attributes.[^7]
 [^5]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
 [^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
 [^7]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
+[^8]: [log/slog: structured, leveled logging](https://github.com/golang/go/issues/56345#issuecomment-1302563756)
+[^9]: [Record with pointer receivers only](https://github.com/pellared/opentelemetry-go/pull/8)
+[^10]: [Go FAQ: Stack or heap](https://go.dev/doc/faq#stack_or_heap)
