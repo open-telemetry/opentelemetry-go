@@ -17,6 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -177,7 +178,8 @@ func Merge(a, b *Resource) (*Resource, error) {
 	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
 	default:
-		return Empty(), errMergeConflictSchemaURL
+		return Empty(), fmt.Errorf("%w: %s vs %s", errMergeConflictSchemaURL,
+			a.schemaURL, b.schemaURL)
 	}
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
