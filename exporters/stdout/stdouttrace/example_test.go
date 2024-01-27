@@ -18,12 +18,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"testing"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,20 +39,20 @@ var tracer = otel.GetTracerProvider().Tracer(
 	trace.WithSchemaURL(semconv.SchemaURL),
 )
 
-func add(ctx context.Context, x, y int64) int64 {
+func add(ctx context.Context, x, y int64) (context.Context, int64) {
 	var span trace.Span
-	_, span = tracer.Start(ctx, "Addition")
+	ctx, span = tracer.Start(ctx, "Addition")
 	defer span.End()
 
-	return x + y
+	return ctx, x + y
 }
 
-func multiply(ctx context.Context, x, y int64) int64 {
+func multiply(ctx context.Context, x, y int64) (context.Context, int64) {
 	var span trace.Span
-	_, span = tracer.Start(ctx, "Multiplication")
+	ctx, span = tracer.Start(ctx, "Multiplication")
 	defer span.End()
 
-	return x * y
+	return ctx, x * y
 }
 
 func Resource() *resource.Resource {
@@ -62,7 +63,7 @@ func Resource() *resource.Resource {
 	)
 }
 
-func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
+func InstallExportPipeline() (func(context.Context) error, error) {
 	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, fmt.Errorf("creating stdout exporter: %w", err)
@@ -77,11 +78,11 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
 	return tracerProvider.Shutdown, nil
 }
 
-func Example() {
+func TestExample(t *testing.T) {
 	ctx := context.Background()
 
 	// Registers a tracer Provider globally.
-	shutdown, err := InstallExportPipeline(ctx)
+	shutdown, err := InstallExportPipeline()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,5 +92,8 @@ func Example() {
 		}
 	}()
 
-	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+	ctx, ans := multiply(ctx, 2, 2)
+	ctx, ans = multiply(ctx, ans, 10)
+	ctx, ans = add(ctx, ans, 2)
+	log.Println("the answer is", ans)
 }
