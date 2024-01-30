@@ -15,9 +15,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKindString(t *testing.T) {
-	got := KindMap.String()
-	assert.Equal(t, "Map", got)
+func TestKind(t *testing.T) {
+	testCases := []struct {
+		kind  Kind
+		str   string
+		value int
+	}{
+		{KindBool, "Bool", 1},
+		{KindBytes, "Bytes", 5},
+		{KindEmpty, "Empty", 0},
+		{KindFloat64, "Float64", 2},
+		{KindInt64, "Int64", 3},
+		{KindList, "List", 6},
+		{KindMap, "Map", 7},
+		{KindString, "String", 4},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.str, func(t *testing.T) {
+			assert.Equal(t, tc.value, int(tc.kind))
+			assert.Equal(t, tc.str, tc.kind.String())
+		})
+	}
 }
 
 func TestValueEqual(t *testing.T) {
