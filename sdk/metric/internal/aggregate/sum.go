@@ -103,7 +103,7 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = val.n
-		val.res.Flush(&dPts[i].Exemplars)
+		val.res.Collect(&dPts[i].Exemplars)
 		// Do not report stale values.
 		delete(s.values, attr)
 		i++
@@ -197,7 +197,7 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
-		value.res.Flush(&dPts[i].Exemplars)
+		value.res.Collect(&dPts[i].Exemplars)
 
 		newReported[attr] = value.n
 		// Unused attribute sets do not report.

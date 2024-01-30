@@ -81,7 +81,7 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 		// ignored.
 		(*dest)[i].Time = v.timestamp
 		(*dest)[i].Value = v.value
-		v.res.Flush(&(*dest)[i].Exemplars)
+		v.res.Collect(&(*dest)[i].Exemplars)
 		// Do not report stale values.
 		delete(s.values, a)
 		i++

@@ -174,7 +174,7 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Flush(&hDPts[i].Exemplars)
+		b.res.Collect(&hDPts[i].Exemplars)
 
 		// Unused attribute sets do not report.
 		delete(s.values, a)

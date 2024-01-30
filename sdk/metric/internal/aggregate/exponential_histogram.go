@@ -384,7 +384,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 			hDPts[i].Max = metricdata.NewExtrema(b.max)
 		}
 
-		b.res.Flush(&hDPts[i].Exemplars)
+		b.res.Collect(&hDPts[i].Exemplars)
 
 		delete(e.values, a)
 		i++
