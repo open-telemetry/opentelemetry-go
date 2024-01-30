@@ -404,7 +404,7 @@ func TestExemplars(t *testing.T) {
 		r := NewManualReader()
 		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
 			Aggregation: AggregationBase2ExponentialHistogram{
-				MaxSize:  160, // > 20, do reservoir size should default to 20.
+				MaxSize:  160, // > 20, reservoir size should default to 20.
 				MaxScale: 20,
 			},
 		})
