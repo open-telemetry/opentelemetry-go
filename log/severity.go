@@ -20,15 +20,15 @@ const (
 
 	// A debugging log record.
 	SeverityDebug1 // DEBUG
-	SeverityDebug2 // DEBUG1
-	SeverityDebug3 // DEBUG2
-	SeverityDebug4 // DEBUG3
+	SeverityDebug2 // DEBUG2
+	SeverityDebug3 // DEBUG3
+	SeverityDebug4 // DEBUG4
 
 	// An informational log record. Indicates that an event happened.
 	SeverityInfo1 // INFO
-	SeverityInfo2 // INFO1
-	SeverityInfo3 // INFO2
-	SeverityInfo4 // INFO3
+	SeverityInfo2 // INFO2
+	SeverityInfo3 // INFO3
+	SeverityInfo4 // INFO4
 
 	// A warning log record. Not an error but is likely more important than an informational event.
 	SeverityWarn1 // WARN
