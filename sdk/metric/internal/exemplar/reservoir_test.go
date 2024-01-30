@@ -111,6 +111,22 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			assert.Len(t, dest, 1, "Collect flushed reservoir")
 		})
 
+		t.Run("CollectLessThanN", func(t *testing.T) {
+			t.Helper()
+
+			r, n := f(2)
+			if n < 2 {
+				t.Skip("skipping, reservoir capacity less than 2:", n)
+			}
+
+			r.Offer(ctx, staticTime, 10, nil)
+
+			var dest []metricdata.Exemplar[N]
+			r.Collect(&dest)
+			// No empty exemplars are exported.
+			require.Len(t, dest, 1, "number of collected exemplars")
+		})
+
 		t.Run("FlushFlushes", func(t *testing.T) {
 			t.Helper()
 
