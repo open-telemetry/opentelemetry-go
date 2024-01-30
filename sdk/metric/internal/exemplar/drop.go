@@ -34,8 +34,3 @@ func (r *dropRes[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) 
 func (r *dropRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = (*dest)[:0]
 }
-
-// Flush resets dest. No exemplars will ever be returned.
-func (r *dropRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
-	*dest = (*dest)[:0]
-}
