@@ -713,6 +713,9 @@ we decided to use pointer receivers for all `Record` methods.
 
 ## Open issues
 
+The Logs Bridge API MUST NOT be released as stable
+before all issues below are closed:
+
 - [Clarify that log attributes are NOT common attributes](https://github.com/open-telemetry/opentelemetry-specification/issues/3849)
 - [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
 - [Clarify scalar value types in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3836)
