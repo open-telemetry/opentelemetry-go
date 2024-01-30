@@ -431,33 +431,7 @@ func TestExemplars(t *testing.T) {
 	check := func(t *testing.T, r Reader, nSum, nHist, nExpo int) {
 		t.Helper()
 
-		rm := &metricdata.ResourceMetrics{
-			ScopeMetrics: []metricdata.ScopeMetrics{
-				{Metrics: []metricdata.Metrics{
-					{
-						Data: metricdata.Sum[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{Exemplars: make([]metricdata.Exemplar[int64], 0, nCPU)},
-							},
-						},
-					},
-					{
-						Data: metricdata.Histogram[int64]{
-							DataPoints: []metricdata.HistogramDataPoint[int64]{
-								{Exemplars: make([]metricdata.Exemplar[int64], 0, 1)},
-							},
-						},
-					},
-					{
-						Data: metricdata.ExponentialHistogram[int64]{
-							DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
-								{Exemplars: make([]metricdata.Exemplar[int64], 0, 20)},
-							},
-						},
-					},
-				}},
-			},
-		}
+		rm := new(metricdata.ResourceMetrics)
 		require.NoError(t, r.Collect(context.Background(), rm))
 
 		require.Len(t, rm.ScopeMetrics, 1, "ScopeMetrics")
