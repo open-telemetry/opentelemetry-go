@@ -38,20 +38,18 @@ var tracer = otel.GetTracerProvider().Tracer(
 	trace.WithSchemaURL(semconv.SchemaURL),
 )
 
-func add(ctx context.Context, x, y int64) (context.Context, int64) {
-	var span trace.Span
-	ctx, span = tracer.Start(ctx, "Addition")
+func add(ctx context.Context, x, y int64) int64 {
+	_, span := tracer.Start(ctx, "Addition")
 	defer span.End()
 
-	return ctx, x + y
+	return x + y
 }
 
-func multiply(ctx context.Context, x, y int64) (context.Context, int64) {
-	var span trace.Span
-	ctx, span = tracer.Start(ctx, "Multiplication")
+func multiply(ctx context.Context, x, y int64) int64 {
+	_, span := tracer.Start(ctx, "Multiplication")
 	defer span.End()
 
-	return ctx, x * y
+	return x * y
 }
 
 func Resource() *resource.Resource {
@@ -91,8 +89,10 @@ func Example() {
 		}
 	}()
 
-	ctx, ans := multiply(ctx, 2, 2)
-	ctx, ans = multiply(ctx, ans, 10)
-	ctx, ans = add(ctx, ans, 2)
+	ctx, span := tracer.Start(ctx, "Calculation")
+	defer span.End()
+	ans := multiply(ctx, 2, 2)
+	ans = multiply(ctx, ans, 10)
+	ans = add(ctx, ans, 2)
 	log.Println("the answer is", ans)
 }
