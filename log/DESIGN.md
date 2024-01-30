@@ -713,14 +713,7 @@ we decided to use pointer receivers for all `Record` methods.
 
 ## Open issues
 
-### Reusing common attributes
-
-Currently, logs attributes are different from common (resource, trace, metrics) attributes.
-However, there may be a desire to make unify them
-as some languages already use common attributes for defining log attributes.[^7]
-
-### Other issues
-
+- [Clarify that log attributes are NOT common attributes](https://github.com/open-telemetry/opentelemetry-specification/issues/3849)
 - [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
 - [Clarify scalar value types in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3836)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
@@ -730,8 +723,8 @@ as some languages already use common attributes for defining log attributes.[^7]
 [^3]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
 [^4]: [Emit definition discussion with benchmarks](https://github.com/open-telemetry/opentelemetry-go/pull/4725#discussion_r1400869566)
 [^5]: [Logger.WithAttributes analysis](https://github.com/pellared/opentelemetry-go/pull/3)
-[^6]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
-[^7]: [Support maps and heterogeneous arrays as attribute values](https://github.com/open-telemetry/opentelemetry-specification/pull/2888)
+[^6]: [Record attributes as field and use sync.Pool for reducing allocations](https://github.com/pellared/opentelemetry-go/pull/4) and [Record attributes based on slog.Record](https://github.com/pellared/opentelemetry-go/pull/6)
+[^7]: [Record.Body as any](https://github.com/pellared/opentelemetry-go/pull/5)
 [^8]: [log/slog: structured, leveled logging](https://github.com/golang/go/issues/56345#issuecomment-1302563756)
 [^9]: [Record with pointer receivers only](https://github.com/pellared/opentelemetry-go/pull/8)
 [^10]: [Go FAQ: Stack or heap](https://go.dev/doc/faq#stack_or_heap)
