@@ -18,13 +18,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"testing"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -78,7 +77,7 @@ func InstallExportPipeline() (func(context.Context) error, error) {
 	return tracerProvider.Shutdown, nil
 }
 
-func TestExample(t *testing.T) {
+func Example() {
 	ctx := context.Background()
 
 	// Registers a tracer Provider globally.
