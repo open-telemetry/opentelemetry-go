@@ -51,7 +51,7 @@ const (
 	KindMap
 )
 
-var emptyString = []byte("<nil>")
+var emptyString = "<nil>"
 
 // Kind returns v's Kind.
 func (v Value) Kind() Kind {
@@ -266,33 +266,23 @@ func (v Value) Equal(w Value) bool {
 // the methods Int64, Float64, and so on, which panic if v is of the
 // wrong kind, String never panics.
 func (v Value) String() string {
-	if sp, ok := v.any.(stringptr); ok {
-		return unsafe.String(sp, v.num)
-	}
-	var buf []byte
-	return string(v.append(buf))
-}
-
-// append appends a text representation of v to dst.
-// v is formatted as with fmt.Sprint.
-func (v Value) append(dst []byte) []byte {
 	switch v.Kind() {
 	case KindString:
-		return append(dst, v.str()...)
+		return v.str()
 	case KindInt64:
-		return strconv.AppendInt(dst, int64(v.num), 10)
+		return strconv.FormatInt(int64(v.num), 10)
 	case KindFloat64:
-		return strconv.AppendFloat(dst, v.float(), 'g', -1, 64)
+		return strconv.FormatFloat(v.float(), 'g', -1, 64)
 	case KindBool:
-		return strconv.AppendBool(dst, v.bool())
+		return strconv.FormatBool(v.bool())
 	case KindBytes:
-		return fmt.Append(dst, v.bytes())
+		return fmt.Sprint(v.bytes())
 	case KindMap:
-		return fmt.Append(dst, v.mapValue())
+		return fmt.Sprint(v.mapValue())
 	case KindList:
-		return fmt.Append(dst, v.list())
+		return fmt.Sprint(v.list())
 	case KindEmpty:
-		return append(dst, emptyString...)
+		return emptyString
 	default:
 		panic(fmt.Sprintf("bad kind: %s", v.Kind()))
 	}
@@ -358,6 +348,7 @@ func (a KeyValue) Equal(b KeyValue) bool {
 	return a.Key == b.Key && a.Value.Equal(b.Value)
 }
 
+// String returns key-value pair as a string, formatted like "key=value".
 func (a KeyValue) String() string {
 	return fmt.Sprintf("%s=%s", a.Key, a.Value)
 }
