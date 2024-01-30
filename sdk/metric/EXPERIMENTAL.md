@@ -40,6 +40,28 @@ Disable the cardinality limit.
 unset OTEL_GO_X_CARDINALITY_LIMIT
 ```
 
+### Exemplars
+
+A sample of mesurements made may be exported directly as a set of exemplars.
+
+This experimental feature can be enabled by setting the `OTEL_GO_X_EXEMPLAR` environment variable.
+The value of must be the case-insensitive string of `"true"` to enable the feature.
+All other values are ignored.
+
+#### Examples
+
+Enable exemplars to be exported.
+
+```console
+export OTEL_GO_X_EXEMPLAR=true
+```
+
+Disable exemplars from being exported.
+
+```console
+unset OTEL_GO_X_EXEMPLAR
+```
+
 ## Compatibility and Stability
 
 Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../VERSIONING.md).
