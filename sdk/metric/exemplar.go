@@ -39,7 +39,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir
 		// Explicit bucket histogram aggregation with more than 1 bucket will
 		// use AlignedHistogramBucketExemplarReservoir.
 		a, ok := agg.(AggregationExplicitBucketHistogram)
-		if ok && len(a.Boundaries) > 1 {
+		if ok && len(a.Boundaries) > 0 {
 			cp := make([]float64, len(a.Boundaries))
 			copy(cp, a.Boundaries)
 			return func() exemplar.Reservoir[N] {
