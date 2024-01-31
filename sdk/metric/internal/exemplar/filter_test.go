@@ -44,9 +44,6 @@ func testSampledFiltered[N int64 | float64](t *testing.T) {
 
 	r.Collect(nil)
 	assert.True(t, under.CollectCalled, "underlying Reservoir Collect not called")
-
-	r.Flush(nil)
-	assert.True(t, under.FlushCalled, "underlying Reservoir Flush not called")
 }
 
 func sample(parent context.Context) context.Context {
@@ -61,7 +58,6 @@ func sample(parent context.Context) context.Context {
 type res[N int64 | float64] struct {
 	OfferCalled   bool
 	CollectCalled bool
-	FlushCalled   bool
 }
 
 func (r *res[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {
@@ -70,8 +66,4 @@ func (r *res[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {
 
 func (r *res[N]) Collect(*[]metricdata.Exemplar[N]) {
 	r.CollectCalled = true
-}
-
-func (r *res[N]) Flush(*[]metricdata.Exemplar[N]) {
-	r.FlushCalled = true
 }
