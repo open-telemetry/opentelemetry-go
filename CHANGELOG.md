@@ -53,7 +53,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Changed
 
 - Upgrade all use of `go.opentelemetry.io/otel/semconv` to use `v1.24.0`. (#4754)
-- Update transformations in `go.opentelemetry.io/otel/exporters/zipkin` to follow `v1.19.0` version of the OpenTelemetry specification. (#4754)
+- Update transformations in `go.opentelemetry.io/otel/exporters/zipkin` to follow `v1.24.0` version of the OpenTelemetry specification. (#4754)
 - Record synchronous measurements when the passed context is canceled instead of dropping in `go.opentelemetry.io/otel/sdk/metric`.
   If you do not want to make a measurement when the context is cancelled, you need to handle it yourself (e.g  `if ctx.Err() != nil`). (#4671)
 - Improve `go.opentelemetry.io/otel/trace.TraceState`'s performance. (#4722)
