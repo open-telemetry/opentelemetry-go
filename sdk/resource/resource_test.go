@@ -183,7 +183,7 @@ func TestMerge(t *testing.T) {
 			name:  "Merge with different schemas",
 			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
 			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
-			want:  nil,
+			want:  []attribute.KeyValue{kv42},
 			isErr: true,
 		},
 	}
@@ -406,9 +406,14 @@ func TestNew(t *testing.T) {
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.1.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
-			isErr:          true,
+			resourceValues: map[string]string{
+				string(semconv.HostNameKey): func() (hostname string) {
+					hostname, _ = os.Hostname()
+					return hostname
+				}(),
+			},
+			schemaURL: "",
+			isErr:     true,
 		},
 		{
 			name:   "With conflicting detector schema urls",
@@ -420,9 +425,14 @@ func TestNew(t *testing.T) {
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
-			isErr:          true,
+			resourceValues: map[string]string{
+				string(semconv.HostNameKey): func() (hostname string) {
+					hostname, _ = os.Hostname()
+					return hostname
+				}(),
+			},
+			schemaURL: "",
+			isErr:     true,
 		},
 	}
 	for _, tt := range tc {

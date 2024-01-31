@@ -40,9 +40,20 @@ var (
 	defaultResourceOnce sync.Once
 )
 
-var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
+// ErrSchemaURLConflict is an error returned when two Resources are merged
+// together that contain different, non-empty, schema URLs.
+var ErrSchemaURLConflict = errors.New("conflicting Schema URL")
 
-// New returns a Resource combined from the user-provided detectors.
+// New returns a [Resource] built using opts.
+//
+// This may return a partial Resource along with an error containing
+// [ErrPartialResource] if options that provide a [Detector] are used and that
+// error is returned from one or more of the Detectors. It may also return a
+// merge-conflict Resource along with an error containing
+// [ErrSchemaURLConflict] if merging Resources from the opts results in a
+// schema URL conflict (see [Resource.Merge] for more information). It is up to
+// the caller to determine if this returned Resource should be used or not
+// based on these errors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
 	for _, opt := range opts {
@@ -146,16 +157,30 @@ func (r *Resource) Equal(eq *Resource) bool {
 	return r.Equivalent() == eq.Equivalent()
 }
 
-// Merge creates a new resource by combining resource a and b.
+// Merge creates a new [Resource] by merging a and b.
 //
-// If there are common keys between resource a and b, then the value
-// from resource b will overwrite the value from resource a, even
-// if resource b's value is empty.
+// If there are common keys between a and b, then the value from b will
+// overwrite the value from a, even if b's value is empty.
 //
-// The SchemaURL of the resources will be merged according to the spec rules:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
-// If the resources have different non-empty schemaURL an empty resource and an error
-// will be returned.
+// The SchemaURL of the resources will be merged according to the
+// [OpenTelemetry specification rules]:
+//
+//   - If a's schema URL is empty then the returned Resource's schema URL will
+//     be set to the schema URL of b,
+//   - Else if b's schema URL is empty then the returned Resource's schema URL
+//     will be set to the schema URL of a,
+//   - Else if the schema URLs of a and b are the same then that will be the
+//     schema URL of the returned Resource,
+//   - Else this is a merging error (the schema URL of b and a are not empty
+//     and different). See below for how this is handled.
+//
+// If the resources have different, non-empty, schema URLs an error containing
+// [ErrSchemaURLConflict] will be returned with the merged Resource. It may be
+// the case that some unintended attributes have been overwritten or old
+// semantic conventions persisted in the returned Resource. It is up to the
+// caller to determine if this returned Resource should be used or not.
+//
+// [OpenTelemetry specification rules]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 func Merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
@@ -168,7 +193,10 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 
 	// Merge the schema URL.
-	var schemaURL string
+	var (
+		schemaURL string
+		err       error
+	)
 	switch true {
 	case a.schemaURL == "":
 		schemaURL = b.schemaURL
@@ -177,7 +205,9 @@ func Merge(a, b *Resource) (*Resource, error) {
 	case a.schemaURL == b.schemaURL:
 		schemaURL = a.schemaURL
 	default:
-		return Empty(), errMergeConflictSchemaURL
+		// Return the merged resource with an appropriate error. It is up to
+		// the user to decide if the returned resource can be used or not.
+		err = ErrSchemaURLConflict
 	}
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
@@ -188,7 +218,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 		combine = append(combine, mi.Attribute())
 	}
 	merged := NewWithAttributes(schemaURL, combine...)
-	return merged, nil
+	return merged, err
 }
 
 // Empty returns an instance of Resource with no attributes. It is
