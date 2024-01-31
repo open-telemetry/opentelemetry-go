@@ -396,7 +396,7 @@ func BenchmarkExemplars(b *testing.B) {
 		mp := NewMeterProvider(WithReader(r), WithView(v))
 		return mp.Meter(name), r
 	}
-	nCPU := runtime.NumCPU()
+	nCPU := runtime.NumCPU() // Size of the fixed reservoir used.
 
 	b.Setenv("OTEL_GO_X_EXEMPLAR", "true")
 
