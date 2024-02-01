@@ -324,7 +324,7 @@ func TestNew(t *testing.T) {
 
 		resourceValues map[string]string
 		schemaURL      string
-		isErr          bool
+		wantErr        error
 	}{
 		{
 			name:           "No Options returns empty resource",
@@ -413,7 +413,7 @@ func TestNew(t *testing.T) {
 				}(),
 			},
 			schemaURL: "",
-			isErr:     true,
+			wantErr:   resource.ErrSchemaURLConflict,
 		},
 		{
 			name:   "With conflicting detector schema urls",
@@ -432,7 +432,7 @@ func TestNew(t *testing.T) {
 				}(),
 			},
 			schemaURL: "",
-			isErr:     true,
+			wantErr:   resource.ErrSchemaURLConflict,
 		},
 	}
 	for _, tt := range tc {
@@ -446,10 +446,10 @@ func TestNew(t *testing.T) {
 			ctx := context.Background()
 			res, err := resource.New(ctx, tt.options...)
 
-			if tt.isErr {
-				require.Error(t, err)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 
 			require.EqualValues(t, tt.resourceValues, toMap(res))
