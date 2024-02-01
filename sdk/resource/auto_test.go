@@ -18,55 +18,77 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
+type detector struct {
+	SchemaURL  string
+	Attributes []attribute.KeyValue
+}
+
+func newDetector(schemaURL string, attrs ...attribute.KeyValue) resource.Detector {
+	return detector{schemaURL, attrs}
+}
+
+func (d detector) Detect(context.Context) (*resource.Resource, error) {
+	return resource.NewWithAttributes(d.SchemaURL, d.Attributes...), nil
+}
+
 func TestDetect(t *testing.T) {
+	v130 := "https://opentelemetry.io/schemas/1.3.0"
+	v140 := "https://opentelemetry.io/schemas/1.4.0"
+	v150 := "https://opentelemetry.io/schemas/1.5.0"
+
+	alice := attribute.String("name", "Alice")
+	bob := attribute.String("name", "Bob")
+	carol := attribute.String("name", "Carol")
+
+	admin := attribute.Bool("admin", true)
+	user := attribute.Bool("admin", false)
+
 	cases := []struct {
-		name    string
-		schema  []string
-		wantErr error
+		name      string
+		detectors []resource.Detector
+		want      *resource.Resource
+		wantErr   error
 	}{
 		{
 			name: "two different schema urls",
-			schema: []string{
-				"https://opentelemetry.io/schemas/1.3.0",
-				"https://opentelemetry.io/schemas/1.4.0",
+			detectors: []resource.Detector{
+				newDetector(v130, alice, admin),
+				newDetector(v140, bob, user),
 			},
+			want:    resource.NewSchemaless(bob, user),
 			wantErr: resource.ErrSchemaURLConflict,
 		},
 		{
 			name: "three different schema urls",
-			schema: []string{
-				"https://opentelemetry.io/schemas/1.3.0",
-				"https://opentelemetry.io/schemas/1.4.0",
-				"https://opentelemetry.io/schemas/1.5.0",
+			detectors: []resource.Detector{
+				newDetector(v130, alice, admin),
+				newDetector(v140, bob, user),
+				newDetector(v150, carol),
 			},
+			want:    resource.NewSchemaless(carol, user),
 			wantErr: resource.ErrSchemaURLConflict,
 		},
 		{
 			name: "same schema url",
-			schema: []string{
-				"https://opentelemetry.io/schemas/1.4.0",
-				"https://opentelemetry.io/schemas/1.4.0",
+			detectors: []resource.Detector{
+				newDetector(v140, alice, admin),
+				newDetector(v140, bob, user),
 			},
+			want: resource.NewWithAttributes(v140, bob, user),
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			detectors := make([]resource.Detector, len(c.schema))
-			for i, s := range c.schema {
-				detectors[i] = resource.StringDetector(s, semconv.HostNameKey, os.Hostname)
-			}
-			r, err := resource.Detect(context.Background(), detectors...)
-			assert.NotNil(t, r)
+			r, err := resource.Detect(context.Background(), c.detectors...)
 			if c.wantErr != nil {
 				assert.ErrorIs(t, err, c.wantErr)
 				if errors.Is(c.wantErr, resource.ErrSchemaURLConflict) {
@@ -75,6 +97,8 @@ func TestDetect(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			assert.Equal(t, c.want.SchemaURL(), r.SchemaURL())
+			assert.ElementsMatch(t, c.want.Attributes(), r.Attributes())
 		})
 	}
 }
