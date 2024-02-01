@@ -275,6 +275,8 @@ const (
 
 func (v Value) Kind() Kind
 
+// Value factories:
+
 func StringValue(value string)
 
 func IntValue(v int) Value
@@ -290,6 +292,8 @@ func BytesValue(v []byte) Value
 func ListValue(vs ...Value) Value
 
 func MapValue(kvs ...KeyValue) Value
+
+// Value accessors:
 
 func (v Value) AsAny() any
 
@@ -309,12 +313,17 @@ func (v Value) AsMap() []KeyValue
 
 func (v Value) Empty() bool
 
+// Value equality comparison:
+
 func (v Value) Equal(w Value) bool
+
 
 type KeyValue struct {
 	Key   string
 	Value Value
 }
+
+// KeyValue factories:
 
 func String(key, value string)
 
@@ -331,6 +340,8 @@ func Bytes(key string, v []byte) KeyValue
 func List(key string, args ...Value) KeyValue
 
 func Map(key string, args ...KeyValue) KeyValue
+
+// KeyValue equality comparison:
 
 func (a KeyValue) Equal(b KeyValue) bool
 ```
