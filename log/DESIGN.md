@@ -332,8 +332,6 @@ func List(key string, args ...Value) KeyValue
 
 func Map(key string, args ...KeyValue) KeyValue
 
-func (a KeyValue) Invalid() bool
-
 func (a KeyValue) Equal(b KeyValue) bool
 ```
 
