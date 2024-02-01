@@ -16,6 +16,7 @@ package resource_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -28,32 +29,49 @@ import (
 
 func TestDetect(t *testing.T) {
 	cases := []struct {
-		name             string
-		schema1, schema2 string
-		isErr            bool
+		name    string
+		schema  []string
+		wantErr error
 	}{
 		{
-			name:    "different schema urls",
-			schema1: "https://opentelemetry.io/schemas/1.3.0",
-			schema2: "https://opentelemetry.io/schemas/1.4.0",
-			isErr:   true,
+			name: "two different schema urls",
+			schema: []string{
+				"https://opentelemetry.io/schemas/1.3.0",
+				"https://opentelemetry.io/schemas/1.4.0",
+			},
+			wantErr: resource.ErrSchemaURLConflict,
 		},
 		{
-			name:    "same schema url",
-			schema1: "https://opentelemetry.io/schemas/1.4.0",
-			schema2: "https://opentelemetry.io/schemas/1.4.0",
-			isErr:   false,
+			name: "three different schema urls",
+			schema: []string{
+				"https://opentelemetry.io/schemas/1.3.0",
+				"https://opentelemetry.io/schemas/1.4.0",
+				"https://opentelemetry.io/schemas/1.5.0",
+			},
+			wantErr: resource.ErrSchemaURLConflict,
+		},
+		{
+			name: "same schema url",
+			schema: []string{
+				"https://opentelemetry.io/schemas/1.4.0",
+				"https://opentelemetry.io/schemas/1.4.0",
+			},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			d1 := resource.StringDetector(c.schema1, semconv.HostNameKey, os.Hostname)
-			d2 := resource.StringDetector(c.schema2, semconv.HostNameKey, os.Hostname)
-			r, err := resource.Detect(context.Background(), d1, d2)
+			detectors := make([]resource.Detector, len(c.schema))
+			for i, s := range c.schema {
+				detectors[i] = resource.StringDetector(s, semconv.HostNameKey, os.Hostname)
+			}
+			r, err := resource.Detect(context.Background(), detectors...)
 			assert.NotNil(t, r)
-			if c.isErr {
-				assert.Error(t, err)
+			if c.wantErr != nil {
+				assert.ErrorIs(t, err, c.wantErr)
+				if errors.Is(c.wantErr, resource.ErrSchemaURLConflict) {
+					assert.Equal(t, "", r.SchemaURL())
+				}
 			} else {
 				assert.NoError(t, err)
 			}

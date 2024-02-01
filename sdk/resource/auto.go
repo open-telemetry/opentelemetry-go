@@ -94,6 +94,11 @@ func detect(ctx context.Context, res *Resource, detectors []Detector) error {
 	if len(errs) == 0 {
 		return nil
 	}
+	if errors.Is(errs, ErrSchemaURLConflict) {
+		// If there has been a merge conflict, ensure the resource has no
+		// schema URL.
+		res.schemaURL = ""
+	}
 	return errs
 }
 
