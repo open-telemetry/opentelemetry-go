@@ -129,7 +129,8 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 // The original record and the clone can both be modified
 // without interfering with each other.
 func (r *Record) Clone() Record {
-	r.back = sliceClip(r.back) // prevent append from mutating shared array
+	// Prevent append from mutating shared array.
+	r.back = sliceClip(r.back)
 	return *r
 }
 
