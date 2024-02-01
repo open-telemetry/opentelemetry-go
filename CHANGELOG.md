@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `WithEndpointURL` option to the `exporters/otlp/otlpmetric/otlpmetricgrpc`, `exporters/otlp/otlpmetric/otlpmetrichttp`, `exporters/otlp/otlptrace/otlptracegrpc` and `exporters/otlp/otlptrace/otlptracehttp` packages. (#4808)
+- Experimental exemplar exporting is added to the metric SDK.
+  See [metric documentation](./sdk/metric/EXPERIMENTAL.md#exemplars) for more information about this feature and how to enable it. (#4871)
 
 ### Fixed
 
@@ -52,7 +54,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Changed
 
 - Upgrade all use of `go.opentelemetry.io/otel/semconv` to use `v1.24.0`. (#4754)
-- Update transformations in `go.opentelemetry.io/otel/exporters/zipkin` to follow `v1.19.0` version of the OpenTelemetry specification. (#4754)
+- Update transformations in `go.opentelemetry.io/otel/exporters/zipkin` to follow `v1.24.0` version of the OpenTelemetry specification. (#4754)
 - Record synchronous measurements when the passed context is canceled instead of dropping in `go.opentelemetry.io/otel/sdk/metric`.
   If you do not want to make a measurement when the context is cancelled, you need to handle it yourself (e.g  `if ctx.Err() != nil`). (#4671)
 - Improve `go.opentelemetry.io/otel/trace.TraceState`'s performance. (#4722)

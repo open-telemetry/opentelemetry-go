@@ -39,13 +39,6 @@ type Reservoir[N int64 | float64] interface {
 
 	// Collect returns all the held exemplars.
 	//
-	// The Reservoir state is preserved after this call. See Flush to
-	// copy-and-clear instead.
+	// The Reservoir state is preserved after this call.
 	Collect(dest *[]metricdata.Exemplar[N])
-
-	// Flush returns all the held exemplars.
-	//
-	// The Reservoir state is reset after this call. See Collect to preserve
-	// the state instead.
-	Flush(dest *[]metricdata.Exemplar[N])
 }
