@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -31,10 +32,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func testSumAggregateOutput(dest *metricdata.Aggregation) int {
@@ -393,4 +396,122 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	iSync = pipe.aggregations[scope]
 	require.Len(t, iSync, 1, "registered instrumentSync changed")
 	assert.Equal(t, name, iSync[0].name, "stream name changed")
+}
+
+func TestExemplars(t *testing.T) {
+	nCPU := runtime.NumCPU()
+	setup := func(name string) (metric.Meter, Reader) {
+		r := NewManualReader()
+		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
+			Aggregation: AggregationBase2ExponentialHistogram{
+				MaxSize:  160, // > 20, reservoir size should default to 20.
+				MaxScale: 20,
+			},
+		})
+		return NewMeterProvider(WithReader(r), WithView(v)).Meter(name), r
+	}
+
+	measure := func(ctx context.Context, m metric.Meter) {
+		i, err := m.Int64Counter("int64-counter")
+		require.NoError(t, err)
+
+		h, err := m.Int64Histogram("int64-histogram")
+		require.NoError(t, err)
+
+		e, err := m.Int64Histogram("int64-expo-histogram")
+		require.NoError(t, err)
+
+		for j := 0; j < 20*nCPU; j++ { // will be >= 20 and > nCPU
+			i.Add(ctx, 1)
+			h.Record(ctx, 1)
+			e.Record(ctx, 1)
+		}
+	}
+
+	check := func(t *testing.T, r Reader, nSum, nHist, nExpo int) {
+		t.Helper()
+
+		rm := new(metricdata.ResourceMetrics)
+		require.NoError(t, r.Collect(context.Background(), rm))
+
+		require.Len(t, rm.ScopeMetrics, 1, "ScopeMetrics")
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 3, "Metrics")
+
+		require.IsType(t, metricdata.Sum[int64]{}, sm.Metrics[0].Data, sm.Metrics[0].Name)
+		sum := sm.Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sum.DataPoints[0].Exemplars, nSum)
+
+		require.IsType(t, metricdata.Histogram[int64]{}, sm.Metrics[1].Data, sm.Metrics[1].Name)
+		hist := sm.Metrics[1].Data.(metricdata.Histogram[int64])
+		assert.Len(t, hist.DataPoints[0].Exemplars, nHist)
+
+		require.IsType(t, metricdata.ExponentialHistogram[int64]{}, sm.Metrics[2].Data, sm.Metrics[2].Name)
+		expo := sm.Metrics[2].Data.(metricdata.ExponentialHistogram[int64])
+		assert.Len(t, expo.DataPoints[0].Exemplars, nExpo)
+	}
+
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	sampled := trace.ContextWithSpanContext(context.Background(), sc)
+
+	t.Run("OTEL_GO_X_EXEMPLAR=true", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+
+		t.Run("Default", func(t *testing.T) {
+			m, r := setup("default")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("Invalid", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
+			m, r := setup("default")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("always_on", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
+			m, r := setup("always_on")
+			measure(ctx, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("always_off", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+			m, r := setup("always_off")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+		})
+
+		t.Run("trace_based", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
+			m, r := setup("trace_based")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+	})
+
+	t.Run("OTEL_GO_X_EXEMPLAR=false", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_EXEMPLAR", "false")
+
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
+		m, r := setup("always_on")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+	})
 }

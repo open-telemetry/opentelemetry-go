@@ -39,16 +39,14 @@ var tracer = otel.GetTracerProvider().Tracer(
 )
 
 func add(ctx context.Context, x, y int64) int64 {
-	var span trace.Span
-	_, span = tracer.Start(ctx, "Addition")
+	_, span := tracer.Start(ctx, "Addition")
 	defer span.End()
 
 	return x + y
 }
 
 func multiply(ctx context.Context, x, y int64) int64 {
-	var span trace.Span
-	_, span = tracer.Start(ctx, "Multiplication")
+	_, span := tracer.Start(ctx, "Multiplication")
 	defer span.End()
 
 	return x * y
@@ -62,7 +60,7 @@ func Resource() *resource.Resource {
 	)
 }
 
-func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
+func InstallExportPipeline() (func(context.Context) error, error) {
 	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, fmt.Errorf("creating stdout exporter: %w", err)
@@ -81,7 +79,7 @@ func Example() {
 	ctx := context.Background()
 
 	// Registers a tracer Provider globally.
-	shutdown, err := InstallExportPipeline(ctx)
+	shutdown, err := InstallExportPipeline()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,5 +89,10 @@ func Example() {
 		}
 	}()
 
-	log.Println("the answer is", add(ctx, multiply(ctx, multiply(ctx, 2, 2), 10), 2))
+	ctx, span := tracer.Start(ctx, "Calculation")
+	defer span.End()
+	ans := multiply(ctx, 2, 2)
+	ans = multiply(ctx, ans, 10)
+	ans = add(ctx, ans, 2)
+	log.Println("the answer is", ans)
 }

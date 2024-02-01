@@ -193,8 +193,3 @@ func (r *randRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	// measurements that are made over the older collection cycle ones.
 	r.reset()
 }
-
-func (r *randRes[N]) Flush(dest *[]metricdata.Exemplar[N]) {
-	r.storage.Flush(dest)
-	r.reset()
-}
