@@ -13,40 +13,40 @@ type Severity int
 // Severity values defined by OpenTelemetry.
 const (
 	// A fine-grained debugging log record. Typically disabled in default configurations.
-	SeverityTrace1 Severity = iota + 1 // TRACE
-	SeverityTrace2                     // TRACE2
-	SeverityTrace3                     // TRACE3
-	SeverityTrace4                     // TRACE4
+	SeverityTrace1 Severity = 1 // TRACE
+	SeverityTrace2 Severity = 2 // TRACE2
+	SeverityTrace3 Severity = 3 // TRACE3
+	SeverityTrace4 Severity = 4 // TRACE4
 
 	// A debugging log record.
-	SeverityDebug1 // DEBUG
-	SeverityDebug2 // DEBUG2
-	SeverityDebug3 // DEBUG3
-	SeverityDebug4 // DEBUG4
+	SeverityDebug1 Severity = 5 // DEBUG
+	SeverityDebug2 Severity = 6 // DEBUG2
+	SeverityDebug3 Severity = 7 // DEBUG3
+	SeverityDebug4 Severity = 8 // DEBUG4
 
 	// An informational log record. Indicates that an event happened.
-	SeverityInfo1 // INFO
-	SeverityInfo2 // INFO2
-	SeverityInfo3 // INFO3
-	SeverityInfo4 // INFO4
+	SeverityInfo1 Severity = 9  // INFO
+	SeverityInfo2 Severity = 10 // INFO2
+	SeverityInfo3 Severity = 11 // INFO3
+	SeverityInfo4 Severity = 12 // INFO4
 
 	// A warning log record. Not an error but is likely more important than an informational event.
-	SeverityWarn1 // WARN
-	SeverityWarn2 // WARN2
-	SeverityWarn3 // WARN3
-	SeverityWarn4 // WARN4
+	SeverityWarn1 Severity = 13 // WARN
+	SeverityWarn2 Severity = 14 // WARN2
+	SeverityWarn3 Severity = 15 // WARN3
+	SeverityWarn4 Severity = 16 // WARN4
 
 	// An error log record. Something went wrong.
-	SeverityError1 // ERROR
-	SeverityError2 // ERROR2
-	SeverityError3 // ERROR3
-	SeverityError4 // ERROR4
+	SeverityError1 Severity = 17 // ERROR
+	SeverityError2 Severity = 18 // ERROR2
+	SeverityError3 Severity = 19 // ERROR3
+	SeverityError4 Severity = 20 // ERROR4
 
 	// A fatal log record such as application or system crash.
-	SeverityFatal1 // FATAL
-	SeverityFatal2 // FATAL2
-	SeverityFatal3 // FATAL3
-	SeverityFatal4 // FATAL4
+	SeverityFatal1 Severity = 21 // FATAL
+	SeverityFatal2 Severity = 22 // FATAL2
+	SeverityFatal3 Severity = 23 // FATAL3
+	SeverityFatal4 Severity = 24 // FATAL4
 
 	SeverityTrace = SeverityTrace1
 	SeverityDebug = SeverityDebug1
