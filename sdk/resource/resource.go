@@ -191,24 +191,6 @@ func Merge(a, b *Resource) (*Resource, error) {
 		return a, nil
 	}
 
-	// Merge the schema URL.
-	var (
-		schemaURL string
-		err       error
-	)
-	switch true {
-	case a.schemaURL == "":
-		schemaURL = b.schemaURL
-	case b.schemaURL == "":
-		schemaURL = a.schemaURL
-	case a.schemaURL == b.schemaURL:
-		schemaURL = a.schemaURL
-	default:
-		// Return the merged resource with an appropriate error. It is up to
-		// the user to decide if the returned resource can be used or not.
-		err = ErrSchemaURLConflict
-	}
-
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
 	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
 	mi := attribute.NewMergeIterator(b.Set(), a.Set())
@@ -216,8 +198,18 @@ func Merge(a, b *Resource) (*Resource, error) {
 	for mi.Next() {
 		combine = append(combine, mi.Attribute())
 	}
-	merged := NewWithAttributes(schemaURL, combine...)
-	return merged, err
+
+	switch {
+	case a.schemaURL == "":
+		return NewWithAttributes(b.schemaURL, combine...), nil
+	case b.schemaURL == "":
+		return NewWithAttributes(a.schemaURL, combine...), nil
+	case a.schemaURL == b.schemaURL:
+		return NewWithAttributes(a.schemaURL, combine...), nil
+	}
+	// Return the merged resource with an appropriate error. It is up to
+	// the user to decide if the returned resource can be used or not.
+	return NewSchemaless(combine...), ErrSchemaURLConflict
 }
 
 // Empty returns an instance of Resource with no attributes. It is
