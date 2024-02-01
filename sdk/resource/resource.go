@@ -17,6 +17,7 @@ package resource // import "go.opentelemetry.io/otel/sdk/resource"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -209,7 +210,12 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 	// Return the merged resource with an appropriate error. It is up to
 	// the user to decide if the returned resource can be used or not.
-	return NewSchemaless(combine...), ErrSchemaURLConflict
+	return NewSchemaless(combine...), fmt.Errorf(
+		"%w: %s and %s",
+		ErrSchemaURLConflict,
+		a.schemaURL,
+		b.schemaURL,
+	)
 }
 
 // Empty returns an instance of Resource with no attributes. It is
