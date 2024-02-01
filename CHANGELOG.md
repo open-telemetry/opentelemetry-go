@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
 - Fix `go.opentelemetry.io/otel/sdk/metric` to cache instruments to avoid leaking memory when the same instrument is created multiple times. (#4820)
+- Fix missing Mix and Max values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for type `Extrema` in `go.opentelemetry.io/sdk/metric/metricdata`. (#4827)
 
 ## [1.23.0-rc.1] 2024-01-18
 
