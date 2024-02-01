@@ -123,30 +123,17 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
-		if a.Invalid() {
-			continue
-		}
 		r.front[r.nFront] = a
 		r.nFront++
 	}
-	// Check if a copy was modified by slicing past the end
-	// and seeing if the attribute there is non-zero.
+	// Check if a copy was modified by slicing past the end.
 	if cap(r.back) > len(r.back) {
-		end := r.back[:len(r.back)+1][len(r.back)]
-		if !end.Invalid() {
-			// Don't panic; copy and muddle through.
-			r.back = sliceClip(r.back)
-			otel.Handle(errUnsafeAddAttrs)
-		}
+		// Don't panic; copy and muddle through.
+		r.back = sliceClip(r.back)
+		otel.Handle(errUnsafeAddAttrs)
 	}
-	ne := countInvalidAttrs(attrs[i:])
-	r.back = sliceGrow(r.back, len(attrs[i:])-ne)
-	for _, a := range attrs[i:] {
-		if a.Invalid() {
-			continue
-		}
-		r.back = append(r.back, a)
-	}
+	r.back = sliceGrow(r.back, len(attrs[i:]))
+	r.back = append(r.back, attrs[i:]...)
 }
 
 // Clone returns a copy of the record with no shared state.
@@ -160,15 +147,4 @@ func (r *Record) Clone() Record {
 // AttributesLen returns the number of attributes in the Record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
-}
-
-// countInvalidAttrs returns the number of invalid attributes.
-func countInvalidAttrs(as []KeyValue) int {
-	n := 0
-	for _, a := range as {
-		if a.Invalid() {
-			n++
-		}
-	}
-	return n
 }

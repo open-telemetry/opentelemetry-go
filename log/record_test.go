@@ -77,6 +77,7 @@ func TestRecordAttributes(t *testing.T) {
 		Float64("k6", testFloat),
 		Int("k7", testInt),
 		Bool("k8", testBool),
+		{},
 	}
 	r.AddAttributes(attrs...)
 
@@ -112,23 +113,6 @@ func TestRecordAttributes(t *testing.T) {
 	}
 }
 
-func TestRecordAttributesInvalid(t *testing.T) {
-	r := Record{}
-	attrs := []KeyValue{
-		String("k1", testString),
-		{},
-		Int("k3", testInt),
-		Bool("k4", testBool),
-		String("k5", testString),
-		Float64("k6", testFloat),
-		Int("k7", testInt),
-		{},
-	}
-	r.AddAttributes(attrs...)
-
-	assert.Equal(t, len(attrs)-2, r.AttributesLen())
-}
-
 func TestRecordAliasingAndClone(t *testing.T) {
 	defer func(orig otel.ErrorHandler) {
 		otel.SetErrorHandler(orig)
@@ -151,11 +135,12 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	r1.back = b
 
 	// Make a copy that shares state.
-	// Adding to both should emit an special error for the second call.
+	// Adding to both should emit an special error for each call.
 	r2 := r1
 	r1AttrsBefore := attrsSlice(r1)
 	r1.AddAttributes(Int("p", 0))
-	assert.Zero(t, errs)
+	assert.Equal(t, []error{errUnsafeAddAttrs}, errs, "sends an error via ErrorHandler when a dirty AddAttribute is detected")
+	errs = nil
 	r2.AddAttributes(Int("p", 1))
 	assert.Equal(t, []error{errUnsafeAddAttrs}, errs, "sends an error via ErrorHandler when a dirty AddAttribute is detected")
 	errs = nil
@@ -168,6 +153,7 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	assert.Equal(t, r1Attrs, attrsSlice(r3))
 	r3.AddAttributes(Int("p", 2))
 	assert.Zero(t, errs)
+	errs = nil
 	assert.Equal(t, r1Attrs, attrsSlice(r1), "r1 is unchanged")
 	assert.Equal(t, append(r1Attrs, Int("p", 2)), attrsSlice(r3))
 	r3.SetSeverity(SeverityDebug)
