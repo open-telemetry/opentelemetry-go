@@ -171,14 +171,13 @@ func (r *Resource) Equal(eq *Resource) bool {
 //     will be set to the schema URL of a,
 //   - Else if the schema URLs of a and b are the same then that will be the
 //     schema URL of the returned Resource,
-//   - Else this is a merging error (the schema URL of b and a are not empty
-//     and different). See below for how this is handled.
-//
-// If the resources have different, non-empty, schema URLs an error containing
-// [ErrSchemaURLConflict] will be returned with the merged Resource. It may be
-// the case that some unintended attributes have been overwritten or old
-// semantic conventions persisted in the returned Resource. It is up to the
-// caller to determine if this returned Resource should be used or not.
+//   - Else this is a merging error. If the resources have different,
+//     non-empty, schema URLs an error containing [ErrSchemaURLConflict] will
+//     be returned with the merged Resource. The merged Resource will have an
+//     empty schema URL. It may be the case that some unintended attributes
+//     have been overwritten or old semantic conventions persisted in the
+//     returned Resource. It is up to the caller to determine if this returned
+//     Resource should be used or not.
 //
 // [OpenTelemetry specification rules]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 func Merge(a, b *Resource) (*Resource, error) {
