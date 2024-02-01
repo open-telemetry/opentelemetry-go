@@ -8,12 +8,11 @@
 package log
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -113,15 +112,7 @@ func TestRecordAttributes(t *testing.T) {
 	}
 }
 
-func TestRecordAliasingAndClone(t *testing.T) {
-	defer func(orig otel.ErrorHandler) {
-		otel.SetErrorHandler(orig)
-	}(otel.GetErrorHandler())
-	var errs []error
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errs = append(errs, err)
-	}))
-
+func TestRecordCloneConcurrentSafe(t *testing.T) {
 	// Create a record whose Attrs overflow the inline array,
 	// creating a slice in r.back.
 	r1 := Record{}
@@ -134,30 +125,26 @@ func TestRecordAliasingAndClone(t *testing.T) {
 	copy(b, r1.back)
 	r1.back = b
 
-	// Make a copy that shares state.
-	// Adding to both should emit an special error for each call.
-	r2 := r1
-	r1AttrsBefore := attrsSlice(r1)
-	r1.AddAttributes(Int("p", 0))
-	assert.Equal(t, []error{errUnsafeAddAttrs}, errs, "sends an error via ErrorHandler when a dirty AddAttribute is detected")
-	errs = nil
-	r2.AddAttributes(Int("p", 1))
-	assert.Equal(t, []error{errUnsafeAddAttrs}, errs, "sends an error via ErrorHandler when a dirty AddAttribute is detected")
-	errs = nil
-	assert.Equal(t, append(r1AttrsBefore, Int("p", 0)), attrsSlice(r1))
-	assert.Equal(t, append(r1AttrsBefore, Int("p", 1)), attrsSlice(r2))
+	attrsBefore := attrsSlice(r1)
 
-	// Adding to a clone is fine.
-	r1Attrs := attrsSlice(r1)
-	r3 := r1.Clone()
-	assert.Equal(t, r1Attrs, attrsSlice(r3))
-	r3.AddAttributes(Int("p", 2))
-	assert.Zero(t, errs)
-	errs = nil
-	assert.Equal(t, r1Attrs, attrsSlice(r1), "r1 is unchanged")
-	assert.Equal(t, append(r1Attrs, Int("p", 2)), attrsSlice(r3))
-	r3.SetSeverity(SeverityDebug)
-	assert.NotEqual(t, r3.Severity(), r1.Severity(), "r1 is unchanged")
+	// Changing this to r2 := r1 will make the test fail
+	// and has a race condition.
+	r2 := r1.Clone()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		r1.AddAttributes(Int("p", 1))
+	}()
+	go func() {
+		defer wg.Done()
+		r2.AddAttributes(Int("p", 2))
+	}()
+	wg.Wait()
+
+	assert.Equal(t, append(attrsBefore, Int("p", 1)), attrsSlice(r1))
+	assert.Equal(t, append(attrsBefore, Int("p", 2)), attrsSlice(r2))
 }
 
 func attrsSlice(r Record) []KeyValue {

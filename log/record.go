@@ -8,10 +8,7 @@
 package log // import "go.opentelemetry.io/otel/log"
 
 import (
-	"errors"
 	"time"
-
-	"go.opentelemetry.io/otel"
 )
 
 // Record represents a log record.
@@ -114,11 +111,8 @@ func (r *Record) WalkAttributes(f func(KeyValue) bool) {
 	}
 }
 
-var errUnsafeAddAttrs = errors.New("unsafely called AddAttributes on copy of Record made without using Record.Clone")
-
 // AddAttributes appends the given [attribute.KeyValue] to the [Record]'s
 // list of [attribute.KeyValue].
-// It omits invalid attributes.
 func (r *Record) AddAttributes(attrs ...KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
@@ -126,12 +120,7 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 		r.front[r.nFront] = a
 		r.nFront++
 	}
-	// Check if a copy was modified by slicing past the end.
-	if cap(r.back) > len(r.back) {
-		// Don't panic; copy and muddle through.
-		r.back = sliceClip(r.back)
-		otel.Handle(errUnsafeAddAttrs)
-	}
+
 	r.back = sliceGrow(r.back, len(attrs[i:]))
 	r.back = append(r.back, attrs[i:]...)
 }
