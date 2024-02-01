@@ -169,35 +169,35 @@ Additionally, `Severity[Level]1` constants are defined to make the API more read
 type Severity int
 
 const (
-	SeverityTrace1 Severity = iota + 1
-	SeverityTrace2
-	SeverityTrace3
-	SeverityTrace4
+	SeverityTrace1 Severity = 1 // TRACE
+	SeverityTrace2 Severity = 2 // TRACE2
+	SeverityTrace3 Severity = 3 // TRACE3
+	SeverityTrace4 Severity = 4 // TRACE4
 
-	SeverityDebug1
-	SeverityDebug2
-	SeverityDebug3
-	SeverityDebug4
+	SeverityDebug1 Severity = 5 // DEBUG
+	SeverityDebug2 Severity = 6 // DEBUG2
+	SeverityDebug3 Severity = 7 // DEBUG3
+	SeverityDebug4 Severity = 8 // DEBUG4
 
-	SeverityInfo1
-	SeverityInfo2
-	SeverityInfo3
-	SeverityInfo4
+	SeverityInfo1 Severity = 9  // INFO
+	SeverityInfo2 Severity = 10 // INFO2
+	SeverityInfo3 Severity = 11 // INFO3
+	SeverityInfo4 Severity = 12 // INFO4
 
-	SeverityWarn1
-	SeverityWarn2
-	SeverityWarn3
-	SeverityWarn4
+	SeverityWarn1 Severity = 13 // WARN
+	SeverityWarn2 Severity = 14 // WARN2
+	SeverityWarn3 Severity = 15 // WARN3
+	SeverityWarn4 Severity = 16 // WARN4
 
-	SeverityError1
-	SeverityError2
-	SeverityError3
-	SeverityError4
+	SeverityError1 Severity = 17 // ERROR
+	SeverityError2 Severity = 18 // ERROR2
+	SeverityError3 Severity = 19 // ERROR3
+	SeverityError4 Severity = 20 // ERROR4
 
-	SeverityFatal1
-	SeverityFatal2
-	SeverityFatal3
-	SeverityFatal4
+	SeverityFatal1 Severity = 21 // FATAL
+	SeverityFatal2 Severity = 22 // FATAL2
+	SeverityFatal3 Severity = 23 // FATAL3
+	SeverityFatal4 Severity = 24 // FATAL4
 
 	SeverityTrace = SeverityTrace1
 	SeverityDebug = SeverityDebug1
