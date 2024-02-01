@@ -16,21 +16,32 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exempla
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// Drop returns a [Reservoir] that drops all measurements it is offered.
-func Drop[N int64 | float64]() Reservoir[N] { return &dropRes[N]{} }
+// Histogram returns a [Reservoir] that samples the last measurement that falls
+// within a histogram bucket. The histogram bucket upper-boundaries are define
+// by bounds.
+//
+// The passed bounds will be sorted by this function.
+func Histogram[N int64 | float64](bounds []float64) Reservoir[N] {
+	sort.Float64s(bounds)
+	return &histRes[N]{
+		bounds:  bounds,
+		storage: newStorage[N](len(bounds) + 1),
+	}
+}
 
-type dropRes[N int64 | float64] struct{}
+type histRes[N int64 | float64] struct {
+	*storage[N]
 
-// Offer does nothing, all measurements offered will be dropped.
-func (r *dropRes[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {}
+	// bounds are bucket bounds in ascending order.
+	bounds []float64
+}
 
-// Collect resets dest. No exemplars will ever be returned.
-func (r *dropRes[N]) Collect(dest *[]metricdata.Exemplar[N]) {
-	*dest = (*dest)[:0]
+func (r *histRes[N]) Offer(ctx context.Context, t time.Time, n N, a []attribute.KeyValue) {
+	r.store[sort.SearchFloat64s(r.bounds, float64(n))] = newMeasurement(ctx, t, n, a)
 }

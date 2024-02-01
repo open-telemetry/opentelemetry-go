@@ -38,8 +38,7 @@ func newStorage[N int64 | float64](n int) *storage[N] {
 
 // Collect returns all the held exemplars.
 //
-// The Reservoir state is preserved after this call. See Flush to
-// copy-and-clear instead.
+// The Reservoir state is preserved after this call.
 func (r *storage[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
@@ -50,27 +49,6 @@ func (r *storage[N]) Collect(dest *[]metricdata.Exemplar[N]) {
 
 		m.Exemplar(&(*dest)[n])
 		n++
-	}
-	*dest = (*dest)[:n]
-}
-
-// Flush returns all the held exemplars.
-//
-// The Reservoir state is reset after this call. See Collect to preserve the
-// state instead.
-func (r *storage[N]) Flush(dest *[]metricdata.Exemplar[N]) {
-	*dest = reset(*dest, len(r.store), len(r.store))
-	var n int
-	for i, m := range r.store {
-		if !m.valid {
-			continue
-		}
-
-		m.Exemplar(&(*dest)[n])
-		n++
-
-		// Reset.
-		r.store[i] = measurement[N]{}
 	}
 	*dest = (*dest)[:n]
 }
