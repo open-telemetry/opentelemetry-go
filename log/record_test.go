@@ -123,8 +123,9 @@ func TestRecordCloneConcurrentSafe(t *testing.T) {
 
 	attrsBefore := attrsSlice(r1)
 
-	// Changing this to r2 := r1 will make the test fail
-	// and has a race condition.
+	// Changing the line below to:
+	//   r2 := r1
+	// will cause assertion failures and a race condition.
 	r2 := r1.Clone()
 
 	var wg sync.WaitGroup
