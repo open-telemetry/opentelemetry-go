@@ -92,25 +92,6 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			assert.Equal(t, want, dest[0])
 		})
 
-		t.Run("CollectDoesNotFlush", func(t *testing.T) {
-			t.Helper()
-
-			r, n := f(1)
-			if n < 1 {
-				t.Skip("skipping, reservoir capacity less than 1:", n)
-			}
-
-			r.Offer(ctx, staticTime, 10, nil)
-
-			var dest []metricdata.Exemplar[N]
-			r.Collect(&dest)
-			require.Len(t, dest, 1, "number of collected exemplars")
-
-			dest = dest[:0]
-			r.Collect(&dest)
-			assert.Len(t, dest, 1, "Collect flushed reservoir")
-		})
-
 		t.Run("CollectLessThanN", func(t *testing.T) {
 			t.Helper()
 
@@ -127,24 +108,6 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			require.Len(t, dest, 1, "number of collected exemplars")
 		})
 
-		t.Run("FlushFlushes", func(t *testing.T) {
-			t.Helper()
-
-			r, n := f(1)
-			if n < 1 {
-				t.Skip("skipping, reservoir capacity less than 1:", n)
-			}
-
-			r.Offer(ctx, staticTime, 10, nil)
-
-			var dest []metricdata.Exemplar[N]
-			r.Flush(&dest)
-			require.Len(t, dest, 1, "number of flushed exemplars")
-
-			r.Flush(&dest)
-			assert.Len(t, dest, 0, "Flush did not flush reservoir")
-		})
-
 		t.Run("MultipleOffers", func(t *testing.T) {
 			t.Helper()
 
@@ -159,17 +122,17 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			}
 
 			var dest []metricdata.Exemplar[N]
-			r.Flush(&dest)
+			r.Collect(&dest)
 			assert.Len(t, dest, n, "multiple offers did not fill reservoir")
 
-			// Ensure the flush reset also resets any couting state.
+			// Ensure the collect reset also resets any couting state.
 			for i := 0; i < n+1; i++ {
-				v := N(2 * i)
+				v := N(i)
 				r.Offer(ctx, staticTime, v, nil)
 			}
 
 			dest = dest[:0]
-			r.Flush(&dest)
+			r.Collect(&dest)
 			assert.Len(t, dest, n, "internal count state not reset")
 		})
 
@@ -186,11 +149,6 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			dest := []metricdata.Exemplar[N]{{}} // Should be reset to empty.
 			r.Collect(&dest)
 			assert.Len(t, dest, 0, "no exemplars should be collected")
-
-			r.Offer(context.Background(), staticTime, 10, nil)
-			dest = []metricdata.Exemplar[N]{{}} // Should be reset to empty.
-			r.Flush(&dest)
-			assert.Len(t, dest, 0, "no exemplars should be flushed")
 		})
 	}
 }
