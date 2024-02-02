@@ -623,7 +623,7 @@ is not the same as `any` (`interface{}`) in Go.
 Moreover, using `any` as a field would decrease the performance.[^7]
 
 Notice it will be still possible to add following kind and factories
-in a backwards comaptible way:
+in a backwards compatible way:
 
 ```go
 const KindMap Kind
