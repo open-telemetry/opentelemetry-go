@@ -569,8 +569,8 @@ type Record struct {
 	ObservedTimestamp time.Time
 	Severity          Severity
 	SeverityText      string
-	Body              string
-	Attributes        []attribute.KeyValue
+	Body              Value
+	Attributes        []KeyValue
 ```
 
 The users and bridges could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
