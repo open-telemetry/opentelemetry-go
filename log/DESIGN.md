@@ -407,7 +407,7 @@ Rejected alternatives:
 - [Passing record as pointer to Logger.Emit](#passing-record-as-pointer-to-loggeremit)
 - [Logger.WithAttributes](#loggerwithattributes)
 - [Record attributes as slice](#record-attributes-as-slice)
-- [Record.Body as any](#recordbody-as-any)
+- [Use any instead of defining Value](#use-any-instead-of-defining-value)
 - [Severity type encapsulating number and text](#severity-type-encapsulating-number-and-text)
 - [Reuse attribute package](#reuse-attribute-package)
 - [Mix receiver types for Record](#mix-receiver-types-for-record)
@@ -610,17 +610,17 @@ less user friendly (users and bridges would use e.g. a `sync.Pool` to reduce
 the number of heap allocation), less safe (more prone to use after free bugs
 and race conditions), and the benchmark differences were not significant.
 
-### Record.Body as any
+### Use any instead of defining Value
 
 [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
 defines Body to be `any`.
 One could propose to define `Body` (and attribute values) as `any`
 instead of a defining a new type (`Value`).
 
-However, [`any` type defined in the specification](https://opentelemetry.io/docs/specs/otel/logs/data-model/#type-any)
+First of all, [`any` type defined in the specification](https://opentelemetry.io/docs/specs/otel/logs/data-model/#type-any)
 is not the same as `any` (`interface{}`) in Go.
 
-It also worth to notice that using `any` as a field would decrease the performance.[^7]
+Moreover, using `any` as a field would decrease the performance.[^7]
 
 Notice it will be still possible to add following kind and factories
 in a backwards comaptible way:
