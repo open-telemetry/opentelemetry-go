@@ -277,7 +277,7 @@ func (v Value) Kind() Kind
 
 // Value factories:
 
-func StringValue(value string)
+func StringValue(value string) Value
 
 func IntValue(v int) Value
 
@@ -347,7 +347,7 @@ func (a KeyValue) Equal(b KeyValue) bool
 ```
 
 `Value` is representing `any`.
-`KeyValue` is represneting a key(string)-value(`any`) pair.
+`KeyValue` is representing a key(string)-value(`any`) pair.
 
 `Kind` is an enumeration used for specifying the underlying value type.
 `KindEmpty` is used for an empty (zero) value.
@@ -379,7 +379,7 @@ This would allow the implementation to not clone the record,
 but simply retain, modify or discard it.
 The implementation may still choose to clone the record or copy its attributes
 if it needs to retain or modify it,
-e.g. in case of asynchronous processing to eliminiate the possibility of data races,
+e.g. in case of asynchronous processing to eliminate the possibility of data races,
 because the user can technically reuse the record and add new attributes
 after the call (even when the documentation says that the caller must not do it).
 
@@ -504,7 +504,7 @@ is more performant as it reduces heap allocations.[^4]
 Another advantage of passing `Record` is that API would not have functions like `NewRecord(options...)`,
 which would be used by the SDK and not by the users.
 
-At last, the definition would be similar to [`slog.Handler.Handle`](https://pkg.go.dev/log/slog#Handler)
+Finally, the definition would be similar to [`slog.Handler.Handle`](https://pkg.go.dev/log/slog#Handler)
 that was designed to provide optimization opportunities.[^2]
 
 ### Passing record as pointer to Logger.Emit
@@ -557,7 +557,7 @@ is that the variadic slice passed to an interface method is always heap allocate
 
 Moreover, the logger returned by `WithAttribute` was allocated on the heap.
 
-At last, the proposal was not specification compliant.
+Lastly, the proposal was not specification compliant.
 
 ### Record attributes as slice
 
@@ -623,7 +623,7 @@ However, using `any` decreases the performance.[^7]
 Additionally, we are not aware of any popular Go logging library
 that uses any objects as log records.
 
-At last, the specification recommends using `string` in Bridge API:
+Finally, the specification recommends using `string` in Bridge API:
 
 > First-party Applications SHOULD use a string message.
 
