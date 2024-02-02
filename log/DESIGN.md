@@ -542,7 +542,7 @@ The performance of acquiring a logger is not as critical
 as the performance of emitting a log record. While a single
 HTTP/RPC handler could write hundreds of logs, it should not
 create a new logger for each log entry.
-The application should reuse loggers whenever possible.
+The bridge implementation should reuse loggers whenever possible.
 
 ### Logger.WithAttributes
 
@@ -573,7 +573,7 @@ type Record struct {
 	Attributes        []KeyValue
 ```
 
-The users and bridges could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
+The bridge implementations could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
 for reducing the number of allocations when passing attributes.
 
 The benchmarks results were better.
