@@ -614,27 +614,26 @@ and race conditions), and the benchmark differences were not significant.
 
 [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-body)
 defines Body to be `any`.
-We could define `Body` as `any` instead of `string`.
-This could result in a more flexible API
-that could support logging libraries which model log records as any objects.
+One could propose to define `Body` (and attribute values) as `any`
+instead of a defining a new type (`Value`).
 
-However, using `any` decreases the performance.[^7]
+However, [`any` type defined in the specification](https://opentelemetry.io/docs/specs/otel/logs/data-model/#type-any)
+is not the same as `any` (`interface{}`) in Go.
 
-Additionally, we are not aware of any popular Go logging library
-that uses any objects as log records.
+It also worth to notice that using `any` as a field would decrease the performance.[^7]
 
-Finally, the specification recommends using `string` in Bridge API:
+Notice it will be still possible to add following kind and factories
+in a backwards comaptible way:
 
-> First-party Applications SHOULD use a string message.
+```go
+const KindMap Kind
 
-As according to [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
-First-party Applications are supposed to use the log bridges
-that integrates with the SDK through Bridge API.
+func AnyValue(value any) KeyValue
 
-We can always add an additional `StructuredBody any` field in a future release
-if we would need to support structured bodies. This approach would be
-backwards-compatible and should not have such a negative impact on performance
-for the most common scenario where `Body` is a `string`.
+func Any(key string, value any) KeyValue
+```
+
+However, currently, it would not be specification compliant.
 
 ### Severity type encapsulating number and text
 
