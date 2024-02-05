@@ -8,13 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.23.0] 2024-02-05
+
+This release contains the first stable, `v1`, release of the following modules:
+
+- `go.opentelemetry.io/otel/bridge/opencensus`
+- `go.opentelemetry.io/otel/bridge/opencensus/test`
+- `go.opentelemetry.io/otel/example/opencensus`
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`
+- `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`
+
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add `WithEndpointURL` option to the `exporters/otlp/otlpmetric/otlpmetricgrpc`, `exporters/otlp/otlpmetric/otlpmetrichttp`, `exporters/otlp/otlptrace/otlptracegrpc` and `exporters/otlp/otlptrace/otlptracehttp` packages. (#4808)
 - Experimental exemplar exporting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#exemplars) for more information about this feature and how to enable it. (#4871)
 - `ErrSchemaURLConflict` is added to `go.opentelemetry.io/otel/sdk/resource`.
-  This error is returned when a merge of two `Resource`s with different (non-empty) schema URL is attepted. (#4876)
+  This error is returned when a merge of two `Resource`s with different (non-empty) schema URL is attempted. (#4876)
 
 ### Changed
 
@@ -27,7 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `ContainerID` resource detection on systemd when cgroup path has a colon. (#4449)
 - Fix `go.opentelemetry.io/otel/sdk/metric` to cache instruments to avoid leaking memory when the same instrument is created multiple times. (#4820)
-- Fix missing Mix and Max values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for type `Extrema` in `go.opentelemetry.io/sdk/metric/metricdata`. (#4827)
+- Fix missing `Mix` and `Max` values for `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` by introducing `MarshalText` and `MarshalJSON` for the `Extrema` type in `go.opentelemetry.io/sdk/metric/metricdata`. (#4827)
 
 ## [1.23.0-rc.1] 2024-01-18
 
@@ -2810,7 +2823,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.23.0-rc.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.0
 [1.23.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.0-rc.1
 [1.22.0/0.45.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.22.0
 [1.21.0/0.44.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.21.0
