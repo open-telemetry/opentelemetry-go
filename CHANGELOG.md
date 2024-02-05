@@ -13,6 +13,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithEndpointURL` option to the `exporters/otlp/otlpmetric/otlpmetricgrpc`, `exporters/otlp/otlpmetric/otlpmetrichttp`, `exporters/otlp/otlptrace/otlptracegrpc` and `exporters/otlp/otlptrace/otlptracehttp` packages. (#4808)
 - Experimental exemplar exporting is added to the metric SDK.
   See [metric documentation](./sdk/metric/EXPERIMENTAL.md#exemplars) for more information about this feature and how to enable it. (#4871)
+- `ErrSchemaURLConflict` is added to `go.opentelemetry.io/otel/sdk/resource`.
+  This error is returned when a merge of two `Resource`s with different (non-empty) schema URL is attepted. (#4876)
+
+### Changed
+
+- The `Merge` and `New` functions in `go.opentelemetry.io/otel/sdk/resource` now returns a partial result if there is a schema URL merge conflict.
+  Instead of returning `nil` when two `Resource`s with different (non-empty) schema URLs are merged the merged `Resource`, along with the new `ErrSchemaURLConflict` error, is returned.
+  It is up to the user to decide if they want to use the returned `Resource` or not.
+  It may have desired attributes overwritten or include stale semantic conventions. (#4876)
 
 ### Fixed
 
