@@ -10,9 +10,9 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 {%- endmacro -%}
 {%- macro keydoc(metric) -%}
 {%- if metric.stability|string() == "StabilityLevel.DEPRECATED" -%}
-{{ to_go_name(metric.metric_name) }} is the attribute Key conforming to the "{{ metric.metric_name}}" semantic conventions.
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the attribute Key conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief) }}
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief) }}
 {%- endif %}
 {%- endmacro -%}
 // Copyright The OpenTelemetry Authors
@@ -42,7 +42,9 @@ const (
   // Instrument: {{ metric.instrument }}
   // Unit: {{ metric.unit }}
   // Stability: {{ metric.stability }}
-  {{to_go_name(metric.metric_name)}} = attribute.Key("{{metric.metric_name}}")
+  {{to_go_name(metric.metric_name)}}Name = attribute.Key("{{metric.metric_name}}")
+  {{to_go_name(metric.metric_name)}}Unit = attribute.Key("{{metric.unit}}")
+  {{to_go_name(metric.metric_name)}}Description = attribute.Key("{{metric.brief}}")
 {%- endif %}
 {% endfor %}
 )
