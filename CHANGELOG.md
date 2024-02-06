@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [1.23.0] 2024-02-05
+## [1.23.0] 2024-02-06
 
 This release contains the first stable, `v1`, release of the following modules:
 
