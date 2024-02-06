@@ -24,7 +24,8 @@ import (
 )
 
 func ExampleNew() {
-	res, err := resource.New(context.Background(),
+	res, err := resource.New(
+		context.Background(),
 		resource.WithFromEnv(),      // Pull attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables.
 		resource.WithTelemetrySDK(), // Provide information about the OpenTelemetry SDK used.
 		resource.WithProcess(),      // Discover and provide process information.
