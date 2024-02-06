@@ -653,6 +653,16 @@ func (s *recordingSpan) Resource() *resource.Resource {
 	return s.tracer.provider.resource
 }
 
+func (s *recordingSpan) AddLinks(links ...trace.Link) {
+	if !s.IsRecording() {
+		return
+	}
+
+	for _, l := range links {
+		s.addLink(l)
+	}
+}
+
 func (s *recordingSpan) addLink(link trace.Link) {
 	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
