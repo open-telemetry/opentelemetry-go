@@ -16,6 +16,8 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"fmt"
+	"runtime"
 	"strconv"
 	"testing"
 
@@ -24,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var viewBenchmarks = []struct {
@@ -367,5 +370,91 @@ func benchCollectAttrs(setup func(attribute.Set) Reader) func(*testing.B) {
 			attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
 		}
 		b.Run("Attributes/10", run(setup(attribute.NewSet(attrs...))))
+	}
+}
+
+func BenchmarkExemplars(b *testing.B) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+
+	attr := attribute.NewSet(
+		attribute.String("user", "Alice"),
+		attribute.Bool("admin", true),
+	)
+
+	setup := func(name string) (metric.Meter, Reader) {
+		r := NewManualReader()
+		v := NewView(Instrument{Name: "*"}, Stream{
+			AttributeFilter: func(kv attribute.KeyValue) bool {
+				return kv.Key == attribute.Key("user")
+			},
+		})
+		mp := NewMeterProvider(WithReader(r), WithView(v))
+		return mp.Meter(name), r
+	}
+	nCPU := runtime.NumCPU() // Size of the fixed reservoir used.
+
+	b.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+
+	name := fmt.Sprintf("Int64Counter/%d", nCPU)
+	b.Run(name, func(b *testing.B) {
+		m, r := setup("Int64Counter")
+		i, err := m.Int64Counter("int64-counter")
+		assert.NoError(b, err)
+
+		rm := newRM(metricdata.Sum[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{
+				{Exemplars: make([]metricdata.Exemplar[int64], 0, nCPU)},
+			},
+		})
+		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars)
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			for j := 0; j < 2*nCPU; j++ {
+				i.Add(ctx, 1, metric.WithAttributeSet(attr))
+			}
+
+			_ = r.Collect(ctx, rm)
+			assert.Len(b, *e, nCPU)
+		}
+	})
+
+	name = fmt.Sprintf("Int64Histogram/%d", nCPU)
+	b.Run(name, func(b *testing.B) {
+		m, r := setup("Int64Counter")
+		i, err := m.Int64Histogram("int64-histogram")
+		assert.NoError(b, err)
+
+		rm := newRM(metricdata.Histogram[int64]{
+			DataPoints: []metricdata.HistogramDataPoint[int64]{
+				{Exemplars: make([]metricdata.Exemplar[int64], 0, 1)},
+			},
+		})
+		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Exemplars)
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			for j := 0; j < 2*nCPU; j++ {
+				i.Record(ctx, 1, metric.WithAttributeSet(attr))
+			}
+
+			_ = r.Collect(ctx, rm)
+			assert.Len(b, *e, 1)
+		}
+	})
+}
+
+func newRM(a metricdata.Aggregation) *metricdata.ResourceMetrics {
+	return &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{Metrics: []metricdata.Metrics{{Data: a}}},
+		},
 	}
 }
