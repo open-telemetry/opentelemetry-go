@@ -16,6 +16,7 @@ package resource_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -35,8 +36,10 @@ func ExampleNew() {
 		resource.WithAttributes(attribute.String("foo", "bar")), // Add custom resource attributes.
 		// resource.WithDetectors(thirdparty.Detector{}), // Bring your own external Detector implementation.
 	)
-	if err != nil {
-		log.Println(err) // Log issues. Notice that resource.New always returns a non-nil resource.
+	if errors.Is(err, resource.ErrPartialResource) || errors.Is(err, resource.ErrSchemaURLConflict) {
+		log.Println(err) // Log non-fatal issues.
+	} else if err != nil {
+		log.Fatalln(err) // The error may be fatal.
 	}
 
 	// Now, you can use the resource and e.g. pass it to a tracer or meter provider.
