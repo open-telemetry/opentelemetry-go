@@ -35,7 +35,7 @@ func ExampleNew() {
 		// resource.WithDetectors(thirdparty.Detector{}), // Bring your own external Detector implementation.
 	)
 	if err != nil {
-		log.Println(err) // Log issues during resource creation. Note that resource.New still returns a resource.
+		log.Println(err) // Log issues. Notice that resource.New always returns a non-nil resource.
 	}
 
 	// Now, you can use the resource and e.g. pass it to a tracer or meter provider.
