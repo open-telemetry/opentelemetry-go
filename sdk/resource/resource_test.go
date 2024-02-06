@@ -183,7 +183,7 @@ func TestMerge(t *testing.T) {
 			name:  "Merge with different schemas",
 			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
 			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
-			want:  nil,
+			want:  []attribute.KeyValue{kv42},
 			isErr: true,
 		},
 	}
@@ -324,7 +324,7 @@ func TestNew(t *testing.T) {
 
 		resourceValues map[string]string
 		schemaURL      string
-		isErr          bool
+		wantErr        error
 	}{
 		{
 			name:           "No Options returns empty resource",
@@ -406,9 +406,14 @@ func TestNew(t *testing.T) {
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.1.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
-			isErr:          true,
+			resourceValues: map[string]string{
+				string(semconv.HostNameKey): func() (hostname string) {
+					hostname, _ = os.Hostname()
+					return hostname
+				}(),
+			},
+			schemaURL: "",
+			wantErr:   resource.ErrSchemaURLConflict,
 		},
 		{
 			name:   "With conflicting detector schema urls",
@@ -420,9 +425,14 @@ func TestNew(t *testing.T) {
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 			},
-			resourceValues: map[string]string{},
-			schemaURL:      "",
-			isErr:          true,
+			resourceValues: map[string]string{
+				string(semconv.HostNameKey): func() (hostname string) {
+					hostname, _ = os.Hostname()
+					return hostname
+				}(),
+			},
+			schemaURL: "",
+			wantErr:   resource.ErrSchemaURLConflict,
 		},
 	}
 	for _, tt := range tc {
@@ -436,10 +446,10 @@ func TestNew(t *testing.T) {
 			ctx := context.Background()
 			res, err := resource.New(ctx, tt.options...)
 
-			if tt.isErr {
-				require.Error(t, err)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 
 			require.EqualValues(t, tt.resourceValues, toMap(res))
