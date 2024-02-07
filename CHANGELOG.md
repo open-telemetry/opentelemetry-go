@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Adds a new template to generate metric semantic conventions, as well as adding it to the Makefile `semconv-generate` script to add the metric.go file to the v1.24.0 directory. (#4528)
+
 ## [1.23.0] 2024-02-06
 
 This release contains the first stable, `v1`, release of the following modules:
