@@ -25,7 +25,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 - Add `WithEndpointURL` option to the `exporters/otlp/otlpmetric/otlpmetricgrpc`, `exporters/otlp/otlpmetric/otlpmetrichttp`, `exporters/otlp/otlptrace/otlptracegrpc` and `exporters/otlp/otlptrace/otlptracehttp` packages. (#4808)
 - Experimental exemplar exporting is added to the metric SDK.
-  See [metric documentation](./sdk/metric/EXPERIMENTAL.md#exemplars) for more information about this feature and how to enable it. (#4871)
+  See [metric SDK] documentation for more information about this feature and how to enable it. (#4871)
 - `ErrSchemaURLConflict` is added to `go.opentelemetry.io/otel/sdk/resource`.
   This error is returned when a merge of two `Resource`s with different (non-empty) schema URL is attempted. (#4876)
 
@@ -70,7 +70,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   The package contains semantic conventions from the `v1.24.0` version of the OpenTelemetry Semantic Conventions. (#4770)
 - Add `WithResourceAsConstantLabels` option to apply resource attributes for every metric emitted by the Prometheus exporter. (#4733)
 - Experimental cardinality limiting is added to the metric SDK.
-  See [metric documentation](./sdk/metric/EXPERIMENTAL.md#cardinality-limit) for more information about this feature and how to enable it. (#4457)
+  See [metric SDK] documentation for more information about this feature and how to enable it. (#4457)
 - Add `NewMemberRaw` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage`. (#4804)
 
 ### Changed
