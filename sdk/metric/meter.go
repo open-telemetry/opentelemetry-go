@@ -148,7 +148,8 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 			inst.appendMeasures(in)
 			for _, cback := range callbacks {
 				inst := int64Observer{measures: in}
-				insert.addCallback(func(ctx context.Context) error { return cback(ctx, inst) })
+				fn := cback
+				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
@@ -281,7 +282,8 @@ func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Fl
 			inst.appendMeasures(in)
 			for _, cback := range callbacks {
 				inst := float64Observer{measures: in}
-				insert.addCallback(func(ctx context.Context) error { return cback(ctx, inst) })
+				fn := cback
+				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
