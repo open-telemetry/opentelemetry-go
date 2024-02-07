@@ -405,6 +405,7 @@ Rejected alternatives:
 - [Reuse attribute package](#reuse-attribute-package)
 - [Mix receiver types for Record](#mix-receiver-types-for-record)
 - [Add XYZ method to Logger](#add-xyz-method-to-logger)
+- [Rename KeyValue to Attr](#rename-keyvalue-to-attr)
 
 ### noop package
 
@@ -676,7 +677,7 @@ However, the benchmarks do not show any noticeable differences.[^9]
 
 The compiler is smart-enough to not make a heap allocation for any of these methods.
 The use of a pointer receiver does not cause any heap allocation.
-From Go FAQ[^10]:
+From Go FAQ:[^10]
 
 > In the current compilers, if a variable has its address taken,
 > that variable is a candidate for allocation on the heap.
@@ -687,7 +688,7 @@ From Go FAQ[^10]:
 The [Understanding Allocations: the Stack and the Heap](https://www.youtube.com/watch?v=ZMZpH4yT7M0)
 presentation by Jacob Walker describes the escape analysis with details.
 
-Moreover, also from Go FAQ[^10]:
+Moreover, also from Go FAQ:[^10]
 
 > Also, if a local variable is very large,
 > it might make more sense to store it on the heap rather than the stack.
@@ -727,6 +728,37 @@ such as [`slog`](https://pkg.go.dev/log/slog),
 [`zerolog`](https://pkg.go.dev/github.com/rs/zerolog),
 [`logr`](https://pkg.go.dev/github.com/go-logr/logr).
 
+### Rename KeyValue to Attr
+
+There was a proposal to rename `KeyValue` to `Attr` (or `Attribute`).[^11]
+New developers may not intuitively know that `log.KeyValue` is an attribute in
+the OpenTelemetry parlance.
+
+During the discussion we agreed to keep the `KeyValue` name.
+
+The type is used in two semantics:
+
+- as a log attribute
+- as a map item
+
+As for map item semantics, this type is a key-value pair, not an attribute.
+Naming the type as `Attr` would convey semantical meaning
+that would not be correct for a map.
+
+We expect that most of the Bridge API users will be OpenTelemetry contributors.
+We plan to implement bridges for the most popular logging libraries ourselves.
+Given we will all have the context needed to disambiguate these overlapping
+names, developers' confusion should not be an issue.
+
+For bridges not developed by us,
+developers will likely look at our existing bridges for inspiration.
+Our correct use of these types will be a reference to them.
+
+At last, we could consider a design defining both types: `KeyValue` and `Attr`.
+However, in this approach we would need have factory functions for both types.
+It would make the API surface unnecessarly big,
+and we may even have problems naming the functions.
+
 ## Open issues
 
 The Logs Bridge API MUST NOT be released as stable
@@ -746,3 +778,4 @@ before all issues below are closed:
 [^8]: [log/slog: structured, leveled logging](https://github.com/golang/go/issues/56345#issuecomment-1302563756)
 [^9]: [Record with pointer receivers only](https://github.com/pellared/opentelemetry-go/pull/8)
 [^10]: [Go FAQ: Stack or heap](https://go.dev/doc/faq#stack_or_heap)
+[^11]: [Rename KeyValue to Attr discussion](https://github.com/open-telemetry/opentelemetry-go/pull/4809#discussion_r1476080093)
