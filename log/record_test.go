@@ -106,12 +106,3 @@ func TestRecordAttributes(t *testing.T) {
 		assert.Equal(t, tc.index, i, "WalkAttributes early return for %s", tc.name)
 	}
 }
-
-func attrsSlice(r Record) []KeyValue {
-	var attrs []KeyValue
-	r.WalkAttributes(func(kv KeyValue) bool {
-		attrs = append(attrs, kv)
-		return true
-	})
-	return attrs
-}
