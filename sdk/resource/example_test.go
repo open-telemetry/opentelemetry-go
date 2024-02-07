@@ -27,12 +27,12 @@ import (
 func ExampleNew() {
 	res, err := resource.New(
 		context.Background(),
-		resource.WithFromEnv(),      // Pull attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables.
-		resource.WithTelemetrySDK(), // Provide information about the OpenTelemetry SDK used.
+		resource.WithFromEnv(),      // Discover and provide attributes from OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME environment variables.
+		resource.WithTelemetrySDK(), // Discover and provide information about the OpenTelemetry SDK used.
 		resource.WithProcess(),      // Discover and provide process information.
 		resource.WithOS(),           // Discover and provide OS information.
 		resource.WithContainer(),    // Discover and provide container information.
-		resource.WithHost(),         // Discover and provide information.
+		resource.WithHost(),         // Discover and provide host information.
 		resource.WithAttributes(attribute.String("foo", "bar")), // Add custom resource attributes.
 		// resource.WithDetectors(thirdparty.Detector{}), // Bring your own external Detector implementation.
 	)
@@ -42,7 +42,7 @@ func ExampleNew() {
 		log.Fatalln(err) // The error may be fatal.
 	}
 
-	// Now, you can use the resource and e.g. pass it to a tracer or meter provider.
+	// Now, you can use the resource (e.g. pass it to a tracer or meter provider).
 	fmt.Println(res.SchemaURL())
 
 	// Output: https://opentelemetry.io/schemas/1.24.0
