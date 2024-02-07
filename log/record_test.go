@@ -4,7 +4,6 @@
 package log
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -106,42 +105,6 @@ func TestRecordAttributes(t *testing.T) {
 		})
 		assert.Equal(t, tc.index, i, "WalkAttributes early return for %s", tc.name)
 	}
-}
-
-func TestRecordCloneConcurrentSafe(t *testing.T) {
-	// Create a record whose Attrs overflow the inline array,
-	// creating a slice in r.back.
-	r1 := Record{}
-	for i := 0; i < attributesInlineCount+1; i++ {
-		r1.AddAttributes(Int("k", i))
-	}
-
-	// Ensure that r1.back's capacity exceeds its length.
-	b := make([]KeyValue, len(r1.back), len(r1.back)+1)
-	copy(b, r1.back)
-	r1.back = b
-
-	attrsBefore := attrsSlice(r1)
-
-	// Changing the line below to:
-	//   r2 := r1
-	// will cause assertion failures and a race condition.
-	r2 := r1.Clone()
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		r1.AddAttributes(Int("p", 1))
-	}()
-	go func() {
-		defer wg.Done()
-		r2.AddAttributes(Int("p", 2))
-	}()
-	wg.Wait()
-
-	assert.Equal(t, append(attrsBefore, Int("p", 1)), attrsSlice(r1))
-	assert.Equal(t, append(attrsBefore, Int("p", 2)), attrsSlice(r2))
 }
 
 func attrsSlice(r Record) []KeyValue {

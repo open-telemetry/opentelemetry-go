@@ -125,15 +125,6 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
-// Clone returns a copy of the record with no shared state.
-// The original record and the clone can both be modified
-// without interfering with each other.
-func (r *Record) Clone() Record {
-	// Prevent append from mutating shared array.
-	r.back = sliceClip(r.back)
-	return *r
-}
-
 // AttributesLen returns the number of attributes in the Record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)

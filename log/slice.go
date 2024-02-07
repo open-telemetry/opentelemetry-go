@@ -20,13 +20,6 @@ func sliceGrow[S ~[]E, E any](s S, n int) S {
 	return s
 }
 
-// sliceClip removes unused capacity from the slice, returning s[:len(s):len(s)].
-//
-// This is a copy from https://pkg.go.dev/slices as it is not available in Go 1.20.
-func sliceClip[S ~[]E, E any](s S) S {
-	return s[:len(s):len(s)]
-}
-
 // sliceEqualFunc reports whether two slices are equal using an equality
 // function on each pair of elements. If the lengths are different,
 // EqualFunc returns false. Otherwise, the elements are compared in
