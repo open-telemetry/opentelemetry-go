@@ -85,7 +85,7 @@ This is how you can set an infinite cardinality limit
 
 	export OTEL_GO_X_CARDINALITY_LIMIT=-1
 
-This is how you can disable the cardinality limit.
+This is how you can disable the cardinality limit:
 
 	unset OTEL_GO_X_CARDINALITY_LIMIT
 
@@ -112,6 +112,30 @@ the [OpenTelemetry specification].
 
 All values other than these will result in the default, "trace_based",
 exemplar filter being used.
+
+This is how you can enable exemplars to be exported:
+
+	export OTEL_GO_X_EXEMPLAR=true
+
+This is how you can disable exemplars from being exported:
+
+	unset OTEL_GO_X_EXEMPLAR
+
+This is how you can set the exemplar filter to allow all measurements:
+
+	export OTEL_METRICS_EXEMPLAR_FILTER=always_on
+
+This is how you can set the exemplar filter to deny all measurements:
+
+	export OTEL_METRICS_EXEMPLAR_FILTER=always_off
+
+This is how you can set the exemplar filter to only allow sampled measurements:
+
+	export OTEL_METRICS_EXEMPLAR_FILTER=trace_based
+
+This is how you can revert to the default exemplar filter ("trace_based"):
+
+	unset OTEL_METRICS_EXEMPLAR_FILTER
 
 [OpenTelemetry specification]: https://github.com/open-telemetry/opentelemetry-specification/blob/a6ca2fd484c9e76fe1d8e1c79c99f08f4745b5ee/specification/configuration/sdk-environment-variables.md#exemplar
 [versioning and stability policy]: https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md
