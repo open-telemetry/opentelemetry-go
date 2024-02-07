@@ -15,6 +15,10 @@ The next release will require at least [Go 1.21].
 
 - Support [Go 1.22]. (#4890)
 
+### Fixed
+
+- Register all callbacks passed during observable instrument creation instead of just the last one multiple times in `go.opentelemetry.io/otel/sdk/metric`. (#4888)
+
 ## [1.23.0] 2024-02-06
 
 This release contains the first stable, `v1`, release of the following modules:
