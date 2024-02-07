@@ -726,9 +726,7 @@ before all issues below are closed:
 
 - [Clarify that log attributes are NOT common attributes](https://github.com/open-telemetry/opentelemetry-specification/issues/3849)
 - [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
-- [Clarify scalar value types in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3836)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
-- [Remove confusing description from Body field in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/pull/3827)
 
 [^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
 [^2]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
