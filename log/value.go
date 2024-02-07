@@ -289,6 +289,9 @@ func (v Value) String() string {
 }
 
 // An KeyValue is a key-value pair.
+// It is used to represent a log attribute,
+// which is a superset of [go.opentelemetry.io/otel/attribute.KeyValue],
+// and map item.
 type KeyValue struct {
 	Key   string
 	Value Value
