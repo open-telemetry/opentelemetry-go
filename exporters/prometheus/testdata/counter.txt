@@ -1,7 +1,7 @@
-# HELP foo_milliseconds_total a simple counter
-# TYPE foo_milliseconds_total counter
-foo_milliseconds_total{A="B",C="D",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 24.3
-foo_milliseconds_total{A="D",C="B",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 5
+# HELP foo_seconds_total a simple counter
+# TYPE foo_seconds_total counter
+foo_seconds_total{A="B",C="D",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 24.3
+foo_seconds_total{A="D",C="B",E="true",F="42",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 5
 # HELP otel_scope_info Instrumentation Scope metadata
 # TYPE otel_scope_info gauge
 otel_scope_info{otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1

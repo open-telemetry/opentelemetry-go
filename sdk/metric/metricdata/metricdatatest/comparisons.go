@@ -143,6 +143,24 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 			reasons = append(reasons, "Histogram not equal:")
 			reasons = append(reasons, r...)
 		}
+	case metricdata.ExponentialHistogram[int64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.ExponentialHistogram[float64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Summary:
+		r := equalSummary(v, b.(metricdata.Summary), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Summary not equal:")
+			reasons = append(reasons, r...)
+		}
 	default:
 		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
 	}
@@ -240,8 +258,10 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 		}
 	}
 
-	if a.Value != b.Value {
-		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
 	}
 
 	if !cfg.ignoreExemplars {
@@ -278,23 +298,25 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 		}
 	}
-	if a.Count != b.Count {
-		reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
-	}
-	if !equalSlices(a.Bounds, b.Bounds) {
-		reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
-	}
-	if !equalSlices(a.BucketCounts, b.BucketCounts) {
-		reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
-	}
-	if !eqExtrema(a.Min, b.Min) {
-		reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
-	}
-	if !eqExtrema(a.Max, b.Max) {
-		reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
-	}
-	if a.Sum != b.Sum {
-		reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !equalSlices(a.Bounds, b.Bounds) {
+			reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
+		}
+		if !equalSlices(a.BucketCounts, b.BucketCounts) {
+			reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
 	}
 	if !cfg.ignoreExemplars {
 		r := compareDiff(diffSlices(
@@ -308,6 +330,167 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 		if r != "" {
 			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
 		}
+	}
+	return reasons
+}
+
+// equalExponentialHistograms returns reasons exponential Histograms are not equal. If they are
+// equal, the returned reasons will be empty.
+//
+// The DataPoints each Histogram contains are compared based on containing the
+// same HistogramDataPoint, not the order they are stored in.
+func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHistogram[N], cfg config) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+
+	r := compareDiff(diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(a, b metricdata.ExponentialHistogramDataPoint[N]) bool {
+			r := equalExponentialHistogramDataPoints(a, b, cfg)
+			return len(r) == 0
+		},
+	))
+	if r != "" {
+		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
+	}
+	return reasons
+}
+
+// equalExponentialHistogramDataPoints returns reasons HistogramDataPoints are not equal.
+// If they are equal, the returned reasons will be empty.
+func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.ExponentialHistogramDataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.Encoded(attribute.DefaultEncoder()),
+			b.Attributes.Encoded(attribute.DefaultEncoder()),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+
+		if a.Scale != b.Scale {
+			reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
+		}
+		if a.ZeroCount != b.ZeroCount {
+			reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
+		}
+
+		r := equalExponentialBuckets(a.PositiveBucket, b.PositiveBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
+		r = equalExponentialBuckets(a.NegativeBucket, b.NegativeBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
+	}
+	if !cfg.ignoreExemplars {
+		r := compareDiff(diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(a, b metricdata.Exemplar[N]) bool {
+				r := equalExemplars(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+		}
+	}
+	return reasons
+}
+
+func equalExponentialBuckets(a, b metricdata.ExponentialBucket, _ config) (reasons []string) {
+	if a.Offset != b.Offset {
+		reasons = append(reasons, notEqualStr("Offset", a.Offset, b.Offset))
+	}
+	if !equalSlices(a.Counts, b.Counts) {
+		reasons = append(reasons, notEqualStr("Counts", a.Counts, b.Counts))
+	}
+	return reasons
+}
+
+func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
+	r := compareDiff(diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(a, b metricdata.SummaryDataPoint) bool {
+			r := equalSummaryDataPoint(a, b, cfg)
+			return len(r) == 0
+		},
+	))
+	if r != "" {
+		reasons = append(reasons, fmt.Sprintf("Summary DataPoints not equal:\n%s", r))
+	}
+	return reasons
+}
+
+func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reasons []string) {
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.Encoded(attribute.DefaultEncoder()),
+			b.Attributes.Encoded(attribute.DefaultEncoder()),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+		r := compareDiff(diffSlices(
+			a.QuantileValues,
+			b.QuantileValues,
+			func(a, b metricdata.QuantileValue) bool {
+				r := equalQuantileValue(a, b, cfg)
+				return len(r) == 0
+			},
+		))
+		if r != "" {
+			reasons = append(reasons, r)
+		}
+	}
+	return reasons
+}
+
+func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []string) {
+	if a.Quantile != b.Quantile {
+		reasons = append(reasons, notEqualStr("Quantile", a.Quantile, b.Quantile))
+	}
+	if a.Value != b.Value {
+		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
 	}
 	return reasons
 }
@@ -409,8 +592,10 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
 		}
 	}
-	if a.Value != b.Value {
-		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
 	}
 	if !equalSlices(a.SpanID, b.SpanID) {
 		reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))
@@ -557,6 +742,31 @@ func hasAttributesHistogram[T int64 | float64](histogram metricdata.Histogram[T]
 	return reasons
 }
 
+func hasAttributesExponentialHistogramDataPoints[T int64 | float64](dp metricdata.ExponentialHistogramDataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesExponentialHistogram[T int64 | float64](histogram metricdata.ExponentialHistogram[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range histogram.DataPoints {
+		reas := hasAttributesExponentialHistogramDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("histogram datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
 func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.KeyValue) (reasons []string) {
 	switch agg := agg.(type) {
 	case metricdata.Gauge[int64]:
@@ -571,6 +781,12 @@ func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.Key
 		reasons = hasAttributesHistogram(agg, attrs...)
 	case metricdata.Histogram[float64]:
 		reasons = hasAttributesHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[int64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[float64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.Summary:
+		reasons = hasAttributesSummary(agg, attrs...)
 	default:
 		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
 	}
@@ -596,12 +812,38 @@ func hasAttributesScopeMetrics(sm metricdata.ScopeMetrics, attrs ...attribute.Ke
 	}
 	return reasons
 }
+
 func hasAttributesResourceMetrics(rm metricdata.ResourceMetrics, attrs ...attribute.KeyValue) (reasons []string) {
 	for n, sm := range rm.ScopeMetrics {
 		reas := hasAttributesScopeMetrics(sm, attrs...)
 		if len(reas) > 0 {
 			reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics %d:\n", n))
 			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummary(summary metricdata.Summary, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range summary.DataPoints {
+		reas := hasAttributesSummaryDataPoint(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("summary datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummaryDataPoint(dp metricdata.SummaryDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
 		}
 	}
 	return reasons

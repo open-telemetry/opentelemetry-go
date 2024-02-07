@@ -26,12 +26,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 var (
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	now = time.Date(2000, time.January, 01, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	now = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 
 	res = resource.NewSchemaless(
 		semconv.ServiceName("stdoutmetric-example"),
@@ -41,7 +41,7 @@ var (
 		Resource: res,
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "example", Version: "v0.0.1"},
+				Scope: instrumentation.Scope{Name: "example", Version: "0.0.1"},
 				Metrics: []metricdata.Metrics{
 					{
 						Name:        "requests",
@@ -73,6 +73,27 @@ var (
 									StartTime:  now,
 									Time:       now.Add(1 * time.Second),
 									Value:      0.5,
+								},
+							},
+						},
+					},
+					{
+						Name:        "requests.size",
+						Description: "Size of received requests",
+						Unit:        "kb",
+						Data: metricdata.Histogram[int64]{
+							Temporality: metricdata.DeltaTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[int64]{
+								{
+									Attributes:   attribute.NewSet(attribute.String("server", "central")),
+									StartTime:    now,
+									Time:         now.Add(1 * time.Second),
+									Count:        10,
+									Bounds:       []float64{1, 5, 10},
+									BucketCounts: []uint64{1, 3, 6, 0},
+									Sum:          128,
+									Min:          metricdata.NewExtrema[int64](3),
+									Max:          metricdata.NewExtrema[int64](30),
 								},
 							},
 						},
@@ -158,7 +179,7 @@ func Example() {
 	// Ensure the periodic reader is cleaned up by shutting down the sdk.
 	_ = sdk.Shutdown(ctx)
 
-	//Output:
+	// Output:
 	// {
 	//   "Resource": [
 	//     {
@@ -173,7 +194,7 @@ func Example() {
 	//     {
 	//       "Scope": {
 	//         "Name": "example",
-	//         "Version": "v0.0.1",
+	//         "Version": "0.0.1",
 	//         "SchemaURL": ""
 	//       },
 	//       "Metrics": [
@@ -228,6 +249,44 @@ func Example() {
 	//           }
 	//         },
 	//         {
+	//           "Name": "requests.size",
+	//           "Description": "Size of received requests",
+	//           "Unit": "kb",
+	//           "Data": {
+	//             "DataPoints": [
+	//               {
+	//                 "Attributes": [
+	//                   {
+	//                     "Key": "server",
+	//                     "Value": {
+	//                       "Type": "STRING",
+	//                       "Value": "central"
+	//                     }
+	//                   }
+	//                 ],
+	//                 "StartTime": "0001-01-01T00:00:00Z",
+	//                 "Time": "0001-01-01T00:00:00Z",
+	//                 "Count": 10,
+	//                 "Bounds": [
+	//                   1,
+	//                   5,
+	//                   10
+	//                 ],
+	//                 "BucketCounts": [
+	//                   1,
+	//                   3,
+	//                   6,
+	//                   0
+	//                 ],
+	//                 "Min": 3,
+	//                 "Max": 30,
+	//                 "Sum": 128
+	//               }
+	//             ],
+	//             "Temporality": "DeltaTemporality"
+	//           }
+	//         },
+	//         {
 	//           "Name": "latency",
 	//           "Description": "Time spend processing received requests",
 	//           "Unit": "ms",
@@ -257,8 +316,8 @@ func Example() {
 	//                   6,
 	//                   0
 	//                 ],
-	//                 "Min": {},
-	//                 "Max": {},
+	//                 "Min": null,
+	//                 "Max": null,
 	//                 "Sum": 57
 	//               }
 	//             ],

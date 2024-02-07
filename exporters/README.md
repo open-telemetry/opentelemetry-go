@@ -7,16 +7,17 @@ This package contains exporters for this purpose.
 
 The following exporter packages are provided with the following OpenTelemetry signal support.
 
-| Exporter Package                                                                | Metrics | Traces |
-| :-----------------------------------------------------------------------------: | :-----: | :----: |
-| [go.opentelemetry.io/otel/exporters/jaeger](./jaeger)                           |         | ✓      |
-| [go.opentelemetry.io/otel/exporters/otlp/otlpmetric](./otlp/otlpmetric)         | ✓       |        |
-| [go.opentelemetry.io/otel/exporters/otlp/otlptrace](./otlp/otlptrace)           |         | ✓      |
-| [go.opentelemetry.io/otel/exporters/prometheus](./prometheus)                   | ✓       |        |
-| [go.opentelemetry.io/otel/exporters/stdout/stdoutmetric](./stdout/stdoutmetric) | ✓       |        |
-| [go.opentelemetry.io/otel/exporters/stdout/stdouttrace](./stdout/stdouttrace)   |         | ✓      |
-| [go.opentelemetry.io/otel/exporters/zipkin](./zipkin)                           |         | ✓      |
+|                                           Exporter Package                                            | Metrics | Traces |
+|:-----------------------------------------------------------------------------------------------------:|:-------:|:------:|
+| [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc](./otlp/otlpmetric/otlpmetricgrpc) |    ✓    |        |
+| [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp](./otlp/otlpmetric/otlpmetrichttp) |    ✓    |        |
+|   [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc](./otlp/otlptrace/otlptracegrpc)   |         |   ✓    |
+|   [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp](./otlp/otlptrace/otlptracehttp)   |         |   ✓    |
+|                     [go.opentelemetry.io/otel/exporters/prometheus](./prometheus)                     |    ✓    |        |
+|            [go.opentelemetry.io/otel/exporters/stdout/stdoutmetric](./stdout/stdoutmetric)            |    ✓    |        |
+|             [go.opentelemetry.io/otel/exporters/stdout/stdouttrace](./stdout/stdouttrace)             |         |   ✓    |
+|                         [go.opentelemetry.io/otel/exporters/zipkin](./zipkin)                         |         |   ✓    |
 
-See the [OpenTelemetry registry] for 3rd-part exporters compatible with this project.
+See the [OpenTelemetry registry] for 3rd-party exporters compatible with this project.
 
 [OpenTelemetry registry]: https://opentelemetry.io/registry/?language=go&component=exporter

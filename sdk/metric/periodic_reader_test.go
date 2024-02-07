@@ -20,10 +20,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -166,7 +167,7 @@ func (e *fnExporter) Temporality(k InstrumentKind) metricdata.Temporality {
 	return DefaultTemporalitySelector(k)
 }
 
-func (e *fnExporter) Aggregation(k InstrumentKind) aggregation.Aggregation {
+func (e *fnExporter) Aggregation(k InstrumentKind) Aggregation {
 	if e.aggregationFunc != nil {
 		return e.aggregationFunc(k)
 	}
@@ -197,21 +198,18 @@ func (e *fnExporter) Shutdown(ctx context.Context) error {
 type periodicReaderTestSuite struct {
 	*readerTestSuite
 
-	ErrReader Reader
+	ErrReader *PeriodicReader
 }
 
 func (ts *periodicReaderTestSuite) SetupTest() {
-	ts.readerTestSuite.SetupTest()
-
 	e := &fnExporter{
 		exportFunc:   func(context.Context, *metricdata.ResourceMetrics) error { return assert.AnError },
 		flushFunc:    func(context.Context) error { return assert.AnError },
 		shutdownFunc: func(context.Context) error { return assert.AnError },
 	}
 
-	ts.ErrReader = NewPeriodicReader(e)
+	ts.ErrReader = NewPeriodicReader(e, WithProducer(testExternalProducer{}))
 	ts.ErrReader.register(testSDKProducer{})
-	ts.ErrReader.RegisterProducer(testExternalProducer{})
 }
 
 func (ts *periodicReaderTestSuite) TearDownTest() {
@@ -231,8 +229,12 @@ func (ts *periodicReaderTestSuite) TestShutdownPropagated() {
 func TestPeriodicReader(t *testing.T) {
 	suite.Run(t, &periodicReaderTestSuite{
 		readerTestSuite: &readerTestSuite{
-			Factory: func() Reader {
-				return NewPeriodicReader(new(fnExporter))
+			Factory: func(opts ...ReaderOption) Reader {
+				var popts []PeriodicReaderOption
+				for _, o := range opts {
+					popts = append(popts, o)
+				}
+				return NewPeriodicReader(new(fnExporter), popts...)
 			},
 		},
 	})
@@ -289,9 +291,8 @@ func TestPeriodicReaderRun(t *testing.T) {
 		},
 	}
 
-	r := NewPeriodicReader(exp)
+	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 	r.register(testSDKProducer{})
-	r.RegisterProducer(testExternalProducer{})
 	trigger <- time.Now()
 	assert.Equal(t, assert.AnError, <-eh.Err)
 
@@ -318,9 +319,8 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 
 	t.Run("ForceFlush", func(t *testing.T) {
 		exp, called := expFunc(t)
-		r := NewPeriodicReader(exp)
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{})
-		r.RegisterProducer(testExternalProducer{})
 		assert.Equal(t, assert.AnError, r.ForceFlush(context.Background()), "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 
@@ -328,20 +328,112 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		_ = r.Shutdown(context.Background())
 	})
 
+	t.Run("ForceFlush timeout on producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{}))
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				select {
+				case <-time.After(timeout + time.Second):
+					*rm = testResourceMetricsA
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return ctx.Err()
+				}
+				return nil
+			},
+		})
+		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(context.Background())
+	})
+
+	t.Run("ForceFlush timeout on external producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				select {
+				case <-time.After(timeout + time.Second):
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return nil, ctx.Err()
+				}
+				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+			},
+		}))
+		r.register(testSDKProducer{})
+		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+
+		// Ensure Reader is allowed clean up attempt.
+		_ = r.Shutdown(context.Background())
+	})
+
 	t.Run("Shutdown", func(t *testing.T) {
 		exp, called := expFunc(t)
-		r := NewPeriodicReader(exp)
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{})
-		r.RegisterProducer(testExternalProducer{})
 		assert.Equal(t, assert.AnError, r.Shutdown(context.Background()), "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})
+
+	t.Run("Shutdown timeout on producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{}))
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				select {
+				case <-time.After(timeout + time.Second):
+					*rm = testResourceMetricsA
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return ctx.Err()
+				}
+				return nil
+			},
+		})
+		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+	})
+
+	t.Run("Shutdown timeout on external producer", func(t *testing.T) {
+		exp, called := expFunc(t)
+		timeout := time.Millisecond
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				select {
+				case <-time.After(timeout + time.Second):
+				case <-ctx.Done():
+					// we timed out before we could collect metrics
+					return nil, ctx.Err()
+				}
+				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+			},
+		}))
+		r.register(testSDKProducer{})
+		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
+		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+	})
+}
+
+func TestPeriodicReaderMultipleForceFlush(t *testing.T) {
+	ctx := context.Background()
+	r := NewPeriodicReader(new(fnExporter), WithProducer(testExternalProducer{}))
+	r.register(testSDKProducer{})
+	require.NoError(t, r.ForceFlush(ctx))
+	require.NoError(t, r.ForceFlush(ctx))
+	require.NoError(t, r.Shutdown(ctx))
 }
 
 func BenchmarkPeriodicReader(b *testing.B) {
-	b.Run("Collect", benchReaderCollectFunc(
-		NewPeriodicReader(new(fnExporter)),
-	))
+	r := NewPeriodicReader(new(fnExporter))
+	b.Run("Collect", benchReaderCollectFunc(r))
+	require.NoError(b, r.Shutdown(context.Background()))
 }
 
 func TestPeriodiclReaderTemporality(t *testing.T) {
@@ -374,6 +466,47 @@ func TestPeriodiclReaderTemporality(t *testing.T) {
 			var undefinedInstrument InstrumentKind
 			rdr := NewPeriodicReader(tt.exporter)
 			assert.Equal(t, tt.wantTemporality.String(), rdr.temporality(undefinedInstrument).String())
+		})
+	}
+}
+
+func TestPeriodicReaderCollect(t *testing.T) {
+	expiredCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1))
+	defer cancel()
+
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		expectedErr error
+	}{
+		{
+			name:        "with a valid context",
+			ctx:         context.Background(),
+			expectedErr: nil,
+		},
+		{
+			name:        "with an expired context",
+			ctx:         expiredCtx,
+			expectedErr: context.DeadlineExceeded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewPeriodicReader(new(fnExporter))
+			mp := NewMeterProvider(WithReader(rdr))
+			meter := mp.Meter("test")
+
+			// Ensure the pipeline has a callback setup
+			testM, err := meter.Int64ObservableCounter("test")
+			assert.NoError(t, err)
+			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+				return nil
+			}, testM)
+			assert.NoError(t, err)
+
+			rm := &metricdata.ResourceMetrics{}
+			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))
 		})
 	}
 }

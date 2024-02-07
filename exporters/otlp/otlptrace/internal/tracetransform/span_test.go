@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -213,12 +213,14 @@ func TestSpanData(t *testing.T) {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Events: []tracesdk.Event{
-			{Time: startTime,
+			{
+				Time: startTime,
 				Attributes: []attribute.KeyValue{
 					attribute.Int64("CompressedByteSize", 512),
 				},
 			},
-			{Time: endTime,
+			{
+				Time: endTime,
 				Attributes: []attribute.KeyValue{
 					attribute.String("EventType", "Recv"),
 				},
@@ -311,7 +313,9 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	sd := Spans(tracetest.SpanStubs{{}}.Snapshots())
+	sd := Spans(tracetest.SpanStubs{
+		{},
+	}.Snapshots())
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	scopeSpans := rs.GetScopeSpans()
@@ -323,5 +327,9 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	assert.NotPanics(t, func() { Spans(tracetest.SpanStubs{{}}.Snapshots()) })
+	assert.NotPanics(t, func() {
+		Spans(tracetest.SpanStubs{
+			{},
+		}.Snapshots())
+	})
 }

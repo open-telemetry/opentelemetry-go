@@ -78,8 +78,7 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	otel.SetTracerProvider(tp)
 
 	log.Println("Installing the OpenCensus bridge to make OpenCensus libraries write spans using OpenTelemetry.")
-	tracer := tp.Tracer("simple")
-	octrace.DefaultTracer = opencensus.NewTracer(tracer)
+	opencensus.InstallTraceBridge()
 	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenCensus span, which should be printed out using the OpenTelemetry stdouttrace exporter.\n-- It should have no parent, since it is the first span.")
@@ -88,7 +87,7 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
-	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
+	ctx, otspan := tp.Tracer("simple").Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
 	tp.ForceFlush(ctx)
 
@@ -103,9 +102,8 @@ func tracing(otExporter sdktrace.SpanExporter) {
 // registry or an OpenCensus view.
 func monitoring(exporter metric.Exporter) error {
 	log.Println("Adding the OpenCensus metric Producer to an OpenTelemetry Reader to export OpenCensus metrics using the OpenTelemetry stdout exporter.")
-	reader := metric.NewPeriodicReader(exporter)
 	// Register the OpenCensus metric Producer to add metrics from OpenCensus to the output.
-	reader.RegisterProducer(opencensus.NewMetricProducer())
+	reader := metric.NewPeriodicReader(exporter, metric.WithProducer(opencensus.NewMetricProducer()))
 	metric.NewMeterProvider(metric.WithReader(reader))
 
 	log.Println("Registering a gauge metric using an OpenCensus registry.")

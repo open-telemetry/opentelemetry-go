@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Link Checker
       id: lychee
-      uses: lycheeverse/lychee-action@v1.8.0
+      uses: lycheeverse/lychee-action@v1.9.3
 
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
-      uses: peter-evans/create-issue-from-file@v4
+      uses: peter-evans/create-issue-from-file@v5
       with:
         title: Link Checker Report
         content-filepath: ./lychee/out.md

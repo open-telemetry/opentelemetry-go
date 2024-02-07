@@ -31,7 +31,11 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 {%- endif -%}
 {%- endmacro -%}
 {%- macro keydoc(attr) -%}
+{%- if attr.stability|string() == "StabilityLevel.DEPRECATED" -%}
+{{ to_go_name(attr.fqn) }}Key is the attribute Key conforming to the "{{ attr.fqn }}" semantic conventions.
+{%- else -%}
 {{ to_go_name(attr.fqn) }}Key is the attribute Key conforming to the "{{ attr.fqn }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- endif %}
 {%- endmacro -%}
 {%- macro keydetails(attr) -%}
 {%- if attr.attr_type is string %}
@@ -51,18 +55,24 @@ RequirementLevel: Recommended
 RequirementLevel: Optional
 {%- endif %}
 {{ attr.stability |  replace("Level.", ": ") | capitalize }}
-{%- if attr.deprecated != None %}
-Deprecated: {{ attr.deprecated }}
-{%- endif %}
 {%- if attr.examples is iterable %}
 Examples: {{ attr.examples | pprint | trim("[]")  }}
 {%- endif %}
 {%- if attr.note %}
 Note: {{ attr.note }}
 {%- endif %}
+{%- if attr.stability|string() == "StabilityLevel.DEPRECATED" %}
+Deprecated: {{ attr.brief | replace("Deprecated, ", "") }}
+{%- endif %}
 {%- endmacro -%}
 {%- macro fndoc(attr) -%}
+{%- if attr.stability|string() == "StabilityLevel.DEPRECATED" -%}
+// {{ to_go_name(attr.fqn) }} returns an attribute KeyValue conforming to the "{{ attr.fqn }}" semantic conventions.
+
+Deprecated: {{ attr.brief | replace("Deprecated, ", "") }}
+{%- else -%}
 // {{ to_go_name(attr.fqn) }} returns an attribute KeyValue conforming to the "{{ attr.fqn }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- endif %}
 {%- endmacro -%}
 {%- macro to_go_func(type, name) -%}
 {%- if type == "string" -%}
@@ -124,6 +134,10 @@ const (
 var (
 {%- for val in attr.attr_type.members %}
     // {{ val.brief | to_doc_brief }}
+{%- if attr.stability|string() == "StabilityLevel.DEPRECATED" %}
+    //
+    // Deprecated: {{ attr.brief | replace("Deprecated, ", "") | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}
+{%- endif %}
     {{to_go_name("{}.{}".format(attr.fqn, val.member_id))}} = {{to_go_name(attr.fqn)}}Key.{{to_go_attr_type(attr.attr_type.enum_type, val.value)}}
 {%- endfor %}
 )

@@ -25,40 +25,17 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/internal/retry"
-	ominternal "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/oconf"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/retry"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
-
-// New returns an OpenTelemetry metric Exporter. The Exporter can be used with
-// a PeriodicReader to export OpenTelemetry metric data to an OTLP receiving
-// endpoint using gRPC.
-//
-// If an already established gRPC ClientConn is not passed in options using
-// WithGRPCConn, a connection to the OTLP endpoint will be established based
-// on options. If a connection cannot be establishes in the lifetime of ctx,
-// an error will be returned.
-func New(ctx context.Context, options ...Option) (metric.Exporter, error) {
-	c, err := newClient(ctx, options...)
-	if err != nil {
-		return nil, err
-	}
-	return ominternal.New(c), nil
-}
 
 type client struct {
 	metadata      metadata.MD
 	exportTimeout time.Duration
 	requestFunc   retry.RequestFunc
-
-	temporalitySelector metric.TemporalitySelector
-	aggregationSelector metric.AggregationSelector
 
 	// ourConn keeps track of where conn was created: true if created here in
 	// NewClient, or false if passed with an option. This is important on
@@ -70,16 +47,11 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, options ...Option) (ominternal.Client, error) {
-	cfg := oconf.NewGRPCConfig(asGRPCOptions(options)...)
-
+func newClient(ctx context.Context, cfg oconf.Config) (*client, error) {
 	c := &client{
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
 		conn:          cfg.GRPCConn,
-
-		temporalitySelector: cfg.Metrics.TemporalitySelector,
-		aggregationSelector: cfg.Metrics.AggregationSelector,
 	}
 
 	if len(cfg.Metrics.Headers) > 0 {
@@ -89,7 +61,11 @@ func newClient(ctx context.Context, options ...Option) (ominternal.Client, error
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
-		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, cfg.DialOptions...)
+		userAgent := "OTel Go OTLP over gRPC metrics exporter/" + Version()
+		dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
+		dialOpts = append(dialOpts, cfg.DialOptions...)
+
+		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, dialOpts...)
 		if err != nil {
 			return nil, err
 		}
@@ -103,19 +79,6 @@ func newClient(ctx context.Context, options ...Option) (ominternal.Client, error
 
 	return c, nil
 }
-
-// Temporality returns the Temporality to use for an instrument kind.
-func (c *client) Temporality(k metric.InstrumentKind) metricdata.Temporality {
-	return c.temporalitySelector(k)
-}
-
-// Aggregation returns the Aggregation to use for an instrument kind.
-func (c *client) Aggregation(k metric.InstrumentKind) aggregation.Aggregation {
-	return c.aggregationSelector(k)
-}
-
-// ForceFlush does nothing, the client holds no state.
-func (c *client) ForceFlush(ctx context.Context) error { return ctx.Err() }
 
 // Shutdown shuts down the client, freeing all resource.
 //
@@ -213,28 +176,36 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 // duration to wait for if an explicit throttle time is included in err.
 func retryable(err error) (bool, time.Duration) {
 	s := status.Convert(err)
+	return retryableGRPCStatus(s)
+}
+
+func retryableGRPCStatus(s *status.Status) (bool, time.Duration) {
 	switch s.Code() {
 	case codes.Canceled,
 		codes.DeadlineExceeded,
-		codes.ResourceExhausted,
 		codes.Aborted,
 		codes.OutOfRange,
 		codes.Unavailable,
 		codes.DataLoss:
-		return true, throttleDelay(s)
+		// Additionally, handle RetryInfo.
+		_, d := throttleDelay(s)
+		return true, d
+	case codes.ResourceExhausted:
+		// Retry only if the server signals that the recovery from resource exhaustion is possible.
+		return throttleDelay(s)
 	}
 
 	// Not a retry-able error.
 	return false, 0
 }
 
-// throttleDelay returns a duration to wait for if an explicit throttle time
-// is included in the response status.
-func throttleDelay(s *status.Status) time.Duration {
+// throttleDelay returns if the status is RetryInfo
+// and the duration to wait for if an explicit throttle time is included.
+func throttleDelay(s *status.Status) (bool, time.Duration) {
 	for _, detail := range s.Details() {
 		if t, ok := detail.(*errdetails.RetryInfo); ok {
-			return t.RetryDelay.AsDuration()
+			return true, t.RetryDelay.AsDuration()
 		}
 	}
-	return 0
+	return false, 0
 }

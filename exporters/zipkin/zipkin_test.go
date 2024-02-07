@@ -15,6 +15,7 @@
 package zipkin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,8 +27,9 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
+	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
 
+	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +38,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -118,7 +120,9 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 	require.NoError(t, err)
 	collector.url = fmt.Sprintf("http://%s", listener.Addr().String())
 	server := &http.Server{
-		Handler: http.HandlerFunc(collector.handler),
+		Handler:      http.HandlerFunc(collector.handler),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	collector.server = server
 	wg := &sync.WaitGroup{}
@@ -363,4 +367,22 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, exp.Shutdown(context.Background()))
 	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+}
+
+func TestLogrFormatting(t *testing.T) {
+	format := "string %q, int %d"
+	args := []interface{}{"s", 1}
+
+	var buf bytes.Buffer
+	l := funcr.New(func(prefix, args string) {
+		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+	}, funcr.Options{})
+	exp, err := New("", WithLogr(l))
+	require.NoError(t, err)
+
+	exp.logf(format, args...)
+
+	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
+	got := buf.String()
+	assert.Equal(t, want, got)
 }

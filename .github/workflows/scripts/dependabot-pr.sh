@@ -17,8 +17,8 @@
 git config user.name opentelemetrybot
 git config user.email 107717825+opentelemetrybot@users.noreply.github.com
 
-PR_NAME=dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
-git checkout -b $PR_NAME
+BRANCH=dependabot/dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
+git checkout -b $BRANCH
 
 IFS=$'\n'
 requests=($( gh pr list --search "author:app/dependabot" --json title --jq '.[].title' ))
@@ -60,6 +60,6 @@ git add go.sum go.mod
 git add "**/go.sum" "**/go.mod"
 git commit -m "dependabot updates `date`
 $message"
-git push origin $PR_NAME
+git push origin $BRANCH
 
 gh pr create --title "[chore] dependabot updates `date`" --body "$message"

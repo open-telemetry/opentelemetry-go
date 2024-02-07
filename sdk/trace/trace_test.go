@@ -33,10 +33,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	ottest "go.opentelemetry.io/otel/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1133,6 +1133,18 @@ func TestNilSpanEnd(t *testing.T) {
 	span.End()
 }
 
+func TestSpanWithCanceledContext(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
+	span.End()
+
+	assert.Equal(t, 1, te.Len(), "span recording must ignore context cancelation")
+}
+
 func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
@@ -1198,7 +1210,7 @@ func TestRecordError(t *testing.T) {
 	}{
 		{
 			err: ottest.NewTestError("test error"),
-			typ: "go.opentelemetry.io/otel/internal/internaltest.TestError",
+			typ: "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError",
 			msg: "test error",
 		},
 		{
@@ -1250,7 +1262,7 @@ func TestRecordError(t *testing.T) {
 
 func TestRecordErrorWithStackTrace(t *testing.T) {
 	err := ottest.NewTestError("test error")
-	typ := "go.opentelemetry.io/otel/internal/internaltest.TestError"
+	typ := "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError"
 	msg := "test error"
 
 	te := NewTestExporter()
@@ -1407,7 +1419,8 @@ func TestWithResource(t *testing.T) {
 			name: "last resource wins",
 			options: []TracerProviderOption{
 				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
-				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)))},
+				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			},
 			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
 		},
 		{

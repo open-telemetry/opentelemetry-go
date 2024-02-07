@@ -19,7 +19,7 @@ import (
 	"errors"
 	"io"
 	"log"
-	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -123,9 +123,24 @@ func TestHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(HandlerTestSuite))
 }
 
-func TestHandlerRace(t *testing.T) {
-	go SetErrorHandler(&ErrLogger{log.New(os.Stderr, "", 0)})
-	go Handle(errors.New("error"))
+func TestHandlerConcurrentSafe(t *testing.T) {
+	// In order not to pollute the test output.
+	SetErrorHandler(&ErrLogger{log.New(io.Discard, "", 0)})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		SetErrorHandler(&ErrLogger{log.New(io.Discard, "", 0)})
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		Handle(errors.New("error"))
+	}()
+
+	wg.Wait()
+	reset()
 }
 
 func BenchmarkErrorHandler(b *testing.B) {

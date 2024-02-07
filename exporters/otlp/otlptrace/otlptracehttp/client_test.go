@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -29,8 +28,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
@@ -52,14 +51,19 @@ var (
 
 func TestEndToEnd(t *testing.T) {
 	tests := []struct {
-		name  string
-		opts  []otlptracehttp.Option
-		mcCfg mockCollectorConfig
-		tls   bool
+		name            string
+		opts            []otlptracehttp.Option
+		mcCfg           mockCollectorConfig
+		tls             bool
+		withURLEndpoint bool
 	}{
 		{
 			name: "no extra options",
 			opts: nil,
+		},
+		{
+			name:            "with URL endpoint",
+			withURLEndpoint: true,
 		},
 		{
 			name: "with gzip compression",
@@ -95,7 +99,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503, 503},
+				InjectHTTPStatus: []int{503, 502},
 			},
 		},
 		{
@@ -110,7 +114,7 @@ func TestEndToEnd(t *testing.T) {
 				}),
 			},
 			mcCfg: mockCollectorConfig{
-				InjectHTTPStatus: []int{503},
+				InjectHTTPStatus: []int{504},
 				InjectResponseHeader: []map[string]string{
 					{"Retry-After": "10"},
 				},
@@ -163,8 +167,12 @@ func TestEndToEnd(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mc := runMockCollector(t, tc.mcCfg)
 			defer mc.MustStop(t)
-			allOpts := []otlptracehttp.Option{
-				otlptracehttp.WithEndpoint(mc.Endpoint()),
+			allOpts := []otlptracehttp.Option{}
+
+			if tc.withURLEndpoint {
+				allOpts = append(allOpts, otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()))
+			} else {
+				allOpts = append(allOpts, otlptracehttp.WithEndpoint(mc.Endpoint()))
 			}
 			if tc.tls {
 				tlsConfig := mc.ClientTLSConfig()
@@ -213,6 +221,7 @@ func TestTimeout(t *testing.T) {
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
 		otlptracehttp.WithTimeout(time.Nanosecond),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
 	)
 	ctx := context.Background()
 	exporter, err := otlptrace.New(ctx, client)
@@ -221,9 +230,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	unwrapped := errors.Unwrap(err)
-	assert.Equalf(t, true, os.IsTimeout(unwrapped), "expected timeout error, got: %v", unwrapped)
-	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
+	assert.ErrorContains(t, err, "retry-able request failure")
 }
 
 func TestNoRetry(t *testing.T) {
@@ -330,7 +337,7 @@ func TestDeadlineContext(t *testing.T) {
 	assert.Empty(t, mc.GetSpans())
 }
 
-func TestStopWhileExporting(t *testing.T) {
+func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 	statuses := make([]int, 0, 5)
 	for i := 0; i < cap(statuses); i++ {
 		statuses = append(statuses, http.StatusTooManyRequests)
@@ -400,4 +407,56 @@ func TestPartialSuccess(t *testing.T) {
 	require.Equal(t, 1, len(errs))
 	require.Contains(t, errs[0].Error(), "partially successful")
 	require.Contains(t, errs[0].Error(), "2 spans rejected")
+}
+
+func TestOtherHTTPSuccess(t *testing.T) {
+	for code := 201; code <= 299; code++ {
+		t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
+			mcCfg := mockCollectorConfig{
+				InjectHTTPStatus: []int{code},
+			}
+			mc := runMockCollector(t, mcCfg)
+			defer mc.MustStop(t)
+			driver := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpoint(mc.Endpoint()),
+				otlptracehttp.WithInsecure(),
+			)
+			ctx := context.Background()
+			exporter, err := otlptrace.New(ctx, driver)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, exporter.Shutdown(context.Background()))
+			}()
+
+			errs := []error{}
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				errs = append(errs, err)
+			}))
+			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+			assert.NoError(t, err)
+
+			assert.Equal(t, 0, len(errs))
+		})
+	}
+}
+
+func TestCollectorRespondingNonProtobufContent(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		InjectContentType: "application/octet-stream",
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	ctx := context.Background()
+	exporter, err := otlptrace.New(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(context.Background()))
+	}()
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	assert.NoError(t, err)
+	assert.Len(t, mc.GetSpans(), 1)
 }

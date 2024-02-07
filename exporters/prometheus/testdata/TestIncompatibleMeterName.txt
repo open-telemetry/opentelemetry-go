@@ -1,0 +1,3 @@
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info 1

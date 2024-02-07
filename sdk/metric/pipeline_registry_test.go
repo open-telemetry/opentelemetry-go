@@ -15,6 +15,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"context"
 	"sync/atomic"
 	"testing"
 
@@ -25,44 +26,137 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var defaultView = NewView(Instrument{Name: "*"}, Stream{})
 
-type invalidAggregation struct {
-	aggregation.Aggregation
-}
+type invalidAggregation struct{}
 
-func (invalidAggregation) Copy() aggregation.Aggregation {
+func (invalidAggregation) copy() Aggregation {
 	return invalidAggregation{}
 }
-func (invalidAggregation) Err() error {
+
+func (invalidAggregation) err() error {
 	return nil
+}
+
+func requireN[N int64 | float64](t *testing.T, n int, m []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+	t.Helper()
+	assert.NoError(t, err)
+	require.Len(t, m, n)
+	require.Len(t, comps, n)
+}
+
+func assertSum[N int64 | float64](n int, temp metricdata.Temporality, mono bool, v [2]N) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+		t.Helper()
+		requireN[N](t, n, meas, comps, err)
+
+		for m := 0; m < n; m++ {
+			t.Logf("input/output number: %d", m)
+			in, out := meas[m], comps[m]
+			in(context.Background(), 1, *attribute.EmptySet())
+
+			var got metricdata.Aggregation
+			assert.Equal(t, 1, out(&got), "1 data-point expected")
+			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+				Temporality: temp,
+				IsMonotonic: mono,
+				DataPoints:  []metricdata.DataPoint[N]{{Value: v[0]}},
+			}, got, metricdatatest.IgnoreTimestamp())
+
+			in(context.Background(), 3, *attribute.EmptySet())
+
+			assert.Equal(t, 1, out(&got), "1 data-point expected")
+			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+				Temporality: temp,
+				IsMonotonic: mono,
+				DataPoints:  []metricdata.DataPoint[N]{{Value: v[1]}},
+			}, got, metricdatatest.IgnoreTimestamp())
+		}
+	}
+}
+
+func assertHist[N int64 | float64](temp metricdata.Temporality) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+		t.Helper()
+		requireN[N](t, 1, meas, comps, err)
+
+		in, out := meas[0], comps[0]
+		in(context.Background(), 1, *attribute.EmptySet())
+
+		var got metricdata.Aggregation
+		assert.Equal(t, 1, out(&got), "1 data-point expected")
+		buckets := []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		n := 1
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
+			Temporality: temp,
+			DataPoints: []metricdata.HistogramDataPoint[N]{{
+				Count:        uint64(n),
+				Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+				BucketCounts: buckets,
+				Min:          metricdata.NewExtrema[N](1),
+				Max:          metricdata.NewExtrema[N](1),
+				Sum:          N(n),
+			}},
+		}, got, metricdatatest.IgnoreTimestamp())
+
+		in(context.Background(), 1, *attribute.EmptySet())
+
+		if temp == metricdata.CumulativeTemporality {
+			buckets[1] = 2
+			n = 2
+		}
+		assert.Equal(t, 1, out(&got), "1 data-point expected")
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
+			Temporality: temp,
+			DataPoints: []metricdata.HistogramDataPoint[N]{{
+				Count:        uint64(n),
+				Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+				BucketCounts: buckets,
+				Min:          metricdata.NewExtrema[N](1),
+				Max:          metricdata.NewExtrema[N](1),
+				Sum:          N(n),
+			}},
+		}, got, metricdatatest.IgnoreTimestamp())
+	}
+}
+
+func assertLastValue[N int64 | float64](t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+	t.Helper()
+	requireN[N](t, 1, meas, comps, err)
+
+	in, out := meas[0], comps[0]
+	in(context.Background(), 10, *attribute.EmptySet())
+	in(context.Background(), 1, *attribute.EmptySet())
+
+	var got metricdata.Aggregation
+	assert.Equal(t, 1, out(&got), "1 data-point expected")
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[N]{
+		DataPoints: []metricdata.DataPoint[N]{{Value: 1}},
+	}, got, metricdatatest.IgnoreTimestamp())
 }
 
 func testCreateAggregators[N int64 | float64](t *testing.T) {
 	changeAggView := NewView(
 		Instrument{Name: "foo"},
-		Stream{Aggregation: aggregation.ExplicitBucketHistogram{}},
+		Stream{Aggregation: AggregationExplicitBucketHistogram{
+			Boundaries: []float64{0, 100},
+			NoMinMax:   true,
+		}},
 	)
-	renameView := NewView(
-		Instrument{Name: "foo"},
-		Stream{Name: "bar"},
-	)
-	defaultAggView := NewView(
-		Instrument{Name: "foo"},
-		Stream{Aggregation: aggregation.Default{}},
-	)
+	renameView := NewView(Instrument{Name: "foo"}, Stream{Name: "bar"})
 	invalidAggView := NewView(
 		Instrument{Name: "foo"},
 		Stream{Aggregation: invalidAggregation{}},
 	)
 
 	instruments := []Instrument{
-		{Name: "foo", Kind: InstrumentKind(0)}, //Unknown kind
+		{Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
 		{Name: "foo", Kind: InstrumentKindCounter},
 		{Name: "foo", Kind: InstrumentKindUpDownCounter},
 		{Name: "foo", Kind: InstrumentKindHistogram},
@@ -76,194 +170,196 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		reader   Reader
 		views    []View
 		inst     Instrument
-		wantKind internal.Aggregator[N] //Aggregators should match len and types
-		wantLen  int
-		wantErr  error
+		validate func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error)
 	}{
 		{
-			name:   "drop should return 0 aggregators",
-			reader: NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Drop{} })),
-			views:  []View{defaultView},
+			name:   "Default/Drop",
+			reader: NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDrop{} })),
 			inst:   instruments[InstrumentKindCounter],
+			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+				t.Helper()
+				assert.NoError(t, err)
+				assert.Len(t, meas, 0)
+				assert.Len(t, comps, 0)
+			},
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/Sum/NonMonotonic",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewDeltaSum[N](false),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.DeltaTemporality, false, [2]N{1, 3}),
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/ExplicitBucketHistogram",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewDeltaHistogram[N](aggregation.ExplicitBucketHistogram{}),
-			wantLen:  1,
+			validate: assertHist[N](metricdata.DeltaTemporality),
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/PrecomputedSum/Monotonic",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedDeltaSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.DeltaTemporality, true, [2]N{1, 2}),
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/PrecomputedSum/NonMonotonic",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedDeltaSum[N](false),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.DeltaTemporality, false, [2]N{1, 2}),
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/Gauge",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
-			wantLen:  1,
+			validate: assertLastValue[N],
 		},
 		{
-			name:     "default agg should use reader",
+			name:     "Default/Delta/Sum/Monotonic",
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
-			views:    []View{defaultAggView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewDeltaSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.DeltaTemporality, true, [2]N{1, 3}),
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/Sum/NonMonotonic",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](false),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 4}),
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/ExplicitBucketHistogram",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
-			wantLen:  1,
+			validate: assertHist[N](metricdata.CumulativeTemporality),
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/PrecomputedSum/Monotonic",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 3}),
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/PrecomputedSum/NonMonotonic",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](false),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 3}),
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/Gauge",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
-			wantLen:  1,
+			validate: assertLastValue[N],
 		},
 		{
-			name:     "reader should set default agg",
+			name:     "Default/Cumulative/Sum/Monotonic",
 			reader:   NewManualReader(),
-			views:    []View{defaultView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
 		},
 		{
-			name:     "view should overwrite reader",
-			reader:   NewManualReader(),
-			views:    []View{changeAggView},
-			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
-			wantLen:  1,
+			name:   "ViewHasPrecedence",
+			reader: NewManualReader(),
+			views:  []View{changeAggView},
+			inst:   instruments[InstrumentKindCounter],
+			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+				t.Helper()
+				requireN[N](t, 1, meas, comps, err)
+
+				in, out := meas[0], comps[0]
+				in(context.Background(), 1, *attribute.EmptySet())
+
+				var got metricdata.Aggregation
+				assert.Equal(t, 1, out(&got), "1 data-point expected")
+				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[N]{{
+						Count:        1,
+						Bounds:       []float64{0, 100},
+						BucketCounts: []uint64{0, 1, 0},
+						Sum:          1,
+					}},
+				}, got, metricdatatest.IgnoreTimestamp())
+
+				in(context.Background(), 1, *attribute.EmptySet())
+
+				assert.Equal(t, 1, out(&got), "1 data-point expected")
+				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[N]{{
+						Count:        2,
+						Bounds:       []float64{0, 100},
+						BucketCounts: []uint64{0, 2, 0},
+						Sum:          2,
+					}},
+				}, got, metricdatatest.IgnoreTimestamp())
+			},
 		},
 		{
-			name:     "multiple views should create multiple aggregators",
+			name:     "MultipleViews",
 			reader:   NewManualReader(),
 			views:    []View{defaultView, renameView},
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
-			wantLen:  2,
+			validate: assertSum[N](2, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
 		},
 		{
-			name:     "reader with default aggregation should figure out a Counter",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Cumulative/Sum/Monotonic",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
 		},
 		{
-			name:     "reader with default aggregation should figure out an UpDownCounter",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Cumulative/Sum/NonMonotonic",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindUpDownCounter],
-			wantKind: internal.NewCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 4}),
 		},
 		{
-			name:     "reader with default aggregation should figure out an Histogram",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Cumulative/ExplicitBucketHistogram",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindHistogram],
-			wantKind: internal.NewCumulativeHistogram[N](aggregation.ExplicitBucketHistogram{}),
-			wantLen:  1,
+			validate: assertHist[N](metricdata.CumulativeTemporality),
 		},
 		{
-			name:     "reader with default aggregation should figure out an ObservableCounter",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Cumulative/PrecomputedSum/Monotonic",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindObservableCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 3}),
 		},
 		{
-			name:     "reader with default aggregation should figure out an ObservableUpDownCounter",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Cumulative/PrecomputedSum/NonMonotonic",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
-			wantKind: internal.NewPrecomputedCumulativeSum[N](true),
-			wantLen:  1,
+			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 3}),
 		},
 		{
-			name:     "reader with default aggregation should figure out an ObservableGauge",
-			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.Default{} })),
-			views:    []View{defaultView},
+			name:     "Reader/Default/Gauge",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindObservableGauge],
-			wantKind: internal.NewLastValue[N](),
-			wantLen:  1,
+			validate: assertLastValue[N],
 		},
 		{
-			name:    "view with invalid aggregation should error",
-			reader:  NewManualReader(),
-			views:   []View{invalidAggView},
-			inst:    instruments[InstrumentKindCounter],
-			wantErr: errCreatingAggregators,
+			name:   "InvalidAggregation",
+			reader: NewManualReader(),
+			views:  []View{invalidAggView},
+			inst:   instruments[InstrumentKindCounter],
+			validate: func(t *testing.T, _ []aggregate.Measure[N], _ []aggregate.ComputeAggregation, err error) {
+				assert.ErrorIs(t, err, errCreatingAggregators)
+			},
 		},
 	}
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			var c cache[string, streamID]
-			i := newInserter[N](newPipeline(nil, tt.reader, tt.views), &c)
-			got, err := i.Instrument(tt.inst)
-			assert.ErrorIs(t, err, tt.wantErr)
-			require.Len(t, got, tt.wantLen)
-			for _, agg := range got {
-				assert.IsType(t, tt.wantKind, agg)
+			var c cache[string, instID]
+			p := newPipeline(nil, tt.reader, tt.views)
+			i := newInserter[N](p, &c)
+			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind)
+			input, err := i.Instrument(tt.inst, readerAggregation)
+			var comps []aggregate.ComputeAggregation
+			for _, instSyncs := range p.aggregations {
+				for _, i := range instSyncs {
+					comps = append(comps, i.compAgg)
+				}
 			}
+			tt.validate(t, input, comps, err)
 		})
 	}
 }
@@ -274,13 +370,14 @@ func TestCreateAggregators(t *testing.T) {
 }
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}), &c)
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
 	}
-	_, _ = i.Instrument(inst)
+	readerAggregation := i.readerDefaultAggregation(inst.Kind)
+	_, _ = i.Instrument(inst, readerAggregation)
 }
 
 func TestInvalidInstrumentShouldPanic(t *testing.T) {
@@ -294,7 +391,7 @@ func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	require.Len(t, pipes, 2, "created pipelines")
 
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[int64](pipes, &c)
 	aggs, err := r.Aggregators(inst)
 	require.NoError(t, err, "resolved Aggregators error")
@@ -312,7 +409,7 @@ func TestPipelinesAggregatorForEachReader(t *testing.T) {
 func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	renameView := NewView(Instrument{Name: "foo"}, Stream{Name: "bar"})
 	testRdr := NewManualReader()
-	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
+	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationExplicitBucketHistogram{} }))
 
 	testCases := []struct {
 		name      string
@@ -365,13 +462,15 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 			p := newPipelines(resource.Empty(), tt.readers, tt.views)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
+			testPipelineRegistryResolveIntHistogramAggregators(t, p, tt.wantCount)
+			testPipelineRegistryResolveFloatHistogramAggregators(t, p, tt.wantCount)
 		})
 	}
 }
 
 func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
 	aggs, err := r.Aggregators(inst)
 	assert.NoError(t, err)
@@ -381,9 +480,29 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 
 func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, wantCount int) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
-	var c cache[string, streamID]
+	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
+	assert.NoError(t, err)
+
+	require.Len(t, aggs, wantCount)
+}
+
+func testPipelineRegistryResolveIntHistogramAggregators(t *testing.T, p pipelines, wantCount int) {
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	var c cache[string, instID]
+	r := newResolver[int64](p, &c)
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
+	assert.NoError(t, err)
+
+	require.Len(t, aggs, wantCount)
+}
+
+func testPipelineRegistryResolveFloatHistogramAggregators(t *testing.T, p pipelines, wantCount int) {
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+	var c cache[string, instID]
+	r := newResolver[float64](p, &c)
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -401,14 +520,14 @@ func TestPipelineRegistryResource(t *testing.T) {
 }
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
-	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) aggregation.Aggregation { return aggregation.ExplicitBucketHistogram{} }))
+	testRdrHistogram := NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationSum{} }))
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
 	p := newPipelines(resource.Empty(), readers, views)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
-	var vc cache[string, streamID]
+	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
@@ -416,6 +535,14 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(inst)
+	assert.Error(t, err)
+	assert.Len(t, floatAggs, 0)
+
+	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3})
+	assert.Error(t, err)
+	assert.Len(t, intAggs, 0)
+
+	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.Error(t, err)
 	assert.Len(t, floatAggs, 0)
 }
@@ -459,7 +586,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	p := newPipelines(resource.Empty(), readers, views)
 
-	var vc cache[string, streamID]
+	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(fooInst)
 	assert.NoError(t, err)
@@ -502,155 +629,187 @@ func TestIsAggregatorCompatible(t *testing.T) {
 	testCases := []struct {
 		name string
 		kind InstrumentKind
-		agg  aggregation.Aggregation
+		agg  Aggregation
 		want error
 	}{
 		{
 			name: "SyncCounter and Drop",
 			kind: InstrumentKindCounter,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
 			name: "SyncCounter and LastValue",
 			kind: InstrumentKindCounter,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncCounter and Sum",
 			kind: InstrumentKindCounter,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindCounter,
-			agg:  aggregation.ExplicitBucketHistogram{},
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "SyncCounter and ExponentialHistogram",
+			kind: InstrumentKindCounter,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "SyncUpDownCounter and Drop",
 			kind: InstrumentKindUpDownCounter,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
 			name: "SyncUpDownCounter and LastValue",
 			kind: InstrumentKindUpDownCounter,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncUpDownCounter and Sum",
 			kind: InstrumentKindUpDownCounter,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindUpDownCounter,
-			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "SyncUpDownCounter and ExponentialHistogram",
+			kind: InstrumentKindUpDownCounter,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "SyncHistogram and Drop",
 			kind: InstrumentKindHistogram,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
 			name: "SyncHistogram and LastValue",
 			kind: InstrumentKindHistogram,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "SyncHistogram and Sum",
 			kind: InstrumentKindHistogram,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "SyncHistogram and ExplicitBucketHistogram",
 			kind: InstrumentKindHistogram,
-			agg:  aggregation.ExplicitBucketHistogram{},
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "SyncHistogram and ExponentialHistogram",
+			kind: InstrumentKindHistogram,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableCounter and Drop",
 			kind: InstrumentKindObservableCounter,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
 			name: "ObservableCounter and LastValue",
 			kind: InstrumentKindObservableCounter,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableCounter and Sum",
 			kind: InstrumentKindObservableCounter,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "ObservableCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableCounter,
-			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "ObservableCounter and ExponentialHistogram",
+			kind: InstrumentKindObservableCounter,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableUpDownCounter and Drop",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
 			name: "ObservableUpDownCounter and LastValue",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableUpDownCounter and Sum",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 		},
 		{
 			name: "ObservableUpDownCounter and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableUpDownCounter,
-			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "ObservableUpDownCounter and ExponentialHistogram",
+			kind: InstrumentKindObservableUpDownCounter,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "ObservableGauge and Drop",
 			kind: InstrumentKindObservableGauge,
-			agg:  aggregation.Drop{},
+			agg:  AggregationDrop{},
 		},
 		{
-			name: "ObservableGauge and aggregation.LastValue{}",
+			name: "ObservableGauge and LastValue{}",
 			kind: InstrumentKindObservableGauge,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 		},
 		{
 			name: "ObservableGauge and Sum",
 			kind: InstrumentKindObservableGauge,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "ObservableGauge and ExplicitBucketHistogram",
 			kind: InstrumentKindObservableGauge,
-			agg:  aggregation.ExplicitBucketHistogram{},
-			want: errIncompatibleAggregation,
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "ObservableGauge and ExponentialHistogram",
+			kind: InstrumentKindObservableGauge,
+			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{
 			name: "unknown kind with Sum should error",
 			kind: undefinedInstrument,
-			agg:  aggregation.Sum{},
+			agg:  AggregationSum{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "unknown kind with LastValue should error",
 			kind: undefinedInstrument,
-			agg:  aggregation.LastValue{},
+			agg:  AggregationLastValue{},
 			want: errIncompatibleAggregation,
 		},
 		{
 			name: "unknown kind with Histogram should error",
 			kind: undefinedInstrument,
-			agg:  aggregation.ExplicitBucketHistogram{},
+			agg:  AggregationExplicitBucketHistogram{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "unknown kind with Histogram should error",
+			kind: undefinedInstrument,
+			agg:  AggregationBase2ExponentialHistogram{},
 			want: errIncompatibleAggregation,
 		},
 	}

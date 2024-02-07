@@ -120,7 +120,7 @@ func TestSimpleSpanProcessorShutdown(t *testing.T) {
 	}
 }
 
-func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
+func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe(t *testing.T) {
 	exporter := &testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
 	tp := basicTracerProvider(t)
@@ -153,7 +153,7 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrency(t *testing.T) {
 	<-done
 }
 
-func TestSimpleSpanProcessorShutdownOnEndRace(t *testing.T) {
+func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe2(t *testing.T) {
 	exporter := &testExporter{}
 	ssp := sdktrace.NewSimpleSpanProcessor(exporter)
 	tp := basicTracerProvider(t)

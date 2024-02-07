@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/internaltest/harness.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -260,7 +263,7 @@ func (h *Harness) TestTracer(subjectFactory func() trace.Tracer) {
 }
 
 func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
-	var methods = map[string]func(span trace.Span){
+	methods := map[string]func(span trace.Span){
 		"#End": func(span trace.Span) {
 			span.End()
 		},
@@ -280,7 +283,7 @@ func (h *Harness) testSpan(tracerFactory func() trace.Tracer) {
 			span.SetAttributes(attribute.String("key1", "value"), attribute.Int("key2", 123))
 		},
 	}
-	var mechanisms = map[string]func() trace.Span{
+	mechanisms := map[string]func() trace.Span{
 		"Span created via Tracer#Start": func() trace.Span {
 			tracer := tracerFactory()
 			_, subject := tracer.Start(context.Background(), "test")

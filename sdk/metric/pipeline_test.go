@@ -17,51 +17,36 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type testSumAggregator struct{}
-
-func (testSumAggregator) Aggregation() metricdata.Aggregation {
-	return metricdata.Sum[int64]{
+func testSumAggregateOutput(dest *metricdata.Aggregation) int {
+	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
-		DataPoints:  []metricdata.DataPoint[int64]{}}
-}
-
-func TestEmptyPipeline(t *testing.T) {
-	pipe := &pipeline{}
-
-	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
-	require.NoError(t, err)
-	assert.Nil(t, output.Resource)
-	assert.Len(t, output.ScopeMetrics, 0)
-
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
-	assert.NotPanics(t, func() {
-		pipe.addSync(instrumentation.Scope{}, iSync)
-	})
-
-	require.NotPanics(t, func() {
-		pipe.addMultiCallback(func(context.Context) error { return nil })
-	})
-
-	err = pipe.produce(context.Background(), &output)
-	require.NoError(t, err)
-	assert.Nil(t, output.Resource)
-	require.Len(t, output.ScopeMetrics, 1)
-	require.Len(t, output.ScopeMetrics[0].Metrics, 1)
+		DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+	}
+	return 1
 }
 
 func TestNewPipeline(t *testing.T) {
@@ -73,7 +58,7 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Len(t, output.ScopeMetrics, 0)
 
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregator{}}
+	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -99,7 +84,7 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrency(t *testing.T) {
+func TestPipelineConcurrentSafe(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
@@ -117,7 +102,7 @@ func TestPipelineConcurrency(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", "1", testSumAggregator{}}
+			sync := instrumentSync{name, "desc", "1", testSumAggregateOutput}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
@@ -162,13 +147,14 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				var c cache[string, streamID]
+				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
-				got, err := i.Instrument(inst)
+				readerAggregation := i.readerDefaultAggregation(inst.Kind)
+				got, err := i.Instrument(inst, readerAggregation)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
-				for _, a := range got {
-					a.Aggregate(1, *attribute.EmptySet())
+				for _, in := range got {
+					in(context.Background(), 1, *attribute.EmptySet())
 				}
 
 				out := metricdata.ResourceMetrics{}
@@ -190,4 +176,342 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestLogConflictName(t *testing.T) {
+	testcases := []struct {
+		existing, name string
+		conflict       bool
+	}{
+		{
+			existing: "requestCount",
+			name:     "requestCount",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestDuration",
+			conflict: false,
+		},
+		{
+			existing: "requestCount",
+			name:     "requestcount",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "REQUESTCOUNT",
+			conflict: true,
+		},
+		{
+			existing: "requestCount",
+			name:     "rEqUeStCoUnT",
+			conflict: true,
+		},
+	}
+
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	for _, tc := range testcases {
+		var vc cache[string, instID]
+
+		name := strings.ToLower(tc.existing)
+		_ = vc.Lookup(name, func() instID {
+			return instID{Name: tc.existing}
+		})
+
+		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i.logConflict(instID{Name: tc.name})
+
+		if tc.conflict {
+			assert.Containsf(
+				t, msg, "duplicate metric stream definitions",
+				"warning not logged for conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		} else {
+			assert.Equalf(
+				t, msg, "",
+				"warning logged for non-conflicting names: %s, %s",
+				tc.existing, tc.name,
+			)
+		}
+
+		// Reset.
+		msg = ""
+	}
+}
+
+func TestLogConflictSuggestView(t *testing.T) {
+	var msg string
+	t.Cleanup(func(orig logr.Logger) func() {
+		otel.SetLogger(funcr.New(func(_, args string) {
+			msg = args
+		}, funcr.Options{Verbosity: 20}))
+		return func() { otel.SetLogger(orig) }
+	}(stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))))
+
+	orig := instID{
+		Name:        "requestCount",
+		Description: "number of requests",
+		Kind:        InstrumentKindCounter,
+		Unit:        "1",
+		Number:      "int64",
+	}
+
+	var vc cache[string, instID]
+	name := strings.ToLower(orig.Name)
+	_ = vc.Lookup(name, func() instID { return orig })
+	i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+
+	viewSuggestion := func(inst instID, stream string) string {
+		return `"NewView(Instrument{` +
+			`Name: \"` + inst.Name +
+			`\", Description: \"` + inst.Description +
+			`\", Kind: \"InstrumentKind` + inst.Kind.String() +
+			`\", Unit: \"` + inst.Unit +
+			`\"}, ` +
+			stream +
+			`)"`
+	}
+
+	t.Run("Name", func(t *testing.T) {
+		inst := instID{
+			Name:        "requestcount",
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Description", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: "alt",
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Description: \"`+orig.Description+`\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Kind", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        InstrumentKindHistogram,
+			Unit:        orig.Unit,
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.Containsf(t, msg, viewSuggestion(
+			inst, `Stream{Name: \"{{NEW_NAME}}\"}`,
+		), "no suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Unit", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        "ms",
+			Number:      orig.Number,
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+
+	t.Run("Number", func(t *testing.T) {
+		inst := instID{
+			Name:        orig.Name,
+			Description: orig.Description,
+			Kind:        orig.Kind,
+			Unit:        orig.Unit,
+			Number:      "float64",
+		}
+		i.logConflict(inst)
+		assert.NotContains(t, msg, "NewView", "suggestion logged: %v", inst)
+
+		// Reset.
+		msg = ""
+	})
+}
+
+func TestInserterCachedAggregatorNameConflict(t *testing.T) {
+	const name = "requestCount"
+	scope := instrumentation.Scope{Name: "pipeline_test"}
+	kind := InstrumentKindCounter
+	stream := Stream{
+		Name:        name,
+		Aggregation: AggregationSum{},
+	}
+
+	var vc cache[string, instID]
+	pipe := newPipeline(nil, NewManualReader(), nil)
+	i := newInserter[int64](pipe, &vc)
+
+	readerAggregation := i.readerDefaultAggregation(kind)
+	_, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	require.NoError(t, err)
+
+	require.Len(t, pipe.aggregations, 1)
+	require.Contains(t, pipe.aggregations, scope)
+	iSync := pipe.aggregations[scope]
+	require.Len(t, iSync, 1)
+	require.Equal(t, name, iSync[0].name)
+
+	stream.Name = "RequestCount"
+	_, id, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	require.NoError(t, err)
+	assert.Equal(t, origID, id, "multiple aggregators for equivalent name")
+
+	assert.Len(t, pipe.aggregations, 1, "additional scope added")
+	require.Contains(t, pipe.aggregations, scope, "original scope removed")
+	iSync = pipe.aggregations[scope]
+	require.Len(t, iSync, 1, "registered instrumentSync changed")
+	assert.Equal(t, name, iSync[0].name, "stream name changed")
+}
+
+func TestExemplars(t *testing.T) {
+	nCPU := runtime.NumCPU()
+	setup := func(name string) (metric.Meter, Reader) {
+		r := NewManualReader()
+		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
+			Aggregation: AggregationBase2ExponentialHistogram{
+				MaxSize:  160, // > 20, reservoir size should default to 20.
+				MaxScale: 20,
+			},
+		})
+		return NewMeterProvider(WithReader(r), WithView(v)).Meter(name), r
+	}
+
+	measure := func(ctx context.Context, m metric.Meter) {
+		i, err := m.Int64Counter("int64-counter")
+		require.NoError(t, err)
+
+		h, err := m.Int64Histogram("int64-histogram")
+		require.NoError(t, err)
+
+		e, err := m.Int64Histogram("int64-expo-histogram")
+		require.NoError(t, err)
+
+		for j := 0; j < 20*nCPU; j++ { // will be >= 20 and > nCPU
+			i.Add(ctx, 1)
+			h.Record(ctx, 1)
+			e.Record(ctx, 1)
+		}
+	}
+
+	check := func(t *testing.T, r Reader, nSum, nHist, nExpo int) {
+		t.Helper()
+
+		rm := new(metricdata.ResourceMetrics)
+		require.NoError(t, r.Collect(context.Background(), rm))
+
+		require.Len(t, rm.ScopeMetrics, 1, "ScopeMetrics")
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 3, "Metrics")
+
+		require.IsType(t, metricdata.Sum[int64]{}, sm.Metrics[0].Data, sm.Metrics[0].Name)
+		sum := sm.Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sum.DataPoints[0].Exemplars, nSum)
+
+		require.IsType(t, metricdata.Histogram[int64]{}, sm.Metrics[1].Data, sm.Metrics[1].Name)
+		hist := sm.Metrics[1].Data.(metricdata.Histogram[int64])
+		assert.Len(t, hist.DataPoints[0].Exemplars, nHist)
+
+		require.IsType(t, metricdata.ExponentialHistogram[int64]{}, sm.Metrics[2].Data, sm.Metrics[2].Name)
+		expo := sm.Metrics[2].Data.(metricdata.ExponentialHistogram[int64])
+		assert.Len(t, expo.DataPoints[0].Exemplars, nExpo)
+	}
+
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	sampled := trace.ContextWithSpanContext(context.Background(), sc)
+
+	t.Run("OTEL_GO_X_EXEMPLAR=true", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+
+		t.Run("Default", func(t *testing.T) {
+			m, r := setup("default")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("Invalid", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
+			m, r := setup("default")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("always_on", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
+			m, r := setup("always_on")
+			measure(ctx, m)
+			check(t, r, nCPU, 1, 20)
+		})
+
+		t.Run("always_off", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+			m, r := setup("always_off")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+		})
+
+		t.Run("trace_based", func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
+			m, r := setup("trace_based")
+			measure(ctx, m)
+			check(t, r, 0, 0, 0)
+
+			measure(sampled, m)
+			check(t, r, nCPU, 1, 20)
+		})
+	})
+
+	t.Run("OTEL_GO_X_EXEMPLAR=false", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_EXEMPLAR", "false")
+
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
+		m, r := setup("always_on")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+	})
 }

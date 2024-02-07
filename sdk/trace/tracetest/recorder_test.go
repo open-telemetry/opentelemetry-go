@@ -99,7 +99,7 @@ func runConcurrently(funcs ...func()) {
 	wg.Wait()
 }
 
-func TestEndingConcurrency(t *testing.T) {
+func TestEndingConcurrentSafe(t *testing.T) {
 	sr := NewSpanRecorder()
 
 	runConcurrently(
@@ -111,7 +111,7 @@ func TestEndingConcurrency(t *testing.T) {
 	assert.Len(t, sr.Ended(), 2)
 }
 
-func TestStartingConcurrency(t *testing.T) {
+func TestStartingConcurrentSafe(t *testing.T) {
 	sr := NewSpanRecorder()
 
 	ctx := context.Background()

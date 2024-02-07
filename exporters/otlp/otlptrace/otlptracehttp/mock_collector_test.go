@@ -25,13 +25,14 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlpconfig"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/otlptracetest"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -241,7 +242,9 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	mux := http.NewServeMux()
 	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))
 	server := &http.Server{
-		Handler: mux,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	if cfg.WithTLS {
 		pem, err := generateWeakCertificate()

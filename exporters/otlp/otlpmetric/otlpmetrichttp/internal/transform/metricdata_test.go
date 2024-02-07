@@ -1,0 +1,633 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/otlp/otlpmetric/transform/metricdata_test.go.tmpl
+
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package transform
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+)
+
+type unknownAggT struct {
+	metricdata.Aggregation
+}
+
+var (
+	// Sat Jan 01 2000 00:00:00 GMT+0000.
+	start = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	end   = start.Add(30 * time.Second)
+
+	alice = attribute.NewSet(attribute.String("user", "alice"))
+	bob   = attribute.NewSet(attribute.String("user", "bob"))
+
+	pbAlice = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "alice"},
+	}}
+	pbBob = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "bob"},
+	}}
+
+	minA, maxA, sumA = 2.0, 4.0, 90.0
+	minB, maxB, sumB = 4.0, 150.0, 234.0
+	otelHDPInt64     = []metricdata.HistogramDataPoint[int64]{
+		{
+			Attributes:   alice,
+			StartTime:    start,
+			Time:         end,
+			Count:        30,
+			Bounds:       []float64{1, 5},
+			BucketCounts: []uint64{0, 30, 0},
+			Min:          metricdata.NewExtrema(int64(minA)),
+			Max:          metricdata.NewExtrema(int64(maxA)),
+			Sum:          int64(sumA),
+		}, {
+			Attributes:   bob,
+			StartTime:    start,
+			Time:         end,
+			Count:        3,
+			Bounds:       []float64{1, 5},
+			BucketCounts: []uint64{0, 1, 2},
+			Min:          metricdata.NewExtrema(int64(minB)),
+			Max:          metricdata.NewExtrema(int64(maxB)),
+			Sum:          int64(sumB),
+		},
+	}
+	otelHDPFloat64 = []metricdata.HistogramDataPoint[float64]{
+		{
+			Attributes:   alice,
+			StartTime:    start,
+			Time:         end,
+			Count:        30,
+			Bounds:       []float64{1, 5},
+			BucketCounts: []uint64{0, 30, 0},
+			Min:          metricdata.NewExtrema(minA),
+			Max:          metricdata.NewExtrema(maxA),
+			Sum:          sumA,
+		}, {
+			Attributes:   bob,
+			StartTime:    start,
+			Time:         end,
+			Count:        3,
+			Bounds:       []float64{1, 5},
+			BucketCounts: []uint64{0, 1, 2},
+			Min:          metricdata.NewExtrema(minB),
+			Max:          metricdata.NewExtrema(maxB),
+			Sum:          sumB,
+		},
+	}
+
+	otelEBucketA = metricdata.ExponentialBucket{
+		Offset: 5,
+		Counts: []uint64{0, 5, 0, 5},
+	}
+	otelEBucketB = metricdata.ExponentialBucket{
+		Offset: 3,
+		Counts: []uint64{0, 5, 0, 5},
+	}
+	otelEBucketsC = metricdata.ExponentialBucket{
+		Offset: 5,
+		Counts: []uint64{0, 1},
+	}
+	otelEBucketsD = metricdata.ExponentialBucket{
+		Offset: 3,
+		Counts: []uint64{0, 1},
+	}
+
+	otelEHDPInt64 = []metricdata.ExponentialHistogramDataPoint[int64]{
+		{
+			Attributes:     alice,
+			StartTime:      start,
+			Time:           end,
+			Count:          30,
+			Scale:          2,
+			ZeroCount:      10,
+			PositiveBucket: otelEBucketA,
+			NegativeBucket: otelEBucketB,
+			ZeroThreshold:  .01,
+			Min:            metricdata.NewExtrema(int64(minA)),
+			Max:            metricdata.NewExtrema(int64(maxA)),
+			Sum:            int64(sumA),
+		}, {
+			Attributes:     bob,
+			StartTime:      start,
+			Time:           end,
+			Count:          3,
+			Scale:          4,
+			ZeroCount:      1,
+			PositiveBucket: otelEBucketsC,
+			NegativeBucket: otelEBucketsD,
+			ZeroThreshold:  .02,
+			Min:            metricdata.NewExtrema(int64(minB)),
+			Max:            metricdata.NewExtrema(int64(maxB)),
+			Sum:            int64(sumB),
+		},
+	}
+	otelEHDPFloat64 = []metricdata.ExponentialHistogramDataPoint[float64]{
+		{
+			Attributes:     alice,
+			StartTime:      start,
+			Time:           end,
+			Count:          30,
+			Scale:          2,
+			ZeroCount:      10,
+			PositiveBucket: otelEBucketA,
+			NegativeBucket: otelEBucketB,
+			ZeroThreshold:  .01,
+			Min:            metricdata.NewExtrema(minA),
+			Max:            metricdata.NewExtrema(maxA),
+			Sum:            sumA,
+		}, {
+			Attributes:     bob,
+			StartTime:      start,
+			Time:           end,
+			Count:          3,
+			Scale:          4,
+			ZeroCount:      1,
+			PositiveBucket: otelEBucketsC,
+			NegativeBucket: otelEBucketsD,
+			ZeroThreshold:  .02,
+			Min:            metricdata.NewExtrema(minB),
+			Max:            metricdata.NewExtrema(maxB),
+			Sum:            sumB,
+		},
+	}
+
+	pbHDP = []*mpb.HistogramDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             30,
+			Sum:               &sumA,
+			ExplicitBounds:    []float64{1, 5},
+			BucketCounts:      []uint64{0, 30, 0},
+			Min:               &minA,
+			Max:               &maxA,
+		}, {
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             3,
+			Sum:               &sumB,
+			ExplicitBounds:    []float64{1, 5},
+			BucketCounts:      []uint64{0, 1, 2},
+			Min:               &minB,
+			Max:               &maxB,
+		},
+	}
+
+	pbEHDPBA = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       5,
+		BucketCounts: []uint64{0, 5, 0, 5},
+	}
+	pbEHDPBB = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       3,
+		BucketCounts: []uint64{0, 5, 0, 5},
+	}
+	pbEHDPBC = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       5,
+		BucketCounts: []uint64{0, 1},
+	}
+	pbEHDPBD = &mpb.ExponentialHistogramDataPoint_Buckets{
+		Offset:       3,
+		BucketCounts: []uint64{0, 1},
+	}
+
+	pbEHDP = []*mpb.ExponentialHistogramDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             30,
+			Sum:               &sumA,
+			Scale:             2,
+			ZeroCount:         10,
+			Positive:          pbEHDPBA,
+			Negative:          pbEHDPBB,
+			Min:               &minA,
+			Max:               &maxA,
+		}, {
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             3,
+			Sum:               &sumB,
+			Scale:             4,
+			ZeroCount:         1,
+			Positive:          pbEHDPBC,
+			Negative:          pbEHDPBD,
+			Min:               &minB,
+			Max:               &maxB,
+		},
+	}
+
+	otelHistInt64 = metricdata.Histogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelHDPInt64,
+	}
+	otelHistFloat64 = metricdata.Histogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelHDPFloat64,
+	}
+	invalidTemporality metricdata.Temporality
+	otelHistInvalid    = metricdata.Histogram[int64]{
+		Temporality: invalidTemporality,
+		DataPoints:  otelHDPInt64,
+	}
+
+	otelExpoHistInt64 = metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelEHDPInt64,
+	}
+	otelExpoHistFloat64 = metricdata.ExponentialHistogram[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  otelEHDPFloat64,
+	}
+	otelExpoHistInvalid = metricdata.ExponentialHistogram[int64]{
+		Temporality: invalidTemporality,
+		DataPoints:  otelEHDPInt64,
+	}
+
+	pbHist = &mpb.Histogram{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		DataPoints:             pbHDP,
+	}
+
+	pbExpoHist = &mpb.ExponentialHistogram{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		DataPoints:             pbEHDP,
+	}
+
+	otelDPtsInt64 = []metricdata.DataPoint[int64]{
+		{Attributes: alice, StartTime: start, Time: end, Value: 1},
+		{Attributes: bob, StartTime: start, Time: end, Value: 2},
+	}
+	otelDPtsFloat64 = []metricdata.DataPoint[float64]{
+		{Attributes: alice, StartTime: start, Time: end, Value: 1.0},
+		{Attributes: bob, StartTime: start, Time: end, Value: 2.0},
+	}
+
+	pbDPtsInt64 = []*mpb.NumberDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 1},
+		},
+		{
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 2},
+		},
+	}
+	pbDPtsFloat64 = []*mpb.NumberDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsDouble{AsDouble: 1.0},
+		},
+		{
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsDouble{AsDouble: 2.0},
+		},
+	}
+
+	otelSumInt64 = metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: true,
+		DataPoints:  otelDPtsInt64,
+	}
+	otelSumFloat64 = metricdata.Sum[float64]{
+		Temporality: metricdata.DeltaTemporality,
+		IsMonotonic: false,
+		DataPoints:  otelDPtsFloat64,
+	}
+	otelSumInvalid = metricdata.Sum[float64]{
+		Temporality: invalidTemporality,
+		IsMonotonic: false,
+		DataPoints:  otelDPtsFloat64,
+	}
+
+	pbSumInt64 = &mpb.Sum{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		IsMonotonic:            true,
+		DataPoints:             pbDPtsInt64,
+	}
+	pbSumFloat64 = &mpb.Sum{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		IsMonotonic:            false,
+		DataPoints:             pbDPtsFloat64,
+	}
+
+	otelGaugeInt64         = metricdata.Gauge[int64]{DataPoints: otelDPtsInt64}
+	otelGaugeFloat64       = metricdata.Gauge[float64]{DataPoints: otelDPtsFloat64}
+	otelGaugeZeroStartTime = metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{Attributes: alice, StartTime: time.Time{}, Time: end, Value: 1},
+		},
+	}
+
+	pbGaugeInt64         = &mpb.Gauge{DataPoints: pbDPtsInt64}
+	pbGaugeFloat64       = &mpb.Gauge{DataPoints: pbDPtsFloat64}
+	pbGaugeZeroStartTime = &mpb.Gauge{DataPoints: []*mpb.NumberDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: 0,
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 1},
+		},
+	}}
+
+	unknownAgg  unknownAggT
+	otelMetrics = []metricdata.Metrics{
+		{
+			Name:        "int64-gauge",
+			Description: "Gauge with int64 values",
+			Unit:        "1",
+			Data:        otelGaugeInt64,
+		},
+		{
+			Name:        "float64-gauge",
+			Description: "Gauge with float64 values",
+			Unit:        "1",
+			Data:        otelGaugeFloat64,
+		},
+		{
+			Name:        "int64-sum",
+			Description: "Sum with int64 values",
+			Unit:        "1",
+			Data:        otelSumInt64,
+		},
+		{
+			Name:        "float64-sum",
+			Description: "Sum with float64 values",
+			Unit:        "1",
+			Data:        otelSumFloat64,
+		},
+		{
+			Name:        "invalid-sum",
+			Description: "Sum with invalid temporality",
+			Unit:        "1",
+			Data:        otelSumInvalid,
+		},
+		{
+			Name:        "int64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        otelHistInt64,
+		},
+		{
+			Name:        "float64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        otelHistFloat64,
+		},
+		{
+			Name:        "invalid-histogram",
+			Description: "Invalid histogram",
+			Unit:        "1",
+			Data:        otelHistInvalid,
+		},
+		{
+			Name:        "unknown",
+			Description: "Unknown aggregation",
+			Unit:        "1",
+			Data:        unknownAgg,
+		},
+		{
+			Name:        "int64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistInt64,
+		},
+		{
+			Name:        "float64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistFloat64,
+		},
+		{
+			Name:        "invalid-ExponentialHistogram",
+			Description: "Invalid Exponential Histogram",
+			Unit:        "1",
+			Data:        otelExpoHistInvalid,
+		},
+		{
+			Name:        "zero-time",
+			Description: "Gauge with 0 StartTime",
+			Unit:        "1",
+			Data:        otelGaugeZeroStartTime,
+		},
+	}
+
+	pbMetrics = []*mpb.Metric{
+		{
+			Name:        "int64-gauge",
+			Description: "Gauge with int64 values",
+			Unit:        "1",
+			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeInt64},
+		},
+		{
+			Name:        "float64-gauge",
+			Description: "Gauge with float64 values",
+			Unit:        "1",
+			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeFloat64},
+		},
+		{
+			Name:        "int64-sum",
+			Description: "Sum with int64 values",
+			Unit:        "1",
+			Data:        &mpb.Metric_Sum{Sum: pbSumInt64},
+		},
+		{
+			Name:        "float64-sum",
+			Description: "Sum with float64 values",
+			Unit:        "1",
+			Data:        &mpb.Metric_Sum{Sum: pbSumFloat64},
+		},
+		{
+			Name:        "int64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+		},
+		{
+			Name:        "float64-histogram",
+			Description: "Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+		},
+		{
+			Name:        "int64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+		},
+		{
+			Name:        "float64-ExponentialHistogram",
+			Description: "Exponential Histogram",
+			Unit:        "1",
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+		},
+		{
+			Name:        "zero-time",
+			Description: "Gauge with 0 StartTime",
+			Unit:        "1",
+			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeZeroStartTime},
+		},
+	}
+
+	otelScopeMetrics = []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{
+				Name:      "test/code/path",
+				Version:   "v0.1.0",
+				SchemaURL: semconv.SchemaURL,
+			},
+			Metrics: otelMetrics,
+		},
+	}
+
+	pbScopeMetrics = []*mpb.ScopeMetrics{
+		{
+			Scope: &cpb.InstrumentationScope{
+				Name:    "test/code/path",
+				Version: "v0.1.0",
+			},
+			Metrics:   pbMetrics,
+			SchemaUrl: semconv.SchemaURL,
+		},
+	}
+
+	otelRes = resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName("test server"),
+		semconv.ServiceVersion("v0.1.0"),
+	)
+
+	pbRes = &rpb.Resource{
+		Attributes: []*cpb.KeyValue{
+			{
+				Key: "service.name",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{StringValue: "test server"},
+				},
+			},
+			{
+				Key: "service.version",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{StringValue: "v0.1.0"},
+				},
+			},
+		},
+	}
+
+	otelResourceMetrics = &metricdata.ResourceMetrics{
+		Resource:     otelRes,
+		ScopeMetrics: otelScopeMetrics,
+	}
+
+	pbResourceMetrics = &mpb.ResourceMetrics{
+		Resource:     pbRes,
+		ScopeMetrics: pbScopeMetrics,
+		SchemaUrl:    semconv.SchemaURL,
+	}
+)
+
+func TestTransformations(t *testing.T) {
+	// Run tests from the "bottom-up" of the metricdata data-types and halt
+	// when a failure occurs to ensure the clearest failure message (as
+	// opposed to the opposite of testing from the top-down which will obscure
+	// errors deep inside the structs).
+
+	// DataPoint types.
+	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPInt64))
+	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPFloat64))
+	assert.Equal(t, pbDPtsInt64, DataPoints[int64](otelDPtsInt64))
+	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
+	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPInt64))
+	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPFloat64))
+	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
+
+	// Aggregations.
+	h, err := Histogram(otelHistInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	h, err = Histogram(otelHistFloat64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	h, err = Histogram(otelHistInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, h)
+
+	s, err := Sum[int64](otelSumInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumInt64}, s)
+	s, err = Sum[float64](otelSumFloat64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumFloat64}, s)
+	s, err = Sum[float64](otelSumInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, s)
+
+	assert.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
+	require.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
+
+	e, err := ExponentialHistogram(otelExpoHistInt64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	e, err = ExponentialHistogram(otelExpoHistFloat64)
+	assert.NoError(t, err)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	e, err = ExponentialHistogram(otelExpoHistInvalid)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.Nil(t, e)
+
+	// Metrics.
+	m, err := Metrics(otelMetrics)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.Equal(t, pbMetrics, m)
+
+	// Scope Metrics.
+	sm, err := ScopeMetrics(otelScopeMetrics)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.Equal(t, pbScopeMetrics, sm)
+
+	// Resource Metrics.
+	rm, err := ResourceMetrics(otelResourceMetrics)
+	assert.ErrorIs(t, err, errUnknownTemporality)
+	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.Equal(t, pbResourceMetrics, rm)
+}
