@@ -240,13 +240,6 @@ when converting records to a different representation:
 func (r *Record) AttributesLen() int
 ```
 
-Additionally, `Record` has a `Clone` method facilities
-coping a record with no shared state (attributes "back" slice):
-
-```go
-func (r *Record) Clone() Record
-```
-
 The records attributes design and implemntation is based on
 [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 It allows achieving high-performance access and manipulation of the attributes
