@@ -56,7 +56,7 @@ experimenting with them and provide feedback.
 These feature may change in backwards incompatible ways as feedback is applied.
 
 Experimental features do not fall within the scope of the OpenTelemetry Go
-versioning and stability policy. These features may be removed or modified in
+[versioning and stability policy]. These features may be removed or modified in
 successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path
@@ -114,5 +114,6 @@ All values other than these will result in the default, "trace_based",
 exemplar filter being used.
 
 [OpenTelemetry specification]: https://github.com/open-telemetry/opentelemetry-specification/blob/a6ca2fd484c9e76fe1d8e1c79c99f08f4745b5ee/specification/configuration/sdk-environment-variables.md#exemplar
+[versioning and stability policy]: https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md
 */
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
