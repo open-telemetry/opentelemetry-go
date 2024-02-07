@@ -411,6 +411,7 @@ Rejected alternatives:
 - [Severity type encapsulating number and text](#severity-type-encapsulating-number-and-text)
 - [Reuse attribute package](#reuse-attribute-package)
 - [Mix receiver types for Record](#mix-receiver-types-for-record)
+- [Add XYZ method to Logger](#add-xyz-method-to-logger)
 
 ### noop package
 
@@ -431,7 +432,7 @@ would usually involve more memory allocations.
 
 The logging libraries which have recording methods that accepts `context.Context`,
 such us [`slog`](https://pkg.go.dev/log/slog),
-[`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus)
+[`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus),
 [`zerolog`](https://pkg.go.dev/github.com/rs/zerolog),
 makes passing the trace context trivial.
 
@@ -718,6 +719,20 @@ or all value methods. Google's Go Style Decisions even goes further and says:
 Because, the benchmarks[^9] do not proof any performance difference
 and the general recommendation is to not mix receiver types,
 we decided to use pointer receivers for all `Record` methods.
+
+### Add XYZ method to Logger
+
+The `Logger` does not have methods like `Enabled`, `SetSeverity`, etc.
+as the Bridge API needs to follow (be compliant with)
+the [specification](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/)
+
+Moreover, the Bridge API is intendend to be used to implement bridges.
+Applications should not use it directly. The applications should use logging packages
+such as [`slog`](https://pkg.go.dev/log/slog),
+[`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus),
+[`zap`](https://pkg.go.dev/go.uber.org/zap),
+[`zerolog`](https://pkg.go.dev/github.com/rs/zerolog),
+[`logr`](https://pkg.go.dev/github.com/go-logr/logr).
 
 ## Open issues
 
