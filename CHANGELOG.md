@@ -13,7 +13,7 @@ The next release will require at least [Go 1.21].
 
 ### Added
 
-- Support [Go 1.22]. (#TBD)
+- Support [Go 1.22]. (#4890)
 
 ## [1.23.0] 2024-02-06
 
