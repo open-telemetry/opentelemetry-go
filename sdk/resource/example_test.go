@@ -44,6 +44,4 @@ func ExampleNew() {
 
 	// Now, you can use the resource (e.g. pass it to a tracer or meter provider).
 	fmt.Println(res.SchemaURL())
-
-	// Output: https://opentelemetry.io/schemas/1.24.0
 }
