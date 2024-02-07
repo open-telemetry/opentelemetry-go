@@ -756,7 +756,7 @@ Our correct use of these types will be a reference to them.
 
 At last, we could consider a design defining both types: `KeyValue` and `Attr`.
 However, in this approach we would need have factory functions for both types.
-It would make the API surface unnecessarly big,
+It would make the API surface unnecessarily big,
 and we may even have problems naming the functions.
 
 ## Open issues
