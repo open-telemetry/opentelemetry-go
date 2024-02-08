@@ -1954,25 +1954,29 @@ var _ IDGenerator = (*testIDGenerator)(nil)
 func TestWithIDGenerator(t *testing.T) {
 	const (
 		startTraceID = 1
-		startSpanID  = 1
-		numSpan      = 10
+		startSpanID  = 10
+		numSpan      = 5
 	)
 
-	gen := &testIDGenerator{traceID: startSpanID, spanID: startSpanID}
-
+	gen := &testIDGenerator{traceID: startTraceID, spanID: startSpanID}
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithIDGenerator(gen),
+	)
 	for i := 0; i < numSpan; i++ {
-		te := NewTestExporter()
-		tp := NewTracerProvider(
-			WithSyncer(te),
-			WithIDGenerator(gen),
-		)
-		span := startSpan(tp, "TestWithIDGenerator")
-		got, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
-		require.NoError(t, err)
-		want := uint64(startSpanID + i)
-		assert.Equal(t, got, want)
-		_, err = endSpan(te, span)
-		require.NoError(t, err)
+		func() {
+			_, span := tp.Tracer(t.Name()).Start(context.Background(), strconv.Itoa(i))
+			defer span.End()
+
+			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
+			require.NoError(t, err)
+			assert.Equal(t, uint64(startSpanID+i), gotSpanID)
+
+			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
+			require.NoError(t, err)
+			assert.Equal(t, uint64(startTraceID+i), gotTraceID)
+		}()
 	}
 }
 
