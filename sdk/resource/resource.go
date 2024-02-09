@@ -92,6 +92,29 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 	return resource
 }
 
+// NewWithEntity creates a resource from entity and attrs and associates the resource with a
+// schema URL. If attrs or entityId contains duplicate keys, the last value will be used. If attrs or entityId
+// contains any invalid items those items will be dropped. The attrs and entityId are assumed to be
+// in a schema identified by schemaURL.
+func NewWithEntity(
+	schemaURL string, entityType string, entityId []attribute.KeyValue, attrs []attribute.KeyValue,
+) *Resource {
+	resource := NewSchemaless(attrs...)
+	resource.schemaURL = schemaURL
+	resource.entity.typ = entityType
+
+	// Ensure attributes comply with the specification:
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
+	id, _ := attribute.NewSetWithFiltered(
+		entityId, func(kv attribute.KeyValue) bool {
+			return kv.Valid()
+		},
+	)
+
+	resource.entity.id = id
+	return resource
+}
+
 // NewSchemaless creates a resource from attrs. If attrs contains duplicate keys,
 // the last value will be used. If attrs contains any invalid items those items will
 // be dropped. The resource will not be associated with a schema URL. If the schema
