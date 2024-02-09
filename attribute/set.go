@@ -113,9 +113,11 @@ func (l *Set) Value(k Key) (Value, bool) {
 	rValue := l.equivalent.reflectValue()
 	vlen := rValue.Len()
 
-	idx := sort.Search(vlen, func(idx int) bool {
-		return rValue.Index(idx).Interface().(KeyValue).Key >= k
-	})
+	idx := sort.Search(
+		vlen, func(idx int) bool {
+			return rValue.Index(idx).Interface().(KeyValue).Key >= k
+		},
+	)
 	if idx >= vlen {
 		return Value{}, false
 	}
@@ -425,6 +427,13 @@ func computeDistinctReflect(kvs []KeyValue) interface{} {
 // MarshalJSON returns the JSON encoding of the Set.
 func (l *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.equivalent.iface)
+}
+
+// MarshalableToJSON returns a value that is marshalable to JSON form.
+// The returned value can be passed as an argument to json.Marshal() or
+// be placed in any other structure that itself is passed to json.Marshal().
+func (l *Set) MarshalableToJSON() any {
+	return l.equivalent.iface
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Set.
