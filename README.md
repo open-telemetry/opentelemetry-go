@@ -11,16 +11,13 @@ It provides a set of APIs to directly measure performance and behavior of your s
 
 ## Project Status
 
-| Signal  | Status     |
-|---------|------------|
-| Traces  | Stable     |
-| Metrics | Stable     |
-| Logs    | Design [1] |
+| Signal  | Status         |
+|---------|----------------|
+| Traces  | Stable         |
+| Metrics | Stable         |
+| Logs    | In development |
 
-- [1]: Currently the logs signal development is in a design phase ([#4696](https://github.com/open-telemetry/opentelemetry-go/issues/4696)).
-   No Logs Pull Requests are currently being accepted.
-
-Progress and status specific to this repository is tracked in our
+Progres and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
 and
 [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones).
