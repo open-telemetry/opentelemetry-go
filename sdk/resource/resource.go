@@ -137,7 +137,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	return &Resource{attrs: s} //nolint
+	return &Resource{attrs: s, entity: Entity{id: attribute.NewSet()}} //nolint
 }
 
 // String implements the Stringer interface and provides a
@@ -243,13 +243,46 @@ func Merge(a, b *Resource) (*Resource, error) {
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
 	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
-	mi := attribute.NewMergeIterator(b.Set(), a.Set())
+	combineAttrs := mergeAttrs(b.Set(), a.Set())
+
+	var combineEntityId []attribute.KeyValue
+
+	var entityType string
+	if a.entity.typ == b.entity.typ {
+		entityType = a.entity.typ
+		combineEntityId = mergeAttrs(&b.entity.id, &a.entity.id)
+	} else {
+		if a.entity.typ == "" {
+			entityType = b.entity.typ
+			combineEntityId = b.entity.id.ToSlice()
+		} else if b.entity.typ == "" {
+			entityType = a.entity.typ
+			combineEntityId = a.entity.id.ToSlice()
+		} else {
+			// Different non-empty entities.
+			combineEntityId = a.entity.id.ToSlice()
+			// TODO: merge the id of the updating Entity into the non-identifying
+			// attributes of the old Resource, attributes from the updating Entity
+			// take precedence.
+			panic("not implemented")
+		}
+	}
+
+	merged := NewWithEntity(schemaURL, entityType, combineEntityId, combineAttrs)
+	return merged, nil
+}
+
+func mergeAttrs(a, b *attribute.Set) []attribute.KeyValue {
+	if a.Len()+b.Len() == 0 {
+		return nil
+	}
+
+	mi := attribute.NewMergeIterator(a, b)
 	combine := make([]attribute.KeyValue, 0, a.Len()+b.Len())
 	for mi.Next() {
 		combine = append(combine, mi.Attribute())
 	}
-	merged := NewWithAttributes(schemaURL, combine...)
-	return merged, nil
+	return combine
 }
 
 // Empty returns an instance of Resource with no attributes. It is

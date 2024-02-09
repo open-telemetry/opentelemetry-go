@@ -67,15 +67,18 @@ func TestNewWithAttributes(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			res := resource.NewSchemaless(c.in...)
-			if diff := cmp.Diff(
-				res.Attributes(),
-				c.want,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
-				t.Fatalf("unwanted result: diff %+v,", diff)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+				res := resource.NewSchemaless(c.in...)
+				if diff := cmp.Diff(
+					res.Attributes(),
+					c.want,
+					cmp.AllowUnexported(attribute.Value{}),
+				); diff != "" {
+					t.Fatalf("unwanted result: diff %+v,", diff)
+				}
+			},
+		)
 	}
 }
 
@@ -188,21 +191,24 @@ func TestMerge(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			res, err := resource.Merge(c.a, c.b)
-			if c.isErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.EqualValues(t, c.schemaURL, res.SchemaURL())
-			if diff := cmp.Diff(
-				res.Attributes(),
-				c.want,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
-				t.Fatalf("unwanted result: diff %+v,", diff)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
+				res, err := resource.Merge(c.a, c.b)
+				if c.isErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+				assert.EqualValues(t, c.schemaURL, res.SchemaURL())
+				if diff := cmp.Diff(
+					res.Attributes(),
+					c.want,
+					cmp.AllowUnexported(attribute.Value{}),
+				); diff != "" {
+					t.Fatalf("unwanted result: diff %+v,", diff)
+				}
+			},
+		)
 	}
 }
 
@@ -224,8 +230,10 @@ func TestDefault(t *testing.T) {
 
 	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)
 	require.True(t, strings.HasPrefix(serviceName.AsString(), "unknown_service:"))
-	require.Greaterf(t, len(serviceName.AsString()), len("unknown_service:"),
-		"default service.name should include executable name")
+	require.Greaterf(
+		t, len(serviceName.AsString()), len("unknown_service:"),
+		"default service.name should include executable name",
+	)
 
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
@@ -310,9 +318,11 @@ func TestMarshalJSON(t *testing.T) {
 	r := resource.NewSchemaless(attribute.Int64("A", 1), attribute.String("C", "D"))
 	data, err := json.Marshal(r)
 	require.NoError(t, err)
-	require.Equal(t,
-		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
-		string(data))
+	require.Equal(
+		t,
+		`{"Attributes":[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}],"SchemaURL":"","Entity":{"Type":"","Id":[]}}`,
+		string(data),
+	)
 }
 
 func TestNew(t *testing.T) {
@@ -416,7 +426,10 @@ func TestNew(t *testing.T) {
 			options: []resource.Option{
 				resource.WithDetectors(
 					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
-					resource.StringDetector("https://opentelemetry.io/schemas/1.1.0", semconv.HostNameKey, func() (string, error) { return "", errors.New("fail") }),
+					resource.StringDetector(
+						"https://opentelemetry.io/schemas/1.1.0", semconv.HostNameKey,
+						func() (string, error) { return "", errors.New("fail") },
+					),
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 			},
@@ -426,30 +439,34 @@ func TestNew(t *testing.T) {
 		},
 	}
 	for _, tt := range tc {
-		t.Run(tt.name, func(t *testing.T) {
-			store, err := ottest.SetEnvVariables(map[string]string{
-				envVar: tt.envars,
-			})
-			require.NoError(t, err)
-			defer func() { require.NoError(t, store.Restore()) }()
-
-			ctx := context.Background()
-			res, err := resource.New(ctx, tt.options...)
-
-			if tt.isErr {
-				require.Error(t, err)
-			} else {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				store, err := ottest.SetEnvVariables(
+					map[string]string{
+						envVar: tt.envars,
+					},
+				)
 				require.NoError(t, err)
-			}
+				defer func() { require.NoError(t, store.Restore()) }()
 
-			require.EqualValues(t, tt.resourceValues, toMap(res))
+				ctx := context.Background()
+				res, err := resource.New(ctx, tt.options...)
 
-			// TODO: do we need to ensure that resource is never nil and eliminate the
-			// following if?
-			if res != nil {
-				assert.EqualValues(t, tt.schemaURL, res.SchemaURL())
-			}
-		})
+				if tt.isErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+
+				require.EqualValues(t, tt.resourceValues, toMap(res))
+
+				// TODO: do we need to ensure that resource is never nil and eliminate the
+				// following if?
+				if res != nil {
+					assert.EqualValues(t, tt.schemaURL, res.SchemaURL())
+				}
+			},
+		)
 	}
 }
 
@@ -458,12 +475,16 @@ func TestNewWrapedError(t *testing.T) {
 	_, err := resource.New(
 		context.Background(),
 		resource.WithDetectors(
-			resource.StringDetector("", "", func() (string, error) {
-				return "", localErr
-			}),
-			resource.StringDetector("", "", func() (string, error) {
-				return "", assert.AnError
-			}),
+			resource.StringDetector(
+				"", "", func() (string, error) {
+					return "", localErr
+				},
+			),
+			resource.StringDetector(
+				"", "", func() (string, error) {
+					return "", assert.AnError
+				},
+			),
 		),
 	)
 
@@ -478,14 +499,17 @@ func TestWithHostID(t *testing.T) {
 
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithHostID(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"host.id": "f2c668b579780554f70f72a063dc0864",
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"host.id": "f2c668b579780554f70f72a063dc0864",
+		}, toMap(res),
+	)
 }
 
 func TestWithHostIDError(t *testing.T) {
@@ -494,7 +518,8 @@ func TestWithHostIDError(t *testing.T) {
 
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithHostID(),
 	)
 
@@ -508,14 +533,17 @@ func TestWithOSType(t *testing.T) {
 
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOSType(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type": "linux",
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"os.type": "linux",
+		}, toMap(res),
+	)
 }
 
 func TestWithOSDescription(t *testing.T) {
@@ -524,14 +552,17 @@ func TestWithOSDescription(t *testing.T) {
 
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOSDescription(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.description": "Test",
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"os.description": "Test",
+		}, toMap(res),
+	)
 }
 
 func TestWithOS(t *testing.T) {
@@ -540,148 +571,178 @@ func TestWithOS(t *testing.T) {
 
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOS(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"os.type":        "linux",
-		"os.description": "Test",
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"os.type":        "linux",
+			"os.description": "Test",
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessPID(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessPID(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.pid": fmt.Sprint(fakePID),
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.pid": fmt.Sprint(fakePID),
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessExecutableName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessExecutableName(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.executable.name": fakeExecutableName,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.executable.name": fakeExecutableName,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessExecutablePath(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessExecutablePath(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.executable.path": fakeExecutablePath,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.executable.path": fakeExecutablePath,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessCommandArgs(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessCommandArgs(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.command_args": fmt.Sprint(fakeCommandArgs),
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.command_args": fmt.Sprint(fakeCommandArgs),
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessOwner(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessOwner(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.owner": fakeOwner,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.owner": fakeOwner,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessRuntimeName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeName(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.name": fakeRuntimeName,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.runtime.name": fakeRuntimeName,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessRuntimeVersion(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeVersion(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.version": fakeRuntimeVersion,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.runtime.version": fakeRuntimeVersion,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcessRuntimeDescription(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeDescription(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.runtime.description": fakeRuntimeDescription,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.runtime.description": fakeRuntimeDescription,
+		}, toMap(res),
+	)
 }
 
 func TestWithProcess(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := context.Background()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcess(),
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
-		"process.pid":                 fmt.Sprint(fakePID),
-		"process.executable.name":     fakeExecutableName,
-		"process.executable.path":     fakeExecutablePath,
-		"process.command_args":        fmt.Sprint(fakeCommandArgs),
-		"process.owner":               fakeOwner,
-		"process.runtime.name":        fakeRuntimeName,
-		"process.runtime.version":     fakeRuntimeVersion,
-		"process.runtime.description": fakeRuntimeDescription,
-	}, toMap(res))
+	require.EqualValues(
+		t, map[string]string{
+			"process.pid":                 fmt.Sprint(fakePID),
+			"process.executable.name":     fakeExecutableName,
+			"process.executable.path":     fakeExecutablePath,
+			"process.command_args":        fmt.Sprint(fakeCommandArgs),
+			"process.owner":               fakeOwner,
+			"process.runtime.name":        fakeRuntimeName,
+			"process.runtime.version":     fakeRuntimeVersion,
+			"process.runtime.description": fakeRuntimeDescription,
+		}, toMap(res),
+	)
 }
 
 func toMap(res *resource.Resource) map[string]string {
@@ -738,18 +799,21 @@ func TestWithContainerID(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			resource.SetContainerProviders(tc.containerIDProvider)
+		t.Run(
+			tc.name, func(t *testing.T) {
+				resource.SetContainerProviders(tc.containerIDProvider)
 
-			res, err := resource.New(context.Background(),
-				resource.WithContainerID(),
-			)
+				res, err := resource.New(
+					context.Background(),
+					resource.WithContainerID(),
+				)
 
-			if tc.expectedErr {
-				assert.Error(t, err)
-			}
-			assert.Equal(t, tc.expectedResource, toMap(res))
-		})
+				if tc.expectedErr {
+					assert.Error(t, err)
+				}
+				assert.Equal(t, tc.expectedResource, toMap(res))
+			},
+		)
 	}
 }
 
@@ -757,18 +821,23 @@ func TestWithContainer(t *testing.T) {
 	t.Cleanup(restoreAttributesProviders)
 
 	fakeContainerID := "fake-container-id"
-	resource.SetContainerProviders(func() (string, error) {
-		return fakeContainerID, nil
-	})
+	resource.SetContainerProviders(
+		func() (string, error) {
+			return fakeContainerID, nil
+		},
+	)
 
-	res, err := resource.New(context.Background(),
+	res, err := resource.New(
+		context.Background(),
 		resource.WithContainer(),
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{
-		string(semconv.ContainerIDKey): fakeContainerID,
-	}, toMap(res))
+	assert.Equal(
+		t, map[string]string{
+			string(semconv.ContainerIDKey): fakeContainerID,
+		}, toMap(res),
+	)
 }
 
 func TestResourceConcurrentSafe(t *testing.T) {
