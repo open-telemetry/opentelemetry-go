@@ -14,6 +14,8 @@ The next release will require at least [Go 1.21].
 ### Added
 
 - Support [Go 1.22]. (#4890)
+- Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4900)
+- Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
 
 ## [1.23.1] 2024-02-07
 
