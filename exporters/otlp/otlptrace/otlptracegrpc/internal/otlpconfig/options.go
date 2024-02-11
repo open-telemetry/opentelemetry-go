@@ -20,6 +20,7 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -46,6 +47,8 @@ const (
 )
 
 type (
+	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
+
 	SignalConfig struct {
 		Endpoint    string
 		Insecure    bool
@@ -57,6 +60,8 @@ type (
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
+
+		Proxy HTTPTransportProxyFunc
 	}
 
 	Config struct {
@@ -340,6 +345,13 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Timeout = duration
+		return cfg
+	})
+}
+
+func WithProxyFunc(pf HTTPTransportProxyFunc) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.Proxy = pf
 		return cfg
 	})
 }
