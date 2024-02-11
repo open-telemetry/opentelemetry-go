@@ -462,7 +462,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Proxy",
 			opts: []GenericOption{
-				WithProxyFunc(func(r *http.Request) (*url.URL, error) {
+				WithProxy(func(r *http.Request) (*url.URL, error) {
 					return url.Parse("http://proxy.com")
 				}),
 			},

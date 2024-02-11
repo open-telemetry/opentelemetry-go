@@ -349,7 +349,7 @@ func WithTimeout(duration time.Duration) GenericOption {
 	})
 }
 
-func WithProxyFunc(pf HTTPTransportProxyFunc) GenericOption {
+func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Proxy = pf
 		return cfg

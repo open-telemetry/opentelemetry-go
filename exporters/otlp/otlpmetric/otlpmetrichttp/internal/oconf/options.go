@@ -377,7 +377,7 @@ func WithAggregationSelector(selector metric.AggregationSelector) GenericOption 
 	})
 }
 
-func WithProxyFunc(pf HTTPTransportProxyFunc) GenericOption {
+func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Proxy = pf
 		return cfg
