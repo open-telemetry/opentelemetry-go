@@ -432,9 +432,9 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.NotNil(t, c.Traces.Proxy)
-				proxyUrl, err := c.Traces.Proxy(&http.Request{})
+				proxyURL, err := c.Traces.Proxy(&http.Request{})
 				assert.NoError(t, err)
-				assert.Equal(t, "http://proxy.com", proxyUrl.String())
+				assert.Equal(t, "http://proxy.com", proxyURL.String())
 			},
 		},
 		{
