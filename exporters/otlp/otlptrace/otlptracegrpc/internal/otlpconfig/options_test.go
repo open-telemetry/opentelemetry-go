@@ -19,6 +19,8 @@ package otlpconfig
 
 import (
 	"errors"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -417,6 +419,29 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
+			},
+		},
+
+		// Proxy Tests
+		{
+			name: "Test With Proxy",
+			opts: []GenericOption{
+				WithProxyFunc(func(r *http.Request) (*url.URL, error) {
+					return url.Parse("http://proxy.com")
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Traces.Proxy)
+				proxyUrl, err := c.Traces.Proxy(&http.Request{})
+				assert.NoError(t, err)
+				assert.Equal(t, "http://proxy.com", proxyUrl.String())
+			},
+		},
+		{
+			name: "Test Without Proxy",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Traces.Proxy)
 			},
 		},
 	}
