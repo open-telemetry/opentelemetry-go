@@ -217,3 +217,11 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) Option {
 func WithAggregationSelector(selector metric.AggregationSelector) Option {
 	return wrappedOption{oconf.WithAggregationSelector(selector)}
 }
+
+// WithProxyFunc sets the Proxy function the client will use to determine the
+// proxy to use for an HTTP request. If this option is not used, the client
+// will use the default proxy settings from the
+// exporters/otlp/otlpmetric/otlpmetrichttp package (adhering to the Golang's DefaultTransport from net/http).
+func WithProxyFunc(pf oconf.HTTPTransportProxyFunc) Option {
+	return wrappedOption{oconf.WithProxyFunc(pf)}
+}
