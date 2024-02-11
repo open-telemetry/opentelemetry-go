@@ -20,6 +20,7 @@ package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlp
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -53,6 +54,8 @@ const (
 )
 
 type (
+	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
+
 	SignalConfig struct {
 		Endpoint    string
 		Insecure    bool
@@ -67,6 +70,8 @@ type (
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
+
+		Proxy HTTPTransportProxyFunc
 	}
 
 	Config struct {
@@ -368,6 +373,13 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption 
 func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.AggregationSelector = selector
+		return cfg
+	})
+}
+
+func WithProxyFunc(pf HTTPTransportProxyFunc) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.Proxy = pf
 		return cfg
 	})
 }
