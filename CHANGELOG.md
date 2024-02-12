@@ -14,7 +14,7 @@ The next release will require at least [Go 1.21].
 ### Added
 
 - Support [Go 1.22]. (#4890)
-- Support configuring a custom Proxy Function for the `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` HTTP Client Transport.
+- Support configuring a custom Proxy Function for the metric: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and trace: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp` OTLP Exporter HTTP Client Transport. (#4906)
 
 ## [1.23.1] 2024-02-07
 
