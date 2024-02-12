@@ -46,12 +46,93 @@ var (
 	alice = attribute.NewSet(attribute.String("user", "alice"))
 	bob   = attribute.NewSet(attribute.String("user", "bob"))
 
+	filterAlice = []attribute.KeyValue{attribute.String("user", "filter alice")}
+	filterBob   = []attribute.KeyValue{attribute.String("user", "filter bob")}
+
 	pbAlice = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{StringValue: "alice"},
 	}}
 	pbBob = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{StringValue: "bob"},
 	}}
+
+	pbFilterAlice = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "filter alice"},
+	}}
+	pbFilterBob = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "filter bob"},
+	}}
+
+	spanIDA  = []byte{0, 0, 0, 0, 0, 0, 0, 1}
+	spanIDB  = []byte{0, 0, 0, 0, 0, 0, 0, 2}
+	traceIDA = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	traceIDB = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+
+	exemplarInt64A = metricdata.Exemplar[int64]{
+		FilteredAttributes: filterAlice,
+		Time:               end,
+		Value:              -10,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
+	exemplarFloat64A = metricdata.Exemplar[float64]{
+		FilteredAttributes: filterAlice,
+		Time:               end,
+		Value:              -10.0,
+		SpanID:             spanIDA,
+		TraceID:            traceIDA,
+	}
+	exemplarInt64B = metricdata.Exemplar[int64]{
+		FilteredAttributes: filterBob,
+		Time:               end,
+		Value:              12,
+		SpanID:             spanIDB,
+		TraceID:            traceIDB,
+	}
+	exemplarFloat64B = metricdata.Exemplar[float64]{
+		FilteredAttributes: filterBob,
+		Time:               end,
+		Value:              12.0,
+		SpanID:             spanIDB,
+		TraceID:            traceIDB,
+	}
+
+	pbExemplarInt64A = &mpb.Exemplar{
+		FilteredAttributes: []*cpb.KeyValue{pbFilterAlice},
+		TimeUnixNano:       uint64(end.UnixNano()),
+		Value: &mpb.Exemplar_AsInt{
+			AsInt: -10,
+		},
+		SpanId:  spanIDA,
+		TraceId: traceIDA,
+	}
+	pbExemplarInt64B = &mpb.Exemplar{
+		FilteredAttributes: []*cpb.KeyValue{pbFilterBob},
+		TimeUnixNano:       uint64(end.UnixNano()),
+		Value: &mpb.Exemplar_AsInt{
+			AsInt: 12,
+		},
+		SpanId:  spanIDB,
+		TraceId: traceIDB,
+	}
+	pbExemplarFloat64A = &mpb.Exemplar{
+		FilteredAttributes: []*cpb.KeyValue{pbFilterAlice},
+		TimeUnixNano:       uint64(end.UnixNano()),
+		Value: &mpb.Exemplar_AsDouble{
+			AsDouble: -10.0,
+		},
+		SpanId:  spanIDA,
+		TraceId: traceIDA,
+	}
+	pbExemplarFloat64B = &mpb.Exemplar{
+		FilteredAttributes: []*cpb.KeyValue{pbFilterBob},
+		TimeUnixNano:       uint64(end.UnixNano()),
+		Value: &mpb.Exemplar_AsDouble{
+			AsDouble: 12.0,
+		},
+		SpanId:  spanIDB,
+		TraceId: traceIDB,
+	}
 
 	minA, maxA, sumA = 2.0, 4.0, 90.0
 	minB, maxB, sumB = 4.0, 150.0, 234.0
@@ -66,6 +147,7 @@ var (
 			Min:          metricdata.NewExtrema(int64(minA)),
 			Max:          metricdata.NewExtrema(int64(maxA)),
 			Sum:          int64(sumA),
+			Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64A},
 		}, {
 			Attributes:   bob,
 			StartTime:    start,
@@ -76,6 +158,7 @@ var (
 			Min:          metricdata.NewExtrema(int64(minB)),
 			Max:          metricdata.NewExtrema(int64(maxB)),
 			Sum:          int64(sumB),
+			Exemplars:    []metricdata.Exemplar[int64]{exemplarInt64B},
 		},
 	}
 	otelHDPFloat64 = []metricdata.HistogramDataPoint[float64]{
@@ -89,6 +172,7 @@ var (
 			Min:          metricdata.NewExtrema(minA),
 			Max:          metricdata.NewExtrema(maxA),
 			Sum:          sumA,
+			Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64A},
 		}, {
 			Attributes:   bob,
 			StartTime:    start,
@@ -99,6 +183,7 @@ var (
 			Min:          metricdata.NewExtrema(minB),
 			Max:          metricdata.NewExtrema(maxB),
 			Sum:          sumB,
+			Exemplars:    []metricdata.Exemplar[float64]{exemplarFloat64B},
 		},
 	}
 
@@ -133,6 +218,7 @@ var (
 			Min:            metricdata.NewExtrema(int64(minA)),
 			Max:            metricdata.NewExtrema(int64(maxA)),
 			Sum:            int64(sumA),
+			Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64A},
 		}, {
 			Attributes:     bob,
 			StartTime:      start,
@@ -146,6 +232,7 @@ var (
 			Min:            metricdata.NewExtrema(int64(minB)),
 			Max:            metricdata.NewExtrema(int64(maxB)),
 			Sum:            int64(sumB),
+			Exemplars:      []metricdata.Exemplar[int64]{exemplarInt64B},
 		},
 	}
 	otelEHDPFloat64 = []metricdata.ExponentialHistogramDataPoint[float64]{
@@ -162,6 +249,7 @@ var (
 			Min:            metricdata.NewExtrema(minA),
 			Max:            metricdata.NewExtrema(maxA),
 			Sum:            sumA,
+			Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64A},
 		}, {
 			Attributes:     bob,
 			StartTime:      start,
@@ -175,10 +263,11 @@ var (
 			Min:            metricdata.NewExtrema(minB),
 			Max:            metricdata.NewExtrema(maxB),
 			Sum:            sumB,
+			Exemplars:      []metricdata.Exemplar[float64]{exemplarFloat64B},
 		},
 	}
 
-	pbHDP = []*mpb.HistogramDataPoint{
+	pbHDPInt64 = []*mpb.HistogramDataPoint{
 		{
 			Attributes:        []*cpb.KeyValue{pbAlice},
 			StartTimeUnixNano: uint64(start.UnixNano()),
@@ -189,6 +278,7 @@ var (
 			BucketCounts:      []uint64{0, 30, 0},
 			Min:               &minA,
 			Max:               &maxA,
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		}, {
 			Attributes:        []*cpb.KeyValue{pbBob},
 			StartTimeUnixNano: uint64(start.UnixNano()),
@@ -199,6 +289,33 @@ var (
 			BucketCounts:      []uint64{0, 1, 2},
 			Min:               &minB,
 			Max:               &maxB,
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64B},
+		},
+	}
+
+	pbHDPFloat64 = []*mpb.HistogramDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             30,
+			Sum:               &sumA,
+			ExplicitBounds:    []float64{1, 5},
+			BucketCounts:      []uint64{0, 30, 0},
+			Min:               &minA,
+			Max:               &maxA,
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64A},
+		}, {
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             3,
+			Sum:               &sumB,
+			ExplicitBounds:    []float64{1, 5},
+			BucketCounts:      []uint64{0, 1, 2},
+			Min:               &minB,
+			Max:               &maxB,
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64B},
 		},
 	}
 
@@ -219,7 +336,7 @@ var (
 		BucketCounts: []uint64{0, 1},
 	}
 
-	pbEHDP = []*mpb.ExponentialHistogramDataPoint{
+	pbEHDPInt64 = []*mpb.ExponentialHistogramDataPoint{
 		{
 			Attributes:        []*cpb.KeyValue{pbAlice},
 			StartTimeUnixNano: uint64(start.UnixNano()),
@@ -232,6 +349,7 @@ var (
 			Negative:          pbEHDPBB,
 			Min:               &minA,
 			Max:               &maxA,
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		}, {
 			Attributes:        []*cpb.KeyValue{pbBob},
 			StartTimeUnixNano: uint64(start.UnixNano()),
@@ -244,6 +362,37 @@ var (
 			Negative:          pbEHDPBD,
 			Min:               &minB,
 			Max:               &maxB,
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64B},
+		},
+	}
+
+	pbEHDPFloat64 = []*mpb.ExponentialHistogramDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             30,
+			Sum:               &sumA,
+			Scale:             2,
+			ZeroCount:         10,
+			Positive:          pbEHDPBA,
+			Negative:          pbEHDPBB,
+			Min:               &minA,
+			Max:               &maxA,
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64A},
+		}, {
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             3,
+			Sum:               &sumB,
+			Scale:             4,
+			ZeroCount:         1,
+			Positive:          pbEHDPBC,
+			Negative:          pbEHDPBD,
+			Min:               &minB,
+			Max:               &maxB,
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64B},
 		},
 	}
 
@@ -274,23 +423,57 @@ var (
 		DataPoints:  otelEHDPInt64,
 	}
 
-	pbHist = &mpb.Histogram{
+	pbHistInt64 = &mpb.Histogram{
 		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-		DataPoints:             pbHDP,
+		DataPoints:             pbHDPInt64,
 	}
 
-	pbExpoHist = &mpb.ExponentialHistogram{
+	pbHistFloat64 = &mpb.Histogram{
 		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-		DataPoints:             pbEHDP,
+		DataPoints:             pbHDPFloat64,
+	}
+
+	pbExpoHistInt64 = &mpb.ExponentialHistogram{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		DataPoints:             pbEHDPInt64,
+	}
+
+	pbExpoHistFloat64 = &mpb.ExponentialHistogram{
+		AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+		DataPoints:             pbEHDPFloat64,
 	}
 
 	otelDPtsInt64 = []metricdata.DataPoint[int64]{
-		{Attributes: alice, StartTime: start, Time: end, Value: 1},
-		{Attributes: bob, StartTime: start, Time: end, Value: 2},
+		{
+			Attributes: alice,
+			StartTime:  start,
+			Time:       end,
+			Value:      1,
+			Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64A},
+		},
+		{
+			Attributes: bob,
+			StartTime:  start,
+			Time:       end,
+			Value:      2,
+			Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64B},
+		},
 	}
 	otelDPtsFloat64 = []metricdata.DataPoint[float64]{
-		{Attributes: alice, StartTime: start, Time: end, Value: 1.0},
-		{Attributes: bob, StartTime: start, Time: end, Value: 2.0},
+		{
+			Attributes: alice,
+			StartTime:  start,
+			Time:       end,
+			Value:      1.0,
+			Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64A},
+		},
+		{
+			Attributes: bob,
+			StartTime:  start,
+			Time:       end,
+			Value:      2.0,
+			Exemplars:  []metricdata.Exemplar[float64]{exemplarFloat64B},
+		},
 	}
 
 	pbDPtsInt64 = []*mpb.NumberDataPoint{
@@ -299,12 +482,14 @@ var (
 			StartTimeUnixNano: uint64(start.UnixNano()),
 			TimeUnixNano:      uint64(end.UnixNano()),
 			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 1},
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		},
 		{
 			Attributes:        []*cpb.KeyValue{pbBob},
 			StartTimeUnixNano: uint64(start.UnixNano()),
 			TimeUnixNano:      uint64(end.UnixNano()),
 			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 2},
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64B},
 		},
 	}
 	pbDPtsFloat64 = []*mpb.NumberDataPoint{
@@ -313,12 +498,14 @@ var (
 			StartTimeUnixNano: uint64(start.UnixNano()),
 			TimeUnixNano:      uint64(end.UnixNano()),
 			Value:             &mpb.NumberDataPoint_AsDouble{AsDouble: 1.0},
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64A},
 		},
 		{
 			Attributes:        []*cpb.KeyValue{pbBob},
 			StartTimeUnixNano: uint64(start.UnixNano()),
 			TimeUnixNano:      uint64(end.UnixNano()),
 			Value:             &mpb.NumberDataPoint_AsDouble{AsDouble: 2.0},
+			Exemplars:         []*mpb.Exemplar{pbExemplarFloat64B},
 		},
 	}
 
@@ -353,7 +540,13 @@ var (
 	otelGaugeFloat64       = metricdata.Gauge[float64]{DataPoints: otelDPtsFloat64}
 	otelGaugeZeroStartTime = metricdata.Gauge[int64]{
 		DataPoints: []metricdata.DataPoint[int64]{
-			{Attributes: alice, StartTime: time.Time{}, Time: end, Value: 1},
+			{
+				Attributes: alice,
+				StartTime:  time.Time{},
+				Time:       end,
+				Value:      1,
+				Exemplars:  []metricdata.Exemplar[int64]{exemplarInt64A},
+			},
 		},
 	}
 
@@ -365,6 +558,7 @@ var (
 			StartTimeUnixNano: 0,
 			TimeUnixNano:      uint64(end.UnixNano()),
 			Value:             &mpb.NumberDataPoint_AsInt{AsInt: 1},
+			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		},
 	}}
 
@@ -479,25 +673,25 @@ var (
 			Name:        "int64-histogram",
 			Description: "Histogram",
 			Unit:        "1",
-			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+			Data:        &mpb.Metric_Histogram{Histogram: pbHistInt64},
 		},
 		{
 			Name:        "float64-histogram",
 			Description: "Histogram",
 			Unit:        "1",
-			Data:        &mpb.Metric_Histogram{Histogram: pbHist},
+			Data:        &mpb.Metric_Histogram{Histogram: pbHistFloat64},
 		},
 		{
 			Name:        "int64-ExponentialHistogram",
 			Description: "Exponential Histogram",
 			Unit:        "1",
-			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistInt64},
 		},
 		{
 			Name:        "float64-ExponentialHistogram",
 			Description: "Exponential Histogram",
 			Unit:        "1",
-			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist},
+			Data:        &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistFloat64},
 		},
 		{
 			Name:        "zero-time",
@@ -571,21 +765,21 @@ func TestTransformations(t *testing.T) {
 	// errors deep inside the structs).
 
 	// DataPoint types.
-	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPInt64))
-	assert.Equal(t, pbHDP, HistogramDataPoints(otelHDPFloat64))
+	assert.Equal(t, pbHDPInt64, HistogramDataPoints(otelHDPInt64))
+	assert.Equal(t, pbHDPFloat64, HistogramDataPoints(otelHDPFloat64))
 	assert.Equal(t, pbDPtsInt64, DataPoints[int64](otelDPtsInt64))
 	require.Equal(t, pbDPtsFloat64, DataPoints[float64](otelDPtsFloat64))
-	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPInt64))
-	assert.Equal(t, pbEHDP, ExponentialHistogramDataPoints(otelEHDPFloat64))
+	assert.Equal(t, pbEHDPInt64, ExponentialHistogramDataPoints(otelEHDPInt64))
+	assert.Equal(t, pbEHDPFloat64, ExponentialHistogramDataPoints(otelEHDPFloat64))
 	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHistInt64}, h)
 	h, err = Histogram(otelHistFloat64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHist}, h)
+	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHistFloat64}, h)
 	h, err = Histogram(otelHistInvalid)
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, h)
@@ -605,10 +799,10 @@ func TestTransformations(t *testing.T) {
 
 	e, err := ExponentialHistogram(otelExpoHistInt64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistInt64}, e)
 	e, err = ExponentialHistogram(otelExpoHistFloat64)
 	assert.NoError(t, err)
-	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHist}, e)
+	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistFloat64}, e)
 	e, err = ExponentialHistogram(otelExpoHistInvalid)
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, e)
