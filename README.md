@@ -11,11 +11,11 @@ It provides a set of APIs to directly measure performance and behavior of your s
 
 ## Project Status
 
-| Signal  | Status         |
-|---------|----------------|
-| Traces  | Stable         |
-| Metrics | Stable         |
-| Logs    | In development |
+| Signal  | Status             |
+|---------|--------------------|
+| Traces  | Stable             |
+| Metrics | Stable             |
+| Logs    | In development[^1] |
 
 Progres and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
@@ -24,6 +24,8 @@ and
 
 Project versioning information and stability guarantees can be found in the
 [versioning documentation](VERSIONING.md).
+
+[^1]: https://github.com/orgs/open-telemetry/projects/43
 
 ### Compatibility
 
