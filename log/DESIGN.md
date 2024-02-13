@@ -318,7 +318,7 @@ type KeyValue struct {
 
 // KeyValue factories:
 
-func String(key, value string)
+func String(key, value string) KeyValue
 
 func Int64(key string, value int64) KeyValue
 
