@@ -143,3 +143,11 @@ func WithTimeout(duration time.Duration) Option {
 func WithRetry(rc RetryConfig) Option {
 	return wrappedOption{otlpconfig.WithRetry(retry.Config(rc))}
 }
+
+// WithProxy sets the Proxy function the client will use to determine the
+// proxy to use for an HTTP request. If this option is not used, the client
+// will use the default proxy settings from the
+// exporters/otlp/otlpmetric/otlptracehttp package (adhering to the Golang's DefaultTransport from net/http).
+func WithProxy(pf otlpconfig.HTTPTransportProxyFunc) Option {
+	return wrappedOption{otlpconfig.WithProxy(pf)}
+}
