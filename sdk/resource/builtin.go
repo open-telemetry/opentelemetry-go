@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/resource/internal"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
@@ -98,8 +99,13 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	if !a.Valid() {
 		return nil, fmt.Errorf("invalid attribute: %q -> %q", a.Key, a.Value.Emit())
 	}
-	attrs := []attribute.KeyValue{sd.K.String(value)}
-	return NewWithEntity(sd.schemaURL, sd.entityType, attrs, attrs), nil
+	id := attribute.NewSet(sd.K.String(value))
+	entity := internal.EntityData{
+		Type:  sd.entityType,
+		Id:    id,
+		Attrs: id,
+	}
+	return NewWithEntity(sd.schemaURL, &entity), nil
 }
 
 // Detect implements Detector.

@@ -26,13 +26,12 @@ func Resource(r *resource.Resource) *resourcepb.Resource {
 		return nil
 	}
 
-	entity := r.Entity()
-	entityId := Iterator(entity.IdIter())
+	attrs := Iterator(r.Iter())
+	entityId := Iterator(r.EntityId().Iter())
 
 	return &resourcepb.Resource{
-		Attributes:             ResourceAttributes(r),
-		DroppedAttributesCount: 0,
-		EntityType:             entity.Type(),
-		EntityId:               entityId,
+		Attributes: attrs,
+		EntityType: r.EntityType(),
+		EntityId:   entityId,
 	}
 }
