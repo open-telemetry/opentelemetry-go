@@ -339,3 +339,7 @@ func (r *Resource) Encoded(enc attribute.Encoder) string {
 	}
 	return r.entity.Attrs.Encoded(enc)
 }
+
+func (r *Resource) PublishEntity() {
+
+}

@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/entity"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -36,16 +37,22 @@ type (
 	meterProviderHolder struct {
 		mp metric.MeterProvider
 	}
+
+	entityEmitterProviderHolder struct {
+		tp entity.EntityEmitterProvider
+	}
 )
 
 var (
-	globalTracer        = defaultTracerValue()
-	globalPropagators   = defaultPropagatorsValue()
-	globalMeterProvider = defaultMeterProvider()
+	globalTracer                = defaultTracerValue()
+	globalPropagators           = defaultPropagatorsValue()
+	globalMeterProvider         = defaultMeterProvider()
+	globalEntityEmitterProvider = defaultEntityEmitterProvider()
 
 	delegateTraceOnce             sync.Once
 	delegateTextMapPropagatorOnce sync.Once
 	delegateMeterOnce             sync.Once
+	delegateEntityProviderOnce    sync.Once
 )
 
 // TracerProvider is the internal implementation for global.TracerProvider.
@@ -69,11 +76,13 @@ func SetTracerProvider(tp trace.TracerProvider) {
 		}
 	}
 
-	delegateTraceOnce.Do(func() {
-		if def, ok := current.(*tracerProvider); ok {
-			def.setDelegate(tp)
-		}
-	})
+	delegateTraceOnce.Do(
+		func() {
+			if def, ok := current.(*tracerProvider); ok {
+				def.setDelegate(tp)
+			}
+		},
+	)
 	globalTracer.Store(tracerProviderHolder{tp: tp})
 }
 
@@ -100,11 +109,13 @@ func SetTextMapPropagator(p propagation.TextMapPropagator) {
 
 	// For the textMapPropagator already returned by TextMapPropagator
 	// delegate to p.
-	delegateTextMapPropagatorOnce.Do(func() {
-		if def, ok := current.(*textMapPropagator); ok {
-			def.SetDelegate(p)
-		}
-	})
+	delegateTextMapPropagatorOnce.Do(
+		func() {
+			if def, ok := current.(*textMapPropagator); ok {
+				def.SetDelegate(p)
+			}
+		},
+	)
 	// Return p when subsequent calls to TextMapPropagator are made.
 	globalPropagators.Store(propagatorsHolder{tm: p})
 }
@@ -129,11 +140,13 @@ func SetMeterProvider(mp metric.MeterProvider) {
 		}
 	}
 
-	delegateMeterOnce.Do(func() {
-		if def, ok := current.(*meterProvider); ok {
-			def.setDelegate(mp)
-		}
-	})
+	delegateMeterOnce.Do(
+		func() {
+			if def, ok := current.(*meterProvider); ok {
+				def.setDelegate(mp)
+			}
+		},
+	)
 	globalMeterProvider.Store(meterProviderHolder{mp: mp})
 }
 
@@ -153,4 +166,41 @@ func defaultMeterProvider() *atomic.Value {
 	v := &atomic.Value{}
 	v.Store(meterProviderHolder{mp: &meterProvider{}})
 	return v
+}
+
+func defaultEntityEmitterProvider() *atomic.Value {
+	v := &atomic.Value{}
+	v.Store(entityEmitterProviderHolder{tp: &entityEmitterProvider{}})
+	return v
+}
+
+// EntityEmitterProvider is the internal implementation for global.EntityEmitterProvider.
+func EntityEmitterProvider() entity.EntityEmitterProvider {
+	return globalEntityEmitterProvider.Load().(entityEmitterProviderHolder).tp
+}
+
+// SetEntityEmitterProvider is the internal implementation for global.SetEntityEmitterProvider.
+func SetEntityEmitterProvider(tp entity.EntityEmitterProvider) {
+	current := EntityEmitterProvider()
+
+	if _, cOk := current.(*entityEmitterProvider); cOk {
+		if _, tpOk := tp.(*entityEmitterProvider); tpOk && current == tp {
+			// Do not assign the default delegating EntityEmitterProvider to delegate
+			// to itself.
+			Error(
+				errors.New("no delegate configured in entityEmitter provider"),
+				"Setting entityEmitter provider to it's current value. No delegate will be configured",
+			)
+			return
+		}
+	}
+
+	delegateEntityProviderOnce.Do(
+		func() {
+			if def, ok := current.(*entityEmitterProvider); ok {
+				def.setDelegate(tp)
+			}
+		},
+	)
+	globalEntityEmitterProvider.Store(entityEmitterProviderHolder{tp: tp})
 }
