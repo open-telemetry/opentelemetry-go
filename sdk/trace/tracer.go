@@ -78,6 +78,12 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
 	if config.NewRoot() {
+		// If the generator meets the W3C trace context level
+		// 2 randomness requirement, include the associated
+		// bitmask.
+		if _, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator); isW3CRandom {
+			psc = psc.WithTraceFlags(trace.FlagsRandom)
+		}
 		ctx = trace.ContextWithSpanContext(ctx, psc)
 	} else {
 		psc = trace.SpanContextFromContext(ctx)
