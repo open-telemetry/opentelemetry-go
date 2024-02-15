@@ -65,16 +65,21 @@ var ourTransport = &http.Transport{
 
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
-	clonedTransport := ourTransport.Clone()
 	httpClient := &http.Client{
-		Transport: clonedTransport,
+		Transport: ourTransport,
 		Timeout:   cfg.Metrics.Timeout,
 	}
-	if cfg.Metrics.TLSCfg != nil {
-		clonedTransport.TLSClientConfig = cfg.Metrics.TLSCfg
-	}
-	if cfg.Metrics.Proxy != nil {
-		clonedTransport.Proxy = cfg.Metrics.Proxy
+	
+	if cfg.Metrics.TLSCfg != nil || cfg.Metrics.Proxy != nil {
+		clonedTransport := ourTransport.Clone()
+		httpClient.Transport = clonedTransport
+
+		if cfg.Metrics.TLSCfg != nil {
+			clonedTransport.TLSClientConfig = cfg.Metrics.TLSCfg
+		}
+		if cfg.Metrics.Proxy != nil {
+			clonedTransport.Proxy = cfg.Metrics.Proxy
+		}
 	}
 
 	u := &url.URL{
