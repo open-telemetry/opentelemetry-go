@@ -69,7 +69,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 		Transport: ourTransport,
 		Timeout:   cfg.Metrics.Timeout,
 	}
-	
+
 	if cfg.Metrics.TLSCfg != nil || cfg.Metrics.Proxy != nil {
 		clonedTransport := ourTransport.Clone()
 		httpClient.Transport = clonedTransport
