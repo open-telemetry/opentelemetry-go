@@ -15,8 +15,26 @@
 package entity // import "go.opentelemetry.io/otel/entity"
 
 import (
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/entity/embedded"
 )
+
+type Entity interface {
+	embedded.Entity
+
+	// IsRecording returns the recording state of the Span. It will return
+	// true if the Span is active and events can be recorded.
+	IsRecording() bool
+
+	// SetAttributes sets kv as attributes of the Span. If a key from kv
+	// already exists for an attribute of the Span it will be overwritten with
+	// the value contained in kv.
+	SetAttributes(kv ...attribute.KeyValue)
+
+	// TracerProvider returns a TracerProvider that can be used to generate
+	// additional Spans on the same telemetry pipeline as the current Span.
+	EntityEmitterProvider() EntityEmitterProvider
+}
 
 // EntityEmitter is the creator of Spans.
 //
