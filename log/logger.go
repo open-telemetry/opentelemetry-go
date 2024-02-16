@@ -79,3 +79,38 @@ func (cfg LoggerConfig) InstrumentationAttributes() attribute.Set {
 func (cfg LoggerConfig) SchemaURL() string {
 	return cfg.schemaURL
 }
+
+type loggerOptionFunc func(LoggerConfig) LoggerConfig
+
+func (fn loggerOptionFunc) applyLogger(cfg LoggerConfig) LoggerConfig {
+	return fn(cfg)
+}
+
+// WithInstrumentationVersion returns a [LoggerOption] that sets the
+// instrumentation version of a [Logger].
+func WithInstrumentationVersion(version string) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.version = version
+		return config
+	})
+}
+
+// WithInstrumentationAttributes returns a [LoggerOption] that sets the
+// instrumentation attributes of a [Logger].
+//
+// The passed attributes will be de-duplicated.
+func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.attrs = attribute.NewSet(attr...)
+		return config
+	})
+}
+
+// WithSchemaURL returns a [LoggerOption] that sets the schema URL for a
+// [Logger].
+func WithSchemaURL(schemaURL string) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.schemaURL = schemaURL
+		return config
+	})
+}
