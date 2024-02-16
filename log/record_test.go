@@ -79,11 +79,11 @@ func TestRecordAttributes(t *testing.T) {
 		{}, // Empty.
 	}
 
-	t.Run("Correctness", func(t *testing.T) {
-		var r log.Record
-		r.AddAttributes(attrs...)
-		require.Equal(t, len(attrs), r.AttributesLen())
+	var r log.Record
+	r.AddAttributes(attrs...)
+	require.Equal(t, len(attrs), r.AttributesLen())
 
+	t.Run("Correctness", func(t *testing.T) {
 		var i int
 		r.WalkAttributes(func(kv log.KeyValue) bool {
 			assert.Equal(t, attrs[i], kv)
@@ -93,10 +93,6 @@ func TestRecordAttributes(t *testing.T) {
 	})
 
 	t.Run("WalkAttributes/Filtering", func(t *testing.T) {
-		var r log.Record
-		r.AddAttributes(attrs...)
-		require.Equal(t, len(attrs), r.AttributesLen())
-
 		for i := 1; i <= len(attrs); i++ {
 			var j int
 			r.WalkAttributes(func(log.KeyValue) bool {
