@@ -48,18 +48,34 @@ type LoggerOption interface {
 type LoggerConfig struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
+
+	version   string
+	schemaURL string
+	attrs     attribute.Set
 }
 
-// NewLoggerConfig returns a new [LoggerConfig] with all the opts applied.
-func NewLoggerConfig(opts ...LoggerOption) LoggerConfig { return LoggerConfig{} } // TODO (#4911): implement.
+// NewLoggerConfig returns a new [LoggerConfig] with all the options applied.
+func NewLoggerConfig(options ...LoggerOption) LoggerConfig {
+	var c LoggerConfig
+	for _, opt := range options {
+		c = opt.applyLogger(c)
+	}
+	return c
+}
 
 // InstrumentationVersion returns the version of the library providing
 // instrumentation.
-func (cfg LoggerConfig) InstrumentationVersion() string { return "" } // TODO (#4911): implement.
+func (cfg LoggerConfig) InstrumentationVersion() string {
+	return cfg.version
+}
 
 // InstrumentationAttributes returns the attributes associated with the library
 // providing instrumentation.
-func (cfg LoggerConfig) InstrumentationAttributes() attribute.Set { return attribute.NewSet() } // TODO (#4911): implement.
+func (cfg LoggerConfig) InstrumentationAttributes() attribute.Set {
+	return cfg.attrs
+}
 
 // SchemaURL returns the schema URL of the library providing instrumentation.
-func (cfg LoggerConfig) SchemaURL() string { return "" } // TODO (#4911): implement.
+func (cfg LoggerConfig) SchemaURL() string {
+	return cfg.schemaURL
+}
