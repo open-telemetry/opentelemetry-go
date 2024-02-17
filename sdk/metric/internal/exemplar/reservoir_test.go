@@ -125,7 +125,7 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			r.Collect(&dest)
 			assert.Len(t, dest, n, "multiple offers did not fill reservoir")
 
-			// Ensure the collect reset also resets any couting state.
+			// Ensure the collect reset also resets any counting state.
 			for i := 0; i < n+1; i++ {
 				v := N(i)
 				r.Offer(ctx, staticTime, v, nil)

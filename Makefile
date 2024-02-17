@@ -192,7 +192,7 @@ test-coverage: | $(GOCOVMERGE)
 	done; \
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
-# Adding a directory will include all benchmarks in that direcotry if a filter is not specified.
+# Adding a directory will include all benchmarks in that directory if a filter is not specified.
 BENCHMARK_TARGETS := sdk/trace
 .PHONY: benchmark
 benchmark: $(BENCHMARK_TARGETS:%=benchmark/%)
