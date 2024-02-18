@@ -63,7 +63,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir
 			//   This Exemplar reservoir MAY take a configuration parameter for
 			//   the size of the reservoir. If no size configuration is
 			//   provided, the default size MAY be the number of possible
-			//   concurrent threads (e.g. numer of CPUs) to help reduce
+			//   concurrent threads (e.g. number of CPUs) to help reduce
 			//   contention. Otherwise, a default size of 1 SHOULD be used.
 			n = runtime.NumCPU()
 			if n < 1 {
