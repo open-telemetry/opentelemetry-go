@@ -14,13 +14,18 @@
 
 package log // import "go.opentelemetry.io/otel/log"
 
+import "go.opentelemetry.io/otel/log/embedded"
+
 // LoggerProvider provides access to [Logger].
 //
 // Warning: Methods may be added to this interface in minor releases. See
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type LoggerProvider interface {
-	// TODO (#4909): embed an embedded type from otel/log/embedded.
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.LoggerProvider
 
 	// Logger returns a new [Logger] with the provided name and configuration.
 	//
