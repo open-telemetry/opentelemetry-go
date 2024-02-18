@@ -27,7 +27,7 @@ const (
 	KindInt64
 	KindString
 	KindBytes
-	KindList
+	KindSlice
 	KindMap
 )
 
@@ -56,9 +56,9 @@ func BoolValue(v bool) Value { //nolint:revive // Not a control flag.
 // changed after it is passed.
 func BytesValue(v []byte) Value { return Value{} } // TODO (#4914): implement.
 
-// ListValue returns a [Value] for a slice of [Value]. The passed slice must
+// SliceValue returns a [Value] for a slice of [Value]. The passed slice must
 // not be changed after it is passed.
-func ListValue(vs ...Value) Value { return Value{} } // TODO (#4914): implement.
+func SliceValue(vs ...Value) Value { return Value{} } // TODO (#4914): implement.
 
 // MapValue returns a new [Value] for a slice of key-value pairs. The passed
 // slice must not be changed after it is passed.
@@ -82,8 +82,8 @@ func (v Value) AsFloat64() float64 { return 0 } // TODO (#4914): implement
 // AsBytes returns the value held by v as a []byte.
 func (v Value) AsBytes() []byte { return nil } // TODO (#4914): implement
 
-// AsList returns the value held by v as a []Value.
-func (v Value) AsList() []Value { return nil } // TODO (#4914): implement
+// AsSlice returns the value held by v as a []Value.
+func (v Value) AsSlice() []Value { return nil } // TODO (#4914): implement
 
 // AsMap returns the value held by v as a []KeyValue.
 func (v Value) AsMap() []KeyValue { return nil } // TODO (#4914): implement
@@ -125,8 +125,8 @@ func Bool(key string, v bool) KeyValue { return KeyValue{} } // TODO (#4914): im
 // Bytes returns an KeyValue for a []byte value.
 func Bytes(key string, v []byte) KeyValue { return KeyValue{} } // TODO (#4914): implement
 
-// List returns an KeyValue for a []Value value.
-func List(key string, args ...Value) KeyValue { return KeyValue{} } // TODO (#4914): implement
+// Slice returns an KeyValue for a []Value value.
+func Slice(key string, args ...Value) KeyValue { return KeyValue{} } // TODO (#4914): implement
 
 // Map returns an KeyValue for a map value.
 func Map(key string, args ...KeyValue) KeyValue { return KeyValue{} } // TODO (#4914): implement
