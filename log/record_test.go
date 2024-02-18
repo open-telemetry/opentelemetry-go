@@ -67,14 +67,14 @@ func TestRecordAttributes(t *testing.T) {
 		log.Int("k3", 2),
 		log.Bool("k4", true),
 		log.Bytes("k5", []byte{1}),
-		log.List("k6", log.IntValue(3)),
+		log.Slice("k6", log.IntValue(3)),
 		log.Map("k7", log.Bool("sub1", true)),
 		log.String("k8", "str"),
 		log.Float64("k9", 1.0),
 		log.Int("k10", 2),
 		log.Bool("k11", true),
 		log.Bytes("k12", []byte{1}),
-		log.List("k13", log.IntValue(3)),
+		log.Slice("k13", log.IntValue(3)),
 		log.Map("k14", log.Bool("sub1", true)),
 		{}, // Empty.
 	}
