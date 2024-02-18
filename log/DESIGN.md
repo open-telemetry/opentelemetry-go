@@ -30,7 +30,7 @@ The module name is compliant with
 [Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
 and the package structure is the same as for Trace API and Metrics API.
 
-The Go module consits of the following packages:
+The Go module consists of the following packages:
 
 - `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/log/embedded`
@@ -240,14 +240,14 @@ when converting records to a different representation:
 func (r *Record) AttributesLen() int
 ```
 
-The records attributes design and implemntation is based on
+The records attributes design and implementation is based on
 [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 It allows achieving high-performance access and manipulation of the attributes
 while keeping the API user friendly.
 It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
 
-The following defintions are implementing the abstractions
+The following definitions are implementing the abstractions
 described in [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs):
 
 ```go
@@ -510,7 +510,7 @@ favor passing the record via pointer (and vice versa).
 Passing via value feels safer because of the following reasons.
 
 The user would not be able to pass `nil`.
-Therefore, it reduces the possiblity to have a nil pointer dereference.
+Therefore, it reduces the possibility to have a nil pointer dereference.
 
 It should reduce the possibility of a heap allocation.
 
