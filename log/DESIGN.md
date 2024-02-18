@@ -262,7 +262,7 @@ const (
 	KindInt64
 	KindString
 	KindBytes
-	KindList
+	KindSlice
 	KindMap
 )
 
@@ -282,7 +282,7 @@ func BoolValue(v bool) Value
 
 func BytesValue(v []byte) Value
 
-func ListValue(vs ...Value) Value
+func SliceValue(vs ...Value) Value
 
 func MapValue(kvs ...KeyValue) Value
 
@@ -300,7 +300,7 @@ func (v Value) AsFloat64() float64
 
 func (v Value) AsBytes() []byte
 
-func (v Value) AsList() []Value
+func (v Value) AsSlice() []Value
 
 func (v Value) AsMap() []KeyValue 
 
@@ -330,7 +330,7 @@ func Bool(key string, v bool) KeyValue
 
 func Bytes(key string, v []byte) KeyValue
 
-func List(key string, args ...Value) KeyValue
+func Slice(key string, args ...Value) KeyValue
 
 func Map(key string, args ...KeyValue) KeyValue
 
@@ -349,7 +349,7 @@ func (a KeyValue) Equal(b KeyValue) bool
 `KindInt64` is used for a signed integer value.
 `KindString` is used for a string value.
 `KindBytes` is used for a slice of bytes (in spec: A byte array).
-`KindList` is used for a slice of values (in spec: an array (a list) of any values).
+`KindSlice` is used for a slice of values (in spec: an array (a list) of any values).
 `KindMap` is used for a slice of key-value pairs (in spec: `map<string, any>`).
 
 These types are defined in `go.opentelemetry.io/otel/log` package
