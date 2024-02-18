@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log/embedded"
 )
 
 // Logger emits log records.
@@ -26,7 +27,10 @@ import (
 // package documentation on API implementation for information on how to set
 // default behavior for unimplemented methods.
 type Logger interface {
-	// TODO (#4909): embed an embedded type from otel/log/embedded.
+	// Users of the interface can ignore this. This embedded type is only used
+	// by implementations of this interface. See the "API Implementations"
+	// section of the package documentation for more information.
+	embedded.Logger
 
 	// Emit emits a log record.
 	//
