@@ -14,13 +14,13 @@ func _() {
 	_ = x[KindInt64-3]
 	_ = x[KindString-4]
 	_ = x[KindBytes-5]
-	_ = x[KindList-6]
+	_ = x[KindSlice-6]
 	_ = x[KindMap-7]
 }
 
-const _Kind_name = "EmptyBoolFloat64Int64StringBytesListMap"
+const _Kind_name = "EmptyBoolFloat64Int64StringBytesSliceMap"
 
-var _Kind_index = [...]uint8{0, 5, 9, 16, 21, 27, 32, 36, 39}
+var _Kind_index = [...]uint8{0, 5, 9, 16, 21, 27, 32, 37, 40}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {
