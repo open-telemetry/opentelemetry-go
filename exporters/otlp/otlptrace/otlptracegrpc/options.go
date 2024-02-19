@@ -64,7 +64,7 @@ func WithInsecure() Option {
 	return wrappedOption{otlpconfig.WithInsecure()}
 }
 
-// WithEndpoint sets the target endpoint URL the Exporter will connect to.
+// WithEndpoint sets the target endpoint the Exporter will connect to.
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
