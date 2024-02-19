@@ -31,7 +31,7 @@ func TestImplementationNoPanics(t *testing.T) {
 		reflect.ValueOf(TracerProvider{}),
 		reflect.TypeOf((*trace.TracerProvider)(nil)).Elem(),
 	))
-	t.Run("Meter", assertAllExportedMethodNoPanic(
+	t.Run("Tracer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Tracer{}),
 		reflect.TypeOf((*trace.Tracer)(nil)).Elem(),
 	))
