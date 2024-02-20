@@ -363,7 +363,7 @@ The benchmarks[^1] show that the implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
 The value accessors (`func (v Value) As[Kind]` methods) must not panic,
-as it would violate tvaluhe [specification](https://opentelemetry.io/docs/specs/otel/error-handling/):
+as it would violate the [specification](https://opentelemetry.io/docs/specs/otel/error-handling/):
 
 > API methods MUST NOT throw unhandled exceptions when used incorrectly by end
 > users. The API and SDK SHOULD provide safe defaults for missing or invalid
