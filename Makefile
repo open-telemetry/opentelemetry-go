@@ -315,10 +315,5 @@ add-tags: | $(MULTIMOD)
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
 .PHONY: lint-markdown
-<<<<<<< HEAD
 lint-markdown:
-	docker run -v "$(CURDIR):$(WORKDIR)" docker://avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
-=======
-lint-markdown: 
 	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
->>>>>>> main
