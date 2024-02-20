@@ -362,6 +362,18 @@ and the API is mostly inspired by
 The benchmarks[^1] show that the implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 
+The value accessors (`func (v Value) As[Kind]` methods) must not panic,
+as it would violate tvaluhe [specification](https://opentelemetry.io/docs/specs/otel/error-handling/):
+
+> API methods MUST NOT throw unhandled exceptions when used incorrectly by end
+> users. The API and SDK SHOULD provide safe defaults for missing or invalid
+> arguments. [...] Whenever the library suppresses an error that would otherwise
+> have been exposed to the user, the library SHOULD log the error using
+> language-specific conventions.
+
+Therefore, the value accessors should return a zero value
+and log an error when a bad accessor is called.
+
 The `Severity`, `Kind`, `Value`, `KeyValue` may implement
 the [`fmt.Stringer`](https://pkg.go.dev/fmt#Stringer) interface.
 However, it is not needed for the first stable release
