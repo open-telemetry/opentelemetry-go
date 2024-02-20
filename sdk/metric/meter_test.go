@@ -170,12 +170,22 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	// The synchronous measurement methods must ignore the context cancelation.
+	// The synchronous measurement methods must ignore the context cancellation.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	attrs := attribute.NewSet(attribute.String("name", "alice"))
-	opt := metric.WithAttributeSet(attrs)
+	alice := attribute.NewSet(
+		attribute.String("name", "Alice"),
+		attribute.Bool("admin", true),
+	)
+	optAlice := metric.WithAttributeSet(alice)
+
+	bob := attribute.NewSet(
+		attribute.String("name", "Bob"),
+		attribute.Bool("admin", false),
+	)
+	optBob := metric.WithAttributeSet(bob)
+
 	testCases := []struct {
 		name string
 		fn   func(*testing.T, metric.Meter)
@@ -184,11 +194,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Int64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				ctr, err := m.Int64ObservableCounter("aint", metric.WithInt64Callback(cback))
+				ctr, err := m.Int64ObservableCounter(
+					"aint",
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 3)
@@ -202,7 +218,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 3},
 					},
 				},
@@ -211,11 +228,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Int64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				ctr, err := m.Int64ObservableUpDownCounter("aint", metric.WithInt64Callback(cback))
+				ctr, err := m.Int64ObservableUpDownCounter(
+					"aint",
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 11)
@@ -229,7 +252,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 11},
 					},
 				},
@@ -238,11 +262,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableInt64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Int64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				gauge, err := m.Int64ObservableGauge("agauge", metric.WithInt64Callback(cback))
+				gauge, err := m.Int64ObservableGauge(
+					"agauge",
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(gauge, 11)
@@ -254,7 +284,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 11},
 					},
 				},
@@ -263,11 +294,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64Count",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Float64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				ctr, err := m.Float64ObservableCounter("afloat", metric.WithFloat64Callback(cback))
+				ctr, err := m.Float64ObservableCounter(
+					"afloat",
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 3)
@@ -281,7 +318,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 3},
 					},
 				},
@@ -290,11 +328,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64UpDownCount",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Float64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				ctr, err := m.Float64ObservableUpDownCounter("afloat", metric.WithFloat64Callback(cback))
+				ctr, err := m.Float64ObservableUpDownCounter(
+					"afloat",
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 11)
@@ -308,7 +352,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 11},
 					},
 				},
@@ -317,11 +362,17 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "ObservableFloat64Gauge",
 			fn: func(t *testing.T, m metric.Meter) {
-				cback := func(_ context.Context, o metric.Float64Observer) error {
-					o.Observe(4, opt)
-					return nil
-				}
-				gauge, err := m.Float64ObservableGauge("agauge", metric.WithFloat64Callback(cback))
+				gauge, err := m.Float64ObservableGauge(
+					"agauge",
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(4, optAlice)
+						return nil
+					}),
+					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
+						o.Observe(5, optBob)
+						return nil
+					}),
+				)
 				assert.NoError(t, err)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(gauge, 11)
@@ -333,7 +384,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				Name: "agauge",
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
-						{Attributes: attrs, Value: 4},
+						{Attributes: alice, Value: 4},
+						{Attributes: bob, Value: 5},
 						{Value: 11},
 					},
 				},

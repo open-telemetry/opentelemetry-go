@@ -9,6 +9,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Cardinality Limit](#cardinality-limit)
+- [Exemplars](#exemplars)
 
 ### Cardinality Limit
 
@@ -103,7 +104,7 @@ unset OTEL_METRICS_EXEMPLAR_FILTER
 
 ## Compatibility and Stability
 
-Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../VERSIONING.md).
+Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../VERSIONING.md).
 These features may be removed or modified in successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.
