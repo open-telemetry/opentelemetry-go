@@ -11,10 +11,13 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"unsafe"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 // A Value can represent a structured value.
@@ -25,14 +28,14 @@ type Value struct {
 	// the length for String, Bytes, List, Map.
 	num uint64
 	// If any is of type Kind, then the value is in num as described above.
-	// Otherwise (if is of type stringptr, listptr, sliceptr or mapptr) it contains the value.
+	// Otherwise (if is of type stringptr, bytesptr, sliceptr or mapptr) it contains the value.
 	any any
 }
 
 type (
 	stringptr *byte     // used in Value.any when the Value is a string
 	bytesptr  *byte     // used in Value.any when the Value is a []byte
-	listptr   *Value    // used in Value.any when the Value is a []Value
+	sliceptr  *Value    // used in Value.any when the Value is a []Value
 	mapptr    *KeyValue // used in Value.any when the Value is a []KeyValue
 )
 
@@ -47,7 +50,7 @@ const (
 	KindInt64
 	KindString
 	KindBytes
-	KindList
+	KindSlice
 	KindMap
 )
 
@@ -62,14 +65,16 @@ func (v Value) Kind() Kind {
 		return KindString
 	case bytesptr:
 		return KindBytes
-	case listptr:
-		return KindList
+	case sliceptr:
+		return KindSlice
 	case mapptr:
 		return KindMap
 	default:
 		return KindEmpty
 	}
 }
+
+var errBadKind = errors.New("bad kind")
 
 // StringValue returns a new [Value] for a string.
 func StringValue(value string) Value {
@@ -106,24 +111,25 @@ func BytesValue(v []byte) Value {
 	return Value{num: uint64(len(v)), any: bytesptr(unsafe.SliceData(v))}
 }
 
-// ListValue returns a [Value] for a list of [Value].
+// SliceValue returns a [Value] for a slice of [Value].
 // The caller must not subsequently mutate the argument slice.
-func ListValue(vs ...Value) Value {
-	return Value{num: uint64(len(vs)), any: listptr(unsafe.SliceData(vs))}
+func SliceValue(vs ...Value) Value {
+	return Value{num: uint64(len(vs)), any: sliceptr(unsafe.SliceData(vs))}
 }
 
-// MapValue returns a new [Value] for a list of key-value pairs.
+// MapValue returns a new [Value] for a slice of key-value pairs.
 // The caller must not subsequently mutate the argument slice.
 func MapValue(kvs ...KeyValue) Value {
 	return Value{num: uint64(len(kvs)), any: mapptr(unsafe.SliceData(kvs))}
 }
 
 // AsAny returns v's value as an any.
+// It returns nil and logs error if v's kind is invalid.
 func (v Value) AsAny() any {
 	switch v.Kind() {
 	case KindMap:
 		return v.mapValue()
-	case KindList:
+	case KindSlice:
 		return v.list()
 	case KindInt64:
 		return int64(v.num)
@@ -138,37 +144,41 @@ func (v Value) AsAny() any {
 	case KindEmpty:
 		return nil
 	default:
-		panic(fmt.Sprintf("bad kind: %s", v.Kind()))
+		global.Error(errBadKind, "AsAny", "kind", v.Kind())
+		return nil
 	}
 }
 
-// AsString returns Value's value as a string, formatted like [fmt.Sprint]. It panics
-// if v is not a string.
+// AsString returns Value's value as a string.
+// It returns empty string and logs error if v is not a string.
 func (v Value) AsString() string {
 	if sp, ok := v.any.(stringptr); ok {
 		return unsafe.String(sp, v.num)
 	}
-	panic("AsString: bad kind")
+	global.Error(errBadKind, "AsString", "kind", v.Kind())
+	return ""
 }
 
 func (v Value) str() string {
 	return unsafe.String(v.any.(stringptr), v.num)
 }
 
-// AsInt64 returns v's value as an int64. It panics
-// if v is not a signed integer.
+// AsInt64 returns v's value as an int64.
+// It returns 0 and logs error if v is not a signed integer.
 func (v Value) AsInt64() int64 {
 	if g, w := v.Kind(), KindInt64; g != w {
-		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
+		global.Error(errBadKind, "AsInt64", "kind", v.Kind())
+		return 0
 	}
 	return int64(v.num)
 }
 
-// AsBool returns v's value as a bool. It panics
-// if v is not a bool.
+// AsBool returns v's value as a bool.
+// It returns false and logs error if v is not a bool.
 func (v Value) AsBool() bool {
 	if g, w := v.Kind(), KindBool; g != w {
-		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
+		global.Error(errBadKind, "AsBool", "kind", v.Kind())
+		return false
 	}
 	return v.bool()
 }
@@ -177,11 +187,12 @@ func (v Value) bool() bool {
 	return v.num == 1
 }
 
-// AsFloat64 returns v's value as a float64. It panics
-// if v is not a float64.
+// AsFloat64 returns v's value as a float64.
+// It returns false and logs error if v is not a float64.
 func (v Value) AsFloat64() float64 {
 	if g, w := v.Kind(), KindFloat64; g != w {
-		panic(fmt.Sprintf("Value kind is %s, not %s", g, w))
+		global.Error(errBadKind, "AsFloat64", "kind", v.Kind())
+		return 0
 	}
 
 	return v.float()
@@ -192,38 +203,41 @@ func (v Value) float() float64 {
 }
 
 // AsBytes returns v's value as a []byte.
-// It panics if v's [Kind] is not [KindBytes].
+// It returns nil and logs error if v's [Kind] is not [KindBytes].
 func (v Value) AsBytes() []byte {
 	if sp, ok := v.any.(bytesptr); ok {
 		return unsafe.Slice((*byte)(sp), v.num)
 	}
-	panic("AsBytes: bad kind")
+	global.Error(errBadKind, "AsBytes", "kind", v.Kind())
+	return nil
 }
 
 func (v Value) bytes() []byte {
 	return unsafe.Slice((*byte)(v.any.(bytesptr)), v.num)
 }
 
-// AsList returns v's value as a []Value.
-// It panics if v's [Kind] is not [KindList].
-func (v Value) AsList() []Value {
-	if sp, ok := v.any.(listptr); ok {
+// AsSlice returns v's value as a []Value.
+// It returns nil and logs error if v's [Kind] is not [KindSlice].
+func (v Value) AsSlice() []Value {
+	if sp, ok := v.any.(sliceptr); ok {
 		return unsafe.Slice((*Value)(sp), v.num)
 	}
-	panic("AsList: bad kind")
+	global.Error(errBadKind, "AsSlice", "kind", v.Kind())
+	return nil
 }
 
 func (v Value) list() []Value {
-	return unsafe.Slice((*Value)(v.any.(listptr)), v.num)
+	return unsafe.Slice((*Value)(v.any.(sliceptr)), v.num)
 }
 
 // AsMap returns v's value as a []KeyValue.
-// It panics if v's [Kind] is not [KindMap].
+// It returns nil and logs error if v's [Kind] is not [KindMap].
 func (v Value) AsMap() []KeyValue {
 	if sp, ok := v.any.(mapptr); ok {
 		return unsafe.Slice((*KeyValue)(sp), v.num)
 	}
-	panic("AsMap: bad kind")
+	global.Error(errBadKind, "AsMap", "kind", v.Kind())
+	return nil
 }
 
 func (v Value) mapValue() []KeyValue {
@@ -249,7 +263,7 @@ func (v Value) Equal(w Value) bool {
 		return v.str() == w.str()
 	case KindFloat64:
 		return v.float() == w.float()
-	case KindList:
+	case KindSlice:
 		return sliceEqualFunc(v.list(), w.list(), Value.Equal)
 	case KindMap:
 		return sliceEqualFunc(v.mapValue(), w.mapValue(), KeyValue.Equal)
@@ -262,9 +276,7 @@ func (v Value) Equal(w Value) bool {
 	}
 }
 
-// String returns Value's value as a string, formatted like [fmt.Sprint]. Unlike
-// the methods Int64, Float64, and so on, which panic if v is of the
-// wrong kind, String never panics.
+// String returns Value's value as a string, formatted like [fmt.Sprint].
 func (v Value) String() string {
 	switch v.Kind() {
 	case KindString:
@@ -279,12 +291,12 @@ func (v Value) String() string {
 		return fmt.Sprint(v.bytes())
 	case KindMap:
 		return fmt.Sprint(v.mapValue())
-	case KindList:
+	case KindSlice:
 		return fmt.Sprint(v.list())
 	case KindEmpty:
 		return emptyString
 	default:
-		panic(fmt.Sprintf("bad kind: %s", v.Kind()))
+		return "<invalid>"
 	}
 }
 
@@ -328,9 +340,9 @@ func Bytes(key string, v []byte) KeyValue {
 	return KeyValue{key, BytesValue(v)}
 }
 
-// Bytes returns an KeyValue for a list of [Value].
-func List(key string, args ...Value) KeyValue {
-	return KeyValue{key, ListValue(args...)}
+// Slice returns an KeyValue for a slice of [Value].
+func Slice(key string, args ...Value) KeyValue {
+	return KeyValue{key, SliceValue(args...)}
 }
 
 // Map returns an KeyValue for a Map [Value].

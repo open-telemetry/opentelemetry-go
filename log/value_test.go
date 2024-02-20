@@ -26,7 +26,7 @@ func TestKind(t *testing.T) {
 		{KindEmpty, "Empty", 0},
 		{KindFloat64, "Float64", 2},
 		{KindInt64, "Int64", 3},
-		{KindList, "List", 6},
+		{KindSlice, "Slice", 6},
 		{KindMap, "Map", 7},
 		{KindString, "String", 4},
 	}
@@ -49,9 +49,9 @@ func TestValueEqual(t *testing.T) {
 		BoolValue(false),
 		StringValue("hi"),
 		BytesValue([]byte{1, 3, 5}),
-		ListValue(IntValue(3), StringValue("foo")),
+		SliceValue(IntValue(3), StringValue("foo")),
 		MapValue(Bool("b", true), Int("i", 3)),
-		MapValue(List("l", IntValue(3), StringValue("foo")), Bytes("b", []byte{3, 5, 7})),
+		MapValue(Slice("l", IntValue(3), StringValue("foo")), Bytes("b", []byte{3, 5, 7})),
 	}
 	for i, v1 := range vals {
 		for j, v2 := range vals {
@@ -74,7 +74,7 @@ func TestValueString(t *testing.T) {
 		{BoolValue(true), "true"},
 		{StringValue("foo"), "foo"},
 		{BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
-		{ListValue(IntValue(3), StringValue("foo")), "[3 foo]"},
+		{SliceValue(IntValue(3), StringValue("foo")), "[3 foo]"},
 		{MapValue(Int("a", 1), Bool("b", true)), "[a=1 b=true]"},
 		{Value{}, "<nil>"},
 	} {
@@ -144,7 +144,7 @@ func TestValueAny(t *testing.T) {
 		{int64(11), Int64Value(11)},
 		{1.5, Float64Value(1.5)},
 		{[]byte{1, 2, 3}, BytesValue([]byte{1, 2, 3})},
-		{[]Value{IntValue(3)}, ListValue(IntValue(3))},
+		{[]Value{IntValue(3)}, SliceValue(IntValue(3))},
 		{[]KeyValue{Int("i", 3)}, MapValue(Int("i", 3))},
 		{nil, Value{}},
 	} {
@@ -160,8 +160,8 @@ func TestEmptyMap(t *testing.T) {
 }
 
 func TestEmptyList(t *testing.T) {
-	l := ListValue()
-	got := l.AsList()
+	l := SliceValue()
+	got := l.AsSlice()
 	assert.Nil(t, got)
 }
 
@@ -178,8 +178,8 @@ func TestMapValueWithEmptyMaps(t *testing.T) {
 
 func TestListValueWithEmptyValues(t *testing.T) {
 	// Preserve empty values.
-	l := ListValue(Value{})
-	got := l.AsList()
+	l := SliceValue(Value{})
+	got := l.AsSlice()
 	want := []Value{{}}
 	assert.Equal(t, want, got)
 }
