@@ -124,9 +124,6 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	global.Info("TracerProvider created", "config", o)
 
-	// Begin publishing Resource's producing entity as an entity signal.
-	tp.resource.PublishEntity()
-
 	spss := make(spanProcessorStates, 0, len(o.processors))
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
@@ -368,6 +365,19 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // If this option is not used, the TracerProvider will use the
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
+	return traceProviderOptionFunc(
+		func(cfg tracerProviderConfig) tracerProviderConfig {
+			var err error
+			cfg.resource, err = resource.Merge(resource.Environment(), r)
+			if err != nil {
+				otel.Handle(err)
+			}
+			return cfg
+		},
+	)
+}
+
+func WithEntity(r *resource.Resource) TracerProviderOption {
 	return traceProviderOptionFunc(
 		func(cfg tracerProviderConfig) tracerProviderConfig {
 			var err error
