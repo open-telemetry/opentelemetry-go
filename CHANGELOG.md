@@ -19,7 +19,7 @@ The next release will require at least [Go 1.21].
 
 ### Fixed
 
-- Fix registration callback missing called when register multiple callbacks to `go.opentelemetry.io/internal/global`. (#4945)
+- Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
 
 ## [1.23.1] 2024-02-07
 
