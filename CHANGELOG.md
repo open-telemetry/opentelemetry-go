@@ -17,6 +17,10 @@ The next release will require at least [Go 1.21].
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4900)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
 
+### Fixed
+
+- Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
+
 ## [1.23.1] 2024-02-07
 
 ### Fixed
