@@ -198,5 +198,6 @@ func BenchmarkRecord(b *testing.B) {
 		})
 	})
 
+	// Convince the linter these values are used.
 	_, _, _, _, _, _ = tStamp, sev, text, body, attr, n
 }
