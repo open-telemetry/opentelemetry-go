@@ -128,6 +128,24 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /exporters/otlp/otlplog/otlploggrpc
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /exporters/otlp/otlplog/otlploghttp
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /exporters/otlp/otlpmetric/otlpmetricgrpc
     labels:
       - dependencies
@@ -174,6 +192,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /exporters/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /exporters/stdout/stdoutlog
     labels:
       - dependencies
       - go
@@ -246,6 +273,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /sdk
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /sdk/log
     labels:
       - dependencies
       - go
