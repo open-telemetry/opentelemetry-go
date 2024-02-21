@@ -12,7 +12,7 @@ high-performant in this scenario.
 The prototype was created in
 [#4955](https://github.com/open-telemetry/opentelemetry-go/pull/4955).
 
-## Module structure
+## Modules structure
 
 The SDK is published as a single `go.opentelemetry.io/otel/sdk/log` Go module.
 
