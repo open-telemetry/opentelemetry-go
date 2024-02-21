@@ -17,7 +17,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 | Metrics | Stable             |
 | Logs    | In development[^1] |
 
-Progres and status specific to this repository is tracked in our
+Progress and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
 and
 [milestones](https://github.com/open-telemetry/opentelemetry-go/milestones).
