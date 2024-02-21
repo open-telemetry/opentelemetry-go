@@ -9,7 +9,8 @@ The main and recommended use case is to configure the SDK to use an OTLP
 exporter with a batch processor.[^1] Therefore, the design aims to be
 high-performant in this scenario.
 
-The prototype was created in TODO.
+The prototype was created in
+[#4955](https://github.com/open-telemetry/opentelemetry-go/pull/4955).
 
 ## Module structure
 
