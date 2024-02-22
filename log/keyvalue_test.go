@@ -88,9 +88,6 @@ func TestEmpty(t *testing.T) {
 	t.Run("Value.Empty", func(t *testing.T) {
 		assert.True(t, v.Empty())
 	})
-	t.Run("Value.AsAny", func(t *testing.T) {
-		assert.Nil(t, v.AsAny())
-	})
 
 	t.Run("Bytes", func(t *testing.T) {
 		assert.Nil(t, log.Bytes("b", nil).Value.AsBytes())
@@ -298,5 +295,4 @@ func testKV[T any](t *testing.T, key string, val T, kv log.KeyValue) {
 
 	assert.Equal(t, key, kv.Key, "incorrect key")
 	assert.False(t, kv.Value.Empty(), "value empty")
-	assert.Equal(t, kv.Value.AsAny(), T(val), "AsAny wrong value")
 }
