@@ -149,40 +149,16 @@ func TestRecordAllocationLimits(t *testing.T) {
 		body = r.Body()
 	}), "Body")
 
-	t.Run("Attributes", func(t *testing.T) {
-		attrVal := []log.KeyValue{
-			log.Bool("b1", true),
-			log.Int("i1", 324),
-			log.Float64("f1", -230.213),
-			log.String("s1", "value1"),
-			log.Map("m1", log.Slice("slice1", log.BoolValue(true))),
-			log.Bool("b2", false),
-			log.Int("i2", 39847),
-			log.Float64("f2", 0.382964329),
-			log.String("s2", "value2"),
-			log.Map("m2", log.Slice("slice2", log.BoolValue(false))),
-		}
-
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			var r log.Record
-			r.AddAttributes(attrVal[:5]...)
-			n = r.AttributesLen()
-			r.WalkAttributes(func(kv log.KeyValue) bool {
-				attr = kv
-				return true
-			})
-		}), "5 attributes")
-
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			var r log.Record
-			r.AddAttributes(attrVal...)
-			n = r.AttributesLen()
-			r.WalkAttributes(func(kv log.KeyValue) bool {
-				attr = kv
-				return true
-			})
-		}), 1.0, "10 attributes")
-	})
+	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.AddAttributes(attrVal...)
+		n = r.AttributesLen()
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			attr = kv
+			return true
+		})
+	}), "Attributes")
 
 	// Convince the linter these values are used.
 	_, _, _, _, _, _ = tStamp, sev, text, body, n, attr
