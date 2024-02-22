@@ -310,7 +310,6 @@ func TestAllocationLimits(t *testing.T) {
 	// Assign testing results to external scope so the compiler doesn't
 	// optimize away the testing statements.
 	var (
-		a     any
 		i     int64
 		f     float64
 		b     bool
@@ -356,5 +355,5 @@ func TestAllocationLimits(t *testing.T) {
 	}), "Map.AsMap")
 
 	// Convince the linter these values are used.
-	_, _, _, _, _, _, _, _ = a, i, f, b, by, s, slice, m
+	_, _, _, _, _, _, _ = i, f, b, by, s, slice, m
 }
