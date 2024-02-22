@@ -298,10 +298,7 @@ func testKV[T any](t *testing.T, key string, val T, kv log.KeyValue) {
 }
 
 func TestAllocationLimits(t *testing.T) {
-	const (
-		runs = 5
-		key  = "key"
-	)
+	const key = "key"
 
 	// Assign testing results to external scope so the compiler doesn't
 	// optimize away the testing statements.
@@ -315,40 +312,40 @@ func TestAllocationLimits(t *testing.T) {
 		m     []log.KeyValue
 	)
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		b = log.Bool(key, true).Value.AsBool()
-	}), "Bool.AsBool")
+	}, "Bool.AsBool")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		f = log.Float64(key, 3.0).Value.AsFloat64()
-	}), "Float.AsFloat64")
+	}, "Float.AsFloat64")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		i = log.Int(key, 9).Value.AsInt64()
-	}), "Int.AsInt64")
+	}, "Int.AsInt64")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		i = log.Int64(key, 8).Value.AsInt64()
-	}), "Int64.AsInt64")
+	}, "Int64.AsInt64")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		s = log.String(key, "value").Value.AsString()
-	}), "String.AsString")
+	}, "String.AsString")
 
 	byteVal := []byte{1, 3, 4}
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		by = log.Bytes(key, byteVal).Value.AsBytes()
-	}), "Byte.AsBytes")
+	}, "Byte.AsBytes")
 
 	sliceVal := []log.Value{log.BoolValue(true), log.IntValue(32)}
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		slice = log.Slice(key, sliceVal...).Value.AsSlice()
-	}), "Slice.AsSlice")
+	}, "Slice.AsSlice")
 
 	mapVal := []log.KeyValue{log.Bool("b", true), log.Int("i", 32)}
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		m = log.Map(key, mapVal...).Value.AsMap()
-	}), "Map.AsMap")
+	}, "Map.AsMap")
 
 	// Convince the linter these values are used.
 	_, _, _, _, _, _, _ = i, f, b, by, s, slice, m

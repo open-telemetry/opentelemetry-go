@@ -105,8 +105,6 @@ func TestRecordAttributes(t *testing.T) {
 }
 
 func TestRecordAllocationLimits(t *testing.T) {
-	const runs = 5
-
 	// Assign testing results to external scope so the compiler doesn't
 	// optimize away the testing statements.
 	var (
@@ -118,39 +116,39 @@ func TestRecordAllocationLimits(t *testing.T) {
 		attr   log.KeyValue
 	)
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.SetTimestamp(y2k)
 		tStamp = r.Timestamp()
-	}), "Timestamp")
+	}, "Timestamp")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.SetObservedTimestamp(y2k)
 		tStamp = r.ObservedTimestamp()
-	}), "ObservedTimestamp")
+	}, "ObservedTimestamp")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.SetSeverity(log.SeverityDebug)
 		sev = r.Severity()
-	}), "Severity")
+	}, "Severity")
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.SetSeverityText("severity text")
 		text = r.SeverityText()
-	}), "SeverityText")
+	}, "SeverityText")
 
 	bodyVal := log.BoolValue(true)
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.SetBody(bodyVal)
 		body = r.Body()
-	}), "Body")
+	}, "Body")
 
 	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assertZeroAllocs(t, func() {
 		var r log.Record
 		r.AddAttributes(attrVal...)
 		n = r.AttributesLen()
@@ -158,7 +156,7 @@ func TestRecordAllocationLimits(t *testing.T) {
 			attr = kv
 			return true
 		})
-	}), "Attributes")
+	}, "Attributes")
 
 	// Convince the linter these values are used.
 	_, _, _, _, _, _ = tStamp, sev, text, body, n, attr
