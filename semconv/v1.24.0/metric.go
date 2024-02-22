@@ -113,7 +113,7 @@ const (
 
 	// AspnetcoreRoutingMatchAttempts is the metric conforming to the
 	// "aspnetcore.routing.match_attempts" semantic conventions. It represents the
-	// number of requests that were attempted to be matched to an endpoint..
+	// number of requests that were attempted to be matched to an endpoint.
 	// Instrument: counter
 	// Unit: {match_attempt}
 	// Stability: Experimental
@@ -123,7 +123,7 @@ const (
 
 	// AspnetcoreDiagnosticsExceptions is the metric conforming to the
 	// "aspnetcore.diagnostics.exceptions" semantic conventions. It represents the
-	// number of exceptions caught by exception handling middleware..
+	// number of exceptions caught by exception handling middleware.
 	// Instrument: counter
 	// Unit: {exception}
 	// Stability: Experimental
@@ -134,7 +134,7 @@ const (
 	// AspnetcoreRateLimitingActiveRequestLeases is the metric conforming to the
 	// "aspnetcore.rate_limiting.active_request_leases" semantic conventions. It
 	// represents the number of requests that are currently active on the server
-	// that hold a rate limiting lease..
+	// that hold a rate limiting lease.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
@@ -145,7 +145,7 @@ const (
 	// AspnetcoreRateLimitingRequestLeaseDuration is the metric conforming to the
 	// "aspnetcore.rate_limiting.request_lease.duration" semantic conventions. It
 	// represents the duration of rate limiting lease held by requests on the
-	// server..
+	// server.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -156,7 +156,7 @@ const (
 	// AspnetcoreRateLimitingRequestTimeInQueue is the metric conforming to the
 	// "aspnetcore.rate_limiting.request.time_in_queue" semantic conventions. It
 	// represents the time the request spent in a queue waiting to acquire a rate
-	// limiting lease..
+	// limiting lease.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -167,7 +167,7 @@ const (
 	// AspnetcoreRateLimitingQueuedRequests is the metric conforming to the
 	// "aspnetcore.rate_limiting.queued_requests" semantic conventions. It
 	// represents the number of requests that are currently queued, waiting to
-	// acquire a rate limiting lease..
+	// acquire a rate limiting lease.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
@@ -177,7 +177,7 @@ const (
 
 	// AspnetcoreRateLimitingRequests is the metric conforming to the
 	// "aspnetcore.rate_limiting.requests" semantic conventions. It represents the
-	// number of requests that tried to acquire a rate limiting lease..
+	// number of requests that tried to acquire a rate limiting lease.
 	// Instrument: counter
 	// Unit: {request}
 	// Stability: Experimental
@@ -187,7 +187,7 @@ const (
 
 	// DNSLookupDuration is the metric conforming to the "dns.lookup.duration"
 	// semantic conventions. It represents the measures the time taken to perform a
-	// DNS lookup..
+	// DNS lookup.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -198,7 +198,7 @@ const (
 	// HTTPClientOpenConnections is the metric conforming to the
 	// "http.client.open_connections" semantic conventions. It represents the
 	// number of outbound HTTP connections that are currently active or idle on the
-	// client..
+	// client.
 	// Instrument: updowncounter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -208,7 +208,7 @@ const (
 
 	// HTTPClientConnectionDuration is the metric conforming to the
 	// "http.client.connection.duration" semantic conventions. It represents the
-	// duration of the successfully established outbound HTTP connections..
+	// duration of the successfully established outbound HTTP connections.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -218,7 +218,7 @@ const (
 
 	// HTTPClientActiveRequests is the metric conforming to the
 	// "http.client.active_requests" semantic conventions. It represents the number
-	// of active HTTP requests..
+	// of active HTTP requests.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
@@ -229,7 +229,7 @@ const (
 	// HTTPClientRequestTimeInQueue is the metric conforming to the
 	// "http.client.request.time_in_queue" semantic conventions. It represents the
 	// amount of time requests spent on a queue waiting for an available
-	// connection..
+	// connection.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -239,7 +239,7 @@ const (
 
 	// KestrelActiveConnections is the metric conforming to the
 	// "kestrel.active_connections" semantic conventions. It represents the number
-	// of connections that are currently active on the server..
+	// of connections that are currently active on the server.
 	// Instrument: updowncounter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -249,7 +249,7 @@ const (
 
 	// KestrelConnectionDuration is the metric conforming to the
 	// "kestrel.connection.duration" semantic conventions. It represents the
-	// duration of connections on the server..
+	// duration of connections on the server.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -259,7 +259,7 @@ const (
 
 	// KestrelRejectedConnections is the metric conforming to the
 	// "kestrel.rejected_connections" semantic conventions. It represents the
-	// number of connections rejected by the server..
+	// number of connections rejected by the server.
 	// Instrument: counter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -269,7 +269,7 @@ const (
 
 	// KestrelQueuedConnections is the metric conforming to the
 	// "kestrel.queued_connections" semantic conventions. It represents the number
-	// of connections that are currently queued and are waiting to start..
+	// of connections that are currently queued and are waiting to start.
 	// Instrument: updowncounter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -280,7 +280,7 @@ const (
 	// KestrelQueuedRequests is the metric conforming to the
 	// "kestrel.queued_requests" semantic conventions. It represents the number of
 	// HTTP requests on multiplexed connections (HTTP/2 and HTTP/3) that are
-	// currently queued and are waiting to start..
+	// currently queued and are waiting to start.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
@@ -290,7 +290,7 @@ const (
 
 	// KestrelUpgradedConnections is the metric conforming to the
 	// "kestrel.upgraded_connections" semantic conventions. It represents the
-	// number of connections that are currently upgraded (WebSockets). ..
+	// number of connections that are currently upgraded (WebSockets). .
 	// Instrument: updowncounter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -300,7 +300,7 @@ const (
 
 	// KestrelTLSHandshakeDuration is the metric conforming to the
 	// "kestrel.tls_handshake.duration" semantic conventions. It represents the
-	// duration of TLS handshakes on the server..
+	// duration of TLS handshakes on the server.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -310,7 +310,7 @@ const (
 
 	// KestrelActiveTLSHandshakes is the metric conforming to the
 	// "kestrel.active_tls_handshakes" semantic conventions. It represents the
-	// number of TLS handshakes that are currently in progress on the server..
+	// number of TLS handshakes that are currently in progress on the server.
 	// Instrument: updowncounter
 	// Unit: {handshake}
 	// Stability: Experimental
@@ -320,7 +320,7 @@ const (
 
 	// SignalrServerConnectionDuration is the metric conforming to the
 	// "signalr.server.connection.duration" semantic conventions. It represents the
-	// duration of connections on the server..
+	// duration of connections on the server.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -330,7 +330,7 @@ const (
 
 	// SignalrServerActiveConnections is the metric conforming to the
 	// "signalr.server.active_connections" semantic conventions. It represents the
-	// number of connections that are currently active on the server..
+	// number of connections that are currently active on the server.
 	// Instrument: updowncounter
 	// Unit: {connection}
 	// Stability: Experimental
@@ -424,7 +424,7 @@ const (
 
 	// HTTPServerRequestDuration is the metric conforming to the
 	// "http.server.request.duration" semantic conventions. It represents the
-	// duration of HTTP server requests..
+	// duration of HTTP server requests.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Stable
@@ -434,7 +434,7 @@ const (
 
 	// HTTPServerActiveRequests is the metric conforming to the
 	// "http.server.active_requests" semantic conventions. It represents the number
-	// of active HTTP server requests..
+	// of active HTTP server requests.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
@@ -444,7 +444,7 @@ const (
 
 	// HTTPServerRequestBodySize is the metric conforming to the
 	// "http.server.request.body.size" semantic conventions. It represents the size
-	// of HTTP server request bodies..
+	// of HTTP server request bodies.
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -454,7 +454,7 @@ const (
 
 	// HTTPServerResponseBodySize is the metric conforming to the
 	// "http.server.response.body.size" semantic conventions. It represents the
-	// size of HTTP server response bodies..
+	// size of HTTP server response bodies.
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -464,7 +464,7 @@ const (
 
 	// HTTPClientRequestDuration is the metric conforming to the
 	// "http.client.request.duration" semantic conventions. It represents the
-	// duration of HTTP client requests..
+	// duration of HTTP client requests.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Stable
@@ -474,7 +474,7 @@ const (
 
 	// HTTPClientRequestBodySize is the metric conforming to the
 	// "http.client.request.body.size" semantic conventions. It represents the size
-	// of HTTP client request bodies..
+	// of HTTP client request bodies.
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -484,7 +484,7 @@ const (
 
 	// HTTPClientResponseBodySize is the metric conforming to the
 	// "http.client.response.body.size" semantic conventions. It represents the
-	// size of HTTP client response bodies..
+	// size of HTTP client response bodies.
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -493,7 +493,7 @@ const (
 	HTTPClientResponseBodySizeDescription = "Size of HTTP client response bodies."
 
 	// JvmMemoryInit is the metric conforming to the "jvm.memory.init" semantic
-	// conventions. It represents the measure of initial memory requested..
+	// conventions. It represents the measure of initial memory requested.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
@@ -503,7 +503,7 @@ const (
 
 	// JvmSystemCPUUtilization is the metric conforming to the
 	// "jvm.system.cpu.utilization" semantic conventions. It represents the recent
-	// CPU utilization for the whole system as reported by the JVM..
+	// CPU utilization for the whole system as reported by the JVM.
 	// Instrument: gauge
 	// Unit: 1
 	// Stability: Experimental
@@ -513,7 +513,7 @@ const (
 
 	// JvmSystemCPULoad1m is the metric conforming to the "jvm.system.cpu.load_1m"
 	// semantic conventions. It represents the average CPU load of the whole system
-	// for the last minute as reported by the JVM..
+	// for the last minute as reported by the JVM.
 	// Instrument: gauge
 	// Unit: {run_queue_item}
 	// Stability: Experimental
@@ -523,7 +523,7 @@ const (
 
 	// JvmBufferMemoryUsage is the metric conforming to the
 	// "jvm.buffer.memory.usage" semantic conventions. It represents the measure of
-	// memory used by buffers..
+	// memory used by buffers.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
@@ -533,7 +533,7 @@ const (
 
 	// JvmBufferMemoryLimit is the metric conforming to the
 	// "jvm.buffer.memory.limit" semantic conventions. It represents the measure of
-	// total memory capacity of buffers..
+	// total memory capacity of buffers.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
@@ -542,7 +542,7 @@ const (
 	JvmBufferMemoryLimitDescription = "Measure of total memory capacity of buffers."
 
 	// JvmBufferCount is the metric conforming to the "jvm.buffer.count" semantic
-	// conventions. It represents the number of buffers in the pool..
+	// conventions. It represents the number of buffers in the pool.
 	// Instrument: updowncounter
 	// Unit: {buffer}
 	// Stability: Experimental
@@ -551,7 +551,7 @@ const (
 	JvmBufferCountDescription = "Number of buffers in the pool."
 
 	// JvmMemoryUsed is the metric conforming to the "jvm.memory.used" semantic
-	// conventions. It represents the measure of memory used..
+	// conventions. It represents the measure of memory used.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
@@ -560,7 +560,7 @@ const (
 	JvmMemoryUsedDescription = "Measure of memory used."
 
 	// JvmMemoryCommitted is the metric conforming to the "jvm.memory.committed"
-	// semantic conventions. It represents the measure of memory committed..
+	// semantic conventions. It represents the measure of memory committed.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
@@ -569,7 +569,7 @@ const (
 	JvmMemoryCommittedDescription = "Measure of memory committed."
 
 	// JvmMemoryLimit is the metric conforming to the "jvm.memory.limit" semantic
-	// conventions. It represents the measure of max obtainable memory..
+	// conventions. It represents the measure of max obtainable memory.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
@@ -580,7 +580,7 @@ const (
 	// JvmMemoryUsedAfterLastGc is the metric conforming to the
 	// "jvm.memory.used_after_last_gc" semantic conventions. It represents the
 	// measure of memory used, as measured after the most recent garbage collection
-	// event on this pool..
+	// event on this pool.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
@@ -589,7 +589,7 @@ const (
 	JvmMemoryUsedAfterLastGcDescription = "Measure of memory used, as measured after the most recent garbage collection event on this pool."
 
 	// JvmGcDuration is the metric conforming to the "jvm.gc.duration" semantic
-	// conventions. It represents the duration of JVM garbage collection actions..
+	// conventions. It represents the duration of JVM garbage collection actions.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Stable
@@ -598,7 +598,7 @@ const (
 	JvmGcDurationDescription = "Duration of JVM garbage collection actions."
 
 	// JvmThreadCount is the metric conforming to the "jvm.thread.count" semantic
-	// conventions. It represents the number of executing platform threads..
+	// conventions. It represents the number of executing platform threads.
 	// Instrument: updowncounter
 	// Unit: {thread}
 	// Stability: Stable
@@ -607,7 +607,7 @@ const (
 	JvmThreadCountDescription = "Number of executing platform threads."
 
 	// JvmClassLoaded is the metric conforming to the "jvm.class.loaded" semantic
-	// conventions. It represents the number of classes loaded since JVM start..
+	// conventions. It represents the number of classes loaded since JVM start.
 	// Instrument: counter
 	// Unit: {class}
 	// Stability: Stable
@@ -617,7 +617,7 @@ const (
 
 	// JvmClassUnloaded is the metric conforming to the "jvm.class.unloaded"
 	// semantic conventions. It represents the number of classes unloaded since JVM
-	// start..
+	// start.
 	// Instrument: counter
 	// Unit: {class}
 	// Stability: Stable
@@ -626,7 +626,7 @@ const (
 	JvmClassUnloadedDescription = "Number of classes unloaded since JVM start."
 
 	// JvmClassCount is the metric conforming to the "jvm.class.count" semantic
-	// conventions. It represents the number of classes currently loaded..
+	// conventions. It represents the number of classes currently loaded.
 	// Instrument: updowncounter
 	// Unit: {class}
 	// Stability: Stable
@@ -636,7 +636,7 @@ const (
 
 	// JvmCPUCount is the metric conforming to the "jvm.cpu.count" semantic
 	// conventions. It represents the number of processors available to the Java
-	// virtual machine..
+	// virtual machine.
 	// Instrument: updowncounter
 	// Unit: {cpu}
 	// Stability: Stable
@@ -646,7 +646,7 @@ const (
 
 	// JvmCPUTime is the metric conforming to the "jvm.cpu.time" semantic
 	// conventions. It represents the cPU time used by the process as reported by
-	// the JVM..
+	// the JVM.
 	// Instrument: counter
 	// Unit: s
 	// Stability: Stable
@@ -656,7 +656,7 @@ const (
 
 	// JvmCPURecentUtilization is the metric conforming to the
 	// "jvm.cpu.recent_utilization" semantic conventions. It represents the recent
-	// CPU utilization for the process as reported by the JVM..
+	// CPU utilization for the process as reported by the JVM.
 	// Instrument: gauge
 	// Unit: 1
 	// Stability: Stable
@@ -666,7 +666,7 @@ const (
 
 	// MessagingPublishDuration is the metric conforming to the
 	// "messaging.publish.duration" semantic conventions. It represents the
-	// measures the duration of publish operation..
+	// measures the duration of publish operation.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -676,7 +676,7 @@ const (
 
 	// MessagingReceiveDuration is the metric conforming to the
 	// "messaging.receive.duration" semantic conventions. It represents the
-	// measures the duration of receive operation..
+	// measures the duration of receive operation.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -686,7 +686,7 @@ const (
 
 	// MessagingDeliverDuration is the metric conforming to the
 	// "messaging.deliver.duration" semantic conventions. It represents the
-	// measures the duration of deliver operation..
+	// measures the duration of deliver operation.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
@@ -696,7 +696,7 @@ const (
 
 	// MessagingPublishMessages is the metric conforming to the
 	// "messaging.publish.messages" semantic conventions. It represents the
-	// measures the number of published messages..
+	// measures the number of published messages.
 	// Instrument: counter
 	// Unit: {message}
 	// Stability: Experimental
@@ -706,7 +706,7 @@ const (
 
 	// MessagingReceiveMessages is the metric conforming to the
 	// "messaging.receive.messages" semantic conventions. It represents the
-	// measures the number of received messages..
+	// measures the number of received messages.
 	// Instrument: counter
 	// Unit: {message}
 	// Stability: Experimental
@@ -716,7 +716,7 @@ const (
 
 	// MessagingDeliverMessages is the metric conforming to the
 	// "messaging.deliver.messages" semantic conventions. It represents the
-	// measures the number of delivered messages..
+	// measures the number of delivered messages.
 	// Instrument: counter
 	// Unit: {message}
 	// Stability: Experimental
@@ -726,7 +726,7 @@ const (
 
 	// RPCServerDuration is the metric conforming to the "rpc.server.duration"
 	// semantic conventions. It represents the measures the duration of inbound
-	// RPC..
+	// RPC.
 	// Instrument: histogram
 	// Unit: ms
 	// Stability: Experimental
@@ -736,7 +736,7 @@ const (
 
 	// RPCServerRequestSize is the metric conforming to the
 	// "rpc.server.request.size" semantic conventions. It represents the measures
-	// the size of RPC request messages (uncompressed)..
+	// the size of RPC request messages (uncompressed).
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -746,7 +746,7 @@ const (
 
 	// RPCServerResponseSize is the metric conforming to the
 	// "rpc.server.response.size" semantic conventions. It represents the measures
-	// the size of RPC response messages (uncompressed)..
+	// the size of RPC response messages (uncompressed).
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -756,7 +756,7 @@ const (
 
 	// RPCServerRequestsPerRPC is the metric conforming to the
 	// "rpc.server.requests_per_rpc" semantic conventions. It represents the
-	// measures the number of messages received per RPC..
+	// measures the number of messages received per RPC.
 	// Instrument: histogram
 	// Unit: {count}
 	// Stability: Experimental
@@ -766,7 +766,7 @@ const (
 
 	// RPCServerResponsesPerRPC is the metric conforming to the
 	// "rpc.server.responses_per_rpc" semantic conventions. It represents the
-	// measures the number of messages sent per RPC..
+	// measures the number of messages sent per RPC.
 	// Instrument: histogram
 	// Unit: {count}
 	// Stability: Experimental
@@ -776,7 +776,7 @@ const (
 
 	// RPCClientDuration is the metric conforming to the "rpc.client.duration"
 	// semantic conventions. It represents the measures the duration of outbound
-	// RPC..
+	// RPC.
 	// Instrument: histogram
 	// Unit: ms
 	// Stability: Experimental
@@ -786,7 +786,7 @@ const (
 
 	// RPCClientRequestSize is the metric conforming to the
 	// "rpc.client.request.size" semantic conventions. It represents the measures
-	// the size of RPC request messages (uncompressed)..
+	// the size of RPC request messages (uncompressed).
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -796,7 +796,7 @@ const (
 
 	// RPCClientResponseSize is the metric conforming to the
 	// "rpc.client.response.size" semantic conventions. It represents the measures
-	// the size of RPC response messages (uncompressed)..
+	// the size of RPC response messages (uncompressed).
 	// Instrument: histogram
 	// Unit: By
 	// Stability: Experimental
@@ -806,7 +806,7 @@ const (
 
 	// RPCClientRequestsPerRPC is the metric conforming to the
 	// "rpc.client.requests_per_rpc" semantic conventions. It represents the
-	// measures the number of messages received per RPC..
+	// measures the number of messages received per RPC.
 	// Instrument: histogram
 	// Unit: {count}
 	// Stability: Experimental
@@ -816,7 +816,7 @@ const (
 
 	// RPCClientResponsesPerRPC is the metric conforming to the
 	// "rpc.client.responses_per_rpc" semantic conventions. It represents the
-	// measures the number of messages sent per RPC..
+	// measures the number of messages sent per RPC.
 	// Instrument: histogram
 	// Unit: {count}
 	// Stability: Experimental
@@ -876,7 +876,7 @@ const (
 	SystemCPULogicalCountDescription = "Reports the number of logical (virtual) processor cores created by the operating system to manage multitasking"
 
 	// SystemMemoryUsage is the metric conforming to the "system.memory.usage"
-	// semantic conventions. It represents the reports memory in use by state..
+	// semantic conventions. It represents the reports memory in use by state.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
@@ -886,7 +886,7 @@ const (
 
 	// SystemMemoryLimit is the metric conforming to the "system.memory.limit"
 	// semantic conventions. It represents the total memory available in the
-	// system..
+	// system.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental

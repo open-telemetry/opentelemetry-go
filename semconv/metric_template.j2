@@ -12,7 +12,7 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 {%- if metric.stability|string() == "StabilityLevel.DEPRECATED" or not metric.brief-%}
 {{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief) }}.
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
 {%- macro format_stability(stability) -%}
