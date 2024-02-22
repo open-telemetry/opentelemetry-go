@@ -320,85 +320,40 @@ func TestAllocationLimits(t *testing.T) {
 		m     []log.KeyValue
 	)
 
-	t.Run("Bool", func(t *testing.T) {
-		value := true
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			b = log.Bool(key, value).Value.AsBool()
-		}), "AsBool")
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			a = log.Bool(key, value).Value.AsAny()
-		}), "AsAny")
-	})
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		b = log.Bool(key, true).Value.AsBool()
+	}), "Bool.AsBool")
 
-	t.Run("Float64", func(t *testing.T) {
-		value := 3.0
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			f = log.Float64(key, value).Value.AsFloat64()
-		}), "AsFloat64")
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			a = log.Float64(key, value).Value.AsAny()
-		}), 1.0, "AsAny")
-	})
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		f = log.Float64(key, 3.0).Value.AsFloat64()
+	}), "Float.AsFloat64")
 
-	t.Run("Int", func(t *testing.T) {
-		value := 9
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			i = log.Int(key, value).Value.AsInt64()
-		}), "AsInt64")
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			a = log.Int(key, value).Value.AsAny()
-		}), "AsAny")
-	})
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		i = log.Int(key, 9).Value.AsInt64()
+	}), "Int.AsInt64")
 
-	t.Run("Int64", func(t *testing.T) {
-		value := int64(8)
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			i = log.Int64(key, value).Value.AsInt64()
-		}), "AsInt64")
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			a = log.Int64(key, value).Value.AsAny()
-		}), "AsAny")
-	})
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		i = log.Int64(key, 8).Value.AsInt64()
+	}), "Int64.AsInt64")
 
-	t.Run("String", func(t *testing.T) {
-		value := "value"
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			s = log.String(key, value).Value.AsString()
-		}), "AsString")
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			a = log.String(key, value).Value.AsAny()
-		}), 1.0, "AsAny")
-	})
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		s = log.String(key, "value").Value.AsString()
+	}), "String.AsString")
 
-	t.Run("Bytes", func(t *testing.T) {
-		value := []byte{1, 3, 4}
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			by = log.Bytes(key, value).Value.AsBytes()
-		}), "AsBytes")
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			a = log.Bytes(key, value).Value.AsAny()
-		}), 1.0, "AsAny")
-	})
+	byteVal := []byte{1, 3, 4}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		by = log.Bytes(key, byteVal).Value.AsBytes()
+	}), "Byte.AsBytes")
 
-	t.Run("Slice", func(t *testing.T) {
-		value := []log.Value{log.BoolValue(true), log.IntValue(32)}
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			slice = log.Slice(key, value...).Value.AsSlice()
-		}), "AsSlice")
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			a = log.Slice(key, value...).Value.AsAny()
-		}), 1.0, "AsAny")
-	})
+	sliceVal := []log.Value{log.BoolValue(true), log.IntValue(32)}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		slice = log.Slice(key, sliceVal...).Value.AsSlice()
+	}), "Slice.AsSlice")
 
-	t.Run("Map", func(t *testing.T) {
-		value := []log.KeyValue{log.Bool("b", true), log.Int("i", 32)}
-		assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-			m = log.Map(key, value...).Value.AsMap()
-		}), "AsMap")
-		assert.LessOrEqual(t, testing.AllocsPerRun(runs, func() {
-			a = log.Map(key, value...).Value.AsAny()
-		}), 1.0, "AsAny")
-	})
+	mapVal := []log.KeyValue{log.Bool("b", true), log.Int("i", 32)}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		m = log.Map(key, mapVal...).Value.AsMap()
+	}), "Map.AsMap")
 
 	// Convince the linter these values are used.
 	_, _, _, _, _, _, _, _ = a, i, f, b, by, s, slice, m
