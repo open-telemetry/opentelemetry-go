@@ -288,8 +288,6 @@ func MapValue(kvs ...KeyValue) Value
 
 // Value accessors:
 
-func (v Value) AsAny() any
-
 func (v Value) AsString() string
 
 func (v Value) AsInt64() int64
