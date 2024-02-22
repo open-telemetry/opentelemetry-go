@@ -18,6 +18,10 @@ The next release will require at least [Go 1.21].
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
 - Adds a new template to generate metric semantic conventions, as well as adding it to the Makefile `semconv-generate` script to add the metric.go file to the v1.24.0 directory. (#4528)
 
+### Fixed
+
+- Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
+
 ## [1.23.1] 2024-02-07
 
 ### Fixed
