@@ -9,10 +9,17 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 {%- endif -%}
 {%- endmacro -%}
 {%- macro keydoc(metric) -%}
-{%- if metric.stability|string() == "StabilityLevel.DEPRECATED" -%}
+{%- if metric.stability|string() == "StabilityLevel.DEPRECATED" or not metric.brief-%}
 {{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief) }}
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief) }}.
+{%- endif %}
+{%- endmacro -%}
+{%- macro format_stability(stability) -%}
+{%- if not stability -%}
+Experimental
+{%- else -%}
+{{ stability|replace("StabilityLevel.", "")|capitalize() }}
 {%- endif %}
 {%- endmacro -%}
 // Copyright The OpenTelemetry Authors
@@ -33,18 +40,21 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 
 package semconv  // import [[IMPORTPATH]]
 
-import "go.opentelemetry.io/otel/attribute"
-
 const (
 {% for id in semconvs %}
 {%- if semconvs[id].GROUP_TYPE_NAME == 'metric' %}{% set metric = semconvs[id] %}
   // {{ keydoc(metric) | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}
   // Instrument: {{ metric.instrument }}
   // Unit: {{ metric.unit }}
-  // Stability: {{ metric.stability }}
-  {{to_go_name(metric.metric_name)}}Name = attribute.Key("{{metric.metric_name}}")
-  {{to_go_name(metric.metric_name)}}Unit = attribute.Key("{{metric.unit}}")
-  {{to_go_name(metric.metric_name)}}Description = attribute.Key("{{metric.brief}}")
+  // Stability: {{ format_stability(metric.stability) }}
+{%- if not metric.brief %}
+  // NOTE: The description (brief) for this metric is not defined in the semantic-conventions repository.
+{%- endif %}
+  {{to_go_name(metric.metric_name)}}Name = "{{metric.metric_name}}"
+  {{to_go_name(metric.metric_name)}}Unit = "{{metric.unit}}"
+{%- if metric.brief %}
+  {{to_go_name(metric.metric_name)}}Description = "{{metric.brief}}"
+{%- endif %}
 {%- endif %}
 {% endfor %}
 )
