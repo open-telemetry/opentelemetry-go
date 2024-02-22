@@ -44,10 +44,13 @@ module-sets:
     modules:
       - go.opentelemetry.io/otel/example/prometheus
       - go.opentelemetry.io/otel/exporters/prometheus
+  experimental-logs:
+    version: v0.0.1-alpha
+    modules:
+      - go.opentelemetry.io/otel/log
   experimental-schema:
     version: v0.0.7
     modules:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
-  - go.opentelemetry.io/otel/log
