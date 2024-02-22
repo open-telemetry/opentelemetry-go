@@ -21,6 +21,7 @@ The next release will require at least [Go 1.21].
 ### Fixed
 
 - Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
+- Fix negative buckets in output of exponential histograms. (#4956)
 
 ## [1.23.1] 2024-02-07
 
