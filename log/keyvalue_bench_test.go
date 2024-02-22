@@ -26,7 +26,6 @@ var (
 	outV  log.Value
 	outKV log.KeyValue
 
-	outAny     any
 	outBool    bool
 	outFloat64 float64
 	outInt64   int64
@@ -58,12 +57,6 @@ func BenchmarkBool(b *testing.B) {
 			outBool = kv.Value.AsBool()
 		}
 	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
-		}
-	})
 }
 
 func BenchmarkFloat64(b *testing.B) {
@@ -87,12 +80,6 @@ func BenchmarkFloat64(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			outFloat64 = kv.Value.AsFloat64()
-		}
-	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
 		}
 	})
 }
@@ -120,12 +107,6 @@ func BenchmarkInt(b *testing.B) {
 			outInt64 = kv.Value.AsInt64()
 		}
 	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
-		}
-	})
 }
 
 func BenchmarkInt64(b *testing.B) {
@@ -149,12 +130,6 @@ func BenchmarkInt64(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			outInt64 = kv.Value.AsInt64()
-		}
-	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
 		}
 	})
 }
@@ -183,12 +158,6 @@ func BenchmarkMap(b *testing.B) {
 			outMap = kv.Value.AsMap()
 		}
 	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
-		}
-	})
 }
 
 func BenchmarkSlice(b *testing.B) {
@@ -215,12 +184,6 @@ func BenchmarkSlice(b *testing.B) {
 			outSlice = kv.Value.AsSlice()
 		}
 	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
-		}
-	})
 }
 
 func BenchmarkString(b *testing.B) {
@@ -244,12 +207,6 @@ func BenchmarkString(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			outStr = kv.Value.AsString()
-		}
-	})
-	b.Run("AsAny", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outAny = kv.Value.AsAny()
 		}
 	})
 }

@@ -126,31 +126,6 @@ func MapValue(kvs ...KeyValue) Value {
 	}
 }
 
-// AsAny returns the value held by v as an any.
-func (v Value) AsAny() any {
-	switch v.Kind() {
-	case KindMap:
-		return v.asMap()
-	case KindSlice:
-		return v.asSlice()
-	case KindInt64:
-		return v.asInt64()
-	case KindFloat64:
-		return v.asFloat64()
-	case KindString:
-		return v.asString()
-	case KindBool:
-		return v.asBool()
-	case KindBytes:
-		return v.asBytes()
-	case KindEmpty:
-		return nil
-	default:
-		global.Error(errKind, "AsAny", "Kind", v.Kind())
-		return nil
-	}
-}
-
 // AsString returns the value held by v as a string.
 func (v Value) AsString() string {
 	if sp, ok := v.any.(stringptr); ok {
