@@ -103,3 +103,63 @@ func TestRecordAttributes(t *testing.T) {
 		}
 	})
 }
+
+func TestRecordAllocationLimits(t *testing.T) {
+	const runs = 5
+
+	// Assign testing results to external scope so the compiler doesn't
+	// optimize away the testing statements.
+	var (
+		tStamp time.Time
+		sev    log.Severity
+		text   string
+		body   log.Value
+		n      int
+		attr   log.KeyValue
+	)
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetTimestamp(y2k)
+		tStamp = r.Timestamp()
+	}), "Timestamp")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetObservedTimestamp(y2k)
+		tStamp = r.ObservedTimestamp()
+	}), "ObservedTimestamp")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetSeverity(log.SeverityDebug)
+		sev = r.Severity()
+	}), "Severity")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetSeverityText("severity text")
+		text = r.SeverityText()
+	}), "SeverityText")
+
+	bodyVal := log.BoolValue(true)
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetBody(bodyVal)
+		body = r.Body()
+	}), "Body")
+
+	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.AddAttributes(attrVal...)
+		n = r.AttributesLen()
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			attr = kv
+			return true
+		})
+	}), "Attributes")
+
+	// Convince the linter these values are used.
+	_, _, _, _, _, _ = tStamp, sev, text, body, n, attr
+}
