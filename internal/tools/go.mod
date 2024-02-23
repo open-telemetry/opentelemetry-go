@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/internal/tools
 
-go 1.20
+go 1.21
 
 require (
 	github.com/client9/misspell v0.3.4
