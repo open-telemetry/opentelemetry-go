@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for [Go 1.20]. (#4967)
+
 ## [1.24.0/0.46.0/0.0.1-alpha] 2024-02-23
 
 This release is the last to support [Go 1.20].
