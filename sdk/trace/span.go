@@ -279,12 +279,8 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
-	if sum := len(attrs) + len(s.attributes); sum < limit {
-		// After support for go1.20 is dropped, simplify if-else to min(sum, limit).
-		s.attributes = slices.Grow(s.attributes, sum)
-	} else {
-		s.attributes = slices.Grow(s.attributes, limit)
-	}
+	sum := len(attrs) + len(s.attributes)
+	s.attributes = slices.Grow(s.attributes, min(sum, limit))
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
