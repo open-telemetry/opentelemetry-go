@@ -21,7 +21,7 @@
 // API] is extended (which is something that can happen without a major version
 // bump of the API package).
 //
-// [OpenTelemetry Logs Bridge API]: https://github.com/open-telemetry/opentelemetry-go/tree/d3dcb3999c5689a7bb803cb0529e55a651ed14f1/log
+// [OpenTelemetry Logs Bridge API]: https://pkg.go.dev/go.opentelemetry.io/otel/log
 package embedded // import "go.opentelemetry.io/otel/log/embedded"
 
 // LoggerProvider is embedded in the [Logs Bridge API LoggerProvider].
@@ -32,7 +32,7 @@ package embedded // import "go.opentelemetry.io/otel/log/embedded"
 // Bridge API LoggerProvider] interface is extended (which is something that
 // can happen without a major version bump of the API package).
 //
-// [Logs Bridge API LoggerProvider]: https://github.com/open-telemetry/opentelemetry-go/blob/d3dcb3999c5689a7bb803cb0529e55a651ed14f1/log/provider.go#L22-L32
+// [Logs Bridge API LoggerProvider]: https://pkg.go.dev/go.opentelemetry.io/otel/log#LoggerProvider
 type LoggerProvider interface{ loggerProvider() }
 
 // Logger is embedded in [Logs Bridge API Logger].
@@ -43,5 +43,5 @@ type LoggerProvider interface{ loggerProvider() }
 // interface is extended (which is something that can happen without a major
 // version bump of the API package).
 //
-// [Logs Bridge API Logger]: https://github.com/open-telemetry/opentelemetry-go/blob/d3dcb3999c5689a7bb803cb0529e55a651ed14f1/log/logger.go#L28-L39
+// [Logs Bridge API Logger]: https://pkg.go.dev/go.opentelemetry.io/otel/log#Logger
 type Logger interface{ logger() }

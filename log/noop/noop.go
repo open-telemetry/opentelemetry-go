@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package noop provides an implementation of the OpenTelemetry Logs Bridge API
-// that produces no telemetry and minimizes used computation resources.
+// Package noop provides an implementation of the [OpenTelemetry Logs Bridge
+// API] that produces no telemetry and minimizes used computation resources.
 //
-// Using this package to implement the OpenTelemetry Logs Bridge API will
+// Using this package to implement the [OpenTelemetry Logs Bridge API] will
 // effectively disable OpenTelemetry.
 //
 // This implementation can be embedded in other implementations of the
-// OpenTelemetry Logs Bridge API. Doing so will mean the implementation
+// [OpenTelemetry Logs Bridge API]. Doing so will mean the implementation
 // defaults to no operation for methods it does not implement.
+//
+// [OpenTelemetry Logs Bridge API]: https://pkg.go.dev/go.opentelemetry.io/otel/log
 package noop // import "go.opentelemetry.io/otel/log/noop"
 
 import (
