@@ -19,13 +19,10 @@
 package log_test
 
 import (
-	golog "log"
-	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -273,13 +270,14 @@ func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
 	l.LogSink.Error(err, msg, keysAndValues)
 }
 
-var stdLogger = stdr.New(golog.New(os.Stderr, "", golog.LstdFlags|golog.Lshortfile))
-
 func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
 	return func(t *testing.T) {
+		t.Cleanup(func(l logr.Logger) func() {
+			return func() { global.SetLogger(l) }
+		}(global.GetLogger()))
+
 		l := &logSink{LogSink: testr.New(t).GetSink()}
 		global.SetLogger(logr.New(l))
-		t.Cleanup(func() { global.SetLogger(stdLogger) })
 
 		assert.Zero(t, f())
 
