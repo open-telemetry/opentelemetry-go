@@ -20,7 +20,7 @@ The next release will require at least [Go 1.21].
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
 - The `go.opentelemetry.io/otel/log` module is added.
   This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
-  This module is in an alpha state, it is subject to breaking changes
+  This module is in an alpha state, it is subject to breaking changes.
   See our [versioning policy](./VERSIONING.md) for more info. (#4961)
 
 ### Fixed
