@@ -28,8 +28,6 @@ import (
 //
 // The default logger uses stdr which is backed by the standard `log.Logger`
 // interface. This logger will only show messages at the Error Level.
-//
-// [otel]: go.opentelemetry.io/otel
 var globalLogger = func() *atomic.Pointer[logr.Logger] {
 	l := stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
 
