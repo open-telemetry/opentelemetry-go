@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"runtime"
 	rt "runtime/trace"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -208,16 +209,6 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 	s.status = status
 }
 
-// ensureAttributesCapacity inlines functionality from slices.Grow
-// so that we can avoid needing to import golang.org/x/exp for go1.20.
-// Once support for go1.20 is dropped, we can use slices.Grow available since go1.21 instead.
-// Tracking issue: https://github.com/open-telemetry/opentelemetry-go/issues/4819.
-func (s *recordingSpan) ensureAttributesCapacity(minCapacity int) {
-	if n := minCapacity - cap(s.attributes); n > 0 {
-		s.attributes = append(s.attributes[:cap(s.attributes)], make([]attribute.KeyValue, n)...)[:len(s.attributes)]
-	}
-}
-
 // SetAttributes sets attributes of this span.
 //
 // If a key from attributes already exists the value associated with that key
@@ -252,7 +243,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 
 	// Otherwise, add without deduplication. When attributes are read they
 	// will be deduplicated, optimizing the operation.
-	s.ensureAttributesCapacity(len(s.attributes) + len(attributes))
+	s.attributes = slices.Grow(s.attributes, len(s.attributes)+len(attributes))
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
@@ -290,9 +281,9 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	// the capacity of s will not over allocate s.attributes.
 	if sum := len(attrs) + len(s.attributes); sum < limit {
 		// After support for go1.20 is dropped, simplify if-else to min(sum, limit).
-		s.ensureAttributesCapacity(sum)
+		s.attributes = slices.Grow(s.attributes, sum)
 	} else {
-		s.ensureAttributesCapacity(limit)
+		s.attributes = slices.Grow(s.attributes, limit)
 	}
 	for _, a := range attrs {
 		if !a.Valid() {
