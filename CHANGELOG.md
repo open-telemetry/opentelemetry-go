@@ -18,6 +18,8 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#4890)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4900)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
+- Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4906)
+- Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp`. (#4906)
 - The `go.opentelemetry.io/otel/log` module is added.
   This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
   This module is in an alpha state, it is subject to breaking changes.
@@ -27,8 +29,6 @@ The next release will require at least [Go 1.21].
 
 - Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
 - Fix negative buckets in output of exponential histograms. (#4956)
-- Add custom Proxy function support to: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4906)
-- Add custom Proxy function support to: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp`. (#4906)
 
 ## [1.23.1] 2024-02-07
 
