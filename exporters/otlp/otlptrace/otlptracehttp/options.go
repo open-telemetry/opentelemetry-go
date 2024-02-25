@@ -146,8 +146,7 @@ func WithRetry(rc RetryConfig) Option {
 
 // WithProxy sets the Proxy function the client will use to determine the
 // proxy to use for an HTTP request. If this option is not used, the client
-// will use the default proxy settings from the
-// exporters/otlp/otlpmetric/otlptracehttp package (adhering to the Golang's DefaultTransport from net/http).
+// will use [http.ProxyFromEnvironment].
 func WithProxy(pf otlpconfig.HTTPTransportProxyFunc) Option {
 	return wrappedOption{otlpconfig.WithProxy(pf)}
 }

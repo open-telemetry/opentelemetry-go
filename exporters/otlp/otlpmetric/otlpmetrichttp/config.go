@@ -220,8 +220,7 @@ func WithAggregationSelector(selector metric.AggregationSelector) Option {
 
 // WithProxy sets the Proxy function the client will use to determine the
 // proxy to use for an HTTP request. If this option is not used, the client
-// will use the default proxy settings from the
-// exporters/otlp/otlpmetric/otlpmetrichttp package (adhering to the Golang's DefaultTransport from net/http).
+// will use [http.ProxyFromEnvironment].
 func WithProxy(pf oconf.HTTPTransportProxyFunc) Option {
 	return wrappedOption{oconf.WithProxy(pf)}
 }
