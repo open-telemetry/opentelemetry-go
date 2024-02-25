@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 
-go 1.20
+go 1.21
 
 retract v0.32.2 // Contains unresolvable dependencies.
 

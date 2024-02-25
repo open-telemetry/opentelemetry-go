@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/dice
 
-go 1.20
+go 1.21
 
 require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0

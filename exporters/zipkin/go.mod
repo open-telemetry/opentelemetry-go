@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/zipkin
 
-go 1.20
+go 1.21
 
 require (
 	github.com/go-logr/logr v1.4.1

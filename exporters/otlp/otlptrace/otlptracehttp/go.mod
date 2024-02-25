@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 
-go 1.20
+go 1.21
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
