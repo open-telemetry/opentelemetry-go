@@ -26,6 +26,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	api "go.opentelemetry.io/otel/metric"
@@ -45,7 +46,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	// Register as global meter provider so that it can be used via otel.Meter
+	// and accessed using otel.GetMeterProvider.
+	otel.SetMeterProvider(provider)
+
 	meter := provider.Meter(meterName)
 
 	// Start the prometheus HTTP server and pass the exporter Collector to it
