@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"math"
+	"slices"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -261,11 +262,9 @@ func (v Value) Equal(w Value) bool {
 	case KindFloat64:
 		return v.asFloat64() == w.asFloat64()
 	case KindSlice:
-		// TODO: replace with slices.EqualFunc when Go 1.20 support dropped.
-		return sliceEqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
+		return slices.EqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
 	case KindMap:
-		// TODO: replace with slices.EqualFunc when Go 1.20 support dropped.
-		return sliceEqualFunc(v.asMap(), w.asMap(), KeyValue.Equal)
+		return slices.EqualFunc(v.asMap(), w.asMap(), KeyValue.Equal)
 	case KindBytes:
 		return bytes.Equal(v.asBytes(), w.asBytes())
 	case KindEmpty:
@@ -274,30 +273,6 @@ func (v Value) Equal(w Value) bool {
 		global.Error(errKind, "Equal", "Kind", k1)
 		return false
 	}
-}
-
-// sliceEqualFunc reports whether two slices are equal using an equality
-// function on each pair of elements. If the lengths are different,
-// sliceEqualFunc returns false. Otherwise, the elements are compared in
-// increasing index order, and the comparison stops at the first index for
-// which eq returns false.
-//
-// This is based on [EqualFunc]. It was added to provide backwards
-// compatibility for Go 1.20. When Go 1.20 is no longer supported it can be
-// removed.
-//
-// EqualFunc: https://pkg.go.dev/slices#EqualFunc
-func sliceEqualFunc[T any](s1 []T, s2 []T, eq func(T, T) bool) bool {
-	if len(s1) != len(s2) {
-		return false
-	}
-	for i, v1 := range s1 {
-		v2 := s2[i]
-		if !eq(v1, v2) {
-			return false
-		}
-	}
-	return true
 }
 
 // An KeyValue is a key-value pair used to represent a log attribute (a
