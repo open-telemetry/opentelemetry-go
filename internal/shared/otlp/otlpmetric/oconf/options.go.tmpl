@@ -54,6 +54,8 @@ const (
 )
 
 type (
+	// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
+	// This type is compatible with `http.Transport.Proxy` and can be used to set a custom proxy function to the OTLP HTTP client.
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
