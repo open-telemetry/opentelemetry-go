@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.24.0/0.46.0/0.0.1-alpha] 2024-02-23
+
 This release is the last to support [Go 1.20].
 The next release will require at least [Go 1.21].
 
@@ -16,6 +18,15 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#4890)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4900)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
+- The `go.opentelemetry.io/otel/log` module is added.
+  This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
+  This module is in an alpha state, it is subject to breaking changes.
+  See our [versioning policy](./VERSIONING.md) for more info. (#4961)
+
+### Fixed
+
+- Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
+- Fix negative buckets in output of exponential histograms. (#4956)
 - Add custom Proxy function support to: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4906)
 - Add custom Proxy function support to: `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp`. (#4906)
 

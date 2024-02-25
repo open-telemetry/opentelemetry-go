@@ -354,20 +354,27 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "second callback not registered")
 
-	mp := &testMeterProvider{}
+	var called2 bool
+	_, err = m.RegisterCallback(func(context.Context, metric.Observer) error {
+		called2 = true
+		return nil
+	}, actr)
+	require.NoError(t, err)
+	require.Equal(t, 2, mImpl.registry.Len(), "third callback not registered")
 
-	// otel.SetMeterProvider(mp)
+	mp := &testMeterProvider{}
 	globalMeterProvider.setDelegate(mp)
 
 	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
 	require.False(t, called0, "pre-delegation unregistered callback called")
-	require.True(t, called1, "callback not called")
+	require.True(t, called1, "second callback not called")
+	require.True(t, called2, "third callback not called")
 
-	called1 = false
 	assert.NoError(t, reg1.Unregister(), "unregister second callback")
-
-	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
-	assert.False(t, called1, "unregistered callback called")
+	called1, called2 = false, false // reset called capture
+	testCollect(t, m)               // This is a hacky way to emulate a read from an exporter
+	assert.False(t, called1, "unregistered second callback called")
+	require.True(t, called2, "third callback not called")
 
 	assert.NotPanics(t, func() {
 		assert.NoError(t, reg1.Unregister(), "duplicate unregister calls")
