@@ -16,6 +16,7 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exempla
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"time"
 
@@ -28,7 +29,7 @@ import (
 //
 // The passed bounds will be sorted by this function.
 func Histogram[N int64 | float64](bounds []float64) Reservoir[N] {
-	sort.Float64s(bounds)
+	slices.Sort(bounds)
 	return &histRes[N]{
 		bounds:  bounds,
 		storage: newStorage[N](len(bounds) + 1),
