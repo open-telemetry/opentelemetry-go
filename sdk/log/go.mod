@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/sdk/log
 
-go 1.20
+go 1.21
 
 require (
 	go.opentelemetry.io/otel/log v0.0.1-alpha
