@@ -14,7 +14,19 @@
 
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
-// Version is the current release version of the log SDK in use.
-func Version() string {
-	return "1.23.1"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
+)
+
+// Compile-time check logger implements metric.log.Logger.
+var _ log.Logger = (*logger)(nil)
+
+type logger struct {
+	embedded.Logger
+}
+
+func (*logger) Emit(context.Context, log.Record) {
 }
