@@ -175,10 +175,10 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		b.res.Collect(&hDPts[i].Exemplars)
 
-		// Unused attribute sets do not report.
-		delete(s.values, a)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(s.values)
 	// The delta collection cycle resets.
 	s.start = t
 
