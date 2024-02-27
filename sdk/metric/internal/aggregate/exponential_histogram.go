@@ -387,9 +387,11 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		b.res.Collect(&hDPts[i].Exemplars)
 
-		delete(e.values, a)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(e.values)
+
 	e.start = t
 	h.DataPoints = hDPts
 	*dest = h
