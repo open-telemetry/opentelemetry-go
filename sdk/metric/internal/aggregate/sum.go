@@ -104,10 +104,10 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].Time = t
 		dPts[i].Value = val.n
 		val.res.Collect(&dPts[i].Exemplars)
-		// Do not report stale values.
-		delete(s.values, attr)
 		i++
 	}
+	// Do not report stale values.
+	clear(s.values)
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -200,11 +200,10 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 		value.res.Collect(&dPts[i].Exemplars)
 
 		newReported[attr] = value.n
-		// Unused attribute sets do not report.
-		delete(s.values, attr)
 		i++
 	}
-	// Unused attribute sets are forgotten.
+	// Unused attribute sets do not report.
+	clear(s.values)
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -238,10 +237,10 @@ func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
 		dPts[i].Value = val.n
 		val.res.Collect(&dPts[i].Exemplars)
 
-		// Unused attribute sets do not report.
-		delete(s.values, attr)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(s.values)
 
 	sData.DataPoints = dPts
 	*dest = sData

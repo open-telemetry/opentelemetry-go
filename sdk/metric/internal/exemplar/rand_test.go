@@ -17,7 +17,7 @@ package exemplar
 import (
 	"context"
 	"math"
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,7 +43,7 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 		data[i] = (-1.0 / intensity) * math.Log(random())
 	}
 	// Sort to test position bias.
-	sort.Float64s(data)
+	slices.Sort(data)
 
 	r := FixedSize[float64](sampleSize)
 	for _, value := range data {

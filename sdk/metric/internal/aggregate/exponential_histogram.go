@@ -375,6 +375,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
 		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
+		copy(hDPts[i].NegativeBucket.Counts, b.negBuckets.counts)
 
 		if !e.noSum {
 			hDPts[i].Sum = b.sum
@@ -386,9 +387,11 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		b.res.Collect(&hDPts[i].Exemplars)
 
-		delete(e.values, a)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(e.values)
+
 	e.start = t
 	h.DataPoints = hDPts
 	*dest = h
@@ -425,6 +428,7 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 
 		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
 		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
+		copy(hDPts[i].NegativeBucket.Counts, b.negBuckets.counts)
 
 		if !e.noSum {
 			hDPts[i].Sum = b.sum
