@@ -16,6 +16,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -68,9 +69,8 @@ func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int, r
 	// passed boundaries is ultimately this type's responsibility. Make a copy
 	// here so we can always guarantee this. Or, in the case of failure, have
 	// complete control over the fix.
-	b := make([]float64, len(bounds))
-	copy(b, bounds)
-	sort.Float64s(b)
+	b := slices.Clone(bounds)
+	slices.Sort(b)
 	return &histValues[N]{
 		noSum:  noSum,
 		bounds: b,
@@ -150,8 +150,7 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 	defer s.valuesMu.Unlock()
 
 	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
+	bounds := slices.Clone(s.bounds)
 
 	n := len(s.values)
 	hDPts := reset(h.DataPoints, n, n)
@@ -201,28 +200,25 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	defer s.valuesMu.Unlock()
 
 	// Do not allow modification of our copy of bounds.
-	bounds := make([]float64, len(s.bounds))
-	copy(bounds, s.bounds)
+	bounds := slices.Clone(s.bounds)
 
 	n := len(s.values)
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
 	for a, b := range s.values {
-		// The HistogramDataPoint field values returned need to be copies of
-		// the buckets value as we will keep updating them.
-		//
-		// TODO (#3047): Making copies for bounds and counts incurs a large
-		// memory allocation footprint. Alternatives should be explored.
-		counts := make([]uint64, len(b.counts))
-		copy(counts, b.counts)
-
 		hDPts[i].Attributes = a
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
 		hDPts[i].Count = b.count
 		hDPts[i].Bounds = bounds
-		hDPts[i].BucketCounts = counts
+
+		// The HistogramDataPoint field values returned need to be copies of
+		// the buckets value as we will keep updating them.
+		//
+		// TODO (#3047): Making copies for bounds and counts incurs a large
+		// memory allocation footprint. Alternatives should be explored.
+		hDPts[i].BucketCounts = slices.Clone(b.counts)
 
 		if !s.noSum {
 			hDPts[i].Sum = b.total

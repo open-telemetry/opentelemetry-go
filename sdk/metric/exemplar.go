@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"os"
 	"runtime"
+	"slices"
 
 	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/x"
@@ -40,8 +41,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.Reservoir
 		// use AlignedHistogramBucketExemplarReservoir.
 		a, ok := agg.(AggregationExplicitBucketHistogram)
 		if ok && len(a.Boundaries) > 0 {
-			cp := make([]float64, len(a.Boundaries))
-			copy(cp, a.Boundaries)
+			cp := slices.Clone(a.Boundaries)
 			return func() exemplar.Reservoir[N] {
 				bounds := cp
 				return exemplar.Histogram[N](bounds)
