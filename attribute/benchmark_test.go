@@ -111,6 +111,12 @@ func BenchmarkInt(b *testing.B) {
 			outKV = attribute.Int(k, v)
 		}
 	})
+	b.Run("AsInt64", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outInt64 = kv.Value.AsInt64()
+		}
+	})
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
@@ -128,6 +134,12 @@ func BenchmarkIntSlice(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			outKV = attribute.IntSlice(k, v)
+		}
+	})
+	b.Run("AsInt64Slice", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outInt64Slice = kv.Value.AsInt64Slice()
 		}
 	})
 	b.Run("Emit", benchmarkEmit(kv))
