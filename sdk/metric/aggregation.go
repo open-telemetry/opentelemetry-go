@@ -17,6 +17,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"errors"
 	"fmt"
+	"slices"
 )
 
 // errAgg is wrapped by misconfigured aggregations.
@@ -141,10 +142,8 @@ func (h AggregationExplicitBucketHistogram) err() error {
 
 // copy returns a deep copy of h.
 func (h AggregationExplicitBucketHistogram) copy() Aggregation {
-	b := make([]float64, len(h.Boundaries))
-	copy(b, h.Boundaries)
 	return AggregationExplicitBucketHistogram{
-		Boundaries: b,
+		Boundaries: slices.Clone(h.Boundaries),
 		NoMinMax:   h.NoMinMax,
 	}
 }
