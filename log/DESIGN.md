@@ -774,7 +774,6 @@ and we may even have problems naming the functions.
 The Logs Bridge API MUST NOT be released as stable
 before all issues below are closed:
 
-- [Clarify that log attributes are NOT common attributes](https://github.com/open-telemetry/opentelemetry-specification/issues/3849)
 - [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
 
