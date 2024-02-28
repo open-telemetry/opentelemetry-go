@@ -215,7 +215,7 @@ func (v Value) asBool() bool { return v.num == 1 }
 // BOOLSLICE.
 func (v Value) AsBoolSlice() []bool {
 	if sp, ok := v.any.(boolSlicePtr); ok {
-		return unsafe.Slice((*bool)(sp), v.num)
+		return slices.Clone(unsafe.Slice((*bool)(sp), v.num))
 	}
 	return nil
 }
@@ -241,7 +241,7 @@ func (v Value) asInt64() int64 { return int64(v.num) }
 // INT64SLICE.
 func (v Value) AsInt64Slice() []int64 {
 	if sp, ok := v.any.(int64SlicePtr); ok {
-		return unsafe.Slice((*int64)(sp), v.num)
+		return slices.Clone(unsafe.Slice((*int64)(sp), v.num))
 	}
 	return nil
 }
@@ -267,7 +267,7 @@ func (v Value) asFloat64() float64 { return math.Float64frombits(v.num) }
 // FLOAT64SLICE.
 func (v Value) AsFloat64Slice() []float64 {
 	if sp, ok := v.any.(float64SlicePtr); ok {
-		return unsafe.Slice((*float64)(sp), v.num)
+		return slices.Clone(unsafe.Slice((*float64)(sp), v.num))
 	}
 	return nil
 }
@@ -295,7 +295,7 @@ func (v Value) asString() string {
 // STRINGSLICE.
 func (v Value) AsStringSlice() []string {
 	if sp, ok := v.any.(stringSlicePtr); ok {
-		return unsafe.Slice((*string)(sp), v.num)
+		return slices.Clone(unsafe.Slice((*string)(sp), v.num))
 	}
 	return nil
 }
@@ -312,19 +312,19 @@ func (v Value) AsInterface() interface{} {
 	case BOOL:
 		return v.asBool()
 	case BOOLSLICE:
-		return v.asBoolSlice()
+		return slices.Clone(v.asBoolSlice())
 	case INT64:
 		return v.asInt64()
 	case INT64SLICE:
-		return v.asInt64Slice()
+		return slices.Clone(v.asInt64Slice())
 	case FLOAT64:
 		return v.asFloat64()
 	case FLOAT64SLICE:
-		return v.asFloat64Slice()
+		return slices.Clone(v.asFloat64Slice())
 	case STRING:
 		return v.asString()
 	case STRINGSLICE:
-		return v.asStringSlice()
+		return slices.Clone(v.asStringSlice())
 	}
 	return unknownValueType{}
 }
