@@ -150,6 +150,35 @@ func StringSliceValue(v []string) Value {
 	}
 }
 
+// Equal returns if v is equal to w.
+func (v Value) Equal(w Value) bool {
+	vType := v.Type()
+	wType := w.Type()
+	if vType != wType {
+		return false
+	}
+	switch vType {
+	case INT64, BOOL:
+		return v.num == w.num
+	case STRING:
+		return v.asString() == w.asString()
+	case FLOAT64:
+		return v.asFloat64() == w.asFloat64()
+	case BOOLSLICE:
+		return slices.Equal(v.asBoolSlice(), w.asBoolSlice())
+	case INT64SLICE:
+		return slices.Equal(v.asInt64Slice(), w.asInt64Slice())
+	case FLOAT64SLICE:
+		return slices.Equal(v.asFloat64Slice(), w.asFloat64Slice())
+	case STRINGSLICE:
+		return slices.Equal(v.asStringSlice(), w.asStringSlice())
+	case INVALID:
+		return true
+	default:
+		return false
+	}
+}
+
 // Type returns a type of the Value.
 func (v Value) Type() Type {
 	switch t := v.any.(type) {

@@ -24,6 +24,11 @@ type KeyValue struct {
 	Value Value
 }
 
+// Equal returns if a is equal to b.
+func (a KeyValue) Equal(b KeyValue) bool {
+	return a.Key == b.Key && a.Value.Equal(b.Value)
+}
+
 // Valid returns if kv is a valid OpenTelemetry attribute.
 func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined() && kv.Value.Type() != INVALID
