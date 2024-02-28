@@ -71,7 +71,7 @@ const (
 )
 
 // BoolValue creates a BOOL Value.
-func BoolValue(v bool) Value {
+func BoolValue(v bool) Value { //nolint:revive // Not a control flag.
 	var n uint64
 	if v {
 		n = 1
