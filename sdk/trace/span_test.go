@@ -240,7 +240,14 @@ func TestTruncateAttr(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("%s->%s(limit:%d)", test.attr.Key, test.attr.Value.Emit(), test.limit)
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.want, truncateAttr(test.limit, test.attr))
+			got := truncateAttr(test.limit, test.attr)
+			assert.Truef(
+				t,
+				test.want.Equal(got),
+				"%s->%s != %s->%s",
+				test.want.Key, test.want.Value.Emit(),
+				got.Key, got.Value.Emit(),
+			)
 		})
 	}
 }

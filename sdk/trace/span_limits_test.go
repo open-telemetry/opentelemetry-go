@@ -17,6 +17,7 @@ package trace
 import (
 	"context"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -181,26 +182,34 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 
 func TestSpanLimits(t *testing.T) {
 	t.Run("AttributeValueLengthLimit", func(t *testing.T) {
+		contains := func(t *testing.T, a []attribute.KeyValue, kv attribute.KeyValue) {
+			t.Helper()
+
+			assert.Truef(t, slices.ContainsFunc(a, func(got attribute.KeyValue) bool {
+				return got.Equal(kv)
+			}), "%#v does not contain %s->%s", a, kv.Key, kv.Value.Emit())
+		}
+
 		limits := NewSpanLimits()
 		// Unlimited.
 		limits.AttributeValueLengthLimit = -1
 		attrs := testSpanLimits(t, limits).Attributes()
-		assert.Contains(t, attrs, attribute.String("string", "abc"))
-		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
-		assert.Contains(t, attrs, attribute.String("euro", "€"))
+		contains(t, attrs, attribute.String("string", "abc"))
+		contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
+		contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 2
 		attrs = testSpanLimits(t, limits).Attributes()
 		// Ensure string and string slice attributes are truncated.
-		assert.Contains(t, attrs, attribute.String("string", "ab"))
-		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
-		assert.Contains(t, attrs, attribute.String("euro", ""))
+		contains(t, attrs, attribute.String("string", "ab"))
+		contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
+		contains(t, attrs, attribute.String("euro", ""))
 
 		limits.AttributeValueLengthLimit = 0
 		attrs = testSpanLimits(t, limits).Attributes()
-		assert.Contains(t, attrs, attribute.String("string", ""))
-		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"", ""}))
-		assert.Contains(t, attrs, attribute.String("euro", ""))
+		contains(t, attrs, attribute.String("string", ""))
+		contains(t, attrs, attribute.StringSlice("stringSlice", []string{"", ""}))
+		contains(t, attrs, attribute.String("euro", ""))
 	})
 
 	t.Run("AttributeCountLimit", func(t *testing.T) {
