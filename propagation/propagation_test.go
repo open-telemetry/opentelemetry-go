@@ -16,7 +16,7 @@ package propagation_test
 
 import (
 	"context"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -130,6 +130,6 @@ func TestMapCarrierKeys(t *testing.T) {
 	}
 
 	keys := carrier.Keys()
-	sort.Strings(keys)
+	slices.Sort(keys)
 	assert.Equal(t, []string{"baz", "foo"}, keys)
 }
