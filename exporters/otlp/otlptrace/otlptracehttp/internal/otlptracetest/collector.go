@@ -18,6 +18,7 @@
 package otlptracetest // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 
 import (
+	"cmp"
 	"slices"
 
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -100,13 +101,7 @@ func resourceString(res *resourcepb.Resource) string {
 
 func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
 	slices.SortFunc(attrs, func(a, b *commonpb.KeyValue) int {
-		if a.Key == b.Key {
-			return 0
-		}
-		if a.Key < b.Key {
-			return -1
-		}
-		return 1
+		return cmp.Compare(a.Key, b.Key)
 	})
 	return attrs
 }
