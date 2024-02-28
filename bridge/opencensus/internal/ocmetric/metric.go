@@ -15,6 +15,7 @@
 package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
@@ -212,13 +213,7 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 		}
 	}
 	slices.SortFunc(exemplar.FilteredAttributes, func(a, b attribute.KeyValue) int {
-		if a.Key == b.Key {
-			return 0
-		}
-		if a.Key < b.Key {
-			return -1
-		}
-		return 1
+		return cmp.Compare(a.Key, b.Key)
 	})
 	return exemplar, err
 }
@@ -396,13 +391,7 @@ func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue
 		})
 	}
 	slices.SortFunc(quantileValues, func(a, b metricdata.QuantileValue) int {
-		if a.Quantile == b.Quantile {
-			return 0
-		}
-		if a.Quantile < b.Quantile {
-			return -1
-		}
-		return 0
+		return cmp.Compare(a.Quantile, b.Quantile)
 	})
 	return quantileValues
 }
