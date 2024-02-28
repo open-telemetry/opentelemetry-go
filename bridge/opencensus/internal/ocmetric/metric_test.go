@@ -18,7 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -1178,4 +1180,58 @@ func TestConvertKV(t *testing.T) {
 			assert.Equal(t, tt.expected, got.Value)
 		})
 	}
+}
+
+func BenchmarkConvertExemplar(b *testing.B) {
+	const attchmentsN = 10
+	data := make([]*ocmetricdata.Exemplar, b.N)
+	for i := range data {
+		a := make(ocmetricdata.Attachments, attchmentsN)
+		for j := 0; j < attchmentsN; j++ {
+			a[strconv.Itoa(j)] = rand.Int63()
+		}
+		data[i] = &ocmetricdata.Exemplar{
+			Value:       rand.NormFloat64(),
+			Timestamp:   time.Now(),
+			Attachments: a,
+		}
+	}
+
+	var out metricdata.Exemplar[float64]
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		out, _ = convertExemplar(data[n])
+	}
+
+	_ = out
+}
+
+func BenchmarkConvertQuantiles(b *testing.B) {
+	const percentileN = 20
+	data := make([]ocmetricdata.Snapshot, b.N)
+	for i := range data {
+		p := make(map[float64]float64, percentileN)
+		for j := 0; j < percentileN; j++ {
+			v := rand.Float64()
+			for v == 0 {
+				// Convert from [0, 1) interval to (0, 1).
+				v = rand.Float64()
+			}
+			v *= 100 // Convert from (0, 1) interval to (0, 100).
+			p[v] = rand.ExpFloat64()
+		}
+		data[i] = ocmetricdata.Snapshot{Percentiles: p}
+	}
+
+	var out []metricdata.QuantileValue
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		out = convertQuantiles(data[n])
+	}
+
+	_ = out
 }
