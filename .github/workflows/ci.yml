@@ -123,6 +123,17 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.platform.os }}
     steps:
+      - name: Set up arkade
+        uses: alexellis/setup-arkade@master
+        if: ${{ startsWith(matrix.platform.os, 'actuated') }}
+      - name: Install vmmeter
+        if: ${{ startsWith(matrix.platform.os, 'actuated') }}
+        run: |
+          sudo -E arkade oci install ghcr.io/openfaasltd/vmmeter:latest --path /usr/local/bin/
+      - name: Run vmmeter
+        uses: self-actuated/vmmeter-action@master
+        if: ${{ startsWith(matrix.platform.os, 'actuated') }}
+
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Go
