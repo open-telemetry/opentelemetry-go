@@ -6,7 +6,7 @@ package baggage
 import (
 	"fmt"
 	"math/rand"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -611,11 +611,11 @@ func TestBaggageString(t *testing.T) {
 		for i, m := range members {
 			parts := strings.Split(m, propertyDelimiter)
 			if len(parts) > 1 {
-				sort.Strings(parts[1:])
+				slices.Sort(parts[1:])
 				members[i] = strings.Join(parts, propertyDelimiter)
 			}
 		}
-		sort.Strings(members)
+		slices.Sort(members)
 		return strings.Join(members, listDelimiter)
 	}
 
