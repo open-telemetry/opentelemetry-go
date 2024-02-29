@@ -134,7 +134,7 @@ jobs:
         run: |
           sudo -E arkade oci install ghcr.io/openfaasltd/vmmeter:latest --path /usr/local/bin/
       - name: Run vmmeter
-        uses: self-actuated/vmmeter-action@master
+        uses: self-actuated/vmmeter-action@v1
         if: ${{ startsWith(matrix.platform.os, 'actuated') }}
 
       - name: Checkout code
