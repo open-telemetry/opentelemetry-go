@@ -2,23 +2,13 @@
 // source: internal/shared/otlp/otlptrace/otlptracetest/collector.go.tmpl
 
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package otlptracetest // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -99,8 +89,8 @@ func resourceString(res *resourcepb.Resource) string {
 }
 
 func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
-		return attrs[i].Key < attrs[j].Key
+	slices.SortFunc(attrs, func(a, b *commonpb.KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
 	})
 	return attrs
 }
