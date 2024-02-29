@@ -123,6 +123,9 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.platform.os }}
     steps:
+      # Setup VMMeter for actuated jobs, so we can track CPU/memory usage and
+      # finetune our instance size accordingly.
+      # See https://actuated.dev/blog/arm-ci-cncf-ampere
       - name: Set up arkade
         uses: alexellis/setup-arkade@master
         if: ${{ startsWith(matrix.platform.os, 'actuated') }}
