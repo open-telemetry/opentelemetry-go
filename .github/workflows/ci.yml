@@ -127,7 +127,7 @@ jobs:
       # finetune our instance size accordingly.
       # See https://actuated.dev/blog/arm-ci-cncf-ampere
       - name: Set up arkade
-        uses: alexellis/setup-arkade@master
+        uses: alexellis/setup-arkade@v3
         if: ${{ startsWith(matrix.platform.os, 'actuated') }}
       - name: Install vmmeter
         if: ${{ startsWith(matrix.platform.os, 'actuated') }}
