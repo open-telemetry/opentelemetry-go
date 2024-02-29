@@ -4,11 +4,12 @@
 package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 
 	ocmetricdata "go.opencensus.io/metric/metricdata"
@@ -200,8 +201,9 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 			exemplar.FilteredAttributes = append(exemplar.FilteredAttributes, convertKV(k, v))
 		}
 	}
-	sortable := attribute.Sortable(exemplar.FilteredAttributes)
-	sort.Sort(&sortable)
+	slices.SortFunc(exemplar.FilteredAttributes, func(a, b attribute.KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
 	return exemplar, err
 }
 
@@ -377,17 +379,11 @@ func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue
 			Value:    value,
 		})
 	}
-	sort.Sort(byQuantile(quantileValues))
+	slices.SortFunc(quantileValues, func(a, b metricdata.QuantileValue) int {
+		return cmp.Compare(a.Quantile, b.Quantile)
+	})
 	return quantileValues
 }
-
-// byQuantile implements sort.Interface for []metricdata.QuantileValue
-// based on the Quantile field.
-type byQuantile []metricdata.QuantileValue
-
-func (a byQuantile) Len() int           { return len(a) }
-func (a byQuantile) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byQuantile) Less(i, j int) bool { return a[i].Quantile < a[j].Quantile }
 
 // convertAttrs converts from OpenCensus attribute keys and values to an
 // OpenTelemetry attribute Set.
