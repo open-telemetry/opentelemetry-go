@@ -119,7 +119,7 @@ jobs:
             arch: "386"
           - os: windows-latest
             arch: amd64
-          - os: actuated-arm64-4cpu-4gb
+          - os: actuated-arm64-1cpu-1gb
             arch: arm64
     runs-on: ${{ matrix.platform.os }}
     steps:
