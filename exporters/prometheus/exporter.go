@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"unicode"
@@ -313,9 +313,7 @@ func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceKV keyVals) ([]stri
 	values := make([]string, 0, attrs.Len())
 	for key, vals := range keysMap {
 		keys = append(keys, key)
-		sort.Slice(vals, func(i, j int) bool {
-			return i < j
-		})
+		slices.Sort(vals)
 		values = append(values, strings.Join(vals, ";"))
 	}
 
