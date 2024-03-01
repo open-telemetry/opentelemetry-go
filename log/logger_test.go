@@ -20,11 +20,11 @@ func TestNewLoggerConfig(t *testing.T) {
 		attribute.Bool("admin", true),
 	)
 
-	c := log.NewLoggerConfig(
+	c := log.NewLoggerConfig([]log.LoggerOption{
 		log.WithInstrumentationVersion(version),
 		log.WithSchemaURL(schemaURL),
 		log.WithInstrumentationAttributes(attr.ToSlice()...),
-	)
+	})
 
 	assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
 	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")

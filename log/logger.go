@@ -48,7 +48,7 @@ type LoggerConfig struct {
 }
 
 // NewLoggerConfig returns a new [LoggerConfig] with all the options applied.
-func NewLoggerConfig(options ...LoggerOption) LoggerConfig {
+func NewLoggerConfig(options []LoggerOption) LoggerConfig {
 	var c LoggerConfig
 	for _, opt := range options {
 		c = opt.applyLogger(c)
