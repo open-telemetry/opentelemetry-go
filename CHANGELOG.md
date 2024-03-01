@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `"go.opentelemetry.io/otel/log".NewLoggerConfig` now accepts `[]log.LoggerOption` instead of `...log.LoggerOption`. (#4997)
+
 ### Removed
 
 - Drop support for [Go 1.20]. (#4967)
