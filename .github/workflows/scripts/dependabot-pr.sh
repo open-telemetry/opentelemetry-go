@@ -18,15 +18,15 @@ declare -A mods
 
 for line in $requests; do
     echo $line
-    if [[ $line != Bump* ]]; then
+    if [[ $line != build* ]]; then
         continue
     fi
 
-    module=$(echo $line | cut -f 2 -d " ")
+    module=$(echo $line | cut -f 3 -d " ")
     if [[ $module == go.opentelemetry.io/otel* ]]; then
         continue
     fi
-    version=$(echo $line | cut -f 6 -d " ")
+    version=$(echo $line | cut -f 7 -d " ")
 
     mods[$module]=$version
     message+=$line
@@ -42,8 +42,7 @@ for module version in ${(kv)mods}; do
     done
 done
 
-make go-mod-tidy
-make build
+make go-mod-tidy golangci-lint-fix build
 
 git add go.sum go.mod
 git add "**/go.sum" "**/go.mod"
