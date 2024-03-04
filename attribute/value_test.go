@@ -95,7 +95,7 @@ func TestValue(t *testing.T) {
 	}
 }
 
-func TestComparability(t *testing.T) {
+func TestEquivalence(t *testing.T) {
 	pairs := [][2]attribute.KeyValue{
 		{
 			attribute.Bool("Bool", true),
