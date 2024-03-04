@@ -5,6 +5,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -90,6 +91,26 @@ func TestEquivalence(t *testing.T) {
 				})
 			}
 		}
+	}
+
+	if testing.Short() {
+		// If running with -short, evaluate a random subset.
+		const reducedLen = 100
+
+		cp0, cp1 := kvs0[:0], kvs1[:0]
+		seen := make(map[int]struct{})
+		for i := 0; i < reducedLen; i++ {
+			n := rand.Intn(len(kvs0))
+			if _, ok := seen[n]; ok {
+				// Choose another.
+				i--
+				continue
+			}
+			seen[n] = struct{}{}
+			cp0 = append(cp0, kvs0[i])
+			cp1 = append(cp1, kvs1[i])
+		}
+		kvs0, kvs1 = cp0, cp1
 	}
 
 	for i, kv0 := range kvs0 {
