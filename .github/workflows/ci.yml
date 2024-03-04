@@ -97,6 +97,7 @@ jobs:
           file: ./coverage.txt
           fail_ci_if_error: true
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Store coverage test output
         uses: actions/upload-artifact@v4
         with:
