@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/example/passthrough
 
-go 1.20
+go 1.21
 
 require (
 	go.opentelemetry.io/otel v1.24.0
