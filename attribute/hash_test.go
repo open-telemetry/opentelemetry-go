@@ -145,3 +145,20 @@ func (m msg) slice(kvs []KeyValue) string {
 	_, _ = b.WriteRune(']')
 	return b.String()
 }
+
+func BenchmarkHashKVs(b *testing.B) {
+	attrs := make([]KeyValue, len(keyVals))
+	for i := range keyVals {
+		attrs[i] = keyVals[i].Build("k")
+	}
+
+	var h fnv.Hash
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		h = hashKVs(attrs)
+	}
+
+	_ = h
+}
