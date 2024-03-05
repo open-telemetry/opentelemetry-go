@@ -5,11 +5,8 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
@@ -28,8 +25,8 @@ type builder interface {
 }
 
 // keyVals is all the KeyValue generators that are used for testing. This is
-// not []KeyValue so test detect if internal fields of the KeyValue that differ
-// for different instances are used in the hashing.
+// not []KeyValue so tests detect if internal fields of the KeyValue that
+// differ for different instances are used in the hashing.
 var keyVals = []builder{
 	generator[bool]{Bool, true},
 	generator[bool]{Bool, false},
@@ -53,73 +50,63 @@ var keyVals = []builder{
 	generator[[]string]{StringSlice, []string{"[]i1"}},
 }
 
-func TestEquivalence(t *testing.T) {
-	const key = "key"
+func TestHashKVsEquality(t *testing.T) {
+	type testcase struct {
+		hash fnv.Hash
+		kvs  []KeyValue
+	}
+
+	keys := []string{"k0", "k1"}
 
 	// Test all combinations up to length 3.
 	n := len(keyVals)
-	kvs0 := make([][]KeyValue, 0, 1+n+(n*n)+(n*n*n))
-	kvs1 := make([][]KeyValue, 0, 1+n+(n*n)+(n*n*n))
+	result := make([]testcase, 0, 1+len(keys)*(n+(n*n)+(n*n*n)))
 
-	kvs0 = append(kvs0, []KeyValue{})
-	kvs1 = append(kvs1, []KeyValue{})
+	result = append(result, testcase{hashKVs(nil), nil})
 
-	for i := 0; i < len(keyVals); i++ {
-		kvs0 = append(kvs0, []KeyValue{keyVals[i].Build(key)})
-		kvs1 = append(kvs1, []KeyValue{keyVals[i].Build(key)})
+	for _, key := range keys {
+		for i := 0; i < len(keyVals); i++ {
+			kvs := []KeyValue{keyVals[i].Build(key)}
+			hash := hashKVs(kvs)
+			result = append(result, testcase{hash, kvs})
 
-		for j := 0; j < len(keyVals); j++ {
-			kvs0 = append(kvs0, []KeyValue{
-				keyVals[i].Build(key),
-				keyVals[j].Build(key),
-			})
-			kvs1 = append(kvs1, []KeyValue{
-				keyVals[i].Build(key),
-				keyVals[j].Build(key),
-			})
-
-			for k := 0; k < len(keyVals); k++ {
-				kvs0 = append(kvs0, []KeyValue{
+			for j := 0; j < len(keyVals); j++ {
+				kvs := []KeyValue{
 					keyVals[i].Build(key),
 					keyVals[j].Build(key),
-					keyVals[k].Build(key),
-				})
-				kvs1 = append(kvs1, []KeyValue{
-					keyVals[i].Build(key),
-					keyVals[j].Build(key),
-					keyVals[k].Build(key),
-				})
+				}
+				hash := hashKVs(kvs)
+				result = append(result, testcase{hash, kvs})
+
+				for k := 0; k < len(keyVals); k++ {
+					kvs := []KeyValue{
+						keyVals[i].Build(key),
+						keyVals[j].Build(key),
+						keyVals[k].Build(key),
+					}
+					hash := hashKVs(kvs)
+					result = append(result, testcase{hash, kvs})
+				}
 			}
 		}
 	}
 
-	if testing.Short() {
-		// If running with -short, evaluate a random subset.
-		const reducedLen = 100
-
-		cp0, cp1 := kvs0[:0], kvs1[:0]
-		seen := make(map[int]struct{})
-		for i := 0; i < reducedLen; i++ {
-			n := rand.Intn(len(kvs0))
-			if _, ok := seen[n]; ok {
-				// Choose another.
-				i--
-				continue
-			}
-			seen[n] = struct{}{}
-			cp0 = append(cp0, kvs0[i])
-			cp1 = append(cp1, kvs1[i])
-		}
-		kvs0, kvs1 = cp0, cp1
-	}
-
-	for i, kv0 := range kvs0 {
-		for j, kv1 := range kvs1 {
-			h0, h1 := hashKVs(kv0), hashKVs(kv1)
+	for i := 0; i < len(result); i++ {
+		hI, kvI := result[i].hash, result[i].kvs
+		for j := 0; j < len(result); j++ {
+			hJ, kvJ := result[j].hash, result[j].kvs
+			m := msg{i: i, j: j, hI: hI, hJ: hJ, kvI: kvI, kvJ: kvJ}
 			if i == j {
-				assert.Equal(t, h0, h1, msg{"!=", i, j, h0, h1, kv0, kv1})
+				m.cmp = "=="
+				if hI != hJ {
+					t.Errorf("hashes not equal: %s", m)
+				}
 			} else {
-				assert.NotEqual(t, h0, h1, msg{"==", i, j, h0, h1, kv0, kv1})
+				m.cmp = "!="
+				if hI == hJ {
+					// Do not use testify/assert here. It is slow.
+					t.Errorf("hashes equal: %s", m)
+				}
 			}
 		}
 	}
@@ -128,14 +115,14 @@ func TestEquivalence(t *testing.T) {
 type msg struct {
 	cmp      string
 	i, j     int
-	h0, h1   fnv.Hash
-	kv0, kv1 []KeyValue
+	hI, hJ   fnv.Hash
+	kvI, kvJ []KeyValue
 }
 
 func (m msg) String() string {
 	return fmt.Sprintf(
 		"(%d: %d)%s %s (%d: %d)%s",
-		m.i, m.h0, m.slice(m.kv0), m.cmp, m.j, m.h1, m.slice(m.kv1),
+		m.i, m.hI, m.slice(m.kvI), m.cmp, m.j, m.hJ, m.slice(m.kvJ),
 	)
 }
 

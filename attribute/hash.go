@@ -12,10 +12,6 @@ import (
 
 // hashKVs returns a new FNV-1a hash of kvs.
 func hashKVs(kvs []KeyValue) fnv.Hash {
-	if kvs == nil {
-		return fnv.New()
-	}
-
 	h := fnv.New()
 	for _, kv := range kvs {
 		h = hashKV(h, kv)
