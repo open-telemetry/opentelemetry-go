@@ -350,56 +350,73 @@ func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 
 // newSet returns a new set based on the sorted and uniqued kvs.
 func newSet(kvs []KeyValue) Set {
-	s := Set{hash: hashKVs(kvs)}
+	s := Set{
+		hash: hashKVs(kvs),
+		data: computeDataFixed(kvs),
+	}
+	if s.data == nil {
+		s.data = computeDataReflect(kvs)
+	}
+	return s
+}
+
+// computeDataFixed computes a Set data for small slices. It returns nil if the
+// input is too large for this code path.
+func computeDataFixed(kvs []KeyValue) interface{} {
 	switch len(kvs) {
 	case 1:
 		ptr := new([1]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 2:
 		ptr := new([2]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 3:
 		ptr := new([3]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 4:
 		ptr := new([4]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 5:
 		ptr := new([5]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 6:
 		ptr := new([6]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 7:
 		ptr := new([7]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 8:
 		ptr := new([8]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 9:
 		ptr := new([9]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	case 10:
 		ptr := new([10]KeyValue)
 		copy((*ptr)[:], kvs)
-		s.data = *ptr
+		return *ptr
 	default:
-		at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
-		for i, keyValue := range kvs {
-			*(at.Index(i).Addr().Interface().(*KeyValue)) = keyValue
-		}
-		s.data = at.Interface()
+		return nil
 	}
-	return s
+}
+
+// computeDataReflect computes a Set data using reflection, works for any size
+// input.
+func computeDataReflect(kvs []KeyValue) interface{} {
+	at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
+	for i, keyValue := range kvs {
+		*(at.Index(i).Addr().Interface().(*KeyValue)) = keyValue
+	}
+	return at.Interface()
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
