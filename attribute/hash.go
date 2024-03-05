@@ -5,9 +5,9 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"fmt"
+	"reflect"
 
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
-	"go.opentelemetry.io/otel/internal"
 )
 
 // hashKVs returns a new FNV-1a hash of kvs.
@@ -26,39 +26,44 @@ func hashKV(h fnv.Hash, kv KeyValue) fnv.Hash {
 	switch kv.Value.Type() {
 	case BOOL:
 		h = h.String("b")
-		h = h.Bool(internal.RawToBool(kv.Value.numeric))
+		h = h.Uint64(kv.Value.numeric)
 	case INT64:
 		h = h.String("i")
-		h = h.Int64(internal.RawToInt64(kv.Value.numeric))
+		h = h.Uint64(kv.Value.numeric)
 	case FLOAT64:
 		h = h.String("f")
-		h = h.Float64(internal.RawToFloat64(kv.Value.numeric))
+		// Assumes numeric stored with math.Float64bits.
+		h = h.Uint64(kv.Value.numeric)
 	case STRING:
 		h = h.String("s")
 		h = h.String(kv.Value.stringly)
 	case BOOLSLICE:
-		// Differentiate between bool and [1]bool
+		// Differentiate between bool and [1]bool.
 		h = h.String("[]b")
-		for _, v := range kv.Value.asBoolSlice() {
-			h = h.Bool(v)
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i++ {
+			h = h.Bool(rv.Index(i).Bool())
 		}
 	case INT64SLICE:
-		// Differentiate between int64 and [1]int64
+		// Differentiate between int64 and [1]int64.
 		h = h.String("[]i")
-		for _, v := range kv.Value.asInt64Slice() {
-			h = h.Int64(v)
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i++ {
+			h = h.Int64(rv.Index(i).Int())
 		}
 	case FLOAT64SLICE:
-		// Differentiate between float64 and [1]float64
+		// Differentiate between float64 and [1]float64.
 		h = h.String("[]f")
-		for _, v := range kv.Value.asFloat64Slice() {
-			h = h.Float64(v)
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i++ {
+			h = h.Float64(rv.Index(i).Float())
 		}
 	case STRINGSLICE:
-		// Differentiate between string and [1]string
+		// Differentiate between string and [1]string.
 		h = h.String("[]s")
-		for _, v := range kv.Value.asStringSlice() {
-			h = h.String(v)
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i++ {
+			h = h.String(rv.Index(i).String())
 		}
 	case INVALID:
 	default:
