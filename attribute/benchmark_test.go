@@ -271,3 +271,38 @@ func BenchmarkStringSlice(b *testing.B) {
 	})
 	b.Run("Emit", benchmarkEmit(kv))
 }
+
+func BenchmarkDistinctMapLookup(b *testing.B) {
+	const size = 10000
+	m := make(map[attribute.Distinct]struct{}, size)
+	keys := make([]attribute.Distinct, size)
+	for i := 0; i < size; i++ {
+		s := attribute.NewSet(attribute.Int("key", i))
+		m[s.Equivalent()] = struct{}{}
+		keys[i] = s.Equivalent()
+	}
+
+	var out struct{}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		out = m[keys[n%size]]
+	}
+
+	_ = out
+}
+
+func BenchmarkDistinctMapSet(b *testing.B) {
+	const size = 10000
+	m := make(map[attribute.Distinct]struct{}, size)
+	keys := make([]attribute.Distinct, size)
+	for i := 0; i < size; i++ {
+		s := attribute.NewSet(attribute.Int("key", i))
+		keys[i] = s.Equivalent()
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		m[keys[n%size]] = struct{}{}
+	}
+}
