@@ -73,7 +73,7 @@ func EmptySet() *Set {
 // Valid returns true if this value refers to a valid Set.
 func (d Distinct) Valid() bool { return d.hash != 0 }
 
-// reflectValue abbreviates reflect.ValueOf(d).
+// reflectValue abbreviates reflect.ValueOf(l.data).
 func (l Set) reflectValue() reflect.Value {
 	return reflect.ValueOf(l.data)
 }

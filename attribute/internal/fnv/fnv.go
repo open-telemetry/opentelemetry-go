@@ -20,7 +20,10 @@ import (
 	"math"
 )
 
-// Taken from "hash/fnv".
+// Taken from "hash/fnv". Verified at:
+//
+//   - https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-17.html
+//   - http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
 const (
 	offset64 = 14695981039346656037
 	prime64  = 1099511628211
