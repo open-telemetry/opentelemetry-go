@@ -170,7 +170,7 @@ func empty() Set {
 // Except for empty sets, this method adds an additional allocation compared
 // with calls that include a Sortable.
 func NewSet(kvs ...KeyValue) Set {
-	s, _ := NewSetWithSortableFiltered(kvs, nil, nil)
+	s, _ := NewSetWithFiltered(kvs, nil)
 	return s
 }
 
@@ -180,7 +180,7 @@ func NewSet(kvs ...KeyValue) Set {
 // This call includes a Sortable option as a memory optimization.
 // Deprecated: NewSet.
 func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
-	s, _ := NewSetWithSortableFiltered(kvs, nil, nil)
+	s, _ := NewSetWithFiltered(kvs, nil)
 	return s
 }
 
@@ -190,35 +190,6 @@ func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
 // This call includes a Filter to include/exclude attribute keys from the
 // return value. Excluded keys are returned as a slice of attribute values.
 func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
-	s, filtered := NewSetWithSortableFiltered(kvs, nil, filter)
-	return s, filtered
-}
-
-// NewSetWithSortableFiltered returns a new Set.
-//
-// Duplicate keys are eliminated by taking the last value.  This
-// re-orders the input slice so that unique last-values are contiguous
-// at the end of the slice.
-//
-// This ensures the following:
-//
-// - Last-value-wins semantics
-// - Caller sees the reordering, but doesn't lose values
-// - Repeated call preserve last-value wins.
-//
-// Note that methods are defined on Set, although this returns Set. Callers
-// can avoid memory allocations by:
-//
-// - allocating a Sortable for use as a temporary in this method
-// - allocating a Set for storing the return value of this constructor.
-//
-// The result maintains a cache of encoded attributes, by attribute.EncoderID.
-// This value should not be copied after its first use.
-//
-// The second []KeyValue return value is a list of attributes that were
-// excluded by the Filter (if non-nil).
-// Deprecated: use NewSetWithFiltered.
-func NewSetWithSortableFiltered(kvs []KeyValue, _ *Sortable, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
 		return empty(), nil
@@ -254,6 +225,34 @@ func NewSetWithSortableFiltered(kvs []KeyValue, _ *Sortable, filter Filter) (Set
 		}
 	}
 	return Set{equivalent: computeDistinct(kvs)}, nil
+}
+
+// NewSetWithSortableFiltered returns a new Set.
+//
+// Duplicate keys are eliminated by taking the last value.  This
+// re-orders the input slice so that unique last-values are contiguous
+// at the end of the slice.
+//
+// This ensures the following:
+//
+// - Last-value-wins semantics
+// - Caller sees the reordering, but doesn't lose values
+// - Repeated call preserve last-value wins.
+//
+// Note that methods are defined on Set, although this returns Set. Callers
+// can avoid memory allocations by:
+//
+// - allocating a Sortable for use as a temporary in this method
+// - allocating a Set for storing the return value of this constructor.
+//
+// The result maintains a cache of encoded attributes, by attribute.EncoderID.
+// This value should not be copied after its first use.
+//
+// The second []KeyValue return value is a list of attributes that were
+// excluded by the Filter (if non-nil).
+// Deprecated: use NewSetWithFiltered.
+func NewSetWithSortableFiltered(kvs []KeyValue, _ *Sortable, filter Filter) (Set, []KeyValue) {
+	return NewSetWithFiltered(kvs, filter)
 }
 
 // filteredToFront filters slice in-place using keep function. All KeyValues that need to
