@@ -14,13 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/encoding/gzip"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"{{ .retryImportPath }}"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -43,9 +36,6 @@ type (
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
-
-		// gRPC configurations
-		GRPCCredentials credentials.TransportCredentials
 	}
 
 	Config struct {
@@ -53,12 +43,6 @@ type (
 		Traces SignalConfig
 
 		RetryConfig retry.Config
-
-		// gRPC configurations
-		ReconnectionPeriod time.Duration
-		ServiceConfig      string
-		DialOptions        []grpc.DialOption
-		GRPCConn           *grpc.ClientConn
 	}
 )
 
@@ -94,53 +78,6 @@ func cleanPath(urlPath string, defaultPath string) string {
 		tmp = fmt.Sprintf("/%s", tmp)
 	}
 	return tmp
-}
-
-// NewGRPCConfig returns a new Config with all settings applied from opts and
-// any unset setting using the default gRPC config values.
-func NewGRPCConfig(opts ...GRPCOption) Config {
-	userAgent := "OTel OTLP Exporter Go/" + otlptrace.Version()
-	cfg := Config{
-		Traces: SignalConfig{
-			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorGRPCPort),
-			URLPath:     DefaultTracesPath,
-			Compression: NoCompression,
-			Timeout:     DefaultTimeout,
-		},
-		RetryConfig: retry.DefaultConfig,
-		DialOptions: []grpc.DialOption{grpc.WithUserAgent(userAgent)},
-	}
-	cfg = ApplyGRPCEnvConfigs(cfg)
-	for _, opt := range opts {
-		cfg = opt.ApplyGRPCOption(cfg)
-	}
-
-	if cfg.ServiceConfig != "" {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
-	}
-	// Priroritize GRPCCredentials over Insecure (passing both is an error).
-	if cfg.Traces.GRPCCredentials != nil {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Traces.GRPCCredentials))
-	} else if cfg.Traces.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	} else {
-		// Default to using the host's root CA.
-		creds := credentials.NewTLS(nil)
-		cfg.Traces.GRPCCredentials = creds
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
-	}
-	if cfg.Traces.Compression == GzipCompression {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
-	}
-	if cfg.ReconnectionPeriod != 0 {
-		p := grpc.ConnectParams{
-			Backoff:           backoff.DefaultConfig,
-			MinConnectTimeout: cfg.ReconnectionPeriod,
-		}
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
-	}
-
-	return cfg
 }
 
 type (
@@ -300,7 +237,6 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 		cfg.Traces.TLSCfg = tlsCfg.Clone()
 		return cfg
 	}, func(cfg Config) Config {
-		cfg.Traces.GRPCCredentials = credentials.NewTLS(tlsCfg)
 		return cfg
 	})
 }
