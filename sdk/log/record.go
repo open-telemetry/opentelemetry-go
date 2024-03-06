@@ -65,6 +65,9 @@ type Record struct {
 
 	// scope is the Scope that the Logger was created with.
 	scope *instrumentation.Scope
+
+	attributeValueLengthLimit int
+	attributeCountLimit       int
 }
 
 // Timestamp returns the time when the log record occurred.
@@ -176,4 +179,24 @@ func (r *Record) Resource() resource.Resource {
 // InstrumentationScope returns the scope that the Logger was created with.
 func (r *Record) InstrumentationScope() instrumentation.Scope {
 	return *r.scope
+}
+
+// AttributeValueLengthLimit is the maximum allowed attribute value length.
+//
+// This limit only applies to string and string slice attribute values.
+// Any string longer than this value should be truncated to this length.
+//
+// Setting this to a negative value means no limit should be applied.
+func (r *Record) AttributeValueLengthLimit() int {
+	return r.attributeValueLengthLimit
+}
+
+// AttributeCountLimit is the maximum allowed log record attribute count. Any
+// attribute added to a log record once this limit is reached should be dropped.
+//
+// Setting this to zero means no attributes should be recorded.
+//
+// Setting this to a negative value means no limit should be applied.
+func (r *Record) AttributeCountLimit() int {
+	return r.attributeCountLimit
 }
