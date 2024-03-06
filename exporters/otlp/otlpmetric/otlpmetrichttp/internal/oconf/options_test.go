@@ -214,11 +214,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Default Certificate",
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if grpcOption {
-					assert.NotNil(t, c.Metrics.GRPCCredentials)
-				} else {
-					assert.Nil(t, c.Metrics.TLSCfg)
-				}
+				assert.Nil(t, c.Metrics.TLSCfg)
 			},
 		},
 		{
@@ -227,13 +223,8 @@ func TestConfigs(t *testing.T) {
 				WithTLSClientConfig(tlsCert),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if grpcOption {
-					// TODO: make sure gRPC's credentials actually works
-					assert.NotNil(t, c.Metrics.GRPCCredentials)
-				} else {
-					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
-				}
+				// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
 			},
 		},
 		{
@@ -245,12 +236,8 @@ func TestConfigs(t *testing.T) {
 				"cert_path": []byte(WeakCertificate),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if grpcOption {
-					assert.NotNil(t, c.Metrics.GRPCCredentials)
-				} else {
-					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
-				}
+				// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
 			},
 		},
 		{
@@ -264,12 +251,8 @@ func TestConfigs(t *testing.T) {
 				"invalid_cert": []byte("invalid certificate file."),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if grpcOption {
-					assert.NotNil(t, c.Metrics.GRPCCredentials)
-				} else {
-					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
-				}
+				// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
+				assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Metrics.TLSCfg.RootCAs.Subjects())
 			},
 		},
 		{
@@ -282,12 +265,8 @@ func TestConfigs(t *testing.T) {
 				"cert_path": []byte(WeakCertificate),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if grpcOption {
-					assert.NotNil(t, c.Metrics.GRPCCredentials)
-				} else {
-					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, 1, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
-				}
+				// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
+				assert.Equal(t, 1, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
 			},
 		},
 
@@ -459,10 +438,6 @@ func TestConfigs(t *testing.T) {
 			// Tests Generic options as HTTP Options
 			cfg := NewHTTPConfig(asHTTPOptions(tt.opts)...)
 			tt.asserts(t, &cfg, false)
-
-			// Tests Generic options as gRPC Options
-			cfg = NewGRPCConfig(asGRPCOptions(tt.opts)...)
-			tt.asserts(t, &cfg, true)
 		})
 	}
 }
