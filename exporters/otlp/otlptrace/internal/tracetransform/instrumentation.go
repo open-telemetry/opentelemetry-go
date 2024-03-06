@@ -5,7 +5,7 @@ package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptr
 
 import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	commonpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
 )
 
 func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationScope {

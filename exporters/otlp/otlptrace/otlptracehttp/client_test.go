@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	coltracepb "go.opentelemetry.io/proto/slim/otlp/collector/trace/v1"
 )
 
 const (

@@ -14,8 +14,8 @@ import (
 	"{{ .internalImportPath }}"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	cpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	cpb "go.opentelemetry.io/proto/slim/otlp/collector/metrics/v1"
+	mpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 )
 
 type client struct {

@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/trace v1.24.0
-	go.opentelemetry.io/proto/otlp v1.1.0
+	go.opentelemetry.io/proto/slim/otlp v1.1.0
 	google.golang.org/protobuf v1.32.0
 )
 
@@ -32,3 +32,5 @@ replace go.opentelemetry.io/otel/sdk => ../../../sdk
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
 replace go.opentelemetry.io/otel/metric => ../../../metric
+
+replace go.opentelemetry.io/proto/slim/otlp => github.com/pellared/opentelemetry-proto-go/slim/otlp v0.0.0-20240306102010-a527e6c38aec

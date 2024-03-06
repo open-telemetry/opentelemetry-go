@@ -10,10 +10,10 @@ import (
 	"cmp"
 	"slices"
 
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
-	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	collectortracepb "go.opentelemetry.io/proto/slim/otlp/collector/trace/v1"
+	commonpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
+	resourcepb "go.opentelemetry.io/proto/slim/otlp/resource/v1"
+	tracepb "go.opentelemetry.io/proto/slim/otlp/trace/v1"
 )
 
 // TracesCollector mocks a collector for the end-to-end testing.

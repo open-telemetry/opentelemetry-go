@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	tracepb "go.opentelemetry.io/proto/slim/otlp/trace/v1"
 )
 
 func TestSpanKind(t *testing.T) {

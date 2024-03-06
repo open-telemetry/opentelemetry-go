@@ -6,7 +6,7 @@ package otlptrace // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 import (
 	"context"
 
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	tracepb "go.opentelemetry.io/proto/slim/otlp/trace/v1"
 )
 
 // Client manages connections to the collector, handles the

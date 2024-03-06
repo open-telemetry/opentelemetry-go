@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	tracepb "go.opentelemetry.io/proto/slim/otlp/trace/v1"
 )
 
 type client struct {

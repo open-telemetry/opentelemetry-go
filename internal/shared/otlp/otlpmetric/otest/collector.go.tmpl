@@ -32,8 +32,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"{{ .oconfImportPath }}"
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	collpb "go.opentelemetry.io/proto/slim/otlp/collector/metrics/v1"
+	mpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 )
 
 // Collector is the collection target a Client sends metric uploads to.
