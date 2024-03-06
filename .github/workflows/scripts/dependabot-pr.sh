@@ -1,18 +1,7 @@
 #!/bin/zsh -ex
 
 # Copyright The OpenTelemetry Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 git config user.name opentelemetrybot
 git config user.email 107717825+opentelemetrybot@users.noreply.github.com
@@ -29,15 +18,15 @@ declare -A mods
 
 for line in $requests; do
     echo $line
-    if [[ $line != Bump* ]]; then
+    if [[ $line != build* ]]; then
         continue
     fi
 
-    module=$(echo $line | cut -f 2 -d " ")
+    module=$(echo $line | cut -f 3 -d " ")
     if [[ $module == go.opentelemetry.io/otel* ]]; then
         continue
     fi
-    version=$(echo $line | cut -f 6 -d " ")
+    version=$(echo $line | cut -f 7 -d " ")
 
     mods[$module]=$version
     message+=$line
@@ -53,8 +42,7 @@ for module version in ${(kv)mods}; do
     done
 done
 
-make go-mod-tidy
-make build
+make go-mod-tidy golangci-lint-fix build
 
 git add go.sum go.mod
 git add "**/go.sum" "**/go.mod"

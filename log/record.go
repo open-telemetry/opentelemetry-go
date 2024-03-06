@@ -1,20 +1,12 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package log // import "go.opentelemetry.io/otel/log"
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // attributesInlineCount is the number of attributes that are efficiently
 // stored in an array within a Record. This value is borrowed from slog which
@@ -125,24 +117,8 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 		r.nFront++
 	}
 
-	// TODO: when Go 1.20 is no longer supported, use slices.Grow instead.
-	r.back = grow(r.back, len(attrs[i:]))
+	r.back = slices.Grow(r.back, len(attrs[i:]))
 	r.back = append(r.back, attrs[i:]...)
-}
-
-// grow increases the slice's capacity, if necessary, to guarantee space for
-// another n elements. After grow(n), at least n elements can be appended to
-// the slice without another allocation.
-//
-// This is based on [Grow]. It is not available in Go 1.20 so it is reproduced
-// here.
-//
-// [Grow]: https://pkg.go.dev/slices#Grow
-func grow(slice []KeyValue, n int) []KeyValue {
-	if n -= cap(slice) - len(slice); n > 0 {
-		slice = append(slice[:cap(slice)], make([]KeyValue, n)...)[:len(slice)]
-	}
-	return slice
 }
 
 // AttributesLen returns the number of attributes in the log record.
