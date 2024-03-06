@@ -258,7 +258,7 @@ func TestBucketsBin(t *testing.T) {
 
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](3)
+		b := newBuckets[N](alice, 3)
 		assertB := func(counts []uint64, count uint64, min, max N) {
 			t.Helper()
 			assert.Equal(t, counts, b.counts)
@@ -282,7 +282,7 @@ func TestBucketsSum(t *testing.T) {
 
 func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](3)
+		b := newBuckets[N](alice, 3)
 
 		var want N
 		assert.Equal(t, want, b.total)
@@ -325,12 +325,12 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 	h.cumulative(&data)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
-	require.Equal(t, hdp.BucketCounts, h.values[alice].counts)
+	require.Equal(t, hdp.BucketCounts, h.values[alice.Equivalent()].counts)
 
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
-	assert.Equal(t, cpCounts, h.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+	assert.Equal(t, cpCounts, h.values[alice.Equivalent()].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
 }
 
 func TestDeltaHistogramReset(t *testing.T) {
