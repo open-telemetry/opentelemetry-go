@@ -127,7 +127,7 @@ func (r *Record) SetBody(v log.Value)
 
 func (r *Record) WalkAttributes(f func(log.KeyValue) bool)
 
-// SetAttributes sets (and overrides) attributes to the log record.
+// SetAttributes sets and overrides the attributes of the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue)
 
 func (r *Record) TraceID() trace.TraceID
