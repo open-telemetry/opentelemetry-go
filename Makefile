@@ -1,16 +1,5 @@
 # Copyright The OpenTelemetry Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 TOOLS_MOD_DIR := ./internal/tools
 
@@ -192,7 +181,7 @@ test-coverage: | $(GOCOVMERGE)
 	done; \
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
-# Adding a directory will include all benchmarks in that direcotry if a filter is not specified.
+# Adding a directory will include all benchmarks in that directory if a filter is not specified.
 BENCHMARK_TARGETS := sdk/trace
 .PHONY: benchmark
 benchmark: $(BENCHMARK_TARGETS:%=benchmark/%)
@@ -225,7 +214,7 @@ go-mod-tidy/%: DIR=$*
 go-mod-tidy/%: | crosslink
 	@echo "$(GO) mod tidy in $(DIR)" \
 		&& cd $(DIR) \
-		&& $(GO) mod tidy -compat=1.20
+		&& $(GO) mod tidy -compat=1.21
 
 .PHONY: lint-modules
 lint-modules: go-mod-tidy

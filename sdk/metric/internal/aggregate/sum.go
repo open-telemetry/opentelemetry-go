@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
@@ -104,10 +93,10 @@ func (s *sum[N]) delta(dest *metricdata.Aggregation) int {
 		dPts[i].Time = t
 		dPts[i].Value = val.n
 		val.res.Collect(&dPts[i].Exemplars)
-		// Do not report stale values.
-		delete(s.values, attr)
 		i++
 	}
+	// Do not report stale values.
+	clear(s.values)
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -200,11 +189,10 @@ func (s *precomputedSum[N]) delta(dest *metricdata.Aggregation) int {
 		value.res.Collect(&dPts[i].Exemplars)
 
 		newReported[attr] = value.n
-		// Unused attribute sets do not report.
-		delete(s.values, attr)
 		i++
 	}
-	// Unused attribute sets are forgotten.
+	// Unused attribute sets do not report.
+	clear(s.values)
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -238,10 +226,10 @@ func (s *precomputedSum[N]) cumulative(dest *metricdata.Aggregation) int {
 		dPts[i].Value = val.n
 		val.res.Collect(&dPts[i].Exemplars)
 
-		// Unused attribute sets do not report.
-		delete(s.values, attr)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(s.values)
 
 	sData.DataPoints = dPts
 	*dest = sData

@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package global // import "go.opentelemetry.io/otel/internal/global"
 
@@ -354,20 +343,27 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "second callback not registered")
 
-	mp := &testMeterProvider{}
+	var called2 bool
+	_, err = m.RegisterCallback(func(context.Context, metric.Observer) error {
+		called2 = true
+		return nil
+	}, actr)
+	require.NoError(t, err)
+	require.Equal(t, 2, mImpl.registry.Len(), "third callback not registered")
 
-	// otel.SetMeterProvider(mp)
+	mp := &testMeterProvider{}
 	globalMeterProvider.setDelegate(mp)
 
 	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
 	require.False(t, called0, "pre-delegation unregistered callback called")
-	require.True(t, called1, "callback not called")
+	require.True(t, called1, "second callback not called")
+	require.True(t, called2, "third callback not called")
 
-	called1 = false
 	assert.NoError(t, reg1.Unregister(), "unregister second callback")
-
-	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
-	assert.False(t, called1, "unregistered callback called")
+	called1, called2 = false, false // reset called capture
+	testCollect(t, m)               // This is a hacky way to emulate a read from an exporter
+	assert.False(t, called1, "unregistered second callback called")
+	require.True(t, called2, "third callback not called")
 
 	assert.NotPanics(t, func() {
 		assert.NoError(t, reg1.Unregister(), "duplicate unregister calls")

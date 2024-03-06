@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package aggregate
 
@@ -771,6 +760,7 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 				{ctx, 2, alice},
 				{ctx, 16, alice},
 				{ctx, 1, alice},
+				{ctx, -1, alice},
 			},
 			expect: output{
 				n: 1,
@@ -781,14 +771,18 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      6,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        31,
+							Sum:        30,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 					},
@@ -821,6 +815,7 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 				{ctx, 2, carol},
 				{ctx, 16, carol},
 				{ctx, 1, dave},
+				{ctx, -1, alice},
 			},
 			expect: output{
 				n: 2,
@@ -831,14 +826,18 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      6,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        31,
+							Sum:        30,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 						{
@@ -888,6 +887,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 				{ctx, 2, alice},
 				{ctx, 16, alice},
 				{ctx, 1, alice},
+				{ctx, -1, alice},
 			},
 			expect: output{
 				n: 1,
@@ -898,14 +898,18 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      6,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        31,
+							Sum:        30,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 					},
@@ -927,14 +931,18 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      9,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        44,
+							Sum:        43,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 					},
@@ -952,14 +960,18 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      9,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        44,
+							Sum:        43,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 					},
@@ -985,14 +997,18 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 							Attributes: fltrAlice,
 							StartTime:  staticTime,
 							Time:       staticTime,
-							Count:      9,
-							Min:        metricdata.NewExtrema[N](1),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
-							Sum:        44,
+							Sum:        43,
 							Scale:      -1,
 							PositiveBucket: metricdata.ExponentialBucket{
 								Offset: -1,
 								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
 							},
 						},
 						{

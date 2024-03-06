@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
@@ -375,6 +364,7 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
 		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
+		copy(hDPts[i].NegativeBucket.Counts, b.negBuckets.counts)
 
 		if !e.noSum {
 			hDPts[i].Sum = b.sum
@@ -386,9 +376,11 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 
 		b.res.Collect(&hDPts[i].Exemplars)
 
-		delete(e.values, a)
 		i++
 	}
+	// Unused attribute sets do not report.
+	clear(e.values)
+
 	e.start = t
 	h.DataPoints = hDPts
 	*dest = h
@@ -425,6 +417,7 @@ func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
 
 		hDPts[i].NegativeBucket.Offset = int32(b.negBuckets.startBin)
 		hDPts[i].NegativeBucket.Counts = reset(hDPts[i].NegativeBucket.Counts, len(b.negBuckets.counts), len(b.negBuckets.counts))
+		copy(hDPts[i].NegativeBucket.Counts, b.negBuckets.counts)
 
 		if !e.noSum {
 			hDPts[i].Sum = b.sum

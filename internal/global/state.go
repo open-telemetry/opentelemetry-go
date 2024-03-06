@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package global // import "go.opentelemetry.io/otel/internal/global"
 
@@ -63,7 +52,7 @@ func SetTracerProvider(tp trace.TracerProvider) {
 			// to itself.
 			Error(
 				errors.New("no delegate configured in tracer provider"),
-				"Setting tracer provider to it's current value. No delegate will be configured",
+				"Setting tracer provider to its current value. No delegate will be configured",
 			)
 			return
 		}
@@ -92,7 +81,7 @@ func SetTextMapPropagator(p propagation.TextMapPropagator) {
 			// delegate to itself.
 			Error(
 				errors.New("no delegate configured in text map propagator"),
-				"Setting text map propagator to it's current value. No delegate will be configured",
+				"Setting text map propagator to its current value. No delegate will be configured",
 			)
 			return
 		}
@@ -123,7 +112,7 @@ func SetMeterProvider(mp metric.MeterProvider) {
 			// to itself.
 			Error(
 				errors.New("no delegate configured in meter provider"),
-				"Setting meter provider to it's current value. No delegate will be configured",
+				"Setting meter provider to its current value. No delegate will be configured",
 			)
 			return
 		}

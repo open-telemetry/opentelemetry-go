@@ -30,7 +30,7 @@ The module name is compliant with
 [Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
 and the package structure is the same as for Trace API and Metrics API.
 
-The Go module consits of the following packages:
+The Go module consists of the following packages:
 
 - `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/log/embedded`
@@ -240,14 +240,14 @@ when converting records to a different representation:
 func (r *Record) AttributesLen() int
 ```
 
-The records attributes design and implemntation is based on
+The records attributes design and implementation is based on
 [`slog.Record`](https://pkg.go.dev/log/slog#Record).
 It allows achieving high-performance access and manipulation of the attributes
 while keeping the API user friendly.
 It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
 
-The following defintions are implementing the abstractions
+The following definitions are implementing the abstractions
 described in [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs):
 
 ```go
@@ -262,7 +262,7 @@ const (
 	KindInt64
 	KindString
 	KindBytes
-	KindList
+	KindSlice
 	KindMap
 )
 
@@ -282,13 +282,11 @@ func BoolValue(v bool) Value
 
 func BytesValue(v []byte) Value
 
-func ListValue(vs ...Value) Value
+func SliceValue(vs ...Value) Value
 
 func MapValue(kvs ...KeyValue) Value
 
 // Value accessors:
-
-func (v Value) AsAny() any
 
 func (v Value) AsString() string
 
@@ -300,7 +298,7 @@ func (v Value) AsFloat64() float64
 
 func (v Value) AsBytes() []byte
 
-func (v Value) AsList() []Value
+func (v Value) AsSlice() []Value
 
 func (v Value) AsMap() []KeyValue 
 
@@ -330,7 +328,7 @@ func Bool(key string, v bool) KeyValue
 
 func Bytes(key string, v []byte) KeyValue
 
-func List(key string, args ...Value) KeyValue
+func Slice(key string, args ...Value) KeyValue
 
 func Map(key string, args ...KeyValue) KeyValue
 
@@ -349,7 +347,7 @@ func (a KeyValue) Equal(b KeyValue) bool
 `KindInt64` is used for a signed integer value.
 `KindString` is used for a string value.
 `KindBytes` is used for a slice of bytes (in spec: A byte array).
-`KindList` is used for a slice of values (in spec: an array (a list) of any values).
+`KindSlice` is used for a slice of values (in spec: an array (a list) of any values).
 `KindMap` is used for a slice of key-value pairs (in spec: `map<string, any>`).
 
 These types are defined in `go.opentelemetry.io/otel/log` package
@@ -361,6 +359,18 @@ and the API is mostly inspired by
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
 The benchmarks[^1] show that the implementation is more performant than
 [`attribute.Value`](https://pkg.go.dev/go.opentelemetry.io/otel/attribute#Value).
+
+The value accessors (`func (v Value) As[Kind]` methods) must not panic,
+as it would violate the [specification](https://opentelemetry.io/docs/specs/otel/error-handling/):
+
+> API methods MUST NOT throw unhandled exceptions when used incorrectly by end
+> users. The API and SDK SHOULD provide safe defaults for missing or invalid
+> arguments. [...] Whenever the library suppresses an error that would otherwise
+> have been exposed to the user, the library SHOULD log the error using
+> language-specific conventions.
+
+Therefore, the value accessors should return a zero value
+and log an error when a bad accessor is called.
 
 The `Severity`, `Kind`, `Value`, `KeyValue` may implement
 the [`fmt.Stringer`](https://pkg.go.dev/fmt#Stringer) interface.
@@ -510,7 +520,7 @@ favor passing the record via pointer (and vice versa).
 Passing via value feels safer because of the following reasons.
 
 The user would not be able to pass `nil`.
-Therefore, it reduces the possiblity to have a nil pointer dereference.
+Therefore, it reduces the possibility to have a nil pointer dereference.
 
 It should reduce the possibility of a heap allocation.
 
@@ -764,7 +774,6 @@ and we may even have problems naming the functions.
 The Logs Bridge API MUST NOT be released as stable
 before all issues below are closed:
 
-- [Clarify that log attributes are NOT common attributes](https://github.com/open-telemetry/opentelemetry-specification/issues/3849)
 - [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
 
