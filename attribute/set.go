@@ -170,10 +170,6 @@ func empty() Set {
 // Except for empty sets, this method adds an additional allocation compared
 // with calls that include a Sortable.
 func NewSet(kvs ...KeyValue) Set {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return empty()
-	}
 	s, _ := NewSetWithSortableFiltered(kvs, nil, nil)
 	return s
 }
@@ -184,10 +180,6 @@ func NewSet(kvs ...KeyValue) Set {
 // This call includes a Sortable option as a memory optimization.
 // Deprecated: NewSet.
 func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return empty()
-	}
 	s, _ := NewSetWithSortableFiltered(kvs, nil, nil)
 	return s
 }
@@ -198,10 +190,6 @@ func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
 // This call includes a Filter to include/exclude attribute keys from the
 // return value. Excluded keys are returned as a slice of attribute values.
 func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
-	// Check for empty set.
-	if len(kvs) == 0 {
-		return empty(), nil
-	}
 	s, filtered := NewSetWithSortableFiltered(kvs, nil, filter)
 	return s, filtered
 }
