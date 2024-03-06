@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
@@ -23,7 +12,7 @@ import (
 )
 
 func TestLimiterAttributes(t *testing.T) {
-	m := map[attribute.Set]struct{}{alice: {}}
+	m := map[attribute.Distinct]struct{}{alice.Equivalent(): {}}
 	t.Run("NoLimit", func(t *testing.T) {
 		l := newLimiter[struct{}](0)
 		assert.Equal(t, alice, l.Attributes(alice, m))
@@ -54,7 +43,7 @@ func TestLimiterAttributes(t *testing.T) {
 var limitedAttr attribute.Set
 
 func BenchmarkLimiterAttributes(b *testing.B) {
-	m := map[attribute.Set]struct{}{alice: {}}
+	m := map[attribute.Distinct]struct{}{alice.Equivalent(): {}}
 	l := newLimiter[struct{}](2)
 
 	b.ReportAllocs()

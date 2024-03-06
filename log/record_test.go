@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package log_test
 
@@ -102,4 +91,64 @@ func TestRecordAttributes(t *testing.T) {
 			assert.Equal(t, i, j, "number of attributes walked incorrect")
 		}
 	})
+}
+
+func TestRecordAllocationLimits(t *testing.T) {
+	const runs = 5
+
+	// Assign testing results to external scope so the compiler doesn't
+	// optimize away the testing statements.
+	var (
+		tStamp time.Time
+		sev    log.Severity
+		text   string
+		body   log.Value
+		n      int
+		attr   log.KeyValue
+	)
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetTimestamp(y2k)
+		tStamp = r.Timestamp()
+	}), "Timestamp")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetObservedTimestamp(y2k)
+		tStamp = r.ObservedTimestamp()
+	}), "ObservedTimestamp")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetSeverity(log.SeverityDebug)
+		sev = r.Severity()
+	}), "Severity")
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetSeverityText("severity text")
+		text = r.SeverityText()
+	}), "SeverityText")
+
+	bodyVal := log.BoolValue(true)
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.SetBody(bodyVal)
+		body = r.Body()
+	}), "Body")
+
+	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		var r log.Record
+		r.AddAttributes(attrVal...)
+		n = r.AttributesLen()
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			attr = kv
+			return true
+		})
+	}), "Attributes")
+
+	// Convince the linter these values are used.
+	_, _, _, _, _, _ = tStamp, sev, text, body, n, attr
 }

@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Clarify the documentation about equivalence guarantees for the `Set` and `Distinct` types in `go.opentelemetry.io/otel/attribute`. (#5027)
+
+### Removed
+
+- Drop support for [Go 1.20]. (#4967)
+
+## [1.24.0/0.46.0/0.0.1-alpha] 2024-02-23
+
 This release is the last to support [Go 1.20].
 The next release will require at least [Go 1.21].
 
@@ -16,10 +26,15 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#4890)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#4900)
 - Add exemplar support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4900)
+- The `go.opentelemetry.io/otel/log` module is added.
+  This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
+  This module is in an alpha state, it is subject to breaking changes.
+  See our [versioning policy](./VERSIONING.md) for more info. (#4961)
 
 ### Fixed
 
 - Fix registration of multiple callbacks when using the global meter provider from `go.opentelemetry.io/otel`. (#4945)
+- Fix negative buckets in output of exponential histograms. (#4956)
 
 ## [1.23.1] 2024-02-07
 
@@ -2842,7 +2857,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.23.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.24.0...HEAD
+[1.24.0/0.46.0/0.0.1-alpha]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.24.0
 [1.23.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.1
 [1.23.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.0
 [1.23.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.0-rc.1
