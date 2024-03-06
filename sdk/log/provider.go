@@ -59,10 +59,12 @@ func WithResource(*resource.Resource) Option {
 	return nil
 }
 
-// WithProcessor associates Processor with a LoggerProvider.
+// WithExporter associates Exporter with a LoggerProvider.
 //
 // By default, if this option is not used, the LoggerProvider will perform no
-// operations; no data will be exported without a Processor.
-func WithProcessor(Processor) Option {
+// operations; no data will be exported without an Exporter.
+//
+// Use NewBatchingExporter to batch log records before they are exported.
+func WithExporter(Exporter) Option {
 	return nil
 }
