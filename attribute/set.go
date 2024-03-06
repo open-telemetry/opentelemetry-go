@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
@@ -26,15 +15,24 @@ type (
 	// immutable set of attributes, with an internal cache for storing
 	// attribute encodings.
 	//
-	// This type supports the Equivalent method of comparison using values of
-	// type Distinct.
+	// This type will remain comparable for backwards compatibility. The
+	// equivalence of Sets across versions is not guaranteed to be stable.
+	// Prior versions may find two Sets to be equal or not when compared
+	// directly (i.e. ==), but subsequent versions may not. Users should use
+	// the Equals method to ensure stable equivalence checking.
+	//
+	// Users should also use the Distinct returned from Equivalent as a map key
+	// instead of a Set directly. In addition to that type providing guarantees
+	// on stable equivalence, it may also provide performance improvements.
 	Set struct {
 		equivalent Distinct
 	}
 
-	// Distinct wraps a variable-size array of KeyValue, constructed with keys
-	// in sorted order. This can be used as a map key or for equality checking
-	// between Sets.
+	// Distinct is a unique identifier of a Set.
+	//
+	// Distinct is designed to be ensures equivalence stability: comparisons
+	// will return the save value across versions. For this reason, Distinct
+	// should always be used as a map key instead of a Set.
 	Distinct struct {
 		iface interface{}
 	}

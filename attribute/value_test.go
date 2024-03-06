@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package attribute_test
 
@@ -106,7 +95,7 @@ func TestValue(t *testing.T) {
 	}
 }
 
-func TestSetComparability(t *testing.T) {
+func TestEquivalence(t *testing.T) {
 	pairs := [][2]attribute.KeyValue{
 		{
 			attribute.Bool("Bool", true),
@@ -150,12 +139,39 @@ func TestSetComparability(t *testing.T) {
 		},
 	}
 
-	for _, p := range pairs {
-		s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
-		m := map[attribute.Set]struct{}{s0: {}}
-		_, ok := m[s1]
-		assert.Truef(t, ok, "%s not comparable", p[0].Value.Type())
-	}
+	t.Run("Distinct", func(t *testing.T) {
+		for _, p := range pairs {
+			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
+			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
+			_, ok := m[s1.Equivalent()]
+			assert.Truef(t, ok, "Distinct comparison of %s type: not equivalent", p[0].Value.Type())
+			assert.Truef(
+				t,
+				ok,
+				"Distinct comparison of %s type: not equivalent: %s != %s",
+				p[0].Value.Type(),
+				s0.Encoded(attribute.DefaultEncoder()),
+				s1.Encoded(attribute.DefaultEncoder()),
+			)
+		}
+	})
+
+	t.Run("Set", func(t *testing.T) {
+		// Maintain backwards compatibility.
+		for _, p := range pairs {
+			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
+			m := map[attribute.Set]struct{}{s0: {}}
+			_, ok := m[s1]
+			assert.Truef(
+				t,
+				ok,
+				"Set comparison of %s type: not equivalent: %s != %s",
+				p[0].Value.Type(),
+				s0.Encoded(attribute.DefaultEncoder()),
+				s1.Encoded(attribute.DefaultEncoder()),
+			)
+		}
+	})
 }
 
 func TestAsSlice(t *testing.T) {
