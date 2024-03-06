@@ -123,7 +123,6 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.platform.os }}
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Go
