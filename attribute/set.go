@@ -31,7 +31,7 @@ type (
 
 	// Sortable implements sort.Interface, used for sorting KeyValue.
 	//
-	// Deprecated: no longer needed.
+	// Deprecated: This type is no longer used. It was added as a performance optimization for Go < 1.21 that is no longer needed (Go < 1.21 is no longer supported by the module).
 	Sortable []KeyValue
 )
 
@@ -178,7 +178,8 @@ func NewSet(kvs ...KeyValue) Set {
 // NewSetWithSortableFiltered for more details.
 //
 // This call includes a Sortable option as a memory optimization.
-// Deprecated: NewSet.
+//
+// Deprecated: Use [NewSet] instead.
 func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
 	s, _ := NewSetWithFiltered(kvs, nil)
 	return s
@@ -250,7 +251,8 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 //
 // The second []KeyValue return value is a list of attributes that were
 // excluded by the Filter (if non-nil).
-// Deprecated: use NewSetWithFiltered.
+//
+// Deprecated: Use [NewSetWithFiltered] instead.
 func NewSetWithSortableFiltered(kvs []KeyValue, _ *Sortable, filter Filter) (Set, []KeyValue) {
 	return NewSetWithFiltered(kvs, filter)
 }
