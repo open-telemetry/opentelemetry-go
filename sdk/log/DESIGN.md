@@ -16,12 +16,7 @@ The prototype was created in
 
 The SDK is published as a single `go.opentelemetry.io/otel/sdk/log` Go module.
 
-The Go module consists of the following packages:
-
-- `go.opentelemetry.io/otel/sdk/log`
-- `go.opentelemetry.io/otel/sdk/log/logtest`
-
-The exporters are published as following Go modules:
+The exporters are going to be published as following Go modules:
 
 - `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`
 - `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`
