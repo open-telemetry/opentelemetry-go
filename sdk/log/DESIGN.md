@@ -47,39 +47,9 @@ The [LogRecord limits](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrec
 are defined as follows:
 
 ```go
-func WithLimits(Limits) Option
+func WithAttributeCountLimit(limit int) Option
 
-type Limits struct {
-	// AttributeValueLengthLimit is the maximum allowed attribute value length.
-	//
-	// This limit only applies to string and string slice attribute values.
-	// Any string longer than this value will be truncated to this length.
-	//
-	// Setting this to zero means to use the default setting.
-	// See also AttributeValueLengthLimitZero.
-	//
-	// Setting this to a negative value means no limit is applied.
-	AttributeValueLengthLimit int
-
-	// AttributeValueLengthLimitZero is to set a zero value of AttributeValueLengthLimit.
-	// Setting this means string and string slice attribute values will be empty.
-	// It overrides any value set via AttributeValueLengthLimit.
-	AttributeValueLengthLimitZero bool
-
-	// AttributeCountLimit is the maximum allowed span attribute count. Any
-	// attribute added to a span once this limit is reached will be dropped.
-	//
-	// Setting this to zero means to use the default setting.
-	// See also AttributeCountLimitZero.
-	//
-	// Setting this to a negative value means no limit is applied.
-	AttributeCountLimit int
-
-	// AttributeCountLimitZero is to set a zero value of AttributeCountLimit.
-	// Setting this means no attributes will be recorded.
-	// It overrides any value set via AttributeCountLimit.
-	AttributeCountLimitZero bool
-}
+func WithAttributeValueLengthLimit(limit int) Option
 ```
 
 ### LogRecordProcessor and LogRecordExporter  
