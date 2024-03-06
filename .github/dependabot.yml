@@ -92,15 +92,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /example/otel-collector
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
     directory: /example/passthrough
     labels:
       - dependencies
@@ -128,15 +119,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /exporters/otlp/otlpmetric/otlpmetricgrpc
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
     directory: /exporters/otlp/otlpmetric/otlpmetrichttp
     labels:
       - dependencies
@@ -147,15 +129,6 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /exporters/otlp/otlptrace
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /exporters/otlp/otlptrace/otlptracegrpc
     labels:
       - dependencies
       - go
