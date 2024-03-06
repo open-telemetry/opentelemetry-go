@@ -458,14 +458,6 @@ func asHTTPOptions(opts []GenericOption) []HTTPOption {
 	return converted
 }
 
-func asGRPCOptions(opts []GenericOption) []GRPCOption {
-	converted := make([]GRPCOption, len(opts))
-	for i, o := range opts {
-		converted[i] = NewGRPCOption(o.ApplyGRPCOption)
-	}
-	return converted
-}
-
 func TestCleanPath(t *testing.T) {
 	type args struct {
 		urlPath     string
