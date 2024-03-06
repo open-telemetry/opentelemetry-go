@@ -122,10 +122,10 @@ This is similar to the design of HTTP server middleware
 which is a wrapper of `http.Handler`.[^2]
 
 [Simple processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor)
-is a achieved by simply passing a bare-exporter.
+is achieved by simply passing a bare-exporter.
 
 [Batching processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#batching-processor)
-is a achieved by wrapping an expoter with `Batcher`:
+is a achieved by wrapping an exporter with `Batcher`:
 
 ```go
 type Batcher struct { /* ... */ }
