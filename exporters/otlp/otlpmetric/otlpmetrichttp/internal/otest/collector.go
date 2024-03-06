@@ -27,8 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
@@ -72,93 +70,6 @@ func (s *Storage) Dump() []*mpb.ResourceMetrics {
 	var data []*mpb.ResourceMetrics
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
-}
-
-// GRPCCollector is an OTLP gRPC server that collects all requests it receives.
-type GRPCCollector struct {
-	collpb.UnimplementedMetricsServiceServer
-
-	headersMu sync.Mutex
-	headers   metadata.MD
-	storage   *Storage
-
-	resultCh <-chan ExportResult
-	listener net.Listener
-	srv      *grpc.Server
-}
-
-// NewGRPCCollector returns a *GRPCCollector that is listening at the provided
-// endpoint.
-//
-// If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port.
-//
-// If errCh is not nil, the collector will respond to Export calls with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
-func NewGRPCCollector(endpoint string, resultCh <-chan ExportResult) (*GRPCCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
-	}
-
-	c := &GRPCCollector{
-		storage:  NewStorage(),
-		resultCh: resultCh,
-	}
-
-	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	c.srv = grpc.NewServer()
-	collpb.RegisterMetricsServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
-
-	return c, nil
-}
-
-// Shutdown shuts down the gRPC server closing all open connections and
-// listeners immediately.
-func (c *GRPCCollector) Shutdown() { c.srv.Stop() }
-
-// Addr returns the net.Addr c is listening at.
-func (c *GRPCCollector) Addr() net.Addr {
-	return c.listener.Addr()
-}
-
-// Collect returns the Storage holding all collected requests.
-func (c *GRPCCollector) Collect() *Storage {
-	return c.storage
-}
-
-// Headers returns the headers received for all requests.
-func (c *GRPCCollector) Headers() map[string][]string {
-	// Makes a copy.
-	c.headersMu.Lock()
-	defer c.headersMu.Unlock()
-	return metadata.Join(c.headers)
-}
-
-// Export handles the export req.
-func (c *GRPCCollector) Export(ctx context.Context, req *collpb.ExportMetricsServiceRequest) (*collpb.ExportMetricsServiceResponse, error) {
-	c.storage.Add(req)
-
-	if h, ok := metadata.FromIncomingContext(ctx); ok {
-		c.headersMu.Lock()
-		c.headers = metadata.Join(c.headers, h)
-		c.headersMu.Unlock()
-	}
-
-	if c.resultCh != nil {
-		r := <-c.resultCh
-		if r.Response == nil {
-			return &collpb.ExportMetricsServiceResponse{}, r.Err
-		}
-		return r.Response, r.Err
-	}
-	return &collpb.ExportMetricsServiceResponse{}, nil
 }
 
 var emptyExportMetricsServiceResponse = func() []byte {
