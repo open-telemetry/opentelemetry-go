@@ -14,7 +14,10 @@
 
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 var _ Exporter = (*Batcher)(nil)
 
@@ -42,5 +45,21 @@ func (b *Batcher) Shutdown(ctx context.Context) error {
 }
 
 func (b *Batcher) ForceFlush(ctx context.Context) error {
+	return nil
+}
+
+func WithInterval(d time.Duration) BatchingOption {
+	return nil
+}
+
+func WithTimeout(d time.Duration) BatchingOption {
+	return nil
+}
+
+func WithQueueSize(max int) BatchingOption {
+	return nil
+}
+
+func WithBatchSize(max int) BatchingOption {
 	return nil
 }
