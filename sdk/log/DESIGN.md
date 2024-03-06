@@ -148,6 +148,9 @@ func (r *Record) AttributeCountLimit() int
 The user can implement a custom [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 by implementing a `Exporter` decorator.
 
+This is similar to the design of HTTP server middleware
+which is a wrapper of `http.Handler`.[^2]
+
 [Simple processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor)
 is a achieved by simply passing a bare-exporter.
 
@@ -194,3 +197,4 @@ The Logs SDK NOT be released as stable before all issues below are closed:
 - [Fix what can be modified via ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3907)
 
 [^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
+[^2]: [Middleware - Go Web Examples](https://gowebexamples.com/basic-middleware/)
