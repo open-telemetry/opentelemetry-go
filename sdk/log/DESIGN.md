@@ -149,10 +149,10 @@ The user can implement a custom [LogRecordProcessor](https://opentelemetry.io/do
 by implementing a `Exporter` decorator.
 
 [Simple processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor)
-is a acheived by simply passing a bare-exporter.
+is a achieved by simply passing a bare-exporter.
 
 [Batching processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#batching-processor)
-is a acheived by wrapping an expoter with `Batcher`:
+is a achieved by wrapping an expoter with `Batcher`:
 
 ```go
 type Batcher struct { /* ... */ }
