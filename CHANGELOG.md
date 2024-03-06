@@ -14,7 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate `go.opentelemetry.io/otel/attribute.Sortable` and methods that use it. (#4734)
+- Deprecate `go.opentelemetry.io/otel/attribute.Sortable` type. (#4734)
+- Deprecate `go.opentelemetry.io/otel/attribute.NewSetWithSortable` function. (#4734)
+- Deprecate `go.opentelemetry.io/otel/attribute.NewSetWithSortableFiltered` function. (#4734)
 
 ## [1.24.0/0.46.0/0.0.1-alpha] 2024-02-23
 
