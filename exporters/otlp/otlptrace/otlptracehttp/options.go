@@ -5,6 +5,8 @@ package otlptracehttp // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 
 import (
 	"crypto/tls"
+	"net/http"
+	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
@@ -14,6 +16,11 @@ import (
 // Compression describes the compression used for payloads sent to the
 // collector.
 type Compression otlpconfig.Compression
+
+// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
+// This type is compatible with http.Transport.Proxy and can be used to set a custom proxy function
+// to the OTLP HTTP client.
+type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 const (
 	// NoCompression tells the driver to send payloads without
@@ -136,6 +143,6 @@ func WithRetry(rc RetryConfig) Option {
 // WithProxy sets the Proxy function the client will use to determine the
 // proxy to use for an HTTP request. If this option is not used, the client
 // will use [http.ProxyFromEnvironment].
-func WithProxy(pf otlpconfig.HTTPTransportProxyFunc) Option {
-	return wrappedOption{otlpconfig.WithProxy(pf)}
+func WithProxy(pf HTTPTransportProxyFunc) Option {
+	return wrappedOption{otlpconfig.WithProxy(otlpconfig.HTTPTransportProxyFunc(pf))}
 }
