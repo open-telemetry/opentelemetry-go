@@ -140,13 +140,13 @@ func (b *Batcher) ForceFlush(ctx context.Context) error
 
 type BatchingOption interface { /* ... */ }
 
-func WithInterval(d time.Duration) BatchingOption
+func WithMaxQueueSize(max int) BatchingOption
 
-func WithTimeout(d time.Duration) BatchingOption
+func WithExportInterval(d time.Duration) BatchingOption
 
-func WithQueueSize(max int) BatchingOption
+func WithExportTimeout(d time.Duration) BatchingOption
 
-func WithBatchSize(max int) BatchingOption
+func WithExportMaxBatchSize(max int) BatchingOption
 ```
 
 ## Benchmarking
