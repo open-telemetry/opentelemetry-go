@@ -48,18 +48,18 @@ func (b *Batcher) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-func WithInterval(d time.Duration) BatchingOption {
+func WithMaxQueueSize(d time.Duration) BatchingOption {
 	return nil
 }
 
-func WithTimeout(d time.Duration) BatchingOption {
+func WithExportInterval(d time.Duration) BatchingOption {
 	return nil
 }
 
-func WithQueueSize(max int) BatchingOption {
+func WithExportTimeout(max int) BatchingOption {
 	return nil
 }
 
-func WithBatchSize(max int) BatchingOption {
+func WithExportMaxBatchSize(max int) BatchingOption {
 	return nil
 }
