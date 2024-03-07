@@ -40,7 +40,9 @@ type (
 
 	// Sortable implements sort.Interface, used for sorting KeyValue.
 	//
-	// Deprecated: This type is no longer used. It was added as a performance optimization for Go < 1.21 that is no longer needed (Go < 1.21 is no longer supported by the module).
+	// Deprecated: This type is no longer used. It was added as a performance
+	// optimization for Go < 1.21 that is no longer needed (Go < 1.21 is no
+	// longer supported by the module).
 	Sortable []KeyValue
 )
 
