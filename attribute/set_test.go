@@ -356,3 +356,22 @@ func BenchmarkFiltering(b *testing.B) {
 	b.Run("Filtered", benchFn(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
 	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
 }
+
+var sinkSet attribute.Set
+
+func BenchmarkNewSet(b *testing.B) {
+	attrs := []attribute.KeyValue{
+		attribute.String("B1", "2"),
+		attribute.String("C2", "5"),
+		attribute.String("B3", "2"),
+		attribute.String("C4", "1"),
+		attribute.String("A5", "4"),
+		attribute.String("C6", "3"),
+		attribute.String("A7", "1"),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
