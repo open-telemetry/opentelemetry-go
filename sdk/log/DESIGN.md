@@ -179,5 +179,5 @@ The Logs SDK NOT be released as stable before all issues below are closed:
 - [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
 
 [^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
-[^2]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480) 
+[^2]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
 [^3]: [Middleware - Go Web Examples](https://gowebexamples.com/basic-middleware/)
