@@ -34,6 +34,7 @@ type LoggerProvider struct {
 
 func NewLoggerProvider(...Option) *LoggerProvider
 
+// Logger implements the log.LoggerProvider interface.
 func (*LoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger
 
 type Option interface { /* ... */ }
