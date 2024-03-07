@@ -174,7 +174,9 @@ The benchmark results can be found in [the prototype](https://github.com/open-te
 
 The Logs SDK NOT be released as stable before all issues below are closed:
 
+- [Redefine ReadableLogRecord and ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3898)
 - [Fix what can be modified via ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3907)
+- [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
 
 [^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
 [^2]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480) 
