@@ -44,13 +44,18 @@ func WithResource(*resource.Resource) Option
 ## LogRecord limits
 
 The [LogRecord limits](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecord-limits)
-are defined as follows:
+can be configured using following options:
 
 ```go
 func WithAttributeCountLimit(limit int) Option
 
 func WithAttributeValueLengthLimit(limit int) Option
 ```
+
+The limits can be also configured using the `OTEL_LOGRECORD_*` environment variables as
+[defined by the specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#logrecord-limits).
+
+The options take precedence over environmental variables.
 
 ### LogRecordProcessor and LogRecordExporter  
 
@@ -148,6 +153,11 @@ func WithExportTimeout(d time.Duration) BatchingOption
 
 func WithExportMaxBatchSize(max int) BatchingOption
 ```
+
+The `Batcher` can be also configured using the `OTEL_BLRP_*` environment variables as
+[defined by the specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#batch-logrecord-processor).
+
+The options take precedence over environmental variables.
 
 ## Benchmarking
 
