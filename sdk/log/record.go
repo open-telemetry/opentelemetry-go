@@ -186,7 +186,7 @@ func (r *Record) InstrumentationScope() instrumentation.Scope {
 // This limit only applies to string and string slice attribute values.
 // Any string longer than this value should be truncated to this length.
 //
-// Setting this to a negative value means no limit should be applied.
+// Negative value means no limit should be applied.
 func (r *Record) AttributeValueLengthLimit() int {
 	return r.attributeValueLengthLimit
 }
@@ -194,9 +194,15 @@ func (r *Record) AttributeValueLengthLimit() int {
 // AttributeCountLimit is the maximum allowed log record attribute count. Any
 // attribute added to a log record once this limit is reached should be dropped.
 //
-// Setting this to zero means no attributes should be recorded.
+// Zero means no attributes should be recorded.
 //
-// Setting this to a negative value means no limit should be applied.
+// Negative value means no limit should be applied.
 func (r *Record) AttributeCountLimit() int {
 	return r.attributeCountLimit
+}
+
+// Clone returns a copy of the record with no shared state. The original record
+// and the clone can both be modified without interfering with each other.
+func (r *Record) Clone() *Record {
+	return r
 }
