@@ -151,7 +151,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 }
 
 // SetAttributes sets (and overrides) attributes to the log record.
-func (r *Record) SetAttributes(attrs []log.KeyValue) {
+func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	r.nFront = 0
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
