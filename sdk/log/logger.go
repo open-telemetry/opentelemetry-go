@@ -70,8 +70,8 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 
 	records := recordsPool.Get().(*[]*Record)
 	(*records)[0] = record
-	for _, expoter := range l.provider.cfg.exporters {
-		if err := expoter.Export(ctx, *records); err != nil {
+	for _, exporter := range l.provider.cfg.exporters {
+		if err := exporter.Export(ctx, *records); err != nil {
 			otel.Handle(err)
 		}
 	}
