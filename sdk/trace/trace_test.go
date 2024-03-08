@@ -1993,7 +1993,8 @@ func TestAddSpanWithInvalidSpanContext(t *testing.T) {
 	attrs := []attribute.KeyValue{{Key: "k", Value: attribute.StringValue("v")}}
 	span.AddLink(trace.Link{
 		SpanContext: inValidContext,
-		Attributes:  attrs})
+		Attributes:  attrs,
+	})
 
 	want := &snapshot{
 		name: "span0",
