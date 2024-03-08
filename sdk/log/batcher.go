@@ -16,7 +16,12 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"time"
+
+	"go.opentelemetry.io/otel"
 )
 
 var _ Exporter = (*Batcher)(nil)
@@ -35,20 +40,71 @@ type Batcher struct {
 	cfg      batcherConfig
 }
 
+const (
+	queueSizeDefault    = 2048
+	intervalDefault     = time.Second
+	timeoutDefault      = 30 * time.Second
+	maxBatchSizeDefault = 512
+)
+
 // NewBatchingExporter decorates the provided exporter
 // so that the log records are batched before exporting.
 func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 	cfg := batcherConfig{
-		queueSize:    2048,
-		interval:     time.Second,
-		timeout:      30 * time.Second,
-		maxBatchSize: 512,
+		queueSize:    queueSizeDefault,
+		interval:     intervalDefault,
+		timeout:      timeoutDefault,
+		maxBatchSize: maxBatchSizeDefault,
 	}
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
 	}
 
-	// TODO: Apply env vars.
+	if v := os.Getenv("OTEL_BLRP_MAX_QUEUE_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err != nil {
+			otel.Handle(fmt.Errorf("invalid OTEL_BLRP_MAX_QUEUE_SIZE value: %w", err))
+		} else {
+			cfg.queueSize = n
+		}
+	}
+	if v := os.Getenv("OTEL_BSP_SCHEDULE_DELAY"); v != "" {
+		if n, err := strconv.Atoi(v); err != nil {
+			otel.Handle(fmt.Errorf("invalid OTEL_BSP_SCHEDULE_DELAY value: %w", err))
+		} else {
+			cfg.interval = time.Duration(n) * time.Millisecond
+		}
+	}
+	if v := os.Getenv("OTEL_BSP_EXPORT_TIMEOUT"); v != "" {
+		if n, err := strconv.Atoi(v); err != nil {
+			otel.Handle(fmt.Errorf("invalid OTEL_BSP_EXPORT_TIMEOUT value: %w", err))
+		} else {
+			cfg.timeout = time.Duration(n) * time.Millisecond
+		}
+	}
+	if v := os.Getenv("OTEL_BSP_MAX_EXPORT_BATCH_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err != nil {
+			otel.Handle(fmt.Errorf("invalid OTEL_BSP_MAX_EXPORT_BATCH_SIZE value: %w", err))
+		} else {
+			cfg.timeout = time.Duration(n) * time.Millisecond
+		}
+	}
+
+	if cfg.queueSize <= 0 {
+		otel.Handle(fmt.Errorf("batcher max queue size must be positive but was %v, setting default value", cfg.queueSize))
+		cfg.queueSize = queueSizeDefault
+	}
+	if cfg.interval <= 0 {
+		otel.Handle(fmt.Errorf("batcher interval must be positive but was %v, setting default value", cfg.interval))
+		cfg.interval = intervalDefault
+	}
+	if cfg.timeout <= 0 {
+		otel.Handle(fmt.Errorf("batcher timeout must be positive but was %v, setting default value", cfg.timeout))
+		cfg.timeout = timeoutDefault
+	}
+	if cfg.maxBatchSize <= 0 {
+		otel.Handle(fmt.Errorf("batcher max batch size must be positive but was %v, setting default value", cfg.maxBatchSize))
+		cfg.maxBatchSize = maxBatchSizeDefault
+	}
 
 	return &Batcher{exporter, cfg}
 }
