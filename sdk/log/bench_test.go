@@ -30,7 +30,7 @@ func TestZeroAllocationSimple(t *testing.T) {
 	ctx := context.Background()
 
 	provider := NewLoggerProvider(WithExporter(noopExporter{}))
-	defer assert.NoError(t, provider.Shutdown(ctx))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(ctx)) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
@@ -48,7 +48,7 @@ func TestZeroAllocationBatch(t *testing.T) {
 	ctx := context.Background()
 
 	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
-	defer assert.NoError(t, provider.Shutdown(ctx))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(ctx)) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
@@ -167,11 +167,9 @@ func Benchmark(b *testing.B) {
 				logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 				b.ReportAllocs()
-				b.RunParallel(func(pb *testing.PB) {
-					for pb.Next() {
-						call.f(logger)
-					}
-				})
+				for i := 0; i < b.N; i++ {
+					call.f(logger)
+				}
 				_ = provider.Shutdown(context.Background())
 			})
 			b.Run("Batch", func(b *testing.B) {
@@ -179,11 +177,9 @@ func Benchmark(b *testing.B) {
 				logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 				b.ReportAllocs()
-				b.RunParallel(func(pb *testing.PB) {
-					for pb.Next() {
-						call.f(logger)
-					}
-				})
+				for i := 0; i < b.N; i++ {
+					call.f(logger)
+				}
 				_ = provider.Shutdown(context.Background())
 			})
 		})
