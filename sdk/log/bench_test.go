@@ -313,7 +313,7 @@ type timestampDecorator struct {
 	Exporter
 }
 
-func (e timestampDecorator) Export(_ context.Context, records []Record) error {
+func (e timestampDecorator) Export(ctx context.Context, records []Record) error {
 	bPtr := pool.Get().(*[]Record)
 	defer func() {
 		*bPtr = (*bPtr)[:0]
