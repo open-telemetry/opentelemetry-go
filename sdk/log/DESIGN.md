@@ -135,6 +135,8 @@ func (r *Record) SetBody(v log.Value)
 
 func (r *Record) WalkAttributes(f func(log.KeyValue) bool)
 
+func (r *Record) AddAttributes(attrs ...log.KeyValue)
+
 // SetAttributes sets and overrides the attributes of the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue)
 
