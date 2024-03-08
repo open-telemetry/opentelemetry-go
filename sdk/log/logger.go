@@ -16,11 +16,20 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var recordsPool = sync.Pool{
+	New: func() any {
+		b := make([]*Record, 1)
+		return &b
+	},
+}
 
 // Compile-time check logger implements metric.log.Logger.
 var _ log.Logger = (*logger)(nil)
@@ -32,5 +41,36 @@ type logger struct {
 	scope    instrumentation.Scope
 }
 
-func (*logger) Emit(context.Context, log.Record) {
+func (l *logger) Emit(ctx context.Context, r log.Record) {
+	record := &Record{
+		resource:                  l.provider.cfg.resource,
+		attributeCountLimit:       l.provider.cfg.attributeCountLimit,
+		attributeValueLengthLimit: l.provider.cfg.attributeValueLengthLimit,
+
+		scope: &l.scope,
+
+		timestamp:         r.Timestamp(),
+		observedTimestamp: r.ObservedTimestamp(),
+		severity:          r.Severity(),
+		severityText:      r.SeverityText(),
+		body:              r.Body(),
+	}
+
+	if span := trace.SpanContextFromContext(ctx); span.IsValid() {
+		record.traceID = span.TraceID()
+		record.spanID = span.SpanID()
+		record.traceFlags = span.TraceFlags()
+	}
+
+	r.WalkAttributes(func(kv log.KeyValue) bool {
+		record.AddAttributes(kv)
+		return true
+	})
+
+	records := recordsPool.Get().(*[]*Record)
+	(*records)[0] = record
+	for _, expoter := range l.provider.cfg.exporters {
+		expoter.Export(ctx, *records)
+	}
+	recordsPool.Put(records)
 }
