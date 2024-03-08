@@ -34,6 +34,8 @@ type Exporter interface {
 	// implement any retry logic. All errors returned by this function are
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
+	//
+	// Implementations must not retain the records slice.
 	Export(ctx context.Context, records []*Record) error
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
