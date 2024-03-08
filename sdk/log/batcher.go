@@ -16,9 +16,12 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -33,11 +36,24 @@ type batcherConfig struct {
 	maxBatchSize int
 }
 
+type exportRequest struct {
+	Context context.Context
+	Result  chan error
+}
+
 // Batcher is an exporter decorator
 // that asynchronously exports batches of log records.
 type Batcher struct {
 	exporter Exporter
 	cfg      batcherConfig
+
+	mu    sync.Mutex
+	queue []*Record
+
+	stop       chan exportRequest
+	flush      chan exportRequest
+	isShutdown atomic.Bool
+	done       chan struct{}
 }
 
 const (
@@ -106,22 +122,111 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 		cfg.maxBatchSize = maxBatchSizeDefault
 	}
 
-	return &Batcher{exporter, cfg}
+	b := &Batcher{
+		exporter: exporter,
+		cfg:      cfg,
+		flush:    make(chan exportRequest),
+		stop:     make(chan exportRequest),
+		done:     make(chan struct{}),
+		queue:    make([]*Record, 0, cfg.queueSize),
+	}
+
+	go b.run()
+
+	return b
 }
 
 // Export batches provided log records.
 func (b *Batcher) Export(ctx context.Context, records []*Record) error {
+	if b.isShutdown.Load() {
+		return nil
+	}
+
+	defer b.mu.Unlock()
+	b.mu.Lock()
+
+	for _, r := range records {
+		if len(b.queue) == b.cfg.queueSize {
+			// Queue is full.
+			return nil
+		}
+		b.queue = append(b.queue, r)
+	}
 	return nil
 }
 
 // Shutdown flushes queued log records and shuts down the decorated expoter.
 func (b *Batcher) Shutdown(ctx context.Context) error {
-	return nil
+	wasShutdown := b.isShutdown.Swap(true)
+	if wasShutdown {
+		return nil
+	}
+
+	req := exportRequest{
+		Context: ctx,
+		Result:  make(chan error, 1),
+	}
+	b.stop <- req
+	err := <-req.Result
+
+	err = errors.Join(err, b.exporter.Shutdown(ctx))
+
+	return err
 }
 
 // ForceFlush flushes queued log records and flushes the decorated expoter.
 func (b *Batcher) ForceFlush(ctx context.Context) error {
-	return nil
+	if b.isShutdown.Load() {
+		return nil
+	}
+
+	req := exportRequest{
+		Context: ctx,
+		Result:  make(chan error, 1),
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-b.done:
+		return nil
+	case b.flush <- req:
+		return <-req.Result
+	}
+}
+
+func (b *Batcher) run() {
+	defer close(b.done)
+
+	ticker := time.NewTicker(b.cfg.interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := b.export(context.Background())
+			if err != nil {
+				otel.Handle(err)
+			}
+		case req := <-b.flush:
+			err := b.export(req.Context)
+			req.Result <- err
+			ticker.Reset(b.cfg.interval)
+		case req := <-b.stop:
+			err := b.export(req.Context)
+			req.Result <- err
+			return
+		}
+	}
+}
+
+func (b *Batcher) export(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, b.cfg.timeout)
+	defer cancel()
+
+	// TODO: send only batch limited by b.cfg.maxBatchSize (not full queue)
+	err := b.exporter.Export(ctx, b.queue)
+	b.queue = b.queue[:0]
+	return err
 }
 
 // BatchingOption applies a configuration to a Batcher.
