@@ -151,7 +151,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 }
 
 // SetAttributes sets (and overrides) attributes to the log record.
-// The passed slice must not be changed after it is passed.
 func (r *Record) SetAttributes(attrs []log.KeyValue) {
 	r.nFront = 0
 	var i int
@@ -161,7 +160,7 @@ func (r *Record) SetAttributes(attrs []log.KeyValue) {
 		r.nFront++
 	}
 
-	r.back = attrs[i:]
+	r.back = slices.Clone(attrs[i:])
 }
 
 // AttributesLen returns the number of attributes in the log record.
