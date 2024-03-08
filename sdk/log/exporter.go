@@ -24,7 +24,7 @@ type Exporter interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 
-	// Export serializes and transmits log records to a receiver.
+	// Export transmits log records to a receiver.
 	//
 	// This is called synchronously, there is no concurrency safety
 	// requirement. Because of this, it is critical that all timeouts and
