@@ -65,13 +65,45 @@ and [LogRecordExporter](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logre
 are defined via an `Exporter` interface:[^2]
 
 ```go
-func WithExporter(Exporter) Option {
-	return nil
-}
+func WithExporter(Exporter) Option
 
+// Exporter handles the delivery of log records to external receivers.
+//
+// Any of the Exporter's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Exporter to manage
+// this concurrency.
 type Exporter interface {
+	// Export transmits log records to a receiver.
+	//
+	// The deadline or cancellation of the passed context must be honored. An
+	// appropriate error should be returned in these situations.
+	//
+	// All retry logic must be contained in this function. The SDK does not
+	// implement any retry logic. All errors returned by this function are
+	// considered unrecoverable and will be reported to a configured error
+	// Handler.
+	//
+	// Implementations must not retain the records slice.
+	//
+	// Implementations should consider cloning the records before modifying
+	// them to avoid possible data races.
 	Export(ctx context.Context, records []*Record) error
+
+	// Shutdown is called when the SDK shuts down. Any cleanup or release of
+	// resources held by the exporter should be done in this call.
+	//
+	// The deadline or cancellation of the passed context must be honored. An
+	// appropriate error should be returned in these situations.
+	//
+	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
+	// should perform no operation and return nil error.
 	Shutdown(ctx context.Context) error
+
+	// ForceFlush exports log records to the configured Exporter that have not yet
+	// been exported.
+	//
+	// The deadline or cancellation of the passed context must be honored. An
+	// appropriate error should be returned in these situations.
 	ForceFlush(ctx context.Context) error
 }
 ```
@@ -119,7 +151,15 @@ func (r *Record) InstrumentationScope() instrumentation.Scope
 func (r *Record) AttributeValueLengthLimit() int
 
 func (r *Record) AttributeCountLimit() int
+
+func (r *Record) Clone() *Record
 ```
+
+The slice passed to `Export` must not be retained by the implementation
+(like e.g. [`io.Writer`](https://pkg.go.dev/io#Writer))
+so that the caller can reuse the passed slice
+(e.g. using [`sync.Pool`](https://pkg.go.dev/sync#Pool))
+to avoid heap allocations on each call.
 
 The user can implement a custom [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 by implementing a `Exporter` decorator.
