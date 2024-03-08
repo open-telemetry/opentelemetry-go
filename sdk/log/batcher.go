@@ -45,6 +45,8 @@ type Batcher struct {
 	mu    sync.Mutex
 	queue []*Record
 
+	batch []*Record
+
 	stop       chan exportRequest
 	flush      chan exportRequest
 	isShutdown atomic.Bool
@@ -129,6 +131,7 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 		stop:     make(chan exportRequest),
 		done:     make(chan struct{}),
 		queue:    make([]*Record, 0, cfg.queueSize),
+		batch:    make([]*Record, 0, cfg.maxBatchSize),
 	}
 
 	go b.run()
@@ -223,16 +226,24 @@ func (b *Batcher) export(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, b.cfg.timeout)
 	defer cancel()
 
-	// TODO: send only batch limited by b.cfg.maxBatchSize (not full queue)
-	defer b.mu.Unlock()
 	b.mu.Lock()
 	if len(b.queue) == 0 {
 		// Nothing to export
+		b.mu.Unlock()
 		return nil
 	}
+	if len(b.queue) > b.cfg.maxBatchSize {
+		b.batch = append(b.batch, b.queue[:b.cfg.maxBatchSize]...)
+		b.queue = b.queue[b.cfg.maxBatchSize:]
+	} else {
+		b.batch = append(b.batch, b.queue...)
+		b.queue = b.queue[:0]
+	}
+	b.mu.Unlock()
 
-	err := b.exporter.Export(ctx, b.queue)
-	b.queue = b.queue[:0]
+	// Doing export outside of the log prevents deadlocks and improves efficiency.
+	err := b.exporter.Export(ctx, b.batch)
+	b.batch = b.batch[:0]
 	return err
 }
 
