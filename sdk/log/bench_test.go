@@ -77,6 +77,22 @@ func TestZeroAllocsBatch(t *testing.T) {
 	}))
 }
 
+func TestZeroAllocsNoSpan(t *testing.T) {
+	provider := NewLoggerProvider(WithExporter(noopExporter{}))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
+	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		logger.LogAttrs(context.Background(), slog.LevelInfo, testBodyString,
+			slog.String("string", testString),
+			slog.Float64("float", testFloat),
+			slog.Int("int", testInt),
+			slog.Bool("bool", testBool),
+			slog.String("string", testString),
+		)
+	}))
+}
+
 func Benchmark(b *testing.B) {
 	for _, call := range []struct {
 		name string
