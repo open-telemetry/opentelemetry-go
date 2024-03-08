@@ -11,6 +11,8 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -21,6 +23,45 @@ var (
 	testInt        = 32768
 	testBool       = true
 )
+
+var runs = 5
+
+func TestZeroAllocationSimple(t *testing.T) {
+	ctx := context.Background()
+
+	provider := NewLoggerProvider(WithExporter(noopExporter{}))
+	defer assert.NoError(t, provider.Shutdown(ctx))
+	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
+			slog.String("string", testString),
+			slog.Float64("float", testFloat),
+			slog.Int("int", testInt),
+			slog.Bool("bool", testBool),
+			slog.String("string", testString),
+		)
+	}))
+}
+
+func TestZeroAllocationBatch(t *testing.T) {
+	ctx := context.Background()
+
+	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
+	defer assert.NoError(t, provider.Shutdown(ctx))
+	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
+			slog.String("string", testString),
+			slog.Float64("float", testFloat),
+			slog.Int("int", testInt),
+			slog.Bool("bool", testBool),
+			slog.String("string", testString),
+		)
+		_ = provider.ForceFlush(ctx)
+	}))
+}
 
 func Benchmark(b *testing.B) {
 	for _, call := range []struct {
@@ -121,7 +162,7 @@ func Benchmark(b *testing.B) {
 		},
 	} {
 		b.Run(call.name, func(b *testing.B) {
-			b.Run("Sync", func(b *testing.B) {
+			b.Run("Simple", func(b *testing.B) {
 				provider := NewLoggerProvider(WithExporter(noopExporter{}))
 				logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
