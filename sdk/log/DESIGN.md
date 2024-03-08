@@ -219,6 +219,7 @@ The Logs SDK NOT be released as stable before all issues below are closed:
 
 - [Redefine ReadableLogRecord and ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3898)
 - [Fix what can be modified via ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3907)
+- [logs: Allow duplicate keys](https://github.com/open-telemetry/opentelemetry-specification/issues/3931)
 - [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
 
 [^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
