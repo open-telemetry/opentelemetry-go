@@ -7,7 +7,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/trace"
@@ -22,6 +24,7 @@ var (
 	testString     = "7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190"
 	testInt        = 32768
 	testBool       = true
+	testTimestamp  = time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC)
 )
 
 var runs = 5
@@ -42,12 +45,28 @@ func TestZeroAllocsSimple(t *testing.T) {
 	}))
 }
 
+func TestZeroAllocsModifyProcessor(t *testing.T) {
+	provider := NewLoggerProvider(WithExporter(timestampDecorator{noopExporter{}}))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
+	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
+			slog.String("string", testString),
+			slog.Float64("float", testFloat),
+			slog.Int("int", testInt),
+			slog.Bool("bool", testBool),
+			slog.String("string", testString),
+		)
+	}))
+}
+
 func TestZeroAllocsBatch(t *testing.T) {
 	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
-	assert.Equal(t, 1.0, testing.AllocsPerRun(runs, func() {
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 			slog.String("string", testString),
 			slog.Float64("float", testFloat),
@@ -265,4 +284,32 @@ func (e noopExporter) Shutdown(_ context.Context) error {
 
 func (e noopExporter) ForceFlush(_ context.Context) error {
 	return nil
+}
+
+var pool = sync.Pool{
+	New: func() any {
+		b := make([]Record, 0, 1)
+		return &b
+	},
+}
+
+type timestampDecorator struct {
+	Exporter
+}
+
+func (e timestampDecorator) Export(_ context.Context, records []Record) error {
+	bPtr := pool.Get().(*[]Record)
+	defer func() {
+		*bPtr = (*bPtr)[:0]
+		pool.Put(bPtr)
+	}()
+	b := *bPtr
+
+	for _, r := range records {
+		r = r.Clone()
+		r.SetObservedTimestamp(testTimestamp)
+		b = append(b, r)
+	}
+
+	return e.Exporter.Export(ctx, b)
 }
