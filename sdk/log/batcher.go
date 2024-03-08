@@ -27,19 +27,14 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+const (
+	queueSizeDefault    = 2048
+	intervalDefault     = time.Second
+	timeoutDefault      = 30 * time.Second
+	maxBatchSizeDefault = 512
+)
+
 var _ Exporter = (*Batcher)(nil)
-
-type batcherConfig struct {
-	queueSize    int
-	interval     time.Duration
-	timeout      time.Duration
-	maxBatchSize int
-}
-
-type exportRequest struct {
-	Context context.Context
-	Result  chan error
-}
 
 // Batcher is an exporter decorator
 // that asynchronously exports batches of log records.
@@ -56,12 +51,17 @@ type Batcher struct {
 	done       chan struct{}
 }
 
-const (
-	queueSizeDefault    = 2048
-	intervalDefault     = time.Second
-	timeoutDefault      = 30 * time.Second
-	maxBatchSizeDefault = 512
-)
+type batcherConfig struct {
+	queueSize    int
+	interval     time.Duration
+	timeout      time.Duration
+	maxBatchSize int
+}
+
+type exportRequest struct {
+	Context context.Context
+	Result  chan error
+}
 
 // NewBatchingExporter decorates the provided exporter
 // so that the log records are batched before exporting.
