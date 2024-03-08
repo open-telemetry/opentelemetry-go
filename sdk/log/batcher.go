@@ -224,6 +224,13 @@ func (b *Batcher) export(ctx context.Context) error {
 	defer cancel()
 
 	// TODO: send only batch limited by b.cfg.maxBatchSize (not full queue)
+	defer b.mu.Unlock()
+	b.mu.Lock()
+	if len(b.queue) == 0 {
+		// Nothing to export
+		return nil
+	}
+
 	err := b.exporter.Export(ctx, b.queue)
 	b.queue = b.queue[:0]
 	return err
