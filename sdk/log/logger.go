@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
@@ -44,6 +45,10 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
 		body:              r.Body(),
+	}
+
+	if record.observedTimestamp.Equal(time.Time{}) {
+		record.observedTimestamp = time.Now()
 	}
 
 	if span := trace.SpanContextFromContext(ctx); span.IsValid() { // This escapes to the heap if there is no span in context.
