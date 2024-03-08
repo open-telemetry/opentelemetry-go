@@ -216,5 +216,7 @@ func (r *Record) AttributeCountLimit() int {
 // Clone returns a copy of the record with no shared state. The original record
 // and the clone can both be modified without interfering with each other.
 func (r *Record) Clone() *Record {
-	return r
+	res := *r
+	res.back = slices.Clip(r.back) // prevent append from mutating shared array
+	return &res
 }
