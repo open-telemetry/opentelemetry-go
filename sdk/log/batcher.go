@@ -156,7 +156,7 @@ func (b *Batcher) Shutdown(ctx context.Context) error {
 
 	req := exportRequest{
 		Context: ctx,
-		Result:  make(chan error, 1),
+		Result:  make(chan error, 1), // Heap allocation.
 	}
 	b.stop <- req
 	err := <-req.Result
@@ -174,7 +174,7 @@ func (b *Batcher) ForceFlush(ctx context.Context) error {
 
 	req := exportRequest{
 		Context: ctx,
-		Result:  make(chan error, 1),
+		Result:  make(chan error, 1), // Heap allocation.
 	}
 	select {
 	case <-ctx.Done():
@@ -212,7 +212,7 @@ func (b *Batcher) run() {
 }
 
 func (b *Batcher) export(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, b.cfg.timeout)
+	ctx, cancel := context.WithTimeout(ctx, b.cfg.timeout) // 5 heap allocations.
 	defer cancel()
 
 	b.mu.Lock()

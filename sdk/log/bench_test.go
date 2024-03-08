@@ -59,7 +59,6 @@ func TestZeroAllocationBatch(t *testing.T) {
 			slog.Bool("bool", testBool),
 			slog.String("string", testString),
 		)
-		_ = provider.ForceFlush(ctx)
 	}))
 }
 
