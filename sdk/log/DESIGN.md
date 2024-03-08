@@ -85,9 +85,9 @@ type Exporter interface {
 	//
 	// Implementations must not retain the records slice.
 	//
-	// Implementations should consider cloning the records before modifying
+	// Implementations should clone the records before modifying
 	// them to avoid possible data races.
-	Export(ctx context.Context, records []*Record) error
+	Export(ctx context.Context, records []Record) error
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
@@ -154,7 +154,7 @@ func (r *Record) AttributeValueLengthLimit() int
 
 func (r *Record) AttributeCountLimit() int
 
-func (r *Record) Clone() *Record
+func (r *Record) Clone() Record
 ```
 
 The slice passed to `Export` must not be retained by the implementation
@@ -180,7 +180,7 @@ type Batcher struct { /* ... */ }
 
 func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher
 
-func (b *Batcher) Export(ctx context.Context, records []*Record)
+func (b *Batcher) Export(ctx context.Context, records []Record)
 
 func (b *Batcher) Shutdown(ctx context.Context) error
 
