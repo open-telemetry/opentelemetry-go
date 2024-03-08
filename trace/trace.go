@@ -350,6 +350,9 @@ type Span interface {
 	// AddEvent adds an event with the provided name and options.
 	AddEvent(name string, options ...EventOption)
 
+	// AddLink adds link after span starts.
+	AddLink(link Link)
+
 	// IsRecording returns the recording state of the Span. It will return
 	// true if the Span is active and events can be recorded.
 	IsRecording() bool

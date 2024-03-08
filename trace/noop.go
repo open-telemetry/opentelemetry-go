@@ -75,6 +75,9 @@ func (noopSpan) RecordError(error, ...EventOption) {}
 // AddEvent does nothing.
 func (noopSpan) AddEvent(string, ...EventOption) {}
 
+// AddLink does nothing.
+func (noopSpan) AddLink(Link) {}
+
 // SetName does nothing.
 func (noopSpan) SetName(string) {}
 
