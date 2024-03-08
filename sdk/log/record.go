@@ -137,9 +137,8 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 	}
 }
 
-// SetAttributes sets (and overrides) attributes to the log record.
-func (r *Record) SetAttributes(attrs ...log.KeyValue) {
-	// TODO: make sure the keys are unique
+// AddAttributes adds attributes to the log record.
+func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
@@ -149,6 +148,20 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 
 	r.back = slices.Grow(r.back, len(attrs[i:]))
 	r.back = append(r.back, attrs[i:]...)
+}
+
+// SetAttributes sets (and overrides) attributes to the log record.
+// The passed slice must not be changed after it is passed.
+func (r *Record) SetAttributes(attrs []log.KeyValue) {
+	r.nFront = 0
+	var i int
+	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
+		a := attrs[i]
+		r.front[r.nFront] = a
+		r.nFront++
+	}
+
+	r.back = attrs[i:]
 }
 
 // AttributesLen returns the number of attributes in the log record.
