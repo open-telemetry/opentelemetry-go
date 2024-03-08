@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -70,7 +71,9 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	records := recordsPool.Get().(*[]*Record)
 	(*records)[0] = record
 	for _, expoter := range l.provider.cfg.exporters {
-		expoter.Export(ctx, *records)
+		if err := expoter.Export(ctx, *records); err != nil {
+			otel.Handle(err)
+		}
 	}
 	recordsPool.Put(records)
 }
