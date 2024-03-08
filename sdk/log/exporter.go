@@ -28,7 +28,7 @@ type Exporter interface {
 	//
 	// Implementations must not retain the records slice.
 	//
-	// Implementations should consider cloning the records before modifying
+	// Implementations should clone the records before modifying
 	// them to avoid possible data races.
 	Export(ctx context.Context, records []Record) error
 	// DO NOT CHANGE: any modification will not be backwards compatible and
