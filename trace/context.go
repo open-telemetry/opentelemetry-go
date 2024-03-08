@@ -36,13 +36,15 @@ func ContextWithRemoteSpanContext(parent context.Context, rsc SpanContext) conte
 // performs no operations is returned.
 func SpanFromContext(ctx context.Context) Span {
 	if ctx == nil {
-		return noopSpan{}
+		return noopSpanInstance
 	}
 	if span, ok := ctx.Value(currentSpanKey).(Span); ok {
 		return span
 	}
-	return noopSpan{}
+	return noopSpanInstance
 }
+
+var noopSpanInstance Span = noopSpan{}
 
 // SpanContextFromContext returns the current Span's SpanContext.
 func SpanContextFromContext(ctx context.Context) SpanContext {

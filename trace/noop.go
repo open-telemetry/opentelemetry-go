@@ -41,7 +41,7 @@ func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption
 	span := SpanFromContext(ctx)
 	if _, ok := span.(nonRecordingSpan); !ok {
 		// span is likely already a noopSpan, but let's be sure
-		span = noopSpan{}
+		span = noopSpanInstance
 	}
 	return ContextWithSpan(ctx, span), span
 }
