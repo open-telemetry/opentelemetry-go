@@ -32,7 +32,7 @@ type logger struct {
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
-	record := &Record{ // This escapes to the heap.
+	record := &Record{ // This always escapes to the heap.
 		resource:                  l.provider.cfg.resource,
 		attributeCountLimit:       l.provider.cfg.attributeCountLimit,
 		attributeValueLengthLimit: l.provider.cfg.attributeValueLengthLimit,
@@ -46,7 +46,7 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		body:              r.Body(),
 	}
 
-	if span := trace.SpanContextFromContext(ctx); span.IsValid() { // This escapes to the heap.
+	if span := trace.SpanContextFromContext(ctx); span.IsValid() { // This escapes to the heap if there is no span in context.
 		record.traceID = span.TraceID()
 		record.spanID = span.SpanID()
 		record.traceFlags = span.TraceFlags()

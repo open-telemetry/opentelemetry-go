@@ -26,14 +26,12 @@ var (
 
 var runs = 5
 
-func TestZeroAllocationSimple(t *testing.T) {
-	ctx := context.Background()
-
+func TestAllocationSimple(t *testing.T) {
 	provider := NewLoggerProvider(WithExporter(noopExporter{}))
-	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(ctx)) })
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assert.Equal(t, 1.0, testing.AllocsPerRun(runs, func() {
 		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 			slog.String("string", testString),
 			slog.Float64("float", testFloat),
@@ -44,14 +42,12 @@ func TestZeroAllocationSimple(t *testing.T) {
 	}))
 }
 
-func TestZeroAllocationBatch(t *testing.T) {
-	ctx := context.Background()
-
+func TestAllocationBatch(t *testing.T) {
 	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
-	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(ctx)) })
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
-	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+	assert.Equal(t, 1.0, testing.AllocsPerRun(runs, func() {
 		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 			slog.String("string", testString),
 			slog.Float64("float", testFloat),
