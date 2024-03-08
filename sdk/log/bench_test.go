@@ -26,12 +26,12 @@ var (
 
 var runs = 5
 
-func TestAllocationSimple(t *testing.T) {
+func TestZeroAllocsSimple(t *testing.T) {
 	provider := NewLoggerProvider(WithExporter(noopExporter{}))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
-	assert.Equal(t, 1.0, testing.AllocsPerRun(runs, func() {
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		logger.LogAttrs(ctx, slog.LevelInfo, testBodyString,
 			slog.String("string", testString),
 			slog.Float64("float", testFloat),
@@ -42,7 +42,7 @@ func TestAllocationSimple(t *testing.T) {
 	}))
 }
 
-func TestAllocationBatch(t *testing.T) {
+func TestZeroAllocsBatch(t *testing.T) {
 	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
@@ -255,7 +255,7 @@ func convertValue(v slog.Value) log.Value {
 
 type noopExporter struct{}
 
-func (e noopExporter) Export(_ context.Context, _ []*Record) error {
+func (e noopExporter) Export(_ context.Context, _ []Record) error {
 	return nil
 }
 

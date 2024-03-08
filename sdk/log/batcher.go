@@ -32,9 +32,9 @@ type Batcher struct {
 	cfg      batcherConfig
 
 	mu    sync.Mutex
-	queue []*Record
+	queue []Record
 
-	batch []*Record
+	batch []Record
 
 	stop       chan exportRequest
 	flush      chan exportRequest
@@ -119,8 +119,8 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 		flush:    make(chan exportRequest),
 		stop:     make(chan exportRequest),
 		done:     make(chan struct{}),
-		queue:    make([]*Record, 0, cfg.queueSize),
-		batch:    make([]*Record, 0, cfg.maxBatchSize),
+		queue:    make([]Record, 0, cfg.queueSize),
+		batch:    make([]Record, 0, cfg.maxBatchSize),
 	}
 
 	go b.run()
@@ -129,7 +129,7 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 }
 
 // Export batches provided log records.
-func (b *Batcher) Export(ctx context.Context, records []*Record) error {
+func (b *Batcher) Export(ctx context.Context, records []Record) error {
 	if b.isShutdown.Load() {
 		return nil
 	}

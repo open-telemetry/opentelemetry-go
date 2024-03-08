@@ -30,7 +30,7 @@ type Exporter interface {
 	//
 	// Implementations should consider cloning the records before modifying
 	// them to avoid possible data races.
-	Export(ctx context.Context, records []*Record) error
+	Export(ctx context.Context, records []Record) error
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 

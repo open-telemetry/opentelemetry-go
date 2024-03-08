@@ -16,7 +16,7 @@ import (
 
 var recordsPool = sync.Pool{
 	New: func() any {
-		b := make([]*Record, 1)
+		b := make([]Record, 1)
 		return &b
 	},
 }
@@ -32,7 +32,7 @@ type logger struct {
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
-	record := &Record{ // This always escapes to the heap.
+	record := Record{ // This always escapes to the heap.
 		resource:                  l.provider.cfg.resource,
 		attributeCountLimit:       l.provider.cfg.attributeCountLimit,
 		attributeValueLengthLimit: l.provider.cfg.attributeValueLengthLimit,
@@ -57,7 +57,7 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		return true
 	})
 
-	records := recordsPool.Get().(*[]*Record)
+	records := recordsPool.Get().(*[]Record)
 	(*records)[0] = record
 	for _, exporter := range l.provider.cfg.exporters {
 		if err := exporter.Export(ctx, *records); err != nil {
