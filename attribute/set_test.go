@@ -356,3 +356,38 @@ func BenchmarkFiltering(b *testing.B) {
 	b.Run("Filtered", benchFn(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
 	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
 }
+
+func BenchmarkNewSet(b *testing.B) {
+	attrs := []attribute.KeyValue{
+		attribute.Bool("k", true),
+		attribute.Bool("k", false),
+		attribute.BoolSlice("k", []bool{false, true}),
+		attribute.BoolSlice("k", []bool{true, true, false}),
+		attribute.Int("k", -1278),
+		attribute.Int("k", 0),
+		attribute.IntSlice("k", []int{3, 23, 21, -8, 0}),
+		attribute.IntSlice("k", []int{1}),
+		attribute.Int64("k", 1),
+		attribute.Int64("k", 29369),
+		attribute.Int64Slice("k", []int64{3826, -38, -29, -1}),
+		attribute.Int64Slice("k", []int64{8, -328, 29, 0}),
+		attribute.Float64("k", -0.3812381),
+		attribute.Float64("k", 1e32),
+		attribute.Float64Slice("k", []float64{0.1, -3.8, -29., 0.3321}),
+		attribute.Float64Slice("k", []float64{-13e8, -32.8, 4., 1e28}),
+		attribute.String("k", "foo"),
+		attribute.String("k", "bar"),
+		attribute.StringSlice("k", []string{"foo", "bar", "baz"}),
+		attribute.StringSlice("k", []string{"[]i1"}),
+	}
+
+	var s attribute.Set
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		s = attribute.NewSet(attrs...)
+	}
+
+	_ = s
+}
