@@ -377,7 +377,7 @@ The benchmark results can be found in [the prototype](https://github.com/open-te
 
 ### Represent both LogRecordProcessor and LogRecordExporter as Expoter
 
-Becuase the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
+Because the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 and the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter)
 abstractions are so similar there was a proposal to unify them under
 single `Expoter` interface.[^2]
