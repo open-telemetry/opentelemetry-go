@@ -55,6 +55,10 @@ type exportRequest struct {
 
 // NewBatchingProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
+//
+// All of the Exporter's methods are called from a single dedicated
+// background goroutine. Therefore, the Expoter does not need to
+// be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
 	cfg := batcherConfig{
 		queueSize:    queueSizeDefault,
