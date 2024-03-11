@@ -187,7 +187,7 @@ type BatchingProcessor struct { /* ... */ }
 // so that the log records are batched before exporting.
 //
 // All of the Exporter's methods are called from a single dedicated
-// background goroutine. Therefore the Expoter does not need to
+// background goroutine. Therefore, the Expoter does not need to
 // be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor 
 
