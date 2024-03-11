@@ -16,8 +16,11 @@ type SimpleProcessor struct {
 	pool     sync.Pool
 }
 
-// NewBatchingProcessor decorates the provided exporter
-// so that the log records are batched before exporting.
+// NewSimpleProcessor is a simple Processor adapter.
+//
+// Any of the Exporter's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Exporter to manage
+// this concurrency.
 func NewSimpleProcessor(exporter Exporter) *SimpleProcessor {
 	p := &SimpleProcessor{exporter: exporter}
 	p.pool = sync.Pool{
