@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"testing"
 	"time"
 
@@ -30,7 +29,7 @@ var (
 var runs = 5
 
 func TestZeroAllocsSimple(t *testing.T) {
-	provider := NewLoggerProvider(WithExporter(noopExporter{}))
+	provider := NewLoggerProvider(WithProcessor(NewSimpleProcessor(noopExporter{})))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
@@ -46,7 +45,7 @@ func TestZeroAllocsSimple(t *testing.T) {
 }
 
 func TestZeroAllocsModifyProcessor(t *testing.T) {
-	provider := NewLoggerProvider(WithExporter(timestampDecorator{noopExporter{}}))
+	provider := NewLoggerProvider(WithProcessor(timestampDecorator{NewSimpleProcessor(noopExporter{})}))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
@@ -62,7 +61,7 @@ func TestZeroAllocsModifyProcessor(t *testing.T) {
 }
 
 func TestZeroAllocsBatch(t *testing.T) {
-	provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
+	provider := NewLoggerProvider(WithProcessor(NewBatchingProcessor(noopExporter{})))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
@@ -78,7 +77,7 @@ func TestZeroAllocsBatch(t *testing.T) {
 }
 
 func TestZeroAllocsNoSpan(t *testing.T) {
-	provider := NewLoggerProvider(WithExporter(noopExporter{}))
+	provider := NewLoggerProvider(WithProcessor(NewSimpleProcessor(noopExporter{})))
 	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
 	logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
@@ -193,7 +192,7 @@ func Benchmark(b *testing.B) {
 	} {
 		b.Run(call.name, func(b *testing.B) {
 			b.Run("Simple", func(b *testing.B) {
-				provider := NewLoggerProvider(WithExporter(noopExporter{}))
+				provider := NewLoggerProvider(WithProcessor(NewSimpleProcessor(noopExporter{})))
 				logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 				b.ReportAllocs()
@@ -203,7 +202,7 @@ func Benchmark(b *testing.B) {
 				_ = provider.Shutdown(context.Background())
 			})
 			b.Run("Batch", func(b *testing.B) {
-				provider := NewLoggerProvider(WithExporter(NewBatchingExporter(noopExporter{})))
+				provider := NewLoggerProvider(WithProcessor(NewBatchingProcessor(noopExporter{})))
 				logger := slog.New(&slogHandler{provider.Logger("log/slog")})
 
 				b.ReportAllocs()
@@ -302,30 +301,12 @@ func (e noopExporter) ForceFlush(_ context.Context) error {
 	return nil
 }
 
-var pool = sync.Pool{
-	New: func() any {
-		b := make([]Record, 0, 1)
-		return &b
-	},
-}
-
 type timestampDecorator struct {
-	Exporter
+	Processor
 }
 
-func (e timestampDecorator) Export(ctx context.Context, records []Record) error {
-	bPtr := pool.Get().(*[]Record)
-	defer func() {
-		*bPtr = (*bPtr)[:0]
-		pool.Put(bPtr)
-	}()
-	b := *bPtr
-
-	for _, r := range records {
-		r = r.Clone()
-		r.SetObservedTimestamp(testTimestamp)
-		b = append(b, r)
-	}
-
-	return e.Exporter.Export(ctx, b)
+func (e timestampDecorator) OnEmit(ctx context.Context, r Record) error {
+	r = r.Clone()
+	r.SetObservedTimestamp(testTimestamp)
+	return e.Processor.OnEmit(ctx, r)
 }

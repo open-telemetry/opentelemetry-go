@@ -7,16 +7,16 @@ import (
 	"context"
 )
 
-// Exporter handles the delivery of log records to external receivers.
+// Processor handles the processing of log records.
 //
 // Any of the Exporter's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the Exporter to manage
 // this concurrency.
-type Exporter interface {
+type Processor interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 
-	// Export transmits log records to a receiver.
+	// OnEmit is called when a Record is emitted.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
@@ -26,11 +26,9 @@ type Exporter interface {
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
 	//
-	// Implementations must not retain the records slice.
-	//
 	// Before modifying a Record, the implementation must use Record.Clone
 	// to create a copy that shares no state with the original.
-	Export(ctx context.Context, records []Record) error
+	OnEmit(ctx context.Context, record Record) error
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 

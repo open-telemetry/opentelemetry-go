@@ -42,7 +42,7 @@ type LoggerProvider struct {
 
 type providerConfig struct {
 	resource                  *resource.Resource
-	exporters                 []Exporter
+	processors                []Processor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 }
@@ -124,7 +124,7 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	}
 
 	var err error
-	for _, exporter := range p.cfg.exporters {
+	for _, exporter := range p.cfg.processors {
 		err = exporter.Shutdown(ctx)
 	}
 	return err
@@ -137,7 +137,7 @@ func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	}
 
 	var err error
-	for _, exporter := range p.cfg.exporters {
+	for _, exporter := range p.cfg.processors {
 		err = exporter.ForceFlush(ctx)
 	}
 	return err
@@ -167,15 +167,19 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 	})
 }
 
-// WithExporter associates Exporter with a LoggerProvider.
+// WithProcessor associates Processor with a LoggerProvider.
 //
 // By default, if this option is not used, the LoggerProvider will perform no
-// operations; no data will be exported without an Exporter.
+// operations; no data will be exported without a processor.
 //
-// Use NewBatchingExporter to batch log records before they are exported.
-func WithExporter(exporter Exporter) LoggerProviderOption {
+// Each WithProcessor creates a separate pipeline. Use custom decotarators
+// for advanced scenarios such as enriching with attributes.
+//
+// Use NewBatchingProcessor to batch log records before they are exported.
+// Use NewSimpleProcessor to synchronously export log records.
+func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.exporters = append(cfg.exporters, exporter)
+		cfg.processors = append(cfg.processors, processor)
 		return cfg
 	})
 }

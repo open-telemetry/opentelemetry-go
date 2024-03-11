@@ -23,11 +23,10 @@ const (
 	maxBatchSizeDefault = 512
 )
 
-var _ Exporter = (*Batcher)(nil)
+var _ Processor = (*BatchingProcessor)(nil)
 
-// Batcher is an exporter decorator
-// that asynchronously exports batches of log records.
-type Batcher struct {
+// BatchingProcessor is an processor that asynchronously exports batches of log records.
+type BatchingProcessor struct {
 	exporter Exporter
 	cfg      batcherConfig
 
@@ -54,9 +53,9 @@ type exportRequest struct {
 	Result  chan error
 }
 
-// NewBatchingExporter decorates the provided exporter
+// NewBatchingProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
-func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
+func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
 	cfg := batcherConfig{
 		queueSize:    queueSizeDefault,
 		interval:     intervalDefault,
@@ -113,7 +112,7 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 		cfg.maxBatchSize = maxBatchSizeDefault
 	}
 
-	b := &Batcher{
+	b := &BatchingProcessor{
 		exporter: exporter,
 		cfg:      cfg,
 		flush:    make(chan exportRequest),
@@ -128,8 +127,8 @@ func NewBatchingExporter(exporter Exporter, opts ...BatchingOption) *Batcher {
 	return b
 }
 
-// Export batches provided log records.
-func (b *Batcher) Export(ctx context.Context, records []Record) error {
+// OnEmit batches provided log record.
+func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
 	if b.isShutdown.Load() {
 		return nil
 	}
@@ -137,18 +136,16 @@ func (b *Batcher) Export(ctx context.Context, records []Record) error {
 	defer b.mu.Unlock()
 	b.mu.Lock()
 
-	for _, r := range records {
-		if len(b.queue) == b.cfg.queueSize {
-			// Queue is full.
-			return nil
-		}
-		b.queue = append(b.queue, r)
+	if len(b.queue) == b.cfg.queueSize {
+		// Queue is full.
+		return nil
 	}
+	b.queue = append(b.queue, r)
 	return nil
 }
 
 // Shutdown flushes queued log records and shuts down the decorated expoter.
-func (b *Batcher) Shutdown(ctx context.Context) error {
+func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	wasShutdown := b.isShutdown.Swap(true)
 	if wasShutdown {
 		return nil
@@ -159,15 +156,11 @@ func (b *Batcher) Shutdown(ctx context.Context) error {
 		Result:  make(chan error, 1), // Heap allocation.
 	}
 	b.stop <- req
-	err := <-req.Result
-
-	err = errors.Join(err, b.exporter.Shutdown(ctx))
-
-	return err
+	return <-req.Result
 }
 
 // ForceFlush flushes queued log records and flushes the decorated expoter.
-func (b *Batcher) ForceFlush(ctx context.Context) error {
+func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	if b.isShutdown.Load() {
 		return nil
 	}
@@ -186,7 +179,7 @@ func (b *Batcher) ForceFlush(ctx context.Context) error {
 	}
 }
 
-func (b *Batcher) run() {
+func (b *BatchingProcessor) run() {
 	defer close(b.done)
 
 	ticker := time.NewTicker(b.cfg.interval)
@@ -201,17 +194,19 @@ func (b *Batcher) run() {
 			}
 		case req := <-b.flush:
 			err := b.export(req.Context)
+			err = errors.Join(err, b.exporter.ForceFlush(req.Context))
 			req.Result <- err
 			ticker.Reset(b.cfg.interval)
 		case req := <-b.stop:
 			err := b.export(req.Context)
+			err = errors.Join(err, b.exporter.Shutdown(req.Context))
 			req.Result <- err
 			return
 		}
 	}
 }
 
-func (b *Batcher) export(ctx context.Context) error {
+func (b *BatchingProcessor) export(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, b.cfg.timeout) // 5 heap allocations.
 	defer cancel()
 

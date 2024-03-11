@@ -5,7 +5,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -14,13 +13,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
 )
-
-var recordsPool = sync.Pool{
-	New: func() any {
-		b := make([]Record, 1)
-		return &b
-	},
-}
 
 // Compile-time check logger implements metric.log.Logger.
 var _ log.Logger = (*logger)(nil)
@@ -62,12 +54,9 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		return true
 	})
 
-	records := recordsPool.Get().(*[]Record)
-	(*records)[0] = record
-	for _, exporter := range l.provider.cfg.exporters {
-		if err := exporter.Export(ctx, *records); err != nil {
+	for _, processor := range l.provider.cfg.processors {
+		if err := processor.OnEmit(ctx, record); err != nil {
 			otel.Handle(err)
 		}
 	}
-	recordsPool.Put(records)
 }
