@@ -51,7 +51,7 @@ type providerConfig struct {
 //
 // By default, the returned LoggerProvider is configured with the default
 // Resource and no Processors. Processors cannot be added after a LoggerProvider is
-// created. This means the returned MeterProvider, one created with no
+// created. This means the returned LoggerProvider, one created with no
 // Processors, will perform no operations.
 func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	cfg := providerConfig{
