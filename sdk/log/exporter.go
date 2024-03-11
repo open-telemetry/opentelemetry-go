@@ -8,10 +8,6 @@ import (
 )
 
 // Exporter handles the delivery of log records to external receivers.
-//
-// Any of the Exporter's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the Exporter to manage
-// this concurrency.
 type Exporter interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
