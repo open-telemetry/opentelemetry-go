@@ -166,8 +166,11 @@ is defined as follows:
 // SimpleProcessor implements Processor.
 type SimpleProcessor struct { /* ... */ }
 
-// NewBatchingProcessor decorates the provided exporter
-// so that the log records are batched before exporting.
+// NewSimpleProcessor is a simple Processor adapter.
+//
+// Any of the Exporter's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Exporter to manage
+// this concurrency.
 func NewSimpleProcessor(exporter Exporter) *SimpleProcessor
 ```
 
@@ -182,6 +185,10 @@ type BatchingProcessor struct { /* ... */ }
 
 // NewBatchingProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
+//
+// All of the Exporter's methods are called from a single dedicated
+// background goroutine. Therefore the Expoter does not need to
+// be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor 
 
 // BatchingOption applies a configuration to a Batcher.
@@ -243,10 +250,6 @@ is defined as follows:
 
 ```go
 // Exporter handles the delivery of log records to external receivers.
-//
-// Any of the Exporter's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the Exporter to manage
-// this concurrency.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
