@@ -379,12 +379,25 @@ The benchmark results can be found in [the prototype](https://github.com/open-te
 
 Because the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 and the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter)
-abstractions are so similar there was a proposal to unify them under
+abstractions are so similar, there was a proposal to unify them under
 single `Expoter` interface.[^2]
 
 However, introducing a `Processor` interface makes it easier
 to create custom processor decorators[^3]
 and makes the design more aligned with the specifiation.
+
+### Embedd log.Record
+
+Because [`Record`](#record) and [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
+are very similar, there was a proposal to embedd `log.Record` in `Record` definition.
+
+[`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
+supports only adding attributes.
+In the SDK, we also need to be able to modify the attributes (e.g. removal)
+provided via API.
+
+Moreover it is safer to have these abstraction decoupled.
+E.g. there can be a need for some fields that can be set via API and cannot be modified by the processors.
 
 ## Open issues
 
