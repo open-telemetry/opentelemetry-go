@@ -86,7 +86,7 @@ func TestSpanFromContext(t *testing.T) {
 			// Check that SpanContextFromContext does not produce any heap allocation.
 			assert.Equal(t, 0.0, testing.AllocsPerRun(5, func() {
 				SpanContextFromContext(tc.context)
-			}), "SpanFromContext allocs")
+			}), "SpanContextFromContext allocs")
 		})
 	}
 }
