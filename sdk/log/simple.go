@@ -10,7 +10,7 @@ import (
 
 var _ Processor = (*SimpleProcessor)(nil)
 
-// Batcher is an processor that synchronously exports log records.
+// SimpleProcessor is an processor that synchronously exports log records.
 type SimpleProcessor struct {
 	exporter Exporter
 	pool     sync.Pool
