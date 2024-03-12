@@ -9,6 +9,7 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -35,6 +36,10 @@ const (
 )
 
 type (
+	// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
+	// This type is compatible with `http.Transport.Proxy` and can be used to set a custom proxy function to the OTLP HTTP client.
+	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
+
 	SignalConfig struct {
 		Endpoint    string
 		Insecure    bool
@@ -46,6 +51,8 @@ type (
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
+
+		Proxy HTTPTransportProxyFunc
 	}
 
 	Config struct {
@@ -329,6 +336,13 @@ func WithHeaders(headers map[string]string) GenericOption {
 func WithTimeout(duration time.Duration) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Timeout = duration
+		return cfg
+	})
+}
+
+func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.Proxy = pf
 		return cfg
 	})
 }

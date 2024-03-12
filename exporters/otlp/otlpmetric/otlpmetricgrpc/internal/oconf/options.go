@@ -9,6 +9,7 @@ package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlp
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -42,6 +43,10 @@ const (
 )
 
 type (
+	// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
+	// This type is compatible with `http.Transport.Proxy` and can be used to set a custom proxy function to the OTLP HTTP client.
+	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
+
 	SignalConfig struct {
 		Endpoint    string
 		Insecure    bool
@@ -56,6 +61,8 @@ type (
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
+
+		Proxy HTTPTransportProxyFunc
 	}
 
 	Config struct {
@@ -357,6 +364,13 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption 
 func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.AggregationSelector = selector
+		return cfg
+	})
+}
+
+func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.Proxy = pf
 		return cfg
 	})
 }
