@@ -48,16 +48,21 @@ var (
 	sid trace.SpanID
 	sc  trace.SpanContext
 
+	alwaysSampledTs trace.TraceState
+
 	handler = &storingHandler{}
 )
 
 func init() {
+	alwaysSampledTs = mustParseTraceState("ot=th:0")
+
 	tid, _ = trace.TraceIDFromHex("01020304050607080102040810203040")
 	sid, _ = trace.SpanIDFromHex("0102040810203040")
 	sc = trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tid,
 		SpanID:     sid,
-		TraceFlags: 0x1,
+		TraceFlags: trace.FlagsSampled,
+		TraceState: alwaysSampledTs,
 	})
 
 	otel.SetErrorHandler(handler)
@@ -80,6 +85,14 @@ type testExporter struct {
 	mu    sync.RWMutex
 	idx   map[string]int
 	spans []*snapshot
+}
+
+func mustParseTraceState(encoded string) trace.TraceState {
+	ts, err := trace.ParseTraceState(encoded)
+	if err != nil {
+		panic(err)
+	}
+	return ts
 }
 
 func NewTestExporter() *testExporter {
@@ -403,6 +416,7 @@ func TestSetSpanAttributesOnStart(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
@@ -658,6 +672,7 @@ func TestEvents(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
@@ -709,6 +724,7 @@ func TestEventsOverLimit(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
@@ -751,6 +767,7 @@ func TestLinks(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:               sc.WithRemote(true),
 		name:                 "span0",
@@ -803,6 +820,7 @@ func TestLinksOverLimit(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
@@ -852,6 +870,7 @@ func TestSetSpanStatus(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:   sc.WithRemote(true),
 		name:     "span0",
@@ -882,6 +901,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:   sc.WithRemote(true),
 		name:     "span0",
@@ -921,7 +941,9 @@ func checkChild(t *testing.T, p trace.SpanContext, apiSpan trace.Span) error {
 	if got, want := s.spanContext.TraceFlags(), p.TraceFlags(); got != want {
 		return fmt.Errorf("got child trace options %d, want %d", got, want)
 	}
-	got, want := s.spanContext.TraceState(), p.TraceState()
+	got := s.spanContext.TraceState()
+	want := p.TraceState()
+	want, _ = want.Insert("ot", "th:0")
 	assert.Equal(t, want, got)
 	return nil
 }
@@ -1226,6 +1248,7 @@ func TestRecordError(t *testing.T) {
 			spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    tid,
 				TraceFlags: 0x1,
+				TraceState: alwaysSampledTs,
 			}),
 			parent:   sc.WithRemote(true),
 			name:     "span0",
@@ -1270,6 +1293,7 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:   sc.WithRemote(true),
 		name:     "span0",
@@ -1317,6 +1341,7 @@ func TestRecordErrorNil(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:   sc.WithRemote(true),
 		name:     "span0",
@@ -1434,6 +1459,7 @@ func TestWithResource(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: alwaysSampledTs,
 				}),
 				parent: sc.WithRemote(true),
 				name:   "span0",
@@ -1471,6 +1497,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:   sc.WithRemote(true),
 		name:     "span0",
@@ -1688,6 +1715,7 @@ func TestAddEventsWithMoreAttributesThanLimit(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent:     sc.WithRemote(true),
 		name:       "span0",
@@ -1749,6 +1777,7 @@ func TestAddLinksWithMoreAttributesThanLimit(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: alwaysSampledTs,
 		}),
 		parent: sc.WithRemote(true),
 		name:   "span0",
@@ -1827,7 +1856,7 @@ func TestSamplerTraceState(t *testing.T) {
 			name:       "alwaysOn",
 			sampler:    AlwaysSample(),
 			input:      mustTS(trace.ParseTraceState("k1=v1")),
-			want:       mustTS(trace.ParseTraceState("k1=v1")),
+			want:       mustTS(trace.ParseTraceState("ot=th:0,k1=v1")),
 			exportSpan: true,
 		},
 		{

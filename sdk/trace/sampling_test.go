@@ -329,45 +329,76 @@ func TestTracestateIsPassed(t *testing.T) {
 	// so ParentBased always takes the always/never sampled of
 	// the incoming trace flags.
 	testCases := []struct {
-		name        string
-		sampler     Sampler
-		inputTs     string
-		ifSampled   outcome
+		name    string
+		sampler Sampler
+
+		// invalidCtx, if true, indicates not to set TraceID
+		// and SpanID, which will cause a ParentBased sampler
+		// to call the root sampler.
+		invalidCtx bool
+
+		// inputTs is the arriving encoded TraceState
+		inputTs string
+
+		// ifSampled is the outcome when the incoming context is sampled
+		ifSampled outcome
+
+		// ifUnsampled is the outcome when the incoming context is unsampled.
 		ifUnsampled outcome
 	}{
 		{
-			"neverSample",
-			NeverSample(),
-			"k=v",
-			outcome{false, "k=v"},
-			outcome{false, "k=v"},
+			// NeverSample() passes trace state.
+			name:        "neverSample",
+			sampler:     NeverSample(),
+			inputTs:     "k=v",
+			ifSampled:   outcome{false, "k=v"},
+			ifUnsampled: outcome{false, "k=v"},
 		},
 		{
-			"alwaysSample",
-			AlwaysSample(),
-			"k=v",
-			outcome{true, "ot=th:0,k=v"},
-			outcome{true, "ot=th:0,k=v"},
+			// AlwaysSample() passes trace state.
+			name:        "alwaysSample",
+			sampler:     AlwaysSample(),
+			inputTs:     "k=v",
+			ifSampled:   outcome{true, "ot=th:0,k=v"},
+			ifUnsampled: outcome{true, "ot=th:0,k=v"},
 		},
 		{
-			"parentBased",
-			ParentBased(unusedSampler{}),
-			"k=v",
-			outcome{true, "ot=th:0,k=v"},
-			outcome{false, "k=v"},
+			// ParentBased() passes trace state to the
+			// Always- or NeverSample().
+			name:        "parentBasedDefaults",
+			sampler:     ParentBased(unusedSampler{}),
+			inputTs:     "k=v",
+			ifSampled:   outcome{true, "ot=th:0,k=v"},
+			ifUnsampled: outcome{false, "k=v"},
 		},
-		// {
-		// 	"fiftyPctSampled",
-		// 	ParentBased(TraceIDRatioBased(0.5)),
-		// 	"k=v,ot=rv:ababababababab",
-		// 	"k=v,ot=rv:ababababababab:th:8",
-		// },
-		// {
-		// 	"fiftyPctNotSampled",
-		// 	ParentBased(TraceIDRatioBased(0.5)),
-		// 	"k=v,ot=rv:ababababababab",
-		// 	"k=v,ot=rv:12121212121212",
-		// },
+		{
+			// ParentBased passes trace state to the
+			// root-based sampler
+			name:        "parentBasedRootAlways",
+			sampler:     ParentBased(AlwaysSample()),
+			invalidCtx:  true,
+			inputTs:     "k=v",
+			ifSampled:   outcome{true, "ot=th:0,k=v"},
+			ifUnsampled: outcome{true, "ot=th:0,k=v"},
+		},
+		{
+			// TraceIDRatioBased ignores parent decision,
+			// 50% sampler w/ sampled R-value.
+			name:        "fiftyPctSampled",
+			sampler:     TraceIDRatioBased(0.5),
+			inputTs:     "k=v,ot=rv:ababababababab",
+			ifSampled:   outcome{true, "ot=rv:ababababababab;th:8,k=v"},
+			ifUnsampled: outcome{true, "ot=rv:ababababababab;th:8,k=v"},
+		},
+		{
+			// TraceIDRatioBased ignores parent decision,
+			// 50% sampler w/ unsampled R-value.
+			name:        "fiftyPctUnsampled",
+			sampler:     TraceIDRatioBased(0.5),
+			inputTs:     "k=v,ot=rv:12121212121212",
+			ifSampled:   outcome{false, "k=v,ot=rv:12121212121212"},
+			ifUnsampled: outcome{false, "k=v,ot=rv:12121212121212"},
+		},
 	}
 
 	generator := defaultIDGenerator()
@@ -391,9 +422,11 @@ func TestTracestateIsPassed(t *testing.T) {
 						var scc trace.SpanContextConfig
 						scc.TraceState = traceState
 
-						randTid, randSid := generator.NewIDs(context.Background())
-						scc.TraceID = randTid
-						scc.SpanID = randSid
+						if !tc.invalidCtx {
+							randTid, randSid := generator.NewIDs(context.Background())
+							scc.TraceID = randTid
+							scc.SpanID = randSid
+						}
 
 						var expect outcome
 						if inputSampled {
