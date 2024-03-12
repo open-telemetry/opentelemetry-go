@@ -126,6 +126,19 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, got[key], []string{headers[key]})
 	})
 
+	t.Run("WithHostHeader", func(t *testing.T) {
+		hostHeader := "test-host"
+		exp, coll := factoryFunc("", nil, WithHostHeader(hostHeader))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.HostHeader()
+		assert.Equal(t, got, hostHeader)
+	})
+
 	t.Run("WithTimeout", func(t *testing.T) {
 		// Do not send on rCh so the Collector never responds to the client.
 		rCh := make(chan otest.ExportResult)

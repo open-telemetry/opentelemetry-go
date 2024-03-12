@@ -36,6 +36,8 @@ var (
 	customUserAgentHeader = map[string]string{
 		"user-agent": "custome-user-agent",
 	}
+
+	customHostName = "test-host-name"
 )
 
 func TestEndToEnd(t *testing.T) {
@@ -148,6 +150,15 @@ func TestEndToEnd(t *testing.T) {
 			},
 			mcCfg: mockCollectorConfig{
 				ExpectedHeaders: customUserAgentHeader,
+			},
+		},
+		{
+			name: "with custom host header",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHostHeader(customHostName),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHostHeader: customHostName,
 			},
 		},
 	}

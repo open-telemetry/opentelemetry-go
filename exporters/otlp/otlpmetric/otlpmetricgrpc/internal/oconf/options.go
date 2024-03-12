@@ -47,6 +47,7 @@ type (
 		Insecure    bool
 		TLSCfg      *tls.Config
 		Headers     map[string]string
+		HostHeader  string
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
@@ -336,6 +337,13 @@ func WithSecure() GenericOption {
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Headers = headers
+		return cfg
+	})
+}
+
+func WithHostHeader(host string) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.HostHeader = host
 		return cfg
 	})
 }

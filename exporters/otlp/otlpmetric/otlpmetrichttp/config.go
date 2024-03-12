@@ -158,6 +158,21 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{oconf.WithHeaders(headers)}
 }
 
+// WithHostHeader overrides Host header in HTTP requests.
+//
+// The example of the use case is using load balancer like envoy between
+// the otel instrumentation library and collector. Typically
+// the call via envoy's route is based on the host header. Example of the usage
+//
+// config.WithEndpoint("myenvoyhost")
+//
+//	.WithHostHeader("mytargetotelcollectorhost")
+//
+// If unset, the target Endpoint's host will be used as Host header.
+func WithHostHeader(host string) Option {
+	return wrappedOption{oconf.WithHostHeader(host)}
+}
+
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
 //
 // This takes precedence over any retry settings defined by WithRetry. Once

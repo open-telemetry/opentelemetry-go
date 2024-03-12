@@ -72,6 +72,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
 	}
+
 	// Body is set when this is cloned during upload.
 	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
@@ -87,6 +88,10 @@ func newClient(cfg oconf.Config) (*client, error) {
 		}
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
+
+	if cfg.Metrics.HostHeader != "" {
+		req.Host = cfg.Metrics.HostHeader
+	}
 
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
