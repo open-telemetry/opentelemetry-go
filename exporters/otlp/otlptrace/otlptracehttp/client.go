@@ -243,7 +243,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 		if _, err := gz.Write(body); err != nil {
 			return req, err
 		}
-		// Close needs to be called to ensure body if fully written.
+		// Close needs to be called to ensure body is fully written.
 		if err := gz.Close(); err != nil {
 			return req, err
 		}
