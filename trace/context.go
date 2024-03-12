@@ -44,8 +44,6 @@ func SpanFromContext(ctx context.Context) Span {
 	return noopSpanInstance
 }
 
-var noopSpanInstance Span = noopSpan{}
-
 // SpanContextFromContext returns the current Span's SpanContext.
 func SpanContextFromContext(ctx context.Context) SpanContext {
 	return SpanFromContext(ctx).SpanContext()
