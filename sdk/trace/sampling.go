@@ -108,7 +108,7 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 		// Interpret the least-significant 8-bytes as an unsigned number
 		// then zero the top 8 bits, yielding the least-significant 56 bits
 		// as randomness.
-		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & 0xffffffffffffff
+		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
 
 		// Note: if the trace flag 0x2 is not set, it means either
 		// (1) this span is a root, but a foreign IdGenerator was used
@@ -191,7 +191,17 @@ const (
 	// This value corresponds with the size of a float64
 	// significand, because it simplifies this implementation to
 	// restrict the probability to use 52 bits (vs 56 bits).
-	MinSupportedProbability = 0x1p-52
+	minSupportedProbability float64 = 1 / float64(maxAdjustedCount)
+
+	// maxSupportedProbability is the number closest to 1.0 (i.e.,
+	// near 99.999999%) that is not equal to 1.0 in terms of the
+	// float64 representation, having 52 bits of significand.
+	// Other ways to express this number:
+	//
+	//   0x1.ffffffffffffe0p-01
+	//   0x0.fffffffffffff0p+00
+	//   math.Nextafter(1.0, 0.0)
+	maxSupportedProbability float64 = 1 - 0x1p-52
 
 	// maxAdjustedCount is the inverse of the smallest
 	// representable sampling probability, it is the number of
@@ -211,15 +221,16 @@ const (
 //nolint:revive // revive complains about stutter of `trace.TraceIDRatioBased`
 func TraceIDRatioBased(fraction float64) Sampler {
 	const (
+		maxp  = 14                       // maximum precision is 56 bits
 		defp  = DefaultSamplingPrecision // default precision
 		hbits = 4                        // bits per hex digit
 	)
 
-	if fraction > 1-MinSupportedProbability {
+	if fraction > 1-0x1p-52 {
 		return AlwaysSample()
 	}
 
-	if fraction < MinSupportedProbability {
+	if fraction < minSupportedProbability {
 		return NeverSample()
 	}
 
@@ -241,30 +252,24 @@ func TraceIDRatioBased(fraction float64) Sampler {
 	// accordingly.
 	_, expF := math.Frexp(fraction)
 	_, expR := math.Frexp(1 - fraction)
-	precision := min(13, max(defp+expF/-hbits, defp+expR/-hbits))
+	precision := min(maxp, max(defp+expF/-hbits, defp+expR/-hbits))
 
-	// Compute the encoded representation using the standard
-	// FormatFloat() to print a hexadecimal floating point value
-	// in the IEEE-specified format.
-	//
-	// Subtracting the fraction from 2.0 expresses the rejection
-	// threshold as a value in the range [1,2), where with
-	// exponent equal to 0, the fraction is placed into the 52 bit
-	// significand.  In this range, the 52 bits of significand
-	// equal the corresponding T-value.
-	//
-	// Using a slice w/ [4:4+precision] strips the leading "0x1.".
-	tvalue := strconv.FormatFloat(2-fraction, 'x', precision, 64)[4 : 4+precision]
+	// Compute the threshold
+	scaled := uint64(math.Round(fraction * float64(maxAdjustedCount)))
+	threshold := maxAdjustedCount - scaled
 
-	// Remove trailing zeros.
-	tvalue = strings.TrimRight(tvalue, "0")
+	// Round to the specified precision, if less than the maximum.
+	if shift := hbits * (maxp - precision); shift != 0 {
+		half := uint64(1) << (shift - 1)
+		threshold += half
+		threshold >>= shift
+		threshold <<= shift
+	}
 
-	// Parse the value as a hex string, yielding the exact
-	// rejection threshold.
-	parsed, _ := strconv.ParseUint(tvalue, 16, 64)
-
-	// Shift it to compensate for trailing zeros.
-	threshold := parsed << (hbits * (14 - len(tvalue)))
+	// Add maxAdjustedCount so that leading-zeros are formatted by
+	// the strconv library after an artificial leading "1".  Then,
+	// strip the leadingt "1", then remove trailing zeros.
+	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
 
 	return &traceIDRatioSampler{
 		threshold:   threshold,

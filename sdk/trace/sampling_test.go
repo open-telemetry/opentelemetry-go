@@ -187,39 +187,37 @@ func TestTraceIDRatioBasedDescription(t *testing.T) {
 		{1 / 1048576.0, "TraceIDRatioBased{9.5367431640625e-07;th:fffff}"},
 
 		// Threshold precision automatically rises for small values
-		{1 / 100.0, "TraceIDRatioBased{0.01;th:fd70a}"},                     // precision 5
-		{1 / 1000.0, "TraceIDRatioBased{0.001;th:ffbe77}"},                  // precision 6
-		{1 / 10000.0, "TraceIDRatioBased{0.0001;th:fff9724}"},               // precision 7
-		{1 / 100000.0, "TraceIDRatioBased{1e-05;th:ffff583a}"},              // precision 8
-		{1 / 1000000.0, "TraceIDRatioBased{1e-06;th:ffffef39}"},             // precision 8
-		{1 / 10000000.0, "TraceIDRatioBased{1e-07;th:fffffe528}"},           // precision 9
-		{1 / 100000000.0, "TraceIDRatioBased{1e-08;th:ffffffd50d}"},         // precision 10
-		{1 / 1000000000.0, "TraceIDRatioBased{1e-09;th:fffffffbb48}"},       // precision 11
-		{1 / 10000000000.0, "TraceIDRatioBased{1e-10;th:ffffffff920c}"},     // precision 12
-		{1 / 100000000000.0, "TraceIDRatioBased{1e-11;th:fffffffff5014}"},   // precision 13 (max)
-		{1 / 1000000000000.0, "TraceIDRatioBased{1e-12;th:fffffffffee68}"},  // precision 13
-		{1 / 10000000000000.0, "TraceIDRatioBased{1e-13;th:ffffffffffe3e}"}, // precision 13
+		{1 / 100.0, "TraceIDRatioBased{0.01;th:fd70a}"},                       // precision 5
+		{1 / 1000.0, "TraceIDRatioBased{0.001;th:ffbe77}"},                    // precision 6
+		{1 / 10000.0, "TraceIDRatioBased{0.0001;th:fff9724}"},                 // precision 7
+		{1 / 100000.0, "TraceIDRatioBased{1e-05;th:ffff583a}"},                // precision 8
+		{1 / 1000000.0, "TraceIDRatioBased{1e-06;th:ffffef39}"},               // precision 8
+		{1 / 10000000.0, "TraceIDRatioBased{1e-07;th:fffffe528}"},             // precision 9
+		{1 / 100000000.0, "TraceIDRatioBased{1e-08;th:ffffffd50d}"},           // precision 10
+		{1 / 1000000000.0, "TraceIDRatioBased{1e-09;th:fffffffbb48}"},         // precision 11
+		{1 / 10000000000.0, "TraceIDRatioBased{1e-10;th:ffffffff920d}"},       // precision 12
+		{1 / 100000000000.0, "TraceIDRatioBased{1e-11;th:fffffffff5014}"},     // precision 13
+		{1 / 1000000000000.0, "TraceIDRatioBased{1e-12;th:fffffffffee68}"},    // precision 13
+		{1 / 10000000000000.0, "TraceIDRatioBased{1e-13;th:ffffffffffe3da}"},  // precision 14
+		{1 / 100000000000000.0, "TraceIDRatioBased{1e-14;th:fffffffffffd2f}"}, // precision 14
 
-		// Note this has 13 'f' digits.  The calculation only works with numbers
-		// above 0x1p-52 because IEEE floating point values have fewer bits than
-		// sampling randomness.  Sampling at this rate means selecting TraceIDs
-		// with randomness in the range [0xfffffffffffff0, 0xffffffffffffff],
-		// which is 16 out of (1<<56).
+		// Note this has 13 'f' digits.
 		{0x1p-52, "TraceIDRatioBased{2.220446049250313e-16;th:fffffffffffff}"},
 
-		// This has 12 '0' digits and a 1.  Like the above, we can only
-		// use 52 bits of precision, working with floating point values.
-		// Sampling at this rate means selecting TraceIDs with randomness
-		// [0x10, 0xffffffffffffff], or all except 16 out of (1<<56).
+		// This has 12 '0' digits and a 1.
 		{1 - 0x1p-52, "TraceIDRatioBased{0.9999999999999998;th:0000000000001}"},
 
 		// Values very close to 0.0
-		{0x1p-53, "AlwaysOffSampler"},
-		{0x1p-56, "AlwaysOffSampler"},
+		{0x1p-53, "TraceIDRatioBased{1.1102230246251565e-16;th:fffffffffffff8}"},
+		{0x1p-54, "TraceIDRatioBased{5.551115123125783e-17;th:fffffffffffffc}"},
+		{0x1p-55, "TraceIDRatioBased{2.7755575615628914e-17;th:fffffffffffffe}"},
+		{0x1p-56, "TraceIDRatioBased{1.3877787807814457e-17;th:ffffffffffffff}"},
 
-		// Values very close to 1.0
+		// Values very close to 1.0 round up to 1.0
 		{1, "AlwaysOnSampler"},
 		{1 - 0x1p-55, "AlwaysOnSampler"},
+		{1 - 0x1p-54, "AlwaysOnSampler"},
+		{1 - 0x1p-53, "AlwaysOnSampler"},
 	} {
 		sampler := TraceIDRatioBased(tc.prob)
 
@@ -229,7 +227,8 @@ func TestTraceIDRatioBasedDescription(t *testing.T) {
 
 // TestTraceIDRatioBasedThreshold tests the unsigned threshold value to ensure
 // it is calculated correctly, separately from the printed threshold tested as
-// part of the description.  The test inputs are the same as TestTraceIDRatioBasedDescription.
+// part of the description.  The test inputs are some of same as are used in
+// TestTraceIDRatioBasedDescription.
 func TestTraceIDRatioBasedThreshold(t *testing.T) {
 	for _, tc := range []struct {
 		prob      float64
@@ -245,26 +244,6 @@ func TestTraceIDRatioBasedThreshold(t *testing.T) {
 		{1 / 256.0, 0xff000000000000},
 		{1 / 65536.0, 0xffff0000000000},
 		{1 / 1048576.0, 0xfffff000000000},
-
-		// Threshold precision automatically rises for small values
-		{1 / 100.0, 0xfd70a000000000},
-		{1 / 1000.0, 0xffbe7700000000},
-		{1 / 10000.0, 0xfff97240000000},
-		{1 / 100000.0, 0xffff583a000000},
-		{1 / 1000000.0, 0xffffef39000000},
-		{1 / 10000000.0, 0xfffffe52800000},
-		{1 / 100000000.0, 0xffffffd50d0000},
-		{1 / 1000000000.0, 0xfffffffbb48000},
-		{1 / 10000000000.0, 0xffffffff920c00},
-		{1 / 100000000000.0, 0xfffffffff50140},
-		{1 / 1000000000000.0, 0xfffffffffee680},
-		{1 / 10000000000000.0, 0xffffffffffe3e0},
-
-		// Note this has 13 'f' digits.
-		{0x1p-52, 0xfffffffffffff0},
-
-		// This has 12 '0' digits and a 1.
-		{1 - 0x1p-52, 0x00000000000010},
 	} {
 		sampler := TraceIDRatioBased(tc.prob).(*traceIDRatioSampler)
 
