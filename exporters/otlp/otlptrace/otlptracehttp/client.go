@@ -74,10 +74,17 @@ func NewClient(opts ...Option) otlptrace.Client {
 		Transport: ourTransport,
 		Timeout:   cfg.Traces.Timeout,
 	}
-	if cfg.Traces.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Traces.TLSCfg
-		httpClient.Transport = transport
+
+	if cfg.Traces.TLSCfg != nil || cfg.Traces.Proxy != nil {
+		clonedTransport := ourTransport.Clone()
+		httpClient.Transport = clonedTransport
+
+		if cfg.Traces.TLSCfg != nil {
+			clonedTransport.TLSClientConfig = cfg.Traces.TLSCfg
+		}
+		if cfg.Traces.Proxy != nil {
+			clonedTransport.Proxy = cfg.Traces.Proxy
+		}
 	}
 
 	stopCh := make(chan struct{})

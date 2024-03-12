@@ -58,10 +58,17 @@ func newClient(cfg oconf.Config) (*client, error) {
 		Transport: ourTransport,
 		Timeout:   cfg.Metrics.Timeout,
 	}
-	if cfg.Metrics.TLSCfg != nil {
-		transport := ourTransport.Clone()
-		transport.TLSClientConfig = cfg.Metrics.TLSCfg
-		httpClient.Transport = transport
+
+	if cfg.Metrics.TLSCfg != nil || cfg.Metrics.Proxy != nil {
+		clonedTransport := ourTransport.Clone()
+		httpClient.Transport = clonedTransport
+
+		if cfg.Metrics.TLSCfg != nil {
+			clonedTransport.TLSClientConfig = cfg.Metrics.TLSCfg
+		}
+		if cfg.Metrics.Proxy != nil {
+			clonedTransport.Proxy = cfg.Metrics.Proxy
+		}
 	}
 
 	u := &url.URL{
