@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +36,10 @@ var (
 
 	customUserAgentHeader = map[string]string{
 		"user-agent": "custome-user-agent",
+	}
+
+	customProxyHeader = map[string]string{
+		"header-added-via-proxy": "proxy-value",
 	}
 )
 
@@ -148,6 +153,20 @@ func TestEndToEnd(t *testing.T) {
 			},
 			mcCfg: mockCollectorConfig{
 				ExpectedHeaders: customUserAgentHeader,
+			},
+		},
+		{
+			name: "with custom proxy",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProxy(func(r *http.Request) (*url.URL, error) {
+					for k, v := range customProxyHeader {
+						r.Header.Set(k, v)
+					}
+					return r.URL, nil
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: customProxyHeader,
 			},
 		},
 	}
