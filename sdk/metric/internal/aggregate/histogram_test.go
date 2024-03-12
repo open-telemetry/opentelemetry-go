@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 
@@ -269,7 +258,7 @@ func TestBucketsBin(t *testing.T) {
 
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](3)
+		b := newBuckets[N](alice, 3)
 		assertB := func(counts []uint64, count uint64, min, max N) {
 			t.Helper()
 			assert.Equal(t, counts, b.counts)
@@ -293,7 +282,7 @@ func TestBucketsSum(t *testing.T) {
 
 func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](3)
+		b := newBuckets[N](alice, 3)
 
 		var want N
 		assert.Equal(t, want, b.total)
@@ -336,12 +325,12 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 	h.cumulative(&data)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
-	require.Equal(t, hdp.BucketCounts, h.values[alice].counts)
+	require.Equal(t, hdp.BucketCounts, h.values[alice.Equivalent()].counts)
 
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
-	assert.Equal(t, cpCounts, h.values[alice].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+	assert.Equal(t, cpCounts, h.values[alice.Equivalent()].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
 }
 
 func TestDeltaHistogramReset(t *testing.T) {
