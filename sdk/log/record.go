@@ -162,14 +162,29 @@ func (r *Record) TraceID() trace.TraceID {
 	return r.traceID
 }
 
+// SetTraceID sets the trace ID.
+func (r *Record) SetTraceID(id trace.TraceID) {
+	r.traceID = id
+}
+
 // SpanID returns the span ID or empty array.
 func (r *Record) SpanID() trace.SpanID {
 	return r.spanID
 }
 
+// SetSpanID sets the span ID.
+func (r *Record) SetSpanID(id trace.SpanID) {
+	r.spanID = id
+}
+
 // TraceFlags returns the trace flags.
 func (r *Record) TraceFlags() trace.TraceFlags {
 	return r.traceFlags
+}
+
+// SetTraceFlags sets the trace flags.
+func (r *Record) SetTraceFlags(flags trace.TraceFlags) {
+	r.traceFlags = flags
 }
 
 // Resource returns the entity that collected the log.
