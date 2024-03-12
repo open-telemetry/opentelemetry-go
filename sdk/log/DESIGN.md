@@ -38,7 +38,7 @@ type LoggerProvider struct {
 // Resource and no Processors. Processors cannot be added after a LoggerProvider is
 // created. This means the returned LoggerProvider, one created with no
 // Processors, will perform no operations.
-func NewLoggerProvider(...LoggerProviderOption) *LoggerProvider
+func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider
 
 // Logger returns a new log.Logger with the provided name and configuration.
 //
@@ -55,7 +55,7 @@ type LoggerProviderOption interface { /* ... */ }
 //
 // By default, if this Option is not used, the default Resource from the
 // go.opentelemetry.io/otel/sdk/resource package will be used.
-func WithResource(*resource.Resource) LoggerProviderOption
+func WithResource(res *resource.Resource) LoggerProviderOption
 ```
 
 ## LogRecord limits
@@ -118,8 +118,8 @@ func WithProcessor(processor Processor) LoggerProviderOption
 
 // Processor handles the processing of log records.
 //
-// Any of the Exporter's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the Exporter to manage
+// Any of the Processor's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
