@@ -117,11 +117,12 @@ func TestLinks(t *testing.T) {
 		return
 	}
 
-	// Empty should be empty.
+	// Empty should be empty and not remote.
 	expected := &tracepb.Span_Link{
 		TraceId:                []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		SpanId:                 []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		DroppedAttributesCount: 3,
+		Flags:                  spanFlagsHasIsRemote,
 	}
 	assert.Equal(t, expected, got[0])
 
@@ -270,6 +271,7 @@ func TestSpanData(t *testing.T) {
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		TraceState:             "key1=val1,key2=val2",
+		Flags:                  spanFlagsHasIsRemote,
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),

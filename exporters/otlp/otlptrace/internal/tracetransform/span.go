@@ -81,14 +81,19 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 	return rss
 }
 
+const (
+	spanFlagsHasIsRemote = 0x100 //  SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
+	spanFlagsIsRemote    = 0x200 //  SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
+)
+
 func spanContextToSpanFlags(sc trace.SpanContext) uint32 {
 	var flags uint32
 	traceFlags := sc.TraceFlags()
 
 	flags |= uint32(traceFlags & trace.FlagsValidMask)
-	flags |= 0x100 // SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
+	flags |= spanFlagsHasIsRemote // SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
 	if sc.IsRemote() {
-		flags |= 0x200 // SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
+		flags |= spanFlagsIsRemote // SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
 	}
 	return flags
 }
@@ -106,7 +111,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
 		TraceState:             sd.SpanContext().TraceState().String(),
-		Flags:                  spanContextToSpanFlags(),
+		Flags:                  spanContextToSpanFlags(sd.SpanContext()),
 		Status:                 status(sd.Status().Code, sd.Status().Description),
 		StartTimeUnixNano:      uint64(sd.StartTime().UnixNano()),
 		EndTimeUnixNano:        uint64(sd.EndTime().UnixNano()),
