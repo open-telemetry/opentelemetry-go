@@ -113,7 +113,7 @@ func TestExtractValidTraceContext(t *testing.T) {
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsSampled,
+				TraceFlags: 0x9,
 				Remote:     true,
 			}),
 		},
@@ -123,9 +123,10 @@ func TestExtractValidTraceContext(t *testing.T) {
 				traceparent: []string{"02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: traceID,
-				SpanID:  spanID,
-				Remote:  true,
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: 0x8,
+				Remote:     true,
 			}),
 		},
 		{
@@ -288,9 +289,9 @@ func TestInjectValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name: "unsupported trace flag bits dropped",
+			name: "valid undefined trace flag bits are passed",
 			header: http.Header{
-				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-ff"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,

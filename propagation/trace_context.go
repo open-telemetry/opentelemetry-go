@@ -111,8 +111,8 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	// Note that opts is 1 byte, so includes exactly the set of
-	// valid bits, so there is no need to test for invalid bits.
+	// Clear all invalid flags:
+	scc.TraceFlags = trace.TraceFlags(opts[0]) & trace.FlagsValidMask
 
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
 	// affect the parsing of traceparent according to the W3C tracecontext
