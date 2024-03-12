@@ -9,8 +9,8 @@ import (
 
 // Processor handles the processing of log records.
 //
-// Any of the Exporter's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the Exporter to manage
+// Any of the Processor's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 type Processor interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
@@ -18,8 +18,8 @@ type Processor interface {
 
 	// OnEmit is called when a Record is emitted.
 	//
-	// The deadline or cancellation of the passed context must be honored. An
-	// appropriate error should be returned in these situations.
+	// Implementation should not interrupt the record processing
+	// if the context is canceled.
 	//
 	// All retry logic must be contained in this function. The SDK does not
 	// implement any retry logic. All errors returned by this function are
