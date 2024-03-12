@@ -329,9 +329,15 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue)
 
 func (r *Record) TraceID() trace.TraceID
 
+func (r *Record) SetTraceID(id trace.TraceID) 
+
 func (r *Record) SpanID() trace.SpanID
 
+func (r *Record) SetSpanID(id trace.SpanID) 
+
 func (r *Record) TraceFlags() trace.TraceFlags
+
+func (r *Record) SetTraceFlags(flags trace.TraceFlags)
 
 // Resource returns the entity that collected the log.
 func (r *Record) Resource() resource.Resource
