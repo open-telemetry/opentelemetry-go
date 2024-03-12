@@ -124,8 +124,8 @@ func WithProcessor(processor Processor) LoggerProviderOption
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
-	// The deadline or cancellation of the passed context must be honored. An
-	// appropriate error should be returned in these situations.
+	// Implementation should not interrupt the record processing
+	// if the context is canceled.
 	//
 	// All retry logic must be contained in this function. The SDK does not
 	// implement any retry logic. All errors returned by this function are
