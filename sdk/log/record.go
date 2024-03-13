@@ -192,11 +192,17 @@ func (r *Record) SetTraceFlags(flags trace.TraceFlags) {
 
 // Resource returns the entity that collected the log.
 func (r *Record) Resource() resource.Resource {
+	if r.resource == nil {
+		return *resource.Empty()
+	}
 	return *r.resource
 }
 
 // InstrumentationScope returns the scope that the Logger was created with.
 func (r *Record) InstrumentationScope() instrumentation.Scope {
+	if r.scope == nil {
+		return instrumentation.Scope{}
+	}
 	return *r.scope
 }
 
