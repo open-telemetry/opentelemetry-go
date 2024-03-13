@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package otlpmetrichttp
 
@@ -20,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -237,5 +227,23 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Contains(t, got, key)
 		assert.Equal(t, got[key], []string{headers[key]})
+	})
+
+	t.Run("WithProxy", func(t *testing.T) {
+		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
+		headerValueSetInProxy := "true"
+		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {
+			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
+			return r.URL, nil
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, headerKeySetInProxy)
+		assert.Equal(t, got[headerKeySetInProxy], []string{headerValueSetInProxy})
 	})
 }

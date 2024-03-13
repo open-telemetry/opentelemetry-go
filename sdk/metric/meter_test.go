@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package metric
 
@@ -1637,7 +1626,12 @@ func TestObservableExample(t *testing.T) {
 		process1001 = attribute.NewSet(processID1001)
 	)
 
-	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Set]int64, func(*testing.T), *metricdata.ScopeMetrics, *int64, *int64, *int64) {
+	type observation struct {
+		attrs attribute.Set
+		value int64
+	}
+
+	setup := func(t *testing.T, temp metricdata.Temporality) (map[attribute.Distinct]observation, func(*testing.T), *metricdata.ScopeMetrics, *int64, *int64, *int64) {
 		t.Helper()
 
 		const (
@@ -1659,11 +1653,11 @@ func TestObservableExample(t *testing.T) {
 		mp := NewMeterProvider(WithReader(reader1), WithReader(reader2), WithView(noFiltered, filtered))
 		meter := mp.Meter(scopeName)
 
-		observations := make(map[attribute.Set]int64)
+		observations := make(map[attribute.Distinct]observation)
 		_, err := meter.Int64ObservableCounter(instName, metric.WithInt64Callback(
 			func(_ context.Context, o metric.Int64Observer) error {
-				for attrSet, val := range observations {
-					o.Observe(val, metric.WithAttributeSet(attrSet))
+				for _, val := range observations {
+					o.Observe(val.value, metric.WithAttributeSet(val.attrs))
 				}
 				return nil
 			},
@@ -1725,8 +1719,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T0, T1]:
 		//     pid = 1001, tid = 1, #PF = 50
 		//     pid = 1001, tid = 2, #PF = 30
-		observations[thread1] = 50
-		observations[thread2] = 30
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 50}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 30}
 
 		*wantFiltered = 80
 		*wantThread1 = 50
@@ -1737,8 +1731,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T1, T2]:
 		//     pid = 1001, tid = 1, #PF = 53
 		//     pid = 1001, tid = 2, #PF = 38
-		observations[thread1] = 53
-		observations[thread2] = 38
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 53}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 38}
 
 		*wantFiltered = 91
 		*wantThread1 = 53
@@ -1749,8 +1743,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T2, T3]
 		//     pid = 1001, tid = 1, #PF = 56
 		//     pid = 1001, tid = 2, #PF = 42
-		observations[thread1] = 56
-		observations[thread2] = 42
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 56}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 42}
 
 		*wantFiltered = 98
 		*wantThread1 = 56
@@ -1761,8 +1755,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T3, T4]:
 		//     pid = 1001, tid = 1, #PF = 60
 		//     pid = 1001, tid = 2, #PF = 47
-		observations[thread1] = 60
-		observations[thread2] = 47
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 60}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 47}
 
 		*wantFiltered = 107
 		*wantThread1 = 60
@@ -1774,9 +1768,9 @@ func TestObservableExample(t *testing.T) {
 		//     thread 1 died, thread 3 started
 		//     pid = 1001, tid = 2, #PF = 53
 		//     pid = 1001, tid = 3, #PF = 5
-		delete(observations, thread1)
-		observations[thread2] = 53
-		observations[thread3] = 5
+		delete(observations, thread1.Equivalent())
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 53}
+		observations[thread3.Equivalent()] = observation{attrs: thread3, value: 5}
 
 		*wantFiltered = 58
 		want.Metrics[1].Data = metricdata.Sum[int64]{
@@ -1799,8 +1793,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T0, T1]:
 		//     pid = 1001, tid = 1, #PF = 50
 		//     pid = 1001, tid = 2, #PF = 30
-		observations[thread1] = 50
-		observations[thread2] = 30
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 50}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 30}
 
 		*wantFiltered = 80
 		*wantThread1 = 50
@@ -1811,8 +1805,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T1, T2]:
 		//     pid = 1001, tid = 1, #PF = 53
 		//     pid = 1001, tid = 2, #PF = 38
-		observations[thread1] = 53
-		observations[thread2] = 38
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 53}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 38}
 
 		*wantFiltered = 11
 		*wantThread1 = 3
@@ -1823,8 +1817,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T2, T3]
 		//     pid = 1001, tid = 1, #PF = 56
 		//     pid = 1001, tid = 2, #PF = 42
-		observations[thread1] = 56
-		observations[thread2] = 42
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 56}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 42}
 
 		*wantFiltered = 7
 		*wantThread1 = 3
@@ -1835,8 +1829,8 @@ func TestObservableExample(t *testing.T) {
 		// During the time range (T3, T4]:
 		//     pid = 1001, tid = 1, #PF = 60
 		//     pid = 1001, tid = 2, #PF = 47
-		observations[thread1] = 60
-		observations[thread2] = 47
+		observations[thread1.Equivalent()] = observation{attrs: thread1, value: 60}
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 47}
 
 		*wantFiltered = 9
 		*wantThread1 = 4
@@ -1848,9 +1842,9 @@ func TestObservableExample(t *testing.T) {
 		//     thread 1 died, thread 3 started
 		//     pid = 1001, tid = 2, #PF = 53
 		//     pid = 1001, tid = 3, #PF = 5
-		delete(observations, thread1)
-		observations[thread2] = 53
-		observations[thread3] = 5
+		delete(observations, thread1.Equivalent())
+		observations[thread2.Equivalent()] = observation{attrs: thread2, value: 53}
+		observations[thread3.Equivalent()] = observation{attrs: thread3, value: 5}
 
 		*wantFiltered = -49
 		want.Metrics[1].Data = metricdata.Sum[int64]{
