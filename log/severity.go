@@ -13,6 +13,9 @@ type Severity int
 
 // Severity values defined by OpenTelemetry.
 const (
+	// SeverityUndefined represents an unset Severity.
+	SeverityUndefined Severity = 0 // UNDEFINED
+
 	// A fine-grained debugging log record. Typically disabled in default
 	// configurations.
 	SeverityTrace1 Severity = 1 // TRACE
