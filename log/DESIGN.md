@@ -774,8 +774,8 @@ and we may even have problems naming the functions.
 The Logs Bridge API MUST NOT be released as stable
 before all issues below are closed:
 
-- [Clarify handling empty (null) values in Logs Data Model](https://github.com/open-telemetry/opentelemetry-specification/issues/3835)
 - [Clarify attributes parameter type of Get a Logger operation](https://github.com/open-telemetry/opentelemetry-specification/issues/3841)
+- [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
 
 [^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
 [^2]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
