@@ -48,6 +48,8 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush flushes all exporters.
+//
+//  This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	// TODO (#5060): Implement.
 	return nil
@@ -85,8 +87,8 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // Each WithProcessor creates a separate pipeline. Use custom decorators
 // for advanced scenarios such as enriching with attributes.
 //
-// Use NewBatchingProcessor to batch log records before they are exported.
-// Use NewSimpleProcessor to synchronously export log records.
+// Use [NewBatchingProcessor] to batch log records before they are exported.
+// Use [NewSimpleProcessor] to synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		// TODO (#5060): Implement.
@@ -106,7 +108,7 @@ func WithProcessor(processor Processor) LoggerProviderOption {
 // If both are set, OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
-// passed, no limit 128 will be used.
+// passed, 128 will be used.
 func WithAttributeCountLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		// TODO (#5060): Implement.

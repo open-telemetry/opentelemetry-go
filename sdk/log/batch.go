@@ -65,7 +65,7 @@ func (fn batchingOptionFunc) apply(c batcherConfig) batcherConfig {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 2048 will be used.
-// The default value is also used when the provided value is not a positive value.
+// The default value is also used when the provided value is less than one.
 func WithMaxQueueSize(max int) BatchingOption {
 	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
 		// TODO (#5063): Implement.
@@ -81,7 +81,7 @@ func WithMaxQueueSize(max int) BatchingOption {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 1s will be used.
-// The default value is also used when the provided value is not a positive value.
+// The default value is also used when the provided value is less than one.
 func WithExportInterval(d time.Duration) BatchingOption {
 	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
 		// TODO (#5063): Implement.
@@ -97,7 +97,7 @@ func WithExportInterval(d time.Duration) BatchingOption {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 30s will be used.
-// The default value is also used when the provided value is not a positive value.
+// The default value is also used when the provided value is less than one.
 func WithExportTimeout(d time.Duration) BatchingOption {
 	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
 		// TODO (#5063): Implement.
@@ -106,6 +106,7 @@ func WithExportTimeout(d time.Duration) BatchingOption {
 }
 
 // WithExportMaxBatchSize sets the maximum batch size of every export.
+// A batch will be split into multiple exports to not exceed this size.
 //
 // If the OTEL_BSP_MAX_EXPORT_BATCH_SIZE environment variable is set,
 // and this option is not passed, that variable value will be used.
@@ -113,7 +114,7 @@ func WithExportTimeout(d time.Duration) BatchingOption {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 512 will be used.
-// The default value is also used when the provided value is not a positive value.
+// The default value is also used when the provided value is less than one.
 func WithExportMaxBatchSize(max int) BatchingOption {
 	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
 		// TODO (#5063): Implement.

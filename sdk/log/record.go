@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Record is log record emitted by the Logger.
+// Record is a log record emitted by the Logger.
 type Record struct{}
 
 // Timestamp returns the time when the log record occurred.
@@ -43,7 +43,7 @@ func (r *Record) Severity() log.Severity {
 	return log.Severity(0)
 }
 
-// SetSeverity sets the severity] level of the log record.
+// SetSeverity sets the severity level of the log record.
 func (r *Record) SetSeverity(level log.Severity) {
 	// TODO (#5064): Implement.
 }
