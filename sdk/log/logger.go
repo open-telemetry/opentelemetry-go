@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -16,6 +17,13 @@ import (
 
 // Compile-time check logger implements metric.log.Logger.
 var _ log.Logger = (*logger)(nil)
+
+var keysPool = sync.Pool{
+	New: func() any {
+		keys := map[string]struct{}{}
+		return &keys
+	},
+}
 
 type logger struct {
 	embedded.Logger
@@ -49,7 +57,24 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		record.traceFlags = span.TraceFlags()
 	}
 
+	keysPtr := keysPool.Get().(*map[string]struct{})
+	defer func() {
+		clear(*keysPtr)
+		keysPool.Put(keysPtr)
+	}()
+	keys := *keysPtr
 	r.WalkAttributes(func(kv log.KeyValue) bool {
+		if _, ok := keys[kv.Key]; ok {
+			// Drop duplicated log attribute.
+			return true
+		}
+
+		keys[kv.Key] = struct{}{}
+
+		if hasDuplicatedKey(kv.Value) {
+			// Drop attribute which contains any key-value with duplicated key.
+			return true
+		}
 		record.AddAttributes(kv)
 		return true
 	})
@@ -59,4 +84,30 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 			otel.Handle(err)
 		}
 	}
+}
+
+func hasDuplicatedKey(value log.Value) bool {
+	if value.Kind() != log.KindMap {
+		return false
+	}
+
+	keysPtr := keysPool.Get().(*map[string]struct{})
+	defer func() {
+		clear(*keysPtr)
+		keysPool.Put(keysPtr)
+	}()
+	keys := *keysPtr
+	m := value.AsMap()
+	for _, kv := range m {
+		if _, ok := keys[kv.Key]; ok {
+			return true
+		}
+		keys[kv.Key] = struct{}{}
+
+		if hasDuplicatedKey(kv.Value) {
+			return true
+		}
+	}
+
+	return false
 }
