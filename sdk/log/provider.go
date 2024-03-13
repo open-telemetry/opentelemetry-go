@@ -49,7 +49,7 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 
 // ForceFlush flushes all exporters.
 //
-//  This method can be called concurrently.
+//	This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	// TODO (#5060): Implement.
 	return nil
@@ -105,7 +105,6 @@ func WithProcessor(processor Processor) LoggerProviderOption {
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 128 will be used.
@@ -125,7 +124,6 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, no limit (-1) will be used.
