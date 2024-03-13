@@ -13,9 +13,6 @@ import (
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 type Processor interface {
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
-
 	// OnEmit is called when a Record is emitted.
 	//
 	// Implementation should not interrupt the record processing
@@ -29,9 +26,6 @@ type Processor interface {
 	// Before modifying a Record, the implementation must use Record.Clone
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record Record) error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
-
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
@@ -41,15 +35,10 @@ type Processor interface {
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
 	Shutdown(ctx context.Context) error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
-
 	// ForceFlush exports log records to the configured Exporter that have not yet
 	// been exported.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	ForceFlush(ctx context.Context) error
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
 }
