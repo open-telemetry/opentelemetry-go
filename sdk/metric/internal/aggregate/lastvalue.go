@@ -15,6 +15,7 @@ import (
 
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
+	attrs     attribute.Set
 	timestamp time.Time
 	value     N
 	res       exemplar.Reservoir[N]
@@ -24,7 +25,7 @@ func newLastValue[N int64 | float64](limit int, r func() exemplar.Reservoir[N]) 
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
-		values: make(map[attribute.Set]datapoint[N]),
+		values: make(map[attribute.Distinct]datapoint[N]),
 	}
 }
 
@@ -34,7 +35,7 @@ type lastValue[N int64 | float64] struct {
 
 	newRes func() exemplar.Reservoir[N]
 	limit  limiter[datapoint[N]]
-	values map[attribute.Set]datapoint[N]
+	values map[attribute.Distinct]datapoint[N]
 }
 
 func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
@@ -44,16 +45,17 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.
 	defer s.Unlock()
 
 	attr := s.limit.Attributes(fltrAttr, s.values)
-	d, ok := s.values[attr]
+	d, ok := s.values[attr.Equivalent()]
 	if !ok {
 		d.res = s.newRes()
 	}
 
+	d.attrs = attr
 	d.timestamp = t
 	d.value = value
 	d.res.Offer(ctx, t, value, droppedAttr)
 
-	s.values[attr] = d
+	s.values[attr.Equivalent()] = d
 }
 
 func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
@@ -64,8 +66,8 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 	*dest = reset(*dest, n, n)
 
 	var i int
-	for a, v := range s.values {
-		(*dest)[i].Attributes = a
+	for _, v := range s.values {
+		(*dest)[i].Attributes = v.attrs
 		// The event time is the only meaningful timestamp, StartTime is
 		// ignored.
 		(*dest)[i].Time = v.timestamp

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -226,5 +227,23 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Contains(t, got, key)
 		assert.Equal(t, got[key], []string{headers[key]})
+	})
+
+	t.Run("WithProxy", func(t *testing.T) {
+		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
+		headerValueSetInProxy := "true"
+		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {
+			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
+			return r.URL, nil
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, headerKeySetInProxy)
+		assert.Equal(t, got[headerKeySetInProxy], []string{headerValueSetInProxy})
 	})
 }

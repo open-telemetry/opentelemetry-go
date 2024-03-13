@@ -5,6 +5,8 @@ package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"crypto/tls"
+	"net/http"
+	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
@@ -15,6 +17,11 @@ import (
 // Compression describes the compression used for payloads sent to the
 // collector.
 type Compression oconf.Compression
+
+// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
+// This type is compatible with http.Transport.Proxy and can be used to set a custom proxy function
+// to the OTLP HTTP client.
+type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 const (
 	// NoCompression tells the driver to send payloads without
@@ -205,4 +212,11 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) Option {
 // explicitly passed for a view matching an instrument.
 func WithAggregationSelector(selector metric.AggregationSelector) Option {
 	return wrappedOption{oconf.WithAggregationSelector(selector)}
+}
+
+// WithProxy sets the Proxy function the client will use to determine the
+// proxy to use for an HTTP request. If this option is not used, the client
+// will use [http.ProxyFromEnvironment].
+func WithProxy(pf HTTPTransportProxyFunc) Option {
+	return wrappedOption{oconf.WithProxy(oconf.HTTPTransportProxyFunc(pf))}
 }
