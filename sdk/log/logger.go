@@ -20,3 +20,8 @@ type logger struct {
 func (l *logger) Emit(ctx context.Context, r log.Record) {
 	// TODO (#5061): Implement.
 }
+
+func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
+	// TODO (#5061): Implement.
+	return true
+}
