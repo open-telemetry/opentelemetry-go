@@ -410,9 +410,9 @@ E.g. there can be a need for some fields that can be set via API and cannot be m
 
 ## Open issues
 
-The Logs SDK NOT be released as stable before all issues below are closed:
+The Logs SDK MUST NOT be released as stable before all issues below are closed:
 
-- [Redefine ReadableLogRecord and ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3898)
+- [Clarify that ReadableLogRecord and ReadWriteLogRecord can be represented using a single type](https://github.com/open-telemetry/opentelemetry-specification/pull/3898)
 - [Fix what can be modified via ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3907)
 - [logs: Allow duplicate keys](https://github.com/open-telemetry/opentelemetry-specification/issues/3931)
 - [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
