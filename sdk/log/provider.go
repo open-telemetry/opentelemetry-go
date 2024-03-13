@@ -87,8 +87,8 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // Each WithProcessor creates a separate pipeline. Use custom decorators
 // for advanced scenarios such as enriching with attributes.
 //
-// Use [NewBatchingProcessor] to batch log records before they are exported.
-// Use [NewSimpleProcessor] to synchronously export log records.
+// For production, use [NewBatchingProcessor] to batch log records before they are exported.
+// For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		// TODO (#5060): Implement.

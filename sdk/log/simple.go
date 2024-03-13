@@ -18,6 +18,12 @@ type SimpleProcessor struct{}
 // Any of the exporter's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the exporter to manage
 // this concurrency.
+//
+// This Processor is not recommended for production use. The synchronous
+// nature of this Processor make it good for testing, debugging, or
+// showing examples of other features, but it can be slow and have a high
+// computation resource usage overhead. [NewBatchingProcessor] is recommended
+// for production use instead.
 func NewSimpleProcessor(exporter Exporter) *SimpleProcessor {
 	// TODO (#5062): Implement.
 	return nil
