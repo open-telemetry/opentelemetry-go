@@ -111,79 +111,79 @@ const (
 	DBClientConnectionsUseTimeUnit        = "ms"
 	DBClientConnectionsUseTimeDescription = "The time between borrowing a connection and returning it to the pool"
 
-	// AspnetcoreRoutingMatchAttempts is the metric conforming to the
+	// ASPNETCoreRoutingMatchAttempts is the metric conforming to the
 	// "aspnetcore.routing.match_attempts" semantic conventions. It represents the
 	// number of requests that were attempted to be matched to an endpoint.
 	// Instrument: counter
 	// Unit: {match_attempt}
 	// Stability: Experimental
-	AspnetcoreRoutingMatchAttemptsName        = "aspnetcore.routing.match_attempts"
-	AspnetcoreRoutingMatchAttemptsUnit        = "{match_attempt}"
-	AspnetcoreRoutingMatchAttemptsDescription = "Number of requests that were attempted to be matched to an endpoint."
+	ASPNETCoreRoutingMatchAttemptsName        = "aspnetcore.routing.match_attempts"
+	ASPNETCoreRoutingMatchAttemptsUnit        = "{match_attempt}"
+	ASPNETCoreRoutingMatchAttemptsDescription = "Number of requests that were attempted to be matched to an endpoint."
 
-	// AspnetcoreDiagnosticsExceptions is the metric conforming to the
+	// ASPNETCoreDiagnosticsExceptions is the metric conforming to the
 	// "aspnetcore.diagnostics.exceptions" semantic conventions. It represents the
 	// number of exceptions caught by exception handling middleware.
 	// Instrument: counter
 	// Unit: {exception}
 	// Stability: Experimental
-	AspnetcoreDiagnosticsExceptionsName        = "aspnetcore.diagnostics.exceptions"
-	AspnetcoreDiagnosticsExceptionsUnit        = "{exception}"
-	AspnetcoreDiagnosticsExceptionsDescription = "Number of exceptions caught by exception handling middleware."
+	ASPNETCoreDiagnosticsExceptionsName        = "aspnetcore.diagnostics.exceptions"
+	ASPNETCoreDiagnosticsExceptionsUnit        = "{exception}"
+	ASPNETCoreDiagnosticsExceptionsDescription = "Number of exceptions caught by exception handling middleware."
 
-	// AspnetcoreRateLimitingActiveRequestLeases is the metric conforming to the
+	// ASPNETCoreRateLimitingActiveRequestLeases is the metric conforming to the
 	// "aspnetcore.rate_limiting.active_request_leases" semantic conventions. It
 	// represents the number of requests that are currently active on the server
 	// that hold a rate limiting lease.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
-	AspnetcoreRateLimitingActiveRequestLeasesName        = "aspnetcore.rate_limiting.active_request_leases"
-	AspnetcoreRateLimitingActiveRequestLeasesUnit        = "{request}"
-	AspnetcoreRateLimitingActiveRequestLeasesDescription = "Number of requests that are currently active on the server that hold a rate limiting lease."
+	ASPNETCoreRateLimitingActiveRequestLeasesName        = "aspnetcore.rate_limiting.active_request_leases"
+	ASPNETCoreRateLimitingActiveRequestLeasesUnit        = "{request}"
+	ASPNETCoreRateLimitingActiveRequestLeasesDescription = "Number of requests that are currently active on the server that hold a rate limiting lease."
 
-	// AspnetcoreRateLimitingRequestLeaseDuration is the metric conforming to the
+	// ASPNETCoreRateLimitingRequestLeaseDuration is the metric conforming to the
 	// "aspnetcore.rate_limiting.request_lease.duration" semantic conventions. It
 	// represents the duration of rate limiting lease held by requests on the
 	// server.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
-	AspnetcoreRateLimitingRequestLeaseDurationName        = "aspnetcore.rate_limiting.request_lease.duration"
-	AspnetcoreRateLimitingRequestLeaseDurationUnit        = "s"
-	AspnetcoreRateLimitingRequestLeaseDurationDescription = "The duration of rate limiting lease held by requests on the server."
+	ASPNETCoreRateLimitingRequestLeaseDurationName        = "aspnetcore.rate_limiting.request_lease.duration"
+	ASPNETCoreRateLimitingRequestLeaseDurationUnit        = "s"
+	ASPNETCoreRateLimitingRequestLeaseDurationDescription = "The duration of rate limiting lease held by requests on the server."
 
-	// AspnetcoreRateLimitingRequestTimeInQueue is the metric conforming to the
+	// ASPNETCoreRateLimitingRequestTimeInQueue is the metric conforming to the
 	// "aspnetcore.rate_limiting.request.time_in_queue" semantic conventions. It
 	// represents the time the request spent in a queue waiting to acquire a rate
 	// limiting lease.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Experimental
-	AspnetcoreRateLimitingRequestTimeInQueueName        = "aspnetcore.rate_limiting.request.time_in_queue"
-	AspnetcoreRateLimitingRequestTimeInQueueUnit        = "s"
-	AspnetcoreRateLimitingRequestTimeInQueueDescription = "The time the request spent in a queue waiting to acquire a rate limiting lease."
+	ASPNETCoreRateLimitingRequestTimeInQueueName        = "aspnetcore.rate_limiting.request.time_in_queue"
+	ASPNETCoreRateLimitingRequestTimeInQueueUnit        = "s"
+	ASPNETCoreRateLimitingRequestTimeInQueueDescription = "The time the request spent in a queue waiting to acquire a rate limiting lease."
 
-	// AspnetcoreRateLimitingQueuedRequests is the metric conforming to the
+	// ASPNETCoreRateLimitingQueuedRequests is the metric conforming to the
 	// "aspnetcore.rate_limiting.queued_requests" semantic conventions. It
 	// represents the number of requests that are currently queued, waiting to
 	// acquire a rate limiting lease.
 	// Instrument: updowncounter
 	// Unit: {request}
 	// Stability: Experimental
-	AspnetcoreRateLimitingQueuedRequestsName        = "aspnetcore.rate_limiting.queued_requests"
-	AspnetcoreRateLimitingQueuedRequestsUnit        = "{request}"
-	AspnetcoreRateLimitingQueuedRequestsDescription = "Number of requests that are currently queued, waiting to acquire a rate limiting lease."
+	ASPNETCoreRateLimitingQueuedRequestsName        = "aspnetcore.rate_limiting.queued_requests"
+	ASPNETCoreRateLimitingQueuedRequestsUnit        = "{request}"
+	ASPNETCoreRateLimitingQueuedRequestsDescription = "Number of requests that are currently queued, waiting to acquire a rate limiting lease."
 
-	// AspnetcoreRateLimitingRequests is the metric conforming to the
+	// ASPNETCoreRateLimitingRequests is the metric conforming to the
 	// "aspnetcore.rate_limiting.requests" semantic conventions. It represents the
 	// number of requests that tried to acquire a rate limiting lease.
 	// Instrument: counter
 	// Unit: {request}
 	// Stability: Experimental
-	AspnetcoreRateLimitingRequestsName        = "aspnetcore.rate_limiting.requests"
-	AspnetcoreRateLimitingRequestsUnit        = "{request}"
-	AspnetcoreRateLimitingRequestsDescription = "Number of requests that tried to acquire a rate limiting lease."
+	ASPNETCoreRateLimitingRequestsName        = "aspnetcore.rate_limiting.requests"
+	ASPNETCoreRateLimitingRequestsUnit        = "{request}"
+	ASPNETCoreRateLimitingRequestsDescription = "Number of requests that tried to acquire a rate limiting lease."
 
 	// DNSLookupDuration is the metric conforming to the "dns.lookup.duration"
 	// semantic conventions. It represents the measures the time taken to perform a
@@ -492,177 +492,177 @@ const (
 	HTTPClientResponseBodySizeUnit        = "By"
 	HTTPClientResponseBodySizeDescription = "Size of HTTP client response bodies."
 
-	// JvmMemoryInit is the metric conforming to the "jvm.memory.init" semantic
+	// JVMMemoryInit is the metric conforming to the "jvm.memory.init" semantic
 	// conventions. It represents the measure of initial memory requested.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
-	JvmMemoryInitName        = "jvm.memory.init"
-	JvmMemoryInitUnit        = "By"
-	JvmMemoryInitDescription = "Measure of initial memory requested."
+	JVMMemoryInitName        = "jvm.memory.init"
+	JVMMemoryInitUnit        = "By"
+	JVMMemoryInitDescription = "Measure of initial memory requested."
 
-	// JvmSystemCPUUtilization is the metric conforming to the
+	// JVMSystemCPUUtilization is the metric conforming to the
 	// "jvm.system.cpu.utilization" semantic conventions. It represents the recent
 	// CPU utilization for the whole system as reported by the JVM.
 	// Instrument: gauge
 	// Unit: 1
 	// Stability: Experimental
-	JvmSystemCPUUtilizationName        = "jvm.system.cpu.utilization"
-	JvmSystemCPUUtilizationUnit        = "1"
-	JvmSystemCPUUtilizationDescription = "Recent CPU utilization for the whole system as reported by the JVM."
+	JVMSystemCPUUtilizationName        = "jvm.system.cpu.utilization"
+	JVMSystemCPUUtilizationUnit        = "1"
+	JVMSystemCPUUtilizationDescription = "Recent CPU utilization for the whole system as reported by the JVM."
 
-	// JvmSystemCPULoad1m is the metric conforming to the "jvm.system.cpu.load_1m"
+	// JVMSystemCPULoad1m is the metric conforming to the "jvm.system.cpu.load_1m"
 	// semantic conventions. It represents the average CPU load of the whole system
 	// for the last minute as reported by the JVM.
 	// Instrument: gauge
 	// Unit: {run_queue_item}
 	// Stability: Experimental
-	JvmSystemCPULoad1mName        = "jvm.system.cpu.load_1m"
-	JvmSystemCPULoad1mUnit        = "{run_queue_item}"
-	JvmSystemCPULoad1mDescription = "Average CPU load of the whole system for the last minute as reported by the JVM."
+	JVMSystemCPULoad1mName        = "jvm.system.cpu.load_1m"
+	JVMSystemCPULoad1mUnit        = "{run_queue_item}"
+	JVMSystemCPULoad1mDescription = "Average CPU load of the whole system for the last minute as reported by the JVM."
 
-	// JvmBufferMemoryUsage is the metric conforming to the
+	// JVMBufferMemoryUsage is the metric conforming to the
 	// "jvm.buffer.memory.usage" semantic conventions. It represents the measure of
 	// memory used by buffers.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
-	JvmBufferMemoryUsageName        = "jvm.buffer.memory.usage"
-	JvmBufferMemoryUsageUnit        = "By"
-	JvmBufferMemoryUsageDescription = "Measure of memory used by buffers."
+	JVMBufferMemoryUsageName        = "jvm.buffer.memory.usage"
+	JVMBufferMemoryUsageUnit        = "By"
+	JVMBufferMemoryUsageDescription = "Measure of memory used by buffers."
 
-	// JvmBufferMemoryLimit is the metric conforming to the
+	// JVMBufferMemoryLimit is the metric conforming to the
 	// "jvm.buffer.memory.limit" semantic conventions. It represents the measure of
 	// total memory capacity of buffers.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Experimental
-	JvmBufferMemoryLimitName        = "jvm.buffer.memory.limit"
-	JvmBufferMemoryLimitUnit        = "By"
-	JvmBufferMemoryLimitDescription = "Measure of total memory capacity of buffers."
+	JVMBufferMemoryLimitName        = "jvm.buffer.memory.limit"
+	JVMBufferMemoryLimitUnit        = "By"
+	JVMBufferMemoryLimitDescription = "Measure of total memory capacity of buffers."
 
-	// JvmBufferCount is the metric conforming to the "jvm.buffer.count" semantic
+	// JVMBufferCount is the metric conforming to the "jvm.buffer.count" semantic
 	// conventions. It represents the number of buffers in the pool.
 	// Instrument: updowncounter
 	// Unit: {buffer}
 	// Stability: Experimental
-	JvmBufferCountName        = "jvm.buffer.count"
-	JvmBufferCountUnit        = "{buffer}"
-	JvmBufferCountDescription = "Number of buffers in the pool."
+	JVMBufferCountName        = "jvm.buffer.count"
+	JVMBufferCountUnit        = "{buffer}"
+	JVMBufferCountDescription = "Number of buffers in the pool."
 
-	// JvmMemoryUsed is the metric conforming to the "jvm.memory.used" semantic
+	// JVMMemoryUsed is the metric conforming to the "jvm.memory.used" semantic
 	// conventions. It represents the measure of memory used.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
-	JvmMemoryUsedName        = "jvm.memory.used"
-	JvmMemoryUsedUnit        = "By"
-	JvmMemoryUsedDescription = "Measure of memory used."
+	JVMMemoryUsedName        = "jvm.memory.used"
+	JVMMemoryUsedUnit        = "By"
+	JVMMemoryUsedDescription = "Measure of memory used."
 
-	// JvmMemoryCommitted is the metric conforming to the "jvm.memory.committed"
+	// JVMMemoryCommitted is the metric conforming to the "jvm.memory.committed"
 	// semantic conventions. It represents the measure of memory committed.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
-	JvmMemoryCommittedName        = "jvm.memory.committed"
-	JvmMemoryCommittedUnit        = "By"
-	JvmMemoryCommittedDescription = "Measure of memory committed."
+	JVMMemoryCommittedName        = "jvm.memory.committed"
+	JVMMemoryCommittedUnit        = "By"
+	JVMMemoryCommittedDescription = "Measure of memory committed."
 
-	// JvmMemoryLimit is the metric conforming to the "jvm.memory.limit" semantic
+	// JVMMemoryLimit is the metric conforming to the "jvm.memory.limit" semantic
 	// conventions. It represents the measure of max obtainable memory.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
-	JvmMemoryLimitName        = "jvm.memory.limit"
-	JvmMemoryLimitUnit        = "By"
-	JvmMemoryLimitDescription = "Measure of max obtainable memory."
+	JVMMemoryLimitName        = "jvm.memory.limit"
+	JVMMemoryLimitUnit        = "By"
+	JVMMemoryLimitDescription = "Measure of max obtainable memory."
 
-	// JvmMemoryUsedAfterLastGc is the metric conforming to the
+	// JVMMemoryUsedAfterLastGc is the metric conforming to the
 	// "jvm.memory.used_after_last_gc" semantic conventions. It represents the
 	// measure of memory used, as measured after the most recent garbage collection
 	// event on this pool.
 	// Instrument: updowncounter
 	// Unit: By
 	// Stability: Stable
-	JvmMemoryUsedAfterLastGcName        = "jvm.memory.used_after_last_gc"
-	JvmMemoryUsedAfterLastGcUnit        = "By"
-	JvmMemoryUsedAfterLastGcDescription = "Measure of memory used, as measured after the most recent garbage collection event on this pool."
+	JVMMemoryUsedAfterLastGcName        = "jvm.memory.used_after_last_gc"
+	JVMMemoryUsedAfterLastGcUnit        = "By"
+	JVMMemoryUsedAfterLastGcDescription = "Measure of memory used, as measured after the most recent garbage collection event on this pool."
 
-	// JvmGcDuration is the metric conforming to the "jvm.gc.duration" semantic
+	// JVMGcDuration is the metric conforming to the "jvm.gc.duration" semantic
 	// conventions. It represents the duration of JVM garbage collection actions.
 	// Instrument: histogram
 	// Unit: s
 	// Stability: Stable
-	JvmGcDurationName        = "jvm.gc.duration"
-	JvmGcDurationUnit        = "s"
-	JvmGcDurationDescription = "Duration of JVM garbage collection actions."
+	JVMGcDurationName        = "jvm.gc.duration"
+	JVMGcDurationUnit        = "s"
+	JVMGcDurationDescription = "Duration of JVM garbage collection actions."
 
-	// JvmThreadCount is the metric conforming to the "jvm.thread.count" semantic
+	// JVMThreadCount is the metric conforming to the "jvm.thread.count" semantic
 	// conventions. It represents the number of executing platform threads.
 	// Instrument: updowncounter
 	// Unit: {thread}
 	// Stability: Stable
-	JvmThreadCountName        = "jvm.thread.count"
-	JvmThreadCountUnit        = "{thread}"
-	JvmThreadCountDescription = "Number of executing platform threads."
+	JVMThreadCountName        = "jvm.thread.count"
+	JVMThreadCountUnit        = "{thread}"
+	JVMThreadCountDescription = "Number of executing platform threads."
 
-	// JvmClassLoaded is the metric conforming to the "jvm.class.loaded" semantic
+	// JVMClassLoaded is the metric conforming to the "jvm.class.loaded" semantic
 	// conventions. It represents the number of classes loaded since JVM start.
 	// Instrument: counter
 	// Unit: {class}
 	// Stability: Stable
-	JvmClassLoadedName        = "jvm.class.loaded"
-	JvmClassLoadedUnit        = "{class}"
-	JvmClassLoadedDescription = "Number of classes loaded since JVM start."
+	JVMClassLoadedName        = "jvm.class.loaded"
+	JVMClassLoadedUnit        = "{class}"
+	JVMClassLoadedDescription = "Number of classes loaded since JVM start."
 
-	// JvmClassUnloaded is the metric conforming to the "jvm.class.unloaded"
+	// JVMClassUnloaded is the metric conforming to the "jvm.class.unloaded"
 	// semantic conventions. It represents the number of classes unloaded since JVM
 	// start.
 	// Instrument: counter
 	// Unit: {class}
 	// Stability: Stable
-	JvmClassUnloadedName        = "jvm.class.unloaded"
-	JvmClassUnloadedUnit        = "{class}"
-	JvmClassUnloadedDescription = "Number of classes unloaded since JVM start."
+	JVMClassUnloadedName        = "jvm.class.unloaded"
+	JVMClassUnloadedUnit        = "{class}"
+	JVMClassUnloadedDescription = "Number of classes unloaded since JVM start."
 
-	// JvmClassCount is the metric conforming to the "jvm.class.count" semantic
+	// JVMClassCount is the metric conforming to the "jvm.class.count" semantic
 	// conventions. It represents the number of classes currently loaded.
 	// Instrument: updowncounter
 	// Unit: {class}
 	// Stability: Stable
-	JvmClassCountName        = "jvm.class.count"
-	JvmClassCountUnit        = "{class}"
-	JvmClassCountDescription = "Number of classes currently loaded."
+	JVMClassCountName        = "jvm.class.count"
+	JVMClassCountUnit        = "{class}"
+	JVMClassCountDescription = "Number of classes currently loaded."
 
-	// JvmCPUCount is the metric conforming to the "jvm.cpu.count" semantic
+	// JVMCPUCount is the metric conforming to the "jvm.cpu.count" semantic
 	// conventions. It represents the number of processors available to the Java
 	// virtual machine.
 	// Instrument: updowncounter
 	// Unit: {cpu}
 	// Stability: Stable
-	JvmCPUCountName        = "jvm.cpu.count"
-	JvmCPUCountUnit        = "{cpu}"
-	JvmCPUCountDescription = "Number of processors available to the Java virtual machine."
+	JVMCPUCountName        = "jvm.cpu.count"
+	JVMCPUCountUnit        = "{cpu}"
+	JVMCPUCountDescription = "Number of processors available to the Java virtual machine."
 
-	// JvmCPUTime is the metric conforming to the "jvm.cpu.time" semantic
+	// JVMCPUTime is the metric conforming to the "jvm.cpu.time" semantic
 	// conventions. It represents the cPU time used by the process as reported by
 	// the JVM.
 	// Instrument: counter
 	// Unit: s
 	// Stability: Stable
-	JvmCPUTimeName        = "jvm.cpu.time"
-	JvmCPUTimeUnit        = "s"
-	JvmCPUTimeDescription = "CPU time used by the process as reported by the JVM."
+	JVMCPUTimeName        = "jvm.cpu.time"
+	JVMCPUTimeUnit        = "s"
+	JVMCPUTimeDescription = "CPU time used by the process as reported by the JVM."
 
-	// JvmCPURecentUtilization is the metric conforming to the
+	// JVMCPURecentUtilization is the metric conforming to the
 	// "jvm.cpu.recent_utilization" semantic conventions. It represents the recent
 	// CPU utilization for the process as reported by the JVM.
 	// Instrument: gauge
 	// Unit: 1
 	// Stability: Stable
-	JvmCPURecentUtilizationName        = "jvm.cpu.recent_utilization"
-	JvmCPURecentUtilizationUnit        = "1"
-	JvmCPURecentUtilizationDescription = "Recent CPU utilization for the process as reported by the JVM."
+	JVMCPURecentUtilizationName        = "jvm.cpu.recent_utilization"
+	JVMCPURecentUtilizationUnit        = "1"
+	JVMCPURecentUtilizationDescription = "Recent CPU utilization for the process as reported by the JVM."
 
 	// MessagingPublishDuration is the metric conforming to the
 	// "messaging.publish.duration" semantic conventions. It represents the
