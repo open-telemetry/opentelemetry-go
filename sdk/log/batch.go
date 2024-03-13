@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is an processor that asynchronously exports batches of log records.

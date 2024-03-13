@@ -7,6 +7,7 @@ import (
 	"context"
 )
 
+// Compile-time check SimpleProcessor implements Processor.
 var _ Processor = (*SimpleProcessor)(nil)
 
 // SimpleProcessor is an processor that synchronously exports log records.
