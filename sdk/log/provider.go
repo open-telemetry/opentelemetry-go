@@ -58,9 +58,6 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		attributeCountLimit:       attributeCountLimitDefault,
 		attributeValueLengthLimit: attributeValueLengthLimitDefault,
 	}
-	for _, opt := range opts {
-		cfg = opt.apply(cfg)
-	}
 
 	if v := os.Getenv("OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT"); v != "" {
 		if n, err := strconv.Atoi(v); err != nil {
@@ -75,6 +72,10 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		} else {
 			cfg.attributeValueLengthLimit = n
 		}
+	}
+
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
 	}
 
 	if cfg.resource == nil {
@@ -193,7 +194,6 @@ func WithProcessor(processor Processor) LoggerProviderOption {
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, no limit 128 will be used.
@@ -213,7 +213,6 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, no limit (-1) will be used.
