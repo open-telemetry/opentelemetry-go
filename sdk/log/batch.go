@@ -45,7 +45,7 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-// BatchingOption applies a configuration to a Batcher.
+// BatchingOption applies a configuration to a BatchingProcessor.
 type BatchingOption interface {
 	apply(batcherConfig) batcherConfig
 }

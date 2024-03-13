@@ -42,6 +42,8 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 }
 
 // Shutdown flushes queued log records and shuts down the decorated expoter.
+//
+// This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	// TODO (#5060): Implement.
 	return nil
