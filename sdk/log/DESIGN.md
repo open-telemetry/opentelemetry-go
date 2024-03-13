@@ -73,7 +73,6 @@ can be configured using following options:
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, no limit 128 will be used.
@@ -88,7 +87,6 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption
 //
 // If the OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, no limit (-1) will be used.
@@ -199,7 +197,6 @@ type BatchingOption interface { /* ... */ }
 //
 // If the OTEL_BLRP_MAX_QUEUE_SIZE environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_BLRP_MAX_QUEUE_SIZE will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 2048 will be used.
@@ -210,7 +207,6 @@ func WithMaxQueueSize(max int) BatchingOption
 //
 // If the OTEL_BSP_SCHEDULE_DELAY environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_BSP_SCHEDULE_DELAY will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 1s will be used.
@@ -221,7 +217,6 @@ func WithExportInterval(d time.Duration) BatchingOption
 //
 // If the OTEL_BSP_EXPORT_TIMEOUT environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_BSP_EXPORT_TIMEOUT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 30s will be used.
@@ -232,7 +227,6 @@ func WithExportTimeout(d time.Duration) BatchingOption
 //
 // If the OTEL_BSP_MAX_EXPORT_BATCH_SIZE environment variable is set,
 // and this option is not passed, that variable value will be used.
-// If both are set, OTEL_BSP_MAX_EXPORT_BATCH_SIZE will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, 512 will be used.
