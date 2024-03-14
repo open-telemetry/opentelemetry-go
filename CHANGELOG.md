@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `SpanFromContext` and `SpanContextFromContext` in `go.opentelemetry.io/otel/trace` no longer make a heap allocation when the passed context has no span. (#5049)
+- `go.opentelemetry.io/otel/propagation.TraceContext` now propagates unknown trace flag bits. (#5075)
 
 ### Fixed
 
