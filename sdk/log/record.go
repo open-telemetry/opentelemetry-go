@@ -87,7 +87,7 @@ func (r *Record) Severity() log.Severity {
 	return r.severity
 }
 
-// SetSeverity sets the severity] level of the log record.
+// SetSeverity sets the severity level of the log record.
 func (r *Record) SetSeverity(level log.Severity) {
 	r.severity = level
 }
