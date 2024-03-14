@@ -118,3 +118,8 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestLimitValueFailsOpen(t *testing.T) {
+	var l limit
+	assert.Equal(t, -1, l.Value(), "limit value should default to unlimited")
+}
