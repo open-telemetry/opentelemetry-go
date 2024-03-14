@@ -15,6 +15,9 @@ import (
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
+	// OnEmit will be called indpendent of Enabled. Implementations need to
+	// validate the arguments themselves before processing.
+	//
 	// Implementation should not interrupt the record processing
 	// if the context is canceled.
 	//
