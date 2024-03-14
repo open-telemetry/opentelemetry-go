@@ -46,15 +46,12 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 		carrier.Set(tracestateHeader, ts)
 	}
 
-	// Clear all flags other than the trace-context supported sampling bit.
-	flags := sc.TraceFlags() & trace.FlagsSampled
-
 	var sb strings.Builder
 	sb.Grow(2 + 32 + 16 + 2 + 3)
 	_, _ = sb.WriteString(versionPart)
 	traceID := sc.TraceID()
 	spanID := sc.SpanID()
-	flagByte := [1]byte{byte(flags)}
+	flagByte := [1]byte{byte(sc.TraceFlags())}
 	var buf [32]byte
 	for _, src := range [][]byte{traceID[:], spanID[:], flagByte[:]} {
 		_ = sb.WriteByte(delimiter[0])
