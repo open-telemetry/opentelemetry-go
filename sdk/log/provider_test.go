@@ -247,3 +247,40 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
 }
+
+func TestLoggerProviderForceFlush(t *testing.T) {
+	t.Run("Stopped", func(t *testing.T) {
+		proc := newProcessor("")
+		p := NewLoggerProvider(WithProcessor(proc))
+
+		ctx := context.Background()
+		require.NoError(t, p.ForceFlush(ctx))
+		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
+
+		require.NoError(t, p.Shutdown(ctx))
+
+		require.NoError(t, p.ForceFlush(ctx))
+		assert.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush called after Shutdown")
+	})
+
+	t.Run("Multi", func(t *testing.T) {
+		proc := newProcessor("")
+		p := NewLoggerProvider(WithProcessor(proc))
+
+		ctx := context.Background()
+		require.NoError(t, p.ForceFlush(ctx))
+		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
+
+		require.NoError(t, p.ForceFlush(ctx))
+		assert.Equal(t, 2, proc.forceFlushCalls, "processor ForceFlush not called multiple times")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		proc := newProcessor("")
+		proc.Err = assert.AnError
+		p := NewLoggerProvider(WithProcessor(proc))
+
+		ctx := context.Background()
+		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
+	})
+}
