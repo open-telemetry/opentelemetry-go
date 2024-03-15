@@ -34,7 +34,7 @@ const (
 )
 
 // A Value represents a structured log value.
-// An empty value is valid.
+// A zero value is valid and represents an empty value.
 type Value struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -317,7 +317,7 @@ func Map(key string, value ...KeyValue) KeyValue {
 	return KeyValue{key, MapValue(value...)}
 }
 
-// Empty returns an KeyValue for an empty value.
+// Empty returns a KeyValue with an empty value.
 func Empty(key string) KeyValue {
 	return KeyValue{key, Value{}}
 }
