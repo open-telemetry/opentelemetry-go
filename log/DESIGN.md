@@ -43,14 +43,7 @@ Rejected alternative:
 ### LoggerProvider
 
 The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
-is defined as an interface:
-
-```go
-type LoggerProvider interface {
-	embedded.LoggerProvider
-	Logger(name string, options ...LoggerOption) Logger
-}
-```
+is defined as `LoggerProvider` interface in [provider.go](provider.go).
 
 The specification may add new operations to `LoggerProvider`.
 The interface may have methods added without a package major version bump.
@@ -64,13 +57,7 @@ The `Logger` method implements the [`Get a Logger` operation](https://openteleme
 
 The required `name` parameter is accepted as a `string` method argument.
 
-The following options are defined to support optional parameters:
-
-```go
-func WithInstrumentationVersion(version string) LoggerOption
-func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption
-func WithSchemaURL(schemaURL string) LoggerOption
-```
+The `LoggerOption` options are defined to support optional parameters.
 
 Implementation requirements:
 
@@ -94,14 +81,7 @@ Rejected alternative:
 ### Logger
 
 The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
-is defined as an interface:
-
-```go
-type Logger interface {
-	embedded.Logger
-	Emit(ctx context.Context, record Record)
-}
-```
+is defined as `Logger` interface in [logger.go](logger.go).
 
 The specification may add new operations to `Logger`.
 The interface may have methods added without a package major version bump.
@@ -119,23 +99,7 @@ is accepted as a `context.Context` method argument.
 Calls to `Emit` are supposed to be on the hot path.
 Therefore, in order to reduce the number of heap allocations,
 the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord),
-is defined as a `Record` type:
-
-```go
-type Record struct {
-	timestamp         time.Time
-	observedTimestamp time.Time
-	severity          Severity
-	severityText      string
-	body              Value
-
-	// The fields below are for optimizing the implementation of
-	// attributes.
-	front [5]KeyValue
-	nFront int // The number of attributes in front.
-	back []KeyValue
-}
-```
+is defined as `Record` struct  in [record.go](record.go).
 
 [`Timestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-timestamp)
 is accessed using following methods:
@@ -161,52 +125,10 @@ func (r *Record) Severity() Severity
 func (r *Record) SetSeverity(s Severity)
 ```
 
-`Severity` type is defined and constants are based on
+`Severity` type is defined in [severity.go](severity.go).
+The constants are are based on
 [Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity).
 Additionally, `Severity[Level]1` constants are defined to make the API more readable and user friendly.
-
-```go
-type Severity int
-
-const (
-	SeverityTrace1 Severity = 1 // TRACE
-	SeverityTrace2 Severity = 2 // TRACE2
-	SeverityTrace3 Severity = 3 // TRACE3
-	SeverityTrace4 Severity = 4 // TRACE4
-
-	SeverityDebug1 Severity = 5 // DEBUG
-	SeverityDebug2 Severity = 6 // DEBUG2
-	SeverityDebug3 Severity = 7 // DEBUG3
-	SeverityDebug4 Severity = 8 // DEBUG4
-
-	SeverityInfo1 Severity = 9  // INFO
-	SeverityInfo2 Severity = 10 // INFO2
-	SeverityInfo3 Severity = 11 // INFO3
-	SeverityInfo4 Severity = 12 // INFO4
-
-	SeverityWarn1 Severity = 13 // WARN
-	SeverityWarn2 Severity = 14 // WARN2
-	SeverityWarn3 Severity = 15 // WARN3
-	SeverityWarn4 Severity = 16 // WARN4
-
-	SeverityError1 Severity = 17 // ERROR
-	SeverityError2 Severity = 18 // ERROR2
-	SeverityError3 Severity = 19 // ERROR3
-	SeverityError4 Severity = 20 // ERROR4
-
-	SeverityFatal1 Severity = 21 // FATAL
-	SeverityFatal2 Severity = 22 // FATAL2
-	SeverityFatal3 Severity = 23 // FATAL3
-	SeverityFatal4 Severity = 24 // FATAL4
-
-	SeverityTrace = SeverityTrace1
-	SeverityDebug = SeverityDebug1
-	SeverityInfo  = SeverityInfo1
-	SeverityWarn  = SeverityWarn1
-	SeverityError = SeverityError1
-	SeverityFatal = SeverityFatal1
-)
-```
 
 [`SeverityText`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitytext)
 is accessed using following methods:
@@ -247,95 +169,9 @@ while keeping the API user friendly.
 It relieves the user from making his own improvements
 for reducing the number of allocations when passing attributes.
 
-The following definitions are implementing the abstractions
-described in [the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs):
-
-```go
-type Value struct{}
-
-type Kind int
-
-const (
-	KindEmpty Kind = iota
-	KindBool
-	KindFloat64
-	KindInt64
-	KindString
-	KindBytes
-	KindSlice
-	KindMap
-)
-
-func (v Value) Kind() Kind
-
-// Value factories:
-
-func StringValue(value string) Value
-
-func IntValue(v int) Value
-
-func Int64Value(v int64) Value
-
-func Float64Value(v float64) Value
-
-func BoolValue(v bool) Value
-
-func BytesValue(v []byte) Value
-
-func SliceValue(vs ...Value) Value
-
-func MapValue(kvs ...KeyValue) Value
-
-// Value accessors:
-
-func (v Value) AsString() string
-
-func (v Value) AsInt64() int64
-
-func (v Value) AsBool() bool
-
-func (v Value) AsFloat64() float64
-
-func (v Value) AsBytes() []byte
-
-func (v Value) AsSlice() []Value
-
-func (v Value) AsMap() []KeyValue 
-
-func (v Value) Empty() bool
-
-// Value equality comparison:
-
-func (v Value) Equal(w Value) bool
-
-
-type KeyValue struct {
-	Key   string
-	Value Value
-}
-
-// KeyValue factories:
-
-func String(key, value string) KeyValue
-
-func Int64(key string, value int64) KeyValue
-
-func Int(key string, value int) KeyValue
-
-func Float64(key string, v float64) KeyValue
-
-func Bool(key string, v bool) KeyValue
-
-func Bytes(key string, v []byte) KeyValue
-
-func Slice(key string, args ...Value) KeyValue
-
-func Map(key string, args ...KeyValue) KeyValue
-
-// KeyValue equality comparison:
-
-func (a KeyValue) Equal(b KeyValue) bool
-```
+The abstractions described in
+[the specification](https://opentelemetry.io/docs/specs/otel/logs/#new-first-party-application-logs)
+are defined in [keyvalue.go](keyvalue.go).
 
 `Value` is representing `any`.
 `KeyValue` is representing a key(string)-value(`any`) pair.
