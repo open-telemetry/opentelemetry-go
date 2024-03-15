@@ -1,12 +1,6 @@
-{% macro to_go_name(name) -%}
-    {%- if name.startswith('aspnetcore.') -%}
-        ASPNETCore{{ name[11:] | replace(".", " ") | replace("_", " ") | title | replace(" ", "") }}
-    {%- elif name.startswith('jvm.') -%}
-        JVM{{ name[4:] | replace(".", " ") | replace("_", " ") | title | replace(" ", "") }}
-    {%- else -%}
-        {{ name | replace(".", " ") | replace("_", " ") | title | replace(" ", "") }}
-    {%- endif -%}
-{%- endmacro %}
+{%- macro to_go_name(fqn) -%}
+{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
+{%- endmacro -%}
 {%- macro it_reps(brief) -%}
 It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
   {{ brief[0]|lower }}{{ brief[1:] }}
