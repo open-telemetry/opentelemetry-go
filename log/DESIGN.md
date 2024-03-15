@@ -5,8 +5,8 @@
 `go.opentelemetry.io/otel/log` provides
 [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
 
-The initial version of the design and the prototype
-was created in [#4725](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
+The prototype was created in
+[#4725](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
 
 ## Background
 
