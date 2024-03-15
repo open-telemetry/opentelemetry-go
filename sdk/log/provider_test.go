@@ -20,6 +20,7 @@ type processor struct {
 }
 
 func (processor) OnEmit(context.Context, Record) error { return nil }
+func (processor) Enabled(context.Context, Record) bool { return true }
 func (processor) Shutdown(context.Context) error       { return nil }
 func (processor) ForceFlush(context.Context) error     { return nil }
 
