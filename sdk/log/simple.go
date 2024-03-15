@@ -35,6 +35,11 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r Record) error {
 	return nil
 }
 
+// Enabled returns true.
+func (s *SimpleProcessor) Enabled(context.Context, Record) bool {
+	return true
+}
+
 // Shutdown shuts down the expoter.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 	// TODO (#5062): Implement.

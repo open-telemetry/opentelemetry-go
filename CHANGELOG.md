@@ -12,8 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4906)
 - Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp`. (#4906)
+- The `Enabled` method is added to the `Logger` interface in `go.opentelemetry.io/otel/log`.
+  This method is used to notify users if a log record will be emitted or not. (#5071)
 - Add `SeverityUndefined` `const` to `go.opentelemetry.io/otel/log`.
   This value represents an unset severity level. (#5072)
+- Add `Empty` function in `go.opentelemetry.io/otel/log` to return a `KeyValue` for an empty value. (#5076)
 
 ### Changed
 
