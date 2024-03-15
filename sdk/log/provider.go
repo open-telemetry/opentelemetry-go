@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -163,8 +164,16 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	// TODO (#5060): Implement.
-	return nil
+	stopped := p.stopped.Swap(true)
+	if stopped {
+		return nil
+	}
+
+	var err error
+	for _, p := range p.processors {
+		err = errors.Join(err, p.Shutdown(ctx))
+	}
+	return err
 }
 
 // ForceFlush flushes all exporters.
