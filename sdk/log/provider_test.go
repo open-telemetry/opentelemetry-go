@@ -22,13 +22,34 @@ import (
 )
 
 type processor struct {
-	name string
+	Name string
+	Err  error
+
+	shutdownCalls   int
+	forceFlushCalls int
 }
 
-func (processor) OnEmit(context.Context, Record) error { return nil }
-func (processor) Enabled(context.Context, Record) bool { return true }
-func (processor) Shutdown(context.Context) error       { return nil }
-func (processor) ForceFlush(context.Context) error     { return nil }
+func newProcessor(name string) *processor {
+	return &processor{Name: name}
+}
+
+func (p *processor) OnEmit(context.Context, Record) error {
+	return p.Err
+}
+
+func (*processor) Enabled(context.Context, Record) bool {
+	return true
+}
+
+func (p *processor) Shutdown(context.Context) error {
+	p.shutdownCalls++
+	return p.Err
+}
+
+func (p *processor) ForceFlush(context.Context) error {
+	p.forceFlushCalls++
+	return p.Err
+}
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {
 	t.Cleanup(func(orig otel.ErrorHandler) func() {
@@ -39,7 +60,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 	}(otel.GetErrorHandler()))
 
 	res := resource.NewSchemaless(attribute.String("key", "value"))
-	p0, p1 := processor{name: "0"}, processor{name: "1"}
+	p0, p1 := newProcessor("0"), newProcessor("1")
 	attrCntLim := 12
 	attrValLenLim := 21
 
@@ -137,7 +158,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goRoutineN)
 
-	p := NewLoggerProvider(WithProcessor(processor{name: "0"}))
+	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
 	const name = "testLogger"
 	ctx := context.Background()
 	for i := 0; i < goRoutineN; i++ {
@@ -201,5 +222,28 @@ func TestLoggerProviderLogger(t *testing.T) {
 
 		assert.Same(t, l0, l2)
 		assert.Same(t, l1, l3)
+	})
+}
+
+func TestLoggerProviderShutdown(t *testing.T) {
+	t.Run("Once", func(t *testing.T) {
+		proc := newProcessor("")
+		p := NewLoggerProvider(WithProcessor(proc))
+
+		ctx := context.Background()
+		require.NoError(t, p.Shutdown(ctx))
+		require.Equal(t, 1, proc.shutdownCalls, "processor Shutdown not called")
+
+		require.NoError(t, p.Shutdown(ctx))
+		assert.Equal(t, 1, proc.shutdownCalls, "processor Shutdown called multiple times")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		proc := newProcessor("")
+		proc.Err = assert.AnError
+		p := NewLoggerProvider(WithProcessor(proc))
+
+		ctx := context.Background()
+		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
 }
