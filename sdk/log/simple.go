@@ -19,10 +19,6 @@ type SimpleProcessor struct {
 
 // NewSimpleProcessor is a simple Processor adapter.
 //
-// Any of the exporter's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the exporter to manage
-// this concurrency.
-//
 // This Processor is not recommended for production use. The synchronous
 // nature of this Processor make it good for testing, debugging, or
 // showing examples of other features, but it can be slow and have a high
