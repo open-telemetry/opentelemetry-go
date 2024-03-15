@@ -99,13 +99,15 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 	ctx := context.Background()
 	s := log.NewSimpleProcessor(nil)
 
-	var out error
-
 	b.ReportAllocs()
 	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		out = s.OnEmit(ctx, r)
-	}
+	b.RunParallel(func(pb *testing.PB) {
+		var out error
 
-	_ = out
+		for pb.Next() {
+			out = s.OnEmit(ctx, r)
+		}
+
+		_ = out
+	})
 }
