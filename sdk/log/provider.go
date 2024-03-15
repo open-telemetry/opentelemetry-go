@@ -180,8 +180,15 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 //
 //	This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
-	// TODO (#5060): Implement.
-	return nil
+	if p.stopped.Load() {
+		return nil
+	}
+
+	var err error
+	for _, p := range p.processors {
+		err = errors.Join(err, p.ForceFlush(ctx))
+	}
+	return err
 }
 
 // LoggerProviderOption applies a configuration option value to a LoggerProvider.
