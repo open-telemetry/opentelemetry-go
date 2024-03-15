@@ -151,6 +151,12 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	p.loggersMu.Lock()
 	defer p.loggersMu.Unlock()
 
+	if p.loggers == nil {
+		l := newLogger(p, scope)
+		p.loggers = map[instrumentation.Scope]*logger{scope: l}
+		return l
+	}
+
 	l, ok := p.loggers[scope]
 	if !ok {
 		l = newLogger(p, scope)
