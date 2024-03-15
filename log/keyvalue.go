@@ -34,6 +34,7 @@ const (
 )
 
 // A Value represents a structured log value.
+// A zero value is valid and represents an empty value.
 type Value struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -264,7 +265,7 @@ func (v Value) Equal(w Value) bool {
 	}
 }
 
-// An KeyValue is a key-value pair used to represent a log attribute (a
+// A KeyValue is a key-value pair used to represent a log attribute (a
 // superset of [go.opentelemetry.io/otel/attribute.KeyValue]) and map item.
 type KeyValue struct {
 	Key   string
@@ -276,42 +277,47 @@ func (a KeyValue) Equal(b KeyValue) bool {
 	return a.Key == b.Key && a.Value.Equal(b.Value)
 }
 
-// String returns an KeyValue for a string value.
+// String returns a KeyValue for a string value.
 func String(key, value string) KeyValue {
 	return KeyValue{key, StringValue(value)}
 }
 
-// Int64 returns an KeyValue for an int64 value.
+// Int64 returns a KeyValue for an int64 value.
 func Int64(key string, value int64) KeyValue {
 	return KeyValue{key, Int64Value(value)}
 }
 
-// Int returns an KeyValue for an int value.
+// Int returns a KeyValue for an int value.
 func Int(key string, value int) KeyValue {
 	return KeyValue{key, IntValue(value)}
 }
 
-// Float64 returns an KeyValue for a float64 value.
+// Float64 returns a KeyValue for a float64 value.
 func Float64(key string, value float64) KeyValue {
 	return KeyValue{key, Float64Value(value)}
 }
 
-// Bool returns an KeyValue for a bool value.
+// Bool returns a KeyValue for a bool value.
 func Bool(key string, value bool) KeyValue {
 	return KeyValue{key, BoolValue(value)}
 }
 
-// Bytes returns an KeyValue for a []byte value.
+// Bytes returns a KeyValue for a []byte value.
 func Bytes(key string, value []byte) KeyValue {
 	return KeyValue{key, BytesValue(value)}
 }
 
-// Slice returns an KeyValue for a []Value value.
+// Slice returns a KeyValue for a []Value value.
 func Slice(key string, value ...Value) KeyValue {
 	return KeyValue{key, SliceValue(value...)}
 }
 
-// Map returns an KeyValue for a map value.
+// Map returns a KeyValue for a map value.
 func Map(key string, value ...KeyValue) KeyValue {
 	return KeyValue{key, MapValue(value...)}
+}
+
+// Empty returns a KeyValue with an empty value.
+func Empty(key string) KeyValue {
+	return KeyValue{key, Value{}}
 }
