@@ -92,3 +92,20 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 
 	wg.Wait()
 }
+
+func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
+	var r log.Record
+	r.SetSeverityText("test")
+	ctx := context.Background()
+	s := log.NewSimpleProcessor(nil)
+
+	var out error
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		out = s.OnEmit(ctx, r)
+	}
+
+	_ = out
+}
