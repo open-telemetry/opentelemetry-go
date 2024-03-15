@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,4 +124,26 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 func TestLimitValueFailsOpen(t *testing.T) {
 	var l limit
 	assert.Equal(t, -1, l.Value(), "limit value should default to unlimited")
+}
+
+func TestLoggerProviderConcurrentSafe(t *testing.T) {
+	const goRoutineN = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goRoutineN)
+
+	p := NewLoggerProvider(WithProcessor(processor{name: "0"}))
+	const name = "testLogger"
+	ctx := context.Background()
+	for i := 0; i < goRoutineN; i++ {
+		go func() {
+			defer wg.Done()
+
+			_ = p.Logger(name)
+			_ = p.Shutdown(ctx)
+			_ = p.ForceFlush(ctx)
+		}()
+	}
+
+	wg.Wait()
 }
