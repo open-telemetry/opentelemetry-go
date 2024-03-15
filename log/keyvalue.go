@@ -265,7 +265,7 @@ func (v Value) Equal(w Value) bool {
 	}
 }
 
-// a KeyValue is a key-value pair used to represent a log attribute (a
+// A KeyValue is a key-value pair used to represent a log attribute (a
 // superset of [go.opentelemetry.io/otel/attribute.KeyValue]) and map item.
 type KeyValue struct {
 	Key   string
