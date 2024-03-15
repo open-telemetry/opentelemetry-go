@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `SeverityUndefined` `const` to `go.opentelemetry.io/otel/log`.
   This value represents an unset severity level. (#5072)
 - Add `Empty` function in `go.opentelemetry.io/otel/log` to return a `KeyValue` for an empty value. (#5076)
-- Adds a new template to generate metric semantic conventions, as well as adding it to the Makefile `semconv-generate` script to add the metric.go file to the v1.24.0 directory. (#4528)
+- Add metric semantic conventions to `go.opentelemetry.io/otel/semconv/v1.24.0`. Future `semconv` packages will include metric semantic conventions as well. (#4528)
 
 ### Changed
 
