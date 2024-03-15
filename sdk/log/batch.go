@@ -33,6 +33,11 @@ func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
 	return nil
 }
 
+// Enabled returns true.
+func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
+	return true
+}
+
 // Shutdown flushes queued log records and shuts down the decorated expoter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	// TODO (#5063): Implement.

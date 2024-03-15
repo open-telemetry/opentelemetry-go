@@ -5,22 +5,105 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Compile-time check LoggerProvider implements log.LoggerProvider.
-var _ log.LoggerProvider = (*LoggerProvider)(nil)
+const (
+	defaultAttrCntLim    = 128
+	defaultAttrValLenLim = -1
+
+	envarAttrCntLim    = "OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT"
+	envarAttrValLenLim = "OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT"
+)
+
+type providerConfig struct {
+	resource      *resource.Resource
+	processors    []Processor
+	attrCntLim    limit
+	attrValLenLim limit
+}
+
+func newProviderConfig(opts []LoggerProviderOption) providerConfig {
+	var c providerConfig
+	for _, opt := range opts {
+		c = opt.apply(c)
+	}
+
+	if c.resource == nil {
+		c.resource = resource.Default()
+	}
+
+	c.attrCntLim = c.attrCntLim.Resolve(
+		envarAttrCntLim,
+		defaultAttrCntLim,
+	)
+
+	c.attrValLenLim = c.attrValLenLim.Resolve(
+		envarAttrValLenLim,
+		defaultAttrValLenLim,
+	)
+
+	return c
+}
+
+type limit struct {
+	value int
+	set   bool
+}
+
+func newLimit(value int) limit {
+	return limit{value: value, set: true}
+}
+
+// Resolve returns the resolved form of the limit l. If l's value is set, it
+// will return l. If the l's value is not set, a new limit based on the
+// environment variable envar will be returned if that environment variable is
+// set. Otherwise, fallback is used to construct a new limit that is returned.
+func (l limit) Resolve(envar string, fallback int) limit {
+	if l.set {
+		return l
+	}
+
+	if v := os.Getenv(envar); v != "" {
+		n, err := strconv.Atoi(v)
+		if err == nil {
+			return newLimit(n)
+		}
+		otel.Handle(fmt.Errorf("invalid %s value %s: %w", envar, v, err))
+	}
+
+	return newLimit(fallback)
+}
+
+// Value returns the limit value if set. Otherwise, it returns -1.
+func (l limit) Value() int {
+	if l.set {
+		return l.value
+	}
+	// Fail open, not closed (-1 == unlimited).
+	return -1
+}
 
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
 // created by a LoggerProvider will be associated with the same Resource.
 type LoggerProvider struct {
 	embedded.LoggerProvider
+
+	resource                  *resource.Resource
+	processors                []Processor
+	attributeCountLimit       int
+	attributeValueLengthLimit int
 }
 
-type providerConfig struct{}
+// Compile-time check LoggerProvider implements log.LoggerProvider.
+var _ log.LoggerProvider = (*LoggerProvider)(nil)
 
 // NewLoggerProvider returns a new and configured LoggerProvider.
 //
@@ -29,8 +112,13 @@ type providerConfig struct{}
 // created. This means the returned LoggerProvider, one created with no
 // Processors, will perform no operations.
 func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
-	// TODO (#5060): Implement.
-	return nil
+	cfg := newProviderConfig(opts)
+	return &LoggerProvider{
+		resource:                  cfg.resource,
+		processors:                cfg.processors,
+		attributeCountLimit:       cfg.attrCntLim.Value(),
+		attributeValueLengthLimit: cfg.attrValLenLim.Value(),
+	}
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -76,7 +164,7 @@ func (fn loggerProviderOptionFunc) apply(c providerConfig) providerConfig {
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		// TODO (#5060): Implement.
+		cfg.resource = res
 		return cfg
 	})
 }
@@ -93,7 +181,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		// TODO (#5060): Implement.
+		cfg.processors = append(cfg.processors, processor)
 		return cfg
 	})
 }
@@ -112,7 +200,7 @@ func WithProcessor(processor Processor) LoggerProviderOption {
 // passed, 128 will be used.
 func WithAttributeCountLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		// TODO (#5060): Implement.
+		cfg.attrCntLim = newLimit(limit)
 		return cfg
 	})
 }
@@ -131,7 +219,7 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 // passed, no limit (-1) will be used.
 func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		// TODO (#5060): Implement.
+		cfg.attrValLenLim = newLimit(limit)
 		return cfg
 	})
 }

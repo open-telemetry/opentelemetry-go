@@ -15,6 +15,9 @@ import (
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
+	// OnEmit will be called independent of Enabled. Implementations need to
+	// validate the arguments themselves before processing.
+	//
 	// Implementation should not interrupt the record processing
 	// if the context is canceled.
 	//
@@ -26,6 +29,24 @@ type Processor interface {
 	// Before modifying a Record, the implementation must use Record.Clone
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record Record) error
+	// Enabled returns whether the Processor will process for the given context
+	// and record.
+	//
+	// The passed record is likely to be a partial record with only the
+	// bridge-relevant information being provided (e.g a record with only the
+	// Severity set). If a Logger needs more information than is provided, it
+	// is said to be in an indeterminate state (see below).
+	//
+	// The returned value will be true when the Processor will process for the
+	// provided context and record, and will be false if the Processor will not
+	// process. The returned value may be true or false in an indeterminate
+	// state. An implementation should default to returning true for an
+	// indeterminate state, but may return false if valid reasons in particular
+	// circumstances exist (e.g. performance, correctness).
+	//
+	// Before modifying a Record, the implementation must use Record.Clone
+	// to create a copy that shares no state with the original.
+	Enabled(ctx context.Context, record Record) bool
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
