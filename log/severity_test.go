@@ -20,6 +20,12 @@ func TestSeverity(t *testing.T) {
 		str      string
 	}{
 		{
+			name:     "SeverityUndefined",
+			severity: log.SeverityUndefined,
+			value:    0,
+			str:      "UNDEFINED",
+		},
+		{
 			name:     "SeverityTrace",
 			severity: log.SeverityTrace,
 			value:    1,
