@@ -192,4 +192,14 @@ func TestLoggerProviderLogger(t *testing.T) {
 		assert.NotNil(t, l)
 		assert.IsType(t, noop.Logger{}, l)
 	})
+
+	t.Run("SameLoggers", func(t *testing.T) {
+		p := NewLoggerProvider()
+
+		l0, l1 := p.Logger("l0"), p.Logger("l1")
+		l2, l3 := p.Logger("l0"), p.Logger("l1")
+
+		assert.Same(t, l0, l2)
+		assert.Same(t, l1, l3)
+	})
 }
