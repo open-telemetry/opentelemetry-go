@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -180,5 +181,15 @@ func TestLoggerProviderLogger(t *testing.T) {
 		assert.Equal(t, "Invalid Logger name.", l.msg, "logged message")
 		require.Len(t, l.keysAndValues, 2, "logged key values")
 		assert.Equal(t, "", l.keysAndValues[1], "logged name")
+	})
+
+	t.Run("Stopped", func(t *testing.T) {
+		ctx := context.Background()
+		p := NewLoggerProvider()
+		_ = p.Shutdown(ctx)
+		l := p.Logger("testing")
+
+		assert.NotNil(t, l)
+		assert.IsType(t, noop.Logger{}, l)
 	})
 }
