@@ -8,10 +8,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -100,6 +104,11 @@ type LoggerProvider struct {
 	processors                []Processor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
+
+	loggersMu sync.Mutex
+	loggers   map[instrumentation.Scope]*logger
+
+	stopped atomic.Bool
 }
 
 // Compile-time check LoggerProvider implements log.LoggerProvider.
@@ -123,10 +132,31 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
+// If p is shut down, a [noop.Logger] instace is returned.
+//
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
-	// TODO (#5060): Implement.
-	return &logger{}
+	if p.stopped.Load() {
+		return noop.NewLoggerProvider().Logger(name, opts...)
+	}
+
+	cfg := log.NewLoggerConfig(opts...)
+	scope := instrumentation.Scope{
+		Name:      name,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+
+	p.loggersMu.Lock()
+	defer p.loggersMu.Unlock()
+
+	l, ok := p.loggers[scope]
+	if !ok {
+		l = newLogger(p, scope)
+		p.loggers[scope] = l
+	}
+
+	return l
 }
 
 // Shutdown flushes queued log records and shuts down the decorated expoter.
