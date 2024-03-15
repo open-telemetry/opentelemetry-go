@@ -91,7 +91,7 @@ Having less abstractions reduces the API surface and makes the design simpler.
 ## Benchmarking
 
 The benchmarks are supposed to test end-to-end scenarios
-and avoid I/O that could affect the stability of the results,
+and avoid I/O that could affect the stability of the results.
 
 The benchmark results can be found in [the prototype](https://github.com/open-telemetry/opentelemetry-go/pull/4955).
 
