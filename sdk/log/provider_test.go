@@ -9,10 +9,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -146,4 +150,35 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+type logSink struct {
+	logr.LogSink
+
+	level         int
+	msg           string
+	keysAndValues []interface{}
+}
+
+func (l *logSink) Enabled(int) bool { return true }
+
+func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
+	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
+	l.LogSink.Info(level, msg, keysAndValues)
+}
+
+func TestLoggerProviderLogger(t *testing.T) {
+	t.Run("InvalidName", func(t *testing.T) {
+		l := &logSink{LogSink: testr.New(t).GetSink()}
+		t.Cleanup(func(orig logr.Logger) func() {
+			global.SetLogger(logr.New(l))
+			return func() { global.SetLogger(orig) }
+		}(global.GetLogger()))
+
+		_ = NewLoggerProvider().Logger("")
+		assert.Equal(t, 1, l.level, "logged level")
+		assert.Equal(t, "Invalid Logger name.", l.msg, "logged message")
+		require.Len(t, l.keysAndValues, 2, "logged key values")
+		assert.Equal(t, "", l.keysAndValues[1], "logged name")
+	})
 }
