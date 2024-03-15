@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
@@ -137,6 +138,10 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
+	if name == "" {
+		global.Warn("Invalid Logger name.", "name", name)
+	}
+
 	if p.stopped.Load() {
 		return noop.NewLoggerProvider().Logger(name, opts...)
 	}
