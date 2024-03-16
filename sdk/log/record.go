@@ -37,6 +37,7 @@ type Record struct {
 	// Allocation optimization: an inline array sized to hold
 	// the majority of log calls (based on examination of open-source
 	// code). It holds the start of the list of attributes.
+	// TODO: Not sure whether to use a normal array here or not, as we know the size when copy the attributes from log.Record.
 	front [attributesInlineCount]log.KeyValue
 
 	// The number of attributes in front.
