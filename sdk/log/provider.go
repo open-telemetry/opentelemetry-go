@@ -5,13 +5,19 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -100,6 +106,11 @@ type LoggerProvider struct {
 	processors                []Processor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
+
+	loggersMu sync.Mutex
+	loggers   map[instrumentation.Scope]*logger
+
+	stopped atomic.Bool
 }
 
 // Compile-time check LoggerProvider implements log.LoggerProvider.
@@ -123,26 +134,72 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
+// If p is shut down, a [noop.Logger] instace is returned.
+//
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
-	// TODO (#5060): Implement.
-	return &logger{}
+	if name == "" {
+		global.Warn("Invalid Logger name.", "name", name)
+	}
+
+	if p.stopped.Load() {
+		return noop.NewLoggerProvider().Logger(name, opts...)
+	}
+
+	cfg := log.NewLoggerConfig(opts...)
+	scope := instrumentation.Scope{
+		Name:      name,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+
+	p.loggersMu.Lock()
+	defer p.loggersMu.Unlock()
+
+	if p.loggers == nil {
+		l := newLogger(p, scope)
+		p.loggers = map[instrumentation.Scope]*logger{scope: l}
+		return l
+	}
+
+	l, ok := p.loggers[scope]
+	if !ok {
+		l = newLogger(p, scope)
+		p.loggers[scope] = l
+	}
+
+	return l
 }
 
 // Shutdown flushes queued log records and shuts down the decorated expoter.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	// TODO (#5060): Implement.
-	return nil
+	stopped := p.stopped.Swap(true)
+	if stopped {
+		return nil
+	}
+
+	var err error
+	for _, p := range p.processors {
+		err = errors.Join(err, p.Shutdown(ctx))
+	}
+	return err
 }
 
 // ForceFlush flushes all exporters.
 //
 //	This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
-	// TODO (#5060): Implement.
-	return nil
+	if p.stopped.Load() {
+		return nil
+	}
+
+	var err error
+	for _, p := range p.processors {
+		err = errors.Join(err, p.ForceFlush(ctx))
+	}
+	return err
 }
 
 // LoggerProviderOption applies a configuration option value to a LoggerProvider.

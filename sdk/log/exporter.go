@@ -40,3 +40,11 @@ type Exporter interface {
 	// appropriate error should be returned in these situations.
 	ForceFlush(ctx context.Context) error
 }
+
+type noopExporter struct{}
+
+func (noopExporter) Export(context.Context, []Record) error { return nil }
+
+func (noopExporter) Shutdown(context.Context) error { return nil }
+
+func (noopExporter) ForceFlush(context.Context) error { return nil }
