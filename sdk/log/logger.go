@@ -39,14 +39,16 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
 
 	newRecord := Record{
-		timestamp:                 r.Timestamp(),
-		observedTimestamp:         r.ObservedTimestamp(),
-		severity:                  r.Severity(),
-		severityText:              r.SeverityText(),
-		body:                      r.Body(),
-		traceID:                   sc.TraceID(),
-		spanID:                    sc.SpanID(),
-		traceFlags:                sc.TraceFlags(),
+		timestamp:         r.Timestamp(),
+		observedTimestamp: r.ObservedTimestamp(),
+		severity:          r.Severity(),
+		severityText:      r.SeverityText(),
+		body:              r.Body(),
+
+		traceID:    sc.TraceID(),
+		spanID:     sc.SpanID(),
+		traceFlags: sc.TraceFlags(),
+
 		resource:                  l.provider.resource,
 		scope:                     &l.instrumentationScope,
 		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
