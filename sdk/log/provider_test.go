@@ -27,18 +27,26 @@ type processor struct {
 
 	shutdownCalls   int
 	forceFlushCalls int
+
+	records []Record
+	enabled bool
 }
 
 func newProcessor(name string) *processor {
-	return &processor{Name: name}
+	return &processor{Name: name, enabled: true}
 }
 
-func (p *processor) OnEmit(context.Context, Record) error {
-	return p.Err
+func (p *processor) OnEmit(ctx context.Context, r Record) error {
+	if p.Err != nil {
+		return p.Err
+	}
+
+	p.records = append(p.records, r)
+	return nil
 }
 
-func (*processor) Enabled(context.Context, Record) bool {
-	return true
+func (p *processor) Enabled(context.Context, Record) bool {
+	return p.enabled
 }
 
 func (p *processor) Shutdown(context.Context) error {
