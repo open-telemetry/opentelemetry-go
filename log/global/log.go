@@ -11,7 +11,10 @@ go.opentelemetry.io/otel.
 */
 package global // import "go.opentelemetry.io/otel/log/global"
 
-import "go.opentelemetry.io/otel/log"
+import (
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/internal/global"
+)
 
 // Logger returns a [log.Logger] configured with the provided name and options
 // from the globally configured [log.LoggerProvider].
@@ -37,11 +40,10 @@ func Logger(name string, options ...log.LoggerOption) log.Logger {
 // and all of its created Loggers are updated in-place. There is no need to
 // call this function again for an updated instance.
 func GetLoggerProvider() log.LoggerProvider {
-	// TODO: implement.
-	return nil
+	return global.GetLoggerProvider()
 }
 
 // SetLoggerProvider configures provider as the global [log.LoggerProvider].
 func SetLoggerProvider(provider log.LoggerProvider) {
-	// TODO: implement.
+	global.SetLoggerProvider(provider)
 }
