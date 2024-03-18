@@ -14,16 +14,9 @@ import (
 
 // instLib defines the instrumentation library a logger is created for.
 //
-// Do not use the sdk/instrumentation package. The API cannot depend on the
-// SDK.
-type instLib struct {
-	name    string
-	version string
-}
+// Do not use sdk/instrumentation (API cannot depend on the SDK).
+type instLib struct{ name, version string }
 
-// loggerProvider is a placeholder for a configured SDK LoggerProvider.
-//
-// All LoggerProvider functionality is forwarded to a delegate once configured.
 type loggerProvider struct {
 	embedded.LoggerProvider
 
@@ -32,8 +25,7 @@ type loggerProvider struct {
 	delegate log.LoggerProvider
 }
 
-// Compile-time guarantee that loggerProvider implements the LoggerProvider
-// interface.
+// Compile-time guarantee loggerProvider implements LoggerProvider.
 var _ log.LoggerProvider = (*loggerProvider)(nil)
 
 func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
@@ -45,10 +37,7 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 	}
 
 	cfg := log.NewLoggerConfig(options...)
-	key := instLib{
-		name:    name,
-		version: cfg.InstrumentationVersion(),
-	}
+	key := instLib{name, cfg.InstrumentationVersion()}
 
 	if p.loggers == nil {
 		l := &logger{name: name, options: options}
@@ -70,13 +59,10 @@ func (p *loggerProvider) setDelegate(provider log.LoggerProvider) {
 	defer p.mu.Unlock()
 
 	p.delegate = provider
-
 	for _, l := range p.loggers {
 		l.setDelegate(provider)
 	}
-
-	// Only set logger delegates once.
-	p.loggers = nil
+	p.loggers = nil // Only set logger delegates once.
 }
 
 type logger struct {
@@ -88,7 +74,7 @@ type logger struct {
 	delegate atomic.Value // log.Logger
 }
 
-// Compile-time guarantee that logger implements the trace.Tracer interface.
+// Compile-time guarantee logger implements Logger.
 var _ log.Logger = (*logger)(nil)
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
