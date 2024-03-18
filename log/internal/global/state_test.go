@@ -7,8 +7,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 )
@@ -21,6 +24,11 @@ func TestSetLoggerProvider(t *testing.T) {
 
 	t.Run("Set With default is a noop", func(t *testing.T) {
 		t.Cleanup(reset)
+
+		t.Cleanup(func(orig logr.Logger) func() {
+			global.SetLogger(testr.New(t)) // Don't pollute output.
+			return func() { global.SetLogger(orig) }
+		}(global.GetLogger()))
 		SetLoggerProvider(GetLoggerProvider())
 
 		provider, ok := GetLoggerProvider().(*loggerProvider)
