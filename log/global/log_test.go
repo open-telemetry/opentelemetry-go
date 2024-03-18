@@ -9,20 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-type testLoggerProvider struct{ embedded.LoggerProvider }
-
-var _ log.LoggerProvider = &testLoggerProvider{}
-
-func (*testLoggerProvider) Logger(_ string, _ ...log.LoggerOption) log.Logger {
-	return noop.NewLoggerProvider().Logger("")
-}
-
 func TestMultipleGlobalLoggerProvider(t *testing.T) {
-	p1, p2 := testLoggerProvider{}, noop.NewLoggerProvider()
+	type provider struct{ log.LoggerProvider }
+
+	p1, p2 := provider{}, noop.NewLoggerProvider()
 
 	SetLoggerProvider(&p1)
 	SetLoggerProvider(p2)
