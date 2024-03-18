@@ -8,16 +8,18 @@ Package global provides a global implementation of the OpenTelemetry Logs
 Bridge API.
 
 This package is experimental. It will be deprecated and removed when the [log]
-package becomes stable. Its functionality will be migrated to the
+package becomes stable. Its functionality will be migrated to
 go.opentelemetry.io/otel.
 */
 
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/noop"
 )
 
 // Logger returns a [log.Logger] configured with the provided name and options
@@ -78,21 +80,75 @@ type loggerProvider struct {
 var _ log.LoggerProvider = (*loggerProvider)(nil)
 
 func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
-	// TODO: implement.
-	return nil
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.delegate != nil {
+		return p.delegate.Logger(name, options...)
+	}
+
+	cfg := log.NewLoggerConfig(options...)
+	key := instLib{
+		name:    name,
+		version: cfg.InstrumentationVersion(),
+	}
+
+	if p.loggers == nil {
+		l := newLogger(name, options)
+		p.loggers = map[instLib]*logger{key: l}
+		return l
+	}
+
+	if l, ok := p.loggers[key]; ok {
+		return l
+	}
+
+	l := newLogger(name, options)
+	p.loggers[key] = l
+	return l
+}
+
+func (p *loggerProvider) setDelegate(provider log.LoggerProvider) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.delegate = provider
+
+	for _, l := range p.loggers {
+		l.setDelegate(provider)
+	}
+
+	// Only set logger delegates once.
+	p.loggers = nil
 }
 
 type logger struct {
 	embedded.Logger
+
+	name    string
+	options []log.LoggerOption
+
+	delegate atomic.Value // log.Logger
 }
 
 // Compile-time guarantee that logger implements the trace.Tracer interface.
 var _ log.Logger = (*logger)(nil)
 
-func (l *logger) Emit(context.Context, log.Record) {
-	// TODO: implement.
+func newLogger(name string, options []log.LoggerOption) *logger {
+	var base log.Logger = noop.Logger{}
+	l := &logger{name: name, options: options}
+	l.delegate.Store(base)
+	return l
 }
 
-func (l *logger) Enabled(context.Context, log.Record) bool {
-	return true
+func (l *logger) Emit(ctx context.Context, r log.Record) {
+	l.delegate.Load().(log.Logger).Emit(ctx, r)
+}
+
+func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
+	return l.delegate.Load().(log.Logger).Enabled(ctx, r)
+}
+
+func (l *logger) setDelegate(provider log.LoggerProvider) {
+	l.delegate.Store(provider.Logger(l.name, l.options...))
 }
