@@ -17,12 +17,26 @@ import (
 
 type processor struct {
 	name string
+	err  error
+
+	records []Record
 }
 
-func (processor) OnEmit(context.Context, Record) error { return nil }
-func (processor) Enabled(context.Context, Record) bool { return true }
-func (processor) Shutdown(context.Context) error       { return nil }
-func (processor) ForceFlush(context.Context) error     { return nil }
+func newProcessor(name string) *processor {
+	return &processor{name: name}
+}
+
+func (p *processor) OnEmit(ctx context.Context, r Record) error {
+	if p.err != nil {
+		return p.err
+	}
+
+	p.records = append(p.records, r)
+	return nil
+}
+func (p *processor) Enabled(context.Context, Record) bool { return true }
+func (p *processor) Shutdown(context.Context) error       { return nil }
+func (p *processor) ForceFlush(context.Context) error     { return nil }
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {
 	t.Cleanup(func(orig otel.ErrorHandler) func() {
@@ -33,7 +47,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 	}(otel.GetErrorHandler()))
 
 	res := resource.NewSchemaless(attribute.String("key", "value"))
-	p0, p1 := processor{name: "0"}, processor{name: "1"}
+	p0, p1 := newProcessor("0"), newProcessor("1")
 	attrCntLim := 12
 	attrValLenLim := 21
 

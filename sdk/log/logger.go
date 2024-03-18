@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -22,6 +23,13 @@ type logger struct {
 	instrumentationScope instrumentation.Scope
 }
 
+func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
+	return &logger{
+		provider:             p,
+		instrumentationScope: scope,
+	}
+}
+
 func (l *logger) Emit(ctx context.Context, r log.Record) {
 	newRecord := l.newRecord(ctx, r)
 	for _, p := range l.provider.processors {
@@ -31,7 +39,7 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 }
 
-func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
+func (l *logger) Enabled(context.Context, log.Record) bool {
 	return true
 }
 
