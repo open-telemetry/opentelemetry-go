@@ -1,70 +1,30 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package global
+package global // import "go.opentelemetry.io/otel/log/global"
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-func TestLoggerProviderConcurrentSafe(t *testing.T) {
-	p := &loggerProvider{}
+type testLoggerProvider struct{ embedded.LoggerProvider }
 
-	done := make(chan struct{})
-	stop := make(chan struct{})
+var _ log.LoggerProvider = &testLoggerProvider{}
 
-	go func() {
-		defer close(done)
-		var logger log.Logger
-		for i := 0; ; i++ {
-			logger = p.Logger(fmt.Sprintf("a%d", i))
-			select {
-			case <-stop:
-				_ = logger
-				return
-			default:
-			}
-		}
-	}()
-
-	p.setDelegate(noop.NewLoggerProvider())
-	close(stop)
-	<-done
+func (*testLoggerProvider) Logger(_ string, _ ...log.LoggerOption) log.Logger {
+	return noop.NewLoggerProvider().Logger("")
 }
 
-func TestLoggerConcurrentSafe(t *testing.T) {
-	l := newLogger("", nil)
+func TestMultipleGlobalLoggerProvider(t *testing.T) {
+	p1, p2 := testLoggerProvider{}, noop.NewLoggerProvider()
 
-	done := make(chan struct{})
-	stop := make(chan struct{})
+	SetLoggerProvider(&p1)
+	SetLoggerProvider(p2)
 
-	go func() {
-		defer close(done)
-
-		ctx := context.Background()
-		var r log.Record
-		r.SetSeverityText("text")
-
-		var enabled bool
-		for i := 0; ; i++ {
-			l.Emit(ctx, r)
-			enabled = l.Enabled(ctx, r)
-
-			select {
-			case <-stop:
-				_ = enabled
-				return
-			default:
-			}
-		}
-	}()
-
-	l.setDelegate(noop.NewLoggerProvider())
-	close(stop)
-	<-done
+	assert.Equal(t, p2, GetLoggerProvider())
 }
