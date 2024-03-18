@@ -16,27 +16,41 @@ import (
 )
 
 type processor struct {
-	name string
-	err  error
+	Name string
+	Err  error
+
+	shutdownCalls   int
+	forceFlushCalls int
 
 	records []Record
 }
 
 func newProcessor(name string) *processor {
-	return &processor{name: name}
+	return &processor{Name: name}
 }
 
 func (p *processor) OnEmit(ctx context.Context, r Record) error {
-	if p.err != nil {
-		return p.err
+	if p.Err != nil {
+		return p.Err
 	}
 
 	p.records = append(p.records, r)
 	return nil
 }
-func (p *processor) Enabled(context.Context, Record) bool { return true }
-func (p *processor) Shutdown(context.Context) error       { return nil }
-func (p *processor) ForceFlush(context.Context) error     { return nil }
+
+func (*processor) Enabled(context.Context, Record) bool {
+	return true
+}
+
+func (p *processor) Shutdown(context.Context) error {
+	p.shutdownCalls++
+	return p.Err
+}
+
+func (p *processor) ForceFlush(context.Context) error {
+	p.forceFlushCalls++
+	return p.Err
+}
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {
 	t.Cleanup(func(orig otel.ErrorHandler) func() {

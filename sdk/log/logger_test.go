@@ -19,7 +19,7 @@ import (
 
 func TestLoggerEmit(t *testing.T) {
 	p0, p1, p2WithError := newProcessor("0"), newProcessor("1"), newProcessor("2")
-	p2WithError.err = errors.New("error")
+	p2WithError.Err = errors.New("error")
 
 	r := log.Record{}
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
