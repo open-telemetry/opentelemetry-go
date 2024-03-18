@@ -171,7 +171,61 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
+	p2WithDisabled.enabled = false
 
-	assert.True(t, l.Enabled(context.Background(), log.Record{}))
+	testCases := []struct {
+		name     string
+		logger   *logger
+		ctx      context.Context
+		expected bool
+	}{
+		{
+			name:     "NoProcessors",
+			logger:   newLogger(NewLoggerProvider(), instrumentation.Scope{}),
+			ctx:      context.Background(),
+			expected: false,
+		},
+		{
+			name: "WithProcessors",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+			), instrumentation.Scope{}),
+			ctx:      context.Background(),
+			expected: true,
+		},
+		{
+			name: "WithDisabledProcessors",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p2WithDisabled),
+			), instrumentation.Scope{}),
+			ctx:      context.Background(),
+			expected: false,
+		},
+		{
+			name: "ContainsDisabledProcessor",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p2WithDisabled),
+				WithProcessor(p0),
+			), instrumentation.Scope{}),
+			ctx:      context.Background(),
+			expected: true,
+		},
+		{
+			name: "WithNilContext",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+			), instrumentation.Scope{}),
+			ctx:      nil,
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.Record{}))
+		})
+	}
 }

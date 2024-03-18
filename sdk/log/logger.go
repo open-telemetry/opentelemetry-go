@@ -39,8 +39,14 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 }
 
-func (l *logger) Enabled(context.Context, log.Record) bool {
-	return true
+func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
+	newRecord := l.newRecord(ctx, r)
+	for _, p := range l.provider.processors {
+		if enabled := p.Enabled(ctx, newRecord); enabled {
+			return true
+		}
+	}
+	return false
 }
 
 func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
