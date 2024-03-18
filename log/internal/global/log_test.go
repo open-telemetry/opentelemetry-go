@@ -52,10 +52,9 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 
 		ctx := context.Background()
 		var r log.Record
-		r.SetSeverityText("text")
 
 		var enabled bool
-		for i := 0; ; i++ {
+		for {
 			l.Emit(ctx, r)
 			enabled = l.Enabled(ctx, r)
 
@@ -105,10 +104,7 @@ type testLogger struct {
 	emitN, enabledN int
 }
 
-func (l *testLogger) Emit(context.Context, log.Record) {
-	l.emitN++
-}
-
+func (l *testLogger) Emit(context.Context, log.Record) { l.emitN++ }
 func (l *testLogger) Enabled(context.Context, log.Record) bool {
 	l.enabledN++
 	return true
@@ -116,13 +112,9 @@ func (l *testLogger) Enabled(context.Context, log.Record) bool {
 
 func emitRecord(l log.Logger) {
 	ctx := context.Background()
-
 	var r log.Record
-	r.SetSeverityText("text")
 
-	enabled := l.Enabled(ctx, r)
-	_ = enabled
-
+	_ = l.Enabled(ctx, r)
 	l.Emit(ctx, r)
 }
 
@@ -133,8 +125,7 @@ func TestDelegation(t *testing.T) {
 	provider := &loggerProvider{}
 
 	const preName = "pre"
-	pre0 := provider.Logger(preName)
-	pre1 := provider.Logger(preName)
+	pre0, pre1 := provider.Logger(preName), provider.Logger(preName)
 	assert.Same(t, pre0, pre1, "same logger instance not returned")
 
 	alt := provider.Logger("alt")
@@ -147,7 +138,7 @@ func TestDelegation(t *testing.T) {
 
 	provider.setDelegate(delegate)
 	want += 2 // (pre0/pre1) and (alt)
-	if !assert.Equal(t, want, delegate.loggerN, "previous Logger not delegated") {
+	if !assert.Equal(t, want, delegate.loggerN, "previous Loggers not delegated") {
 		want = delegate.loggerN
 	}
 
