@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -42,7 +41,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 }
 
 func TestLoggerConcurrentSafe(t *testing.T) {
-	l := newLogger("", nil)
+	l := &logger{}
 
 	done := make(chan struct{})
 	stop := make(chan struct{})
@@ -81,7 +80,7 @@ type testLoggerProvider struct {
 
 func (p *testLoggerProvider) Logger(name string, _ ...log.LoggerOption) log.Logger {
 	if p.loggers == nil {
-		l := &testLogger{name: name}
+		l := &testLogger{}
 		p.loggers = map[string]*testLogger{name: l}
 		p.loggerN++
 		return l
@@ -92,15 +91,14 @@ func (p *testLoggerProvider) Logger(name string, _ ...log.LoggerOption) log.Logg
 	}
 
 	p.loggerN++
-	l := &testLogger{name: name}
+	l := &testLogger{}
 	p.loggers[name] = l
-	return &testLogger{}
+	return l
 }
 
 type testLogger struct {
 	embedded.Logger
 
-	name            string
 	emitN, enabledN int
 }
 
@@ -119,9 +117,6 @@ func emitRecord(l log.Logger) {
 }
 
 func TestDelegation(t *testing.T) {
-	delegate := &testLoggerProvider{}
-	require.Equal(t, 0, delegate.loggerN, "invalid setup")
-
 	provider := &loggerProvider{}
 
 	const preName = "pre"
@@ -131,13 +126,10 @@ func TestDelegation(t *testing.T) {
 	alt := provider.Logger("alt")
 	assert.NotSame(t, pre0, alt)
 
-	want := 0
-	if !assert.Equal(t, want, delegate.loggerN, "delegate Logger created") {
-		want = delegate.loggerN
-	}
-
+	delegate := &testLoggerProvider{}
 	provider.setDelegate(delegate)
-	want += 2 // (pre0/pre1) and (alt)
+
+	want := 2 // (pre0/pre1) and (alt)
 	if !assert.Equal(t, want, delegate.loggerN, "previous Loggers not delegated") {
 		want = delegate.loggerN
 	}

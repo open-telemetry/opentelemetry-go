@@ -51,7 +51,7 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 	}
 
 	if p.loggers == nil {
-		l := newLogger(name, options)
+		l := &logger{name: name, options: options}
 		p.loggers = map[instLib]*logger{key: l}
 		return l
 	}
@@ -60,7 +60,7 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 		return l
 	}
 
-	l := newLogger(name, options)
+	l := &logger{name: name, options: options}
 	p.loggers[key] = l
 	return l
 }
@@ -90,10 +90,6 @@ type logger struct {
 
 // Compile-time guarantee that logger implements the trace.Tracer interface.
 var _ log.Logger = (*logger)(nil)
-
-func newLogger(name string, options []log.LoggerOption) *logger {
-	return &logger{name: name, options: options}
-}
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
 	if del, ok := l.delegate.Load().(log.Logger); ok {
