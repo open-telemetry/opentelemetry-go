@@ -28,24 +28,18 @@ type loggerProviderHolder struct {
 	provider log.LoggerProvider
 }
 
-// GetLoggerProvider returns the internal implementation for
-// global.GetLoggerProvider.
+// GetLoggerProvider returns the global LoggerProvider.
 func GetLoggerProvider() log.LoggerProvider {
 	return globalLoggerProvider.Load().(loggerProviderHolder).provider
 }
 
-// SetLoggerProvider is the internal implementation for
-// global.SetLoggerProvider.
+// SetLoggerProvider sets the global LoggerProvider.
 func SetLoggerProvider(provider log.LoggerProvider) {
 	current := GetLoggerProvider()
 	if _, cOk := current.(*loggerProvider); cOk {
 		if _, mpOk := provider.(*loggerProvider); mpOk && current == provider {
-			// Do not assign the default delegating LoggerProvider to delegate
-			// to itself.
-			global.Error(
-				errors.New("LoggerProvider delegate: self delegation"),
-				"No delegate will be configured",
-			)
+			err := errors.New("invalid delegation: LoggerProvider self-delegation")
+			global.Error(err, "No delegate will be configured")
 			return
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 )

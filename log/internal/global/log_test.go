@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
@@ -163,7 +164,6 @@ func TestDelegation(t *testing.T) {
 	emitRecord(pre2)
 
 	if assert.IsType(t, &testLogger{}, pre2, "wrong pre-delegation Logger type") {
-
 		assert.Equal(t, 2, pre2.(*testLogger).emitN, "Emit not delegated")
 		assert.Equal(t, 2, pre2.(*testLogger).enabledN, "Enabled not delegated")
 	}
