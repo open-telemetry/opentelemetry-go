@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // Compile-time check logger implements log.Logger.
@@ -15,6 +16,11 @@ var _ log.Logger = (*logger)(nil)
 
 type logger struct {
 	embedded.Logger
+}
+
+func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
+	// TODO (#5061): Implement.
+	return &logger{}
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
