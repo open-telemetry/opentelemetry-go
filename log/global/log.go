@@ -34,11 +34,11 @@ func Logger(name string, options ...log.LoggerOption) log.Logger {
 
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].
 //
-// If a global LoggerProvider has not been configured with [SetLoggerProvider], the returned
-// Logger will be a No-Op implementation of a LoggerProvider. When a global
-// LoggerProvider is registered for the first time, the returned LoggerProvider
-// and all of its created Loggers are updated in-place. There is no need to
-// call this function again for an updated instance.
+// If a global LoggerProvider has not been configured with [SetLoggerProvider],
+// the returned Logger will be a No-Op implementation of a LoggerProvider. When
+// a global LoggerProvider is registered for the first time, the returned
+// LoggerProvider and all of its created Loggers are updated in-place. There is
+// no need to call this function again for an updated instance.
 func GetLoggerProvider() log.LoggerProvider {
 	return global.GetLoggerProvider()
 }
