@@ -10,7 +10,6 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/noop"
 )
 
 // instLib defines the instrumentation library a logger is created for.
@@ -93,18 +92,21 @@ type logger struct {
 var _ log.Logger = (*logger)(nil)
 
 func newLogger(name string, options []log.LoggerOption) *logger {
-	var base log.Logger = noop.Logger{}
-	l := &logger{name: name, options: options}
-	l.delegate.Store(base)
-	return l
+	return &logger{name: name, options: options}
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
-	l.delegate.Load().(log.Logger).Emit(ctx, r)
+	if del, ok := l.delegate.Load().(log.Logger); ok {
+		del.Emit(ctx, r)
+	}
 }
 
 func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
-	return l.delegate.Load().(log.Logger).Enabled(ctx, r)
+	var enabled bool
+	if del, ok := l.delegate.Load().(log.Logger); ok {
+		enabled = del.Enabled(ctx, r)
+	}
+	return enabled
 }
 
 func (l *logger) setDelegate(provider log.LoggerProvider) {
