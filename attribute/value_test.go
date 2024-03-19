@@ -81,9 +81,9 @@ func TestValue(t *testing.T) {
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
 		{
-			name: "Key.ByteSlice() correctly returns keys's internal []byte value",
-			value: k.ByteSlice([]byte{0, 1}).Value,
-			wantType: attribute.BYTESLICE,
+			name:      "Key.ByteSlice() correctly returns keys's internal []byte value",
+			value:     k.ByteSlice([]byte{0, 1}).Value,
+			wantType:  attribute.BYTESLICE,
 			wantValue: []byte{0, 1},
 		},
 	} {

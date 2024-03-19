@@ -154,7 +154,7 @@ func TestIncorrectCast(t *testing.T) {
 		},
 		{
 			name: "ByteSlice",
-			val: attribute.ByteSliceValue([]byte{0}),
+			val:  attribute.ByteSliceValue([]byte{0}),
 		},
 	}
 	for _, tt := range testCases {

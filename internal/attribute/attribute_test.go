@@ -48,7 +48,7 @@ var (
 	wrapAsInt64Slice   = func(v interface{}) interface{} { return AsInt64Slice(v) }
 	wrapAsFloat64Slice = func(v interface{}) interface{} { return AsFloat64Slice(v) }
 	wrapAsStringSlice  = func(v interface{}) interface{} { return AsStringSlice(v) }
-	wrapAsByteSlice = func(v interface{}) interface {} { return AsByteSlice(v) }
+	wrapAsByteSlice    = func(v interface{}) interface{} { return AsByteSlice(v) }
 )
 
 func TestSliceValue(t *testing.T) {

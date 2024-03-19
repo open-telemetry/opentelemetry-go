@@ -45,7 +45,7 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
-	// BYTESLICE is a slice of byte Type Value
+	// BYTESLICE is a slice of byte Type Value.
 	BYTESLICE
 )
 
@@ -119,7 +119,7 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
 }
 
-// ByteSliceValue creates a BYTESLICE Value
+// ByteSliceValue creates a BYTESLICE Value.
 func ByteSliceValue(v []byte) Value {
 	return Value{
 		vtype: BYTESLICE,

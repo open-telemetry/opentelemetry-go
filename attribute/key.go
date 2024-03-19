@@ -123,7 +123,7 @@ func (k Key) StringSlice(v []string) KeyValue {
 // convenience function instead -- ByteSlice(name, value).
 func (k Key) ByteSlice(v []byte) KeyValue {
 	return KeyValue{
-		Key: k,
+		Key:   k,
 		Value: ByteSliceValue(v),
 	}
 }
