@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -49,7 +50,13 @@ func getenv[T ~int | ~int64](key string) func(setting[T]) setting[T] {
 			if err != nil {
 				otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, v, err))
 			} else {
-				s.Value = T(n)
+				switch any(s.Value).(type) {
+				case time.Duration:
+					// OTel duration envar are in millisecond.
+					s.Value = T(time.Duration(n) * time.Millisecond)
+				default:
+					s.Value = T(n)
+				}
 				s.Set = true
 			}
 		}

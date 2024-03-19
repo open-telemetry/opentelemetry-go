@@ -38,6 +38,10 @@ type BatchingProcessor struct {
 //
 // All of the exporter's methods are called synchronously.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
+	if exporter == nil {
+		// Do not panic on nil export.
+		exporter = defaultNoopExporter
+	}
 	cfg := newBatchingConfig(opts)
 	return &BatchingProcessor{
 		exporter: exporter,
