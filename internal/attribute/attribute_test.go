@@ -36,11 +36,19 @@ var wrapStringSliceValue = func(v interface{}) interface{} {
 	return nil
 }
 
+var wrapByteSliceValue = func(v interface{}) interface{} {
+	if vi, ok := v.([]byte); ok {
+		return ByteSliceValue(vi)
+	}
+	return nil
+}
+
 var (
 	wrapAsBoolSlice    = func(v interface{}) interface{} { return AsBoolSlice(v) }
 	wrapAsInt64Slice   = func(v interface{}) interface{} { return AsInt64Slice(v) }
 	wrapAsFloat64Slice = func(v interface{}) interface{} { return AsFloat64Slice(v) }
 	wrapAsStringSlice  = func(v interface{}) interface{} { return AsStringSlice(v) }
+	wrapAsByteSlice = func(v interface{}) interface {} { return AsByteSlice(v) }
 )
 
 func TestSliceValue(t *testing.T) {
@@ -70,6 +78,10 @@ func TestSliceValue(t *testing.T) {
 			args: args{[]string{"123", "2"}}, want: [2]string{"123", "2"}, fn: wrapStringSliceValue,
 		},
 		{
+			name: "ByteSliceValue() two items",
+			args: args{[]byte{0, 1}}, want: [2]byte{0, 1}, fn: wrapByteSliceValue,
+		},
+		{
 			name: "AsBoolSlice() two items",
 			args: args{[2]bool{true, false}}, want: []bool{true, false}, fn: wrapAsBoolSlice,
 		},
@@ -84,6 +96,10 @@ func TestSliceValue(t *testing.T) {
 		{
 			name: "AsStringSlice() two items",
 			args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}, fn: wrapAsStringSlice,
+		},
+		{
+			name: "AsByteSlice() two items",
+			args: args{[2]byte{0, 1}}, want: []byte{0, 1}, fn: wrapAsByteSlice,
 		},
 	}
 	for _, tt := range tests {

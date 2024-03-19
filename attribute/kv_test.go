@@ -152,6 +152,10 @@ func TestIncorrectCast(t *testing.T) {
 			name: "StringSlice",
 			val:  attribute.BoolSliceValue([]bool{true}),
 		},
+		{
+			name: "ByteSlice",
+			val: attribute.ByteSliceValue([]byte{0}),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,6 +169,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInterface()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
+				tt.val.AsByteSlice()
 			})
 		})
 	}
