@@ -119,6 +119,8 @@ jobs:
             arch: "386"
           - os: windows-latest
             arch: amd64
+          # ARM64 compatibility tests are using actuated runners
+          # See https://github.com/open-telemetry/community/blob/main/docs/using-actuated.md
           - os: actuated-arm64-2cpu-8gb
             arch: arm64
     runs-on: ${{ matrix.platform.os }}
