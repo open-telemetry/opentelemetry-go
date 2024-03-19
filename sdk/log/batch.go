@@ -92,21 +92,25 @@ func newBatchingConfig(options []BatchingOption) batchingConfig {
 	c.maxQSize = c.maxQSize.Resolve(
 		clearLessThanOne[int](),
 		getenv[int](envarMaxQSize),
+		clearLessThanOne[int](),
 		fallback[int](dfltMaxQSize),
 	)
 	c.expInterval = c.expInterval.Resolve(
 		clearLessThanOne[time.Duration](),
 		getenv[time.Duration](envarExpInterval),
+		clearLessThanOne[time.Duration](),
 		fallback[time.Duration](dfltExpInterval),
 	)
 	c.expTimeout = c.expTimeout.Resolve(
 		clearLessThanOne[time.Duration](),
 		getenv[time.Duration](envarExpTimeout),
+		clearLessThanOne[time.Duration](),
 		fallback[time.Duration](dfltExpTimeout),
 	)
 	c.expMaxBatchSize = c.expMaxBatchSize.Resolve(
 		clearLessThanOne[int](),
 		getenv[int](envarExpMaxBatchSize),
+		clearLessThanOne[int](),
 		fallback[int](dfltExpMaxBatchSize),
 	)
 

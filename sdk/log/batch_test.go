@@ -67,12 +67,28 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 			},
 		},
 		{
+			name: "InvalidOptions",
+			options: []BatchingOption{
+				WithMaxQueueSize(-11),
+				WithExportInterval(-1 * time.Microsecond),
+				WithExportTimeout(-1 * time.Hour),
+				WithExportMaxBatchSize(-2),
+			},
+			want: &BatchingProcessor{
+				exporter:           defaultNoopExporter,
+				maxQueueSize:       dfltMaxQSize,
+				exportInterval:     dfltExpInterval,
+				exportTimeout:      dfltExpTimeout,
+				exportMaxBatchSize: dfltExpMaxBatchSize,
+			},
+		},
+		{
 			name: "InvalidEnvironment",
 			envars: map[string]string{
-				envarMaxQSize:        "invalid envarMaxQSize",
-				envarExpInterval:     "invalid envarExpInterval",
-				envarExpTimeout:      "invalid envarExpTimeout",
-				envarExpMaxBatchSize: "invalid envarExpMaxBatchSize",
+				envarMaxQSize:        "-1",
+				envarExpInterval:     "-1",
+				envarExpTimeout:      "-1",
+				envarExpMaxBatchSize: "-1",
 			},
 			want: &BatchingProcessor{
 				exporter:           defaultNoopExporter,
