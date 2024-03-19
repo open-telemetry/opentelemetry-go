@@ -53,6 +53,7 @@ The next release will require at least [Go 1.21].
   This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
   This module is in an alpha state, it is subject to breaking changes.
   See our [versioning policy](./VERSIONING.md) for more info. (#4961)
+- ARM64 platform to the compatibility testing suite. (#4994)
 
 ### Fixed
 
