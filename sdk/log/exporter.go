@@ -41,6 +41,8 @@ type Exporter interface {
 	ForceFlush(ctx context.Context) error
 }
 
+var defaultNoopExporter = &noopExporter{}
+
 type noopExporter struct{}
 
 func (noopExporter) Export(context.Context, []Record) error { return nil }
