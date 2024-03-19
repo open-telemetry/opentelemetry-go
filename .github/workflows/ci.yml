@@ -108,17 +108,22 @@ jobs:
     strategy:
       matrix:
         go-version: ["~1.22.0", "~1.21.3"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        # GitHub Actions does not support arm* architectures on default
-        # runners. It is possible to accomplish this with a self-hosted runner
-        # if we want to add this in the future:
-        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
-        arch: ["386", amd64]
-        exclude:
-          # Not a supported Go OS/architecture.
-          - os: macos-latest
+        platform:
+          - os: ubuntu-latest
             arch: "386"
-    runs-on: ${{ matrix.os }}
+          - os: ubuntu-latest
+            arch: amd64
+          - os: macos-latest
+            arch: amd64
+          - os: windows-latest
+            arch: "386"
+          - os: windows-latest
+            arch: amd64
+          # ARM64 compatibility tests are using actuated runners
+          # See https://github.com/open-telemetry/community/blob/main/docs/using-actuated.md
+          - os: actuated-arm64-2cpu-8gb
+            arch: arm64
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,7 +135,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - name: Run tests
         env:
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.platform.arch }}
         run: make test-short
 
   test-compatibility:
