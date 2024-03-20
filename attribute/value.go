@@ -268,7 +268,7 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case BYTESLICE:
-		return fmt.Sprintf("%q", v.asByteSlice())
+		return fmt.Sprint(v.asByteSlice())
 	default:
 		return "unknown"
 	}
