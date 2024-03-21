@@ -19,12 +19,14 @@ import (
 )
 
 func TestLoggerEmit(t *testing.T) {
+	nowDate := time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+
 	nowSwap := now
 	t.Cleanup(func() {
 		now = nowSwap
 	})
 	now = func() time.Time {
-		return time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+		return nowDate
 	}
 
 	p0, p1, p2WithError := newProcessor("0"), newProcessor("1"), newProcessor("2")
@@ -183,7 +185,7 @@ func TestLoggerEmit(t *testing.T) {
 					body:                      rWithNoObservedTimestamp.Body(),
 					severity:                  rWithNoObservedTimestamp.Severity(),
 					severityText:              rWithNoObservedTimestamp.SeverityText(),
-					observedTimestamp:         time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC),
+					observedTimestamp:         nowDate,
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
