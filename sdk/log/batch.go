@@ -5,14 +5,36 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"slices"
+	"sync"
+	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 // Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is an processor that asynchronously exports batches of log records.
-type BatchingProcessor struct{}
+type BatchingProcessor struct {
+	exportCh   chan exportData
+	exportDone chan struct{}
+	exporter   Exporter
+
+	maxQueueSize       int
+	exportInterval     time.Duration
+	exportTimeout      time.Duration
+	exportMaxBatchSize int
+
+	batch *batch
+
+	ctx      context.Context
+	cancel   context.CancelFunc
+	pollDone chan struct{}
+	stopped  atomic.Bool
+}
 
 type batcherConfig struct{}
 
@@ -23,31 +45,210 @@ type batcherConfig struct{}
 // background goroutine. Therefore, the exporter does not need to
 // be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
-	// TODO (#5063): Implement.
-	return nil
+	b := &BatchingProcessor{
+		exportCh: make(chan exportData, 2),
+		// TODO (#5088): maxQueueSize
+		// TODO (#5088): exportInterval
+		// TODO (#5088): exportTimeout
+		// TODO (#5088): exportMaxBatchSize
+	}
+
+	b.batch = newBatch(b.maxQueueSize)
+
+	b.exporter = chuncker{
+		Exporter: exporter,
+		Size:     b.exportMaxBatchSize,
+		Timeout:  b.exportTimeout,
+	}
+	b.exportDone = exportSync(b.exportCh, b.exporter)
+
+	b.ctx, b.cancel = context.WithCancel(context.Background())
+	b.pollDone = b.poll(b.exportInterval)
+
+	return b
+}
+
+func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
+	done = make(chan struct{})
+
+	// Use a custom error for the deadline to distinguish between a parent
+	// context deadline being reached and a child context one.
+	errElapsed := errors.New("interval elapsed")
+
+	start := time.Now()
+	go func() {
+		defer func() { close(b.pollDone) }()
+		for {
+			// Wait until an interval has passed or the parent context stopped.
+			deadline := start.Add(interval)
+			ctx, cancel := context.WithDeadlineCause(b.ctx, deadline, errElapsed)
+			<-ctx.Done()
+			cancel() // Release any resource held by ctx.
+
+			switch ctx.Err() {
+			case errElapsed:
+				var records []Record
+				records, start = b.batch.FlushStale(start)
+				b.enqueue(b.ctx, records, nil)
+			case nil:
+				// This should not happen. Restart loop if it does.
+			default:
+				// Parent context done.
+				return
+			}
+		}
+	}()
+	return done
+}
+
+// Enqueue attemps to enqueue an export. If the exportCh is full, the export
+// will be dropped and an error logged.
+func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
+	select {
+	case b.exportCh <- exportData{ctx, r, rCh}:
+	default:
+		// Export chan full. Do not block.
+		err := errors.New("export overflow")
+		global.Error(err, "dropping log batch", "dropped", len(r))
+	}
 }
 
 // OnEmit batches provided log record.
-func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
-	// TODO (#5063): Implement.
+func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
+	if b.stopped.Load() {
+		return nil
+	}
+	if flushed := b.batch.Append(r); flushed != nil {
+		b.enqueue(b.ctx, flushed, nil)
+	}
 	return nil
 }
 
-// Enabled returns true.
+// Enabled returns if b is enabled.
 func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
-	return true
+	return !b.stopped.Load()
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
-	// TODO (#5063): Implement.
-	return nil
+	if b.stopped.Swap(true) {
+		return nil
+	}
+
+	resp := make(chan error, 1)
+	b.enqueue(ctx, b.batch.Flush(), resp)
+
+	// Close poller.
+	b.cancel()
+	<-b.pollDone
+
+	// Wait for response before closing exporter.
+	var err error
+	select {
+	case err = <-resp:
+		close(resp)
+	case <-ctx.Done():
+		// Out of time. Ignore flush response.
+		close(b.exportCh)
+		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+	}
+
+	// Close exporter.
+	close(b.exportCh)
+	select {
+	case <-b.exportDone:
+	case <-ctx.Done():
+		err = errors.Join(err, ctx.Err())
+	}
+	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
-	// TODO (#5063): Implement.
+	if b.stopped.Load() {
+		return nil
+	}
+	resp := make(chan error, 1)
+	defer func() { close(resp) }()
+	b.enqueue(ctx, b.batch.Flush(), resp)
+
+	var err error
+	select {
+	case err = <-resp:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return errors.Join(err, b.exporter.ForceFlush(ctx))
+}
+
+// batch holds a batch of logging records.
+type batch struct {
+	sync.Mutex
+
+	data []Record
+	// oldest is the timestamp of when the first Record in the batch was
+	// received.
+	oldest time.Time
+}
+
+func newBatch(n int) *batch {
+	return &batch{data: make([]Record, 0, n)}
+}
+
+// Append adds r to the batch. If adding r fills the batch, the batch is
+// flushed and its contents returned.
+func (b *batch) Append(r Record) []Record {
+	b.Lock()
+	defer b.Unlock()
+
+	b.data = append(b.data, r)
+	if len(b.data) == 1 {
+		b.oldest = time.Now()
+	}
+	if len(b.data) == cap(b.data) {
+		return b.flush()
+	}
 	return nil
+}
+
+// Flush returns and clears the contents of the batch.
+func (b *batch) Flush() []Record {
+	b.Lock()
+	defer b.Unlock()
+
+	return b.flush()
+}
+
+// Flush flushes batch b if it is older than timestamp.
+//
+// If the batch is flushed, the flushed records along with the estimated start
+// time (i.e. now) of the next batch is returned.
+//
+// If the batch is not flushed, because the batch is empty or it is younger
+// than timestamp, the returned time will be the start time of the still held
+// batch. This time will be the estimated start time (i.e. now) in the case
+// where the batch is empty.
+func (b *batch) FlushStale(timestamp time.Time) ([]Record, time.Time) {
+	b.Lock()
+	defer b.Unlock()
+
+	if len(b.data) == 0 {
+		return nil, time.Now()
+	}
+
+	if b.oldest.After(timestamp) {
+		// Not stale.
+		return nil, b.oldest
+	}
+
+	return b.flush(), time.Now()
+}
+
+func (b *batch) flush() []Record {
+	clone := slices.Clone(b.data)
+	b.data = b.data[:0]
+	b.oldest = time.Time{}
+	return clone
 }
 
 // BatchingOption applies a configuration to a BatchingProcessor.

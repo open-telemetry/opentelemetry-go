@@ -5,6 +5,9 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"time"
+
+	"go.opentelemetry.io/otel"
 )
 
 // Exporter handles the delivery of log records to external receivers.
@@ -50,3 +53,79 @@ func (noopExporter) Export(context.Context, []Record) error { return nil }
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
+
+// exportSync exports all data from input using exporter in a spawned
+// goroutine. The returned chan will be closed when the spawned goroutine
+// completes.
+func exportSync(input <-chan exportData, exporter Exporter) (done chan struct{}) {
+	done = make(chan struct{})
+	go func() {
+		defer close(done)
+		for data := range input {
+			data.DoExport(exporter.Export)
+		}
+	}()
+	return done
+}
+
+// exportData is data related to an export.
+type exportData struct {
+	ctx     context.Context
+	records []Record
+
+	// respCh is the channel any error returned from the export will be sent
+	// on. If this is nil, and the export error is non-nil, the error will
+	// passed to the OTel error handler.
+	respCh chan<- error
+}
+
+// DoExport calls exportFn with the data contained in e. The error response
+// will be returned on e's respCh if not nil. The error will be handled by the
+// default OTel error handle if it is not nil and respCh is nil or full.
+func (e exportData) DoExport(exportFn func(context.Context, []Record) error) {
+	if len(e.records) == 0 {
+		e.respond(nil)
+		return
+	}
+
+	e.respond(exportFn(e.ctx, e.records))
+}
+
+func (e exportData) respond(err error) {
+	select {
+	case e.respCh <- err:
+	default:
+		// e.respCh is nil or busy, default to otel.Handler.
+		if err != nil {
+			otel.Handle(err)
+		}
+	}
+}
+
+// chuncker wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads and timeouts. Any payload larger than a
+// defined size is chunked into smaller payloads and exported sequentially. The
+// entire export (all chunks) needs to complete within the defined timeout,
+// otherwise the export is canceled.
+type chuncker struct {
+	Exporter
+
+	// Size is the maximum batch Size exported.
+	Size int
+	// Timeout is the maximum time an entire export (all batches) is attempted.
+	Timeout time.Duration
+}
+
+func (c chuncker) Export(ctx context.Context, records []Record) error {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	n := len(records)
+	for i, j := 0, c.Size; i < n; i, j = i+c.Size, max(j+c.Size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
