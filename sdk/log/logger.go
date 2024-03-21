@@ -73,7 +73,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	}
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
-	if newRecord.observedTimestamp.Equal(time.Time{}) {
+	if newRecord.observedTimestamp.IsZero() {
 		newRecord.observedTimestamp = now()
 	}
 
