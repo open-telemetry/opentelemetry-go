@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
@@ -12,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
 )
+
+var now = time.Now
 
 // Compile-time check logger implements log.Logger.
 var _ log.Logger = (*logger)(nil)
@@ -68,6 +71,12 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
 		attributeCountLimit:       l.provider.attributeCountLimit,
 	}
+
+	// This field SHOULD be set once the event is observed by OpenTelemetry.
+	if newRecord.observedTimestamp.IsZero() {
+		newRecord.observedTimestamp = now()
+	}
+
 	r.WalkAttributes(func(kv log.KeyValue) bool {
 		newRecord.AddAttributes(kv)
 		return true
