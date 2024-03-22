@@ -64,13 +64,13 @@ func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-// Shutdown flushes queued log records and shuts down the decorated expoter.
+// Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	// TODO (#5063): Implement.
 	return nil
 }
 
-// ForceFlush flushes queued log records and flushes the decorated expoter.
+// ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	// TODO (#5063): Implement.
 	return nil
