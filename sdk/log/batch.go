@@ -101,7 +101,7 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 	return done
 }
 
-// Enqueue attemps to enqueue an export. If the exportCh is full, the export
+// Enqueue attempts to enqueue an export. If the exportCh is full, the export
 // will be dropped and an error logged.
 func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
 	select {
