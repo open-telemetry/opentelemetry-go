@@ -20,7 +20,7 @@ type batcherConfig struct{}
 // so that the log records are batched before exporting.
 //
 // All of the exporter's methods are called from a single dedicated
-// background goroutine. Therefore, the expoter does not need to
+// background goroutine. Therefore, the exporter does not need to
 // be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
 	// TODO (#5063): Implement.
@@ -38,13 +38,13 @@ func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-// Shutdown flushes queued log records and shuts down the decorated expoter.
+// Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	// TODO (#5063): Implement.
 	return nil
 }
 
-// ForceFlush flushes queued log records and flushes the decorated expoter.
+// ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	// TODO (#5063): Implement.
 	return nil
@@ -79,7 +79,7 @@ func WithMaxQueueSize(max int) BatchingOption {
 
 // WithExportInterval sets the maximum duration between batched exports.
 //
-// If the OTEL_BSP_SCHEDULE_DELAY environment variable is set,
+// If the OTEL_BLRP_SCHEDULE_DELAY environment variable is set,
 // and this option is not passed, that variable value will be used.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -94,7 +94,7 @@ func WithExportInterval(d time.Duration) BatchingOption {
 
 // WithExportTimeout sets the duration after which a batched export is canceled.
 //
-// If the OTEL_BSP_EXPORT_TIMEOUT environment variable is set,
+// If the OTEL_BLRP_EXPORT_TIMEOUT environment variable is set,
 // and this option is not passed, that variable value will be used.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -110,7 +110,7 @@ func WithExportTimeout(d time.Duration) BatchingOption {
 // WithExportMaxBatchSize sets the maximum batch size of every export.
 // A batch will be split into multiple exports to not exceed this size.
 //
-// If the OTEL_BSP_MAX_EXPORT_BATCH_SIZE environment variable is set,
+// If the OTEL_BLRP_MAX_EXPORT_BATCH_SIZE environment variable is set,
 // and this option is not passed, that variable value will be used.
 //
 // By default, if an environment variable is not set, and this option is not
