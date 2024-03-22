@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -51,59 +52,92 @@ func (e *testExporter) ForceFlush(ctx context.Context) error {
 }
 
 func TestExportSync(t *testing.T) {
-	in := make(chan exportData, 1)
-	exp := &testExporter{Err: assert.AnError}
-	done := exportSync(in, exp)
+	eventuallyDone := func(t *testing.T, done chan struct{}) {
+		assert.Eventually(t, func() bool {
+			select {
+			case <-done:
+				return true
+			default:
+				return false
+			}
+		}, 2*time.Second, time.Microsecond)
+	}
 
-	const goRoutines = 10
-	var wg sync.WaitGroup
-	wg.Add(goRoutines)
-	for i := 0; i < goRoutines; i++ {
-		go func(n int) {
+	t.Run("ErrorHandler", func(t *testing.T) {
+		var got error
+		handler := otel.ErrorHandlerFunc(func(err error) { got = err })
+		otel.SetErrorHandler(handler)
+
+		in := make(chan exportData, 1)
+		exp := &testExporter{Err: assert.AnError}
+		done := exportSync(in, exp)
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
 			defer wg.Done()
 
-			var r Record
-			r.SetBody(log.IntValue(n))
-
-			resp := make(chan error, 1)
 			in <- exportData{
 				ctx:     context.Background(),
-				records: []Record{r},
-				respCh:  resp,
+				records: make([]Record, 1),
 			}
+		}()
 
-			assert.ErrorIs(t, <-resp, assert.AnError)
-		}(i)
-	}
+		wg.Wait()
+		close(in)
+		eventuallyDone(t, done)
 
-	// Empty records should be ignored.
-	in <- exportData{ctx: context.Background()}
+		assert.ErrorIs(t, got, assert.AnError, "error not passed to ErrorHandler")
+	})
 
-	wg.Wait()
+	t.Run("ConcurrentSafe", func(t *testing.T) {
+		in := make(chan exportData, 1)
+		exp := &testExporter{Err: assert.AnError}
+		done := exportSync(in, exp)
 
-	close(in)
-	assert.Eventually(t, func() bool {
-		select {
-		case <-done:
-			return true
-		default:
-			return false
+		const goRoutines = 10
+		var wg sync.WaitGroup
+		wg.Add(goRoutines)
+		for i := 0; i < goRoutines; i++ {
+			go func(n int) {
+				defer wg.Done()
+
+				var r Record
+				r.SetBody(log.IntValue(n))
+
+				resp := make(chan error, 1)
+				in <- exportData{
+					ctx:     context.Background(),
+					records: []Record{r},
+					respCh:  resp,
+				}
+
+				assert.ErrorIs(t, <-resp, assert.AnError)
+			}(i)
 		}
-	}, 2*time.Second, time.Microsecond)
 
-	assert.Equal(t, goRoutines, exp.ExportN, "Export calls")
+		// Empty records should be ignored.
+		in <- exportData{ctx: context.Background()}
 
-	want := make([]log.Value, goRoutines)
-	for i := range want {
-		want[i] = log.IntValue(i)
-	}
-	got := make([]log.Value, len(exp.Records))
-	for i := range got {
-		if assert.Len(t, exp.Records[i], 1, "number of records exported") {
-			got[i] = exp.Records[i][0].Body()
+		wg.Wait()
+
+		close(in)
+		eventuallyDone(t, done)
+
+		assert.Equal(t, goRoutines, exp.ExportN, "Export calls")
+
+		want := make([]log.Value, goRoutines)
+		for i := range want {
+			want[i] = log.IntValue(i)
 		}
-	}
-	assert.ElementsMatch(t, want, got, "record bodies")
+		got := make([]log.Value, len(exp.Records))
+		for i := range got {
+			if assert.Len(t, exp.Records[i], 1, "number of records exported") {
+				got[i] = exp.Records[i][0].Body()
+			}
+		}
+		assert.ElementsMatch(t, want, got, "record bodies")
+	})
 }
 
 func TestChunker(t *testing.T) {
