@@ -57,6 +57,9 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 
 // String returns the hex string representation form of a TraceID.
 func (t TraceID) String() string {
+	if !t.IsValid() {
+		return ""
+	}
 	return hex.EncodeToString(t[:])
 }
 
@@ -82,6 +85,9 @@ func (s SpanID) MarshalJSON() ([]byte, error) {
 
 // String returns the hex string representation form of a SpanID.
 func (s SpanID) String() string {
+	if !s.IsValid() {
+		return ""
+	}
 	return hex.EncodeToString(s[:])
 }
 
