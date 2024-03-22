@@ -132,7 +132,7 @@ func (c chunker) Export(ctx context.Context, records []Record) error {
 	}
 
 	n := len(records)
-	for i, j := 0, c.Size; i < n; i, j = i+c.Size, min(j+c.Size, n) {
+	for i, j := 0, min(c.Size, n); i < n; i, j = i+c.Size, min(j+c.Size, n) {
 		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
 			return err
 		}

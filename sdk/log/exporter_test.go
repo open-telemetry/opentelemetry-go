@@ -182,12 +182,12 @@ func TestChunker(t *testing.T) {
 	t.Run("Chunk", func(t *testing.T) {
 		exp := &testExporter{}
 		c := chunker{Exporter: exp, Size: 10}
+		assert.NoError(t, c.Export(context.Background(), make([]Record, 5)))
 		assert.NoError(t, c.Export(context.Background(), make([]Record, 25)))
 
-		require.Len(t, exp.Records, 3, "chunks")
-
-		wantLen := []int{10, 10, 5}
-		for i, n := range wantLen {
+		wantLens := []int{5, 10, 10, 5}
+		require.Len(t, exp.Records, len(wantLens), "chunks")
+		for i, n := range wantLens {
 			assert.Lenf(t, exp.Records[i], n, "chunk %d", i)
 		}
 	})
