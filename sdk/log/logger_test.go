@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package log // import "go.opentelemetry.io/otel/sdk/log"
+
 import (
 	"context"
 	"errors"
@@ -18,6 +19,16 @@ import (
 )
 
 func TestLoggerEmit(t *testing.T) {
+	nowDate := time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	nowSwap := now
+	t.Cleanup(func() {
+		now = nowSwap
+	})
+	now = func() time.Time {
+		return nowDate
+	}
+
 	p0, p1, p2WithError := newProcessor("0"), newProcessor("1"), newProcessor("2")
 	p2WithError.Err = errors.New("error")
 
@@ -31,6 +42,9 @@ func TestLoggerEmit(t *testing.T) {
 		log.Float64("k2", 1.0),
 	)
 	r.SetObservedTimestamp(time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC))
+
+	rWithNoObservedTimestamp := r
+	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
 	contextWithSpanContext := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0o1},
@@ -142,6 +156,36 @@ func TestLoggerEmit(t *testing.T) {
 					severity:                  r.Severity(),
 					severityText:              r.SeverityText(),
 					observedTimestamp:         r.ObservedTimestamp(),
+					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
+					attributeValueLengthLimit: 3,
+					attributeCountLimit:       2,
+					scope:                     &instrumentation.Scope{Name: "scope"},
+					front: [attributesInlineCount]log.KeyValue{
+						log.String("k1", "str"),
+						log.Float64("k2", 1.0),
+					},
+					nFront: 2,
+				},
+			},
+		},
+		{
+			name: "NoObservedTimestamp",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithAttributeValueLengthLimit(3),
+				WithAttributeCountLimit(2),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+			), instrumentation.Scope{Name: "scope"}),
+			ctx:    context.Background(),
+			record: rWithNoObservedTimestamp,
+			expectedRecords: []Record{
+				{
+					timestamp:                 rWithNoObservedTimestamp.Timestamp(),
+					body:                      rWithNoObservedTimestamp.Body(),
+					severity:                  rWithNoObservedTimestamp.Severity(),
+					severityText:              rWithNoObservedTimestamp.SeverityText(),
+					observedTimestamp:         nowDate,
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
