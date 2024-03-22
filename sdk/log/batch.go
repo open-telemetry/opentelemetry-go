@@ -23,11 +23,6 @@ type BatchingProcessor struct {
 	exportDone chan struct{}
 	exporter   Exporter
 
-	maxQueueSize       int
-	exportInterval     time.Duration
-	exportTimeout      time.Duration
-	exportMaxBatchSize int
-
 	batch *batch
 
 	ctx      context.Context
@@ -45,35 +40,40 @@ type batcherConfig struct{}
 // background goroutine. Therefore, the exporter does not need to
 // be concurrent safe.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
+	// TODO (#5088): handle maxQueueSize, exportInterval, exportTimeout,
+	// exportMaxBatchSize direclty here.
+	return newBatchingProcessor(exporter, 0, 0, 0, 0)
+}
+
+// TODO (#5088): Merge into NewBatchingProcessor when #5088 is merged.
+func newBatchingProcessor(e Exporter, maxQ, maxBatch int, ival, timeout time.Duration) *BatchingProcessor {
+	exp := chunker{Exporter: e, Size: maxBatch, Timeout: timeout}
+	expCh := make(chan exportData, 2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	b := &BatchingProcessor{
-		exportCh: make(chan exportData, 2),
-		// TODO (#5088): maxQueueSize
-		// TODO (#5088): exportInterval
-		// TODO (#5088): exportTimeout
-		// TODO (#5088): exportMaxBatchSize
+		exporter:   exp,
+		exportCh:   expCh,
+		exportDone: exportSync(expCh, exp),
+		batch:      newBatch(maxQ),
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 
-	b.batch = newBatch(b.maxQueueSize)
-
-	b.exporter = chunker{
-		Exporter: exporter,
-		Size:     b.exportMaxBatchSize,
-		Timeout:  b.exportTimeout,
-	}
-	b.exportDone = exportSync(b.exportCh, b.exporter)
-
-	b.ctx, b.cancel = context.WithCancel(context.Background())
-	b.pollDone = b.poll(b.exportInterval)
-
+	b.pollDone = b.poll(ival)
 	return b
 }
 
+var (
+	errElapsed = errors.New("interval elapsed")
+
+	// Used for testing.
+	ctxWithDeadlineCause = context.WithDeadlineCause
+)
+
 func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
-
-	// Use a custom error for the deadline to distinguish between a parent
-	// context deadline being reached and a child context one.
-	errElapsed := errors.New("interval elapsed")
 
 	start := time.Now()
 	go func() {
@@ -81,27 +81,26 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 		for {
 			// Wait until an interval has passed or the parent context stopped.
 			deadline := start.Add(interval)
-			ctx, cancel := context.WithDeadlineCause(b.ctx, deadline, errElapsed)
+			// Use a custom error for the deadline to distinguish between a
+			// parent context deadline being reached and a child context one.
+			ctx, cancel := ctxWithDeadlineCause(b.ctx, deadline, errElapsed)
 			<-ctx.Done()
 			cancel() // Release any resource held by ctx.
 
-			switch ctx.Err() {
-			case errElapsed:
-				var records []Record
-				records, start = b.batch.FlushStale(start)
-				b.enqueue(b.ctx, records, nil)
-			case nil:
-				// This should not happen. Restart loop if it does.
-			default:
+			if !errors.Is(context.Cause(ctx), errElapsed) {
 				// Parent context done.
 				return
 			}
+
+			var records []Record
+			records, start = b.batch.FlushStale(start)
+			b.enqueue(b.ctx, records, nil)
 		}
 	}()
 	return done
 }
 
-// Enqueue attempts to enqueue an export. If the exportCh is full, the export
+// enqueue attempts to enqueue an export. If the exportCh is full, the export
 // will be dropped and an error logged.
 func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
 	select {
