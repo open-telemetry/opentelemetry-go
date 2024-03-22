@@ -55,7 +55,7 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 
 	b.batch = newBatch(b.maxQueueSize)
 
-	b.exporter = chuncker{
+	b.exporter = chunker{
 		Exporter: exporter,
 		Size:     b.exportMaxBatchSize,
 		Timeout:  b.exportTimeout,
