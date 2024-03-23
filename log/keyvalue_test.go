@@ -60,6 +60,7 @@ func TestValueEqual(t *testing.T) {
 		log.MapValue(
 			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
 			log.Bytes("b", []byte{3, 5, 7}),
+			log.Empty("e"),
 		),
 	}
 	for i, v1 := range vals {
@@ -69,7 +70,7 @@ func TestValueEqual(t *testing.T) {
 	}
 }
 
-func TestEmpty(t *testing.T) {
+func TestValueEmpty(t *testing.T) {
 	v := log.Value{}
 	t.Run("Value.Empty", func(t *testing.T) {
 		assert.True(t, v.Empty())
@@ -244,6 +245,23 @@ func TestMap(t *testing.T) {
 	t.Run("AsMap", func(t *testing.T) {
 		assert.Equal(t, val, v.AsMap(), "AsMap")
 	})
+}
+
+func TestEmpty(t *testing.T) {
+	const key = "key"
+	kv := log.Empty(key)
+
+	assert.Equal(t, key, kv.Key, "incorrect key")
+	assert.True(t, kv.Value.Empty(), "value not empty")
+
+	v, k := kv.Value, log.KindEmpty
+	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
+	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
+	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
+	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
+	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
+	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
 
 type logSink struct {

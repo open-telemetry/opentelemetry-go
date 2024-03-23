@@ -45,3 +45,6 @@ type Logger struct{ embedded.Logger }
 
 // Emit does nothing.
 func (Logger) Emit(context.Context, log.Record) {}
+
+// Enabled returns false. No log records are ever emitted.
+func (Logger) Enabled(context.Context, log.Record) bool { return false }
