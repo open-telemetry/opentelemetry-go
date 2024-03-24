@@ -432,6 +432,83 @@ var (
 		DataPoints:             pbEHDPFloat64,
 	}
 
+	quantileValuesA = []metricdata.QuantileValue{
+		{
+			Quantile: 0.0,
+			Value:    0.1,
+		},
+		{
+			Quantile: 0.5,
+			Value:    1.0,
+		},
+		{
+			Quantile: 1.0,
+			Value:    10.4,
+		},
+	}
+	quantileValuesB = []metricdata.QuantileValue{
+		{
+			Quantile: 0.0,
+			Value:    0.5,
+		},
+		{
+			Quantile: 0.5,
+			Value:    3.1,
+		},
+		{
+			Quantile: 1.0,
+			Value:    8.3,
+		},
+	}
+
+	pbQuantileValuesA = []*mpb.SummaryDataPoint_ValueAtQuantile{
+		{
+			Quantile: 0.0,
+			Value:    0.1,
+		},
+		{
+			Quantile: 0.5,
+			Value:    1.0,
+		},
+		{
+			Quantile: 1.0,
+			Value:    10.4,
+		},
+	}
+	pbQuantileValuesB = []*mpb.SummaryDataPoint_ValueAtQuantile{
+		{
+			Quantile: 0.0,
+			Value:    0.5,
+		},
+		{
+			Quantile: 0.5,
+			Value:    3.1,
+		},
+		{
+			Quantile: 1.0,
+			Value:    8.3,
+		},
+	}
+
+	otelSummaryDPts = []metricdata.SummaryDataPoint{
+		{
+			Attributes:     alice,
+			StartTime:      start,
+			Time:           end,
+			Count:          20,
+			Sum:            sumA,
+			QuantileValues: quantileValuesA,
+		},
+		{
+			Attributes:     bob,
+			StartTime:      start,
+			Time:           end,
+			Count:          26,
+			Sum:            sumB,
+			QuantileValues: quantileValuesB,
+		},
+	}
+
 	otelDPtsInt64 = []metricdata.DataPoint[int64]{
 		{
 			Attributes: alice,
@@ -498,6 +575,25 @@ var (
 		},
 	}
 
+	pbDPtsSummary = []*mpb.SummaryDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             20,
+			Sum:               sumA,
+			QuantileValues:    pbQuantileValuesA,
+		},
+		{
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             26,
+			Sum:               sumB,
+			QuantileValues:    pbQuantileValuesB,
+		},
+	}
+
 	otelSumInt64 = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: true,
@@ -550,6 +646,10 @@ var (
 			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		},
 	}}
+
+	pbSummary = &mpb.Summary{DataPoints: pbDPtsSummary}
+
+	otelSummary = metricdata.Summary{DataPoints: otelSummaryDPts}
 
 	unknownAgg  unknownAggT
 	otelMetrics = []metricdata.Metrics{
@@ -631,6 +731,12 @@ var (
 			Unit:        "1",
 			Data:        otelGaugeZeroStartTime,
 		},
+		{
+			Name:        "summary",
+			Description: "Summary metric",
+			Unit:        "1",
+			Data:        otelSummary,
+		},
 	}
 
 	pbMetrics = []*mpb.Metric{
@@ -687,6 +793,12 @@ var (
 			Description: "Gauge with 0 StartTime",
 			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeZeroStartTime},
+		},
+		{
+			Name:        "summary",
+			Description: "Summary metric",
+			Unit:        "1",
+			Data:        &mpb.Metric_Summary{Summary: pbSummary},
 		},
 	}
 
@@ -761,6 +873,7 @@ func TestTransformations(t *testing.T) {
 	assert.Equal(t, pbEHDPInt64, ExponentialHistogramDataPoints(otelEHDPInt64))
 	assert.Equal(t, pbEHDPFloat64, ExponentialHistogramDataPoints(otelEHDPFloat64))
 	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
+	assert.Equal(t, pbDPtsSummary, SummaryDataPoints(otelSummaryDPts))
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
@@ -795,6 +908,8 @@ func TestTransformations(t *testing.T) {
 	e, err = ExponentialHistogram(otelExpoHistInvalid)
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, e)
+
+	require.Equal(t, &mpb.Metric_Summary{Summary: pbSummary}, Summary(otelSummary))
 
 	// Metrics.
 	m, err := Metrics(otelMetrics)
