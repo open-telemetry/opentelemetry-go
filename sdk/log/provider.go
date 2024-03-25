@@ -6,13 +6,9 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
-	"strconv"
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -32,8 +28,8 @@ const (
 type providerConfig struct {
 	resource      *resource.Resource
 	processors    []Processor
-	attrCntLim    limit
-	attrValLenLim limit
+	attrCntLim    setting[int]
+	attrValLenLim setting[int]
 }
 
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
@@ -47,54 +43,16 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 	}
 
 	c.attrCntLim = c.attrCntLim.Resolve(
-		envarAttrCntLim,
-		defaultAttrCntLim,
+		getenv[int](envarAttrCntLim),
+		fallback[int](defaultAttrCntLim),
 	)
 
 	c.attrValLenLim = c.attrValLenLim.Resolve(
-		envarAttrValLenLim,
-		defaultAttrValLenLim,
+		getenv[int](envarAttrValLenLim),
+		fallback[int](defaultAttrValLenLim),
 	)
 
 	return c
-}
-
-type limit struct {
-	value int
-	set   bool
-}
-
-func newLimit(value int) limit {
-	return limit{value: value, set: true}
-}
-
-// Resolve returns the resolved form of the limit l. If l's value is set, it
-// will return l. If the l's value is not set, a new limit based on the
-// environment variable envar will be returned if that environment variable is
-// set. Otherwise, fallback is used to construct a new limit that is returned.
-func (l limit) Resolve(envar string, fallback int) limit {
-	if l.set {
-		return l
-	}
-
-	if v := os.Getenv(envar); v != "" {
-		n, err := strconv.Atoi(v)
-		if err == nil {
-			return newLimit(n)
-		}
-		otel.Handle(fmt.Errorf("invalid %s value %s: %w", envar, v, err))
-	}
-
-	return newLimit(fallback)
-}
-
-// Value returns the limit value if set. Otherwise, it returns -1.
-func (l limit) Value() int {
-	if l.set {
-		return l.value
-	}
-	// Fail open, not closed (-1 == unlimited).
-	return -1
 }
 
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
@@ -127,8 +85,8 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	return &LoggerProvider{
 		resource:                  cfg.resource,
 		processors:                cfg.processors,
-		attributeCountLimit:       cfg.attrCntLim.Value(),
-		attributeValueLengthLimit: cfg.attrValLenLim.Value(),
+		attributeCountLimit:       cfg.attrCntLim.Value,
+		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 	}
 }
 
@@ -257,7 +215,7 @@ func WithProcessor(processor Processor) LoggerProviderOption {
 // passed, 128 will be used.
 func WithAttributeCountLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.attrCntLim = newLimit(limit)
+		cfg.attrCntLim = newSetting(limit)
 		return cfg
 	})
 }
@@ -276,7 +234,7 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 // passed, no limit (-1) will be used.
 func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.attrValLenLim = newLimit(limit)
+		cfg.attrValLenLim = newSetting(limit)
 		return cfg
 	})
 }
