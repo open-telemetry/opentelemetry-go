@@ -5,7 +5,10 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,6 +35,18 @@ type BatchingProcessor struct {
 	exportInterval     time.Duration
 	exportTimeout      time.Duration
 	exportMaxBatchSize int
+
+	// batch is the active batch of records that have not yet been exported.
+	batch *batch
+
+	// ctx is the parent context for the BatchingProcessor asynchronous
+	// operations. When this context is canceled exports are canceled and
+	// polling is stopped.
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	// stopped holds the stopped state of the BatchingProcessor.
+	stopped atomic.Bool
 }
 
 // NewBatchingProcessor decorates the provided exporter
@@ -44,6 +59,10 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		exporter = defaultNoopExporter
 	}
 	cfg := newBatchingConfig(opts)
+
+	// TODO: Add polling to the BatchingProcessor.
+
+	ctx, cancel := context.WithCancel(context.Background())
 	return &BatchingProcessor{
 		exporter: exporter,
 
@@ -51,29 +70,80 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		exportInterval:     cfg.expInterval.Value,
 		exportTimeout:      cfg.expTimeout.Value,
 		exportMaxBatchSize: cfg.expMaxBatchSize.Value,
+
+		batch:  newBatch(cfg.maxQSize.Value),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
+// enqueueFunc is used for testing until #5105 is merged and integrated.
+var enqueueFunc = func(context.Context, []Record, chan error) {}
+
+// enqueue attempts to enqueue an export. If the exportCh is full, the export
+// will be dropped and an error logged.
+func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
+	// TODO (#5105): Implement this. Until this is implemented call enqueueFunc
+	// so the rest of the BatchingProcessor can be tested.
+	enqueueFunc(ctx, r, rCh)
+}
+
 // OnEmit batches provided log record.
-func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
-	// TODO (#5063): Implement.
+func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
+	if b.stopped.Load() {
+		return nil
+	}
+	if flushed := b.batch.Append(r); flushed != nil {
+		b.enqueue(b.ctx, flushed, nil)
+	}
 	return nil
 }
 
-// Enabled returns true.
+// Enabled returns if b is enabled.
 func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
-	return true
+	return !b.stopped.Load()
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
-	// TODO (#5063): Implement.
-	return nil
+	if b.stopped.Swap(true) {
+		return nil
+	}
+
+	resp := make(chan error, 1)
+	b.enqueue(ctx, b.batch.Flush(), resp)
+
+	// Cancel all exports and polling.
+	b.cancel()
+
+	// Wait for response before closing exporter.
+	var err error
+	select {
+	case err = <-resp:
+		close(resp)
+	case <-ctx.Done():
+		// Out of time. Ignore flush response.
+		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+	}
+	return err
 }
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
-	// TODO (#5063): Implement.
+	if b.stopped.Load() {
+		return nil
+	}
+	resp := make(chan error, 1)
+	defer func() { close(resp) }()
+	b.enqueue(ctx, b.batch.Flush(), resp)
+
+	var err error
+	select {
+	case err = <-resp:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return errors.Join(err, b.exporter.ForceFlush(ctx))
 }
 
 // batch holds a batch of logging records.
