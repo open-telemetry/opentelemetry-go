@@ -55,12 +55,10 @@ func TestBatchingProcessor(t *testing.T) {
 			f()
 		}
 
-		assert.Eventually(t, func() bool {
-			return e.ExportN == 2
-		}, 2*time.Second, time.Microsecond, e.ExportN)
-
 		wantLens := []int{10, 5}
-		require.Len(t, e.Records, len(wantLens), "chunks")
+		assert.Eventually(t, func() bool {
+			return len(wantLens) == len(e.Records)
+		}, 2*time.Second, time.Microsecond, e.ExportN)
 		for i, n := range wantLens {
 			assert.Lenf(t, e.Records[i], n, "chunk %d", i)
 		}
