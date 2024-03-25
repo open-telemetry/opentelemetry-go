@@ -67,7 +67,7 @@ func (w wrappedOption) applyHTTPOption(cfg otlpconfig.Config) otlpconfig.Config 
 // take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
-// passed, "localhost:4317" will be used.
+// passed, "localhost:4318" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
@@ -87,7 +87,7 @@ func WithEndpoint(endpoint string) Option {
 // If an invalid URL is provided, the default value will be kept.
 //
 // By default, if an environment variable is not set, and this option is not
-// passed, "localhost:4317" will be used.
+// passed, "localhost:4318" will be used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpointURL(u string) Option {

@@ -29,6 +29,28 @@ type Logger interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Emit(ctx context.Context, record Record)
+
+	// Enabled returns whether the Logger emits for the given context and
+	// record.
+	//
+	// The passed record is likely to be a partial record with only the
+	// bridge-relevant information being provided (e.g a record with only the
+	// Severity set). If a Logger needs more information than is provided, it
+	// is said to be in an indeterminate state (see below).
+	//
+	// The returned value will be true when the Logger will emit for the
+	// provided context and record, and will be false if the Logger will not
+	// emit. The returned value may be true or false in an indeterminate state.
+	// An implementation should default to returning true for an indeterminate
+	// state, but may return false if valid reasons in particular circumstances
+	// exist (e.g. performance, correctness).
+	//
+	// The record should not be held by the implementation. A copy should be
+	// made if the record needs to be held after the call returns.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Enabled(ctx context.Context, record Record) bool
 }
 
 // LoggerOption applies configuration options to a [Logger].
