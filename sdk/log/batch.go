@@ -138,12 +138,12 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 		return nil
 	}
 	resp := make(chan error, 1)
-	defer func() { close(resp) }()
 	b.enqueue(ctx, b.batch.Flush(), resp)
 
 	var err error
 	select {
 	case err = <-resp:
+		close(resp)
 	case <-ctx.Done():
 		return ctx.Err()
 	}

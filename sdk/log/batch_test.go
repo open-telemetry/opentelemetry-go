@@ -244,30 +244,53 @@ func TestBatchingProcessor(t *testing.T) {
 	})
 
 	t.Run("ForceFlush", func(t *testing.T) {
-		e, cleanup := newExp(assert.AnError)
-		t.Cleanup(cleanup)
+		t.Run("Flushes", func(t *testing.T) {
+			e, cleanup := newExp(assert.AnError)
+			t.Cleanup(cleanup)
 
-		b := NewBatchingProcessor(
-			e,
-			WithMaxQueueSize(10),
-			WithExportMaxBatchSize(10),
-			WithExportInterval(time.Hour),
-			WithExportTimeout(time.Hour),
-		)
-		defer func() { _ = b.Shutdown(ctx) }()
+			b := NewBatchingProcessor(
+				e,
+				WithMaxQueueSize(10),
+				WithExportMaxBatchSize(10),
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
+			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
-		var r Record
-		r.SetBody(log.BoolValue(true))
-		require.NoError(t, b.OnEmit(ctx, r))
+			var r Record
+			r.SetBody(log.BoolValue(true))
+			require.NoError(t, b.OnEmit(ctx, r))
 
-		assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
-		assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
-		if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
-			got := e.Records()
-			if assert.Len(t, got[0], 1, "records received") {
-				assert.Equal(t, r, got[0][0])
+			assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
+			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
+			if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
+				got := e.Records()
+				if assert.Len(t, got[0], 1, "records received") {
+					assert.Equal(t, r, got[0][0])
+				}
 			}
-		}
+		})
+
+		t.Run("CanceledContext", func(t *testing.T) {
+			trigger := make(chan error)
+			e := newTestExporter(nil)
+			orig := enqueueFunc
+			enqueueFunc = func(_ context.Context, _ []Record, ch chan error) {
+				go func() { ch <- <-trigger }()
+			}
+			t.Cleanup(func() {
+				e.Stop()
+				enqueueFunc = orig
+			})
+
+			b := NewBatchingProcessor(e)
+			t.Cleanup(func() { _ = b.Shutdown(ctx) })
+			t.Cleanup(func() { close(trigger) })
+
+			c, cancel := context.WithCancel(ctx)
+			cancel()
+			assert.ErrorIs(t, b.ForceFlush(c), context.Canceled)
+		})
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
