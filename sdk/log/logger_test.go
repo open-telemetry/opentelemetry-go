@@ -273,3 +273,38 @@ func TestLoggerEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestAllocationLimits(t *testing.T) {
+	const runs = 1
+
+	logger := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+
+	r := log.Record{}
+	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	r.SetObservedTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	r.SetBody(log.StringValue("testing body value"))
+	r.SetSeverity(log.SeverityInfo)
+	r.SetSeverityText("testing text")
+
+	attrs5 := []log.KeyValue{
+		log.String("k1", "str"),
+		log.Float64("k2", 1.0),
+		log.Int("k3", 2),
+		log.Bool("k4", true),
+		log.Bytes("k5", []byte{1}),
+	}
+	r.AddAttributes(attrs5...)
+
+	r10 := r
+	r10.AddAttributes(attrs5...)
+	assert.Equal(t, 10, r10.AttributesLen())
+
+	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
+		logger.newRecord(context.Background(), r)
+	}), "newRecord")
+
+	// TODO: Optimize this allocation count to 1.
+	assert.Equal(t, 8.0, testing.AllocsPerRun(runs, func() {
+		logger.newRecord(context.Background(), r10)
+	}), "newRecord with 10 attributes")
+}
