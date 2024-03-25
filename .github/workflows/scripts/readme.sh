@@ -3,7 +3,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-dirs=(`find . -type f -name "go.mod" -not -path "*/internal/*" -not -path "*/test*" -exec dirname {} \; | sort | egrep  '^./'`)
+dirs=(`find . -type f -name "go.mod" -not -path "*/internal/*" -not -path "*/test*" -not -path "*/example/*" -exec dirname {} \; | sort | egrep  '^./'`)
 topdir=`pwd`
 
 for dir in $dirs; do
