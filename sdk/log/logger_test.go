@@ -286,7 +286,8 @@ func TestAllocationLimits(t *testing.T) {
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 
-	r.AddAttributes(log.String("k1", "str"),
+	r.AddAttributes(
+		log.String("k1", "str"),
 		log.Float64("k2", 1.0),
 		log.Int("k3", 2),
 		log.Bool("k4", true),
