@@ -92,11 +92,11 @@ func TestBatchingProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		defer b.Shutdown(ctx)
+		defer func() { _ = b.Shutdown(ctx) }()
 
 		var r Record
 		r.SetBody(log.BoolValue(true))
-		b.OnEmit(ctx, r)
+		require.NoError(t, b.OnEmit(ctx, r))
 
 		assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
 		assert.Equal(t, 1, e.ForceFlushN, "exporter ForceFlush calls")
