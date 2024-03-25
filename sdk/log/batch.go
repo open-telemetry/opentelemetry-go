@@ -29,7 +29,7 @@ const (
 // Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
-// BatchingProcessor is an processor that asynchronously exports batches of log records.
+// BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
 	exportCh   chan exportData
 	exportDone chan struct{}
