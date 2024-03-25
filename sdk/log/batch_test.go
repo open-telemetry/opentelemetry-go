@@ -135,7 +135,7 @@ func TestBatchingProcessor(t *testing.T) {
 	ctx := context.Background()
 
 	newExp := func(err error) (exp *testExporter, cleanup func()) {
-		exp = &testExporter{Err: err}
+		exp = newTestExporter(err)
 		orig := enqueueFunc
 		enqueueFunc = func(ctx context.Context, r []Record, ch chan error) {
 			err := exp.Export(ctx, r)
@@ -143,7 +143,10 @@ func TestBatchingProcessor(t *testing.T) {
 				ch <- err
 			}
 		}
-		return exp, func() { enqueueFunc = orig }
+		return exp, func() {
+			exp.Stop()
+			enqueueFunc = orig
+		}
 	}
 
 	t.Run("OnEmit", func(t *testing.T) {
@@ -161,7 +164,7 @@ func TestBatchingProcessor(t *testing.T) {
 			assert.NoError(t, b.OnEmit(ctx, r))
 		}
 
-		assert.Equal(t, 1, e.ExportN)
+		assert.Equal(t, 1, e.ExportN())
 		assert.Len(t, b.batch.data, 5)
 	})
 
@@ -181,7 +184,7 @@ func TestBatchingProcessor(t *testing.T) {
 
 		assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 		assert.NoError(t, b.Shutdown(ctx))
-		assert.Equal(t, 1, e.ShutdownN, "exporter Shutdown calls")
+		assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 	})
 
 	t.Run("ForceFlush", func(t *testing.T) {
@@ -202,12 +205,52 @@ func TestBatchingProcessor(t *testing.T) {
 		require.NoError(t, b.OnEmit(ctx, r))
 
 		assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
-		assert.Equal(t, 1, e.ForceFlushN, "exporter ForceFlush calls")
-		if assert.Equal(t, 1, e.ExportN, "exporter Export calls") {
-			if assert.Len(t, e.Records[0], 1, "records received") {
-				assert.Equal(t, r, e.Records[0][0])
+		assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
+		if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
+			got := e.Records()
+			if assert.Len(t, got[0], 1, "records received") {
+				assert.Equal(t, r, got[0][0])
 			}
 		}
+	})
+
+	t.Run("ConcurrentSafe", func(t *testing.T) {
+		const goRoutines = 10
+
+		e, cleanup := newExp(nil)
+		t.Cleanup(cleanup)
+
+		b := NewBatchingProcessor(e)
+		stop := make(chan struct{})
+		var wg sync.WaitGroup
+		for i := 0; i < goRoutines-1; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for {
+					select {
+					case <-stop:
+						return
+					default:
+						assert.NoError(t, b.OnEmit(ctx, Record{}))
+						assert.NoError(t, b.ForceFlush(ctx))
+					}
+				}
+			}()
+		}
+
+		require.Eventually(t, func() bool {
+			return e.ExportN() > 0
+		}, 2*time.Second, time.Microsecond, "export before shutdown")
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			assert.NoError(t, b.Shutdown(ctx))
+			close(stop)
+		}()
+
+		wg.Wait()
 	})
 }
 
