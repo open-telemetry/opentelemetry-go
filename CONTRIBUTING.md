@@ -183,9 +183,9 @@ For a deeper discussion, see
 
 ## Documentation
 
-Each (non-internal, non-test) package must be documented using
-[Go Doc Comments](https://go.dev/doc/comment),
-preferably in a `doc.go` file.
+Each (non-internal, non-test) package must be documented using [Go Doc
+Comments](https://go.dev/doc/comment), preferably in a `doc.go` file, and have
+a `README.md` file containing at least a title and a `pkg.go.dev` badge.
 
 Prefer using [Examples](https://pkg.go.dev/testing#hdr-Examples)
 instead of putting code snippets in Go doc comments.
