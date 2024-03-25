@@ -5,7 +5,9 @@ package log
 
 import (
 	"context"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,40 +17,92 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
+type instruction struct {
+	Record *[]Record
+	Flush  chan [][]Record
+}
+
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
-	// ExportTrigger is read from prior to returning from the Export method if
-	// non-nil.
-	ExportTrigger chan struct{}
 
 	// Counts of method calls.
-	ExportN, ShutdownN, ForceFlushN int
-	// Records are the Records passed to export.
-	Records [][]Record
+	exportN, shutdownN, forceFlushN *int32
+
+	input chan instruction
+	done  chan struct{}
+}
+
+func newTestExporter(err error) *testExporter {
+	e := &testExporter{
+		Err:         err,
+		exportN:     new(int32),
+		shutdownN:   new(int32),
+		forceFlushN: new(int32),
+		input:       make(chan instruction),
+	}
+	e.done = run(e.input)
+
+	return e
+}
+
+func run(input chan instruction) chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		var records [][]Record
+		for in := range input {
+			if in.Record != nil {
+				records = append(records, *in.Record)
+			}
+			if in.Flush != nil {
+				cp := slices.Clone(records)
+				records = records[:0]
+				in.Flush <- cp
+			}
+		}
+	}()
+	return done
+}
+
+func (e *testExporter) Records() [][]Record {
+	out := make(chan [][]Record, 1)
+	e.input <- instruction{Flush: out}
+	return <-out
 }
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
-	e.ExportN++
-	e.Records = append(e.Records, r)
-	if e.ExportTrigger != nil {
-		select {
-		case <-e.ExportTrigger:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
+	atomic.AddInt32(e.exportN, 1)
+	e.input <- instruction{Record: &r}
 	return e.Err
+}
+
+func (e *testExporter) ExportN() int {
+	return int(atomic.LoadInt32(e.exportN))
+}
+
+func (e *testExporter) Stop() {
+	close(e.input)
+	<-e.done
 }
 
 func (e *testExporter) Shutdown(ctx context.Context) error {
-	e.ShutdownN++
+	atomic.AddInt32(e.shutdownN, 1)
 	return e.Err
 }
 
+func (e *testExporter) ShutdownN() int {
+	return int(atomic.LoadInt32(e.shutdownN))
+}
+
 func (e *testExporter) ForceFlush(ctx context.Context) error {
-	e.ForceFlushN++
+	atomic.AddInt32(e.forceFlushN, 1)
 	return e.Err
+}
+
+func (e *testExporter) ForceFlushN() int {
+	return int(atomic.LoadInt32(e.forceFlushN))
 }
 
 func TestExportSync(t *testing.T) {
@@ -69,7 +123,8 @@ func TestExportSync(t *testing.T) {
 		otel.SetErrorHandler(handler)
 
 		in := make(chan exportData, 1)
-		exp := &testExporter{Err: assert.AnError}
+		exp := newTestExporter(assert.AnError)
+		t.Cleanup(exp.Stop)
 		done := exportSync(in, exp)
 
 		var wg sync.WaitGroup
@@ -92,7 +147,8 @@ func TestExportSync(t *testing.T) {
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
 		in := make(chan exportData, 1)
-		exp := &testExporter{Err: assert.AnError}
+		exp := newTestExporter(assert.AnError)
+		t.Cleanup(exp.Stop)
 		done := exportSync(in, exp)
 
 		const goRoutines = 10
@@ -124,16 +180,17 @@ func TestExportSync(t *testing.T) {
 		close(in)
 		eventuallyDone(t, done)
 
-		assert.Equal(t, goRoutines, exp.ExportN, "Export calls")
+		assert.Equal(t, goRoutines, exp.ExportN(), "Export calls")
 
 		want := make([]log.Value, goRoutines)
 		for i := range want {
 			want[i] = log.IntValue(i)
 		}
-		got := make([]log.Value, len(exp.Records))
+		records := exp.Records()
+		got := make([]log.Value, len(records))
 		for i := range got {
-			if assert.Len(t, exp.Records[i], 1, "number of records exported") {
-				got[i] = exp.Records[i][0].Body()
+			if assert.Len(t, records[i], 1, "number of records exported") {
+				got[i] = records[i][0].Body()
 			}
 		}
 		assert.ElementsMatch(t, want, got, "record bodies")
