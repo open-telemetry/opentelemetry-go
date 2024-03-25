@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -73,7 +74,47 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	// TODO (#5063): Implement.
+}
+
+// batch holds a batch of logging records.
+type batch struct {
+	sync.Mutex
+
+	data []Record
+}
+
+func newBatch(n int) *batch {
+	return &batch{data: make([]Record, 0, n)}
+}
+
+// Append adds r to the batch. If adding r fills the batch, the batch is
+// flushed and its contents returned.
+func (b *batch) Append(r Record) []Record {
+	b.Lock()
+	defer b.Unlock()
+
+	b.data = append(b.data, r)
+	if len(b.data) == cap(b.data) {
+		return b.flush()
+	}
 	return nil
+}
+
+// Flush returns and clears the contents of the batch.
+func (b *batch) Flush() []Record {
+	b.Lock()
+	defer b.Unlock()
+
+	return b.flush()
+}
+
+// flush returns and clears the contents of the batch.
+//
+// This assumes b.Lock is held.
+func (b *batch) flush() []Record {
+	clone := slices.Clone(b.data)
+	b.data = b.data[:0]
+	return clone
 }
 
 type batchingConfig struct {

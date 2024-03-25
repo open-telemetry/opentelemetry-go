@@ -5,12 +5,15 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/log"
 )
 
 func TestNewBatchingProcessorConfiguration(t *testing.T) {
@@ -131,4 +134,73 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 			assert.Equal(t, tc.want, NewBatchingProcessor(nil, tc.options...))
 		})
 	}
+}
+
+func TestBatch(t *testing.T) {
+	var r Record
+	r.SetBody(log.BoolValue(true))
+
+	t.Run("newBatch", func(t *testing.T) {
+		const size = 1
+		b := newBatch(size)
+		assert.Len(t, b.data, 0)
+		assert.Equal(t, size, cap(b.data), "capacity")
+	})
+
+	t.Run("Append", func(t *testing.T) {
+		const size = 2
+		b := newBatch(size)
+
+		assert.Nil(t, b.Append(r), "incomplete batch")
+		require.Len(t, b.data, 1)
+		assert.Equal(t, r, b.data[0])
+
+		got := b.Append(r)
+		assert.Len(t, b.data, 0)
+		assert.Equal(t, size, cap(b.data), "capacity")
+		assert.Equal(t, []Record{r, r}, got, "flushed")
+	})
+
+	t.Run("Flush", func(t *testing.T) {
+		const size = 2
+		b := newBatch(size)
+		b.data = append(b.data, r)
+
+		got := b.Flush()
+		assert.Len(t, b.data, 0)
+		assert.Equal(t, size, cap(b.data), "capacity")
+		assert.Equal(t, []Record{r}, got, "flushed")
+	})
+
+	t.Run("ConcurrentSafe", func(t *testing.T) {
+		const goRoutines = 10
+
+		flushed := make(chan []Record, goRoutines)
+		out := make([]Record, 0, goRoutines)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for recs := range flushed {
+				out = append(out, recs...)
+			}
+		}()
+
+		var wg sync.WaitGroup
+		wg.Add(goRoutines)
+
+		b := newBatch(goRoutines)
+		for i := 0; i < goRoutines; i++ {
+			go func() {
+				defer wg.Done()
+				assert.Nil(t, b.Append(r))
+				flushed <- b.Flush()
+			}()
+		}
+
+		wg.Wait()
+		close(flushed)
+		<-done
+
+		assert.Len(t, out, goRoutines, "flushed Records")
+	})
 }
