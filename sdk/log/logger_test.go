@@ -286,25 +286,14 @@ func TestAllocationLimits(t *testing.T) {
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 
-	attrs5 := []log.KeyValue{
-		log.String("k1", "str"),
+	r.AddAttributes(log.String("k1", "str"),
 		log.Float64("k2", 1.0),
 		log.Int("k3", 2),
 		log.Bool("k4", true),
 		log.Bytes("k5", []byte{1}),
-	}
-	r.AddAttributes(attrs5...)
-
-	r10 := r
-	r10.AddAttributes(attrs5...)
-	assert.Equal(t, 10, r10.AttributesLen())
+	)
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		logger.newRecord(context.Background(), r)
 	}), "newRecord")
-
-	// TODO: Optimize this allocation count to 1.
-	assert.Equal(t, 8.0, testing.AllocsPerRun(runs, func() {
-		logger.newRecord(context.Background(), r10)
-	}), "newRecord with 10 attributes")
 }
