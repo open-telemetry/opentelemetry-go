@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestNewBatchingProcessorConfiguration(t *testing.T) {
+func TestNewBatchingConfig(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		t.Log(err)
 	}))
@@ -25,16 +25,15 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 		name    string
 		envars  map[string]string
 		options []BatchingOption
-		want    *BatchingProcessor
+		want    batchingConfig
 	}{
 		{
 			name: "Defaults",
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
 			},
 		},
 		{
@@ -45,12 +44,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       1,
-				exportInterval:     time.Microsecond,
-				exportTimeout:      time.Hour,
-				exportMaxBatchSize: 2,
+			want: batchingConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(time.Microsecond),
+				expTimeout:      newSetting(time.Hour),
+				expMaxBatchSize: newSetting(2),
 			},
 		},
 		{
@@ -61,12 +59,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(10),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       1,
-				exportInterval:     100 * time.Millisecond,
-				exportTimeout:      1000 * time.Millisecond,
-				exportMaxBatchSize: 10,
+			want: batchingConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(100 * time.Millisecond),
+				expTimeout:      newSetting(1000 * time.Millisecond),
+				expMaxBatchSize: newSetting(10),
 			},
 		},
 		{
@@ -77,12 +74,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(-1 * time.Hour),
 				WithExportMaxBatchSize(-2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
 			},
 		},
 		{
@@ -93,12 +89,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
 			},
 		},
 		{
@@ -116,12 +111,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       3,
-				exportInterval:     time.Microsecond,
-				exportTimeout:      time.Hour,
-				exportMaxBatchSize: 2,
+			want: batchingConfig{
+				maxQSize:        newSetting(3),
+				expInterval:     newSetting(time.Microsecond),
+				expTimeout:      newSetting(time.Hour),
+				expMaxBatchSize: newSetting(2),
 			},
 		},
 	}
@@ -131,7 +125,7 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			assert.Equal(t, tc.want, NewBatchingProcessor(nil, tc.options...))
+			assert.Equal(t, tc.want, newBatchingConfig(tc.options))
 		})
 	}
 }
