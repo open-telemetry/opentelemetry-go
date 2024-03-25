@@ -183,9 +183,9 @@ For a deeper discussion, see
 
 ## Documentation
 
-Each (non-internal, non-test) package must be documented using [Go Doc
-Comments](https://go.dev/doc/comment), preferably in a `doc.go` file, and have
-a `README.md` file containing at least a title and a `pkg.go.dev` badge.
+Each (non-internal, non-test) package must be documented using
+[Go Doc Comments](https://go.dev/doc/comment),
+preferably in a `doc.go` file.
 
 Prefer using [Examples](https://pkg.go.dev/testing#hdr-Examples)
 instead of putting code snippets in Go doc comments.
@@ -200,6 +200,13 @@ You can install and run a "local Go Doc site" in the following way:
 
 [`go.opentelemetry.io/otel/metric`](https://pkg.go.dev/go.opentelemetry.io/otel/metric)
 is an example of a very well-documented package.
+
+### README files
+
+Each (non-internal, non-test, non-documentation) module must contain a
+`README.md` file containing at least a title, and a `pkg.go.dev` badge.
+
+The README should not be a repetition of Go doc comments.
 
 ## Style Guide
 
