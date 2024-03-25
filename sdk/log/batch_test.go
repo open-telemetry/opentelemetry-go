@@ -4,6 +4,7 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
@@ -128,6 +129,86 @@ func TestNewBatchingConfig(t *testing.T) {
 			assert.Equal(t, tc.want, newBatchingConfig(tc.options))
 		})
 	}
+}
+
+func TestBatchingProcessor(t *testing.T) {
+	ctx := context.Background()
+
+	newExp := func(err error) (exp *testExporter, cleanup func()) {
+		exp = &testExporter{Err: err}
+		orig := enqueueFunc
+		enqueueFunc = func(ctx context.Context, r []Record, ch chan error) {
+			err := exp.Export(ctx, r)
+			if ch != nil {
+				ch <- err
+			}
+		}
+		return exp, func() { enqueueFunc = orig }
+	}
+
+	t.Run("OnEmit", func(t *testing.T) {
+		e, cleanup := newExp(nil)
+		t.Cleanup(cleanup)
+
+		b := NewBatchingProcessor(
+			e,
+			WithMaxQueueSize(10),
+			WithExportMaxBatchSize(10),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		for _, r := range make([]Record, 15) {
+			assert.NoError(t, b.OnEmit(ctx, r))
+		}
+
+		assert.Equal(t, 1, e.ExportN)
+		assert.Len(t, b.batch.data, 5)
+	})
+
+	t.Run("Enabled", func(t *testing.T) {
+		b := NewBatchingProcessor(defaultNoopExporter)
+		assert.True(t, b.Enabled(ctx, Record{}))
+
+		_ = b.Shutdown(ctx)
+		assert.False(t, b.Enabled(ctx, Record{}))
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		e, cleanup := newExp(assert.AnError)
+		t.Cleanup(cleanup)
+
+		b := NewBatchingProcessor(e)
+
+		assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
+		assert.NoError(t, b.Shutdown(ctx))
+		assert.Equal(t, 1, e.ShutdownN, "exporter Shutdown calls")
+	})
+
+	t.Run("ForceFlush", func(t *testing.T) {
+		e, cleanup := newExp(assert.AnError)
+		t.Cleanup(cleanup)
+
+		b := NewBatchingProcessor(
+			e,
+			WithMaxQueueSize(10),
+			WithExportMaxBatchSize(10),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		defer func() { _ = b.Shutdown(ctx) }()
+
+		var r Record
+		r.SetBody(log.BoolValue(true))
+		require.NoError(t, b.OnEmit(ctx, r))
+
+		assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
+		assert.Equal(t, 1, e.ForceFlushN, "exporter ForceFlush calls")
+		if assert.Equal(t, 1, e.ExportN, "exporter Export calls") {
+			if assert.Len(t, e.Records[0], 1, "records received") {
+				assert.Equal(t, r, e.Records[0][0])
+			}
+		}
+	})
 }
 
 func TestBatch(t *testing.T) {

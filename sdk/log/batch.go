@@ -78,7 +78,11 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 }
 
 // enqueueFunc is used for testing until #5105 is merged and integrated.
-var enqueueFunc = func(context.Context, []Record, chan error) {}
+var enqueueFunc = func(_ context.Context, _ []Record, ch chan error) {
+	if ch != nil {
+		ch <- nil
+	}
+}
 
 // enqueue attempts to enqueue an export. If the exportCh is full, the export
 // will be dropped and an error logged.
@@ -125,7 +129,7 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		// Out of time. Ignore flush response.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
-	return err
+	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
