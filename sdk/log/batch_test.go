@@ -5,11 +5,14 @@ package log
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -29,7 +32,13 @@ func TestBatchingProcessor(t *testing.T) {
 		}(ctxWithDeadlineCause))
 
 		e := &testExporter{}
-		b := newBatchingProcessor(e, 10, 10, time.Hour, time.Hour)
+		b := NewBatchingProcessor(
+			e,
+			WithMaxQueueSize(10),
+			WithExportMaxBatchSize(10),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
 		for _, r := range make([]Record, 15) {
 			assert.NoError(t, b.OnEmit(ctx, r))
 		}
@@ -58,7 +67,7 @@ func TestBatchingProcessor(t *testing.T) {
 	})
 
 	t.Run("Enabled", func(t *testing.T) {
-		b := newBatchingProcessor(defaultNoopExporter, 0, 0, 0, 0)
+		b := NewBatchingProcessor(defaultNoopExporter)
 		assert.True(t, b.Enabled(ctx, Record{}))
 
 		_ = b.Shutdown(ctx)
@@ -67,7 +76,7 @@ func TestBatchingProcessor(t *testing.T) {
 
 	t.Run("Shutdown", func(t *testing.T) {
 		e := &testExporter{Err: assert.AnError}
-		b := newBatchingProcessor(e, 0, 0, 0, 0)
+		b := NewBatchingProcessor(e)
 
 		assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 		assert.NoError(t, b.Shutdown(ctx))
@@ -76,7 +85,13 @@ func TestBatchingProcessor(t *testing.T) {
 
 	t.Run("ForceFlush", func(t *testing.T) {
 		e := &testExporter{Err: assert.AnError}
-		b := newBatchingProcessor(e, 10, 10, time.Hour, time.Hour)
+		b := NewBatchingProcessor(
+			e,
+			WithMaxQueueSize(10),
+			WithExportMaxBatchSize(10),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
 		defer b.Shutdown(ctx)
 
 		var r Record
@@ -91,4 +106,118 @@ func TestBatchingProcessor(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestNewBatchingConfig(t *testing.T) {
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		t.Log(err)
+	}))
+
+	testcases := []struct {
+		name    string
+		envars  map[string]string
+		options []BatchingOption
+		want    batchingConfig
+	}{
+		{
+			name: "Defaults",
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+			},
+		},
+		{
+			name: "Options",
+			options: []BatchingOption{
+				WithMaxQueueSize(1),
+				WithExportInterval(time.Microsecond),
+				WithExportTimeout(time.Hour),
+				WithExportMaxBatchSize(2),
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(time.Microsecond),
+				expTimeout:      newSetting(time.Hour),
+				expMaxBatchSize: newSetting(2),
+			},
+		},
+		{
+			name: "Environment",
+			envars: map[string]string{
+				envarMaxQSize:        strconv.Itoa(1),
+				envarExpInterval:     strconv.Itoa(100),
+				envarExpTimeout:      strconv.Itoa(1000),
+				envarExpMaxBatchSize: strconv.Itoa(10),
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(100 * time.Millisecond),
+				expTimeout:      newSetting(1000 * time.Millisecond),
+				expMaxBatchSize: newSetting(10),
+			},
+		},
+		{
+			name: "InvalidOptions",
+			options: []BatchingOption{
+				WithMaxQueueSize(-11),
+				WithExportInterval(-1 * time.Microsecond),
+				WithExportTimeout(-1 * time.Hour),
+				WithExportMaxBatchSize(-2),
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+			},
+		},
+		{
+			name: "InvalidEnvironment",
+			envars: map[string]string{
+				envarMaxQSize:        "-1",
+				envarExpInterval:     "-1",
+				envarExpTimeout:      "-1",
+				envarExpMaxBatchSize: "-1",
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(dfltMaxQSize),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+			},
+		},
+		{
+			name: "Precedence",
+			envars: map[string]string{
+				envarMaxQSize:        strconv.Itoa(1),
+				envarExpInterval:     strconv.Itoa(100),
+				envarExpTimeout:      strconv.Itoa(1000),
+				envarExpMaxBatchSize: strconv.Itoa(10),
+			},
+			options: []BatchingOption{
+				// These override the environment variables.
+				WithMaxQueueSize(3),
+				WithExportInterval(time.Microsecond),
+				WithExportTimeout(time.Hour),
+				WithExportMaxBatchSize(2),
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(3),
+				expInterval:     newSetting(time.Microsecond),
+				expTimeout:      newSetting(time.Hour),
+				expMaxBatchSize: newSetting(2),
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			for key, value := range tc.envars {
+				t.Setenv(key, value)
+			}
+			assert.Equal(t, tc.want, newBatchingConfig(tc.options))
+		})
+	}
 }

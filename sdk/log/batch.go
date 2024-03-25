@@ -14,6 +14,18 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 )
 
+const (
+	dfltMaxQSize        = 2048
+	dfltExpInterval     = time.Second
+	dfltExpTimeout      = 30 * time.Second
+	dfltExpMaxBatchSize = 512
+
+	envarMaxQSize        = "OTEL_BLRP_MAX_QUEUE_SIZE"
+	envarExpInterval     = "OTEL_BLRP_SCHEDULE_DELAY"
+	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
+	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
+)
+
 // Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
@@ -31,24 +43,23 @@ type BatchingProcessor struct {
 	stopped  atomic.Bool
 }
 
-type batcherConfig struct{}
-
 // NewBatchingProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
 //
-// All of the exporter's methods are called from a single dedicated
-// background goroutine. Therefore, the exporter does not need to
-// be concurrent safe.
+// All of the exporter's methods are called synchronously.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
-	// TODO (#5088): handle maxQueueSize, exportInterval, exportTimeout,
-	// exportMaxBatchSize direclty here.
-	return newBatchingProcessor(exporter, 0, 0, 0, 0)
-}
+	if exporter == nil {
+		// Do not panic on nil export.
+		exporter = defaultNoopExporter
+	}
+	cfg := newBatchingConfig(opts)
 
-// TODO (#5088): Merge into NewBatchingProcessor when #5088 is merged.
-func newBatchingProcessor(e Exporter, maxQ, maxBatch int, ival, timeout time.Duration) *BatchingProcessor {
-	exp := chunker{Exporter: e, Size: maxBatch, Timeout: timeout}
 	expCh := make(chan exportData, 2)
+	exp := chunker{
+		Exporter: exporter,
+		Size:     cfg.expMaxBatchSize.Value,
+		Timeout:  cfg.expTimeout.Value,
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -56,12 +67,12 @@ func newBatchingProcessor(e Exporter, maxQ, maxBatch int, ival, timeout time.Dur
 		exporter:   exp,
 		exportCh:   expCh,
 		exportDone: exportSync(expCh, exp),
-		batch:      newBatch(maxQ),
+		batch:      newBatch(cfg.maxQSize.Value),
 		ctx:        ctx,
 		cancel:     cancel,
 	}
 
-	b.pollDone = b.poll(ival)
+	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
 }
 
@@ -250,14 +261,55 @@ func (b *batch) flush() []Record {
 	return clone
 }
 
-// BatchingOption applies a configuration to a BatchingProcessor.
-type BatchingOption interface {
-	apply(batcherConfig) batcherConfig
+type batchingConfig struct {
+	maxQSize        setting[int]
+	expInterval     setting[time.Duration]
+	expTimeout      setting[time.Duration]
+	expMaxBatchSize setting[int]
 }
 
-type batchingOptionFunc func(batcherConfig) batcherConfig
+func newBatchingConfig(options []BatchingOption) batchingConfig {
+	var c batchingConfig
+	for _, o := range options {
+		c = o.apply(c)
+	}
 
-func (fn batchingOptionFunc) apply(c batcherConfig) batcherConfig {
+	c.maxQSize = c.maxQSize.Resolve(
+		clearLessThanOne[int](),
+		getenv[int](envarMaxQSize),
+		clearLessThanOne[int](),
+		fallback[int](dfltMaxQSize),
+	)
+	c.expInterval = c.expInterval.Resolve(
+		clearLessThanOne[time.Duration](),
+		getenv[time.Duration](envarExpInterval),
+		clearLessThanOne[time.Duration](),
+		fallback[time.Duration](dfltExpInterval),
+	)
+	c.expTimeout = c.expTimeout.Resolve(
+		clearLessThanOne[time.Duration](),
+		getenv[time.Duration](envarExpTimeout),
+		clearLessThanOne[time.Duration](),
+		fallback[time.Duration](dfltExpTimeout),
+	)
+	c.expMaxBatchSize = c.expMaxBatchSize.Resolve(
+		clearLessThanOne[int](),
+		getenv[int](envarExpMaxBatchSize),
+		clearLessThanOne[int](),
+		fallback[int](dfltExpMaxBatchSize),
+	)
+
+	return c
+}
+
+// BatchingOption applies a configuration to a [BatchingProcessor].
+type BatchingOption interface {
+	apply(batchingConfig) batchingConfig
+}
+
+type batchingOptionFunc func(batchingConfig) batchingConfig
+
+func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
 	return fn(c)
 }
 
@@ -270,9 +322,9 @@ func (fn batchingOptionFunc) apply(c batcherConfig) batcherConfig {
 // By default, if an environment variable is not set, and this option is not
 // passed, 2048 will be used.
 // The default value is also used when the provided value is less than one.
-func WithMaxQueueSize(max int) BatchingOption {
-	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
-		// TODO (#5063): Implement.
+func WithMaxQueueSize(size int) BatchingOption {
+	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+		cfg.maxQSize = newSetting(size)
 		return cfg
 	})
 }
@@ -286,8 +338,8 @@ func WithMaxQueueSize(max int) BatchingOption {
 // passed, 1s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportInterval(d time.Duration) BatchingOption {
-	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
-		// TODO (#5063): Implement.
+	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+		cfg.expInterval = newSetting(d)
 		return cfg
 	})
 }
@@ -301,8 +353,8 @@ func WithExportInterval(d time.Duration) BatchingOption {
 // passed, 30s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportTimeout(d time.Duration) BatchingOption {
-	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
-		// TODO (#5063): Implement.
+	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+		cfg.expTimeout = newSetting(d)
 		return cfg
 	})
 }
@@ -316,9 +368,9 @@ func WithExportTimeout(d time.Duration) BatchingOption {
 // By default, if an environment variable is not set, and this option is not
 // passed, 512 will be used.
 // The default value is also used when the provided value is less than one.
-func WithExportMaxBatchSize(max int) BatchingOption {
-	return batchingOptionFunc(func(cfg batcherConfig) batcherConfig {
-		// TODO (#5063): Implement.
+func WithExportMaxBatchSize(size int) BatchingOption {
+	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+		cfg.expMaxBatchSize = newSetting(size)
 		return cfg
 	})
 }
