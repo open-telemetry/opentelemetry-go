@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"time"
 )
 
 // Exporter handles the delivery of log records to external receivers.
@@ -50,3 +51,41 @@ func (noopExporter) Export(context.Context, []Record) error { return nil }
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
+
+// chunker wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads and timeouts. Any payload larger than a
+// defined size is chunked into smaller payloads and exported sequentially. The
+// entire export (all chunks) needs to complete within the defined timeout,
+// otherwise the export is canceled.
+type chunker struct {
+	Exporter
+
+	// Size is the maximum batch Size exported.
+	//
+	// If Size is less than or equal to 0 no chunking will be done.
+	Size int
+	// Timeout is the maximum time an entire export (all batches) is attempted.
+	//
+	// If Timeout is less than or equal to 0 no timeout will be used.
+	Timeout time.Duration
+}
+
+func (c chunker) Export(ctx context.Context, records []Record) error {
+	if c.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.Timeout)
+		defer cancel()
+	}
+
+	if c.Size <= 0 {
+		return c.Exporter.Export(ctx, records)
+	}
+
+	n := len(records)
+	for i, j := 0, min(c.Size, n); i < n; i, j = i+c.Size, min(j+c.Size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
