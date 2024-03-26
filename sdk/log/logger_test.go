@@ -275,7 +275,7 @@ func TestLoggerEnabled(t *testing.T) {
 }
 
 func TestAllocationLimits(t *testing.T) {
-	const runs = 1
+	const runs = 10
 
 	logger := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
