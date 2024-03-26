@@ -8,8 +8,6 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | s
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | grep -E -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
-ALL_PACKAGES := $(shell find . -type d -not -path "*/internal*" -not -path "*/test*" -not -path "*/example*" -not -path "*/.*" | sort)
-
 GO = go
 TIMEOUT = 60
 
