@@ -24,6 +24,10 @@ import (
 )
 
 const (
+	keyInstrumentationScopeName    = "otel.scope.name"
+	keyInstrumentationScopeVersion = "otel.scope.version"
+
+	// otel.library.name and otel.library.version are deprecated but have to be propagated according to https://github.com/open-telemetry/opentelemetry-specification/blob/v1.31.0/specification/common/mapping-to-non-otlp.md#instrumentationscope
 	keyInstrumentationLibraryName    = "otel.library.name"
 	keyInstrumentationLibraryVersion = "otel.library.version"
 
@@ -183,7 +187,9 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 // extraZipkinTags are those that may be added to every outgoing span.
 var extraZipkinTags = []string{
 	"otel.status_code",
+	keyInstrumentationScopeName,
 	keyInstrumentationLibraryName,
+	keyInstrumentationScopeVersion,
 	keyInstrumentationLibraryVersion,
 }
 
@@ -213,8 +219,10 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 	}
 
 	if is := data.InstrumentationScope(); is.Name != "" {
+		m[keyInstrumentationScopeName] = is.Name
 		m[keyInstrumentationLibraryName] = is.Name
 		if is.Version != "" {
+			m[keyInstrumentationScopeVersion] = is.Version
 			m[keyInstrumentationLibraryVersion] = is.Version
 		}
 	}
