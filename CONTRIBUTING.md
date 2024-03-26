@@ -203,7 +203,7 @@ is an example of a very well-documented package.
 
 ### README files
 
-Each (non-internal, non-test, non-documentation) module must contain a
+Each (non-internal, non-test, non-documentation) package must contain a
 `README.md` file containing at least a title, and a `pkg.go.dev` badge.
 
 The README should not be a repetition of Go doc comments.
