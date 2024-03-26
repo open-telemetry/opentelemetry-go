@@ -115,7 +115,7 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 
 	req := exportRequest{
 		Context: ctx,
-		Result:  make(chan error, 1), // Heap allocation.
+		Result:  make(chan error, 1),
 	}
 	// Send to a buffered channel so that it eventually closes the exporting goroutine.
 	// This line can be called only once so it will never be blocking operation.
@@ -137,7 +137,7 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 
 	req := exportRequest{
 		Context: ctx,
-		Result:  make(chan error, 1), // Heap allocation.
+		Result:  make(chan error, 1),
 	}
 	select {
 	case <-ctx.Done():
@@ -178,7 +178,7 @@ func (b *BatchingProcessor) run() {
 }
 
 func (b *BatchingProcessor) export(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, b.exportTimeout) // 5 heap allocations.
+	ctx, cancel := context.WithTimeout(ctx, b.exportTimeout)
 	defer cancel()
 
 	b.mu.Lock()
