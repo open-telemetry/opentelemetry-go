@@ -4,6 +4,7 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"context"
 	"strconv"
 	"testing"
 	"time"
@@ -19,20 +20,22 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 	}))
 
 	testcases := []struct {
-		name    string
-		envars  map[string]string
-		options []BatchingOption
-		want    *BatchingProcessor
+		name                   string
+		envars                 map[string]string
+		options                []BatchingOption
+		wantExporter           Exporter
+		wantMaxQueueSize       int
+		wantExportInterval     time.Duration
+		wantExportTimeout      time.Duration
+		wantExportMaxBatchSize int
 	}{
 		{
-			name: "Defaults",
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
-			},
+			name:                   "Defaults",
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       dfltMaxQSize,
+			wantExportInterval:     dfltExpInterval,
+			wantExportTimeout:      dfltExpTimeout,
+			wantExportMaxBatchSize: dfltExpMaxBatchSize,
 		},
 		{
 			name: "Options",
@@ -42,13 +45,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       1,
-				exportInterval:     time.Microsecond,
-				exportTimeout:      time.Hour,
-				exportMaxBatchSize: 2,
-			},
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       1,
+			wantExportInterval:     time.Microsecond,
+			wantExportTimeout:      time.Hour,
+			wantExportMaxBatchSize: 2,
 		},
 		{
 			name: "Environment",
@@ -58,13 +59,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(10),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       1,
-				exportInterval:     100 * time.Millisecond,
-				exportTimeout:      1000 * time.Millisecond,
-				exportMaxBatchSize: 10,
-			},
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       1,
+			wantExportInterval:     100 * time.Millisecond,
+			wantExportTimeout:      1000 * time.Millisecond,
+			wantExportMaxBatchSize: 10,
 		},
 		{
 			name: "InvalidOptions",
@@ -74,13 +73,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(-1 * time.Hour),
 				WithExportMaxBatchSize(-2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
-			},
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       dfltMaxQSize,
+			wantExportInterval:     dfltExpInterval,
+			wantExportTimeout:      dfltExpTimeout,
+			wantExportMaxBatchSize: dfltExpMaxBatchSize,
 		},
 		{
 			name: "InvalidEnvironment",
@@ -90,13 +87,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       dfltMaxQSize,
-				exportInterval:     dfltExpInterval,
-				exportTimeout:      dfltExpTimeout,
-				exportMaxBatchSize: dfltExpMaxBatchSize,
-			},
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       dfltMaxQSize,
+			wantExportInterval:     dfltExpInterval,
+			wantExportTimeout:      dfltExpTimeout,
+			wantExportMaxBatchSize: dfltExpMaxBatchSize,
 		},
 		{
 			name: "Precedence",
@@ -113,13 +108,11 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: &BatchingProcessor{
-				exporter:           defaultNoopExporter,
-				maxQueueSize:       3,
-				exportInterval:     time.Microsecond,
-				exportTimeout:      time.Hour,
-				exportMaxBatchSize: 2,
-			},
+			wantExporter:           defaultNoopExporter,
+			wantMaxQueueSize:       3,
+			wantExportInterval:     time.Microsecond,
+			wantExportTimeout:      time.Hour,
+			wantExportMaxBatchSize: 2,
 		},
 	}
 
@@ -128,7 +121,16 @@ func TestNewBatchingProcessorConfiguration(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			assert.Equal(t, tc.want, NewBatchingProcessor(nil, tc.options...))
+
+			b := NewBatchingProcessor(nil, tc.options...)
+			t.Cleanup(func() {
+				assert.NoError(t, b.Shutdown(context.Background()))
+			})
+			assert.Equal(t, tc.wantExporter, b.exporter, "exporter")
+			assert.Equal(t, tc.wantExportInterval, b.exportInterval, "exportInterval")
+			assert.Equal(t, tc.wantExportTimeout, b.exportTimeout, "exportTimeout")
+			assert.Equal(t, tc.wantExportMaxBatchSize, b.exportMaxBatchSize, "exportMaxBatchSize")
+			assert.Equal(t, tc.wantMaxQueueSize, b.maxQueueSize, "maxQueueSize")
 		})
 	}
 }
