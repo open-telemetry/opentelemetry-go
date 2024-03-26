@@ -118,7 +118,7 @@ func TestChunker(t *testing.T) {
 		t.Cleanup(exp.Stop)
 		c := chunker{Exporter: exp}
 		const size = 100
-		c.Export(context.Background(), make([]Record, size))
+		_ = c.Export(context.Background(), make([]Record, size))
 
 		assert.Equal(t, 1, exp.ExportN())
 		records := exp.Records()
