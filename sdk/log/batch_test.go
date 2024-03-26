@@ -44,7 +44,7 @@ func TestBatchingProcessorShutdownCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	b := NewBatchingProcessor(nil)
+	b := NewBatchingProcessor(slowExporter{})
 	err := b.Shutdown(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 }
@@ -53,7 +53,7 @@ func TestBatchingProcessorForceFlushCancled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	b := NewBatchingProcessor(nil)
+	b := NewBatchingProcessor(slowExporter{})
 	err := b.ForceFlush(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 }
@@ -352,5 +352,22 @@ func (e *syncExporter) Shutdown(context.Context) error {
 }
 
 func (e *syncExporter) ForceFlush(context.Context) error {
+	return nil
+}
+
+type slowExporter struct{}
+
+func (e slowExporter) Export(_ context.Context, r []Record) error {
+	time.Sleep(time.Second)
+	return nil
+}
+
+func (e slowExporter) Shutdown(context.Context) error {
+	time.Sleep(time.Second)
+	return nil
+}
+
+func (e slowExporter) ForceFlush(context.Context) error {
+	time.Sleep(time.Second)
 	return nil
 }
