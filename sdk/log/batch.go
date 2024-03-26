@@ -116,7 +116,9 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		Context: ctx,
 		Result:  make(chan error, 1), // Heap allocation.
 	}
-	b.stop <- req // Send to a buffered channel so that it eventually closes.
+	// Send to a buffered channel so that it eventually closes the exporting goroutine.
+	// This line can be called only once so it will never be blocking operation.
+	b.stop <- req
 
 	select {
 	case <-ctx.Done():
