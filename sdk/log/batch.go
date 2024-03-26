@@ -94,6 +94,7 @@ func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
 
 	if len(b.queue) == b.maxQueueSize {
 		// Queue is full.
+		// Drop the record.
 		return nil
 	}
 	b.queue = append(b.queue, r)
