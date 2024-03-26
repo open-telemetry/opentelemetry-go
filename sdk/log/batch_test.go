@@ -303,7 +303,7 @@ func BenchmarkBatchingProcessorOnEmit(b *testing.B) {
 	})
 }
 
-func BenchmarkBatchingProcessorEmitForceFlush(b *testing.B) {
+func BenchmarkBatchingProcessorOnEmitForceFlush(b *testing.B) {
 	var r Record
 	r.SetSeverityText("test")
 	ctx := context.Background()
