@@ -140,6 +140,7 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-b.done:
+		// The batching processor was concurrently shutdown.
 		return nil
 	case b.flush <- req:
 		return <-req.Result
