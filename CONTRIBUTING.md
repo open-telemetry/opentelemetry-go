@@ -208,6 +208,9 @@ Each (non-internal, non-test, non-documentation) module must contain a
 
 The README should not be a repetition of Go doc comments.
 
+You can verify the presence of all README files with the `make verify-readmes`
+command.
+
 ## Style Guide
 
 One of the primary goals of this project is that it is actually used by

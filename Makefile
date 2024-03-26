@@ -8,13 +8,15 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | s
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | grep -E -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
+ALL_PACKAGES := $(shell find . -type d -not -path "*/internal*" -not -path "*/test*" -not -path "*/example*" -not -path "*/.*" | sort)
+
 GO = go
 TIMEOUT = 60
 
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes test-default
 ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
@@ -305,3 +307,7 @@ add-tags: | $(MULTIMOD)
 .PHONY: lint-markdown
 lint-markdown: 
 	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+
+.PHONY: verify-readmes
+verify-readmes:
+	./verify_readmes.sh

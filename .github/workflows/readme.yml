@@ -5,14 +5,11 @@ on:
       - main
   pull_request:
 jobs:
-  readme_presence:
+  verify_readmes:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Install zsh
-        run: sudo apt-get update; sudo apt-get install zsh
-
       - name: Run readme.sh
-        run: ./.github/workflows/scripts/readme.sh
+        run: ./verify_readmes.sh
