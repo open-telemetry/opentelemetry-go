@@ -303,6 +303,29 @@ func BenchmarkBatchingProcessorOnEmit(b *testing.B) {
 	})
 }
 
+func BenchmarkBatchingProcessorForceFlush(b *testing.B) {
+	var r Record
+	r.SetSeverityText("test")
+	ctx := context.Background()
+	s := NewBatchingProcessor(nil, WithExportInterval(time.Millisecond))
+	b.Cleanup(func() {
+		assert.NoError(b, s.Shutdown(context.Background()))
+	})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		var out error
+
+		for pb.Next() {
+			out = s.OnEmit(ctx, r)
+			_ = s.ForceFlush(ctx)
+		}
+
+		_ = out
+	})
+}
+
 type syncExporter struct {
 	mu      sync.Mutex
 	records []Record
