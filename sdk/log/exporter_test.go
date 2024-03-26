@@ -113,6 +113,19 @@ func (e *testExporter) ForceFlushN() int {
 }
 
 func TestChunker(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		c := chunker{Exporter: exp}
+		const size = 100
+		c.Export(context.Background(), make([]Record, size))
+
+		assert.Equal(t, 1, exp.ExportN())
+		records := exp.Records()
+		assert.Len(t, records, 1)
+		assert.Len(t, records[0], size)
+	})
+
 	t.Run("ForceFlush", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
