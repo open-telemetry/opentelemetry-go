@@ -5,7 +5,12 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"sync"
+	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel"
 )
 
 const (
@@ -24,6 +29,7 @@ const (
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
+// A BatchingProcessor must be created with [NewBatchingProcessor].
 type BatchingProcessor struct {
 	exporter Exporter
 
@@ -31,6 +37,21 @@ type BatchingProcessor struct {
 	exportInterval     time.Duration
 	exportTimeout      time.Duration
 	exportMaxBatchSize int
+
+	mu    sync.Mutex
+	queue []Record
+
+	batch []Record
+
+	stop       chan exportRequest
+	flush      chan exportRequest
+	isShutdown atomic.Bool
+	done       chan struct{}
+}
+
+type exportRequest struct {
+	Context context.Context
+	Result  chan error
 }
 
 // NewBatchingProcessor decorates the provided exporter
@@ -43,19 +64,39 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		exporter = defaultNoopExporter
 	}
 	cfg := newBatchingConfig(opts)
-	return &BatchingProcessor{
+	b := &BatchingProcessor{
 		exporter: exporter,
 
 		maxQueueSize:       cfg.maxQSize.Value,
 		exportInterval:     cfg.expInterval.Value,
 		exportTimeout:      cfg.expTimeout.Value,
 		exportMaxBatchSize: cfg.expMaxBatchSize.Value,
+
+		flush: make(chan exportRequest),
+		stop:  make(chan exportRequest, 1),
+		done:  make(chan struct{}),
+		queue: make([]Record, 0, cfg.maxQSize.Value),
+		batch: make([]Record, 0, cfg.expMaxBatchSize.Value),
 	}
+
+	go b.run()
+	return b
 }
 
 // OnEmit batches provided log record.
 func (b *BatchingProcessor) OnEmit(ctx context.Context, r Record) error {
-	// TODO (#5063): Implement.
+	if b.isShutdown.Load() {
+		return nil
+	}
+
+	defer b.mu.Unlock()
+	b.mu.Lock()
+
+	if len(b.queue) == b.maxQueueSize {
+		// Queue is full.
+		return nil
+	}
+	b.queue = append(b.queue, r)
 	return nil
 }
 
@@ -66,14 +107,95 @@ func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
-	// TODO (#5063): Implement.
-	return nil
+	wasShutdown := b.isShutdown.Swap(true)
+	if wasShutdown {
+		return nil
+	}
+
+	req := exportRequest{
+		Context: ctx,
+		Result:  make(chan error, 1), // Heap allocation.
+	}
+	b.stop <- req // Send to a buffered channel so that it eventually closes.
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-req.Result:
+		return err
+	}
 }
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
-	// TODO (#5063): Implement.
-	return nil
+	if b.isShutdown.Load() {
+		return nil
+	}
+
+	req := exportRequest{
+		Context: ctx,
+		Result:  make(chan error, 1), // Heap allocation.
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-b.done:
+		return nil
+	case b.flush <- req:
+		return <-req.Result
+	}
+}
+
+func (b *BatchingProcessor) run() {
+	defer close(b.done)
+
+	ticker := time.NewTicker(b.exportInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := b.export(context.Background())
+			if err != nil {
+				otel.Handle(err)
+			}
+		case req := <-b.flush:
+			err := b.export(req.Context)
+			err = errors.Join(err, b.exporter.ForceFlush(req.Context))
+			req.Result <- err
+			ticker.Reset(b.exportInterval)
+		case req := <-b.stop:
+			err := b.export(req.Context)
+			err = errors.Join(err, b.exporter.Shutdown(req.Context))
+			req.Result <- err
+			return
+		}
+	}
+}
+
+func (b *BatchingProcessor) export(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, b.exportTimeout) // 5 heap allocations.
+	defer cancel()
+
+	b.mu.Lock()
+	if len(b.queue) == 0 {
+		// Nothing to export
+		b.mu.Unlock()
+		return nil
+	}
+	if len(b.queue) > b.exportMaxBatchSize {
+		b.batch = append(b.batch, b.queue[:b.exportMaxBatchSize]...)
+		b.queue = b.queue[b.exportMaxBatchSize:]
+	} else {
+		b.batch = append(b.batch, b.queue...)
+		b.queue = b.queue[:0]
+	}
+	b.mu.Unlock()
+
+	// Doing export outside of the lock prevents deadlocks and improves efficiency.
+	err := b.exporter.Export(ctx, b.batch)
+	b.batch = b.batch[:0]
+	return err
 }
 
 type batchingConfig struct {
