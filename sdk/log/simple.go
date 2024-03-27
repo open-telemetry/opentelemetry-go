@@ -27,7 +27,7 @@ type SimpleProcessor struct {
 func NewSimpleProcessor(exporter Exporter) *SimpleProcessor {
 	if exporter == nil {
 		// Do not panic on nil exporter.
-		exporter = noopExporter{}
+		exporter = defaultNoopExporter
 	}
 	return &SimpleProcessor{exporter: exporter}
 }

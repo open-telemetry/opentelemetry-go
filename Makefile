@@ -14,8 +14,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes test-default
+ci: generate dependabot-check license-check lint vanity-import-check verify-readmes build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -306,3 +306,7 @@ add-tags: | $(MULTIMOD)
 .PHONY: lint-markdown
 lint-markdown:
 	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+
+.PHONY: verify-readmes
+verify-readmes:
+	./verify_readmes.sh

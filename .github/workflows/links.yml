@@ -17,6 +17,8 @@ jobs:
     - name: Link Checker
       id: lychee
       uses: lycheeverse/lychee-action@v1.9.3
+      with:
+          args: --max-concurrency 5 .
 
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
