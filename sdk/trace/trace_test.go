@@ -1977,7 +1977,7 @@ func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
 	assert.Equal(t, 0, (&recordingSpan{}).DroppedAttributes())
 }
 
-func TestAddSpanWithInvalidSpanContext(t *testing.T) {
+func TestAddLinkWithInvalidSpanContext(t *testing.T) {
 	te := NewTestExporter()
 	sl := NewSpanLimits()
 	tp := NewTracerProvider(
@@ -2012,11 +2012,11 @@ func TestAddSpanWithInvalidSpanContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("Link: -got +want %s", diff)
+		t.Errorf("AddLinkWithInvalidSpanContext: -got +want %s", diff)
 	}
 }
 
-func TestAddSpan(t *testing.T) {
+func TestAddLink(t *testing.T) {
 	te := NewTestExporter()
 	sl := NewSpanLimits()
 	tp := NewTracerProvider(
@@ -2051,6 +2051,6 @@ func TestAddSpan(t *testing.T) {
 		t.Fatal(err)
 	}
 	if diff := cmpDiff(got, want); diff != "" {
-		t.Errorf("Link: -got +want %s", diff)
+		t.Errorf("AddLink: -got +want %s", diff)
 	}
 }
