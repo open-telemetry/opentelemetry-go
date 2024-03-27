@@ -121,15 +121,6 @@ provided via API.
 Moreover it is safer to have these abstraction decoupled.
 E.g. there can be a need for some fields that can be set via API and cannot be modified by the processors.
 
-## Open issues
-
-The Logs SDK MUST NOT be released as stable before all issues below are closed:
-
-- [Clarify that ReadableLogRecord and ReadWriteLogRecord can be represented using a single type](https://github.com/open-telemetry/opentelemetry-specification/pull/3898)
-- [Fix what can be modified via ReadWriteLogRecord](https://github.com/open-telemetry/opentelemetry-specification/pull/3907)
-- [logs: Allow duplicate keys](https://github.com/open-telemetry/opentelemetry-specification/issues/3931)
-- [Add an Enabled method to Logger](https://github.com/open-telemetry/opentelemetry-specification/issues/3917)
-
 [^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
 [^2]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
 [^3]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)
