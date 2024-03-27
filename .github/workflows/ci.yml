@@ -37,7 +37,7 @@ jobs:
       - name: Generate
         run: make generate
       - name: Run linters
-        run: make dependabot-check license-check lint vanity-import-check
+        run: make dependabot-check license-check lint vanity-import-check verify-readmes
       - name: Build
         run: make build
       - name: Check clean repository
