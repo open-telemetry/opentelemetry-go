@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -24,12 +26,16 @@ const (
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
 
+var errOverflow = errors.New("export overflow")
+
 // Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
-	exporter Exporter
+	exporter   Exporter
+	exportCh   chan exportData
+	exportDone chan struct{}
 
 	// q is the active queue of records that have not yet been exported.
 	q *queue
@@ -37,8 +43,8 @@ type BatchingProcessor struct {
 	// triggered (unless the interval expires).
 	batchSize int
 
-	flush chan flushReq
-	done  chan struct{}
+	batchComplete chan struct{}
+	done          chan struct{}
 
 	// ctx is the parent context for the BatchingProcessor asynchronous
 	// operations. When this context is canceled exports are canceled and
@@ -62,12 +68,22 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 	cfg := newBatchingConfig(opts)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	b := &BatchingProcessor{
-		exporter: exporter,
 
-		q:         newQueue(cfg.maxQSize.Value),
-		batchSize: cfg.expMaxBatchSize.Value,
-		flush:     make(chan flushReq, (cfg.maxQSize.Value/cfg.expMaxBatchSize.Value)+1),
+	// TODO: explore making the size of this configurable.
+	expCh := make(chan exportData, 1)
+	exporter = &timeoutExporter{
+		Exporter: exporter,
+		timeout:  cfg.expTimeout.Value,
+	}
+
+	b := &BatchingProcessor{
+		exporter:   exporter,
+		exportCh:   expCh,
+		exportDone: exportSync(expCh, exporter),
+
+		q:             newQueue(cfg.maxQSize.Value),
+		batchSize:     cfg.expMaxBatchSize.Value,
+		batchComplete: make(chan struct{}, 1),
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -83,36 +99,35 @@ func (b *BatchingProcessor) run() (done chan struct{}) {
 		for {
 			// TODO: add interval polling.
 			select {
+			case <-b.batchComplete:
 			case <-b.ctx.Done():
 				// Parent context done. Shutting down.
 				return
-			case args := <-b.flush:
-				// TODO: sync.Pool to hold these.
-				buf := make([]Record, b.batchSize)
-				n := b.q.Flush(buf)
-				buf = buf[:n]
-				b.enqueue(args.ctx, buf, args.respCh)
+			}
+
+			// TODO: sync.Pool to hold these.
+			buf := make([]Record, b.batchSize)
+
+			qLen := b.q.TryFlush(buf, func(r []Record) bool {
+				data := exportData{ctx: context.Background(), records: r}
+				select {
+				case b.exportCh <- data:
+					return true
+				default:
+					return false
+				}
+			})
+
+			if qLen >= b.batchSize {
+				select {
+				case b.batchComplete <- struct{}{}:
+				default:
+					// Another flush signal already received.
+				}
 			}
 		}
 	}()
 	return done
-}
-
-type flushReq struct {
-	ctx    context.Context
-	respCh chan error
-}
-
-// enqueue attempts to enqueue an export. If the exportCh is full, the export
-// will be dropped and an error logged.
-func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
-	// TODO (#5105): Enqueue this data to another goroutine so it does not
-	// block the caller.
-	err := b.exporter.Export(ctx, r)
-	if rCh != nil {
-		rCh <- err
-		close(rCh)
-	}
 }
 
 // OnEmit batches provided log record.
@@ -120,9 +135,9 @@ func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	if n := b.q.Enqueue(r); n > 0 && n%b.batchSize == 0 {
+	if n := b.q.Enqueue(r); n >= b.batchSize {
 		select {
-		case b.flush <- flushReq{ctx: b.ctx}:
+		case b.batchComplete <- struct{}{}:
 		default:
 			// Flush chan full. The full queue is scheduled to be flushed but
 			// we are enqueueing faster than we can flush. Old data in the
@@ -143,26 +158,24 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	resp := make(chan error, 1)
-	b.flush <- flushReq{ctx: ctx, respCh: resp}
-
-	// Wait for response before closing exporter.
-	var err error
-	select {
-	case err = <-resp:
-		// Cancel all exports and polling.
-		b.cancel()
-	case <-ctx.Done():
-		b.cancel()
-		// Out of time. Ignore flush response.
-		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
-	}
-
+	// Stop the run goroutine.
+	b.cancel()
 	select {
 	case <-b.done:
 	case <-ctx.Done():
-		// Out of time. Ignore flush response.
+		// Out of time.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+	}
+
+	// Flush remaining queued.
+	err := b.flushAll(ctx)
+
+	// Stop the export goroutine, no more data will be sent.
+	close(b.exportCh)
+	select {
+	case <-b.exportDone:
+	case <-ctx.Done():
+		err = errors.Join(err, ctx.Err())
 	}
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
@@ -172,16 +185,40 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	resp := make(chan error, 1)
-	b.flush <- flushReq{ctx: ctx, respCh: resp}
+	err := b.flushAll(ctx)
+	return errors.Join(err, b.exporter.ForceFlush(ctx))
+}
+
+func (b *BatchingProcessor) flushAll(ctx context.Context) error {
+	records := b.q.Flush()
+	n := len(records)
+	if n == 0 {
+		return nil
+	}
+
+	bSize := b.batchSize
+	batches := 1 + ((n - 1) / bSize)
+	resp := make(chan error, batches)
+
+	for i, j := 0, min(bSize, n); i < n; i, j = i+bSize, min(j+bSize, n) {
+		select {
+		case b.exportCh <- exportData{ctx, records[i:j], resp}:
+		case <-ctx.Done():
+			global.Error(errOverflow, "dropping records", "count", len(records[i:]))
+			return ctx.Err()
+		}
+	}
 
 	var err error
-	select {
-	case err = <-resp:
-	case <-ctx.Done():
-		return ctx.Err()
+	for i := 0; i < batches; i++ {
+		select {
+		case e := <-resp:
+			errors.Join(err, e)
+		case <-ctx.Done():
+			return errors.Join(err, ctx.Err())
+		}
 	}
-	return errors.Join(err, b.exporter.ForceFlush(ctx))
+	return err
 }
 
 // queue holds a queue of logging records.
@@ -219,20 +256,40 @@ func (q *queue) Enqueue(r Record) int {
 	return q.len
 }
 
-// Flush flushes up to len(buf) Records into buf. It returns the number of
-// Records flushed (0 <= n <= len(p)).
-func (q *queue) Flush(buf []Record) int {
+// TryFlush attempts to flush up to len(buf) Records into buf. It returns the
+// number of Records flushed (0 <= n <= len(p)).
+func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
 
-	size := min(len(buf), q.len)
-	for i := 0; i < size; i++ {
+	origRead := q.read
+
+	n := min(len(buf), q.len)
+	for i := 0; i < n; i++ {
 		buf[i] = q.read.Value.(Record)
 		q.read = q.read.Next()
 	}
-	q.len -= size
 
-	return size
+	if flush(buf[:n]) {
+		q.len -= n
+	} else {
+		q.read = origRead
+	}
+	return q.len
+}
+
+func (q *queue) Flush() []Record {
+	q.Lock()
+	defer q.Unlock()
+
+	out := make([]Record, q.len)
+	for i := range out {
+		out[i] = q.read.Value.(Record)
+		q.read = q.read.Next()
+	}
+	q.len = 0
+
+	return out
 }
 
 type batchingConfig struct {

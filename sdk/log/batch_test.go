@@ -235,15 +235,12 @@ func TestBatchingProcessorForceFlushFlush(t *testing.T) {
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
-	t.Cleanup(func() {
-		t.Log("shutting down", b.Shutdown(ctx))
-	})
+	t.Cleanup(func() { b.Shutdown(ctx) })
 
 	var r Record
 	r.SetBody(log.BoolValue(true))
 	require.NoError(t, b.OnEmit(ctx, r))
 
-	t.Log("ForceFlush")
 	assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
 	assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
 	if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
@@ -259,6 +256,11 @@ func TestBatchingProcessorForceFlushCanceledContext(t *testing.T) {
 	trigger := make(chan struct{})
 	e := newTestExporter(nil)
 	b := NewBatchingProcessor(&triggered{Exporter: e, trigger: trigger})
+	t.Cleanup(func() { b.Shutdown(ctx) })
+
+	var r Record
+	r.SetBody(log.BoolValue(true))
+	_ = b.OnEmit(ctx, r)
 	t.Cleanup(func() { _ = b.Shutdown(ctx) })
 	t.Cleanup(func() { close(trigger) })
 
@@ -345,10 +347,7 @@ func TestQueue(t *testing.T) {
 		q.write = q.write.Next()
 		q.len = 1
 
-		got := make([]Record, 2)
-		if assert.Equal(t, 1, q.Flush(got)) {
-			assert.Equal(t, []Record{r}, got[:1], "flushed")
-		}
+		assert.Equal(t, []Record{r}, q.Flush(), "flushed")
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
@@ -372,10 +371,7 @@ func TestQueue(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				b.Enqueue(Record{})
-				out := make([]Record, goRoutines)
-				n := b.Flush(out)
-				out = out[:n]
-				flushed <- out
+				flushed <- b.Flush()
 			}()
 		}
 

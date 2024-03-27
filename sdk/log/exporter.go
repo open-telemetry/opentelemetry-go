@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -52,6 +53,18 @@ func (noopExporter) Export(context.Context, []Record) error { return nil }
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
+
+type timeoutExporter struct {
+	Exporter
+
+	timeout time.Duration
+}
+
+func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	return e.Exporter.Export(ctx, records)
+}
 
 // exportSync exports all data from input using exporter in a spawned
 // goroutine. The returned chan will be closed when the spawned goroutine
