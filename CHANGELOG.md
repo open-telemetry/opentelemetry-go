@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `AddLink` method to the `Span` interface in `go.opentelemetry.io/otel/trace`. (#5032)
 - Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#4906)
 - Add `WithProxy` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlptracehttp`. (#4906)
 - The `Enabled` method is added to the `Logger` interface in `go.opentelemetry.io/otel/log`.
