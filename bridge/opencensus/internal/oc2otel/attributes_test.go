@@ -37,6 +37,32 @@ func TestAttributes(t *testing.T) {
 	}
 }
 
+func TestAttributesFromMap(t *testing.T) {
+	in := map[string]interface{}{
+		"bool":    true,
+		"int64":   int64(49),
+		"float64": float64(1.618),
+		"key":     "val",
+	}
+
+	want := []attribute.KeyValue{
+		attribute.Bool("bool", true),
+		attribute.Int64("int64", 49),
+		attribute.Float64("float64", 1.618),
+		attribute.String("key", "val"),
+	}
+	got := AttributesFromMap(in)
+
+	if len(got) != len(want) {
+		t.Errorf("Attributes conversion failed: want %#v, got %#v", want, got)
+	}
+	for i := range got {
+		if g, w := got[i], want[i]; g != w {
+			t.Errorf("Attributes conversion: want %#v, got %#v", w, g)
+		}
+	}
+}
+
 func TestAttributeValueUnknown(t *testing.T) {
 	got := AttributeValue([]byte{})
 	if got != attribute.StringValue("unknown") {
