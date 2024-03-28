@@ -629,7 +629,7 @@ func (s *recordingSpan) Resource() *resource.Resource {
 	return s.tracer.provider.resource
 }
 
-func (s *recordingSpan) addLink(link trace.Link) {
+func (s *recordingSpan) AddLink(link trace.Link) {
 	if !s.IsRecording() || !link.SpanContext.IsValid() {
 		return
 	}
@@ -802,6 +802,9 @@ func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
 
 // AddEvent does nothing.
 func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}
+
+// AddLink does nothing.
+func (nonRecordingSpan) AddLink(trace.Link) {}
 
 // SetName does nothing.
 func (nonRecordingSpan) SetName(string) {}
