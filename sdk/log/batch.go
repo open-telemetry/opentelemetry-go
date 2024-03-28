@@ -33,8 +33,20 @@ var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
-	exporter   Exporter
-	exportCh   chan exportData
+	// exporter is the Exporter all batches are exported. The Export method of
+	// this Exporter should not be called directly. All exports should be
+	// submitted to the exportCh.
+	exporter Exporter
+	// exportCh is the chan the export goroutine reads from. All exports need
+	// to be made serially (according to the Export interface). This channel
+	// and a single export goroutine is used to ensure this even though there
+	// are multiple origins for an export within the BatchingProcessor.
+	//
+	// This channel is expected to be closed once by the Shutdown method once
+	// all exports are known to be submitted. Only when this channel is closed
+	// and drained will the exporting goroutine terminate.
+	exportCh chan exportData
+	// exportDone signals the export goroutine has completed.
 	exportDone chan struct{}
 
 	// q is the active queue of records that have not yet been exported.
@@ -43,14 +55,20 @@ type BatchingProcessor struct {
 	// triggered (unless the interval expires).
 	batchSize int
 
-	batchComplete chan struct{}
-	done          chan struct{}
-
-	// ctx is the parent context for the BatchingProcessor asynchronous
-	// operations. When this context is canceled exports are canceled and
-	// polling is stopped.
-	ctx    context.Context
-	cancel context.CancelFunc
+	// pollTrigger triggers the poll goroutine to flush a batch from the queue.
+	// This is sent to when it is known that the queue contains at least one
+	// complete batch.
+	//
+	// When a send is made to the channel, the poll loop will be reset after
+	// the flush. If there is still enough Records in the queue for another
+	// batch the reset of the poll loop will automatically re-trigger itself.
+	// There is no need for the original sender to monitor and resend.
+	pollTrigger chan struct{}
+	// pollKill kills the poll goroutine. This is only expected to be closed
+	// once by the Shutdown method.
+	pollKill chan struct{}
+	// pollDone signals the poll goroutine has completed.
+	pollDone chan struct{}
 
 	// stopped holds the stopped state of the BatchingProcessor.
 	stopped atomic.Bool
@@ -67,8 +85,6 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 	}
 	cfg := newBatchingConfig(opts)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	// TODO: explore making the size of this configurable.
 	expCh := make(chan exportData, 1)
 	exporter = &timeoutExporter{
@@ -81,46 +97,33 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		exportCh:   expCh,
 		exportDone: exportSync(expCh, exporter),
 
-		q:             newQueue(cfg.maxQSize.Value),
-		batchSize:     cfg.expMaxBatchSize.Value,
-		batchComplete: make(chan struct{}, 1),
-
-		ctx:    ctx,
-		cancel: cancel,
+		q:           newQueue(cfg.maxQSize.Value),
+		batchSize:   cfg.expMaxBatchSize.Value,
+		pollTrigger: make(chan struct{}, 1),
+		pollKill:    make(chan struct{}),
 	}
-	b.done = b.run()
+	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
 }
 
-func (b *BatchingProcessor) run() (done chan struct{}) {
+// poll spawns a goroutine to handle interval polling and batch exporting. The
+// returned done chan is closed when the spawned goroutine completes.
+func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 	go func() {
-		defer func() { close(done) }()
+		defer close(done)
+
 		for {
 			// TODO: add interval polling.
 			select {
-			case <-b.batchComplete:
-			case <-b.ctx.Done():
-				// Parent context done. Shutting down.
+			case <-b.pollTrigger:
+			case <-b.pollKill:
 				return
 			}
 
-			// TODO: sync.Pool to hold these.
-			buf := make([]Record, b.batchSize)
-
-			qLen := b.q.TryFlush(buf, func(r []Record) bool {
-				data := exportData{ctx: context.Background(), records: r}
+			if b.flushBatch() >= b.batchSize {
 				select {
-				case b.exportCh <- data:
-					return true
-				default:
-					return false
-				}
-			})
-
-			if qLen >= b.batchSize {
-				select {
-				case b.batchComplete <- struct{}{}:
+				case b.pollTrigger <- struct{}{}:
 				default:
 					// Another flush signal already received.
 				}
@@ -130,6 +133,29 @@ func (b *BatchingProcessor) run() (done chan struct{}) {
 	return done
 }
 
+// flushBatch flushes a batch from the queue. The remaining queue size will be
+// returned.
+//
+// This will only flush at most single batch.
+func (b *BatchingProcessor) flushBatch() int {
+	// TODO: sync.Pool to hold these.
+	buf := make([]Record, b.batchSize)
+
+	return b.q.TryFlush(buf, func(r []Record) bool {
+		if len(r) == 0 {
+			return true
+		}
+
+		data := exportData{ctx: context.Background(), records: r}
+		select {
+		case b.exportCh <- data:
+			return true
+		default:
+			return false
+		}
+	})
+}
+
 // OnEmit batches provided log record.
 func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 	if b.stopped.Load() {
@@ -137,11 +163,9 @@ func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 	}
 	if n := b.q.Enqueue(r); n >= b.batchSize {
 		select {
-		case b.batchComplete <- struct{}{}:
+		case b.pollTrigger <- struct{}{}:
 		default:
-			// Flush chan full. The full queue is scheduled to be flushed but
-			// we are enqueueing faster than we can flush. Old data in the
-			// queue is going to be dropped at this point.
+			// Flush chan full. The poll goroutine will handle this.
 		}
 	}
 	return nil
@@ -158,12 +182,13 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	// Stop the run goroutine.
-	b.cancel()
+	// Stop the poll goroutine.
+	close(b.pollKill)
 	select {
-	case <-b.done:
+	case <-b.pollDone:
 	case <-ctx.Done():
-		// Out of time.
+		// Out of time. Do not close b.exportCh, it is not certain if the poll
+		// goroutine will try to send to it still.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
 
@@ -256,8 +281,11 @@ func (q *queue) Enqueue(r Record) int {
 	return q.len
 }
 
-// TryFlush attempts to flush up to len(buf) Records into buf. It returns the
-// number of Records flushed (0 <= n <= len(p)).
+// TryFlush attempts to flush up to len(buf) Records. The available Records
+// will be assigned into buf and passed to flush. If flush fails, returning
+// false, the Records will not be removed from the queue. If flush succeeds,
+// returning true, the flushed Records are removed from the queue. The number
+// of Records remaining in the queue are returned.
 func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
