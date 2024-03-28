@@ -28,6 +28,7 @@ type span struct {
 	attrs     []attribute.KeyValue
 	eName     string
 	eOpts     []trace.EventOption
+	links     []trace.Link
 }
 
 func (s *span) IsRecording() bool                         { return s.recording }
@@ -37,6 +38,7 @@ func (s *span) SetName(n string)                          { s.name = n }
 func (s *span) SetStatus(c codes.Code, d string)          { s.sCode, s.sMsg = c, d }
 func (s *span) SetAttributes(a ...attribute.KeyValue)     { s.attrs = a }
 func (s *span) AddEvent(n string, o ...trace.EventOption) { s.eName, s.eOpts = n, o }
+func (s *span) AddLink(l trace.Link)                      { s.links = append(s.links, l) }
 
 func TestSpanIsRecordingEvents(t *testing.T) {
 	s := &span{recording: true}
@@ -230,16 +232,51 @@ func TestSpanAddMessageReceiveEvent(t *testing.T) {
 }
 
 func TestSpanAddLinkFails(t *testing.T) {
-	h, restore := withHandler()
-	defer restore()
-
 	// OpenCensus does not try to set links if not recording.
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 	ocS.AddLink(octrace.Link{})
+	ocS.AddLink(octrace.Link{
+		TraceID: octrace.TraceID([16]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+		SpanID:  octrace.SpanID([8]byte{2, 0, 0, 0, 0, 0, 0, 0}),
+		Attributes: map[string]interface{}{
+			"foo":    "bar",
+			"number": int64(3),
+		},
+	})
 
-	if h.err == nil {
-		t.Error("span.AddLink failed to raise an error")
+	wantLinks := []trace.Link{
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceFlags: trace.FlagsSampled,
+			}),
+		},
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+				SpanID:     trace.SpanID([]byte{2, 0, 0, 0, 0, 0, 0, 0}),
+				TraceFlags: trace.FlagsSampled,
+			}),
+			Attributes: []attribute.KeyValue{
+				attribute.String("foo", "bar"),
+				attribute.Int64("number", 3),
+			},
+		},
+	}
+
+	if len(s.links) != len(wantLinks) {
+		t.Fatalf("got wrong number of links; want %v, got %v", len(wantLinks), len(s.links))
+	}
+
+	for i, l := range s.links {
+		if !l.SpanContext.Equal(wantLinks[i].SpanContext) {
+			t.Errorf("link[%v] has the wrong span context; want %+v, got %+v", i, wantLinks[i].SpanContext, l.SpanContext)
+		}
+		gotAttributeSet := attribute.NewSet(l.Attributes...)
+		wantAttributeSet := attribute.NewSet(wantLinks[i].Attributes...)
+		if !gotAttributeSet.Equals(&wantAttributeSet) {
+			t.Errorf("link[%v] has the wrong attributes; want %v, got %v", i, wantAttributeSet.Encoded(attribute.DefaultEncoder()), gotAttributeSet.Encoded(attribute.DefaultEncoder()))
+		}
 	}
 }
 
