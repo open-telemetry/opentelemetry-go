@@ -1976,3 +1976,81 @@ func TestEmptyRecordingSpanAttributes(t *testing.T) {
 func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
 	assert.Equal(t, 0, (&recordingSpan{}).DroppedAttributes())
 }
+
+func TestAddLinkWithInvalidSpanContext(t *testing.T) {
+	te := NewTestExporter()
+	sl := NewSpanLimits()
+	tp := NewTracerProvider(
+		WithSpanLimits(sl),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
+	span := startSpan(tp, "AddSpanWithInvalidSpanContext")
+	inValidContext := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID([16]byte{}),
+		SpanID:  [8]byte{},
+	})
+	attrs := []attribute.KeyValue{{Key: "k", Value: attribute.StringValue("v")}}
+	span.AddLink(trace.Link{
+		SpanContext: inValidContext,
+		Attributes:  attrs,
+	})
+
+	want := &snapshot{
+		name: "span0",
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:               sc.WithRemote(true),
+		links:                nil,
+		spanKind:             trace.SpanKindInternal,
+		instrumentationScope: instrumentation.Scope{Name: "AddSpanWithInvalidSpanContext"},
+	}
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("AddLinkWithInvalidSpanContext: -got +want %s", diff)
+	}
+}
+
+func TestAddLink(t *testing.T) {
+	te := NewTestExporter()
+	sl := NewSpanLimits()
+	tp := NewTracerProvider(
+		WithSpanLimits(sl),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
+	attrs := []attribute.KeyValue{{Key: "k", Value: attribute.StringValue("v")}}
+	span := startSpan(tp, "AddSpan")
+
+	link := trace.Link{SpanContext: sc, Attributes: attrs}
+	span.AddLink(link)
+
+	want := &snapshot{
+		name: "span0",
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent: sc.WithRemote(true),
+		links: []Link{
+			{
+				SpanContext: sc,
+				Attributes:  attrs,
+			},
+		},
+		spanKind:             trace.SpanKindInternal,
+		instrumentationScope: instrumentation.Scope{Name: "AddSpan"},
+	}
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("AddLink: -got +want %s", diff)
+	}
+}

@@ -100,6 +100,9 @@ func (Span) RecordError(error, ...trace.EventOption) {}
 // AddEvent does nothing.
 func (Span) AddEvent(string, ...trace.EventOption) {}
 
+// AddLink does nothing.
+func (Span) AddLink(trace.Link) {}
+
 // SetName does nothing.
 func (Span) SetName(string) {}
 
