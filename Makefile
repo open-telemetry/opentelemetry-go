@@ -280,6 +280,7 @@ semconv-generate: | $(SEMCONVGEN) $(SEMCONVKIT)
 	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=attribute_group -p conventionType=trace -f attribute_group.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=event -p conventionType=event -f event.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
 	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=resource -p conventionType=resource -f resource.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
+	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=metric  -f metric.go -t "$(SEMCONVPKG)/metric_template.j2" -s "$(TAG)"
 	$(SEMCONVKIT) -output "$(SEMCONVPKG)/$(TAG)" -tag "$(TAG)"
 
 .PHONY: gorelease
@@ -303,7 +304,7 @@ add-tags: | $(MULTIMOD)
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
 .PHONY: lint-markdown
-lint-markdown: 
+lint-markdown:
 	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
 
 .PHONY: verify-readmes
