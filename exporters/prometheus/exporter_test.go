@@ -13,6 +13,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -22,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestPrometheusExporter(t *testing.T) {
@@ -897,4 +899,101 @@ func TestShutdownExporter(t *testing.T) {
 	}
 	// ensure we aren't unnecessarily logging errors from the shutdown MeterProvider
 	require.NoError(t, handledError)
+}
+
+func TestExemplars(t *testing.T) {
+	for _, tc := range []struct {
+		name                  string
+		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
+		expectedExemplarValue float64
+	}{
+		{
+			name: "counter",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Float64Counter("foo")
+				require.NoError(t, err)
+				counter.Add(ctx, 9)
+			},
+			expectedExemplarValue: 9,
+		},
+		{
+			name: "histogrtam",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("foo")
+				require.NoError(t, err)
+				hist.Record(ctx, 9)
+			},
+			expectedExemplarValue: 9,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+			// initialize registry exporter
+			ctx := context.Background()
+			registry := prometheus.NewRegistry()
+			exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+			require.NoError(t, err)
+
+			// initialize resource
+			res, err := resource.New(ctx,
+				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+			)
+			require.NoError(t, err)
+			res, err = resource.Merge(resource.Default(), res)
+			require.NoError(t, err)
+
+			// initialize provider and meter
+			provider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+				metric.WithResource(res),
+			)
+			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
+
+			// Add a sampled span context so that measurements get exemplars added
+			sc := trace.NewSpanContext(trace.SpanContextConfig{
+				SpanID:     trace.SpanID{0o1},
+				TraceID:    trace.TraceID{0o1},
+				TraceFlags: trace.FlagsSampled,
+			})
+			ctx = trace.ContextWithSpanContext(ctx, sc)
+			// Record a single observation with the exemplar
+			tc.recordMetrics(ctx, meter)
+
+			// Verify that the exemplar is present in the proto version of the
+			// prometheus metrics.
+			got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+			defer done()
+			require.NoError(t, err)
+
+			require.Len(t, got, 1)
+			family := got[0]
+			require.Len(t, family.GetMetric(), 1)
+			metric := family.GetMetric()[0]
+			var exemplar *dto.Exemplar
+			switch family.GetType() {
+			case dto.MetricType_COUNTER:
+				exemplar = metric.GetCounter().GetExemplar()
+			case dto.MetricType_HISTOGRAM:
+				for _, b := range metric.GetHistogram().GetBucket() {
+					if b.GetExemplar() != nil {
+						exemplar = b.GetExemplar()
+						continue
+					}
+				}
+			}
+			require.NotNil(t, exemplar)
+			require.Equal(t, exemplar.GetValue(), tc.expectedExemplarValue)
+			expectedLabels := map[string]string{
+				traceIDExemplarKey: "01000000000000000000000000000000",
+				spanIDExemplarKey:  "0100000000000000",
+			}
+			require.Equal(t, len(expectedLabels), len(exemplar.GetLabel()))
+			for _, label := range exemplar.GetLabel() {
+				val, ok := expectedLabels[label.GetName()]
+				require.True(t, ok)
+				require.Equal(t, label.GetValue(), val)
+			}
+		})
+	}
 }
