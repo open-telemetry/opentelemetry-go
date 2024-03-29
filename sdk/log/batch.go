@@ -10,8 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -36,18 +34,7 @@ type BatchingProcessor struct {
 	// exporter is the Exporter all batches are exported. The Export method of
 	// this Exporter should not be called directly. All exports should be
 	// submitted to the exportCh.
-	exporter Exporter
-	// exportCh is the chan the export goroutine reads from. All exports need
-	// to be made serially (according to the Export interface). This channel
-	// and a single export goroutine is used to ensure this even though there
-	// are multiple origins for an export within the BatchingProcessor.
-	//
-	// This channel is expected to be closed once by the Shutdown method once
-	// all exports are known to be submitted. Only when this channel is closed
-	// and drained will the exporting goroutine terminate.
-	exportCh chan exportData
-	// exportDone signals the export goroutine has completed.
-	exportDone chan struct{}
+	exporter *bufferedExporter
 
 	// q is the active queue of records that have not yet been exported.
 	q *queue
@@ -79,23 +66,23 @@ type BatchingProcessor struct {
 //
 // All of the exporter's methods are called synchronously.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
+	cfg := newBatchingConfig(opts)
+
 	if exporter == nil {
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
-	cfg := newBatchingConfig(opts)
-
-	// TODO: explore making the size of this configurable.
-	expCh := make(chan exportData, 1)
-	exporter = &timeoutExporter{
-		Exporter: exporter,
-		timeout:  cfg.expTimeout.Value,
-	}
+	// Order is important here. Wrap the chucker with a timeoutExporter to
+	// ensure each export completes in timeout (instead of all chuncked
+	// exports).
+	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
+	// Use a chuncker to ensure ForceFlush and Shutdown calls are batched
+	// appropriately on export.
+	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
 	b := &BatchingProcessor{
-		exporter:   exporter,
-		exportCh:   expCh,
-		exportDone: exportSync(expCh, exporter),
+		// TODO: explore making the size of this configurable.
+		exporter: newBufferedExporter(exporter, 1),
 
 		q:           newQueue(cfg.maxQSize.Value),
 		batchSize:   cfg.expMaxBatchSize.Value,
@@ -121,7 +108,12 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 				return
 			}
 
-			if b.flushBatch() >= b.batchSize {
+			// TODO: sync.Pool to hold these.
+			buf := make([]Record, b.batchSize)
+			qLen := b.q.TryFlush(buf, func(r []Record) bool {
+				return b.exporter.EnqueueExport(context.Background(), r)
+			})
+			if qLen >= b.batchSize {
 				select {
 				case b.pollTrigger <- struct{}{}:
 				default:
@@ -131,29 +123,6 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 		}
 	}()
 	return done
-}
-
-// flushBatch flushes a batch from the queue. The remaining queue size will be
-// returned.
-//
-// This will only flush at most single batch.
-func (b *BatchingProcessor) flushBatch() int {
-	// TODO: sync.Pool to hold these.
-	buf := make([]Record, b.batchSize)
-
-	return b.q.TryFlush(buf, func(r []Record) bool {
-		if len(r) == 0 {
-			return true
-		}
-
-		data := exportData{ctx: context.Background(), records: r}
-		select {
-		case b.exportCh <- data:
-			return true
-		default:
-			return false
-		}
-	})
 }
 
 // OnEmit batches provided log record.
@@ -192,16 +161,12 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
 
-	// Flush remaining queued.
-	err := b.flushAll(ctx)
-
-	// Stop the export goroutine, no more data will be sent.
-	close(b.exportCh)
-	select {
-	case <-b.exportDone:
-	case <-ctx.Done():
-		err = errors.Join(err, ctx.Err())
-	}
+	// Flush remaining queued before exporter shutdown.
+	//
+	// Given the poll goroutine has stopped we know no more data will be
+	// queued. This ensures concurrent calls to ForceFlush do not panic because
+	// they are flusing to a shut down exporter.
+	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
@@ -210,40 +175,8 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	err := b.flushAll(ctx)
+	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, b.exporter.ForceFlush(ctx))
-}
-
-func (b *BatchingProcessor) flushAll(ctx context.Context) error {
-	records := b.q.Flush()
-	n := len(records)
-	if n == 0 {
-		return nil
-	}
-
-	bSize := b.batchSize
-	batches := 1 + ((n - 1) / bSize)
-	resp := make(chan error, batches)
-
-	for i, j := 0, min(bSize, n); i < n; i, j = i+bSize, min(j+bSize, n) {
-		select {
-		case b.exportCh <- exportData{ctx, records[i:j], resp}:
-		case <-ctx.Done():
-			global.Error(errOverflow, "dropping records", "count", len(records[i:]))
-			return ctx.Err()
-		}
-	}
-
-	var err error
-	for i := 0; i < batches; i++ {
-		select {
-		case e := <-resp:
-			errors.Join(err, e)
-		case <-ctx.Done():
-			return errors.Join(err, ctx.Err())
-		}
-	}
-	return err
 }
 
 // queue holds a queue of logging records.

@@ -5,6 +5,10 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -57,13 +61,52 @@ func (noopExporter) ForceFlush(context.Context) error { return nil }
 type timeoutExporter struct {
 	Exporter
 
+	// timeout is the maximum time an entire export (all batches) is attempted.
+	//
+	// If Timeout is less than or equal to 0 no timeout will be used.
 	timeout time.Duration
+}
+
+func newTimeoutExporter(exp Exporter, timeout time.Duration) *timeoutExporter {
+	return &timeoutExporter{Exporter: exp, timeout: timeout}
 }
 
 func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 	return e.Exporter.Export(ctx, records)
+}
+
+// chunker wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads and timeouts. Any payload larger than a
+// defined size is chunked into smaller payloads and exported sequentially. The
+// entire export (all chunks) needs to complete within the defined timeout,
+// otherwise the export is canceled.
+type chunker struct {
+	Exporter
+
+	// size is the maximum batch size exported.
+	//
+	// If size is less than or equal to 0 no chunking will be done.
+	size int
+}
+
+func newChunkExporter(exp Exporter, size int) *chunker {
+	return &chunker{Exporter: exp, size: size}
+}
+
+func (c chunker) Export(ctx context.Context, records []Record) error {
+	if c.size <= 0 {
+		return c.Exporter.Export(ctx, records)
+	}
+
+	n := len(records)
+	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // exportSync exports all data from input using exporter in a spawned
@@ -112,4 +155,110 @@ func (e exportData) respond(err error) {
 			otel.Handle(err)
 		}
 	}
+}
+
+type bufferedExporter struct {
+	Exporter
+
+	input   chan exportData
+	inputWG sync.WaitGroup
+
+	done    chan struct{}
+	stopped atomic.Bool
+}
+
+func newBufferedExporter(exporter Exporter, size int) *bufferedExporter {
+	input := make(chan exportData, size)
+	return &bufferedExporter{
+		Exporter: exporter,
+
+		input: input,
+		done:  exportSync(input, exporter),
+	}
+}
+
+var errStopped = errors.New("exporter stopped")
+
+func (e *bufferedExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
+	data := exportData{ctx, records, rCh}
+
+	e.inputWG.Add(1)
+	defer e.inputWG.Done()
+
+	// Check stopped before enqueueing now that e.inputWG is incremented to
+	// prevent sends on a closed chan when Shutdown is called concurrently.
+	if e.stopped.Load() {
+		return errStopped
+	}
+
+	select {
+	case e.input <- data:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return nil
+}
+
+func (e *bufferedExporter) EnqueueExport(ctx context.Context, records []Record) bool {
+	if len(records) == 0 {
+		// Nothing to enqueue, do not waste input space.
+		return true
+	}
+	return e.enqueue(ctx, records, nil) == nil
+}
+
+func (e *bufferedExporter) Export(ctx context.Context, records []Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, records, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return fmt.Errorf("%w: dropping %d records", err, len(records))
+	}
+
+	select {
+	case err := <-resp:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (e *bufferedExporter) ForceFlush(ctx context.Context) error {
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, nil, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return err
+	}
+
+	select {
+	case <-resp:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return e.Exporter.ForceFlush(ctx)
+}
+
+func (e *bufferedExporter) Shutdown(ctx context.Context) error {
+	if e.stopped.Swap(true) {
+		return nil
+	}
+	e.inputWG.Wait()
+
+	// No more sends will be made.
+	close(e.input)
+	select {
+	case <-e.done:
+	case <-ctx.Done():
+		return errors.Join(ctx.Err(), e.Shutdown(ctx))
+	}
+	return e.Exporter.Shutdown(ctx)
 }
