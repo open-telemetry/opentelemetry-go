@@ -264,6 +264,25 @@ func TestEmpty(t *testing.T) {
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
 
+func TestValueString(t *testing.T) {
+	for _, test := range []struct {
+		v    log.Value
+		want string
+	}{
+		{log.Int64Value(-3), "-3"},
+		{log.Float64Value(.15), "0.15"},
+		{log.BoolValue(true), "true"},
+		{log.StringValue("foo"), "foo"},
+		{log.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
+		{log.SliceValue(log.IntValue(3), log.StringValue("foo")), "[3 foo]"},
+		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a=1 b=true]"},
+		{log.Value{}, "<nil>"},
+	} {
+		got := test.v.String()
+		assert.Equal(t, test.want, got)
+	}
+}
+
 type logSink struct {
 	logr.LogSink
 

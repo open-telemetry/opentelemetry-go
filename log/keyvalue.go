@@ -8,8 +8,10 @@ package log // import "go.opentelemetry.io/otel/log"
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -265,6 +267,39 @@ func (v Value) Equal(w Value) bool {
 	}
 }
 
+// String returns Value's value as a string, formatted like [fmt.Sprint].
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (v Value) String() string {
+	switch v.Kind() {
+	case KindString:
+		return v.asString()
+	case KindInt64:
+		return strconv.FormatInt(int64(v.num), 10)
+	case KindFloat64:
+		return strconv.FormatFloat(v.asFloat64(), 'g', -1, 64)
+	case KindBool:
+		return strconv.FormatBool(v.asBool())
+	case KindBytes:
+		return fmt.Sprint(v.asBytes())
+	case KindMap:
+		return fmt.Sprint(v.asMap())
+	case KindSlice:
+		return fmt.Sprint(v.asSlice())
+	case KindEmpty:
+		return "<nil>"
+	default:
+		// Try to handle this as gracefully as possible.
+		//
+		// Don't panic here. The goal here is to have developers find this
+		// first if a slog.Kind is is not handled. It is
+		// preferable to have user's open issue asking why their attributes
+		// have a "unhandled: " prefix than say that their code is panicking.
+		return fmt.Sprintf("<unhandled log.Kind: %s>", v.Kind())
+	}
+}
+
 // A KeyValue is a key-value pair used to represent a log attribute (a
 // superset of [go.opentelemetry.io/otel/attribute.KeyValue]) and map item.
 type KeyValue struct {
@@ -320,4 +355,12 @@ func Map(key string, value ...KeyValue) KeyValue {
 // Empty returns a KeyValue with an empty value.
 func Empty(key string) KeyValue {
 	return KeyValue{key, Value{}}
+}
+
+// String returns key-value pair as a string, formatted like "key=value".
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (a KeyValue) String() string {
+	return fmt.Sprintf("%s=%s", a.Key, a.Value)
 }
