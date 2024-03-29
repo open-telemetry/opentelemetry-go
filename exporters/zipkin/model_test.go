@@ -1027,6 +1027,7 @@ func TestTagsTransformation(t *testing.T) {
 				},
 			},
 			want: map[string]string{
+				"otel.scope.name":   instrLibName,
 				"otel.library.name": instrLibName,
 			},
 		},
@@ -1040,6 +1041,8 @@ func TestTagsTransformation(t *testing.T) {
 				},
 			},
 			want: map[string]string{
+				"otel.scope.name":      instrLibName,
+				"otel.scope.version":   instrLibVersion,
 				"otel.library.name":    instrLibName,
 				"otel.library.version": instrLibVersion,
 			},
