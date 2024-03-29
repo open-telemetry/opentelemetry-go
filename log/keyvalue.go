@@ -357,10 +357,10 @@ func Empty(key string) KeyValue {
 	return KeyValue{key, Value{}}
 }
 
-// String returns key-value pair as a string, formatted like "key=value".
+// String returns key-value pair as a string, formatted like "key:value".
 //
 // The returned string is meant for debugging;
 // the string representation is not stable.
 func (a KeyValue) String() string {
-	return fmt.Sprintf("%s=%s", a.Key, a.Value)
+	return fmt.Sprintf("%s:%s", a.Key, a.Value)
 }

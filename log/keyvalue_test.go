@@ -275,7 +275,7 @@ func TestValueString(t *testing.T) {
 		{log.StringValue("foo"), "foo"},
 		{log.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
 		{log.SliceValue(log.IntValue(3), log.StringValue("foo")), "[3 foo]"},
-		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a=1 b=true]"},
+		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a:1 b:true]"},
 		{log.Value{}, "<nil>"},
 	} {
 		got := test.v.String()
