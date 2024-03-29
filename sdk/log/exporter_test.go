@@ -26,9 +26,6 @@ type instruction struct {
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
-	// ExportTrigger is read from prior to returning from the Export method if
-	// non-nil.
-	ExportTrigger chan struct{}
 
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN *int32
@@ -78,13 +75,6 @@ func (e *testExporter) Records() [][]Record {
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
 	atomic.AddInt32(e.exportN, 1)
-	if e.ExportTrigger != nil {
-		select {
-		case <-e.ExportTrigger:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
 	e.input <- instruction{Record: &r}
 	return e.Err
 }
