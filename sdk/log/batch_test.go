@@ -235,7 +235,7 @@ func TestBatchingProcessorForceFlushFlush(t *testing.T) {
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
-	t.Cleanup(func() { b.Shutdown(ctx) })
+	t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 	var r Record
 	r.SetBody(log.BoolValue(true))
@@ -256,7 +256,7 @@ func TestBatchingProcessorForceFlushCanceledContext(t *testing.T) {
 	trigger := make(chan struct{})
 	e := newTestExporter(nil)
 	b := NewBatchingProcessor(&triggered{Exporter: e, trigger: trigger})
-	t.Cleanup(func() { b.Shutdown(ctx) })
+	t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 	var r Record
 	r.SetBody(log.BoolValue(true))
