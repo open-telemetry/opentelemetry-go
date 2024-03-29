@@ -61,13 +61,14 @@ func (noopExporter) ForceFlush(context.Context) error { return nil }
 type timeoutExporter struct {
 	Exporter
 
-	// timeout is the maximum time an entire export (all batches) is attempted.
-	//
-	// If Timeout is less than or equal to 0 no timeout will be used.
+	// timeout is the maximum time an export is attempted.
 	timeout time.Duration
 }
 
-func newTimeoutExporter(exp Exporter, timeout time.Duration) *timeoutExporter {
+func newTimeoutExporter(exp Exporter, timeout time.Duration) Exporter {
+	if timeout <= 0 {
+		return exp
+	}
 	return &timeoutExporter{Exporter: exp, timeout: timeout}
 }
 
@@ -77,29 +78,24 @@ func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
 	return e.Exporter.Export(ctx, records)
 }
 
-// chunker wraps an Exporter's Export method so it is called with
-// appropriately sized export payloads and timeouts. Any payload larger than a
-// defined size is chunked into smaller payloads and exported sequentially. The
-// entire export (all chunks) needs to complete within the defined timeout,
-// otherwise the export is canceled.
-type chunker struct {
+// chunkExporter wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads. Any payload larger than a defined size
+// is chunked into smaller payloads and exported sequentially.
+type chunkExporter struct {
 	Exporter
 
 	// size is the maximum batch size exported.
-	//
-	// If size is less than or equal to 0 no chunking will be done.
 	size int
 }
 
-func newChunkExporter(exp Exporter, size int) *chunker {
-	return &chunker{Exporter: exp, size: size}
+func newChunkExporter(exp Exporter, size int) Exporter {
+	if size <= 0 {
+		return exp
+	}
+	return &chunkExporter{Exporter: exp, size: size}
 }
 
-func (c chunker) Export(ctx context.Context, records []Record) error {
-	if c.size <= 0 {
-		return c.Exporter.Export(ctx, records)
-	}
-
+func (c chunkExporter) Export(ctx context.Context, records []Record) error {
 	n := len(records)
 	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
 		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
@@ -185,8 +181,8 @@ func (e *bufferedExporter) enqueue(ctx context.Context, records []Record, rCh ch
 	e.inputWG.Add(1)
 	defer e.inputWG.Done()
 
-	// Check stopped before enqueueing now that e.inputWG is incremented to
-	// prevent sends on a closed chan when Shutdown is called concurrently.
+	// Check stopped before enqueueing now that e.inputWG is incremented. This
+	// prevents sends on a closed chan when Shutdown is called concurrently.
 	if e.stopped.Load() {
 		return errStopped
 	}

@@ -24,16 +24,12 @@ const (
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
 
-var errOverflow = errors.New("export overflow")
-
 // Compile-time check BatchingProcessor implements Processor.
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
-	// exporter is the Exporter all batches are exported. The Export method of
-	// this Exporter should not be called directly. All exports should be
-	// submitted to the exportCh.
+	// exporter is the bufferedExporter all batches are exported with.
 	exporter *bufferedExporter
 
 	// q is the active queue of records that have not yet been exported.
@@ -72,11 +68,11 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
-	// Order is important here. Wrap the chucker with a timeoutExporter to
+	// Order is important here. Wrap the timeoutExporter with the chuncker to
 	// ensure each export completes in timeout (instead of all chuncked
 	// exports).
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
-	// Use a chuncker to ensure ForceFlush and Shutdown calls are batched
+	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched
 	// appropriately on export.
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
@@ -134,7 +130,9 @@ func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 		select {
 		case b.pollTrigger <- struct{}{}:
 		default:
-			// Flush chan full. The poll goroutine will handle this.
+			// Flush chan full. The poll goroutine will handle this by
+			// re-sending any trigger until the queue has less than batchSize
+			// records.
 		}
 	}
 	return nil
