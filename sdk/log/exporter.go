@@ -5,6 +5,10 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -54,6 +58,53 @@ func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
 
+type timeoutExporter struct {
+	Exporter
+
+	// timeout is the maximum time an export is attempted.
+	timeout time.Duration
+}
+
+func newTimeoutExporter(exp Exporter, timeout time.Duration) Exporter {
+	if timeout <= 0 {
+		return exp
+	}
+	return &timeoutExporter{Exporter: exp, timeout: timeout}
+}
+
+func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	return e.Exporter.Export(ctx, records)
+}
+
+// chunkExporter wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads. Any payload larger than a defined size
+// is chunked into smaller payloads and exported sequentially.
+type chunkExporter struct {
+	Exporter
+
+	// size is the maximum batch size exported.
+	size int
+}
+
+func newChunkExporter(exp Exporter, size int) Exporter {
+	if size <= 0 {
+		return exp
+	}
+	return &chunkExporter{Exporter: exp, size: size}
+}
+
+func (c chunkExporter) Export(ctx context.Context, records []Record) error {
+	n := len(records)
+	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // exportSync exports all data from input using exporter in a spawned
 // goroutine. The returned chan will be closed when the spawned goroutine
 // completes.
@@ -102,40 +153,108 @@ func (e exportData) respond(err error) {
 	}
 }
 
-// chunker wraps an Exporter's Export method so it is called with
-// appropriately sized export payloads and timeouts. Any payload larger than a
-// defined size is chunked into smaller payloads and exported sequentially. The
-// entire export (all chunks) needs to complete within the defined timeout,
-// otherwise the export is canceled.
-type chunker struct {
+type bufferedExporter struct {
 	Exporter
 
-	// Size is the maximum batch Size exported.
-	//
-	// If Size is less than or equal to 0 no chunking will be done.
-	Size int
-	// Timeout is the maximum time an entire export (all batches) is attempted.
-	//
-	// If Timeout is less than or equal to 0 no timeout will be used.
-	Timeout time.Duration
+	input   chan exportData
+	inputWG sync.WaitGroup
+
+	done    chan struct{}
+	stopped atomic.Bool
 }
 
-func (c chunker) Export(ctx context.Context, records []Record) error {
-	if c.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.Timeout)
-		defer cancel()
+func newBufferedExporter(exporter Exporter, size int) *bufferedExporter {
+	input := make(chan exportData, size)
+	return &bufferedExporter{
+		Exporter: exporter,
+
+		input: input,
+		done:  exportSync(input, exporter),
+	}
+}
+
+var errStopped = errors.New("exporter stopped")
+
+func (e *bufferedExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
+	data := exportData{ctx, records, rCh}
+
+	e.inputWG.Add(1)
+	defer e.inputWG.Done()
+
+	// Check stopped before enqueueing now that e.inputWG is incremented. This
+	// prevents sends on a closed chan when Shutdown is called concurrently.
+	if e.stopped.Load() {
+		return errStopped
 	}
 
-	if c.Size <= 0 {
-		return c.Exporter.Export(ctx, records)
-	}
-
-	n := len(records)
-	for i, j := 0, min(c.Size, n); i < n; i, j = i+c.Size, min(j+c.Size, n) {
-		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
-			return err
-		}
+	select {
+	case e.input <- data:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 	return nil
+}
+
+func (e *bufferedExporter) EnqueueExport(ctx context.Context, records []Record) bool {
+	if len(records) == 0 {
+		// Nothing to enqueue, do not waste input space.
+		return true
+	}
+	return e.enqueue(ctx, records, nil) == nil
+}
+
+func (e *bufferedExporter) Export(ctx context.Context, records []Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, records, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return fmt.Errorf("%w: dropping %d records", err, len(records))
+	}
+
+	select {
+	case err := <-resp:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (e *bufferedExporter) ForceFlush(ctx context.Context) error {
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, nil, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return err
+	}
+
+	select {
+	case <-resp:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return e.Exporter.ForceFlush(ctx)
+}
+
+func (e *bufferedExporter) Shutdown(ctx context.Context) error {
+	if e.stopped.Swap(true) {
+		return nil
+	}
+	e.inputWG.Wait()
+
+	// No more sends will be made.
+	close(e.input)
+	select {
+	case <-e.done:
+	case <-ctx.Done():
+		return errors.Join(ctx.Err(), e.Shutdown(ctx))
+	}
+	return e.Exporter.Shutdown(ctx)
 }

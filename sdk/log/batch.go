@@ -4,14 +4,12 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"container/ring"
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -31,16 +29,32 @@ var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
-	exportCh   chan exportData
-	exportDone chan struct{}
-	exporter   Exporter
+	// exporter is the bufferedExporter all batches are exported with.
+	exporter *bufferedExporter
 
-	batch *batch
+	// q is the active queue of records that have not yet been exported.
+	q *queue
+	// batchSize is the minimum number of Records needed before an export is
+	// triggered (unless the interval expires).
+	batchSize int
 
-	ctx      context.Context
-	cancel   context.CancelFunc
+	// pollTrigger triggers the poll goroutine to flush a batch from the queue.
+	// This is sent to when it is known that the queue contains at least one
+	// complete batch.
+	//
+	// When a send is made to the channel, the poll loop will be reset after
+	// the flush. If there is still enough Records in the queue for another
+	// batch the reset of the poll loop will automatically re-trigger itself.
+	// There is no need for the original sender to monitor and resend.
+	pollTrigger chan struct{}
+	// pollKill kills the poll goroutine. This is only expected to be closed
+	// once by the Shutdown method.
+	pollKill chan struct{}
+	// pollDone signals the poll goroutine has completed.
 	pollDone chan struct{}
-	stopped  atomic.Bool
+
+	// stopped holds the stopped state of the BatchingProcessor.
+	stopped atomic.Bool
 }
 
 // NewBatchingProcessor decorates the provided exporter
@@ -48,79 +62,63 @@ type BatchingProcessor struct {
 //
 // All of the exporter's methods are called synchronously.
 func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
+	cfg := newBatchingConfig(opts)
+
 	if exporter == nil {
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
-	cfg := newBatchingConfig(opts)
-
-	expCh := make(chan exportData, 2)
-	exp := chunker{
-		Exporter: exporter,
-		Size:     cfg.expMaxBatchSize.Value,
-		Timeout:  cfg.expTimeout.Value,
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
+	// Order is important here. Wrap the timeoutExporter with the chuncker to
+	// ensure each export completes in timeout (instead of all chuncked
+	// exports).
+	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
+	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched
+	// appropriately on export.
+	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
 	b := &BatchingProcessor{
-		exporter:   exp,
-		exportCh:   expCh,
-		exportDone: exportSync(expCh, exp),
-		batch:      newBatch(cfg.maxQSize.Value),
-		ctx:        ctx,
-		cancel:     cancel,
-	}
+		// TODO: explore making the size of this configurable.
+		exporter: newBufferedExporter(exporter, 1),
 
+		q:           newQueue(cfg.maxQSize.Value),
+		batchSize:   cfg.expMaxBatchSize.Value,
+		pollTrigger: make(chan struct{}, 1),
+		pollKill:    make(chan struct{}),
+	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
 }
 
-var (
-	errElapsed = errors.New("interval elapsed")
-
-	// Used for testing.
-	ctxWithDeadlineCause = context.WithDeadlineCause
-)
-
+// poll spawns a goroutine to handle interval polling and batch exporting. The
+// returned done chan is closed when the spawned goroutine completes.
 func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
-
-	start := time.Now()
 	go func() {
-		defer func() { close(b.pollDone) }()
-		for {
-			// Wait until an interval has passed or the parent context stopped.
-			deadline := start.Add(interval)
-			// Use a custom error for the deadline to distinguish between a
-			// parent context deadline being reached and a child context one.
-			ctx, cancel := ctxWithDeadlineCause(b.ctx, deadline, errElapsed)
-			<-ctx.Done()
-			cancel() // Release any resource held by ctx.
+		defer close(done)
 
-			if !errors.Is(context.Cause(ctx), errElapsed) {
-				// Parent context done.
+		for {
+			// TODO: add interval polling.
+			select {
+			case <-b.pollTrigger:
+			case <-b.pollKill:
 				return
 			}
 
-			var records []Record
-			records, start = b.batch.FlushStale(start)
-			b.enqueue(b.ctx, records, nil)
+			// TODO: sync.Pool to hold these.
+			buf := make([]Record, b.batchSize)
+			qLen := b.q.TryFlush(buf, func(r []Record) bool {
+				return b.exporter.EnqueueExport(context.Background(), r)
+			})
+			if qLen >= b.batchSize {
+				select {
+				case b.pollTrigger <- struct{}{}:
+				default:
+					// Another flush signal already received.
+				}
+			}
 		}
 	}()
 	return done
-}
-
-// enqueue attempts to enqueue an export. If the exportCh is full, the export
-// will be dropped and an error logged.
-func (b *BatchingProcessor) enqueue(ctx context.Context, r []Record, rCh chan error) {
-	select {
-	case b.exportCh <- exportData{ctx, r, rCh}:
-	default:
-		// Export chan full. Do not block.
-		err := errors.New("export overflow")
-		global.Error(err, "dropping log batch", "dropped", len(r))
-	}
 }
 
 // OnEmit batches provided log record.
@@ -128,8 +126,14 @@ func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	if flushed := b.batch.Append(r); flushed != nil {
-		b.enqueue(b.ctx, flushed, nil)
+	if n := b.q.Enqueue(r); n >= b.batchSize {
+		select {
+		case b.pollTrigger <- struct{}{}:
+		default:
+			// Flush chan full. The poll goroutine will handle this by
+			// re-sending any trigger until the queue has less than batchSize
+			// records.
+		}
 	}
 	return nil
 }
@@ -145,31 +149,22 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	resp := make(chan error, 1)
-	b.enqueue(ctx, b.batch.Flush(), resp)
-
-	// Close poller.
-	b.cancel()
-	<-b.pollDone
-
-	// Wait for response before closing exporter.
-	var err error
+	// Stop the poll goroutine.
+	close(b.pollKill)
 	select {
-	case err = <-resp:
-		close(resp)
+	case <-b.pollDone:
 	case <-ctx.Done():
-		// Out of time. Ignore flush response.
-		close(b.exportCh)
+		// Out of time. Do not close b.exportCh, it is not certain if the poll
+		// goroutine will try to send to it still.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
 
-	// Close exporter.
-	close(b.exportCh)
-	select {
-	case <-b.exportDone:
-	case <-ctx.Done():
-		err = errors.Join(err, ctx.Err())
-	}
+	// Flush remaining queued before exporter shutdown.
+	//
+	// Given the poll goroutine has stopped we know no more data will be
+	// queued. This ensures concurrent calls to ForceFlush do not panic because
+	// they are flusing to a shut down exporter.
+	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
@@ -178,87 +173,82 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	resp := make(chan error, 1)
-	defer func() { close(resp) }()
-	b.enqueue(ctx, b.batch.Flush(), resp)
-
-	var err error
-	select {
-	case err = <-resp:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, b.exporter.ForceFlush(ctx))
 }
 
-// batch holds a batch of logging records.
-type batch struct {
+// queue holds a queue of logging records.
+type queue struct {
 	sync.Mutex
 
-	data []Record
-	// oldest is the timestamp of when the first Record in the batch was
-	// received.
-	oldest time.Time
+	cap, len    int
+	read, write *ring.Ring
 }
 
-func newBatch(n int) *batch {
-	return &batch{data: make([]Record, 0, n)}
-}
-
-// Append adds r to the batch. If adding r fills the batch, the batch is
-// flushed and its contents returned.
-func (b *batch) Append(r Record) []Record {
-	b.Lock()
-	defer b.Unlock()
-
-	b.data = append(b.data, r)
-	if len(b.data) == 1 {
-		b.oldest = time.Now()
+func newQueue(size int) *queue {
+	r := ring.New(size)
+	return &queue{
+		cap:   size,
+		read:  r,
+		write: r,
 	}
-	if len(b.data) == cap(b.data) {
-		return b.flush()
+}
+
+// Enqueue adds r to the queue. The queue size, including the addition of r, is
+// returned.
+func (q *queue) Enqueue(r Record) int {
+	q.Lock()
+	defer q.Unlock()
+
+	q.write.Value = r
+	q.write = q.write.Next()
+
+	q.len++
+	if q.len > q.cap {
+		// Overflow. Advance read to be the new "oldest".
+		q.len = q.cap
+		q.read = q.read.Next()
 	}
-	return nil
+	return q.len
 }
 
-// Flush returns and clears the contents of the batch.
-func (b *batch) Flush() []Record {
-	b.Lock()
-	defer b.Unlock()
+// TryFlush attempts to flush up to len(buf) Records. The available Records
+// will be assigned into buf and passed to flush. If flush fails, returning
+// false, the Records will not be removed from the queue. If flush succeeds,
+// returning true, the flushed Records are removed from the queue. The number
+// of Records remaining in the queue are returned.
+func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
+	q.Lock()
+	defer q.Unlock()
 
-	return b.flush()
-}
+	origRead := q.read
 
-// Flush flushes batch b if it is older than timestamp.
-//
-// If the batch is flushed, the flushed records along with the estimated start
-// time (i.e. now) of the next batch is returned.
-//
-// If the batch is not flushed, because the batch is empty or it is younger
-// than timestamp, the returned time will be the start time of the still held
-// batch. This time will be the estimated start time (i.e. now) in the case
-// where the batch is empty.
-func (b *batch) FlushStale(timestamp time.Time) ([]Record, time.Time) {
-	b.Lock()
-	defer b.Unlock()
-
-	if len(b.data) == 0 {
-		return nil, time.Now()
+	n := min(len(buf), q.len)
+	for i := 0; i < n; i++ {
+		buf[i] = q.read.Value.(Record)
+		q.read = q.read.Next()
 	}
 
-	if b.oldest.After(timestamp) {
-		// Not stale.
-		return nil, b.oldest
+	if flush(buf[:n]) {
+		q.len -= n
+	} else {
+		q.read = origRead
 	}
-
-	return b.flush(), time.Now()
+	return q.len
 }
 
-func (b *batch) flush() []Record {
-	clone := slices.Clone(b.data)
-	b.data = b.data[:0]
-	b.oldest = time.Time{}
-	return clone
+func (q *queue) Flush() []Record {
+	q.Lock()
+	defer q.Unlock()
+
+	out := make([]Record, q.len)
+	for i := range out {
+		out[i] = q.read.Value.(Record)
+		q.read = q.read.Next()
+	}
+	q.len = 0
+
+	return out
 }
 
 type batchingConfig struct {
