@@ -182,6 +182,9 @@ func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
 // AddEvent does nothing.
 func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}
 
+// AddLink does nothing.
+func (nonRecordingSpan) AddLink(trace.Link) {}
+
 // SetName does nothing.
 func (nonRecordingSpan) SetName(string) {}
 

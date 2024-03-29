@@ -176,6 +176,11 @@ type MockEvent struct {
 	Attributes []attribute.KeyValue
 }
 
+type MockLink struct {
+	SpanContext trace.SpanContext
+	Attributes  []attribute.KeyValue
+}
+
 type MockSpan struct {
 	embedded.Span
 
@@ -190,6 +195,7 @@ type MockSpan struct {
 	EndTime      time.Time
 	ParentSpanID trace.SpanID
 	Events       []MockEvent
+	Links        []MockLink
 }
 
 var (
@@ -283,6 +289,13 @@ func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 		Timestamp:  c.Timestamp(),
 		Name:       name,
 		Attributes: c.Attributes(),
+	})
+}
+
+func (s *MockSpan) AddLink(link trace.Link) {
+	s.Links = append(s.Links, MockLink{
+		SpanContext: link.SpanContext,
+		Attributes:  link.Attributes,
 	})
 }
 
