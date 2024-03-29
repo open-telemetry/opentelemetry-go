@@ -5,7 +5,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -54,37 +53,30 @@ func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
 
-// chunker wraps an Exporter's Export method so it is called with
-// appropriately sized export payloads and timeouts. Any payload larger than a
-// defined size is chunked into smaller payloads and exported sequentially. The
-// entire export (all chunks) needs to complete within the defined timeout,
-// otherwise the export is canceled.
-type chunker struct {
+// chunkExporter wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads. Any payload larger than a defined size
+// is chunked into smaller payloads and exported sequentially.
+type chunkExporter struct {
 	Exporter
 
-	// Size is the maximum batch Size exported.
-	//
-	// If Size is less than or equal to 0 no chunking will be done.
-	Size int
-	// Timeout is the maximum time an entire export (all batches) is attempted.
-	//
-	// If Timeout is less than or equal to 0 no timeout will be used.
-	Timeout time.Duration
+	// size is the maximum batch size exported.
+	size int
 }
 
-func (c chunker) Export(ctx context.Context, records []Record) error {
-	if c.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.Timeout)
-		defer cancel()
+// newChunkExporter wraps exporter. Calls to the Export will have their records
+// payload chuncked so they do not exceed size. If size is less than or equal
+// to 0, exporter is returned directly.
+func newChunkExporter(exporter Exporter, size int) Exporter {
+	if size <= 0 {
+		return exporter
 	}
+	return &chunkExporter{Exporter: exporter, size: size}
+}
 
-	if c.Size <= 0 {
-		return c.Exporter.Export(ctx, records)
-	}
-
+// Export exports records in chuncks no larger than c.size.
+func (c chunkExporter) Export(ctx context.Context, records []Record) error {
 	n := len(records)
-	for i, j := 0, min(c.Size, n); i < n; i, j = i+c.Size, min(j+c.Size, n) {
+	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
 		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
 			return err
 		}

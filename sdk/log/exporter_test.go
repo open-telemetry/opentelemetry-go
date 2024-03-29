@@ -117,10 +117,10 @@ func (e *testExporter) ForceFlushN() int {
 }
 
 func TestChunker(t *testing.T) {
-	t.Run("Default", func(t *testing.T) {
+	t.Run("ZeroSize", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		c := chunker{Exporter: exp}
+		c := newChunkExporter(exp, 0)
 		const size = 100
 		_ = c.Export(context.Background(), make([]Record, size))
 
@@ -133,49 +133,23 @@ func TestChunker(t *testing.T) {
 	t.Run("ForceFlush", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		_ = chunker{Exporter: exp}.ForceFlush(context.Background())
+		c := newChunkExporter(exp, 0)
+		_ = c.ForceFlush(context.Background())
 		assert.Equal(t, 1, exp.ForceFlushN(), "ForceFlush not passed through")
 	})
 
 	t.Run("Shutdown", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		_ = chunker{Exporter: exp}.Shutdown(context.Background())
+		c := newChunkExporter(exp, 0)
+		_ = c.Shutdown(context.Background())
 		assert.Equal(t, 1, exp.ShutdownN(), "Shutdown not passed through")
-	})
-
-	t.Run("Timeout", func(t *testing.T) {
-		trigger := make(chan struct{})
-		t.Cleanup(func() { close(trigger) })
-
-		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
-		exp.ExportTrigger = trigger
-		c := chunker{Exporter: exp, Timeout: time.Nanosecond}
-
-		out := make(chan error, 1)
-		go func() {
-			out <- c.Export(context.Background(), make([]Record, 1))
-		}()
-
-		var err error
-		assert.Eventually(t, func() bool {
-			select {
-			case err = <-out:
-				return true
-			default:
-				return false
-			}
-		}, 2*time.Second, time.Microsecond)
-
-		assert.ErrorIs(t, err, context.DeadlineExceeded)
-		close(out)
 	})
 
 	t.Run("Chunk", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		c := chunker{Exporter: exp, Size: 10}
+		c := newChunkExporter(exp, 10)
 		assert.NoError(t, c.Export(context.Background(), make([]Record, 5)))
 		assert.NoError(t, c.Export(context.Background(), make([]Record, 25)))
 
@@ -190,13 +164,13 @@ func TestChunker(t *testing.T) {
 	t.Run("ExportError", func(t *testing.T) {
 		exp := newTestExporter(assert.AnError)
 		t.Cleanup(exp.Stop)
-		c := chunker{Exporter: exp}
+		c := newChunkExporter(exp, 0)
 		ctx := context.Background()
 		records := make([]Record, 25)
 		err := c.Export(ctx, records)
 		assert.ErrorIs(t, err, assert.AnError, "no chunking")
 
-		c.Size = 10
+		c = newChunkExporter(exp, 10)
 		err = c.Export(ctx, records)
 		assert.ErrorIs(t, err, assert.AnError, "with chunking")
 	})
