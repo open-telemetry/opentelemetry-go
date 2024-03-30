@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/internal/baggage"
 )
@@ -241,7 +242,12 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 
 // NewMemberRaw returns a new Member from the passed arguments.
 //
-// The passed key must be compliant with W3C Baggage specification.
+// The passed key and value must be valid UTF-8 string.
+// However, the specific Propagators that are used to transmit baggage entries across
+// component boundaries may impose their own restrictions on baggage key.
+// For example, the W3C Baggage specification restricts the baggage keys to strings that
+// satisfy the token definition from RFC7230, Section 3.2.6.
+// For maximum compatibility, alpha-numeric value are strongly recommended to be used as baggage key.
 func NewMemberRaw(key, value string, props ...Property) (Member, error) {
 	m := Member{
 		key:        key,
@@ -313,8 +319,11 @@ func (m Member) validate() error {
 		return fmt.Errorf("%w: %q", errInvalidMember, m)
 	}
 
-	if !validateKey(m.key) {
+	if !validateBaggageName(m.key) {
 		return fmt.Errorf("%w: %q", errInvalidKey, m.key)
+	}
+	if !validateBaggageValue(m.value) {
+		return fmt.Errorf("%w: %q", errInvalidValue, m.value)
 	}
 	return m.properties.validate()
 }
@@ -630,6 +639,23 @@ func skipSpace(s string, offset int) int {
 	return i
 }
 
+// validateBaggageName checks if the string is a valid OpenTelemetry Baggage name.
+// Baggage name is a valid UTF-8 string.
+func validateBaggageName(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	return utf8.ValidString(s)
+}
+
+// validateBaggageValue checks if the string is a valid OpenTelemetry Baggage value.
+// Baggage value is a valid UTF-8 strings.
+func validateBaggageValue(s string) bool {
+	return utf8.ValidString(s)
+}
+
+// validateKey checks if the string is a valid W3C Baggage key.
 func validateKey(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -658,6 +684,7 @@ func validateKeyChar(c int32) bool {
 		c == 0x7e
 }
 
+// validateValue checks if the string is a valid W3C Baggage value.
 func validateValue(s string) bool {
 	for _, c := range s {
 		if !validateValueChar(c) {

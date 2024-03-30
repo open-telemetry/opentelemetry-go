@@ -140,6 +140,11 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
+	// wrong value with wrong decoding
+	p, err = NewKeyValueProperty("key", "%zzzzz")
+	assert.ErrorIs(t, err, errInvalidValue)
+	assert.Equal(t, Property{}, p)
+
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
@@ -407,6 +412,15 @@ func TestBaggageParse(t *testing.T) {
 			in:   "foo=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
 				"foo": {Value: "ąść"},
+			},
+		},
+		{
+			name: "encoded UTF-8 string in key",
+			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"a": {Value: "b"},
+				// The percent-encoded key won't be decoded.
+				"%C4%85%C5%9B%C4%87": {Value: "ąść"},
 			},
 		},
 		{
@@ -861,6 +875,10 @@ func TestMemberValidation(t *testing.T) {
 	m.hasData = true
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
+	// Invalid UTF-8 in value
+	m.key, m.value = "k", string([]byte{255})
+	assert.ErrorIs(t, m.validate(), errInvalidValue)
+
 	m.key, m.value = "k", "\\"
 	assert.NoError(t, m.validate())
 }
@@ -881,6 +899,11 @@ func TestNewMember(t *testing.T) {
 		hasData:    true,
 	}
 	assert.Equal(t, expected, m)
+
+	// wrong value with invalid token
+	val = ";"
+	_, err = NewMember(key, val, p)
+	assert.ErrorIs(t, err, errInvalidValue)
 
 	// wrong value with wrong decoding
 	val = "%zzzzz"
@@ -924,6 +947,31 @@ func TestNewMemberRaw(t *testing.T) {
 	// Ensure new member is immutable.
 	p.key = "bar"
 	assert.Equal(t, expected, m)
+}
+
+func TestBaggageUTF8(t *testing.T) {
+	testCases := map[string]string{
+		"ąść": "B% 💼",
+
+		// Case sensitive
+		"a": "a",
+		"A": "A",
+	}
+
+	var members []Member
+	for k, v := range testCases {
+		m, err := NewMemberRaw(k, v)
+		require.NoError(t, err)
+
+		members = append(members, m)
+	}
+
+	b, err := New(members...)
+	require.NoError(t, err)
+
+	for k, v := range testCases {
+		assert.Equal(t, v, b.Member(k).Value())
+	}
 }
 
 func TestPropertiesValidate(t *testing.T) {
