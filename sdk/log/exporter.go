@@ -5,6 +5,10 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -126,4 +130,111 @@ func (e exportData) respond(err error) {
 			otel.Handle(err)
 		}
 	}
+}
+
+type bufferExporter struct {
+	Exporter
+
+	input   chan exportData
+	inputMu sync.Mutex
+
+	done    chan struct{}
+	stopped atomic.Bool
+}
+
+func newBufferExporter(exporter Exporter, size int) *bufferExporter {
+	input := make(chan exportData, size)
+	return &bufferExporter{
+		Exporter: exporter,
+
+		input: input,
+		done:  exportSync(input, exporter),
+	}
+}
+
+var errStopped = errors.New("exporter stopped")
+
+func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
+	data := exportData{ctx, records, rCh}
+
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+
+	// Check stopped before enqueueing now that e.inputMu is held. This
+	// prevents sends on a closed chan when Shutdown is called concurrently.
+	if e.stopped.Load() {
+		return errStopped
+	}
+
+	select {
+	case e.input <- data:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return nil
+}
+
+func (e *bufferExporter) EnqueueExport(ctx context.Context, records []Record) bool {
+	if len(records) == 0 {
+		// Nothing to enqueue, do not waste input space.
+		return true
+	}
+	return e.enqueue(ctx, records, nil) == nil
+}
+
+func (e *bufferExporter) Export(ctx context.Context, records []Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, records, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return fmt.Errorf("%w: dropping %d records", err, len(records))
+	}
+
+	select {
+	case err := <-resp:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (e *bufferExporter) ForceFlush(ctx context.Context) error {
+	resp := make(chan error, 1)
+	err := e.enqueue(ctx, nil, resp)
+	if err != nil {
+		if errors.Is(err, errStopped) {
+			return nil
+		}
+		return err
+	}
+
+	select {
+	case <-resp:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return e.Exporter.ForceFlush(ctx)
+}
+
+func (e *bufferExporter) Shutdown(ctx context.Context) error {
+	if e.stopped.Swap(true) {
+		return nil
+	}
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+
+	// No more sends will be made.
+	close(e.input)
+	select {
+	case <-e.done:
+	case <-ctx.Done():
+		return errors.Join(ctx.Err(), e.Shutdown(ctx))
+	}
+	return e.Exporter.Shutdown(ctx)
 }
