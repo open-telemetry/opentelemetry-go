@@ -267,11 +267,12 @@ func TestTimeoutExporter(t *testing.T) {
 
 func TestBufferExporter(t *testing.T) {
 	t.Run("ConcurrentSafe", func(t *testing.T) {
+		const goRoutines = 10
+
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		e := newBufferExporter(exp, 10)
+		e := newBufferExporter(exp, goRoutines)
 
-		const goRoutines = 10
 		ctx := context.Background()
 		records := make([]Record, 10)
 
@@ -307,7 +308,7 @@ func TestBufferExporter(t *testing.T) {
 		t.Run("Multiple", func(t *testing.T) {
 			exp := newTestExporter(nil)
 			t.Cleanup(exp.Stop)
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 
 			assert.NoError(t, e.Shutdown(context.Background()))
 			assert.Equal(t, 1, exp.ShutdownN(), "first Shutdown")
@@ -323,7 +324,7 @@ func TestBufferExporter(t *testing.T) {
 			trigger := make(chan struct{})
 			exp.ExportTrigger = trigger
 			t.Cleanup(func() { close(trigger) })
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -335,7 +336,7 @@ func TestBufferExporter(t *testing.T) {
 			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 			assert.ErrorIs(t, e.Shutdown(context.Background()), assert.AnError)
 		})
 	})
@@ -347,7 +348,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 2)
 
 			ctx := context.Background()
-			records := make([]Record, 10)
+			records := make([]Record, 1)
 			require.NoError(t, e.enqueue(ctx, records, nil), "enqueue")
 
 			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush records")
@@ -377,7 +378,7 @@ func TestBufferExporter(t *testing.T) {
 			require.Eventually(t, func() bool {
 				return exp.ExportN() > 0
 			}, 2*time.Second, time.Microsecond)
-			cancel()
+			cancel() // Canceled before export response.
 			err := <-got
 			assert.ErrorIs(t, err, context.Canceled, "enqueued")
 			_ = e.Shutdown(ctx)
@@ -391,7 +392,7 @@ func TestBufferExporter(t *testing.T) {
 			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 			assert.ErrorIs(t, e.ForceFlush(context.Background()), assert.AnError)
 		})
 
@@ -399,7 +400,7 @@ func TestBufferExporter(t *testing.T) {
 			exp := newTestExporter(nil)
 			t.Cleanup(exp.Stop)
 
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 
 			ctx := context.Background()
 			_ = e.Shutdown(ctx)
@@ -454,7 +455,7 @@ func TestBufferExporter(t *testing.T) {
 			require.Eventually(t, func() bool {
 				return exp.ExportN() > 0
 			}, 2*time.Second, time.Microsecond)
-			cancel()
+			cancel() // Canceled before export response.
 			err := <-got
 			assert.ErrorIs(t, err, context.Canceled, "enqueued")
 			_ = e.Shutdown(ctx)
@@ -468,7 +469,7 @@ func TestBufferExporter(t *testing.T) {
 			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 			ctx, records := context.Background(), make([]Record, 1)
 			assert.ErrorIs(t, e.Export(ctx, records), assert.AnError)
 		})
@@ -477,7 +478,7 @@ func TestBufferExporter(t *testing.T) {
 			exp := newTestExporter(nil)
 			t.Cleanup(exp.Stop)
 
-			e := newBufferExporter(exp, 10)
+			e := newBufferExporter(exp, 1)
 
 			ctx := context.Background()
 			_ = e.Shutdown(ctx)
@@ -519,12 +520,10 @@ func TestBufferExporter(t *testing.T) {
 		t.Run("ContextCancelled", func(t *testing.T) {
 			exp := newTestExporter(nil)
 			t.Cleanup(exp.Stop)
+			exp.ExportTrigger = make(chan struct{})
+			t.Cleanup(func() { close(exp.ExportTrigger) })
 
-			trigger := make(chan struct{})
-			exp.ExportTrigger = trigger
-			t.Cleanup(func() { close(trigger) })
 			e := newBufferExporter(exp, 0)
-
 			records := make([]Record, 1)
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -535,10 +534,9 @@ func TestBufferExporter(t *testing.T) {
 		t.Run("Stopped", func(t *testing.T) {
 			exp := newTestExporter(nil)
 			t.Cleanup(exp.Stop)
-
-			e := newBufferExporter(exp, 10)
-
+			e := newBufferExporter(exp, 1)
 			ctx := context.Background()
+
 			_ = e.Shutdown(ctx)
 			assert.False(t, e.EnqueueExport(ctx, make([]Record, 1)))
 		})
