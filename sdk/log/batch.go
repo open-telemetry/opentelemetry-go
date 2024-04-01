@@ -7,6 +7,7 @@ import (
 	"container/ring"
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,21 +94,31 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 // returned done chan is closed when the spawned goroutine completes.
 func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
+
+	ticker := time.NewTicker(interval)
+	// TODO: investigate using a sync.Pool instead of cloning.
+	buf := make([]Record, b.batchSize)
 	go func() {
 		defer close(done)
+		defer ticker.Stop()
 
 		for {
-			// TODO: add interval polling.
 			select {
+			case <-ticker.C:
+				// TODO: handle premature ticks. If the oldest record is
+				// younger than interval, do not export batch.
 			case <-b.pollTrigger:
+				ticker.Reset(interval)
 			case <-b.pollKill:
 				return
 			}
 
-			// TODO: sync.Pool to hold these.
-			buf := make([]Record, b.batchSize)
 			qLen := b.q.TryFlush(buf, func(r []Record) bool {
-				return b.exporter.EnqueueExport(context.Background(), r)
+				ok := b.exporter.EnqueueExport(context.Background(), r)
+				if ok {
+					buf = slices.Clone(buf)
+				}
+				return ok
 			})
 			if qLen >= b.batchSize {
 				select {

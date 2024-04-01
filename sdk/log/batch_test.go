@@ -131,6 +131,30 @@ func TestNewBatchingConfig(t *testing.T) {
 	}
 }
 
+func TestBatchingProcessorPolling(t *testing.T) {
+	ctx := context.Background()
+	e := newTestExporter(nil)
+	const size = 15
+	b := NewBatchingProcessor(
+		e,
+		WithMaxQueueSize(2*size),
+		WithExportMaxBatchSize(2*size),
+		WithExportInterval(time.Nanosecond),
+		WithExportTimeout(time.Hour),
+	)
+	for _, r := range make([]Record, size) {
+		assert.NoError(t, b.OnEmit(ctx, r))
+	}
+	var got []Record
+	assert.Eventually(t, func() bool {
+		for _, r := range e.Records() {
+			got = append(got, r...)
+		}
+		return len(got) == size
+	}, 2*time.Second, time.Microsecond)
+	_ = b.Shutdown(ctx)
+}
+
 func TestBatchingProcessorOnEmit(t *testing.T) {
 	ctx := context.Background()
 	e := newTestExporter(nil)
