@@ -132,6 +132,8 @@ func (e exportData) respond(err error) {
 	}
 }
 
+// bufferExporter provides asynchronous and synchronous export functionality by
+// buffering export requests.
 type bufferExporter struct {
 	Exporter
 
@@ -142,7 +144,14 @@ type bufferExporter struct {
 	stopped atomic.Bool
 }
 
+// newBufferExporter returns a new bufferExporter that wraps exporter. The
+// returned bufferExporter will buffer at most size number of export requests.
+// If size is less than zero, zero will be used (i.e. only synchronous
+// exporting will be supported).
 func newBufferExporter(exporter Exporter, size int) *bufferExporter {
+	if size < 0 {
+		size = 0
+	}
 	input := make(chan exportData, size)
 	return &bufferExporter{
 		Exporter: exporter,
@@ -174,6 +183,9 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 	return nil
 }
 
+// EnqueueExport enqueues an export of records in the context of ctx to be
+// performed asynchronously. This will return true if the exported is
+// successfully enqueued, false otherwise.
 func (e *bufferExporter) EnqueueExport(ctx context.Context, records []Record) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
@@ -182,6 +194,8 @@ func (e *bufferExporter) EnqueueExport(ctx context.Context, records []Record) bo
 	return e.enqueue(ctx, records, nil) == nil
 }
 
+// Export synchronously exports records in the context of ctx. This will not
+// return until the export has been completed.
 func (e *bufferExporter) Export(ctx context.Context, records []Record) error {
 	if len(records) == 0 {
 		return nil
@@ -204,6 +218,8 @@ func (e *bufferExporter) Export(ctx context.Context, records []Record) error {
 	}
 }
 
+// ForceFlush flushes buffered exports. Any existing exports that is buffered
+// is flushed before this returns.
 func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 	resp := make(chan error, 1)
 	err := e.enqueue(ctx, nil, resp)
@@ -222,6 +238,12 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 	return e.Exporter.ForceFlush(ctx)
 }
 
+// Shutdown shuts down e.
+//
+// Any buffered exports are flushed before this returns.
+//
+// All calls to EnqueueExport or Exporter will return nil without any export
+// after this is called.
 func (e *bufferExporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
