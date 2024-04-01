@@ -26,6 +26,9 @@ type instruction struct {
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
+	// ExportTrigger is read from prior to returning from the Export method if
+	// non-nil.
+	ExportTrigger chan struct{}
 
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN *int32
@@ -75,6 +78,13 @@ func (e *testExporter) Records() [][]Record {
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
 	atomic.AddInt32(e.exportN, 1)
+	if e.ExportTrigger != nil {
+		select {
+		case <-e.ExportTrigger:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	e.input <- instruction{Record: &r}
 	return e.Err
 }
@@ -255,5 +265,42 @@ func TestExportSync(t *testing.T) {
 			}
 		}
 		assert.ElementsMatch(t, want, got, "record bodies")
+	})
+}
+
+func TestTimeoutExporter(t *testing.T) {
+	t.Run("ZeroTimeout", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newTimeoutExporter(exp, 0)
+		assert.Same(t, exp, e)
+	})
+
+	t.Run("Timeout", func(t *testing.T) {
+		trigger := make(chan struct{})
+		t.Cleanup(func() { close(trigger) })
+
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		exp.ExportTrigger = trigger
+		e := newTimeoutExporter(exp, time.Nanosecond)
+
+		out := make(chan error, 1)
+		go func() {
+			out <- e.Export(context.Background(), make([]Record, 1))
+		}()
+
+		var err error
+		assert.Eventually(t, func() bool {
+			select {
+			case err = <-out:
+				return true
+			default:
+				return false
+			}
+		}, 2*time.Second, time.Microsecond)
+
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+		close(out)
 	})
 }
