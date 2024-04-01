@@ -110,8 +110,20 @@ func (s *Span) AddMessageReceiveEvent(messageID, uncompressedByteSize, compresse
 }
 
 // AddLink adds a link to this span.
+// This drops the OpenCensus LinkType because there is no such concept in OpenTelemetry.
 func (s *Span) AddLink(l octrace.Link) {
-	Handle(fmt.Errorf("ignoring OpenCensus link %+v for span %q because OpenTelemetry doesn't support setting links after creation", l, s.String()))
+	s.otelSpan.AddLink(trace.Link{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID: trace.TraceID(l.TraceID),
+			SpanID:  trace.SpanID(l.SpanID),
+			// We don't know if this was sampled or not.
+			// Mark it as sampled, since sampled means
+			// "the caller may have recorded trace data":
+			// https://www.w3.org/TR/trace-context/#sampled-flag
+			TraceFlags: trace.FlagsSampled,
+		}),
+		Attributes: oc2otel.AttributesFromMap(l.Attributes),
+	})
 }
 
 // String prints a string representation of this span.
