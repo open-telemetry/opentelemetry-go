@@ -201,22 +201,11 @@ func TestBatchingProcessorShutdownForceFlush(t *testing.T) {
 	assert.Equal(t, 0, e.ForceFlushN(), "ForceFlush called after shutdown")
 }
 
-type triggered struct {
-	Exporter
-
-	trigger chan struct{}
-}
-
-func (t *triggered) Export(ctx context.Context, records []Record) error {
-	<-t.trigger
-	return t.Exporter.Export(ctx, records)
-}
-
 func TestBatchingProcessorShutdownCanceledContext(t *testing.T) {
-	trigger := make(chan struct{})
-	t.Cleanup(func() { close(trigger) })
 	e := newTestExporter(nil)
-	b := NewBatchingProcessor(&triggered{Exporter: e, trigger: trigger})
+	e.ExportTrigger = make(chan struct{})
+	t.Cleanup(func() { close(e.ExportTrigger) })
+	b := NewBatchingProcessor(e)
 
 	ctx := context.Background()
 	c, cancel := context.WithCancel(ctx)
@@ -253,16 +242,16 @@ func TestBatchingProcessorForceFlushFlush(t *testing.T) {
 
 func TestBatchingProcessorForceFlushCanceledContext(t *testing.T) {
 	ctx := context.Background()
-	trigger := make(chan struct{})
 	e := newTestExporter(nil)
-	b := NewBatchingProcessor(&triggered{Exporter: e, trigger: trigger})
+	e.ExportTrigger = make(chan struct{})
+	b := NewBatchingProcessor(e)
 	t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 	var r Record
 	r.SetBody(log.BoolValue(true))
 	_ = b.OnEmit(ctx, r)
 	t.Cleanup(func() { _ = b.Shutdown(ctx) })
-	t.Cleanup(func() { close(trigger) })
+	t.Cleanup(func() { close(e.ExportTrigger) })
 
 	c, cancel := context.WithCancel(ctx)
 	cancel()
