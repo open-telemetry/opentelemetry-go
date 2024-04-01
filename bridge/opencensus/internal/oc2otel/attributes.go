@@ -20,6 +20,17 @@ func Attributes(attr []octrace.Attribute) []attribute.KeyValue {
 	return otelAttr
 }
 
+func AttributesFromMap(attr map[string]interface{}) []attribute.KeyValue {
+	otelAttr := make([]attribute.KeyValue, 0, len(attr))
+	for k, v := range attr {
+		otelAttr = append(otelAttr, attribute.KeyValue{
+			Key:   attribute.Key(k),
+			Value: AttributeValue(v),
+		})
+	}
+	return otelAttr
+}
+
 func AttributeValue(ocval interface{}) attribute.Value {
 	switch v := ocval.(type) {
 	case bool:
