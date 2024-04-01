@@ -5,6 +5,8 @@ package log
 
 import (
 	"context"
+	"io"
+	stdlog "log"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -144,6 +146,12 @@ func TestExportSync(t *testing.T) {
 		var got error
 		handler := otel.ErrorHandlerFunc(func(err error) { got = err })
 		otel.SetErrorHandler(handler)
+		t.Cleanup(func() {
+			l := stdlog.New(io.Discard, "", stdlog.LstdFlags)
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				l.Print(err)
+			}))
+		})
 
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
