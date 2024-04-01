@@ -4,7 +4,9 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"container/ring"
 	"context"
+	"sync"
 	"time"
 )
 
@@ -74,6 +76,88 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	// TODO (#5063): Implement.
 	return nil
+}
+
+// queue holds a queue of logging records.
+//
+// When the queue becomes full, the oldest records in the queue are
+// overwritten.
+type queue struct {
+	sync.Mutex
+
+	cap, len    int
+	read, write *ring.Ring
+}
+
+func newQueue(size int) *queue {
+	r := ring.New(size)
+	return &queue{
+		cap:   size,
+		read:  r,
+		write: r,
+	}
+}
+
+// Enqueue adds r to the queue. The queue size, including the addition of r, is
+// returned.
+//
+// If enqueueing r will exceed the capacity of q, the oldest Record held in q
+// will be dropped and r retained.
+func (q *queue) Enqueue(r Record) int {
+	q.Lock()
+	defer q.Unlock()
+
+	q.write.Value = r
+	q.write = q.write.Next()
+
+	q.len++
+	if q.len > q.cap {
+		// Overflow. Advance read to be the new "oldest".
+		q.len = q.cap
+		q.read = q.read.Next()
+	}
+	return q.len
+}
+
+// TryFlush attempts to flush up to len(buf) Records. The available Records
+// will be assigned into buf and passed to flush. If flush fails, returning
+// false, the Records will not be removed from the queue. If flush succeeds,
+// returning true, the flushed Records are removed from the queue. The number
+// of Records remaining in the queue are returned.
+func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
+	q.Lock()
+	defer q.Unlock()
+
+	origRead := q.read
+
+	n := min(len(buf), q.len)
+	for i := 0; i < n; i++ {
+		buf[i] = q.read.Value.(Record)
+		q.read = q.read.Next()
+	}
+
+	if flush(buf[:n]) {
+		q.len -= n
+	} else {
+		q.read = origRead
+	}
+	return q.len
+}
+
+// Flush returns all the Records held in the queue and resets the queue to be
+// empty.
+func (q *queue) Flush() []Record {
+	q.Lock()
+	defer q.Unlock()
+
+	out := make([]Record, q.len)
+	for i := range out {
+		out[i] = q.read.Value.(Record)
+		q.read = q.read.Next()
+	}
+	q.len = 0
+
+	return out
 }
 
 type batchingConfig struct {
