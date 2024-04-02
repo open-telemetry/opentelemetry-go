@@ -2038,7 +2038,9 @@ func TestSpanAddLink(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.validate(t, got)
+			if diff := cmpDiff(got, tc.want); diff != "" {
+				t.Errorf("-got +want %s", diff)
+			}
 		})
 	}
 }
