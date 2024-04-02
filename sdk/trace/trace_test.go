@@ -1926,7 +1926,7 @@ func TestSpanAddLink(t *testing.T) {
 	tests := []struct {
 		name        string
 		spanContext trace.SpanContext
-		validate    func(*testing.T, *snapshot)
+		want        *snapshot
 	}{
 		{
 			name:        "AddLinkWithInvalidSpanContext",
