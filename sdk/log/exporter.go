@@ -58,6 +58,37 @@ func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
 
+// chunkExporter wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads. Any payload larger than a defined size
+// is chunked into smaller payloads and exported sequentially.
+type chunkExporter struct {
+	Exporter
+
+	// size is the maximum batch size exported.
+	size int
+}
+
+// newChunkExporter wraps exporter. Calls to the Export will have their records
+// payload chuncked so they do not exceed size. If size is less than or equal
+// to 0, exporter is returned directly.
+func newChunkExporter(exporter Exporter, size int) Exporter {
+	if size <= 0 {
+		return exporter
+	}
+	return &chunkExporter{Exporter: exporter, size: size}
+}
+
+// Export exports records in chuncks no larger than c.size.
+func (c chunkExporter) Export(ctx context.Context, records []Record) error {
+	n := len(records)
+	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // timeoutExporter wraps an Exporter and ensures any call to Export will have a
 // timeout for the context.
 type timeoutExporter struct {
@@ -82,33 +113,6 @@ func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 	return e.Exporter.Export(ctx, records)
-}
-
-// chunkExporter wraps an Exporter's Export method so it is called with
-// appropriately sized export payloads. Any payload larger than a defined size
-// is chunked into smaller payloads and exported sequentially.
-type chunkExporter struct {
-	Exporter
-
-	// size is the maximum batch size exported.
-	size int
-}
-
-func newChunkExporter(exp Exporter, size int) Exporter {
-	if size <= 0 {
-		return exp
-	}
-	return &chunkExporter{Exporter: exp, size: size}
-}
-
-func (c chunkExporter) Export(ctx context.Context, records []Record) error {
-	n := len(records)
-	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
-		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // exportSync exports all data from input using exporter in a spawned
@@ -159,19 +163,28 @@ func (e exportData) respond(err error) {
 	}
 }
 
-type bufferedExporter struct {
+// bufferExporter provides asynchronous and synchronous export functionality by
+// buffering export requests.
+type bufferExporter struct {
 	Exporter
 
 	input   chan exportData
-	inputWG sync.WaitGroup
+	inputMu sync.Mutex
 
 	done    chan struct{}
 	stopped atomic.Bool
 }
 
-func newBufferedExporter(exporter Exporter, size int) *bufferedExporter {
+// newBufferExporter returns a new bufferExporter that wraps exporter. The
+// returned bufferExporter will buffer at most size number of export requests.
+// If size is less than zero, zero will be used (i.e. only synchronous
+// exporting will be supported).
+func newBufferExporter(exporter Exporter, size int) *bufferExporter {
+	if size < 0 {
+		size = 0
+	}
 	input := make(chan exportData, size)
-	return &bufferedExporter{
+	return &bufferExporter{
 		Exporter: exporter,
 
 		input: input,
@@ -181,13 +194,13 @@ func newBufferedExporter(exporter Exporter, size int) *bufferedExporter {
 
 var errStopped = errors.New("exporter stopped")
 
-func (e *bufferedExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
+func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
 	data := exportData{ctx, records, rCh}
 
-	e.inputWG.Add(1)
-	defer e.inputWG.Done()
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
 
-	// Check stopped before enqueueing now that e.inputWG is incremented. This
+	// Check stopped before enqueueing now that e.inputMu is held. This
 	// prevents sends on a closed chan when Shutdown is called concurrently.
 	if e.stopped.Load() {
 		return errStopped
@@ -201,15 +214,20 @@ func (e *bufferedExporter) enqueue(ctx context.Context, records []Record, rCh ch
 	return nil
 }
 
-func (e *bufferedExporter) EnqueueExport(ctx context.Context, records []Record) bool {
+// EnqueueExport enqueues an export of records in the context of ctx to be
+// performed asynchronously. This will return true if the exported is
+// successfully enqueued, false otherwise.
+func (e *bufferExporter) EnqueueExport(records []Record) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
 		return true
 	}
-	return e.enqueue(ctx, records, nil) == nil
+	return e.enqueue(context.Background(), records, nil) == nil
 }
 
-func (e *bufferedExporter) Export(ctx context.Context, records []Record) error {
+// Export synchronously exports records in the context of ctx. This will not
+// return until the export has been completed.
+func (e *bufferExporter) Export(ctx context.Context, records []Record) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -231,7 +249,9 @@ func (e *bufferedExporter) Export(ctx context.Context, records []Record) error {
 	}
 }
 
-func (e *bufferedExporter) ForceFlush(ctx context.Context) error {
+// ForceFlush flushes buffered exports. Any existing exports that is buffered
+// is flushed before this returns.
+func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 	resp := make(chan error, 1)
 	err := e.enqueue(ctx, nil, resp)
 	if err != nil {
@@ -249,18 +269,25 @@ func (e *bufferedExporter) ForceFlush(ctx context.Context) error {
 	return e.Exporter.ForceFlush(ctx)
 }
 
-func (e *bufferedExporter) Shutdown(ctx context.Context) error {
+// Shutdown shuts down e.
+//
+// Any buffered exports are flushed before this returns.
+//
+// All calls to EnqueueExport or Exporter will return nil without any export
+// after this is called.
+func (e *bufferExporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
 	}
-	e.inputWG.Wait()
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
 
 	// No more sends will be made.
 	close(e.input)
 	select {
 	case <-e.done:
 	case <-ctx.Done():
-		return errors.Join(ctx.Err(), e.Shutdown(ctx))
+		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
 	}
 	return e.Exporter.Shutdown(ctx)
 }

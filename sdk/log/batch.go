@@ -31,7 +31,7 @@ var _ Processor = (*BatchingProcessor)(nil)
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
 	// exporter is the bufferedExporter all batches are exported with.
-	exporter *bufferedExporter
+	exporter *bufferExporter
 
 	// q is the active queue of records that have not yet been exported.
 	q *queue
@@ -79,7 +79,7 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 
 	b := &BatchingProcessor{
 		// TODO: explore making the size of this configurable.
-		exporter: newBufferedExporter(exporter, 1),
+		exporter: newBufferExporter(exporter, 1),
 
 		q:           newQueue(cfg.maxQSize.Value),
 		batchSize:   cfg.expMaxBatchSize.Value,
@@ -114,7 +114,7 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 			}
 
 			qLen := b.q.TryFlush(buf, func(r []Record) bool {
-				ok := b.exporter.EnqueueExport(context.Background(), r)
+				ok := b.exporter.EnqueueExport(r)
 				if ok {
 					buf = slices.Clone(buf)
 				}
