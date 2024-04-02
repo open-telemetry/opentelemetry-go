@@ -186,12 +186,12 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 // EnqueueExport enqueues an export of records in the context of ctx to be
 // performed asynchronously. This will return true if the exported is
 // successfully enqueued, false otherwise.
-func (e *bufferExporter) EnqueueExport(ctx context.Context, records []Record) bool {
+func (e *bufferExporter) EnqueueExport(records []Record) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
 		return true
 	}
-	return e.enqueue(ctx, records, nil) == nil
+	return e.enqueue(context.Background(), records, nil) == nil
 }
 
 // Export synchronously exports records in the context of ctx. This will not
