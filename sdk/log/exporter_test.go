@@ -5,6 +5,8 @@ package log
 
 import (
 	"context"
+	"io"
+	stdlog "log"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -33,8 +35,10 @@ type testExporter struct {
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN *int32
 
-	input chan instruction
-	done  chan struct{}
+	stopped atomic.Bool
+	inputMu sync.Mutex
+	input   chan instruction
+	done    chan struct{}
 }
 
 func newTestExporter(err error) *testExporter {
@@ -85,7 +89,11 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 			return ctx.Err()
 		}
 	}
-	e.input <- instruction{Record: &r}
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+	if !e.stopped.Load() {
+		e.input <- instruction{Record: &r}
+	}
 	return e.Err
 }
 
@@ -94,6 +102,12 @@ func (e *testExporter) ExportN() int {
 }
 
 func (e *testExporter) Stop() {
+	if e.stopped.Swap(true) {
+		return
+	}
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+
 	close(e.input)
 	<-e.done
 }
@@ -192,6 +206,12 @@ func TestExportSync(t *testing.T) {
 		var got error
 		handler := otel.ErrorHandlerFunc(func(err error) { got = err })
 		otel.SetErrorHandler(handler)
+		t.Cleanup(func() {
+			l := stdlog.New(io.Discard, "", stdlog.LstdFlags)
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				l.Print(err)
+			}))
+		})
 
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
@@ -302,5 +322,268 @@ func TestTimeoutExporter(t *testing.T) {
 
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 		close(out)
+	})
+}
+
+func TestBufferExporter(t *testing.T) {
+	t.Run("ConcurrentSafe", func(t *testing.T) {
+		const goRoutines = 10
+
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newBufferExporter(exp, goRoutines)
+
+		ctx := context.Background()
+		records := make([]Record, 10)
+
+		stop := make(chan struct{})
+		var wg sync.WaitGroup
+		for i := 0; i < goRoutines; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for {
+					select {
+					case <-stop:
+						return
+					default:
+						_ = e.EnqueueExport(records)
+						_ = e.Export(ctx, records)
+						_ = e.ForceFlush(ctx)
+					}
+				}
+			}()
+		}
+
+		assert.Eventually(t, func() bool {
+			return exp.ExportN() > 0
+		}, 2*time.Second, time.Microsecond)
+
+		assert.NoError(t, e.Shutdown(ctx))
+		close(stop)
+		wg.Wait()
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		t.Run("Multiple", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			assert.NoError(t, e.Shutdown(context.Background()))
+			assert.Equal(t, 1, exp.ShutdownN(), "first Shutdown")
+
+			assert.NoError(t, e.Shutdown(context.Background()))
+			assert.Equal(t, 1, exp.ShutdownN(), "second Shutdown")
+		})
+
+		t.Run("ContextCancelled", func(t *testing.T) {
+			exp := newTestExporter(assert.AnError)
+			t.Cleanup(exp.Stop)
+
+			trigger := make(chan struct{})
+			exp.ExportTrigger = trigger
+			t.Cleanup(func() { close(trigger) })
+			e := newBufferExporter(exp, 1)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+
+			err := e.Shutdown(ctx)
+			assert.ErrorIs(t, err, context.Canceled)
+			assert.ErrorIs(t, err, assert.AnError)
+		})
+
+		t.Run("Error", func(t *testing.T) {
+			exp := newTestExporter(assert.AnError)
+			t.Cleanup(exp.Stop)
+
+			e := newBufferExporter(exp, 1)
+			assert.ErrorIs(t, e.Shutdown(context.Background()), assert.AnError)
+		})
+	})
+
+	t.Run("ForceFlush", func(t *testing.T) {
+		t.Run("Multiple", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 2)
+
+			ctx := context.Background()
+			records := make([]Record, 1)
+			require.NoError(t, e.enqueue(ctx, records, nil), "enqueue")
+
+			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush records")
+			assert.Equal(t, 1, exp.ExportN(), "Export number incremented")
+			assert.Len(t, exp.Records(), 1, "exported Record batches")
+
+			// Nothing to flush.
+			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush empty")
+			assert.Equal(t, 1, exp.ExportN(), "Export number changed")
+			assert.Len(t, exp.Records(), 0, "exported non-zero Records")
+		})
+
+		t.Run("ContextCancelled", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+
+			trigger := make(chan struct{})
+			exp.ExportTrigger = trigger
+			t.Cleanup(func() { close(trigger) })
+			e := newBufferExporter(exp, 1)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			require.True(t, e.EnqueueExport(make([]Record, 1)))
+
+			got := make(chan error, 1)
+			go func() { got <- e.ForceFlush(ctx) }()
+			require.Eventually(t, func() bool {
+				return exp.ExportN() > 0
+			}, 2*time.Second, time.Microsecond)
+			cancel() // Canceled before export response.
+			err := <-got
+			assert.ErrorIs(t, err, context.Canceled, "enqueued")
+			_ = e.Shutdown(ctx)
+
+			// Zero length buffer
+			e = newBufferExporter(exp, 0)
+			assert.ErrorIs(t, e.ForceFlush(ctx), context.Canceled, "not enqueued")
+		})
+
+		t.Run("Error", func(t *testing.T) {
+			exp := newTestExporter(assert.AnError)
+			t.Cleanup(exp.Stop)
+
+			e := newBufferExporter(exp, 1)
+			assert.ErrorIs(t, e.ForceFlush(context.Background()), assert.AnError)
+		})
+
+		t.Run("Stopped", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+
+			e := newBufferExporter(exp, 1)
+
+			ctx := context.Background()
+			_ = e.Shutdown(ctx)
+			assert.NoError(t, e.ForceFlush(ctx))
+		})
+	})
+
+	t.Run("Export", func(t *testing.T) {
+		t.Run("ZeroRecords", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			assert.NoError(t, e.Export(context.Background(), nil))
+			assert.Equal(t, 0, exp.ExportN())
+		})
+
+		t.Run("Multiple", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			ctx := context.Background()
+			records := make([]Record, 1)
+			records[0].SetBody(log.BoolValue(true))
+
+			assert.NoError(t, e.Export(ctx, records))
+
+			n := exp.ExportN()
+			assert.Equal(t, 1, n, "first Export number")
+			assert.Equal(t, [][]Record{records}, exp.Records())
+
+			assert.NoError(t, e.Export(ctx, records))
+			assert.Equal(t, n+1, exp.ExportN(), "second Export number")
+			assert.Equal(t, [][]Record{records}, exp.Records())
+		})
+
+		t.Run("ContextCancelled", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+
+			trigger := make(chan struct{})
+			exp.ExportTrigger = trigger
+			t.Cleanup(func() { close(trigger) })
+			e := newBufferExporter(exp, 1)
+
+			records := make([]Record, 1)
+			ctx, cancel := context.WithCancel(context.Background())
+
+			got := make(chan error, 1)
+			go func() { got <- e.Export(ctx, records) }()
+			require.Eventually(t, func() bool {
+				return exp.ExportN() > 0
+			}, 2*time.Second, time.Microsecond)
+			cancel() // Canceled before export response.
+			err := <-got
+			assert.ErrorIs(t, err, context.Canceled, "enqueued")
+			_ = e.Shutdown(ctx)
+
+			// Zero length buffer
+			e = newBufferExporter(exp, 0)
+			assert.ErrorIs(t, e.Export(ctx, records), context.Canceled, "not enqueued")
+		})
+
+		t.Run("Error", func(t *testing.T) {
+			exp := newTestExporter(assert.AnError)
+			t.Cleanup(exp.Stop)
+
+			e := newBufferExporter(exp, 1)
+			ctx, records := context.Background(), make([]Record, 1)
+			assert.ErrorIs(t, e.Export(ctx, records), assert.AnError)
+		})
+
+		t.Run("Stopped", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+
+			e := newBufferExporter(exp, 1)
+
+			ctx := context.Background()
+			_ = e.Shutdown(ctx)
+			assert.NoError(t, e.Export(ctx, make([]Record, 1)))
+			assert.Equal(t, 0, exp.ExportN(), "Export called")
+		})
+	})
+
+	t.Run("EnqueueExport", func(t *testing.T) {
+		t.Run("ZeroRecords", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			assert.True(t, e.EnqueueExport(nil))
+			e.ForceFlush(context.Background())
+			assert.Equal(t, 0, exp.ExportN(), "empty batch enqueued")
+		})
+
+		t.Run("Multiple", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 2)
+
+			records := make([]Record, 1)
+			records[0].SetBody(log.BoolValue(true))
+
+			assert.True(t, e.EnqueueExport(records))
+			assert.True(t, e.EnqueueExport(records))
+			e.ForceFlush(context.Background())
+
+			n := exp.ExportN()
+			assert.Equal(t, 2, n, "Export number")
+			assert.Equal(t, [][]Record{records, records}, exp.Records())
+		})
+
+		t.Run("Stopped", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			_ = e.Shutdown(context.Background())
+			assert.False(t, e.EnqueueExport(make([]Record, 1)))
+		})
 	})
 }
