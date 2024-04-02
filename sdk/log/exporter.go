@@ -287,7 +287,7 @@ func (e *bufferExporter) Shutdown(ctx context.Context) error {
 	select {
 	case <-e.done:
 	case <-ctx.Done():
-		return errors.Join(ctx.Err(), e.Shutdown(ctx))
+		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
 	}
 	return e.Exporter.Shutdown(ctx)
 }

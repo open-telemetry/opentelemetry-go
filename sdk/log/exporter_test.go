@@ -378,7 +378,7 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
-			exp := newTestExporter(nil)
+			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
 			trigger := make(chan struct{})
@@ -389,7 +389,9 @@ func TestBufferExporter(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 
-			assert.ErrorIs(t, e.Shutdown(ctx), context.Canceled)
+			err := e.Shutdown(ctx)
+			assert.ErrorIs(t, err, context.Canceled)
+			assert.ErrorIs(t, err, assert.AnError)
 		})
 
 		t.Run("Error", func(t *testing.T) {
