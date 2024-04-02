@@ -54,6 +54,37 @@ func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
 
+// chunkExporter wraps an Exporter's Export method so it is called with
+// appropriately sized export payloads. Any payload larger than a defined size
+// is chunked into smaller payloads and exported sequentially.
+type chunkExporter struct {
+	Exporter
+
+	// size is the maximum batch size exported.
+	size int
+}
+
+// newChunkExporter wraps exporter. Calls to the Export will have their records
+// payload chuncked so they do not exceed size. If size is less than or equal
+// to 0, exporter is returned directly.
+func newChunkExporter(exporter Exporter, size int) Exporter {
+	if size <= 0 {
+		return exporter
+	}
+	return &chunkExporter{Exporter: exporter, size: size}
+}
+
+// Export exports records in chuncks no larger than c.size.
+func (c chunkExporter) Export(ctx context.Context, records []Record) error {
+	n := len(records)
+	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
+		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // timeoutExporter wraps an Exporter and ensures any call to Export will have a
 // timeout for the context.
 type timeoutExporter struct {
