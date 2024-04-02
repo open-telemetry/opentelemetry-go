@@ -119,12 +119,12 @@ func (q *queue) Enqueue(r Record) int {
 	return q.len
 }
 
-// TryFlush attempts to flush up to len(buf) Records. The available Records
-// will be assigned into buf and passed to flush. If flush fails, returning
-// false, the Records will not be removed from the queue. If flush succeeds,
-// returning true, the flushed Records are removed from the queue. The number
+// TryDequeue attempts to dequeue up to len(buf) Records. The available Records
+// will be assigned into buf and passed to write. If write fails, returning
+// false, the Records will not be removed from the queue. If write succeeds,
+// returning true, the dequeued Records are removed from the queue. The number
 // of Records remaining in the queue are returned.
-func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
+func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
 
@@ -136,7 +136,7 @@ func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
 		q.read = q.read.Next()
 	}
 
-	if flush(buf[:n]) {
+	if write(buf[:n]) {
 		q.len -= n
 	} else {
 		q.read = origRead

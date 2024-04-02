@@ -187,7 +187,7 @@ func TestQueue(t *testing.T) {
 
 		buf := make([]Record, 1)
 		f := func([]Record) bool { return false }
-		assert.Equal(t, size-1, q.TryFlush(buf, f), "not flushed")
+		assert.Equal(t, size-1, q.TryDequeue(buf, f), "not flushed")
 		require.Equal(t, size-1, q.len, "length")
 		require.NotSame(t, q.read, q.write, "read ring advanced")
 
@@ -196,13 +196,13 @@ func TestQueue(t *testing.T) {
 			flushed = append(flushed, r...)
 			return true
 		}
-		if assert.Equal(t, size-2, q.TryFlush(buf, f), "did not flush len(buf)") {
+		if assert.Equal(t, size-2, q.TryDequeue(buf, f), "did not flush len(buf)") {
 			assert.Equal(t, []Record{r}, flushed, "Records")
 		}
 
 		buf = slices.Grow(buf, size)
 		flushed = flushed[:0]
-		if assert.Equal(t, 0, q.TryFlush(buf, f), "did not flush len(queue)") {
+		if assert.Equal(t, 0, q.TryDequeue(buf, f), "did not flush len(queue)") {
 			assert.Equal(t, []Record{r}, flushed, "Records")
 		}
 	})
