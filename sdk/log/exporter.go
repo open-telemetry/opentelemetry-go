@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -52,6 +53,32 @@ func (noopExporter) Export(context.Context, []Record) error { return nil }
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
+
+// timeoutExporter wraps an Exporter and ensures any call to Export will have a
+// timeout for the context.
+type timeoutExporter struct {
+	Exporter
+
+	// timeout is the maximum time an export is attempted.
+	timeout time.Duration
+}
+
+// newTimeoutExporter wraps exporter with an Exporter that limits the context
+// lifetime passed to Export to be timeout. If timeout is less than or equal to
+// zero, exporter will be returned directly.
+func newTimeoutExporter(exp Exporter, timeout time.Duration) Exporter {
+	if timeout <= 0 {
+		return exp
+	}
+	return &timeoutExporter{Exporter: exp, timeout: timeout}
+}
+
+// Export sets the timeout of ctx before calling the Exporter e wraps.
+func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	return e.Exporter.Export(ctx, records)
+}
 
 // exportSync exports all data from input using exporter in a spawned
 // goroutine. The returned chan will be closed when the spawned goroutine

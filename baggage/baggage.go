@@ -57,10 +57,10 @@ func NewKeyProperty(key string) (Property, error) {
 // NewKeyValueProperty returns a new Property for key with value.
 //
 // The passed key must be compliant with W3C Baggage specification.
-// The passed value must be precent-encoded as defined in W3C Baggage specification.
+// The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewKeyValuePropertyRaw] instead
-// that does not require precent-encoding of the value.
+// that does not require percent-encoding of the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
 	if !validateValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
@@ -225,10 +225,10 @@ type Member struct {
 // NewMemberRaw returns a new Member from the passed arguments.
 //
 // The passed key must be compliant with W3C Baggage specification.
-// The passed value must be precent-encoded as defined in W3C Baggage specification.
+// The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewMemberRaw] instead
-// that does not require precent-encoding of the value.
+// that does not require percent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
 	if !validateValue(value) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
@@ -304,7 +304,7 @@ func parseMember(member string) (Member, error) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
 	}
 
-	// Decode a precent-encoded value.
+	// Decode a percent-encoded value.
 	value, err := url.PathUnescape(val)
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidValue, err)
@@ -614,7 +614,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		return
 	}
 
-	// Decode a precent-encoded value.
+	// Decode a percent-encoded value.
 	value, err := url.PathUnescape(s[valueStart:valueEnd])
 	if err != nil {
 		return
