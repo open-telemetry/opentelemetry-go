@@ -124,6 +124,9 @@ func (q *queue) Enqueue(r Record) int {
 // false, the Records will not be removed from the queue. If write succeeds,
 // returning true, the dequeued Records are removed from the queue. The number
 // of Records remaining in the queue are returned.
+//
+// When write is called the lock of q is held. The write function must not call
+// other methods of this q that acquire the lock.
 func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
