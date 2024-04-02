@@ -144,7 +144,7 @@ func (q *queue) TryFlush(buf []Record, flush func([]Record) bool) int {
 	return q.len
 }
 
-// Flush returns all the Records held in the queue and resets the queue to be
+// Flush returns all the Records held in the queue and resets it to be
 // empty.
 func (q *queue) Flush() []Record {
 	q.Lock()
