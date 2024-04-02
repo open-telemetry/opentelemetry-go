@@ -1924,89 +1924,77 @@ func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
 
 func TestSpanAddLink(t *testing.T) {
 	tests := []struct {
-		name        string
-		spanContext trace.SpanContext
-		want        *snapshot
+		name               string
+		spanContext        trace.SpanContext
+		attrLinkCountLimit int
+		attrs              []attribute.KeyValue
+		want               *snapshot
 	}{
 		{
-			name:        "AddLinkWithInvalidSpanContext",
-			spanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{}), SpanID: [8]byte{}}),
-			validate: func(t *testing.T, got *snapshot) {
-				want := &snapshot{
-					name: "span0",
-					spanContext: trace.NewSpanContext(trace.SpanContextConfig{
-						TraceID:    tid,
-						TraceFlags: 0x1,
-					}),
-					parent:               sc.WithRemote(true),
-					links:                nil,
-					spanKind:             trace.SpanKindInternal,
-					instrumentationScope: instrumentation.Scope{Name: "AddLinkWithInvalidSpanContext"},
-				}
-
-				if diff := cmpDiff(got, want); diff != "" {
-					t.Errorf("AddLinkWithInvalidSpanContext: -got +want %s", diff)
-				}
+			name:               "AddLinkWithInvalidSpanContext",
+			spanContext:        trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{}), SpanID: [8]byte{}}),
+			attrLinkCountLimit: 128,
+			attrs:              []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			want: &snapshot{
+				name: "span0",
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				parent:               sc.WithRemote(true),
+				links:                nil,
+				spanKind:             trace.SpanKindInternal,
+				instrumentationScope: instrumentation.Scope{Name: "AddLinkWithInvalidSpanContext"},
 			},
 		},
 		{
-			name:        "AddLink",
-			spanContext: sc,
-			validate: func(t *testing.T, got *snapshot) {
-				attrs := []attribute.KeyValue{
-					{Key: "k1", Value: attribute.StringValue("v1")},
-					{Key: "k2", Value: attribute.StringValue("v2")},
-					{Key: "k3", Value: attribute.StringValue("v3")},
-					{Key: "k4", Value: attribute.StringValue("v4")},
-				}
-				want := &snapshot{
-					name: "span0",
-					spanContext: trace.NewSpanContext(trace.SpanContextConfig{
-						TraceID:    tid,
-						TraceFlags: 0x1,
-					}),
-					parent: sc.WithRemote(true),
-					links: []Link{
-						{
-							SpanContext: sc,
-							Attributes:  attrs,
-						},
+			name:               "AddLink",
+			spanContext:        sc,
+			attrLinkCountLimit: 128,
+			attrs:              []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			want: &snapshot{
+				name: "span0",
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				parent: sc.WithRemote(true),
+				links: []Link{
+					{
+						SpanContext: sc,
+						Attributes:  []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
 					},
-					spanKind:             trace.SpanKindInternal,
-					instrumentationScope: instrumentation.Scope{Name: "AddLink"},
-				}
-
-				if diff := cmpDiff(got, want); diff != "" {
-					t.Errorf("AddLink: -got +want %s", diff)
-				}
+				},
+				spanKind:             trace.SpanKindInternal,
+				instrumentationScope: instrumentation.Scope{Name: "AddLink"},
 			},
 		},
 		{
-			name:        "AddLinkWithMoreAttributesThanLimit",
-			spanContext: sc,
-			validate: func(t *testing.T, got *snapshot) {
-				attrs := []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}}
-				want := &snapshot{
-					name: "span0",
-					spanContext: trace.NewSpanContext(trace.SpanContextConfig{
-						TraceID:    tid,
-						TraceFlags: 0x1,
-					}),
-					parent: sc.WithRemote(true),
-					links: []Link{
-						{
-							SpanContext:           sc,
-							Attributes:            attrs,
-							DroppedAttributeCount: 3,
-						},
+			name:               "AddLinkWithMoreAttributesThanLimit",
+			spanContext:        sc,
+			attrLinkCountLimit: 1,
+			attrs: []attribute.KeyValue{
+				{Key: "k1", Value: attribute.StringValue("v1")},
+				{Key: "k2", Value: attribute.StringValue("v2")},
+				{Key: "k3", Value: attribute.StringValue("v3")},
+				{Key: "k4", Value: attribute.StringValue("v4")},
+			},
+			want: &snapshot{
+				name: "span0",
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				parent: sc.WithRemote(true),
+				links: []Link{
+					{
+						SpanContext:           sc,
+						Attributes:            []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+						DroppedAttributeCount: 3,
 					},
-					spanKind:             trace.SpanKindInternal,
-					instrumentationScope: instrumentation.Scope{Name: "AddLinkWithMoreAttributesThanLimit"},
-				}
-
-				if diff := cmpDiff(got, want); diff != "" {
-					t.Errorf("AddLinkWithMoreAttributesThanLimit: -got +want %s", diff)
-				}
+				},
+				spanKind:             trace.SpanKindInternal,
+				instrumentationScope: instrumentation.Scope{Name: "AddLinkWithMoreAttributesThanLimit"},
 			},
 		},
 	}
@@ -2015,22 +2003,12 @@ func TestSpanAddLink(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			te := NewTestExporter()
 			sl := NewSpanLimits()
-
-			if tc.name == "AddLinkWithMoreAttributesThanLimit" {
-				sl.AttributePerLinkCountLimit = 1
-			}
+			sl.AttributePerLinkCountLimit = tc.attrLinkCountLimit
 
 			tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
-			attrs := []attribute.KeyValue{
-				{Key: "k1", Value: attribute.StringValue("v1")},
-				{Key: "k2", Value: attribute.StringValue("v2")},
-				{Key: "k3", Value: attribute.StringValue("v3")},
-				{Key: "k4", Value: attribute.StringValue("v4")},
-			}
-
 			span := startSpan(tp, tc.name, trace.WithLinks([]trace.Link{
-				{SpanContext: tc.spanContext, Attributes: attrs},
+				{SpanContext: tc.spanContext, Attributes: tc.attrs},
 			}...))
 
 			got, err := endSpan(te, span)
