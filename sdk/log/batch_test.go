@@ -1,6 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package log
 
 import (
@@ -344,8 +348,8 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, size, q.cap, "capacity")
 
 		var got []Record
-		q.read.Do(func(a any) {
-			got = append(got, a.(Record))
+		q.read.Do(func(r Record) {
+			got = append(got, r)
 		})
 		assert.Equal(t, []Record{r, r}, got, "flushed")
 	})
@@ -391,4 +395,80 @@ func TestQueue(t *testing.T) {
 
 		assert.Len(t, out, goRoutines, "flushed Records")
 	})
+}
+
+func TestRing(t *testing.T) {
+	verify := func(t *testing.T, r *ring, N int, sum int) {
+		// Len
+		n := r.Len()
+		if n != N {
+			t.Errorf("r.Len() == %d; expected %d", n, N)
+		}
+
+		// iteration
+		n = 0
+		s := 0
+		r.Do(func(v Record) {
+			n++
+			body := v.Body()
+			if body.Kind() != log.KindEmpty {
+				s += int(body.AsInt64())
+			}
+		})
+		if n != N {
+			t.Errorf("number of forward iterations == %d; expected %d", n, N)
+		}
+		if sum >= 0 && s != sum {
+			t.Errorf("forward ring sum = %d; expected %d", s, sum)
+		}
+
+		if r == nil {
+			return
+		}
+
+		// connections
+		if r.next != nil {
+			var p *ring // previous element
+			for q := r; p == nil || q != r; q = q.next {
+				if p != nil && p != q.prev {
+					t.Errorf("prev = %p, expected q.prev = %p\n", p, q.prev)
+				}
+				p = q
+			}
+			if p != r.prev {
+				t.Errorf("prev = %p, expected r.prev = %p\n", p, r.prev)
+			}
+		}
+
+		// Next, Prev
+		if r.Next() != r.next {
+			t.Errorf("r.Next() != r.next")
+		}
+		if r.Prev() != r.prev {
+			t.Errorf("r.Prev() != r.prev")
+		}
+	}
+
+	for i := 0; i < 10; i++ {
+		r := newRing(i)
+		verify(t, r, i, -1)
+	}
+
+	makeN := func(n int) *ring {
+		r := newRing(n)
+		for i := 1; i <= n; i++ {
+			var rec Record
+			rec.SetBody(log.IntValue(i))
+			r.Value = rec
+			r = r.Next()
+		}
+		return r
+	}
+
+	sumN := func(n int) int { return (n*n + n) / 2 }
+
+	for i := 0; i < 10; i++ {
+		r := makeN(i)
+		verify(t, r, i, sumN(i))
+	}
 }
