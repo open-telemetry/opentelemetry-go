@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `SpanFromContext` and `SpanContextFromContext` in `go.opentelemetry.io/otel/trace` no longer make a heap allocation when the passed context has no span. (#5049)
+- `NewMemberRaw` in `go.opentelemetry.io/otel/baggage` allows UTF-8 string. (#5132)
 
 ### Fixed
 
