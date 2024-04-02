@@ -130,6 +130,66 @@ func (e *testExporter) ForceFlushN() int {
 	return int(atomic.LoadInt32(e.forceFlushN))
 }
 
+func TestChunker(t *testing.T) {
+	t.Run("ZeroSize", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		c := newChunkExporter(exp, 0)
+		const size = 100
+		_ = c.Export(context.Background(), make([]Record, size))
+
+		assert.Equal(t, 1, exp.ExportN())
+		records := exp.Records()
+		assert.Len(t, records, 1)
+		assert.Len(t, records[0], size)
+	})
+
+	t.Run("ForceFlush", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		c := newChunkExporter(exp, 0)
+		_ = c.ForceFlush(context.Background())
+		assert.Equal(t, 1, exp.ForceFlushN(), "ForceFlush not passed through")
+	})
+
+	t.Run("Shutdown", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		c := newChunkExporter(exp, 0)
+		_ = c.Shutdown(context.Background())
+		assert.Equal(t, 1, exp.ShutdownN(), "Shutdown not passed through")
+	})
+
+	t.Run("Chunk", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		c := newChunkExporter(exp, 10)
+		assert.NoError(t, c.Export(context.Background(), make([]Record, 5)))
+		assert.NoError(t, c.Export(context.Background(), make([]Record, 25)))
+
+		wantLens := []int{5, 10, 10, 5}
+		records := exp.Records()
+		require.Len(t, records, len(wantLens), "chunks")
+		for i, n := range wantLens {
+			assert.Lenf(t, records[i], n, "chunk %d", i)
+		}
+	})
+
+	t.Run("ExportError", func(t *testing.T) {
+		exp := newTestExporter(assert.AnError)
+		t.Cleanup(exp.Stop)
+		c := newChunkExporter(exp, 0)
+		ctx := context.Background()
+		records := make([]Record, 25)
+		err := c.Export(ctx, records)
+		assert.ErrorIs(t, err, assert.AnError, "no chunking")
+
+		c = newChunkExporter(exp, 10)
+		err = c.Export(ctx, records)
+		assert.ErrorIs(t, err, assert.AnError, "with chunking")
+	})
+}
+
 func TestExportSync(t *testing.T) {
 	eventuallyDone := func(t *testing.T, done chan struct{}) {
 		assert.Eventually(t, func() bool {
