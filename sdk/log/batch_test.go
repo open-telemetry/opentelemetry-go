@@ -13,6 +13,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -471,4 +472,52 @@ func TestRing(t *testing.T) {
 		r := makeN(i)
 		verify(t, r, i, sumN(i))
 	}
+}
+
+func BenchmarkBatchingProcessor(b *testing.B) {
+	var r Record
+	body := log.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	b.Logf("record size: %d", rSize)
+
+	ctx := context.Background()
+
+	b.Run("OnEmit", func(b *testing.B) {
+		bp := NewBatchingProcessor(
+			defaultNoopExporter,
+			WithMaxQueueSize(b.N),
+			WithExportMaxBatchSize(b.N),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+
+		b.SetBytes(int64(rSize))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			var err error
+			for pb.Next() {
+				err = bp.OnEmit(ctx, r)
+			}
+			_ = err
+		})
+	})
+
+	b.Run("Flush", func(b *testing.B) {
+		bp := NewBatchingProcessor(defaultNoopExporter)
+
+		b.SetBytes(int64(rSize))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			var err error
+			for pb.Next() {
+				_ = bp.OnEmit(ctx, r)
+				err = bp.ForceFlush(ctx)
+			}
+			_ = err
+		})
+	})
 }
