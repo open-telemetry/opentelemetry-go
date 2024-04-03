@@ -88,7 +88,7 @@ func (r *Recorder) addChildLogger(nr *Recorder) {
 	r.loggers = append(r.loggers, nr)
 }
 
-// Enabled indicates whether a specific record should be stored
+// Enabled indicates whether a specific record should be stored.
 func (r *Recorder) Enabled(ctx context.Context, record log.Record) bool {
 	if r.enabledFn == nil {
 		return defaultEnabledFn(ctx, record)
