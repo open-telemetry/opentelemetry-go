@@ -135,6 +135,10 @@ func TestNewBatchingConfig(t *testing.T) {
 func TestBatchingProcessor(t *testing.T) {
 	ctx := context.Background()
 
+	t.Run("NilExporter", func(t *testing.T) {
+		assert.NotPanics(t, func() { NewBatchingProcessor(nil) })
+	})
+
 	t.Run("Polling", func(t *testing.T) {
 		e := newTestExporter(nil)
 		const size = 15
