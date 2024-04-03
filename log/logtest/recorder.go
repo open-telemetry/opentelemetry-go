@@ -19,6 +19,10 @@ type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
 type enabledFn func(context.Context, log.Record) bool
 
+var defaultEnabledFn = func(context.Context, log.Record) bool {
+	return true
+}
+
 // NewRecorder returns a new Recorder.
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
@@ -86,6 +90,10 @@ func (r *Recorder) addChildLogger(nr *Recorder) {
 
 // Enabled indicates whether a specific record should be stored
 func (r *Recorder) Enabled(ctx context.Context, record log.Record) bool {
+	if r.enabledFn == nil {
+		return defaultEnabledFn(ctx, record)
+	}
+
 	return r.enabledFn(ctx, record)
 }
 

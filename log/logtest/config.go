@@ -3,16 +3,6 @@
 
 package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/log"
-)
-
-var defaultEnabledFn = func(context.Context, log.Record) bool {
-	return true
-}
-
 type config struct {
 	enabledFn enabledFn
 }
@@ -21,10 +11,6 @@ func newConfig(options []Option) config {
 	var c config
 	for _, opt := range options {
 		c = opt.apply(c)
-	}
-
-	if c.enabledFn == nil {
-		c.enabledFn = defaultEnabledFn
 	}
 
 	return c

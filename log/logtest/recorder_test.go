@@ -103,6 +103,11 @@ func TestRecorderEnabled(t *testing.T) {
 	}
 }
 
+func TestRecorderEnabledFnUnset(t *testing.T) {
+	r := &Recorder{}
+	assert.True(t, r.Enabled(context.Background(), log.Record{}))
+}
+
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
 	assert.Len(t, r.Result()[0].Records, 0)
