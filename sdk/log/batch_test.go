@@ -9,6 +9,7 @@ package log
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -333,26 +334,29 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, q.len, 0)
 		assert.Equal(t, size, q.cap, "capacity")
 		assert.Equal(t, size, q.read.Len(), "read ring")
-		assert.Equal(t, size, q.write.Len(), "write ring")
+		assert.Same(t, q.read, q.write, "different rings")
 	})
 
 	t.Run("Enqueue", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
 
-		assert.Equal(t, 1, q.Enqueue(r), "incomplete batch")
+		var notR Record
+		notR.SetBody(log.IntValue(10))
+
+		assert.Equal(t, 1, q.Enqueue(notR), "incomplete batch")
 		assert.Equal(t, 1, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, q.Enqueue(r), "incomplete batch")
+		assert.Equal(t, 2, q.Enqueue(r), "complete batch")
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		var got []Record
-		q.read.Do(func(r Record) {
-			got = append(got, r)
-		})
-		assert.Equal(t, []Record{r, r}, got, "flushed")
+		assert.Equal(t, 2, q.Enqueue(r), "overflow batch")
+		assert.Equal(t, 2, q.len, "length")
+		assert.Equal(t, size, q.cap, "capacity")
+
+		assert.Equal(t, []Record{r, r}, q.Flush(), "flushed Records")
 	})
 
 	t.Run("Flush", func(t *testing.T) {
@@ -363,6 +367,37 @@ func TestQueue(t *testing.T) {
 		q.len = 1
 
 		assert.Equal(t, []Record{r}, q.Flush(), "flushed")
+	})
+
+	t.Run("TryFlush", func(t *testing.T) {
+		const size = 3
+		q := newQueue(size)
+		for i := 0; i < size-1; i++ {
+			q.write.Value = r
+			q.write = q.write.Next()
+			q.len++
+		}
+
+		buf := make([]Record, 1)
+		f := func([]Record) bool { return false }
+		assert.Equal(t, size-1, q.TryDequeue(buf, f), "not flushed")
+		require.Equal(t, size-1, q.len, "length")
+		require.NotSame(t, q.read, q.write, "read ring advanced")
+
+		var flushed []Record
+		f = func(r []Record) bool {
+			flushed = append(flushed, r...)
+			return true
+		}
+		if assert.Equal(t, size-2, q.TryDequeue(buf, f), "did not flush len(buf)") {
+			assert.Equal(t, []Record{r}, flushed, "Records")
+		}
+
+		buf = slices.Grow(buf, size)
+		flushed = flushed[:0]
+		if assert.Equal(t, 0, q.TryDequeue(buf, f), "did not flush len(queue)") {
+			assert.Equal(t, []Record{r}, flushed, "Records")
+		}
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
