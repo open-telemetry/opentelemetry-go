@@ -5,6 +5,7 @@ package logtest
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -110,4 +111,27 @@ func TestRecorderEmitAndReset(t *testing.T) {
 
 	r.Reset()
 	assert.Len(t, r.Result()[0].Records, 0)
+}
+
+func TestRecorderConcurrentSafe(t *testing.T) {
+	const goRoutineN = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goRoutineN)
+
+	r := NewRecorder()
+
+	for i := 0; i < goRoutineN; i++ {
+		go func() {
+			defer wg.Done()
+
+			nr := r.Logger("test")
+			nr.Emit(context.Background(), log.Record{})
+
+			r.Result()
+			r.Reset()
+		}()
+	}
+
+	wg.Wait()
 }
