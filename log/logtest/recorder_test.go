@@ -52,6 +52,11 @@ func TestRecorderLogger(t *testing.T) {
 	}
 }
 
+func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
+	r := NewRecorder()
+	assert.NotEqual(t, r, r.Logger("test"))
+}
+
 func TestRecorderEnabled(t *testing.T) {
 	for _, tt := range []struct {
 		name        string

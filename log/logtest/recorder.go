@@ -62,13 +62,16 @@ type Recorder struct {
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
-	r.Scope = Scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
+	nr := &Recorder{
+		Scope: Scope{
+			Name:      name,
+			Version:   cfg.InstrumentationVersion(),
+			SchemaURL: cfg.SchemaURL(),
+		},
+		minSeverity: r.minSeverity,
 	}
 
-	return r
+	return nr
 }
 
 // Enabled indicates whether a specific record should be stored, according to
