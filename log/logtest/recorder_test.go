@@ -114,8 +114,15 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	r.Emit(context.Background(), log.Record{})
 	assert.Len(t, r.Result()[0].Records, 1)
 
+	l := r.Logger("test")
+	assert.Len(t, r.Result()[1].Records, 0)
+	l.Emit(context.Background(), log.Record{})
+	assert.Len(t, r.Result()[0].Records, 1)
+	assert.Len(t, r.Result()[1].Records, 1)
+
 	r.Reset()
 	assert.Len(t, r.Result()[0].Records, 0)
+	assert.Len(t, r.Result()[1].Records, 0)
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {
