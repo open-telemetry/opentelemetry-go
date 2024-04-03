@@ -131,7 +131,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goRoutineN)
 
-	r := NewRecorder()
+	r := &Recorder{}
 
 	for i := 0; i < goRoutineN; i++ {
 		go func() {
