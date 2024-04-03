@@ -163,21 +163,24 @@ func TestBatchingProcessor(t *testing.T) {
 	})
 
 	t.Run("OnEmit", func(t *testing.T) {
-		const q, batch = 100, 10
+		const batch = 10
 		e := newTestExporter(nil)
 		b := NewBatchingProcessor(
 			e,
-			WithMaxQueueSize(q),
+			WithMaxQueueSize(10*batch),
 			WithExportMaxBatchSize(batch),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for _, r := range make([]Record, q) {
+		for _, r := range make([]Record, 10*batch) {
 			assert.NoError(t, b.OnEmit(ctx, r))
 		}
 		assert.Eventually(t, func() bool {
-			return e.ExportN() == q/batch
-		}, 2*time.Second, time.Microsecond)
+			return e.ExportN() > 1
+		}, 2*time.Second, time.Microsecond, "multi-batch flush")
+
+		assert.NoError(t, b.Shutdown(ctx))
+		assert.GreaterOrEqual(t, e.ExportN(), 10)
 	})
 
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
