@@ -59,46 +59,46 @@ type Recorder struct {
 
 // Logger retrieves a copy of Recorder with the provided scope
 // information.
-func (i *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
+func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
-	i.Scope = Scope{
+	r.Scope = Scope{
 		Name:      name,
 		Version:   cfg.InstrumentationVersion(),
 		SchemaURL: cfg.SchemaURL(),
 	}
 
-	return i
+	return r
 }
 
 // Enabled indicates whether a specific record should be stored, according to
 // its severity, or context values.
-func (i *Recorder) Enabled(ctx context.Context, record log.Record) bool {
-	return ctx.Value(enableKey) != nil || record.Severity() >= i.minSeverity
+func (r *Recorder) Enabled(ctx context.Context, record log.Record) bool {
+	return ctx.Value(enableKey) != nil || record.Severity() >= r.minSeverity
 }
 
 // Emit stores the log record.
-func (i *Recorder) Emit(_ context.Context, record log.Record) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+func (r *Recorder) Emit(_ context.Context, record log.Record) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	i.records = append(i.records, record)
+	r.records = append(r.records, record)
 }
 
 // Result returns the current in-memory recorder log records.
-func (i *Recorder) Result() []log.Record {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	ret := make([]log.Record, len(i.records))
-	copy(ret, i.records)
+func (r *Recorder) Result() []log.Record {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ret := make([]log.Record, len(r.records))
+	copy(ret, r.records)
 	return ret
 }
 
 // Reset the current in-memory recorder log records.
-func (i *Recorder) Reset() {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	i.records = []log.Record{}
+func (r *Recorder) Reset() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.records = []log.Record{}
 }
 
 // ContextWithEnabledRecorder forces enabling the recorder, no matter the log
