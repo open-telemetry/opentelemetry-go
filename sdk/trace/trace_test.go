@@ -2007,9 +2007,9 @@ func TestSpanAddLink(t *testing.T) {
 
 			tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
-			span := startSpan(tp, tc.name, trace.WithLinks([]trace.Link{
-				{SpanContext: tc.spanContext, Attributes: tc.attrs},
-			}...))
+			span := startSpan(tp, tc.name)
+			link := trace.Link{SpanContext: tc.spanContext, Attributes: tc.attrs}
+			span.AddLink(link)
 
 			got, err := endSpan(te, span)
 			if err != nil {
