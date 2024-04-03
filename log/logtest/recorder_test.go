@@ -59,7 +59,7 @@ func TestRecorderLogger(t *testing.T) {
 }
 
 func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
-	r := NewRecorder()
+	r := &Recorder{}
 	assert.NotEqual(t, r, r.Logger("test"))
 }
 
