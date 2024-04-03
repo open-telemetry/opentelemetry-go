@@ -25,10 +25,10 @@ type optFunc func(config) config
 
 func (f optFunc) apply(c config) config { return f(c) }
 
-// WithEnabledFn allows configuring whether the recorder enables specific log entries or not.
+// WithEnabledFunc allows configuring whether the recorder enables specific log entries or not.
 //
 // By default, every log entry will be enabled.
-func WithEnabledFn(fn enabledFn) Option {
+func WithEnabledFunc(fn enabledFn) Option {
 	return optFunc(func(c config) config {
 		c.enabledFn = fn
 		return c

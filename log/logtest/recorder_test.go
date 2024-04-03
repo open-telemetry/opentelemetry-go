@@ -84,7 +84,7 @@ func TestRecorderEnabled(t *testing.T) {
 		{
 			name: "with everything disabled",
 			options: []Option{
-				WithEnabledFn(func(context.Context, log.Record) bool {
+				WithEnabledFunc(func(context.Context, log.Record) bool {
 					return false
 				}),
 			},
