@@ -111,18 +111,24 @@ func TestRecorderEnabledFnUnset(t *testing.T) {
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
 	assert.Len(t, r.Result()[0].Records, 0)
-	r.Emit(context.Background(), log.Record{})
-	assert.Len(t, r.Result()[0].Records, 1)
+
+	r1 := log.Record{}
+	r1.SetSeverity(log.SeverityInfo)
+	r.Emit(context.Background(), r1)
+	assert.Equal(t, r.Result()[0].Records, []log.Record { r1 })
 
 	l := r.Logger("test")
-	assert.Len(t, r.Result()[1].Records, 0)
-	l.Emit(context.Background(), log.Record{})
-	assert.Len(t, r.Result()[0].Records, 1)
-	assert.Len(t, r.Result()[1].Records, 1)
+	assert.Empty(t, r.Result()[1].Records)
+	
+	r2 := log.Record{}
+	r2.SetSeverity(log.SeverityError)
+	l.Emit(context.Background(), r2)
+	assert.Equal(t, r.Result()[0].Records, []log.Record { r1 })
+	assert.Equal(t, r.Result()[1].Records, []log.Record { r2 })
 
 	r.Reset()
-	assert.Len(t, r.Result()[0].Records, 0)
-	assert.Len(t, r.Result()[1].Records, 0)
+	assert.Empty(t, r.Result()[0].Records)
+	assert.Empty(t, r.Result()[1].Records)
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {
