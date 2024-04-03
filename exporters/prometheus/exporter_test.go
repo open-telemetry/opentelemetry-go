@@ -902,6 +902,12 @@ func TestShutdownExporter(t *testing.T) {
 }
 
 func TestExemplars(t *testing.T) {
+	attrsOpt := otelmetric.WithAttributes(
+		attribute.Key("A").String("B"),
+		attribute.Key("C").String("D"),
+		attribute.Key("E").Bool(true),
+		attribute.Key("F").Int(42),
+	)
 	for _, tc := range []struct {
 		name                  string
 		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
@@ -912,7 +918,7 @@ func TestExemplars(t *testing.T) {
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				counter, err := meter.Float64Counter("foo")
 				require.NoError(t, err)
-				counter.Add(ctx, 9)
+				counter.Add(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
 		},
@@ -921,7 +927,7 @@ func TestExemplars(t *testing.T) {
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				hist, err := meter.Int64Histogram("foo")
 				require.NoError(t, err)
-				hist.Record(ctx, 9)
+				hist.Record(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
 		},
@@ -947,6 +953,14 @@ func TestExemplars(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
 				metric.WithResource(res),
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: "*"},
+					metric.Stream{
+						// filter out all attributes so they are added as filtered
+						// attributes to the exemplar
+						AttributeFilter: attribute.NewAllowKeysFilter(),
+					},
+				)),
 			)
 			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
 
@@ -987,6 +1001,10 @@ func TestExemplars(t *testing.T) {
 			expectedLabels := map[string]string{
 				traceIDExemplarKey: "01000000000000000000000000000000",
 				spanIDExemplarKey:  "0100000000000000",
+				"A":                "B",
+				"C":                "D",
+				"E":                "true",
+				"F":                "42",
 			}
 			require.Equal(t, len(expectedLabels), len(exemplar.GetLabel()))
 			for _, label := range exemplar.GetLabel() {
