@@ -38,10 +38,10 @@ type BatchingProcessor struct {
 	//
 	// In order to block OnEmit as little as possible, a separate "poll"
 	// goroutine is spawned at the creation of a BatchingProcessor. This
-	// goroutine is responsible for flushing the queue at regular polled
-	// intervals, or when it is directly signaled to flush.
+	// goroutine is responsible for batching the queue at regular polled
+	// intervals, or when it is directly signaled to.
 	//
-	// To keep the polling goroutine from backing up, all flushes it makes are
+	// To keep the polling goroutine from backing up, all batches it makes are
 	// exported with a bufferedExporter. This exporter allows the poll
 	// goroutine to enqueue an export payload that will be handled in a
 	// separate goroutine dedicated to the export. This asynchronous behavior
@@ -49,22 +49,21 @@ type BatchingProcessor struct {
 	//
 	//   __BatchingProcessor__     __Poll Goroutine__     __Export Goroutine__
 	// ||                     || ||                  || ||                    ||
-	// ||          ********** || ||                  || ||                    ||
-	// || Records=>* OnEmit * || ||                  || ||     **********     ||
-	// ||          ********** || ||   |- ticker      || ||     * export *     ||
-	// ||             ||      || ||   |- trigger     || ||     **********     ||
+	// ||          ********** || ||                  || ||     **********     ||
+	// || Records=>* OnEmit * || ||   | - ticker     || ||     * export *     ||
+	// ||          ********** || ||   | - trigger    || ||     **********     ||
 	// ||             ||      || ||   |              || ||         ||         ||
 	// ||             ||      || ||   |              || ||         ||         ||
 	// ||   __________\/___   || ||   |***********   || ||   ______/\_______  ||
-	// ||  (____queue______)>=||=||===|*  flush  *===||=||=>[_export_buffer_] ||
+	// ||  (____queue______)>=||=||===|*  batch  *===||=||=>[_export_buffer_] ||
 	// ||                     || ||   |***********   || ||                    ||
 	// ||_____________________|| ||__________________|| ||____________________||
 	//
 	//
 	// The "release valve" in this processing is the record queue. This queue
 	// is a ring buffer. It will overwrite the oldest records first when writes
-	// to OnEmit are made faster than the queue can be flushed. If flushes
-	// cannot be batched to the export buffer, the records will remain in the
+	// to OnEmit are made faster than the queue can be flushed. If batches
+	// cannot be flushed to the export buffer, the records will remain in the
 	// queue.
 
 	// exporter is the bufferedExporter all batches are exported with.
