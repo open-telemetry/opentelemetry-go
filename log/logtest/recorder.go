@@ -22,19 +22,27 @@ type enabledFn func(context.Context, log.Record) bool
 // NewRecorder returns a new Recorder.
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
+
+	sr := &ScopeRecords{}
+
 	return &Recorder{
-		enabledFn: cfg.enabledFn,
+		scopeRecords:       []*ScopeRecords{sr},
+		currentScopeRecord: sr,
+		enabledFn:          cfg.enabledFn,
 	}
 }
 
-// Scope represents the instrumentation scope.
-type Scope struct {
+// ScopeRecords represents the records for instrumentation scope.
+type ScopeRecords struct {
 	// Name is the name of the instrumentation scope.
 	Name string
 	// Version is the version of the instrumentation scope.
 	Version string
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
+
+	// The log records this instrumentation recorded
+	Records []log.Record
 }
 
 // Recorder is a recorder that stores all received log records
@@ -45,10 +53,8 @@ type Recorder struct {
 
 	mu sync.Mutex
 
-	records []log.Record
-
-	// Scope is the Logger scope recorder received when Logger was called.
-	Scope Scope
+	scopeRecords       []*ScopeRecords
+	currentScopeRecord *ScopeRecords
 
 	// enabledFn decides whether the recorder should enable logging of a record or not
 	enabledFn enabledFn
@@ -57,15 +63,22 @@ type Recorder struct {
 // Logger retrieves a copy of Recorder with the provided scope
 // information.
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	cfg := log.NewLoggerConfig(opts...)
 
+	sr := &ScopeRecords{
+		Name:      name,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+	r.scopeRecords = append(r.scopeRecords, sr)
+
 	nr := &Recorder{
-		Scope: Scope{
-			Name:      name,
-			Version:   cfg.InstrumentationVersion(),
-			SchemaURL: cfg.SchemaURL(),
-		},
-		enabledFn: r.enabledFn,
+		scopeRecords:       r.scopeRecords,
+		currentScopeRecord: sr,
+		enabledFn:          r.enabledFn,
 	}
 
 	return nr
@@ -81,21 +94,21 @@ func (r *Recorder) Emit(_ context.Context, record log.Record) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.records = append(r.records, record)
+	r.currentScopeRecord.Records = append(r.currentScopeRecord.Records, record)
 }
 
 // Result returns the current in-memory recorder log records.
-func (r *Recorder) Result() []log.Record {
+func (r *Recorder) Result() []*ScopeRecords {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	ret := make([]log.Record, len(r.records))
-	copy(ret, r.records)
+	ret := make([]*ScopeRecords, len(r.scopeRecords))
+	copy(ret, r.scopeRecords)
 	return ret
 }
 
-// Reset the current in-memory recorder log records.
+// Reset clears the in-memory log records for the current scope.
 func (r *Recorder) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.records = []log.Record{}
+	r.currentScopeRecord.Records = []log.Record{}
 }

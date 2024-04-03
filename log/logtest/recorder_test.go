@@ -25,7 +25,9 @@ func TestRecorderLogger(t *testing.T) {
 		{
 			name: "provides a default logger",
 
-			expectedLogger: &Recorder{},
+			expectedLogger: &Recorder{
+				currentScopeRecord: &ScopeRecords{},
+			},
 		},
 		{
 			name: "provides a logger with a configured scope",
@@ -37,7 +39,7 @@ func TestRecorderLogger(t *testing.T) {
 			},
 
 			expectedLogger: &Recorder{
-				Scope: Scope{
+				currentScopeRecord: &ScopeRecords{
 					Name:      "test",
 					Version:   "logtest v42",
 					SchemaURL: "https://example.com",
@@ -47,8 +49,9 @@ func TestRecorderLogger(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
-			// unset enabledFn to allow comparison
+			// unset enabledFn and scope records to allow comparison
 			l.(*Recorder).enabledFn = nil
+			l.(*Recorder).scopeRecords = nil
 
 			assert.Equal(t, tt.expectedLogger, l)
 		})
@@ -102,10 +105,10 @@ func TestRecorderEnabled(t *testing.T) {
 
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
-	assert.Len(t, r.Result(), 0)
+	assert.Len(t, r.Result()[0].Records, 0)
 	r.Emit(context.Background(), log.Record{})
-	assert.Len(t, r.Result(), 1)
+	assert.Len(t, r.Result()[0].Records, 1)
 
 	r.Reset()
-	assert.Len(t, r.Result(), 0)
+	assert.Len(t, r.Result()[0].Records, 0)
 }
