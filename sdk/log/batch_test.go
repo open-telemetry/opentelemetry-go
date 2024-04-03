@@ -180,6 +180,45 @@ func TestBatchingProcessor(t *testing.T) {
 		}, 2*time.Second, time.Microsecond)
 	})
 
+	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
+		e := newTestExporter(nil)
+		e.ExportTrigger = make(chan struct{})
+
+		const batch = 10
+		b := NewBatchingProcessor(
+			e,
+			WithMaxQueueSize(3*batch),
+			WithExportMaxBatchSize(batch),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		for _, r := range make([]Record, 2*batch) {
+			assert.NoError(t, b.OnEmit(ctx, r))
+		}
+
+		var n int
+		require.Eventually(t, func() bool {
+			n = e.ExportN()
+			return n > 0
+		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
+
+		var err error
+		require.Eventually(t, func() bool {
+			err = b.OnEmit(ctx, Record{})
+			return true
+		}, time.Second, time.Microsecond, "OnEmit blocked")
+		assert.NoError(t, err)
+
+		e.ExportTrigger <- struct{}{}
+		assert.Eventually(t, func() bool {
+			return e.ExportN() > n
+		}, 2*time.Second, time.Microsecond, "flush not retriggered")
+
+		close(e.ExportTrigger)
+		assert.NoError(t, b.Shutdown(ctx))
+		assert.Equal(t, 3, e.ExportN())
+	})
+
 	t.Run("Enabled", func(t *testing.T) {
 		b := NewBatchingProcessor(defaultNoopExporter)
 		assert.True(t, b.Enabled(ctx, Record{}))
