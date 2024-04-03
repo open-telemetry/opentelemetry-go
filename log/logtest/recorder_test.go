@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestInMemoryRecorderLogger(t *testing.T) {
+func TestRecorderLogger(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		options []Option
@@ -25,7 +25,7 @@ func TestInMemoryRecorderLogger(t *testing.T) {
 		{
 			name: "provides a default logger",
 
-			expectedLogger: &InMemoryRecorder{},
+			expectedLogger: &Recorder{},
 		},
 		{
 			name: "provides a logger with a configured scope",
@@ -36,7 +36,7 @@ func TestInMemoryRecorderLogger(t *testing.T) {
 				log.WithSchemaURL("https://example.com"),
 			},
 
-			expectedLogger: &InMemoryRecorder{
+			expectedLogger: &Recorder{
 				Scope: Scope{
 					Name:      "test",
 					Version:   "logtest v42",
@@ -46,13 +46,13 @@ func TestInMemoryRecorderLogger(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewInMemoryRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
+			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
 			assert.Equal(t, tt.expectedLogger, l)
 		})
 	}
 }
 
-func TestInMemoryRecorderEnabled(t *testing.T) {
+func TestRecorderEnabled(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		options     []Option
@@ -96,14 +96,14 @@ func TestInMemoryRecorderEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewInMemoryRecorder(tt.options...).Enabled(tt.ctx, tt.buildRecord())
+			e := NewRecorder(tt.options...).Enabled(tt.ctx, tt.buildRecord())
 			assert.Equal(t, tt.isEnabled, e)
 		})
 	}
 }
 
-func TestInMemoryRecorderEmitAndReset(t *testing.T) {
-	r := NewInMemoryRecorder()
+func TestRecorderEmitAndReset(t *testing.T) {
+	r := NewRecorder()
 	assert.Len(t, r.Result(), 0)
 	r.Emit(context.Background(), log.Record{})
 	assert.Len(t, r.Result(), 1)

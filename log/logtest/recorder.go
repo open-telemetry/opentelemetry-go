@@ -21,10 +21,10 @@ type enablerKey uint
 
 var enableKey enablerKey
 
-// NewInMemoryRecorder returns a new InMemoryRecorder.
-func NewInMemoryRecorder(options ...Option) *InMemoryRecorder {
+// NewRecorder returns a new Recorder.
+func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
-	return &InMemoryRecorder{
+	return &Recorder{
 		minSeverity: cfg.minSeverity,
 	}
 }
@@ -39,9 +39,9 @@ type Scope struct {
 	SchemaURL string
 }
 
-// InMemoryRecorder is a recorder that stores all received log records
+// Recorder is a recorder that stores all received log records
 // in-memory.
-type InMemoryRecorder struct {
+type Recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
@@ -57,9 +57,9 @@ type InMemoryRecorder struct {
 	minSeverity log.Severity
 }
 
-// Logger retrieves acopy of InMemoryRecorder with the provided scope
+// Logger retrieves a copy of Recorder with the provided scope
 // information.
-func (i *InMemoryRecorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
+func (i *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
 	i.Scope = Scope{
@@ -73,12 +73,12 @@ func (i *InMemoryRecorder) Logger(name string, opts ...log.LoggerOption) log.Log
 
 // Enabled indicates whether a specific record should be stored, according to
 // its severity, or context values.
-func (i *InMemoryRecorder) Enabled(ctx context.Context, record log.Record) bool {
+func (i *Recorder) Enabled(ctx context.Context, record log.Record) bool {
 	return ctx.Value(enableKey) != nil || record.Severity() >= i.minSeverity
 }
 
 // Emit stores the log record.
-func (i *InMemoryRecorder) Emit(_ context.Context, record log.Record) {
+func (i *Recorder) Emit(_ context.Context, record log.Record) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -86,7 +86,7 @@ func (i *InMemoryRecorder) Emit(_ context.Context, record log.Record) {
 }
 
 // Result returns the current in-memory recorder log records.
-func (i *InMemoryRecorder) Result() []log.Record {
+func (i *Recorder) Result() []log.Record {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	ret := make([]log.Record, len(i.records))
@@ -95,7 +95,7 @@ func (i *InMemoryRecorder) Result() []log.Record {
 }
 
 // Reset the current in-memory recorder log records.
-func (i *InMemoryRecorder) Reset() {
+func (i *Recorder) Reset() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.records = []log.Record{}
