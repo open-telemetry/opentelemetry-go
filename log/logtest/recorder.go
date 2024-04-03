@@ -85,8 +85,8 @@ func (i *InMemoryRecorder) Emit(_ context.Context, record log.Record) {
 	i.records = append(i.records, record)
 }
 
-// GetRecords returns the current in-memory recorder log records.
-func (i *InMemoryRecorder) GetRecords() []log.Record {
+// Result returns the current in-memory recorder log records.
+func (i *InMemoryRecorder) Result() []log.Record {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	ret := make([]log.Record, len(i.records))

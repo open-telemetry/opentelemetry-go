@@ -104,10 +104,10 @@ func TestInMemoryRecorderEnabled(t *testing.T) {
 
 func TestInMemoryRecorderEmitAndReset(t *testing.T) {
 	r := NewInMemoryRecorder()
-	assert.Len(t, r.GetRecords(), 0)
+	assert.Len(t, r.Result(), 0)
 	r.Emit(context.Background(), log.Record{})
-	assert.Len(t, r.GetRecords(), 1)
+	assert.Len(t, r.Result(), 1)
 
 	r.Reset()
-	assert.Len(t, r.GetRecords(), 0)
+	assert.Len(t, r.Result(), 0)
 }
