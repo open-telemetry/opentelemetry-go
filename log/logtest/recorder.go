@@ -23,6 +23,38 @@ var defaultEnabledFunc = func(context.Context, log.Record) bool {
 	return true
 }
 
+type config struct {
+	enabledFn enabledFn
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+
+	return c
+}
+
+// Option configures a [Recorder].
+type Option interface {
+	apply(config) config
+}
+
+type optFunc func(config) config
+
+func (f optFunc) apply(c config) config { return f(c) }
+
+// WithEnabledFunc allows configuring whether the recorder enables specific log entries or not.
+//
+// By default, every log entry will be enabled.
+func WithEnabledFunc(fn enabledFn) Option {
+	return optFunc(func(c config) config {
+		c.enabledFn = fn
+		return c
+	})
+}
+
 // NewRecorder returns a new Recorder.
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
