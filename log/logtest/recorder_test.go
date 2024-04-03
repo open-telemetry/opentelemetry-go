@@ -115,16 +115,16 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	r1 := log.Record{}
 	r1.SetSeverity(log.SeverityInfo)
 	r.Emit(context.Background(), r1)
-	assert.Equal(t, r.Result()[0].Records, []log.Record { r1 })
+	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
 
 	l := r.Logger("test")
 	assert.Empty(t, r.Result()[1].Records)
-	
+
 	r2 := log.Record{}
 	r2.SetSeverity(log.SeverityError)
 	l.Emit(context.Background(), r2)
-	assert.Equal(t, r.Result()[0].Records, []log.Record { r1 })
-	assert.Equal(t, r.Result()[1].Records, []log.Record { r2 })
+	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
+	assert.Equal(t, r.Result()[1].Records, []log.Record{r2})
 
 	r.Reset()
 	assert.Empty(t, r.Result()[0].Records)
