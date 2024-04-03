@@ -30,7 +30,7 @@ func newConfig(options []Option) config {
 	return c
 }
 
-// Option configures a [Hook].
+// Option configures a [Recorder].
 type Option interface {
 	apply(config) config
 }
