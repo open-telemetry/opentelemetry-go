@@ -20,3 +20,15 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/otel => ../../../..
+
+replace go.opentelemetry.io/otel/sdk/log => ../../../../sdk/log
+
+replace go.opentelemetry.io/otel/trace => ../../../../trace
+
+replace go.opentelemetry.io/otel/sdk => ../../../../sdk
+
+replace go.opentelemetry.io/otel/metric => ../../../../metric
+
+replace go.opentelemetry.io/otel/log => ../../../../log
