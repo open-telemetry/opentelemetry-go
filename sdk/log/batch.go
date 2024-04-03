@@ -30,6 +30,43 @@ var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
+	// The BatchingProcessor is designed to provide the highest throughput of
+	// log Records possible while being compatible with OpenTelemetry. The
+	// entry point of log Records is the OnEmit method. This method is designed
+	// to receive Records as fast as possible while still honoring shutdown
+	// commands. All Records received are enqueued to queue.
+	//
+	// In order to block OnEmit as little as possible, a separate "poll"
+	// goroutine is spawned at the creation of a BatchingProcessor. This
+	// goroutine is responsible for flushing the queue at regular polled
+	// intervals, or when it is directly signaled to flush.
+	//
+	// To keep the polling goroutine from backing up, all flushes it makes are
+	// exported with a bufferedExporter. This exporter allows the poll
+	// goroutine to enqueue an export payload that will be handled in a
+	// separate goroutine dedicated to the export. This asynchronous behavior
+	// allows the poll goroutine to maintain accurate interval polling.
+	//
+	//   __BatchingProcessor__     __Poll Goroutine__     __Export Goroutine__
+	// ||                     || ||                  || ||                    ||
+	// ||          ********** || ||                  || ||                    ||
+	// || Records->* OnEmit * || ||                  || ||     **********     ||
+	// ||          ********** || ||    |- ticker     || ||     * export *     ||
+	// ||             ||      || ||    |- trigger    || ||     **********     ||
+	// ||             ||      || ||    |             || ||         ||         ||
+	// ||             \/      || ||    |             || ||         /\         ||
+	// ||   ---------------   || ||    ***********   || ||   ---------------  ||
+	// ||  |    queue      |>-||-||----*  flush  *---||-||->| export buffer | ||
+	// ||   ---------------   || ||    ***********   || ||   ---------------  ||
+	// ||_____________________|| ||__________________|| ||____________________||
+	//
+	//
+	// The "release valve" in this processing is the record queue. This queue
+	// is a ring buffer. It will overwrite the oldest records first when writes
+	// to OnEmit are made faster than the queue can be flushed. If flushes
+	// cannot be batched to the export buffer, the will records remain in the
+	// queue.
+
 	// exporter is the bufferedExporter all batches are exported with.
 	exporter *bufferExporter
 
@@ -69,8 +106,8 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
-	// Order is important here. Wrap the timeoutExporter with the chuncker to
-	// ensure each export completes in timeout (instead of all chuncked
+	// Order is important here. Wrap the timeoutExporter with the chunkExporter
+	// to ensure each export completes in timeout (instead of all chuncked
 	// exports).
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
 	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched
@@ -165,16 +202,11 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	select {
 	case <-b.pollDone:
 	case <-ctx.Done():
-		// Out of time. Do not close b.exportCh, it is not certain if the poll
-		// goroutine will try to send to it still.
+		// Out of time.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
 
 	// Flush remaining queued before exporter shutdown.
-	//
-	// Given the poll goroutine has stopped we know no more data will be
-	// queued. This ensures concurrent calls to ForceFlush do not panic because
-	// they are flusing to a shut down exporter.
 	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
