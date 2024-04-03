@@ -114,7 +114,7 @@ func (r *Recorder) Result() []*ScopeRecords {
 func (r *Recorder) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.currentScopeRecord.Records = []log.Record{}
+	r.currentScopeRecord.Records = nil
 	for _, l := range r.loggers {
 		l.Reset()
 	}
