@@ -26,7 +26,6 @@ func NewRecorder(options ...Option) *Recorder {
 	sr := &ScopeRecords{}
 
 	return &Recorder{
-		scopeRecords:       []*ScopeRecords{sr},
 		currentScopeRecord: sr,
 		enabledFn:          cfg.enabledFn,
 	}
@@ -53,7 +52,7 @@ type Recorder struct {
 
 	mu sync.Mutex
 
-	scopeRecords       []*ScopeRecords
+	loggers            []*Recorder
 	currentScopeRecord *ScopeRecords
 
 	// enabledFn decides whether the recorder should enable logging of a record or not
@@ -63,25 +62,26 @@ type Recorder struct {
 // Logger retrieves a copy of Recorder with the provided scope
 // information.
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
+	cfg := log.NewLoggerConfig(opts...)
+
+	nr := &Recorder{
+		currentScopeRecord: &ScopeRecords{
+			Name:      name,
+			Version:   cfg.InstrumentationVersion(),
+			SchemaURL: cfg.SchemaURL(),
+		},
+		enabledFn: r.enabledFn,
+	}
+	r.addChildLogger(nr)
+
+	return nr
+}
+
+func (r *Recorder) addChildLogger(nr *Recorder) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	cfg := log.NewLoggerConfig(opts...)
-
-	sr := &ScopeRecords{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
-	}
-	r.scopeRecords = append(r.scopeRecords, sr)
-
-	nr := &Recorder{
-		scopeRecords:       r.scopeRecords,
-		currentScopeRecord: sr,
-		enabledFn:          r.enabledFn,
-	}
-
-	return nr
+	r.loggers = append(r.loggers, nr)
 }
 
 // Enabled indicates whether a specific record should be stored
@@ -101,14 +101,21 @@ func (r *Recorder) Emit(_ context.Context, record log.Record) {
 func (r *Recorder) Result() []*ScopeRecords {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	ret := make([]*ScopeRecords, len(r.scopeRecords))
-	copy(ret, r.scopeRecords)
+
+	ret := []*ScopeRecords{}
+	ret = append(ret, r.currentScopeRecord)
+	for _, l := range r.loggers {
+		ret = append(ret, l.Result()...)
+	}
 	return ret
 }
 
-// Reset clears the in-memory log records for the current scope.
+// Reset clears the in-memory log records.
 func (r *Recorder) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.currentScopeRecord.Records = []log.Record{}
+	for _, l := range r.loggers {
+		l.Reset()
+	}
 }

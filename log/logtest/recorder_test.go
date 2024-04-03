@@ -49,9 +49,8 @@ func TestRecorderLogger(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
-			// unset enabledFn and scope records to allow comparison
+			// unset enabledFn to allow comparison
 			l.(*Recorder).enabledFn = nil
-			l.(*Recorder).scopeRecords = nil
 
 			assert.Equal(t, tt.expectedLogger, l)
 		})
