@@ -163,20 +163,21 @@ func TestBatchingProcessor(t *testing.T) {
 	})
 
 	t.Run("OnEmit", func(t *testing.T) {
+		const q, batch = 100, 10
 		e := newTestExporter(nil)
 		b := NewBatchingProcessor(
 			e,
-			WithMaxQueueSize(100),
-			WithExportMaxBatchSize(10),
+			WithMaxQueueSize(q),
+			WithExportMaxBatchSize(batch),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for _, r := range make([]Record, 15) {
+		for _, r := range make([]Record, q) {
 			assert.NoError(t, b.OnEmit(ctx, r))
 		}
-		assert.NoError(t, b.Shutdown(ctx))
-
-		assert.Equal(t, 2, e.ExportN())
+		assert.Eventually(t, func() bool {
+			return e.ExportN() == q/batch
+		}, 2*time.Second, time.Microsecond)
 	})
 
 	t.Run("Enabled", func(t *testing.T) {

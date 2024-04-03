@@ -31,10 +31,10 @@ var _ Processor = (*BatchingProcessor)(nil)
 // BatchingProcessor is a processor that exports batches of log records.
 type BatchingProcessor struct {
 	// The BatchingProcessor is designed to provide the highest throughput of
-	// log Records possible while being compatible with OpenTelemetry. The
-	// entry point of log Records is the OnEmit method. This method is designed
-	// to receive Records as fast as possible while still honoring shutdown
-	// commands. All Records received are enqueued to queue.
+	// log records possible while being compatible with OpenTelemetry. The
+	// entry point of log records is the OnEmit method. This method is designed
+	// to receive records as fast as possible while still honoring shutdown
+	// commands. All records received are enqueued to queue.
 	//
 	// In order to block OnEmit as little as possible, a separate "poll"
 	// goroutine is spawned at the creation of a BatchingProcessor. This
@@ -64,7 +64,7 @@ type BatchingProcessor struct {
 	// The "release valve" in this processing is the record queue. This queue
 	// is a ring buffer. It will overwrite the oldest records first when writes
 	// to OnEmit are made faster than the queue can be flushed. If flushes
-	// cannot be batched to the export buffer, the will records remain in the
+	// cannot be batched to the export buffer, the records will remain in the
 	// queue.
 
 	// exporter is the bufferedExporter all batches are exported with.
@@ -72,7 +72,7 @@ type BatchingProcessor struct {
 
 	// q is the active queue of records that have not yet been exported.
 	q *queue
-	// batchSize is the minimum number of Records needed before an export is
+	// batchSize is the minimum number of records needed before an export is
 	// triggered (unless the interval expires).
 	batchSize int
 
@@ -81,7 +81,7 @@ type BatchingProcessor struct {
 	// complete batch.
 	//
 	// When a send is made to the channel, the poll loop will be reset after
-	// the flush. If there is still enough Records in the queue for another
+	// the flush. If there is still enough records in the queue for another
 	// batch the reset of the poll loop will automatically re-trigger itself.
 	// There is no need for the original sender to monitor and resend.
 	pollTrigger chan struct{}
