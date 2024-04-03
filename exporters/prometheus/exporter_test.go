@@ -917,7 +917,7 @@ func TestExemplars(t *testing.T) {
 			expectedExemplarValue: 9,
 		},
 		{
-			name: "histogrtam",
+			name: "histogram",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				hist, err := meter.Int64Histogram("foo")
 				require.NoError(t, err)
