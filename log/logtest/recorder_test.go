@@ -138,6 +138,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			nr := r.Logger("test")
+			nr.Enabled(context.Background(), log.Record{})
 			nr.Emit(context.Background(), log.Record{})
 
 			r.Result()
