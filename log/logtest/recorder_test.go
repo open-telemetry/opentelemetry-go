@@ -47,6 +47,9 @@ func TestRecorderLogger(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
+			// unset enabledFn to allow comparison
+			l.(*Recorder).enabledFn = nil
+
 			assert.Equal(t, tt.expectedLogger, l)
 		})
 	}
@@ -67,7 +70,7 @@ func TestRecorderEnabled(t *testing.T) {
 		isEnabled bool
 	}{
 		{
-			name: "the default option enables unset levels",
+			name: "the default option enables every log entry",
 			ctx:  context.Background(),
 			buildRecord: func() log.Record {
 				return log.Record{}
@@ -76,9 +79,11 @@ func TestRecorderEnabled(t *testing.T) {
 			isEnabled: true,
 		},
 		{
-			name: "with a minimum severity set disables",
+			name: "with everything disabled",
 			options: []Option{
-				WithMinSeverity(log.SeverityWarn1),
+				WithEnabledFn(func(context.Context, log.Record) bool {
+					return false
+				}),
 			},
 			ctx: context.Background(),
 			buildRecord: func() log.Record {
@@ -86,18 +91,6 @@ func TestRecorderEnabled(t *testing.T) {
 			},
 
 			isEnabled: false,
-		},
-		{
-			name: "with a context that forces an enabled recorder",
-			options: []Option{
-				WithMinSeverity(log.SeverityWarn1),
-			},
-			ctx: ContextWithEnabledRecorder(context.Background()),
-			buildRecord: func() log.Record {
-				return log.Record{}
-			},
-
-			isEnabled: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

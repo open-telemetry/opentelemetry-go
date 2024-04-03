@@ -17,15 +17,13 @@ import (
 // with the Logger method of the recorder when it is embedded.
 type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
-type enablerKey uint
-
-var enableKey enablerKey
+type enabledFn func(context.Context, log.Record) bool
 
 // NewRecorder returns a new Recorder.
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
 	return &Recorder{
-		minSeverity: cfg.minSeverity,
+		enabledFn: cfg.enabledFn,
 	}
 }
 
@@ -52,9 +50,8 @@ type Recorder struct {
 	// Scope is the Logger scope recorder received when Logger was called.
 	Scope Scope
 
-	// minSeverity is the minimum severity the recorder will return true for
-	// when Enabled is called (unless enableKey is set).
-	minSeverity log.Severity
+	// enabledFn decides whether the recorder should enable logging of a record or not
+	enabledFn enabledFn
 }
 
 // Logger retrieves a copy of Recorder with the provided scope
@@ -68,16 +65,15 @@ func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 			Version:   cfg.InstrumentationVersion(),
 			SchemaURL: cfg.SchemaURL(),
 		},
-		minSeverity: r.minSeverity,
+		enabledFn: r.enabledFn,
 	}
 
 	return nr
 }
 
-// Enabled indicates whether a specific record should be stored, according to
-// its severity, or context values.
+// Enabled indicates whether a specific record should be stored
 func (r *Recorder) Enabled(ctx context.Context, record log.Record) bool {
-	return ctx.Value(enableKey) != nil || record.Severity() >= r.minSeverity
+	return r.enabledFn(ctx, record)
 }
 
 // Emit stores the log record.
@@ -102,10 +98,4 @@ func (r *Recorder) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.records = []log.Record{}
-}
-
-// ContextWithEnabledRecorder forces enabling the recorder, no matter the log
-// severity level.
-func ContextWithEnabledRecorder(ctx context.Context) context.Context {
-	return context.WithValue(ctx, enableKey, true)
 }

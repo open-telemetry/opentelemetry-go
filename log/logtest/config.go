@@ -4,17 +4,27 @@
 package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/log"
 )
 
+var defaultEnabledFn = func(context.Context, log.Record) bool {
+	return true
+}
+
 type config struct {
-	minSeverity log.Severity
+	enabledFn enabledFn
 }
 
 func newConfig(options []Option) config {
 	var c config
 	for _, opt := range options {
 		c = opt.apply(c)
+	}
+
+	if c.enabledFn == nil {
+		c.enabledFn = defaultEnabledFn
 	}
 
 	return c
@@ -29,13 +39,12 @@ type optFunc func(config) config
 
 func (f optFunc) apply(c config) config { return f(c) }
 
-// WithMinSeverity returns an [Option] that configures the minimum severity the
-// recorder will return true for when Enabled is called.
+// WithEnabledFn allows configuring whether the recorder enables specific log entries or not.
 //
-// By default, the recorder will be enabled for all levels.
-func WithMinSeverity(l log.Severity) Option {
+// By default, every log entry will be enabled.
+func WithEnabledFn(fn enabledFn) Option {
 	return optFunc(func(c config) config {
-		c.minSeverity = l
+		c.enabledFn = fn
 		return c
 	})
 }
