@@ -175,7 +175,7 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	mc.stopFunc = srv.Stop
 
 	// Wait until gRPC server is up.
-	conn, err := grpc.Dial(mc.endpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(mc.endpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err, "grpc.Dial")
 	require.NoError(t, conn.Close(), "conn.Close")
 
