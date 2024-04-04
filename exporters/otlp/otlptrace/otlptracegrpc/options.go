@@ -150,6 +150,8 @@ func WithServiceConfig(serviceConfig string) Option {
 // connection. The options here are appended to the internal grpc.DialOptions
 // used so they will take precedence over any other internal grpc.DialOptions
 // they might conflict with.
+// The [grpc.WithBlock], [grpc.WithTimeout], and [grpc.WithReturnConnectionError]
+// grpc.DialOptions are ignored by this function.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
