@@ -3,7 +3,7 @@
 
 package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 
-// Version is the current release version of the OpenTelemetry OTLP over HTTP/protobuf metrics exporter in use.
+// Version is the current release version of the OpenTelemetry OTLP over HTTP/protobuf logs exporter in use.
 func Version() string {
 	return "0.0.0"
 }
