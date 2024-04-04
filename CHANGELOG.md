@@ -25,14 +25,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `otel.scope.name` and `otel.scope.version` tags to spans exported by `go.opentelemetry.io/otel/exporters/zipkin`. (#5108)
 - Add support for `AddLink` to `go.opentelemetry.io/otel/bridge/opencensus`. (#5116)
 - Add `String` method to `Value` and `KeyValue` in `go.opentelemetry.io/otel/log`. (#5117)
+- Add Exemplar support to `go.opentelemetry.io/otel/exporters/prometheus`. (#5111)
+- Add metric semantic conventions to `go.opentelemetry.io/otel/semconv/v1.24.0`. Future `semconv` packages will include metric semantic conventions as well. (#4528)
 
 ### Changed
 
 - `SpanFromContext` and `SpanContextFromContext` in `go.opentelemetry.io/otel/trace` no longer make a heap allocation when the passed context has no span. (#5049)
+- `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` now create a gRPC client in idle mode and with "dns" as the default resolver using [`grpc.NewClient`](https://pkg.go.dev/google.golang.org/grpc#NewClient). (#5151)
+  Because of that `WithDialOption` ignores [`grpc.WithBlock`](https://pkg.go.dev/google.golang.org/grpc#WithBlock), [`grpc.WithTimeout`](https://pkg.go.dev/google.golang.org/grpc#WithTimeout), and [`grpc.WithReturnConnectionError`](https://pkg.go.dev/google.golang.org/grpc#WithReturnConnectionError).
+  Notice that [`grpc.DialContext`](https://pkg.go.dev/google.golang.org/grpc#DialContext) which was used before is now deprecated.
 
 ### Fixed
 
 - Clarify the documentation about equivalence guarantees for the `Set` and `Distinct` types in `go.opentelemetry.io/otel/attribute`. (#5027)
+- Prevent default `ErrorHandler` self-delegation. (#5137)
 - Update all dependencies to address [GO-2024-2687]. (#5139)
 
 ### Removed

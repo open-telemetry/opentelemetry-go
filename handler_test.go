@@ -18,6 +18,9 @@ var _ ErrorHandler = &testErrHandler{}
 func (eh *testErrHandler) Handle(err error) { eh.err = err }
 
 func TestGlobalErrorHandler(t *testing.T) {
+	SetErrorHandler(GetErrorHandler())
+	assert.NotPanics(t, func() { Handle(assert.AnError) }, "Default assignment")
+
 	e1 := &testErrHandler{}
 	SetErrorHandler(e1)
 	Handle(assert.AnError)
