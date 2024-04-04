@@ -48,6 +48,7 @@ type (
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
+		Query       map[string][]string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -343,6 +344,13 @@ func WithTimeout(duration time.Duration) GenericOption {
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Proxy = pf
+		return cfg
+	})
+}
+
+func WithQuery(query map[string][]string) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.Query = query
 		return cfg
 	})
 }

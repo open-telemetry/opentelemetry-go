@@ -210,7 +210,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 }
 
 func (d *client) newRequest(body []byte) (request, error) {
-	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
+	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath, RawQuery: d.getRawQuery()}
 	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
 	if err != nil {
 		return request{Request: r}, err
@@ -345,4 +345,13 @@ func (d *client) contextWithStop(ctx context.Context) (context.Context, context.
 		}
 	}(ctx, cancel)
 	return ctx, cancel
+}
+
+func (d *client) getRawQuery() string {
+	values := url.Values{}
+	for k, v := range d.cfg.Query {
+		values[k] = v
+	}
+
+	return values.Encode()
 }
