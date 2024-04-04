@@ -6,7 +6,7 @@ on:
   workflow_dispatch: 
 
 env:
-  DEFAULT_GO_VERSION: "~1.22.0"
+  DEFAULT_GO_VERSION: "~1.22.2"
 jobs:
   benchmark:
     name: Benchmarks
