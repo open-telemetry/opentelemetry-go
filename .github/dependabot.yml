@@ -128,6 +128,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /exporters/otlp/otlplog/otlploghttp
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /exporters/otlp/otlpmetric/otlpmetricgrpc
     labels:
       - dependencies
