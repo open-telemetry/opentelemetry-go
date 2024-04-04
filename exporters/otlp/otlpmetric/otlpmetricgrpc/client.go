@@ -36,7 +36,7 @@ type client struct {
 }
 
 // newClient creates a new gRPC metric client.
-func newClient(ctx context.Context, cfg oconf.Config) (*client, error) {
+func newClient(_ context.Context, cfg oconf.Config) (*client, error) {
 	c := &client{
 		exportTimeout: cfg.Metrics.Timeout,
 		requestFunc:   cfg.RetryConfig.RequestFunc(retryable),
@@ -54,7 +54,7 @@ func newClient(ctx context.Context, cfg oconf.Config) (*client, error) {
 		dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
 		dialOpts = append(dialOpts, cfg.DialOptions...)
 
-		conn, err := grpc.DialContext(ctx, cfg.Metrics.Endpoint, dialOpts...)
+		conn, err := grpc.NewClient(cfg.Metrics.Endpoint, dialOpts...)
 		if err != nil {
 			return nil, err
 		}
