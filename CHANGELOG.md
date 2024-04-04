@@ -2975,4 +2975,3 @@ It contains api and sdk for trace and meter.
 [metric API]:https://pkg.go.dev/go.opentelemetry.io/otel/metric
 [metric SDK]:https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric
 [trace API]:https://pkg.go.dev/go.opentelemetry.io/otel/trace
-
