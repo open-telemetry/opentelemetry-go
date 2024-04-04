@@ -78,11 +78,11 @@ func newClient(opts ...Option) *client {
 }
 
 // Start establishes a gRPC connection to the collector.
-func (c *client) Start(ctx context.Context) error {
+func (c *client) Start(context.Context) error {
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
-		conn, err := grpc.DialContext(ctx, c.endpoint, c.dialOpts...)
+		conn, err := grpc.NewClient(c.endpoint, c.dialOpts...)
 		if err != nil {
 			return err
 		}
