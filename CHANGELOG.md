@@ -25,7 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `otel.scope.name` and `otel.scope.version` tags to spans exported by `go.opentelemetry.io/otel/exporters/zipkin`. (#5108)
 - Add support for `AddLink` to `go.opentelemetry.io/otel/bridge/opencensus`. (#5116)
 - Add `String` method to `Value` and `KeyValue` in `go.opentelemetry.io/otel/log`. (#5117)
-- Add `Query` option in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5118)
+- Add `Query` option in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5152)
 
 ### Changed
 
