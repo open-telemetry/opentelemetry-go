@@ -200,3 +200,8 @@ func WithTimeout(duration time.Duration) Option {
 func WithRetry(settings RetryConfig) Option {
 	return wrappedOption{otlpconfig.WithRetry(retry.Config(settings))}
 }
+
+// WithQuery will send the provided query values with each gRPC request.
+func WithQuery(query map[string][]string) Option {
+	return wrappedOption{otlpconfig.WithQuery(query)}
+}
