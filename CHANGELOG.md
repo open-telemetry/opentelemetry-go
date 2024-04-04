@@ -23,6 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   At which point, users will be required to migrage their code, and this package will be deprecated then removed. (#5085)
 - Add support for `Summary` metrics in the `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` exporters. (#5100)
 - Add `otel.scope.name` and `otel.scope.version` tags to spans exported by `go.opentelemetry.io/otel/exporters/zipkin`. (#5108)
+- Add support for `AddLink` to `go.opentelemetry.io/otel/bridge/opencensus`. (#5116)
+- Add `String` method to `Value` and `KeyValue` in `go.opentelemetry.io/otel/log`. (#5117)
 
 ### Changed
 
@@ -31,6 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Clarify the documentation about equivalence guarantees for the `Set` and `Distinct` types in `go.opentelemetry.io/otel/attribute`. (#5027)
+- Update all dependencies to address [GO-2024-2687]. (#5139)
 
 ### Removed
 
@@ -2972,3 +2975,5 @@ It contains api and sdk for trace and meter.
 [metric API]:https://pkg.go.dev/go.opentelemetry.io/otel/metric
 [metric SDK]:https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric
 [trace API]:https://pkg.go.dev/go.opentelemetry.io/otel/trace
+
+[GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687

@@ -14,7 +14,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.22.0"
+  DEFAULT_GO_VERSION: "~1.22.2"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -92,7 +92,7 @@ jobs:
           cp coverage.txt $TEST_RESULTS
           cp coverage.html $TEST_RESULTS
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.2.0
         with:
           file: ./coverage.txt
           fail_ci_if_error: true
@@ -107,7 +107,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.22.0", "~1.21.3"]
+        go-version: ["~1.22.2", "~1.21.9"]
         platform:
           - os: ubuntu-latest
             arch: "386"
