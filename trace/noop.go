@@ -38,15 +38,15 @@ var _ Tracer = noopTracer{}
 // Start carries forward a non-recording Span, if one is present in the context, otherwise it
 // creates a no-op Span.
 func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption) (context.Context, Span) {
+	if ctx == nil {
+		// Prevent trace.ContextWithSpan from panicking.
+		ctx = context.Background()
+	}
+
 	span := SpanFromContext(ctx)
 	if _, ok := span.(nonRecordingSpan); !ok {
 		// span is likely already a noopSpan, but let's be sure
 		span = noopSpanInstance
-	}
-
-	if ctx == nil {
-		// Prevent trace.ContextWithSpan from panicking.
-		ctx = context.Background()
 	}
 
 	return ContextWithSpan(ctx, span), span

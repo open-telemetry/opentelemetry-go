@@ -6,6 +6,8 @@ package trace
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNoopTracerProvider(t *testing.T) {
@@ -77,4 +79,12 @@ func TestNonRecordingSpanTracerStart(t *testing.T) {
 	if got, want := span.SpanContext(), sc; !assertSpanContextEqual(got, want) {
 		t.Errorf("SpanContext not carried by nonRecordingSpan. got %#v, want %#v", got, want)
 	}
+}
+
+func TestStartSpanWithNilContext(t *testing.T) {
+	tp := NewNoopTracerProvider()
+	tr := tp.Tracer("NoPanic")
+
+	// nolint:staticcheck // no nil context, but that's the point of the test.
+	assert.NotPanics(t, func() { tr.Start(nil, "should-not-panic") })
 }

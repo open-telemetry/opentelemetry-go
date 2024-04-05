@@ -52,12 +52,12 @@ type Tracer struct{ embedded.Tracer }
 // span context. If the span context in ctx is for a non-recording span, that
 // span instance will be returned directly.
 func (t Tracer) Start(ctx context.Context, _ string, _ ...trace.SpanStartOption) (context.Context, trace.Span) {
-	span := trace.SpanFromContext(ctx)
-
 	if ctx == nil {
 		// Prevent trace.ContextWithSpan from panicking.
 		ctx = context.Background()
 	}
+
+	span := trace.SpanFromContext(ctx)
 
 	// If the parent context contains a non-zero span context, that span
 	// context needs to be returned as a non-recording span
