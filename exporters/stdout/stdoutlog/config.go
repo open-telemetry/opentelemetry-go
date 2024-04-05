@@ -41,7 +41,7 @@ func newConfig(options []Option) config {
 	return cfg
 }
 
-// Option sets the configuration value for and Exporter.
+// Option sets the configuration value for an Exporter.
 type Option interface {
 	apply(config) config
 }
