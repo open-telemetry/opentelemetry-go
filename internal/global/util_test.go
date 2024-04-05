@@ -12,9 +12,11 @@ import (
 // its Cleanup step.
 func ResetForTest(t testing.TB) {
 	t.Cleanup(func() {
+		globalErrorHandler = defaultErrorHandler()
 		globalTracer = defaultTracerValue()
 		globalPropagators = defaultPropagatorsValue()
 		globalMeterProvider = defaultMeterProvider()
+		delegateErrorHandlerOnce = sync.Once{}
 		delegateTraceOnce = sync.Once{}
 		delegateTextMapPropagatorOnce = sync.Once{}
 		delegateMeterOnce = sync.Once{}
