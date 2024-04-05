@@ -10,7 +10,7 @@ import (
 )
 
 type client interface {
-	UploadMetrics(context.Context, *logpb.ResourceLogs) error
+	UploadLogs(context.Context, *logpb.ResourceLogs) error
 	Shutdown(context.Context) error
 }
 
@@ -19,7 +19,7 @@ type shutdownClient struct{}
 // Compile-time check shutdownClient implements client.
 var _ client = shutdownClient{}
 
-func (c shutdownClient) UploadMetrics(context.Context, *logpb.ResourceLogs) error {
+func (c shutdownClient) UploadLogs(context.Context, *logpb.ResourceLogs) error {
 	return nil
 }
 
@@ -37,7 +37,7 @@ func newHTTPClient(cfg config) (*httpClient, error) {
 	return &httpClient{}, nil
 }
 
-func (c *httpClient) UploadMetrics(context.Context, *logpb.ResourceLogs) error {
+func (c *httpClient) UploadLogs(context.Context, *logpb.ResourceLogs) error {
 	// TODO: implement.
 	return nil
 }
