@@ -5,10 +5,16 @@ package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 )
 
@@ -23,6 +29,53 @@ var (
 	defaultTimeout     time.Duration          = 10 * time.Second
 	defaultProxy       HTTPTransportProxyFunc = nil
 	defaultRetryCfg    RetryConfig            = RetryConfig{} // TODO: define.
+)
+
+// Environment variable keys
+var (
+	envEndpoint = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+		"OTEL_EXPORTER_OTLP_ENDPOINT",
+	}
+	envPath = envEndpoint
+
+	envInsecure = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_INSECURE",
+		"OTEL_EXPORTER_OTLP_INSECURE",
+	}
+
+	envHeaders = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_HEADERS",
+		"OTEL_EXPORTER_OTLP_HEADERS",
+	}
+
+	envCompression = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION",
+		"OTEL_EXPORTER_OTLP_COMPRESSION",
+	}
+
+	envTimeout = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT",
+		"OTEL_EXPORTER_OTLP_TIMEOUT",
+	}
+
+	envTLSCert = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CERTIFICATE",
+	}
+	envTLSClient = []struct {
+		Certificate string
+		Key         string
+	}{
+		{
+			"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY",
+		},
+		{
+			"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_CLIENT_KEY",
+		},
+	}
 )
 
 // Option applies an option to the Exporter.
@@ -53,24 +106,31 @@ func newConfig(options []Option) config {
 	}
 
 	c.endpoint = c.endpoint.Resolve(
+		getenv[string](envEndpoint, convEndpoint),
 		fallback[string](defaultEndpoint),
 	)
 	c.path = c.path.Resolve(
+		getenv[string](envPath, convPath),
 		fallback[string](defaultPath),
 	)
 	c.insecure = c.insecure.Resolve(
+		getenv[bool](envInsecure, convInsecure),
 		fallback[bool](defaultInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
+		loadEnvTLS[*tls.Config](),
 		fallback[*tls.Config](defaultTlsCfg),
 	)
 	c.headers = c.headers.Resolve(
+		getenv[map[string]string](envHeaders, convHeaders),
 		fallback[map[string]string](defaultHeaders),
 	)
 	c.compression = c.compression.Resolve(
+		getenv[Compression](envCompression, convCompression),
 		fallback[Compression](defaultCompression),
 	)
 	c.timeout = c.timeout.Resolve(
+		getenv[time.Duration](envTimeout, time.ParseDuration),
 		fallback[time.Duration](defaultTimeout),
 	)
 	c.proxy = c.proxy.Resolve(
@@ -316,6 +376,164 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 		s = f(s)
 	}
 	return s
+}
+
+func loadEnvTLS[T *tls.Config]() resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		var rootCAs *x509.CertPool
+		var err error
+		for _, key := range envTLSCert {
+			if v := os.Getenv(key); v != "" {
+				rootCAs, err = loadCertPool(v)
+				break
+			}
+		}
+
+		var certs []tls.Certificate
+		for _, pair := range envTLSClient {
+			cert := os.Getenv(pair.Certificate)
+			key := os.Getenv(pair.Key)
+			if cert != "" && key != "" {
+				var e error
+				certs, e = loadCertificates(cert, key)
+				err = errors.Join(err, e)
+			}
+		}
+
+		if err != nil {
+			global.Error(err, "failed to load TLS")
+		} else if rootCAs != nil || certs != nil {
+			s.Set = true
+			s.Value = &tls.Config{RootCAs: rootCAs, Certificates: certs}
+		}
+		return s
+	}
+}
+
+var readFile = os.ReadFile
+
+func loadCertPool(path string) (*x509.CertPool, error) {
+	b, err := readFile(path)
+	if err != nil {
+		return nil, err
+	}
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(b); !ok {
+		return nil, errors.New("certificate not added")
+	}
+	return cp, nil
+}
+
+func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
+	cert, err := readFile(certPath)
+	if err != nil {
+		return nil, err
+	}
+	key, err := readFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+	crt, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		return nil, err
+	}
+	return []tls.Certificate{crt}, nil
+}
+
+// getenv returns a resolver that will apply an environment variable value
+// associated with the first set key to a setting value. The conv function is
+// used to convert between the value.
+//
+// If the input setting to the resolver is set, the environment variable will
+// not be applied.
+//
+// For any error returned from conv is sent to the OTel error handler and the
+// setting will not be updated.
+func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		for _, key := range keys {
+			if vStr := os.Getenv(key); vStr != "" {
+				v, err := conv(vStr)
+				if err != nil {
+					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+				} else {
+					s.Value = v
+					s.Set = true
+					break
+				}
+			}
+		}
+		return s
+	}
+}
+
+func convEndpoint(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	return u.Host, nil
+}
+
+func convPath(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	if u.Path == "" {
+		return "/", nil
+	}
+	return u.Path, nil
+}
+
+func convInsecure(s string) (bool, error) {
+	return s != "", nil
+}
+
+func convHeaders(s string) (map[string]string, error) {
+	out := make(map[string]string)
+	var err error
+	for _, header := range strings.Split(s, ",") {
+		rawKey, rawVal, found := strings.Cut(header, "=")
+		if !found {
+			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
+			continue
+		}
+
+		escKey, e := url.PathUnescape(rawKey)
+		if e != nil {
+			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
+			continue
+		}
+		key := strings.TrimSpace(escKey)
+
+		escVal, e := url.PathUnescape(rawVal)
+		if e != nil {
+			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
+			continue
+		}
+		val := strings.TrimSpace(escVal)
+
+		out[key] = val
+	}
+	return out, err
+}
+
+func convCompression(s string) (Compression, error) {
+	if s == "gzip" {
+		return GzipCompression, nil
+	}
+	return NoCompression, nil
 }
 
 // fallback returns a resolve that will set a setting value to val if it is not
