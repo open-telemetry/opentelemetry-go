@@ -51,6 +51,35 @@ func newConfig(options []Option) config {
 	for _, opt := range options {
 		c = opt.applyHTTPOption(c)
 	}
+
+	c.endpoint = c.endpoint.Resolve(
+		fallback[string](defaultEndpoint),
+	)
+	c.path = c.path.Resolve(
+		fallback[string](defaultPath),
+	)
+	c.insecure = c.insecure.Resolve(
+		fallback[bool](defaultInsecure),
+	)
+	c.tlsCfg = c.tlsCfg.Resolve(
+		fallback[*tls.Config](defaultTlsCfg),
+	)
+	c.headers = c.headers.Resolve(
+		fallback[map[string]string](defaultHeaders),
+	)
+	c.compression = c.compression.Resolve(
+		fallback[Compression](defaultCompression),
+	)
+	c.timeout = c.timeout.Resolve(
+		fallback[time.Duration](defaultTimeout),
+	)
+	c.proxy = c.proxy.Resolve(
+		fallback[HTTPTransportProxyFunc](defaultProxy),
+	)
+	c.retryCfg = c.retryCfg.Resolve(
+		fallback[RetryConfig](defaultRetryCfg),
+	)
+
 	return c
 }
 
@@ -287,4 +316,19 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 		s = f(s)
 	}
 	return s
+}
+
+// fallback returns a resolve that will set a setting value to val if it is not
+// already set.
+//
+// This is usually passed at the end of a resolver chain to ensure a default is
+// applied if the setting has not already been set.
+func fallback[T any](val T) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if !s.Set {
+			s.Value = val
+			s.Set = true
+		}
+		return s
+	}
 }
