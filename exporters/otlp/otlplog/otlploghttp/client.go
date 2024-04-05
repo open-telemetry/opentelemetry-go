@@ -9,40 +9,23 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
-type client interface {
-	UploadLogs(context.Context, *logpb.ResourceLogs) error
-	Shutdown(context.Context) error
+type client struct {
+	uploadLogs func(context.Context, *logpb.ResourceLogs) error
 }
 
-type shutdownClient struct{}
-
-// Compile-time check shutdownClient implements client.
-var _ client = shutdownClient{}
-
-func (c shutdownClient) UploadLogs(context.Context, *logpb.ResourceLogs) error {
+func (c *client) UploadLogs(ctx context.Context, rl *logpb.ResourceLogs) error {
+	if c.uploadLogs != nil {
+		return c.uploadLogs(ctx, rl)
+	}
 	return nil
 }
 
-func (c shutdownClient) Shutdown(context.Context) error {
-	return nil
-}
-
-type httpClient struct {
-	// TODO: implement.
+func newNoopClient() *client {
+	return &client{}
 }
 
 // newHTTPClient creates a new HTTP log client.
-func newHTTPClient(cfg config) (*httpClient, error) {
+func newHTTPClient(cfg config) (*client, error) {
 	// TODO: implement.
-	return &httpClient{}, nil
-}
-
-func (c *httpClient) UploadLogs(context.Context, *logpb.ResourceLogs) error {
-	// TODO: implement.
-	return nil
-}
-
-func (c *httpClient) Shutdown(context.Context) error {
-	// TODO: implement.
-	return nil
+	return &client{}, nil
 }
