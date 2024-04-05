@@ -1926,14 +1926,16 @@ func TestSpanAddLink(t *testing.T) {
 	tests := []struct {
 		name               string
 		attrLinkCountLimit int
-		link              Link
+		link               trace.Link
 		want               *snapshot
 	}{
 		{
 			name:               "AddLinkWithInvalidSpanContext",
-			spanContext:        trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{}), SpanID: [8]byte{}}),
 			attrLinkCountLimit: 128,
-			attrs:              []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			link: trace.Link{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{}), SpanID: [8]byte{}}),
+				Attributes:  []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			},
 			want: &snapshot{
 				name: "span0",
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -1948,9 +1950,11 @@ func TestSpanAddLink(t *testing.T) {
 		},
 		{
 			name:               "AddLink",
-			spanContext:        sc,
 			attrLinkCountLimit: 128,
-			attrs:              []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			link: trace.Link{
+				SpanContext: sc,
+				Attributes:  []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			},
 			want: &snapshot{
 				name: "span0",
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -1970,13 +1974,15 @@ func TestSpanAddLink(t *testing.T) {
 		},
 		{
 			name:               "AddLinkWithMoreAttributesThanLimit",
-			spanContext:        sc,
 			attrLinkCountLimit: 1,
-			attrs: []attribute.KeyValue{
-				{Key: "k1", Value: attribute.StringValue("v1")},
-				{Key: "k2", Value: attribute.StringValue("v2")},
-				{Key: "k3", Value: attribute.StringValue("v3")},
-				{Key: "k4", Value: attribute.StringValue("v4")},
+			link: trace.Link{
+				SpanContext: sc,
+				Attributes: []attribute.KeyValue{
+					{Key: "k1", Value: attribute.StringValue("v1")},
+					{Key: "k2", Value: attribute.StringValue("v2")},
+					{Key: "k3", Value: attribute.StringValue("v3")},
+					{Key: "k4", Value: attribute.StringValue("v4")},
+				},
 			},
 			want: &snapshot{
 				name: "span0",
@@ -2007,8 +2013,7 @@ func TestSpanAddLink(t *testing.T) {
 			tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
 			span := startSpan(tp, tc.name)
-			link := trace.Link{SpanContext: tc.spanContext, Attributes: tc.attrs}
-			span.AddLink(link)
+			span.AddLink(tc.link)
 
 			got, err := endSpan(te, span)
 			if err != nil {
