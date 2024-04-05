@@ -14,11 +14,11 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint string                 = "localhost:4318"
-	defaultPath     string                 = "/v1/logs"
-	defaultTimeout  time.Duration          = 10 * time.Second
+	defaultEndpoint                        = "localhost:4318"
+	defaultPath                            = "/v1/logs"
+	defaultTimeout                         = 10 * time.Second
 	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg RetryConfig            = RetryConfig{} // TODO: define.
+	defaultRetryCfg                        = RetryConfig{} // TODO: define.
 )
 
 // Option applies an option to the Exporter.
