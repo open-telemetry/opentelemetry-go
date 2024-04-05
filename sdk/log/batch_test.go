@@ -41,13 +41,13 @@ func TestNewBatchingConfig(t *testing.T) {
 		{
 			name: "Options",
 			options: []BatchingOption{
-				WithMaxQueueSize(1),
+				WithMaxQueueSize(10),
 				WithExportInterval(time.Microsecond),
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
 			want: batchingConfig{
-				maxQSize:        newSetting(1),
+				maxQSize:        newSetting(10),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
@@ -56,16 +56,16 @@ func TestNewBatchingConfig(t *testing.T) {
 		{
 			name: "Environment",
 			envars: map[string]string{
-				envarMaxQSize:        strconv.Itoa(1),
+				envarMaxQSize:        strconv.Itoa(10),
 				envarExpInterval:     strconv.Itoa(100),
 				envarExpTimeout:      strconv.Itoa(1000),
-				envarExpMaxBatchSize: strconv.Itoa(10),
+				envarExpMaxBatchSize: strconv.Itoa(1),
 			},
 			want: batchingConfig{
-				maxQSize:        newSetting(1),
+				maxQSize:        newSetting(10),
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
-				expMaxBatchSize: newSetting(10),
+				expMaxBatchSize: newSetting(1),
 			},
 		},
 		{
@@ -118,6 +118,19 @@ func TestNewBatchingConfig(t *testing.T) {
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
+			},
+		},
+		{
+			name: "BatchLessThanOrEqualToQSize",
+			options: []BatchingOption{
+				WithMaxQueueSize(1),
+				WithExportMaxBatchSize(10),
+			},
+			want: batchingConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(1),
 			},
 		},
 	}

@@ -339,6 +339,7 @@ func newBatchingConfig(options []BatchingOption) batchingConfig {
 		clearLessThanOne[int](),
 		getenv[int](envarExpMaxBatchSize),
 		clearLessThanOne[int](),
+		clampMax[int](c.maxQSize.Value),
 		fallback[int](dfltExpMaxBatchSize),
 	)
 
