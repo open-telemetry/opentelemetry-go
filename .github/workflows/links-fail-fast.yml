@@ -10,8 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore lychee cache
+        uses: actions/cache@v3
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+
       - name: Link Checker
         uses: lycheeverse/lychee-action@v1.9.3
         with:
           fail: true
-          args: --max-concurrency 5 .
+          args: --max-concurrency 5 --cache --max-cache-age 1d .
