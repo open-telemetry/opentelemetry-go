@@ -65,7 +65,7 @@ func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
 	srv, addr := startTestGRPCServer(t, bridge)
 	defer srv.Stop()
 
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		addr.String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(bridge)),

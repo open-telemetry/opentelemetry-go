@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
@@ -74,7 +75,11 @@ func TestNewEndToEnd(t *testing.T) {
 		{
 			name: "WithDialOptions",
 			additionalOpts: []otlptracegrpc.Option{
-				otlptracegrpc.WithDialOption(grpc.WithBlock()),
+				otlptracegrpc.WithDialOption(
+					grpc.WithConnectParams(grpc.ConnectParams{
+						Backoff:           backoff.DefaultConfig,
+						MinConnectTimeout: time.Second,
+					})),
 			},
 		},
 	}
@@ -144,7 +149,6 @@ func TestExporterShutdown(t *testing.T) {
 		return otlptracegrpc.NewClient(
 			otlptracegrpc.WithEndpoint(mc.endpoint),
 			otlptracegrpc.WithInsecure(),
-			otlptracegrpc.WithDialOption(grpc.WithBlock()),
 		)
 	}
 	otlptracetest.RunExporterShutdownTest(t, factory)
@@ -366,21 +370,6 @@ func TestNewWithMultipleAttributeTypes(t *testing.T) {
 		}
 		assert.Equal(t, expected[i], actual)
 	}
-}
-
-func TestStartErrorInvalidAddress(t *testing.T) {
-	client := otlptracegrpc.NewClient(
-		otlptracegrpc.WithInsecure(),
-		// Validate the connection in Start (which should return the error).
-		otlptracegrpc.WithDialOption(
-			grpc.WithBlock(),
-			grpc.FailOnNonTempDialError(true),
-		),
-		otlptracegrpc.WithEndpoint("invalid"),
-		otlptracegrpc.WithReconnectionPeriod(time.Hour),
-	)
-	err := client.Start(context.Background())
-	assert.EqualError(t, err, `connection error: desc = "transport: error while dialing: dial tcp: address invalid: missing port in address"`)
 }
 
 func TestEmptyData(t *testing.T) {
