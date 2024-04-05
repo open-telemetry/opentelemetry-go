@@ -14,15 +14,11 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint    string                 = "localhost:4318"
-	defaultPath        string                 = "/v1/logs"
-	defaultInsecure    bool                   = false
-	defaultTlsCfg      *tls.Config            = nil
-	defaultHeaders     map[string]string      = nil
-	defaultCompression Compression            = NoCompression
-	defaultTimeout     time.Duration          = 10 * time.Second
-	defaultProxy       HTTPTransportProxyFunc = nil
-	defaultRetryCfg    RetryConfig            = RetryConfig{} // TODO: define.
+	defaultEndpoint string                 = "localhost:4318"
+	defaultPath     string                 = "/v1/logs"
+	defaultTimeout  time.Duration          = 10 * time.Second
+	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg RetryConfig            = RetryConfig{} // TODO: define.
 )
 
 // Option applies an option to the Exporter.
@@ -57,18 +53,6 @@ func newConfig(options []Option) config {
 	)
 	c.path = c.path.Resolve(
 		fallback[string](defaultPath),
-	)
-	c.insecure = c.insecure.Resolve(
-		fallback[bool](defaultInsecure),
-	)
-	c.tlsCfg = c.tlsCfg.Resolve(
-		fallback[*tls.Config](defaultTlsCfg),
-	)
-	c.headers = c.headers.Resolve(
-		fallback[map[string]string](defaultHeaders),
-	)
-	c.compression = c.compression.Resolve(
-		fallback[Compression](defaultCompression),
 	)
 	c.timeout = c.timeout.Resolve(
 		fallback[time.Duration](defaultTimeout),
@@ -126,6 +110,8 @@ func WithEndpointURL(rawURL string) Option {
 		c.path = newSetting(u.Path)
 		if u.Scheme != "https" {
 			c.insecure = newSetting(true)
+		} else {
+			c.insecure = newSetting(false)
 		}
 		return c
 	})
