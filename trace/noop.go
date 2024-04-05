@@ -43,6 +43,12 @@ func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption
 		// span is likely already a noopSpan, but let's be sure
 		span = noopSpanInstance
 	}
+
+	if ctx == nil {
+		// Prevent trace.ContextWithSpan from panicking.
+		ctx = context.Background()
+	}
+
 	return ContextWithSpan(ctx, span), span
 }
 

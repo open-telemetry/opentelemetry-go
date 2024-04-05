@@ -54,6 +54,11 @@ type Tracer struct{ embedded.Tracer }
 func (t Tracer) Start(ctx context.Context, _ string, _ ...trace.SpanStartOption) (context.Context, trace.Span) {
 	span := trace.SpanFromContext(ctx)
 
+	if ctx == nil {
+		// Prevent trace.ContextWithSpan from panicking.
+		ctx = context.Background()
+	}
+
 	// If the parent context contains a non-zero span context, that span
 	// context needs to be returned as a non-recording span
 	// (https://github.com/open-telemetry/opentelemetry-specification/blob/3a1dde966a4ce87cce5adf464359fe369741bbea/specification/trace/api.md#behavior-of-the-api-in-the-absence-of-an-installed-sdk).
