@@ -196,3 +196,33 @@ func WithProxy(pf HTTPTransportProxyFunc) Option {
 	// TODO: implement.
 	return nil
 }
+
+// setting is a configuration setting value.
+type setting[T any] struct {
+	Value T
+	Set   bool
+}
+
+// newSetting returns a new [setting] with the value set.
+func newSetting[T any](value T) setting[T] {
+	return setting[T]{Value: value, Set: true}
+}
+
+// resolver returns an updated setting after applying an resolution operation.
+type resolver[T any] func(setting[T]) setting[T]
+
+// Resolve returns a resolved version of s.
+//
+// It will apply all the passed fn in the order provided, chaining together the
+// return setting to the next input. The setting s is used as the initial
+// argument to the first fn.
+//
+// Each fn needs to validate if it should apply given the Set state of the
+// setting. This will not perform any checks on the set state when chaining
+// function.
+func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
+	for _, f := range fn {
+		s = f(s)
+	}
+	return s
+}
