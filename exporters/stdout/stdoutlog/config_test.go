@@ -55,8 +55,7 @@ func TestNewConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg, err := newConfig(tc.options...)
-			assert.NoError(t, err)
+			cfg := newConfig(tc.options)
 			assert.Equal(t, tc.expected, cfg)
 		})
 	}
