@@ -231,15 +231,18 @@ func (v Value) Emit() string {
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
 	case INT64SLICE:
-		return fmt.Sprint(v.asInt64Slice())
+		j, _ := json.Marshal(v.asInt64Slice())
+		return string(j)
 	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
 	case FLOAT64SLICE:
-		return fmt.Sprint(v.asFloat64Slice())
+		j, _ := json.Marshal(v.asFloat64Slice())
+		return string(j)
 	case FLOAT64:
 		return fmt.Sprint(v.AsFloat64())
 	case STRINGSLICE:
-		return fmt.Sprint(v.asStringSlice())
+		j, _ := json.Marshal(v.asStringSlice())
+		return string(j)
 	case STRING:
 		return v.stringly
 	default:
