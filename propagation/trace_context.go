@@ -35,7 +35,7 @@ var (
 	versionPart                   = fmt.Sprintf("%.2X", supportedVersion)
 )
 
-// Inject set tracecontext from the Context into the carrier.
+// Inject sets the trace context from the Context into the carrier.
 func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 	sc := trace.SpanContextFromContext(ctx)
 	if !sc.IsValid() {
