@@ -1925,9 +1925,8 @@ func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
 func TestSpanAddLink(t *testing.T) {
 	tests := []struct {
 		name               string
-		spanContext        trace.SpanContext
 		attrLinkCountLimit int
-		attrs              []attribute.KeyValue
+		link              Link
 		want               *snapshot
 	}{
 		{
