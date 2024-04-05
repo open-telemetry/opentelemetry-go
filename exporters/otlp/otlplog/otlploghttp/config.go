@@ -8,6 +8,21 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
+)
+
+// Default values.
+var (
+	defaultEndpoint    string                 = "localhost:4318"
+	defaultPath        string                 = "/v1/logs"
+	defaultInsecure    bool                   = false
+	defaultTlsCfg      *tls.Config            = nil
+	defaultHeaders     map[string]string      = nil
+	defaultCompression Compression            = NoCompression
+	defaultTimeout     time.Duration          = 10 * time.Second
+	defaultProxy       HTTPTransportProxyFunc = nil
+	defaultRetryCfg    RetryConfig            = RetryConfig{} // TODO: define.
 )
 
 // Option applies an option to the Exporter.
@@ -15,8 +30,20 @@ type Option interface {
 	applyHTTPOption(config) config
 }
 
+type fnOpt func(config) config
+
+func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
+
 type config struct {
-	// TODO: implement.
+	endpoint    setting[string]
+	path        setting[string]
+	insecure    setting[bool]
+	tlsCfg      setting[*tls.Config]
+	headers     setting[map[string]string]
+	compression setting[Compression]
+	timeout     setting[time.Duration]
+	proxy       setting[HTTPTransportProxyFunc]
+	retryCfg    setting[RetryConfig]
 }
 
 func newConfig(options []Option) config {
@@ -39,8 +66,10 @@ func newConfig(options []Option) config {
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
 func WithEndpoint(endpoint string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.endpoint = newSetting(endpoint)
+		return c
+	})
 }
 
 // WithEndpointURL sets the target endpoint URL the Exporter will connect to.
@@ -57,14 +86,31 @@ func WithEndpoint(endpoint string) Option {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
-func WithEndpointURL(u string) Option {
-	// TODO: implement.
-	return nil
+func WithEndpointURL(rawURL string) Option {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		global.Error(err, "otlpmetric: parse endpoint url", "url", rawURL)
+		return fnOpt(func(c config) config { return c })
+	}
+	return fnOpt(func(c config) config {
+		c.endpoint = newSetting(u.Host)
+		c.path = newSetting(u.Path)
+		if u.Scheme != "https" {
+			c.insecure = newSetting(true)
+		}
+		return c
+	})
 }
 
-// Compression describes the compression used for payloads sent to the
-// collector.
+// Compression describes the compression used for exported payloads.
 type Compression int
+
+const (
+	// NoCompression represents that no compression should be used.
+	NoCompression Compression = iota
+	// GzipCompression represents that gzip compression should be used.
+	GzipCompression
+)
 
 // WithCompression sets the compression strategy the Exporter will use to
 // compress the HTTP body.
@@ -78,8 +124,10 @@ type Compression int
 // By default, if an environment variable is not set, and this option is not
 // passed, no compression strategy will be used.
 func WithCompression(compression Compression) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.compression = newSetting(compression)
+		return c
+	})
 }
 
 // WithURLPath sets the URL path the Exporter will send requests to.
@@ -92,8 +140,10 @@ func WithCompression(compression Compression) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.path = newSetting(urlPath)
+		return c
+	})
 }
 
 // WithTLSClientConfig sets the TLS configuration the Exporter will use for
@@ -108,8 +158,10 @@ func WithURLPath(urlPath string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, the system default configuration is used.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.tlsCfg = newSetting(tlsCfg.Clone())
+		return c
+	})
 }
 
 // WithInsecure disables client transport security for the Exporter's HTTP
@@ -124,8 +176,10 @@ func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, client security will be used.
 func WithInsecure() Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.insecure = newSetting(true)
+		return c
+	})
 }
 
 // WithHeaders will send the provided headers with each HTTP requests.
@@ -140,8 +194,10 @@ func WithInsecure() Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.headers = newSetting(headers)
+		return c
+	})
 }
 
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
@@ -159,8 +215,10 @@ func WithHeaders(headers map[string]string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.timeout = newSetting(duration)
+		return c
+	})
 }
 
 // RetryConfig defines configuration for retrying the export of log data that
@@ -180,8 +238,10 @@ type RetryConfig struct {
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.retryCfg = newSetting(rc)
+		return c
+	})
 }
 
 // HTTPTransportProxyFunc is a function that resolves which URL to use as proxy
@@ -193,8 +253,10 @@ type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 // proxy to use for an HTTP request. If this option is not used, the client
 // will use [http.ProxyFromEnvironment].
 func WithProxy(pf HTTPTransportProxyFunc) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.proxy = newSetting(pf)
+		return c
+	})
 }
 
 // setting is a configuration setting value.
