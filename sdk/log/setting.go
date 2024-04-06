@@ -42,6 +42,17 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 	return s
 }
 
+// clampMax returns a resolver that will ensure a setting value is no greater
+// than n. If it is, the value is set to n.
+func clampMax[T ~int | ~int64](n T) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if s.Value > n {
+			s.Value = n
+		}
+		return s
+	}
+}
+
 // clearLessThanOne returns a resolver that will clear a setting value and
 // change its set state to false if its value is less than 1.
 func clearLessThanOne[T ~int | ~int64]() resolver[T] {
