@@ -33,7 +33,7 @@ func TestExporter(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check the writer
-	assert.Equal(t, expectedJSON(now, false), buf.String())
+	assert.Equal(t, getJSON(now), buf.String())
 
 	// Flush the exporter
 	err = exporter.ForceFlush(context.Background())
@@ -48,7 +48,7 @@ func TestExporter(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check the writer
-	assert.Equal(t, expectedJSON(now, false), buf.String())
+	assert.Equal(t, getJSON(now), buf.String())
 }
 
 func TestExporterExport(t *testing.T) {
@@ -70,7 +70,7 @@ func TestExporterExport(t *testing.T) {
 			options:    []stdoutlog.Option{},
 			ctx:        context.Background(),
 			records:    records,
-			wantResult: expectedJSONs(now, false),
+			wantResult: getJSONs(now),
 		},
 		{
 			name:       "NoRecords",
@@ -84,21 +84,21 @@ func TestExporterExport(t *testing.T) {
 			options:    []stdoutlog.Option{stdoutlog.WithPrettyPrint()},
 			ctx:        context.Background(),
 			records:    records,
-			wantResult: expectedJSONs(now, true),
+			wantResult: getPrettyJSONs(now),
 		},
 		{
 			name:       "WithoutTimestamps",
 			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps()},
 			ctx:        context.Background(),
 			records:    records,
-			wantResult: expectedJSONs(time.Time{}, false),
+			wantResult: getJSONs(time.Time{}),
 		},
 		{
 			name:       "WithoutTimestamps and WithPrettyPrint",
 			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps(), stdoutlog.WithPrettyPrint()},
 			ctx:        context.Background(),
 			records:    records,
-			wantResult: expectedJSONs(time.Time{}, true),
+			wantResult: getPrettyJSONs(time.Time{}),
 		},
 		{
 			name: "WithCanceledContext",
@@ -128,16 +128,20 @@ func TestExporterExport(t *testing.T) {
 	}
 }
 
-func expectedJSONs(now time.Time, prettyPrint bool) string {
-	result := expectedJSON(now, prettyPrint)
-	return result + result
+func getJSON(now time.Time) string {
+	serializedNow, _ := json.Marshal(now)
+
+	return "{\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":{},\"Scope\":{\"Name\":\"\",\"Version\":\"\",\"SchemaURL\":\"\"},\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
 }
 
-// revive:disable-next-line:flag-parameter
-func expectedJSON(now time.Time, prettyPrint bool) string {
+func getJSONs(now time.Time) string {
+	return getJSON(now) + getJSON(now)
+}
+
+func getPrettyJSON(now time.Time) string {
 	serializedNow, _ := json.Marshal(now)
-	if prettyPrint {
-		return `{
+
+	return `{
 	"Timestamp": ` + string(serializedNow) + `,
 	"ObservedTimestamp": ` + string(serializedNow) + `,
 	"Severity": 9,
@@ -182,8 +186,10 @@ func expectedJSON(now time.Time, prettyPrint bool) string {
 	"AttributeCountLimit": 0
 }
 `
-	}
-	return "{\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":{},\"Scope\":{\"Name\":\"\",\"Version\":\"\",\"SchemaURL\":\"\"},\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
+}
+
+func getPrettyJSONs(now time.Time) string {
+	return getPrettyJSON(now) + getPrettyJSON(now)
 }
 
 func TestExporterShutdown(t *testing.T) {
