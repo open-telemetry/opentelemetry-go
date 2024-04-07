@@ -30,13 +30,11 @@ type recordJSON struct {
 	AttributeCountLimit       int
 }
 
-func newRecordJSON(r sdklog.Record) recordJSON {
+func newRecordJSON(r sdklog.Record, timestamps bool) recordJSON {
 	newRecord := recordJSON{
-		Timestamp:         r.Timestamp(),
-		ObservedTimestamp: r.ObservedTimestamp(),
-		Severity:          r.Severity(),
-		SeverityText:      r.SeverityText(),
-		Body:              r.Body(),
+		Severity:     r.Severity(),
+		SeverityText: r.SeverityText(),
+		Body:         r.Body(),
 
 		TraceID:    r.TraceID(),
 		SpanID:     r.SpanID(),
@@ -54,6 +52,11 @@ func newRecordJSON(r sdklog.Record) recordJSON {
 		newRecord.Attributes = append(newRecord.Attributes, kv)
 		return true
 	})
+
+	if timestamps {
+		newRecord.Timestamp = r.Timestamp()
+		newRecord.ObservedTimestamp = r.ObservedTimestamp()
+	}
 
 	return newRecord
 }

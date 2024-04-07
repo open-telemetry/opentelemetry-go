@@ -51,23 +51,14 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		e.encoder = json.NewEncoder(defaultWriter)
 	}
 
-	for i, record := range records {
+	for _, record := range records {
 		// Honor context cancellation.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		// Remove timestamps.
-		if !e.timestamps {
-			// Clone before make changes.
-			record = records[i].Clone()
-
-			record.SetTimestamp(zeroTime)
-			record.SetObservedTimestamp(zeroTime)
-		}
-
 		// Encode record, one by one.
-		recordJSON := newRecordJSON(record)
+		recordJSON := newRecordJSON(record, e.timestamps)
 		if err := e.encoder.Encode(recordJSON); err != nil {
 			return err
 		}
