@@ -64,7 +64,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		}
 
 		// Encode record, one by one.
-		if err := e.encoder.Encode(&record); err != nil {
+		recordJSON := newRecordJSON(record)
+		if err := e.encoder.Encode(recordJSON); err != nil {
 			return err
 		}
 	}
