@@ -6,7 +6,7 @@ package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 import (
 	"context"
 	"encoding/json"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/log"
@@ -21,8 +21,7 @@ type Exporter struct {
 	encoder    *json.Encoder
 	timestamps bool
 
-	stoppedMu sync.RWMutex
-	stopped   bool
+	stopped atomic.Bool
 }
 
 // New creates an Exporter with the passed options.
@@ -43,13 +42,9 @@ func New(options ...Option) (*Exporter, error) {
 // Export exports log records to writer.
 // The writer is os.Stdout by default.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	e.stoppedMu.RLock()
-	stopped := e.stopped
-	e.stoppedMu.RUnlock()
-	if stopped {
+	if e.stopped.Load() {
 		return nil
 	}
-
 
 	for i := range records {
 		// Honor context cancellation.
@@ -79,9 +74,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 
 // Shutdown stops the exporter.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-	e.stoppedMu.Lock()
-	e.stopped = true
-	e.stoppedMu.Unlock()
+	e.stopped.Store(true)
 
 	select {
 	case <-ctx.Done():
