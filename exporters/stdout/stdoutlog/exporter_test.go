@@ -32,6 +32,9 @@ func TestExporter(t *testing.T) {
 	err = exporter.Export(context.Background(), []sdklog.Record{record})
 	assert.NoError(t, err)
 
+	// Check the writer
+	assert.Equal(t, expectedJSON(now, false), buf.String())
+
 	// Flush the exporter
 	err = exporter.ForceFlush(context.Background())
 	assert.NoError(t, err)
