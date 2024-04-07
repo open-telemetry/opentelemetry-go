@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutlog_test // import "go.opentelemetry.io/otel/exporters/stdout/stdoutout"
+package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutout"
 
 import (
 	"bytes"
@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/trace"
@@ -20,35 +20,77 @@ import (
 
 func TestExporter(t *testing.T) {
 	var buf bytes.Buffer
-
-	exporter, err := stdoutlog.New(stdoutlog.WithWriter(&buf))
-	assert.NoError(t, err)
-	assert.NotNil(t, exporter)
-
 	now := time.Now()
-	record := getRecord(now)
 
-	// Export a record
-	err = exporter.Export(context.Background(), []sdklog.Record{record})
-	assert.NoError(t, err)
+	testCases := []struct {
+		name     string
+		exporter *Exporter
+		want     string
+	}{
+		{
+			name:     "zero value",
+			exporter: &Exporter{},
+			want:     getJSON(time.Time{}),
+		},
+		{
+			name: "new",
+			exporter: func() *Exporter {
+				defaultWriterSwap := defaultWriter
+				defer func() {
+					defaultWriter = defaultWriterSwap
+				}()
+				defaultWriter = &buf
 
-	// Check the writer
-	assert.Equal(t, getJSON(now), buf.String())
+				exporter, err := New()
+				require.NoError(t, err)
+				require.NotNil(t, exporter)
 
-	// Flush the exporter
-	err = exporter.ForceFlush(context.Background())
-	assert.NoError(t, err)
+				return exporter
+			}(),
+			want: getJSON(now),
+		},
+	}
 
-	// Shutdown the exporter
-	err = exporter.Shutdown(context.Background())
-	assert.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Write to buffer for testing
+			defaultWriterSwap := defaultWriter
+			defer func() {
+				defaultWriter = defaultWriterSwap
+			}()
+			defaultWriter = &buf
 
-	// Export a record after shutdown, this should not be written
-	err = exporter.Export(context.Background(), []sdklog.Record{record})
-	assert.NoError(t, err)
+			buf.Reset()
 
-	// Check the writer
-	assert.Equal(t, getJSON(now), buf.String())
+			var err error
+
+			exporter := tc.exporter
+
+			record := getRecord(now)
+
+			// Export a record
+			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			assert.NoError(t, err)
+
+			// Check the writer
+			assert.Equal(t, tc.want, buf.String())
+
+			// Flush the exporter
+			err = exporter.ForceFlush(context.Background())
+			assert.NoError(t, err)
+
+			// Shutdown the exporter
+			err = exporter.Shutdown(context.Background())
+			assert.NoError(t, err)
+
+			// Export a record after shutdown, this should not be written
+			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			assert.NoError(t, err)
+
+			// Check the writer
+			assert.Equal(t, tc.want, buf.String())
+		})
+	}
 }
 
 func TestExporterExport(t *testing.T) {
@@ -59,7 +101,7 @@ func TestExporterExport(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		options    []stdoutlog.Option
+		options    []Option
 		ctx        context.Context
 		records    []sdklog.Record
 		wantResult string
@@ -67,35 +109,35 @@ func TestExporterExport(t *testing.T) {
 	}{
 		{
 			name:       "default",
-			options:    []stdoutlog.Option{},
+			options:    []Option{},
 			ctx:        context.Background(),
 			records:    records,
 			wantResult: getJSONs(now),
 		},
 		{
 			name:       "NoRecords",
-			options:    []stdoutlog.Option{},
+			options:    []Option{},
 			ctx:        context.Background(),
 			records:    nil,
 			wantResult: "",
 		},
 		{
 			name:       "WithPrettyPrint",
-			options:    []stdoutlog.Option{stdoutlog.WithPrettyPrint()},
+			options:    []Option{WithPrettyPrint()},
 			ctx:        context.Background(),
 			records:    records,
 			wantResult: getPrettyJSONs(now),
 		},
 		{
 			name:       "WithoutTimestamps",
-			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps()},
+			options:    []Option{WithoutTimestamps()},
 			ctx:        context.Background(),
 			records:    records,
 			wantResult: getJSONs(time.Time{}),
 		},
 		{
 			name:       "WithoutTimestamps and WithPrettyPrint",
-			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps(), stdoutlog.WithPrettyPrint()},
+			options:    []Option{WithoutTimestamps(), WithPrettyPrint()},
 			ctx:        context.Background(),
 			records:    records,
 			wantResult: getPrettyJSONs(time.Time{}),
@@ -118,7 +160,7 @@ func TestExporterExport(t *testing.T) {
 			// Write to buffer for testing
 			var buf bytes.Buffer
 
-			exporter, err := stdoutlog.New(append(tc.options, stdoutlog.WithWriter(&buf))...)
+			exporter, err := New(append(tc.options, WithWriter(&buf))...)
 			assert.NoError(t, err)
 
 			err = exporter.Export(tc.ctx, tc.records)
@@ -193,14 +235,14 @@ func getPrettyJSONs(now time.Time) string {
 }
 
 func TestExporterShutdown(t *testing.T) {
-	exporter, err := stdoutlog.New()
+	exporter, err := New()
 	assert.NoError(t, err)
 
 	assert.NoError(t, exporter.Shutdown(context.Background()))
 }
 
 func TestExporterForceFlush(t *testing.T) {
-	exporter, err := stdoutlog.New()
+	exporter, err := New()
 	assert.NoError(t, err)
 
 	assert.NoError(t, exporter.ForceFlush(context.Background()))

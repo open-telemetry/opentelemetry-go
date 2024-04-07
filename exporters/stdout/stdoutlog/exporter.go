@@ -16,7 +16,7 @@ var zeroTime time.Time
 
 var _ log.Exporter = &Exporter{}
 
-// Exporter is an implementation of  that writes spans to stdout.
+// Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
 // The writer is os.Stdout by default.
 type Exporter struct {
 	encoder    *json.Encoder
@@ -44,6 +44,11 @@ func New(options ...Option) (*Exporter, error) {
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return nil
+	}
+
+	// Prevent panic if encoder is nil.
+	if e.encoder == nil {
+		e.encoder = json.NewEncoder(defaultWriter)
 	}
 
 	for i, record := range records {
