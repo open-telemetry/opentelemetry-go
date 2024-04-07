@@ -50,12 +50,9 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 
-	if len(records) == 0 {
-		return nil
-	}
 
 	for i := range records {
-		// Honor context cancellation
+		// Honor context cancellation.
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -63,16 +60,16 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		}
 
 		record := records[i]
-		// Remove timestamps
+		// Remove timestamps.
 		if !e.timestamps {
-			// Clone before make changes
+			// Clone before make changes.
 			record = records[i].Clone()
 
 			record.SetTimestamp(zeroTime)
 			record.SetObservedTimestamp(zeroTime)
 		}
 
-		// Encode record, one by one
+		// Encode record, one by one.
 		if err := e.encoder.Encode(&record); err != nil {
 			return err
 		}
