@@ -16,7 +16,7 @@ var zeroTime time.Time
 
 var _ log.Exporter = &Exporter{}
 
-// Exporter is an implementation of  that writes spans to stdout.
+// Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout]) by default).
 type Exporter struct {
 	encoder    *json.Encoder
 	timestamps bool
