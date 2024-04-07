@@ -57,59 +57,59 @@ func TestExporterExport(t *testing.T) {
 	record := getRecord(now)
 	records := []sdklog.Record{record, record}
 
-	// Get canceled context
-	canceledCtx, cancel := context.WithCancel(context.Background())
-	cancel()
-
 	testCases := []struct {
-		name           string
-		options        []stdoutlog.Option
-		ctx            context.Context
-		records        []sdklog.Record
-		expectedResult string
-		expectedError  error
+		name       string
+		options    []stdoutlog.Option
+		ctx        context.Context
+		records    []sdklog.Record
+		wantResult string
+		wantError  error
 	}{
 		{
-			name:           "default",
-			options:        []stdoutlog.Option{},
-			ctx:            context.Background(),
-			records:        records,
-			expectedResult: expectedJSONs(now, false),
+			name:       "default",
+			options:    []stdoutlog.Option{},
+			ctx:        context.Background(),
+			records:    records,
+			wantResult: expectedJSONs(now, false),
 		},
 		{
-			name:           "NoRecords",
-			options:        []stdoutlog.Option{},
-			ctx:            context.Background(),
-			records:        nil,
-			expectedResult: "",
+			name:       "NoRecords",
+			options:    []stdoutlog.Option{},
+			ctx:        context.Background(),
+			records:    nil,
+			wantResult: "",
 		},
 		{
-			name:           "WithPrettyPrint",
-			options:        []stdoutlog.Option{stdoutlog.WithPrettyPrint()},
-			ctx:            context.Background(),
-			records:        records,
-			expectedResult: expectedJSONs(now, true),
+			name:       "WithPrettyPrint",
+			options:    []stdoutlog.Option{stdoutlog.WithPrettyPrint()},
+			ctx:        context.Background(),
+			records:    records,
+			wantResult: expectedJSONs(now, true),
 		},
 		{
-			name:           "WithoutTimestamps",
-			options:        []stdoutlog.Option{stdoutlog.WithoutTimestamps()},
-			ctx:            context.Background(),
-			records:        records,
-			expectedResult: expectedJSONs(time.Time{}, false),
+			name:       "WithoutTimestamps",
+			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps()},
+			ctx:        context.Background(),
+			records:    records,
+			wantResult: expectedJSONs(time.Time{}, false),
 		},
 		{
-			name:           "WithoutTimestamps and WithPrettyPrint",
-			options:        []stdoutlog.Option{stdoutlog.WithoutTimestamps(), stdoutlog.WithPrettyPrint()},
-			ctx:            context.Background(),
-			records:        records,
-			expectedResult: expectedJSONs(time.Time{}, true),
+			name:       "WithoutTimestamps and WithPrettyPrint",
+			options:    []stdoutlog.Option{stdoutlog.WithoutTimestamps(), stdoutlog.WithPrettyPrint()},
+			ctx:        context.Background(),
+			records:    records,
+			wantResult: expectedJSONs(time.Time{}, true),
 		},
 		{
-			name:           "WithCanceledContext",
-			ctx:            canceledCtx,
-			records:        records,
-			expectedResult: "",
-			expectedError:  context.Canceled,
+			name: "WithCanceledContext",
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			}(),
+			records:    records,
+			wantResult: "",
+			wantError:  context.Canceled,
 		},
 	}
 
@@ -122,8 +122,8 @@ func TestExporterExport(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = exporter.Export(tc.ctx, tc.records)
-			assert.Equal(t, tc.expectedError, err)
-			assert.Equal(t, tc.expectedResult, buf.String())
+			assert.Equal(t, tc.wantError, err)
+			assert.Equal(t, tc.wantResult, buf.String())
 		})
 	}
 }
