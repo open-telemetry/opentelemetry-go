@@ -46,7 +46,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 
-	for i := range records {
+	for i, record := range records {
 		// Honor context cancellation.
 		select {
 		case <-ctx.Done():
@@ -54,7 +54,6 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		default:
 		}
 
-		record := records[i]
 		// Remove timestamps.
 		if !e.timestamps {
 			// Clone before make changes.
@@ -75,12 +74,9 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Shutdown stops the exporter.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.stopped.Store(true)
+	// Free the encoder resources.
+	e.encoder = nil
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	return nil
 }
 

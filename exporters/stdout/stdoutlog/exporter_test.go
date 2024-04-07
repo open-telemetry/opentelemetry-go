@@ -182,17 +182,11 @@ func expectedJSON(now time.Time, prettyPrint bool) string {
 	return "{\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":null,\"Scope\":null,\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
 }
 
-func TestExporterShutdownHonorsCancel(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
+func TestExporterShutdown(t *testing.T) {
 	exporter, err := stdoutlog.New()
 	assert.NoError(t, err)
 
-	innerCtx, innerCancel := context.WithCancel(ctx)
-	innerCancel()
-	err = exporter.Shutdown(innerCtx)
-	assert.ErrorIs(t, err, context.Canceled)
+	assert.NoError(t, exporter.Shutdown(context.Background()))
 }
 
 func TestExporterForceFlush(t *testing.T) {
