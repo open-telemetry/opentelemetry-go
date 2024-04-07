@@ -1,12 +1,16 @@
-package stdoutlog
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 
 import (
+	"time"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"time"
 )
 
 // recordJSON is a JSON-serializable representation of a Record.
