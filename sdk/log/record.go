@@ -4,6 +4,7 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"encoding/json"
 	"slices"
 	"time"
 
@@ -232,4 +233,40 @@ func (r *Record) Clone() Record {
 	res := *r
 	res.back = slices.Clone(r.back)
 	return res
+}
+
+// MarshalJSON marshals the Record to JSON.
+func (r *Record) MarshalJSON() ([]byte, error) {
+	return json.Marshal(recordJSON{
+		Timestamp:                 r.timestamp,
+		ObservedTimestamp:         r.observedTimestamp,
+		Severity:                  r.severity,
+		SeverityText:              r.severityText,
+		Body:                      r.body,
+		Attributes:                append(r.front[:r.nFront], r.back...),
+		TraceID:                   r.traceID,
+		SpanID:                    r.spanID,
+		TraceFlags:                r.traceFlags,
+		Resource:                  r.resource,
+		Scope:                     r.scope,
+		AttributeValueLengthLimit: r.attributeValueLengthLimit,
+		AttributeCountLimit:       r.attributeCountLimit,
+	})
+}
+
+// recordJSON is a JSON-serializable representation of a Record.
+type recordJSON struct {
+	Timestamp                 time.Time
+	ObservedTimestamp         time.Time
+	Severity                  log.Severity
+	SeverityText              string
+	Body                      log.Value
+	Attributes                []log.KeyValue
+	TraceID                   trace.TraceID
+	SpanID                    trace.SpanID
+	TraceFlags                trace.TraceFlags
+	Resource                  *resource.Resource
+	Scope                     *instrumentation.Scope
+	AttributeValueLengthLimit int
+	AttributeCountLimit       int
 }
