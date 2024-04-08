@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
-var zeroTime time.Time
 
 var _ log.Exporter = &Exporter{}
 
