@@ -76,7 +76,7 @@ type ScopeRecords struct {
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
 
-	// The log records this instrumentation recorded
+	// Records are the log records this instrumentation scope recorded.
 	Records []log.Record
 }
 
