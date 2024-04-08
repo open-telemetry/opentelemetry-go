@@ -14,7 +14,7 @@ import (
 )
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
-// with the Logger method of the recorder when it is embedded.
+// with the Logger method of the Recorder when it is embedded.
 type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
 type enabledFn func(context.Context, log.Record) bool
