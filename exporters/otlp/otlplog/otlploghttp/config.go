@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
 // Option applies an option to the Exporter.
@@ -165,9 +167,7 @@ func WithTimeout(duration time.Duration) Option {
 
 // RetryConfig defines configuration for retrying the export of log data that
 // failed.
-type RetryConfig struct {
-	// TODO: implement.
-}
+type RetryConfig retry.Config
 
 // WithRetry sets the retry policy for transient retryable errors that are
 // returned by the target endpoint.
