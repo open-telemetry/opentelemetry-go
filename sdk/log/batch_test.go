@@ -373,7 +373,7 @@ func TestBatchingProcessor(t *testing.T) {
 				close(errCh)
 			}()
 			// Wait for ctxErrCalled to close before closing ExportTrigger so
-			// we konw the errPartialFlush will be returned in ForceFlush.
+			// we know the errPartialFlush will be returned in ForceFlush.
 			<-ctxErrCalled
 			close(e.ExportTrigger)
 

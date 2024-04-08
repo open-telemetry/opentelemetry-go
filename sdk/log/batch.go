@@ -212,7 +212,7 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 
 var errPartialFlush = errors.New("partial flush: export buffer full")
 
-// Used for testing
+// Used for testing.
 var ctxErr = func(ctx context.Context) error {
 	return ctx.Err()
 }
