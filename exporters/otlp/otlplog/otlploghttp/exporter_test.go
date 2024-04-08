@@ -26,3 +26,11 @@ func TestExporterShutdown(t *testing.T) {
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
 }
+
+func TestExporterForceFlush(t *testing.T) {
+	ctx := context.Background()
+	e, err := New(ctx)
+	require.NoError(t, err, "New")
+
+	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
+}

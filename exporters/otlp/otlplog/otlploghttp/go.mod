@@ -3,6 +3,7 @@ module go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
 go 1.21
 
 require (
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel/sdk/log v0.0.0-20240403115316-6c6e1e7416e9
 	go.opentelemetry.io/proto/otlp v1.1.0
