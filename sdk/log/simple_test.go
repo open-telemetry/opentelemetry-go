@@ -5,6 +5,7 @@ package log_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,6 +67,30 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	s := log.NewSimpleProcessor(e)
 	_ = s.ForceFlush(context.Background())
 	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
+}
+
+func TestSimpleProcessorConcurrentSafe(t *testing.T) {
+	const goRoutineN = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goRoutineN)
+
+	var r log.Record
+	r.SetSeverityText("test")
+	ctx := context.Background()
+	s := log.NewSimpleProcessor(nil)
+	for i := 0; i < goRoutineN; i++ {
+		go func() {
+			defer wg.Done()
+
+			_ = s.OnEmit(ctx, r)
+			_ = s.Enabled(ctx, r)
+			_ = s.Shutdown(ctx)
+			_ = s.ForceFlush(ctx)
+		}()
+	}
+
+	wg.Wait()
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
