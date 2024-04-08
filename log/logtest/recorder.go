@@ -55,7 +55,7 @@ func WithEnabledFunc(fn enabledFn) Option {
 	})
 }
 
-// NewRecorder returns a new Recorder.
+// NewRecorder returns a new [Recorder].
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
 
