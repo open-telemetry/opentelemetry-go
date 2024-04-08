@@ -48,6 +48,5 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 // ForceFlush does nothing. The Exporter holds no state.
 func (e *Exporter) ForceFlush(ctx context.Context) error {
-	// TODO: implement.
 	return nil
 }
