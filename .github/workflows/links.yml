@@ -17,12 +17,10 @@ jobs:
 
     - name: Restore lychee cache
       uses: actions/cache@v4
-      if: always()
       with:
         path: .lycheecache
         key: cache-lychee-${{ github.sha }}
         restore-keys: cache-lychee-
-        save-always: true
 
     - name: Link Checker
       id: lychee
