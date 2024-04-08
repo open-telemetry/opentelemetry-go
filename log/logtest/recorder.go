@@ -67,7 +67,7 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
-// ScopeRecords represents the records for instrumentation scope.
+// ScopeRecords represents the records for a single instrumentation scope.
 type ScopeRecords struct {
 	// Name is the name of the instrumentation scope.
 	Name string
