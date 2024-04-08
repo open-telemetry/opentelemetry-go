@@ -405,7 +405,8 @@ func TestBatchingProcessor(t *testing.T) {
 
 		e := newTestExporter(nil)
 		b := NewBatchingProcessor(e)
-		stop := make(chan struct{})
+
+		ctx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
 		for i := 0; i < goRoutines-1; i++ {
 			wg.Add(1)
@@ -413,7 +414,7 @@ func TestBatchingProcessor(t *testing.T) {
 				defer wg.Done()
 				for {
 					select {
-					case <-stop:
+					case <-ctx.Done():
 						return
 					default:
 						assert.NoError(t, b.OnEmit(ctx, Record{}))
@@ -432,7 +433,7 @@ func TestBatchingProcessor(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			assert.NoError(t, b.Shutdown(ctx))
-			close(stop)
+			cancel()
 		}()
 
 		wg.Wait()
