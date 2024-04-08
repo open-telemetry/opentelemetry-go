@@ -30,7 +30,7 @@ type recordJSON struct {
 	AttributeCountLimit       int
 }
 
-func newRecordJSON(r sdklog.Record, timestamps bool) recordJSON {
+func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	newRecord := recordJSON{
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
@@ -53,7 +53,7 @@ func newRecordJSON(r sdklog.Record, timestamps bool) recordJSON {
 		return true
 	})
 
-	if timestamps {
+	if e.timestamps {
 		newRecord.Timestamp = r.Timestamp()
 		newRecord.ObservedTimestamp = r.ObservedTimestamp()
 	}

@@ -7,11 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"sync/atomic"
-	"time"
 
 	"go.opentelemetry.io/otel/sdk/log"
 )
-
 
 var _ log.Exporter = &Exporter{}
 
@@ -57,7 +55,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		}
 
 		// Encode record, one by one.
-		recordJSON := newRecordJSON(record, e.timestamps)
+		recordJSON := e.newRecordJSON(record)
 		if err := e.encoder.Encode(recordJSON); err != nil {
 			return err
 		}
