@@ -323,6 +323,65 @@ func TestBatchingProcessor(t *testing.T) {
 			}
 		})
 
+		t.Run("ErrorPartialFlush", func(t *testing.T) {
+			e := newTestExporter(nil)
+			e.ExportTrigger = make(chan struct{})
+
+			ctxErrCalled := make(chan struct{})
+			orig := ctxErr
+			ctxErr = func(ctx context.Context) error {
+				close(ctxErrCalled)
+				return orig(ctx)
+			}
+			t.Cleanup(func() { ctxErr = orig })
+
+			const batch = 1
+			b := NewBatchingProcessor(
+				e,
+				WithMaxQueueSize(10*batch),
+				WithExportMaxBatchSize(batch),
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
+
+			// Enqueue 10 x "batch size" amount of records.
+			for i := 0; i < 10*batch; i++ {
+				require.NoError(t, b.OnEmit(ctx, Record{}))
+			}
+			assert.Eventually(t, func() bool {
+				return e.ExportN() > 0
+			}, 2*time.Second, time.Microsecond)
+			// 1 export being performed, 1 export in buffer chan, >1 batch
+			// still in queue that an attempt to flush will be made on.
+			//
+			// Stop the poll routine to prevent contention with the queue lock.
+			// This is outside of "normal" operations, but we are testing if
+			// ForceFlush will return the correct error when an EnqueueExport
+			// fails and not if ForceFlush will ever get the queue lock in high
+			// throughput situations.
+			close(b.pollDone)
+			<-b.pollDone
+
+			// Cancel the flush ctx from the start so errPartialFlush is
+			// returned right away.
+			fCtx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			errCh := make(chan error, 1)
+			go func() {
+				errCh <- b.ForceFlush(fCtx)
+				close(errCh)
+			}()
+			// Wait for ctxErrCalled to close before closing ExportTrigger so
+			// we konw the errPartialFlush will be returned in ForceFlush.
+			<-ctxErrCalled
+			close(e.ExportTrigger)
+
+			err := <-errCh
+			assert.ErrorIs(t, err, errPartialFlush, "partial flush error")
+			assert.ErrorIs(t, err, context.Canceled, "ctx canceled error")
+		})
+
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
@@ -358,7 +417,8 @@ func TestBatchingProcessor(t *testing.T) {
 						return
 					default:
 						assert.NoError(t, b.OnEmit(ctx, Record{}))
-						assert.NoError(t, b.ForceFlush(ctx))
+						// Ignore partial flush errors.
+						_ = b.ForceFlush(ctx)
 					}
 				}
 			}()

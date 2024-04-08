@@ -210,12 +210,45 @@ func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
+var errPartialFlush = errors.New("partial flush: export buffer full")
+
+// Used for testing
+var ctxErr = func(ctx context.Context) error {
+	return ctx.Err()
+}
+
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 	if b.stopped.Load() {
 		return nil
 	}
-	err := b.exporter.Export(ctx, b.q.Flush())
+
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(errCh)
+
+		buf := make([]Record, b.q.cap)
+		notFlushed := func() bool {
+			var flushed bool
+			_ = b.q.TryDequeue(buf, func(r []Record) bool {
+				flushed = b.exporter.EnqueueExport(r)
+				return flushed
+			})
+			return !flushed
+		}
+		// For as long as ctx allows, try to make a single flush of the queue.
+		for notFlushed() {
+			// Use ctxErr instead of calling ctx.Err directly so we can test
+			// the partial error return.
+			err := ctxErr(ctx)
+			if err != nil {
+				errCh <- errors.Join(err, errPartialFlush)
+				return
+			}
+		}
+	}()
+
+	err := <-errCh
 	return errors.Join(err, b.exporter.ForceFlush(ctx))
 }
 
