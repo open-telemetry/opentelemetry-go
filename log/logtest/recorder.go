@@ -95,7 +95,7 @@ type Recorder struct {
 	enabledFn enabledFn
 }
 
-// Logger retrieves a copy of Recorder with the provided scope
+// Logger returns a copy of Recorder as a [log.Logger] with the provided scope
 // information.
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
