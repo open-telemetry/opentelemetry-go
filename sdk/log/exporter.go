@@ -224,7 +224,24 @@ func (e *bufferExporter) EnqueueExport(records []Record) bool {
 		// Nothing to enqueue, do not waste input space.
 		return true
 	}
-	return e.enqueue(context.Background(), records, nil) == nil
+
+	data := exportData{ctx: context.Background(), records: records}
+
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+
+	// Check stopped before enqueueing now that e.inputMu is held. This
+	// prevents sends on a closed chan when Shutdown is called concurrently.
+	if e.stopped.Load() {
+		return false
+	}
+
+	select {
+	case e.input <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 // Export synchronously exports records in the context of ctx. This will not
