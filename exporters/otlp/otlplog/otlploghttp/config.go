@@ -19,7 +19,7 @@ var (
 	defaultPath                            = "/v1/logs"
 	defaultTimeout                         = 10 * time.Second
 	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                        = RetryConfig{} // TODO: define.
+	defaultRetryCfg                        = RetryConfig(retry.DefaultConfig)
 )
 
 // Option applies an option to the Exporter.
