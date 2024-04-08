@@ -17,6 +17,7 @@ jobs:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
+          save-always: true
 
       - name: Link Checker
         uses: lycheeverse/lychee-action@v1.9.3
