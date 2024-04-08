@@ -279,7 +279,7 @@ type setting[T any] struct {
 	Set   bool
 }
 
-// newSetting returns a new [setting] with the value set.
+// newSetting returns a new setting with the value set.
 func newSetting[T any](value T) setting[T] {
 	return setting[T]{Value: value, Set: true}
 }
