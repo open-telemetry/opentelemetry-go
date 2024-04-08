@@ -191,12 +191,7 @@ Prefer using [Examples](https://pkg.go.dev/testing#hdr-Examples)
 instead of putting code snippets in Go doc comments.
 In some cases, you can even create [Testable Examples](https://go.dev/blog/examples).
 
-You can install and run a "local Go Doc site" in the following way:
-
-  ```sh
-  go install golang.org/x/pkgsite/cmd/pkgsite@latest
-  pkgsite
-  ```
+You can install and run a local pkg.go.dev (Go Doc) website with `make godoc`.
 
 [`go.opentelemetry.io/otel/metric`](https://pkg.go.dev/go.opentelemetry.io/otel/metric)
 is an example of a very well-documented package.

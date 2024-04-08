@@ -310,3 +310,8 @@ lint-markdown:
 .PHONY: verify-readmes
 verify-readmes:
 	./verify_readmes.sh
+
+.PHONY: godoc
+godoc:
+	go install golang.org/x/pkgsite/cmd/pkgsite@latest
+	pkgsite
