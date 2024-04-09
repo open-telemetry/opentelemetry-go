@@ -15,6 +15,10 @@ import (
 )
 
 // Exporter handles the delivery of log records to external receivers.
+//
+// Any of the Exporter's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Exporter to manage
+// this concurrency.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
