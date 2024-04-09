@@ -223,32 +223,25 @@ func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
 		return nil
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		defer close(errCh)
-
-		buf := make([]Record, b.q.cap)
-		notFlushed := func() bool {
-			var flushed bool
-			_ = b.q.TryDequeue(buf, func(r []Record) bool {
-				flushed = b.exporter.EnqueueExport(r)
-				return flushed
-			})
-			return !flushed
+	buf := make([]Record, b.q.cap)
+	notFlushed := func() bool {
+		var flushed bool
+		_ = b.q.TryDequeue(buf, func(r []Record) bool {
+			flushed = b.exporter.EnqueueExport(r)
+			return flushed
+		})
+		return !flushed
+	}
+	var err error
+	// For as long as ctx allows, try to make a single flush of the queue.
+	for notFlushed() {
+		// Use ctxErr instead of calling ctx.Err directly so we can test
+		// the partial error return.
+		if e := ctxErr(ctx); e != nil {
+			err = errors.Join(e, errPartialFlush)
+			break
 		}
-		// For as long as ctx allows, try to make a single flush of the queue.
-		for notFlushed() {
-			// Use ctxErr instead of calling ctx.Err directly so we can test
-			// the partial error return.
-			err := ctxErr(ctx)
-			if err != nil {
-				errCh <- errors.Join(err, errPartialFlush)
-				return
-			}
-		}
-	}()
-
-	err := <-errCh
+	}
 	return errors.Join(err, b.exporter.ForceFlush(ctx))
 }
 
