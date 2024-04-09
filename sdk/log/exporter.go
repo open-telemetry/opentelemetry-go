@@ -219,8 +219,8 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 }
 
 // EnqueueExport enqueues an export of records in the context of ctx to be
-// performed asynchronously. This will return true if the exported is
-// successfully enqueued, false otherwise.
+// performed asynchronously. This will return true if the records are
+// successfully enqueued (or the bufferExporter is shut down), false otherwise.
 //
 // The passed records are held after this call returns.
 func (e *bufferExporter) EnqueueExport(records []Record) bool {
@@ -237,7 +237,7 @@ func (e *bufferExporter) EnqueueExport(records []Record) bool {
 	// Check stopped before enqueueing now that e.inputMu is held. This
 	// prevents sends on a closed chan when Shutdown is called concurrently.
 	if e.stopped.Load() {
-		return false
+		return true
 	}
 
 	select {
