@@ -22,7 +22,7 @@ type SimpleProcessor struct {
 // showing examples of other features, but it can be slow and have a high
 // computation resource usage overhead. [NewBatchingProcessor] is recommended
 // for production use instead.
-func NewSimpleProcessor(exporter Exporter) *SimpleProcessor {
+func NewSimpleProcessor(exporter Exporter, opts ...SimpleProcessorOption) *SimpleProcessor {
 	if exporter == nil {
 		// Do not panic on nil exporter.
 		exporter = defaultNoopExporter
@@ -48,4 +48,9 @@ func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 // ForceFlush flushes the exporter.
 func (s *SimpleProcessor) ForceFlush(ctx context.Context) error {
 	return s.exporter.ForceFlush(ctx)
+}
+
+// SimpleProcessorOption applies a configuration to a [SimpleProcessor].
+type SimpleProcessorOption interface {
+	apply()
 }
