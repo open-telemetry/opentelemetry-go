@@ -14,7 +14,6 @@ import (
 var _ log.Exporter = &Exporter{}
 
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
-// The writer is os.Stdout by default.
 type Exporter struct {
 	encoder    *json.Encoder
 	timestamps bool
@@ -22,7 +21,7 @@ type Exporter struct {
 	stopped atomic.Bool
 }
 
-// New creates an Exporter with the passed options.
+// New creates an [Exporter] with the passed options.
 func New(options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 
