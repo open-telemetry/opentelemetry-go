@@ -47,7 +47,6 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}
-
 	otlp, err := transformResourceLogs(records)
 	if otlp != nil {
 		// Best effort upload of transformable logs.
