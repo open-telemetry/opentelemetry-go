@@ -5,7 +5,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
-	"sync"
 )
 
 // Compile-time check SimpleProcessor implements Processor.
@@ -13,8 +12,7 @@ var _ Processor = (*SimpleProcessor)(nil)
 
 // SimpleProcessor is an processor that synchronously exports log records.
 type SimpleProcessor struct {
-	exporterMu sync.Mutex
-	exporter   Exporter
+	exporter Exporter
 }
 
 // NewSimpleProcessor is a simple Processor adapter.
@@ -34,8 +32,6 @@ func NewSimpleProcessor(exporter Exporter) *SimpleProcessor {
 
 // OnEmit batches provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r Record) error {
-	s.exporterMu.Lock()
-	defer s.exporterMu.Unlock()
 	return s.exporter.Export(ctx, []Record{r})
 }
 
@@ -46,14 +42,10 @@ func (s *SimpleProcessor) Enabled(context.Context, Record) bool {
 
 // Shutdown shuts down the expoter.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
-	s.exporterMu.Lock()
-	defer s.exporterMu.Unlock()
 	return s.exporter.Shutdown(ctx)
 }
 
 // ForceFlush flushes the exporter.
 func (s *SimpleProcessor) ForceFlush(ctx context.Context) error {
-	s.exporterMu.Lock()
-	defer s.exporterMu.Unlock()
 	return s.exporter.ForceFlush(ctx)
 }
