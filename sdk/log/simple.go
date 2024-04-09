@@ -22,7 +22,7 @@ type SimpleProcessor struct {
 // showing examples of other features, but it can be slow and have a high
 // computation resource usage overhead. [NewBatchingProcessor] is recommended
 // for production use instead.
-func NewSimpleProcessor(exporter Exporter, opts ...SimpleProcessorOption) *SimpleProcessor {
+func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
 	if exporter == nil {
 		// Do not panic on nil exporter.
 		exporter = defaultNoopExporter
