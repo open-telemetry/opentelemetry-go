@@ -29,6 +29,7 @@ const (
 var _ Processor = (*BatchingProcessor)(nil)
 
 // BatchingProcessor is a processor that exports batches of log records.
+// A BatchingProcessor must be created with [NewBatchingProcessor].
 type BatchingProcessor struct {
 	// The BatchingProcessor is designed to provide the highest throughput of
 	// log records possible while being compatible with OpenTelemetry. The
