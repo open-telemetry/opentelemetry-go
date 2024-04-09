@@ -21,12 +21,12 @@ func TestRecorderLogger(t *testing.T) {
 		loggerName    string
 		loggerOptions []log.LoggerOption
 
-		expectedLogger log.Logger
+		wantLogger log.Logger
 	}{
 		{
 			name: "provides a default logger",
 
-			expectedLogger: &Recorder{
+			wantLogger: &Recorder{
 				currentScopeRecord: &ScopeRecords{},
 			},
 		},
@@ -39,7 +39,7 @@ func TestRecorderLogger(t *testing.T) {
 				log.WithSchemaURL("https://example.com"),
 			},
 
-			expectedLogger: &Recorder{
+			wantLogger: &Recorder{
 				currentScopeRecord: &ScopeRecords{
 					Name:      "test",
 					Version:   "logtest v42",
@@ -53,7 +53,7 @@ func TestRecorderLogger(t *testing.T) {
 			// unset enabledFn to allow comparison
 			l.(*Recorder).enabledFn = nil
 
-			assert.Equal(t, tt.expectedLogger, l)
+			assert.Equal(t, tt.wantLogger, l)
 		})
 	}
 }
