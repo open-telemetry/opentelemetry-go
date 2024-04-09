@@ -142,8 +142,6 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 		for {
 			select {
 			case <-ticker.C:
-				// TODO: handle premature ticks. If the oldest record is
-				// younger than interval, do not export batch.
 			case <-b.pollTrigger:
 				ticker.Reset(interval)
 			case <-b.pollKill:
