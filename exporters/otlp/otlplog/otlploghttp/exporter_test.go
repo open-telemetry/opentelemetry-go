@@ -59,9 +59,9 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				case <-ctx.Done():
 					return
 				default:
-					atomic.AddUint64(runs, 1)
 					_ = e.Export(ctx, r)
 					_ = e.ForceFlush(ctx)
+					atomic.AddUint64(runs, 1)
 				}
 			}
 		}()
