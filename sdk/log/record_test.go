@@ -4,6 +4,7 @@
 package log
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -203,5 +204,105 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		r.SetAttributes(attrs...)
 		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: SetAttributes", i)
+	}
+}
+
+func TestRecordCompactAttr(t *testing.T) {
+	testcases := []struct {
+		name  string
+		attrs []log.KeyValue
+		want  []log.KeyValue
+	}{
+		{
+			name:  "EmptyKey",
+			attrs: make([]log.KeyValue, 10),
+			want:  make([]log.KeyValue, 1),
+		},
+		{
+			name: "NonEmptyKey",
+			attrs: []log.KeyValue{
+				log.Bool("key", true),
+				log.Int64("key", 1),
+				log.Bool("key", false),
+				log.Float64("key", 2.),
+				log.String("key", "3"),
+				log.Slice("key", log.Int64Value(4)),
+				log.Map("key", log.Int("key", 5)),
+				log.Bytes("key", []byte("six")),
+				log.Bool("key", false),
+			},
+			want: []log.KeyValue{
+				log.Bool("key", false),
+			},
+		},
+		{
+			name: "Multiple",
+			attrs: []log.KeyValue{
+				log.Bool("a", true),
+				log.Int64("b", 1),
+				log.Bool("a", false),
+				log.Float64("c", 2.),
+				log.String("b", "3"),
+				log.Slice("d", log.Int64Value(4)),
+				log.Map("a", log.Int("key", 5)),
+				log.Bytes("d", []byte("six")),
+				log.Bool("e", true),
+				log.Int("f", 1),
+				log.Int("f", 2),
+				log.Int("f", 3),
+				log.Float64("b", 0.0),
+				log.Float64("b", 0.0),
+				log.String("g", "G"),
+				log.String("h", "H"),
+				log.String("g", "GG"),
+				log.Bool("a", false),
+			},
+			want: []log.KeyValue{
+				// Order is important here.
+				log.Bool("a", false),
+				log.Float64("b", 0.0),
+				log.Float64("c", 2.),
+				log.Bytes("d", []byte("six")),
+				log.Bool("e", true),
+				log.Int("f", 3),
+				log.String("g", "GG"),
+				log.String("h", "H"),
+			},
+		},
+		{
+			name: "NoDuplicate",
+			attrs: func() []log.KeyValue {
+				out := make([]log.KeyValue, attributesInlineCount*2)
+				for i := range out {
+					out[i] = log.Bool(strconv.Itoa(i), true)
+				}
+				return out
+			}(),
+			want: func() []log.KeyValue {
+				out := make([]log.KeyValue, attributesInlineCount*2)
+				for i := range out {
+					out[i] = log.Bool(strconv.Itoa(i), true)
+				}
+				return out
+			}(),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := new(Record)
+			r.setAttributes(tc.attrs)
+			r.compactAttr()
+
+			var i int
+			r.WalkAttributes(func(kv log.KeyValue) bool {
+				if assert.Lessf(t, i, len(tc.want), "additional: %v", kv) {
+					want := tc.want[i]
+					assert.Truef(t, kv.Equal(want), "%d: want %v, got %v", i, want, kv)
+				}
+				i++
+				return true
+			})
+		})
 	}
 }

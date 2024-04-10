@@ -188,6 +188,7 @@ func (r *Record) compactAttr() {
 	}
 	r.nFront -= dropped
 
+	// Compact back storage into front.
 	for cursor < attributesInlineCount && len(r.back) > 0 {
 		key := r.back[0].Key
 		idx, found := index[key]
@@ -204,19 +205,20 @@ func (r *Record) compactAttr() {
 		r.back = r.back[1:]
 	}
 
-	for i, a := range r.back {
-		key := a.Key
+	for i := 0; i < len(r.back); i++ {
+		key := r.back[i].Key
 		idx, found := index[key]
 		if found {
 			dropped++
 			if idx < 0 {
-				r.front[-(idx + 1)] = a
+				r.front[-(idx + 1)] = r.back[i]
 			} else {
-				r.back[idx] = a // stored in back: positive index.
+				r.back[idx] = r.back[i]
 			}
 			r.back = append(r.back[:i], r.back[i+1:]...)
+			i--
 		} else {
-			index[key] = i
+			index[key] = i // stored in back: positive index.
 		}
 	}
 
