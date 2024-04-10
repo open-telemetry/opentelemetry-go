@@ -161,7 +161,7 @@ var (
 	}
 )
 
-func TestTransformations(t *testing.T) {
+func TestResourceLogs(t *testing.T) {
 	want := []*lpb.ResourceLogs{pbResourceLogs}
 	assert.Equal(t, want, ResourceLogs(records))
 }
