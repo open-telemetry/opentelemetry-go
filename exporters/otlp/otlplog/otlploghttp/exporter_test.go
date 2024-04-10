@@ -6,6 +6,9 @@ package otlploghttp
 import (
 	"context"
 	"errors"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -89,4 +92,42 @@ func TestExporterForceFlush(t *testing.T) {
 	require.NoError(t, err, "New")
 
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
+}
+
+func TestExporterConcurrentSafe(t *testing.T) {
+	ctx := context.Background()
+	e, err := New(ctx)
+	require.NoError(t, err, "newExporter")
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	runs := new(uint64)
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			r := make([]log.Record, 1)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					_ = e.Export(ctx, r)
+					_ = e.ForceFlush(ctx)
+					atomic.AddUint64(runs, 1)
+				}
+			}
+		}()
+	}
+
+	for atomic.LoadUint64(runs) == 0 {
+		runtime.Gosched()
+	}
+
+	_ = e.Shutdown(ctx)
+	cancel()
+	wg.Wait()
 }
