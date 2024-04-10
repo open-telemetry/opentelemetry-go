@@ -165,3 +165,11 @@ func TestResourceLogs(t *testing.T) {
 	want := []*lpb.ResourceLogs{pbResourceLogs}
 	assert.Equal(t, want, ResourceLogs(records))
 }
+
+func TestSeverityNumber(t *testing.T) {
+	for i := 0; i <= int(api.SeverityFatal4); i++ {
+		want := lpb.SeverityNumber(i)
+		want += lpb.SeverityNumber_SEVERITY_NUMBER_UNSPECIFIED
+		assert.Equal(t, want, SeverityNumber(api.Severity(i)))
+	}
+}
