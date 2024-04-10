@@ -190,3 +190,18 @@ func TestRecordClone(t *testing.T) {
 		return assert.Truef(t, kv.Equal(attr1), "%v != %v", kv, attr1)
 	})
 }
+
+func TestRecordDroppedAttributes(t *testing.T) {
+	for i := 1; i < attributesInlineCount*5; i++ {
+		r := new(Record)
+		r.attributeCountLimit = 1
+
+		attrs := make([]log.KeyValue, i)
+		attrs[0] = log.Bool("only key different then the rest", true)
+		r.AddAttributes(attrs...)
+		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: AddAttributes", i)
+
+		r.SetAttributes(attrs...)
+		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: SetAttributes", i)
+	}
+}
