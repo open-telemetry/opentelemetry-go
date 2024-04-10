@@ -48,6 +48,10 @@ type Record struct {
 	//   - Unused array elements are zero-ed. Used to detect mistakes.
 	back []log.KeyValue
 
+	// dropped is the count of attributes that have been dropped when limits
+	// were reached.
+	dropped int
+
 	traceID    trace.TraceID
 	spanID     trace.SpanID
 	traceFlags trace.TraceFlags
@@ -131,6 +135,26 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 
 // AddAttributes adds attributes to the log record.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
+	if r.attributeCountLimit > 0 {
+		if r.AttributesLen()+len(attrs) > r.attributeCountLimit {
+			r.compactAttr()
+			// TODO: apply truncation to string and []string values.
+			var dropped int
+			attrs, dropped = deduplicate(attrs)
+			r.dropped += dropped
+
+			if n := r.AttributesLen(); n+len(attrs) > r.attributeCountLimit {
+				last := max(0, (r.attributeCountLimit - n))
+				r.dropped += len(attrs) - last
+				attrs = attrs[:last]
+			}
+		}
+	}
+
+	r.addAttributes(attrs)
+}
+
+func (r *Record) addAttributes(attrs []log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
@@ -142,8 +166,97 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
+func (r *Record) compactAttr() {
+	var dropped int
+	// index holds the location of attributes in the record based on the
+	// attribute key. If the value stored is < 0 the -(value + 1) (e.g. -1 ->
+	// 0, -2 -> 1, -3 -> 2) represents the index in r.nFront. Otherwise, the
+	// index is exact index of r.back.
+	index := make(map[string]int)
+	var cursor int
+	for i := 0; i < r.nFront; i++ {
+		key := r.front[i].Key
+		idx, found := index[key]
+		if found {
+			dropped++
+			r.front[-(idx + 1)] = r.front[i]
+		} else {
+			r.front[cursor] = r.front[i]
+			index[key] = -cursor - 1 // stored in front: negative index.
+			cursor++
+		}
+	}
+	r.nFront -= dropped
+
+	for cursor < attributesInlineCount && len(r.back) > 0 {
+		key := r.back[0].Key
+		idx, found := index[key]
+		if found {
+			dropped++
+			r.front[-(idx + 1)] = r.back[0]
+		} else {
+			r.front[cursor] = r.back[0]
+			r.nFront++
+
+			index[key] = -cursor - 1 // stored in front: negative index.
+			cursor++
+		}
+		r.back = r.back[1:]
+	}
+
+	for i, a := range r.back {
+		key := a.Key
+		idx, found := index[key]
+		if found {
+			dropped++
+			if idx < 0 {
+				r.front[-(idx + 1)] = a
+			} else {
+				r.back[idx] = a // stored in back: positive index.
+			}
+			r.back = append(r.back[:i], r.back[i+1:]...)
+		} else {
+			index[key] = i
+		}
+	}
+
+	r.dropped += dropped
+}
+
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
+	// If adding these attributes could exceed limit, de-duplicate to minimize
+	// overflow.
+	if r.attributeCountLimit > 0 && len(attrs) > r.attributeCountLimit {
+		// TODO: apply truncation to string and []string values.
+		attrs, r.dropped = deduplicate(attrs)
+		if len(attrs) > r.attributeCountLimit {
+			r.dropped += len(attrs) - r.attributeCountLimit
+			attrs = attrs[:r.attributeCountLimit]
+		}
+	}
+
+	r.setAttributes(attrs)
+}
+
+func deduplicate(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
+	unique = kvs[:0]
+
+	index := make(map[string]int)
+	for _, a := range kvs {
+		idx, found := index[a.Key]
+		if found {
+			dropped++
+			unique[idx] = a
+		} else {
+			unique = append(unique, a)
+			index[a.Key] = len(unique) - 1
+		}
+	}
+	return unique, dropped
+}
+
+func (r *Record) setAttributes(attrs []log.KeyValue) {
 	r.nFront = 0
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
@@ -158,6 +271,12 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 // AttributesLen returns the number of attributes in the log record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
+}
+
+// DroppedAttributes returns the number of attributes dropped due to limits
+// being reached.
+func (r *Record) DroppedAttributes() int {
+	return r.dropped
 }
 
 // TraceID returns the trace ID or empty array.
@@ -204,26 +323,6 @@ func (r *Record) InstrumentationScope() instrumentation.Scope {
 		return instrumentation.Scope{}
 	}
 	return *r.scope
-}
-
-// AttributeValueLengthLimit is the maximum allowed attribute value length.
-//
-// This limit only applies to string and string slice attribute values.
-// Any string longer than this value should be truncated to this length.
-//
-// Negative value means no limit should be applied.
-func (r *Record) AttributeValueLengthLimit() int {
-	return r.attributeValueLengthLimit
-}
-
-// AttributeCountLimit is the maximum allowed log record attribute count. Any
-// attribute added to a log record once this limit is reached should be dropped.
-//
-// Zero means no attributes should be recorded.
-//
-// Negative value means no limit should be applied.
-func (r *Record) AttributeCountLimit() int {
-	return r.attributeCountLimit
 }
 
 // Clone returns a copy of the record with no shared state. The original record

@@ -125,20 +125,6 @@ func TestRecordInstrumentationScope(t *testing.T) {
 	assert.Equal(t, scope, r.InstrumentationScope())
 }
 
-func TestRecordAttributeValueLengthLimit(t *testing.T) {
-	limit := 12
-	r := new(Record)
-	r.attributeValueLengthLimit = limit
-	assert.Equal(t, limit, r.AttributeValueLengthLimit())
-}
-
-func TestRecordAttributeCountLimit(t *testing.T) {
-	limit := 21
-	r := new(Record)
-	r.attributeCountLimit = limit
-	assert.Equal(t, limit, r.AttributeCountLimit())
-}
-
 func TestRecordClone(t *testing.T) {
 	now0 := time.Now()
 	sev0 := log.SeverityInfo
