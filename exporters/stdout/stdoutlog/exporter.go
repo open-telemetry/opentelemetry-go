@@ -18,11 +18,9 @@ var _ log.Exporter = &Exporter{}
 type Exporter struct {
 	encoder    atomic.Pointer[json.Encoder]
 	timestamps bool
-
-	running atomic.Bool
 }
 
-// New creates an [Exporter] with the passed options.
+// New creates an [Exporter].
 func New(options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 
@@ -34,7 +32,6 @@ func New(options ...Option) (*Exporter, error) {
 	e := Exporter{
 		timestamps: cfg.Timestamps,
 	}
-	e.running.Store(true)
 	e.encoder.Store(enc)
 
 	return &e, nil
@@ -42,10 +39,6 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if !e.running.Load() {
-		return nil
-	}
-
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
@@ -69,10 +62,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Shutdown shuts down the Exporter.
 // Calls to Export will perform no operation after this is called.
 func (e *Exporter) Shutdown(context.Context) error {
-	e.running.Store(false)
-	// Free the encoder resources.
 	e.encoder.Store(nil)
-
 	return nil
 }
 
