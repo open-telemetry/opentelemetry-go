@@ -166,6 +166,34 @@ func TestStatus(t *testing.T) {
 	}
 }
 
+func TestFlags(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		readOnlySpan tracesdk.ReadOnlySpan
+		wantFlags    uint32
+	}{
+		{
+			name:         "with an empty span",
+			readOnlySpan: tracetest.SpanStub{}.Snapshot(),
+			wantFlags:    0x100,
+		},
+		{
+			name: "with a remote span context",
+			readOnlySpan: tracetest.SpanStub{
+				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					Remote: true,
+				}),
+			}.Snapshot(),
+			wantFlags: 0x300,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			span := span(tt.readOnlySpan)
+			assert.Equal(t, tt.wantFlags, span.Flags)
+		})
+	}
+}
+
 func TestNilSpan(t *testing.T) {
 	assert.Nil(t, span(nil))
 }
@@ -270,6 +298,7 @@ func TestSpanData(t *testing.T) {
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		TraceState:             "key1=val1,key2=val2",
+		Flags:                  0x100,
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),

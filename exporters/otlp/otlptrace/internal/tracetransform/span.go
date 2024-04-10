@@ -111,6 +111,12 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		s.ParentSpanId = psid[:]
 	}
 
+	flags := tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
+	if sd.SpanContext().IsRemote() {
+		flags = flags | tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
+	}
+	s.Flags = uint32(flags)
+
 	return s
 }
 
