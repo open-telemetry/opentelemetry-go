@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestExporter(t *testing.T) {
 		{
 			name:     "zero value",
 			exporter: &Exporter{},
-			want:     getJSON(time.Time{}),
+			want:     "",
 		},
 		{
 			name: "new",
@@ -273,4 +274,61 @@ func getRecord(now time.Time) sdklog.Record {
 	record.SetTraceFlags(trace.FlagsSampled)
 
 	return record
+}
+
+func TestExporterConcurrentSafe(t *testing.T) {
+	testCases := []struct {
+		name     string
+		exporter *Exporter
+	}{
+		{
+			name:     "zero value",
+			exporter: &Exporter{},
+		},
+		{
+			name: "new",
+			exporter: func() *Exporter {
+				exporter, err := New()
+				require.NoError(t, err)
+				require.NotNil(t, exporter)
+
+				return exporter
+			}(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			exporter := tc.exporter
+
+			runConcurrently(
+				func() {
+					err := exporter.Export(context.Background(), []sdklog.Record{{}})
+					assert.NoError(t, err)
+				},
+				func() {
+					err := exporter.ForceFlush(context.Background())
+					assert.NoError(t, err)
+				},
+				func() {
+					err := exporter.Shutdown(context.Background())
+					assert.NoError(t, err)
+				},
+			)
+		})
+	}
+}
+
+func runConcurrently(funcs ...func()) {
+	var wg sync.WaitGroup
+
+	for _, f := range funcs {
+		wg.Add(1)
+		go func(f func()) {
+			f()
+			wg.Done()
+		}(f)
+	}
+
+	wg.Wait()
 }

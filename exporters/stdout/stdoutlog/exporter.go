@@ -14,11 +14,12 @@ import (
 var _ log.Exporter = &Exporter{}
 
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
+// Exporter must be created with [New].
 type Exporter struct {
 	encoder    *json.Encoder
 	timestamps bool
 
-	stopped atomic.Bool
+	running atomic.Bool
 }
 
 // New creates an [Exporter] with the passed options.
@@ -30,21 +31,21 @@ func New(options ...Option) (*Exporter, error) {
 		enc.SetIndent("", "\t")
 	}
 
-	return &Exporter{
+	e := Exporter{
 		encoder:    enc,
 		timestamps: cfg.Timestamps,
-	}, nil
+	}
+	e.running.Store(true)
+
+	return &e, nil
 }
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if e.stopped.Load() {
+	if !e.running.Load() {
+		// Free the encoder resources.
+		e.encoder = nil
 		return nil
-	}
-
-	// Prevent panic if encoder is nil.
-	if e.encoder == nil {
-		e.encoder = json.NewEncoder(defaultWriter)
 	}
 
 	for _, record := range records {
@@ -63,15 +64,13 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 }
 
 // Shutdown stops the exporter.
-func (e *Exporter) Shutdown(ctx context.Context) error {
-	e.stopped.Store(true)
-	// Free the encoder resources.
-	e.encoder = nil
+func (e *Exporter) Shutdown(context.Context) error {
+	e.running.Store(false)
 
 	return nil
 }
 
 // ForceFlush performs no action.
-func (e *Exporter) ForceFlush(ctx context.Context) error {
+func (e *Exporter) ForceFlush(context.Context) error {
 	return nil
 }
