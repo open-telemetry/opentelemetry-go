@@ -66,7 +66,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	return nil
 }
 
-// Shutdown stops the exporter.
+// Shutdown shuts down the Exporter.
+// Calls to Export will perform no operation after this is called.
 func (e *Exporter) Shutdown(context.Context) error {
 	e.running.Store(false)
 	// Free the encoder resources.
