@@ -16,7 +16,7 @@ var _ log.Exporter = &Exporter{}
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
 // Exporter must be created with [New].
 type Exporter struct {
-	encoder    *json.Encoder
+	encoder    atomic.Pointer[json.Encoder]
 	timestamps bool
 
 	running atomic.Bool
@@ -32,10 +32,10 @@ func New(options ...Option) (*Exporter, error) {
 	}
 
 	e := Exporter{
-		encoder:    enc,
 		timestamps: cfg.Timestamps,
 	}
 	e.running.Store(true)
+	e.encoder.Store(enc)
 
 	return &e, nil
 }
@@ -43,6 +43,11 @@ func New(options ...Option) (*Exporter, error) {
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if !e.running.Load() {
+		return nil
+	}
+
+	var enc *json.Encoder
+	if enc = e.encoder.Load(); enc == nil {
 		return nil
 	}
 
@@ -54,7 +59,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 
 		// Encode record, one by one.
 		recordJSON := e.newRecordJSON(record)
-		if err := e.encoder.Encode(recordJSON); err != nil {
+		if err := enc.Encode(recordJSON); err != nil {
 			return err
 		}
 	}
@@ -64,6 +69,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Shutdown stops the exporter.
 func (e *Exporter) Shutdown(context.Context) error {
 	e.running.Store(false)
+	// Free the encoder resources.
+	e.encoder.Store(nil)
 
 	return nil
 }
