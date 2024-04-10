@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"slices"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/log"
@@ -18,6 +19,20 @@ import (
 // performed a quantitative survey of log library use and found this value to
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
+
+// indexPool is a pool of index maps used for de-duplication.
+var indexPool = sync.Pool{
+	New: func() any { return make(map[string]int) },
+}
+
+func getIndex() map[string]int {
+	return indexPool.Get().(map[string]int)
+}
+
+func putIndex(index map[string]int) {
+	clear(index)
+	indexPool.Put(index)
+}
 
 // Record is a log record emitted by the Logger.
 type Record struct {
@@ -167,12 +182,14 @@ func (r *Record) addAttributes(attrs []log.KeyValue) {
 }
 
 func (r *Record) compactAttr() {
-	var dropped int
 	// index holds the location of attributes in the record based on the
 	// attribute key. If the value stored is < 0 the -(value + 1) (e.g. -1 ->
 	// 0, -2 -> 1, -3 -> 2) represents the index in r.nFront. Otherwise, the
 	// index is exact index of r.back.
-	index := make(map[string]int)
+	index := getIndex()
+	defer putIndex(index)
+
+	var dropped int
 	var cursor int
 	for i := 0; i < r.nFront; i++ {
 		key := r.front[i].Key
@@ -244,7 +261,9 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 func deduplicate(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	unique = kvs[:0]
 
-	index := make(map[string]int)
+	index := getIndex()
+	defer putIndex(index)
+
 	for _, a := range kvs {
 		idx, found := index[a.Key]
 		if found {
