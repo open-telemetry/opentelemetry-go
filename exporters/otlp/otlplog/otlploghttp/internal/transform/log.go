@@ -18,9 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
-// ResourceLogs returns an OTLP ResourceLogs generated from records. If records
-// contains invalid ScopeLogs, an error will be returned along with an OTLP
-// ResourceLogs that contains partial OTLP ScopeLogs.
+// ResourceLogs returns an slice of OTLP ResourceLogs generated from records.
 func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 	if len(records) == 0 {
 		return nil
@@ -54,9 +52,7 @@ func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceL
 	return out
 }
 
-// ScopeLogs returns a slice of OTLP ScopeLogs generated from recoreds. If
-// records contains invalid log values, an error will be returned along with a
-// slice that contains partial OTLP ScopeLogs.
+// ScopeLogs returns a slice of OTLP ScopeLogs generated from recoreds.
 func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
 	scopeMap := scopeLogsMap(records)
 	out := make([]*lpb.ScopeLogs, 0, len(scopeMap))
@@ -114,12 +110,10 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 }
 
 // timeUnixNano returns t as a Unix time, the number of nanoseconds elapsed
-// since January 1, 1970 UTC as uint64.
-// The result is undefined if the Unix time
-// in nanoseconds cannot be represented by an int64
-// (a date before the year 1678 or after 2262).
-// timeUnixNano on the zero Time returns 0.
-// The result does not depend on the location associated with t.
+// since January 1, 1970 UTC as uint64. The result is undefined if the Unix
+// time in nanoseconds cannot be represented by an int64 (a date before the
+// year 1678 or after 2262). timeUnixNano on the zero Time returns 0. The
+// result does not depend on the location associated with t.
 func timeUnixNano(t time.Time) uint64 {
 	if t.IsZero() {
 		return 0
