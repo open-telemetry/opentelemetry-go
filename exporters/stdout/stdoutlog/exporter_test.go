@@ -301,34 +301,21 @@ func TestExporterConcurrentSafe(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			exporter := tc.exporter
 
-			runConcurrently(
-				func() {
+			const goroutines = 10
+			var wg sync.WaitGroup
+			wg.Add(goroutines)
+			for i := 0; i < goroutines; i++ {
+				go func() {
+					defer wg.Done()
 					err := exporter.Export(context.Background(), []sdklog.Record{{}})
 					assert.NoError(t, err)
-				},
-				func() {
-					err := exporter.ForceFlush(context.Background())
+					err = exporter.ForceFlush(context.Background())
 					assert.NoError(t, err)
-				},
-				func() {
-					err := exporter.Shutdown(context.Background())
+					err = exporter.Shutdown(context.Background())
 					assert.NoError(t, err)
-				},
-			)
+				}()
+			}
+			wg.Wait()
 		})
 	}
-}
-
-func runConcurrently(funcs ...func()) {
-	var wg sync.WaitGroup
-
-	for _, f := range funcs {
-		wg.Add(1)
-		go func(f func()) {
-			f()
-			wg.Done()
-		}(f)
-	}
-
-	wg.Wait()
 }
