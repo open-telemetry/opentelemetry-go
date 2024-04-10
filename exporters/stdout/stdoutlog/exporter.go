@@ -46,8 +46,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 
-	var enc *json.Encoder
-	if enc = e.encoder.Load(); enc == nil {
+	enc := e.encoder.Load()
+	if enc == nil {
 		return nil
 	}
 
