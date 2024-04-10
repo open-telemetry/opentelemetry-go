@@ -43,8 +43,6 @@ func New(options ...Option) (*Exporter, error) {
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if !e.running.Load() {
-		// Free the encoder resources.
-		e.encoder = nil
 		return nil
 	}
 
