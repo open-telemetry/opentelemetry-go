@@ -185,7 +185,7 @@ func (r *Record) compactAttr() {
 	// index holds the location of attributes in the record based on the
 	// attribute key. If the value stored is < 0 the -(value + 1) (e.g. -1 ->
 	// 0, -2 -> 1, -3 -> 2) represents the index in r.nFront. Otherwise, the
-	// index is exact index of r.back.
+	// index is the exact index of r.back.
 	index := getIndex()
 	defer putIndex(index)
 
