@@ -88,11 +88,6 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.stopped = true
 	e.stoppedMu.Unlock()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	return nil
 }
 
