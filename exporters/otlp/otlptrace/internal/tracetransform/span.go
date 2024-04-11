@@ -163,7 +163,7 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 func buildSpanFlags(sc trace.SpanContext) uint32 {
 	flags := tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
 	if sc.IsRemote() {
-		flags = flags | tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
+		flags |= tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
 	}
 
 	return uint32(flags)
