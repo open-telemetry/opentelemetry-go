@@ -167,30 +167,26 @@ func TestStatus(t *testing.T) {
 	}
 }
 
-func TestFlags(t *testing.T) {
+func TestBuildSpanFlags(t *testing.T) {
 	for _, tt := range []struct {
-		name         string
-		readOnlySpan tracesdk.ReadOnlySpan
-		wantFlags    uint32
+		name        string
+		spanContext trace.SpanContext
+		wantFlags   uint32
 	}{
 		{
-			name:         "with an empty span",
-			readOnlySpan: tracetest.SpanStub{}.Snapshot(),
-			wantFlags:    0x100,
+			name:      "with an empty span context",
+			wantFlags: 0x100,
 		},
 		{
-			name: "with a remote parent span context",
-			readOnlySpan: tracetest.SpanStub{
-				Parent: trace.NewSpanContext(trace.SpanContextConfig{
-					Remote: true,
-				}),
-			}.Snapshot(),
+			name: "with a remote span context",
+			spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				Remote: true,
+			}),
 			wantFlags: 0x300,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			span := span(tt.readOnlySpan)
-			assert.Equal(t, tt.wantFlags, span.Flags)
+			assert.Equal(t, tt.wantFlags, buildSpanFlags(tt.spanContext))
 		})
 	}
 }
