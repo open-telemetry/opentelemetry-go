@@ -47,10 +47,10 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 	otlp := transformResourceLogs(records)
-	if otlp != nil {
-		return e.client.Load().UploadLogs(ctx, otlp)
+	if otlp == nil {
+		return nil
 	}
-	return nil
+	return e.client.Load().UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
