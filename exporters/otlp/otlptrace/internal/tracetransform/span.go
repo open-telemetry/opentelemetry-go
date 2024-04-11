@@ -110,7 +110,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if psid := sd.Parent().SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
-	s.Flags = buildSpanFlags(sd.SpanContext())
+	s.Flags = buildSpanFlags(sd.Parent())
 
 	return s
 }
