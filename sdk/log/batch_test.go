@@ -26,7 +26,7 @@ func TestNewBatchingConfig(t *testing.T) {
 	testcases := []struct {
 		name    string
 		envars  map[string]string
-		options []BatchingOption
+		options []BatchProcessorOption
 		want    batchingConfig
 	}{
 		{
@@ -40,7 +40,7 @@ func TestNewBatchingConfig(t *testing.T) {
 		},
 		{
 			name: "Options",
-			options: []BatchingOption{
+			options: []BatchProcessorOption{
 				WithMaxQueueSize(10),
 				WithExportInterval(time.Microsecond),
 				WithExportTimeout(time.Hour),
@@ -70,7 +70,7 @@ func TestNewBatchingConfig(t *testing.T) {
 		},
 		{
 			name: "InvalidOptions",
-			options: []BatchingOption{
+			options: []BatchProcessorOption{
 				WithMaxQueueSize(-11),
 				WithExportInterval(-1 * time.Microsecond),
 				WithExportTimeout(-1 * time.Hour),
@@ -106,7 +106,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(10),
 			},
-			options: []BatchingOption{
+			options: []BatchProcessorOption{
 				// These override the environment variables.
 				WithMaxQueueSize(3),
 				WithExportInterval(time.Microsecond),
@@ -122,7 +122,7 @@ func TestNewBatchingConfig(t *testing.T) {
 		},
 		{
 			name: "BatchLessThanOrEqualToQSize",
-			options: []BatchingOption{
+			options: []BatchProcessorOption{
 				WithMaxQueueSize(1),
 				WithExportMaxBatchSize(10),
 			},

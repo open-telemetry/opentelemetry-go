@@ -99,9 +99,8 @@ type BatchingProcessor struct {
 // so that the log records are batched before exporting.
 //
 // All of the exporter's methods are called synchronously.
-func NewBatchingProcessor(exporter Exporter, opts ...BatchingOption) *BatchingProcessor {
+func NewBatchingProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchingProcessor {
 	cfg := newBatchingConfig(opts)
-
 	if exporter == nil {
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
@@ -336,7 +335,7 @@ type batchingConfig struct {
 	expMaxBatchSize setting[int]
 }
 
-func newBatchingConfig(options []BatchingOption) batchingConfig {
+func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
 	var c batchingConfig
 	for _, o := range options {
 		c = o.apply(c)
@@ -371,8 +370,8 @@ func newBatchingConfig(options []BatchingOption) batchingConfig {
 	return c
 }
 
-// BatchingOption applies a configuration to a [BatchingProcessor].
-type BatchingOption interface {
+// BatchProcessorOption applies a configuration to a [BatchingProcessor].
+type BatchProcessorOption interface {
 	apply(batchingConfig) batchingConfig
 }
 
@@ -391,7 +390,7 @@ func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
 // By default, if an environment variable is not set, and this option is not
 // passed, 2048 will be used.
 // The default value is also used when the provided value is less than one.
-func WithMaxQueueSize(size int) BatchingOption {
+func WithMaxQueueSize(size int) BatchProcessorOption {
 	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
 		cfg.maxQSize = newSetting(size)
 		return cfg
@@ -406,7 +405,7 @@ func WithMaxQueueSize(size int) BatchingOption {
 // By default, if an environment variable is not set, and this option is not
 // passed, 1s will be used.
 // The default value is also used when the provided value is less than one.
-func WithExportInterval(d time.Duration) BatchingOption {
+func WithExportInterval(d time.Duration) BatchProcessorOption {
 	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
 		cfg.expInterval = newSetting(d)
 		return cfg
@@ -421,7 +420,7 @@ func WithExportInterval(d time.Duration) BatchingOption {
 // By default, if an environment variable is not set, and this option is not
 // passed, 30s will be used.
 // The default value is also used when the provided value is less than one.
-func WithExportTimeout(d time.Duration) BatchingOption {
+func WithExportTimeout(d time.Duration) BatchProcessorOption {
 	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
 		cfg.expTimeout = newSetting(d)
 		return cfg
@@ -437,7 +436,7 @@ func WithExportTimeout(d time.Duration) BatchingOption {
 // By default, if an environment variable is not set, and this option is not
 // passed, 512 will be used.
 // The default value is also used when the provided value is less than one.
-func WithExportMaxBatchSize(size int) BatchingOption {
+func WithExportMaxBatchSize(size int) BatchProcessorOption {
 	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
 		cfg.expMaxBatchSize = newSetting(size)
 		return cfg

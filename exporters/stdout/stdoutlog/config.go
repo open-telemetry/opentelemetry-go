@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	defaultWriter      = os.Stdout
-	defaultPrettyPrint = false
-	defaultTimestamps  = true
+	defaultWriter      io.Writer = os.Stdout
+	defaultPrettyPrint           = false
+	defaultTimestamps            = true
 )
 
 // config contains options for the STDOUT exporter.
