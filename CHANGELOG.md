@@ -10,8 +10,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `Recorder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the log bridge implementations. (#5134)
 - The `DroppedAttributes` is added to the `"go.opentelemetry.io/otel/sdk/log".Record` type.
-  This method can be used to determine how many log attributes were dropped from the `Record` due to limits being exceeded. (#TBD)
+  This method can be used to determine how many log attributes were dropped from the `Record` due to limits being exceeded. (#5190)
 
 ### Changed
 
@@ -19,8 +20,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The `AttributeCountLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#TBD)
-- The `AttributeValueLengthLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#TBD)
+- The `AttributeCountLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#5190)
+- The `AttributeValueLengthLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#5190)
 
 ## [1.25.0/0.47.0/0.0.8/0.1.0-alpha] 2024-04-05
 
@@ -43,7 +44,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `String` method to `Value` and `KeyValue` in `go.opentelemetry.io/otel/log`. (#5117)
 - Add Exemplar support to `go.opentelemetry.io/otel/exporters/prometheus`. (#5111)
 - Add metric semantic conventions to `go.opentelemetry.io/otel/semconv/v1.24.0`. Future `semconv` packages will include metric semantic conventions as well. (#4528)
-- Add `Recorder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the log bridge implementations. (#5134)
 
 ### Changed
 
