@@ -150,19 +150,17 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 
 // AddAttributes adds attributes to the log record.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
-	if r.attributeCountLimit > 0 {
-		if r.AttributesLen()+len(attrs) > r.attributeCountLimit {
-			r.compactAttr()
-			// TODO: apply truncation to string and []string values.
-			var dropped int
-			attrs, dropped = deduplicate(attrs)
-			r.dropped += dropped
+	if r.attributeCountLimit > 0 && r.AttributesLen()+len(attrs) > r.attributeCountLimit {
+		r.compactAttr()
+		// TODO: apply truncation to string and []string values.
+		var dropped int
+		attrs, dropped = deduplicate(attrs)
+		r.dropped += dropped
 
-			if n := r.AttributesLen(); n+len(attrs) > r.attributeCountLimit {
-				last := max(0, (r.attributeCountLimit - n))
-				r.dropped += len(attrs) - last
-				attrs = attrs[:last]
-			}
+		if n := r.AttributesLen(); n+len(attrs) > r.attributeCountLimit {
+			last := max(0, (r.attributeCountLimit - n))
+			r.dropped += len(attrs) - last
+			attrs = attrs[:last]
 		}
 	}
 
