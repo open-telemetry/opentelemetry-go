@@ -233,3 +233,19 @@ func (r *Record) Clone() Record {
 	res.back = slices.Clone(r.back)
 	return res
 }
+
+// TestRecord is a log record for testing.
+// You can use it for unit testing [Processor] and [Exporter] implementations.
+type TestRecord struct {
+	Record
+}
+
+// SetResource sets resource for testing.
+func (r *TestRecord) SetResource(res *resource.Resource) {
+	r.resource = res
+}
+
+// SetInstrumentationScope sets the scope for testing.
+func (r *TestRecord) SetInstrumentationScope(s instrumentation.Scope) {
+	r.scope = &s
+}

@@ -204,3 +204,22 @@ func TestRecordClone(t *testing.T) {
 		return assert.Truef(t, kv.Equal(attr1), "%v != %v", kv, attr1)
 	})
 }
+
+func TestTestRecordResource(t *testing.T) {
+	r := new(TestRecord)
+	assert.NotPanics(t, func() { r.Resource() })
+
+	res := resource.NewSchemaless(attribute.Bool("key", true))
+	r.SetResource(res)
+	got := r.Resource()
+	assert.True(t, res.Equal(&got))
+}
+
+func TestTestRecordInstrumentationScope(t *testing.T) {
+	r := new(TestRecord)
+	assert.NotPanics(t, func() { r.InstrumentationScope() })
+
+	scope := instrumentation.Scope{Name: "testing"}
+	r.SetInstrumentationScope(scope)
+	assert.Equal(t, scope, r.InstrumentationScope())
+}
