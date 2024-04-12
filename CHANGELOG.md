@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Recorder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the log bridge implementations. (#5134)
+- Add `TestRecord` in `go.opentelemetry.io/otel/sdk/log` to facilitate testing the `Processor` and `Exporter` implementations. (#5200)
 
 ### Changed
 
