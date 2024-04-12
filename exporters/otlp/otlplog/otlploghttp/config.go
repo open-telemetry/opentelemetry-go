@@ -10,6 +10,16 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
+	"go.opentelemetry.io/otel/internal/global"
+)
+
+// Default values.
+var (
+	defaultEndpoint                        = "localhost:4318"
+	defaultPath                            = "/v1/logs"
+	defaultTimeout                         = 10 * time.Second
+	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                        = RetryConfig(retry.DefaultConfig)
 )
 
 // Option applies an option to the Exporter.
@@ -17,8 +27,20 @@ type Option interface {
 	applyHTTPOption(config) config
 }
 
+type fnOpt func(config) config
+
+func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
+
 type config struct {
-	// TODO: implement.
+	endpoint    setting[string]
+	path        setting[string]
+	insecure    setting[bool]
+	tlsCfg      setting[*tls.Config]
+	headers     setting[map[string]string]
+	compression setting[Compression]
+	timeout     setting[time.Duration]
+	proxy       setting[HTTPTransportProxyFunc]
+	retryCfg    setting[RetryConfig]
 }
 
 func newConfig(options []Option) config {
@@ -26,6 +48,23 @@ func newConfig(options []Option) config {
 	for _, opt := range options {
 		c = opt.applyHTTPOption(c)
 	}
+
+	c.endpoint = c.endpoint.Resolve(
+		fallback[string](defaultEndpoint),
+	)
+	c.path = c.path.Resolve(
+		fallback[string](defaultPath),
+	)
+	c.timeout = c.timeout.Resolve(
+		fallback[time.Duration](defaultTimeout),
+	)
+	c.proxy = c.proxy.Resolve(
+		fallback[HTTPTransportProxyFunc](defaultProxy),
+	)
+	c.retryCfg = c.retryCfg.Resolve(
+		fallback[RetryConfig](defaultRetryCfg),
+	)
+
 	return c
 }
 
@@ -41,8 +80,10 @@ func newConfig(options []Option) config {
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
 func WithEndpoint(endpoint string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.endpoint = newSetting(endpoint)
+		return c
+	})
 }
 
 // WithEndpointURL sets the target endpoint URL the Exporter will connect to.
@@ -59,14 +100,33 @@ func WithEndpoint(endpoint string) Option {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
-func WithEndpointURL(u string) Option {
-	// TODO: implement.
-	return nil
+func WithEndpointURL(rawURL string) Option {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		global.Error(err, "otlpmetric: parse endpoint url", "url", rawURL)
+		return fnOpt(func(c config) config { return c })
+	}
+	return fnOpt(func(c config) config {
+		c.endpoint = newSetting(u.Host)
+		c.path = newSetting(u.Path)
+		if u.Scheme != "https" {
+			c.insecure = newSetting(true)
+		} else {
+			c.insecure = newSetting(false)
+		}
+		return c
+	})
 }
 
-// Compression describes the compression used for payloads sent to the
-// collector.
+// Compression describes the compression used for exported payloads.
 type Compression int
+
+const (
+	// NoCompression represents that no compression should be used.
+	NoCompression Compression = iota
+	// GzipCompression represents that gzip compression should be used.
+	GzipCompression
+)
 
 // WithCompression sets the compression strategy the Exporter will use to
 // compress the HTTP body.
@@ -80,8 +140,10 @@ type Compression int
 // By default, if an environment variable is not set, and this option is not
 // passed, no compression strategy will be used.
 func WithCompression(compression Compression) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.compression = newSetting(compression)
+		return c
+	})
 }
 
 // WithURLPath sets the URL path the Exporter will send requests to.
@@ -94,8 +156,10 @@ func WithCompression(compression Compression) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.path = newSetting(urlPath)
+		return c
+	})
 }
 
 // WithTLSClientConfig sets the TLS configuration the Exporter will use for
@@ -110,8 +174,10 @@ func WithURLPath(urlPath string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, the system default configuration is used.
 func WithTLSClientConfig(tlsCfg *tls.Config) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.tlsCfg = newSetting(tlsCfg.Clone())
+		return c
+	})
 }
 
 // WithInsecure disables client transport security for the Exporter's HTTP
@@ -126,8 +192,10 @@ func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, client security will be used.
 func WithInsecure() Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.insecure = newSetting(true)
+		return c
+	})
 }
 
 // WithHeaders will send the provided headers with each HTTP requests.
@@ -142,8 +210,10 @@ func WithInsecure() Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.headers = newSetting(headers)
+		return c
+	})
 }
 
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
@@ -161,8 +231,10 @@ func WithHeaders(headers map[string]string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.timeout = newSetting(duration)
+		return c
+	})
 }
 
 // RetryConfig defines configuration for retrying the export of log data that
@@ -180,8 +252,10 @@ type RetryConfig retry.Config
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.retryCfg = newSetting(rc)
+		return c
+	})
 }
 
 // HTTPTransportProxyFunc is a function that resolves which URL to use as proxy
@@ -193,6 +267,53 @@ type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 // proxy to use for an HTTP request. If this option is not used, the client
 // will use [http.ProxyFromEnvironment].
 func WithProxy(pf HTTPTransportProxyFunc) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.proxy = newSetting(pf)
+		return c
+	})
+}
+
+// setting is a configuration setting value.
+type setting[T any] struct {
+	Value T
+	Set   bool
+}
+
+// newSetting returns a new setting with the value set.
+func newSetting[T any](value T) setting[T] {
+	return setting[T]{Value: value, Set: true}
+}
+
+// resolver returns an updated setting after applying an resolution operation.
+type resolver[T any] func(setting[T]) setting[T]
+
+// Resolve returns a resolved version of s.
+//
+// It will apply all the passed fn in the order provided, chaining together the
+// return setting to the next input. The setting s is used as the initial
+// argument to the first fn.
+//
+// Each fn needs to validate if it should apply given the Set state of the
+// setting. This will not perform any checks on the set state when chaining
+// function.
+func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
+	for _, f := range fn {
+		s = f(s)
+	}
+	return s
+}
+
+// fallback returns a resolve that will set a setting value to val if it is not
+// already set.
+//
+// This is usually passed at the end of a resolver chain to ensure a default is
+// applied if the setting has not already been set.
+func fallback[T any](val T) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if !s.Set {
+			s.Value = val
+			s.Set = true
+		}
+		return s
+	}
 }
