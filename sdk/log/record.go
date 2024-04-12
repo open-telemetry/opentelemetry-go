@@ -236,6 +236,7 @@ func (r *Record) Clone() Record {
 
 // TestRecord is a log record for testing.
 // You can use it for unit testing [Processor] and [Exporter] implementations.
+// Do not use TestRecord in production code.
 type TestRecord struct {
 	Record
 }
