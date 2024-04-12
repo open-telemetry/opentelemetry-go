@@ -155,6 +155,8 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 				return ok
 			})
 			if qLen >= b.batchSize {
+				// There is another full batch ready. Immediately trigger
+				// another export attempt.
 				select {
 				case b.pollTrigger <- struct{}{}:
 				default:
