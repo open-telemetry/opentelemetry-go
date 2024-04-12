@@ -179,6 +179,10 @@ func (r *Record) addAttributes(attrs []log.KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
+// compactAttr deduplicates and compacts r's attributes. Attributes are
+// deduplicated front-to-back with the last value saved. Any space in the front
+// storage freed during deduplication will populated by attributes from the
+// back storage in order.
 func (r *Record) compactAttr() {
 	// index holds the location of attributes in the record based on the
 	// attribute key. If the value stored is < 0 the -(value + 1) (e.g. -1 ->
@@ -256,6 +260,7 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	r.setAttributes(attrs)
 }
 
+// deduplicate deduplicates kvs front-to-back with the last value saved.
 func deduplicate(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	unique = kvs[:0]
 
