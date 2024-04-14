@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/internal/env"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -21,6 +24,11 @@ const (
 	DefaultScheduleDelay      = 5000
 	DefaultExportTimeout      = 30000
 	DefaultMaxExportBatchSize = 512
+)
+
+var (
+	droppedAttr  = attribute.Bool("dropped", true)
+	exportedAttr = attribute.Bool("dropped", false)
 )
 
 // BatchSpanProcessorOption configures a BatchSpanProcessor.
@@ -55,6 +63,12 @@ type BatchSpanProcessorOptions struct {
 	// Blocking option should be used carefully as it can severely affect the performance of an
 	// application.
 	BlockOnQueueFull bool
+
+	// MeterProvider creates metrics to track spans exported, dropped, and queued within the
+	// BatchSpanProcessor. Exported and dropped spans are tracked with a Counter while the
+	// queue size is tracked with an ObservableGauge.
+	// The default is a noop provider.
+	MeterProvider metric.MeterProvider
 }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
@@ -65,6 +79,9 @@ type batchSpanProcessor struct {
 
 	queue   chan ReadOnlySpan
 	dropped uint32
+
+	queueSizeGauge        metric.Int64ObservableGauge
+	processedSpansCounter metric.Int64Counter
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -98,6 +115,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
 		MaxQueueSize:       maxQueueSize,
 		MaxExportBatchSize: maxExportBatchSize,
+		MeterProvider:      noop.NewMeterProvider(),
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -110,6 +128,33 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		queue:  make(chan ReadOnlySpan, o.MaxQueueSize),
 		stopCh: make(chan struct{}),
 	}
+	meter := o.MeterProvider.Meter("io.opentelemetry.sdk.trace")
+	queueSizeGauge, err := meter.Int64ObservableGauge(
+		"queueSize",
+		metric.WithDescription("The number of items queued"),
+		metric.WithUnit("1"),
+		metric.WithInt64Callback(func(_ context.Context, obsrv metric.Int64Observer) error {
+			obsrv.Observe(int64(len(bsp.queue)))
+			return nil
+		}),
+	)
+	if err != nil {
+		panic(err)
+	}
+	bsp.queueSizeGauge = queueSizeGauge
+
+	processedSpansCounter, err := meter.Int64Counter(
+		"processedSpans",
+		metric.WithUnit("1"),
+		metric.WithDescription(
+			"The number of spans processed by the BatchSpanProcessor. "+
+				"[dropped=true if they were dropped due to high throughput]",
+		),
+	)
+	if err != nil {
+		panic(err)
+	}
+	bsp.processedSpansCounter = processedSpansCounter
 
 	bsp.stopWait.Add(1)
 	go func() {
@@ -259,6 +304,15 @@ func WithBlocking() BatchSpanProcessorOption {
 	}
 }
 
+// WithMeterProvider returns a BatchSpanProcessorOption that configures a
+// BatchSpanProcessor to use the provided MeterProvider for metrics. Without
+// this option, a no-op meter provider is used by default.
+func WithMeterProvider(mp metric.MeterProvider) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		o.MeterProvider = mp
+	}
+}
+
 // exportSpans is a subroutine of processing and draining the queue.
 func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 	bsp.timer.Reset(bsp.o.BatchTimeout)
@@ -375,6 +429,7 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 
 	select {
 	case bsp.queue <- sd:
+		bsp.processedSpansCounter.Add(ctx, 1, metric.WithAttributes(exportedAttr))
 		return true
 	case <-ctx.Done():
 		return false
@@ -388,8 +443,10 @@ func (bsp *batchSpanProcessor) enqueueDrop(ctx context.Context, sd ReadOnlySpan)
 
 	select {
 	case bsp.queue <- sd:
+		bsp.processedSpansCounter.Add(ctx, 1, metric.WithAttributes(exportedAttr))
 		return true
 	default:
+		bsp.processedSpansCounter.Add(ctx, 1, metric.WithAttributes(droppedAttr))
 		atomic.AddUint32(&bsp.dropped, 1)
 	}
 	return false
