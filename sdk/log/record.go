@@ -163,18 +163,21 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		return
 	}
 
-	// Deduplicate attrs within the scope of all existing attributes.
-
+	// Used to find duplicates between attrs and existing attributes in r.
 	rIndex := r.attrIndex()
 	defer putIndex(rIndex)
 
-	// Unique attrs that need to be added to r.
+	// Unique attrs that need to be added to r. This uses the same underlying
+	// array as attrs.
 	//
 	// Note, do not iterate attrs twice by just calling dedup(attrs) here.
 	unique := attrs[:0]
+	// Used to find duplicates within attrs itself. The index value is the
+	// index of the element in unique.
 	uIndex := getIndex()
 	defer putIndex(uIndex)
 
+	// Deduplicate attrs within the scope of all existing attributes.
 	for _, a := range attrs {
 		// Last-value-wins for any duplicates in attrs.
 		idx, found := uIndex[a.Key]
