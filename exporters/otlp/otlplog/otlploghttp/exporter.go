@@ -5,7 +5,6 @@ package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
-	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
@@ -47,12 +46,11 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}
-	otlp, err := transformResourceLogs(records)
-	if otlp != nil {
-		// Best effort upload of transformable logs.
-		err = errors.Join(err, e.client.Load().UploadLogs(ctx, otlp))
+	otlp := transformResourceLogs(records)
+	if otlp == nil {
+		return nil
 	}
-	return err
+	return e.client.Load().UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
