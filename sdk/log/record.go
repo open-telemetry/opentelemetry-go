@@ -150,24 +150,92 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 
 // AddAttributes adds attributes to the log record.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
-	if r.attributeCountLimit > 0 && r.AttributesLen()+len(attrs) > r.attributeCountLimit {
-		r.compactAttr()
-		// TODO: apply truncation to string and []string values.
-		var dropped int
-		attrs, dropped = deduplicate(attrs)
-		r.dropped += dropped
+	n := r.AttributesLen()
+	if n == 0 {
+		// Avoid the more complex duplicate map lookups bellow.
+		attrs, r.dropped = dedup(attrs)
 
-		if n := r.AttributesLen(); n+len(attrs) > r.attributeCountLimit {
-			last := max(0, (r.attributeCountLimit - n))
-			r.dropped += len(attrs) - last
-			attrs = attrs[:last]
-		}
+		var drop int
+		attrs, drop = head(attrs, r.attributeCountLimit)
+		r.dropped += drop
+
+		r.addAttrs(attrs)
+		return
 	}
 
-	r.addAttributes(attrs)
+	// Deduplicate attrs within the scope of all existing attributes.
+
+	rIndex := r.attrIndex()
+	defer putIndex(rIndex)
+
+	// Unique attrs that need to be added to r.
+	//
+	// Note, do not iterate attrs twice by just calling dedup(attrs) here.
+	unique := attrs[:0]
+	uIndex := getIndex()
+	defer putIndex(uIndex)
+
+	for _, a := range attrs {
+		// Last-value-wins for any duplicates in attrs.
+		idx, found := uIndex[a.Key]
+		if found {
+			r.dropped++
+			unique[idx] = a
+			continue
+		}
+
+		idx, found = rIndex[a.Key]
+		if found {
+			// New attrs overwrite any existing with the same key.
+			r.dropped++
+			if idx < 0 {
+				r.front[-(idx + 1)] = a
+			} else {
+				r.back[idx] = a
+			}
+		} else {
+			// Unique attribute.
+			// TODO: apply truncation to string and []string values.
+			unique = append(unique, a)
+			uIndex[a.Key] = len(unique) - 1
+		}
+	}
+	attrs = unique
+
+	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
+		// Truncate the now unique attributes to comply with limit.
+		last := max(0, (r.attributeCountLimit - n))
+		r.dropped += len(attrs) - last
+		attrs = attrs[:last]
+	}
+
+	r.addAttrs(attrs)
 }
 
-func (r *Record) addAttributes(attrs []log.KeyValue) {
+// attrIndex returns an index map for all attributes in the Record r. The index
+// maps the attribute key to location the attribute is stored. If the value is
+// < 0 then -(value + 1) (e.g. -1 -> 0, -2 -> 1, -3 -> 2) represents the index
+// in r.nFront. Otherwise, the index is the exact index of r.back.
+//
+// The returned index is taken from the indexPool. It is the callers
+// responsibility to return the index to that pool (putIndex) when done.
+func (r *Record) attrIndex() map[string]int {
+	index := getIndex()
+	for i := 0; i < r.nFront; i++ {
+		key := r.front[i].Key
+		index[key] = -i - 1 // stored in front: negative index.
+	}
+	for i := 0; i < len(r.back); i++ {
+		key := r.back[i].Key
+		index[key] = i // stored in back: positive index.
+	}
+	return index
+}
+
+// addAttrs adds attrs to the Record r. This does not validate any limits or
+// duplication of attributes, these tasks are left to the caller to handle
+// prior to calling.
+func (r *Record) addAttrs(attrs []log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
@@ -179,94 +247,41 @@ func (r *Record) addAttributes(attrs []log.KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
-// compactAttr deduplicates and compacts r's attributes. Attributes are
-// deduplicated front-to-back with the last value saved. Any space in the front
-// storage freed during deduplication will populated by attributes from the
-// back storage in order.
-func (r *Record) compactAttr() {
-	// index holds the location of attributes in the record based on the
-	// attribute key. If the value stored is < 0 the -(value + 1) (e.g. -1 ->
-	// 0, -2 -> 1, -3 -> 2) represents the index in r.nFront. Otherwise, the
-	// index is the exact index of r.back.
-	index := getIndex()
-	defer putIndex(index)
-
-	var dropped int
-	var cursor int
-	for i := 0; i < r.nFront; i++ {
-		key := r.front[i].Key
-		idx, found := index[key]
-		if found {
-			dropped++
-			r.front[-(idx + 1)] = r.front[i]
-		} else {
-			r.front[cursor] = r.front[i]
-			index[key] = -cursor - 1 // stored in front: negative index.
-			cursor++
-		}
-	}
-	r.nFront -= dropped
-
-	// Compact back storage into front.
-	for cursor < attributesInlineCount && len(r.back) > 0 {
-		key := r.back[0].Key
-		idx, found := index[key]
-		if found {
-			dropped++
-			r.front[-(idx + 1)] = r.back[0]
-		} else {
-			r.front[cursor] = r.back[0]
-			r.nFront++
-
-			index[key] = -cursor - 1 // stored in front: negative index.
-			cursor++
-		}
-		r.back = r.back[1:]
-	}
-
-	for i := 0; i < len(r.back); i++ {
-		key := r.back[i].Key
-		idx, found := index[key]
-		if found {
-			dropped++
-			if idx < 0 {
-				r.front[-(idx + 1)] = r.back[i]
-			} else {
-				r.back[idx] = r.back[i]
-			}
-			r.back = append(r.back[:i], r.back[i+1:]...)
-			i--
-		} else {
-			index[key] = i // stored in back: positive index.
-		}
-	}
-
-	r.dropped += dropped
-}
-
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
-	// If adding these attributes could exceed limit, de-duplicate to minimize
-	// overflow.
-	if r.attributeCountLimit > 0 && len(attrs) > r.attributeCountLimit {
-		// TODO: apply truncation to string and []string values.
-		attrs, r.dropped = deduplicate(attrs)
-		if len(attrs) > r.attributeCountLimit {
-			r.dropped += len(attrs) - r.attributeCountLimit
-			attrs = attrs[:r.attributeCountLimit]
-		}
+	// TODO: apply truncation to string and []string values.
+	attrs, r.dropped = dedup(attrs)
+
+	var drop int
+	attrs, drop = head(attrs, r.attributeCountLimit)
+	r.dropped += drop
+
+	r.nFront = 0
+	var i int
+	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
+		a := attrs[i]
+		r.front[r.nFront] = a
+		r.nFront++
 	}
 
-	r.setAttributes(attrs)
+	r.back = slices.Clone(attrs[i:])
 }
 
-// deduplicate deduplicates kvs front-to-back with the last value saved.
-func deduplicate(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
-	unique = kvs[:0]
+// head returns the first n values of kvs along with the number of elements
+// dropped. If n is less than or equal to zero, kvs is returned with 0.
+func head(kvs []log.KeyValue, n int) (out []log.KeyValue, dropped int) {
+	if n > 0 && len(kvs) > n {
+		return kvs[:n], len(kvs) - n
+	}
+	return kvs, 0
+}
 
+// dedup deduplicates kvs front-to-back with the last value saved.
+func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	index := getIndex()
 	defer putIndex(index)
 
+	unique = kvs[:0] // Use the same underlying array as kvs.
 	for _, a := range kvs {
 		idx, found := index[a.Key]
 		if found {
@@ -278,18 +293,6 @@ func deduplicate(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 		}
 	}
 	return unique, dropped
-}
-
-func (r *Record) setAttributes(attrs []log.KeyValue) {
-	r.nFront = 0
-	var i int
-	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
-		a := attrs[i]
-		r.front[r.nFront] = a
-		r.nFront++
-	}
-
-	r.back = slices.Clone(attrs[i:])
 }
 
 // AttributesLen returns the number of attributes in the log record.

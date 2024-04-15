@@ -202,12 +202,15 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		r.AddAttributes(attrs...)
 		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: AddAttributes", i)
 
+		r.AddAttributes(attrs...)
+		assert.Equalf(t, 2*i-1, r.DroppedAttributes(), "%d: second AddAttributes", i)
+
 		r.SetAttributes(attrs...)
 		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: SetAttributes", i)
 	}
 }
 
-func TestRecordCompactAttr(t *testing.T) {
+func TestRecordAttrDeduplication(t *testing.T) {
 	testcases := []struct {
 		name  string
 		attrs []log.KeyValue
@@ -290,18 +293,37 @@ func TestRecordCompactAttr(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := new(Record)
-			r.setAttributes(tc.attrs)
-			r.compactAttr()
+			validate := func(t *testing.T, r *Record) {
+				t.Helper()
 
-			var i int
-			r.WalkAttributes(func(kv log.KeyValue) bool {
-				if assert.Lessf(t, i, len(tc.want), "additional: %v", kv) {
-					want := tc.want[i]
-					assert.Truef(t, kv.Equal(want), "%d: want %v, got %v", i, want, kv)
-				}
-				i++
-				return true
+				var i int
+				r.WalkAttributes(func(kv log.KeyValue) bool {
+					if assert.Lessf(t, i, len(tc.want), "additional: %v", kv) {
+						want := tc.want[i]
+						assert.Truef(t, kv.Equal(want), "%d: want %v, got %v", i, want, kv)
+					}
+					i++
+					return true
+				})
+			}
+
+			t.Run("SetAttributes", func(t *testing.T) {
+				r := new(Record)
+				r.SetAttributes(tc.attrs...)
+				validate(t, r)
+			})
+
+			t.Run("AddAttributes/Empty", func(t *testing.T) {
+				r := new(Record)
+				r.AddAttributes(tc.attrs...)
+				validate(t, r)
+			})
+
+			t.Run("AddAttributes/Duplicates", func(t *testing.T) {
+				r := new(Record)
+				r.AddAttributes(tc.attrs...)
+				r.AddAttributes(tc.attrs...)
+				validate(t, r)
 			})
 		})
 	}
