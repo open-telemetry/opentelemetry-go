@@ -204,6 +204,9 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 
 	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
 		// Truncate the now unique attributes to comply with limit.
+		//
+		// Do not use head(attrs, r.attributeCountLimit - n) here. If
+		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
 		last := max(0, (r.attributeCountLimit - n))
 		r.dropped += len(attrs) - last
 		attrs = attrs[:last]
