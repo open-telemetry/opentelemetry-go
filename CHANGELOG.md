@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Recorder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the log bridge implementations. (#5134)
 - The `DroppedAttributes` is added to the `"go.opentelemetry.io/otel/sdk/log".Record` type.
   This method can be used to determine how many log attributes were dropped from the `Record` due to limits being exceeded. (#5190)
+- Add span flags to OTLP spans and links exported by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#5194)
 
 ### Changed
 
