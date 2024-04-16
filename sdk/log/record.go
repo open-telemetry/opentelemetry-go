@@ -199,6 +199,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		} else {
 			// Unique attribute.
 			// TODO: apply truncation to string and []string values.
+			// TODO: deduplicate map values.
 			unique = append(unique, a)
 			uIndex[a.Key] = len(unique) - 1
 		}
@@ -256,6 +257,7 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	// TODO: apply truncation to string and []string values.
+	// TODO: deduplicate map values.
 	attrs, r.dropped = dedup(attrs)
 
 	var drop int
