@@ -210,7 +210,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestExporterShutdownHonorsCancel(t *testing.T) {
+func TestExporterShutdownIgnoresContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
