@@ -17,10 +17,11 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"go.opentelemetry.io/otel"
 	collogpb "go.opentelemetry.io/proto/slim/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/slim/otlp/logs/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
