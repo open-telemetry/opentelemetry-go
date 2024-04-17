@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlpmetric/oconf/envconfig_test.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -77,7 +74,7 @@ func TestWithEnvTemporalityPreference(t *testing.T) {
 				return origReader(key)
 			}
 			cfg := Config{}
-			cfg = ApplyGRPCEnvConfigs(cfg)
+			cfg = ApplyHTTPEnvConfigs(cfg)
 
 			if tt.want == nil {
 				// There is no function set, the SDK's default is used.
@@ -147,7 +144,7 @@ func TestWithEnvAggPreference(t *testing.T) {
 				return origReader(key)
 			}
 			cfg := Config{}
-			cfg = ApplyGRPCEnvConfigs(cfg)
+			cfg = ApplyHTTPEnvConfigs(cfg)
 
 			if tt.want == nil {
 				// There is no function set, the SDK's default is used.
