@@ -397,7 +397,8 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 		}
 
 		if err != nil {
-			global.Error(err, "failed to load TLS")
+			err = fmt.Errorf("failed to load TLS: %w", err)
+			otel.Handle(err)
 		} else if rootCAs != nil || certs != nil {
 			s.Set = true
 			s.Value = &tls.Config{RootCAs: rootCAs, Certificates: certs}
@@ -525,7 +526,7 @@ func convCompression(s string) (Compression, error) {
 	if s == "gzip" {
 		return GzipCompression, nil
 	}
-	return NoCompression, nil
+	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
 func convDuration(s string) (time.Duration, error) {

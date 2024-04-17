@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 )
 
 const (
@@ -57,8 +58,10 @@ func TestNewConfig(t *testing.T) {
 	orig := readFile
 	readFile = func() func(name string) ([]byte, error) {
 		index := map[string][]byte{
-			"cert_path": []byte(weakCertificate),
-			"key_path":  []byte(weakPrivateKey),
+			"cert_path":    []byte(weakCertificate),
+			"key_path":     []byte(weakPrivateKey),
+			"invalid_cert": []byte("invalid certificate file."),
+			"invalid_key":  []byte("invalid key file."),
 		}
 		return func(name string) ([]byte, error) {
 			b, ok := index[name]
@@ -82,6 +85,7 @@ func TestNewConfig(t *testing.T) {
 		options []Option
 		envars  map[string]string
 		want    config
+		errs    []string
 	}{
 		{
 			name: "Defaults",
@@ -275,6 +279,36 @@ func TestNewConfig(t *testing.T) {
 				retryCfg:    newSetting(rc),
 			},
 		},
+		{
+			name: "InvalidEnvironmentVariables",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "%invalid",
+				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "a,%ZZ=valid,key=%ZZ",
+				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "xz",
+				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "100 seconds",
+				"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE":        "invalid_cert",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "invalid_cert",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "invalid_key",
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				path:     newSetting(defaultPath),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+			errs: []string{
+				`invalid OTEL_EXPORTER_OTLP_LOGS_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
+				`failed to load TLS:`,
+				`certificate not added`,
+				`tls: failed to find any PEM data in certificate input`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value a,%ZZ=valid,key=%ZZ:`,
+				`invalid header: a`,
+				`invalid header key: %ZZ`,
+				`invalid header value: %ZZ`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -282,6 +316,14 @@ func TestNewConfig(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
+
+			var err error
+			t.Cleanup(func(orig otel.ErrorHandler) func() {
+				otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+					err = errors.Join(err, e)
+				}))
+				return func() { otel.SetErrorHandler(orig) }
+			}(otel.GetErrorHandler()))
 			c := newConfig(tc.options)
 
 			// Do not compare pointer values.
@@ -293,6 +335,10 @@ func TestNewConfig(t *testing.T) {
 			c.proxy = setting[HTTPTransportProxyFunc]{}
 
 			assert.Equal(t, tc.want, c)
+
+			for _, errMsg := range tc.errs {
+				assert.ErrorContains(t, err, errMsg)
+			}
 		})
 	}
 }
