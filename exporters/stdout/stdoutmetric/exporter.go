@@ -51,6 +51,9 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 }
 
 func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if e.redactTimestamps {
 		redactTimestamps(data)
 	}
@@ -60,12 +63,12 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
 
-func (e *exporter) ForceFlush(ctx context.Context) error {
+func (e *exporter) ForceFlush(context.Context) error {
 	// exporter holds no state, nothing to flush.
 	return nil
 }
 
-func (e *exporter) Shutdown(ctx context.Context) error {
+func (e *exporter) Shutdown(context.Context) error {
 	e.shutdownOnce.Do(func() {
 		e.encVal.Store(encoderHolder{
 			encoder: shutdownEncoder{},

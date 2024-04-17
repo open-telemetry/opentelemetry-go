@@ -34,10 +34,9 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 		t.Run("DeadlineExceeded", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
 			t.Cleanup(innerCancel)
-			<-innerCtx.Done()
 
 			f := factory(t)
-			assert.NoError(t, f(innerCtx))
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
 		})
 
 		t.Run("Canceled", func(t *testing.T) {
@@ -45,7 +44,7 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 			innerCancel()
 
 			f := factory(t)
-			assert.NoError(t, f(innerCtx))
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
 		})
 
 		t.Run("NoError", func(t *testing.T) {
@@ -56,18 +55,6 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 }
 
 func TestExporterHonorsContextErrors(t *testing.T) {
-	t.Run("Shutdown", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption())
-		require.NoError(t, err)
-		return exp.Shutdown
-	}))
-
-	t.Run("ForceFlush", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption())
-		require.NoError(t, err)
-		return exp.ForceFlush
-	}))
-
 	t.Run("Export", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
 		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
@@ -76,6 +63,20 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 			return exp.Export(ctx, data)
 		}
 	}))
+}
+
+func TestExporterShutdown(t *testing.T) {
+	exporter, err := stdoutmetric.New(testEncoderOption())
+	assert.NoError(t, err)
+
+	assert.NoError(t, exporter.Shutdown(context.Background()))
+}
+
+func TestExporterForceFlush(t *testing.T) {
+	exporter, err := stdoutmetric.New(testEncoderOption())
+	assert.NoError(t, err)
+
+	assert.NoError(t, exporter.ForceFlush(context.Background()))
 }
 
 func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
