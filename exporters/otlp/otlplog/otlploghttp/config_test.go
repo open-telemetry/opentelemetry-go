@@ -102,6 +102,29 @@ func TestNewConfig(t *testing.T) {
 				retryCfg: newSetting(defaultRetryCfg),
 			},
 		},
+		{
+			name: "LogEnvironmentVariables",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":    "https://env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE":    "true",
+				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":     "h1=v1,h2=v2",
+				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION": "gzip",
+				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":     "15000",
+				// TODO: TLS.
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				path:     newSetting("/prefix/v1/traces"),
+				insecure: newSetting(false),
+				headers: newSetting(map[string]string{
+					"h1": "v1",
+					"h2": "v2",
+				}),
+				compression: newSetting(GzipCompression),
+				timeout:     newSetting(15 * time.Second),
+				retryCfg:    newSetting(defaultRetryCfg),
+			},
+		},
 	}
 
 	for _, tc := range testcases {

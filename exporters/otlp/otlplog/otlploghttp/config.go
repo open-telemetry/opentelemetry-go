@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,12 +35,8 @@ var (
 		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 		"OTEL_EXPORTER_OTLP_ENDPOINT",
 	}
-	envPath = envEndpoint
-
-	envInsecure = []string{
-		"OTEL_EXPORTER_OTLP_LOGS_INSECURE",
-		"OTEL_EXPORTER_OTLP_INSECURE",
-	}
+	envPath     = envEndpoint
+	envInsecure = envEndpoint
 
 	envHeaders = []string{
 		"OTEL_EXPORTER_OTLP_LOGS_HEADERS",
@@ -123,7 +120,7 @@ func newConfig(options []Option) config {
 		getenv[Compression](envCompression, convCompression),
 	)
 	c.timeout = c.timeout.Resolve(
-		getenv[time.Duration](envTimeout, time.ParseDuration),
+		getenv[time.Duration](envTimeout, convDuration),
 		fallback[time.Duration](defaultTimeout),
 	)
 	c.proxy = c.proxy.Resolve(
@@ -483,14 +480,15 @@ func convPath(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if u.Path == "" {
-		return "/", nil
-	}
-	return u.Path, nil
+	return u.Path + "/v1/traces", nil
 }
 
 func convInsecure(s string) (bool, error) {
-	return s != "", nil
+	u, err := url.Parse(s)
+	if err != nil {
+		return false, err
+	}
+	return u.Scheme != "https", nil
 }
 
 func convHeaders(s string) (map[string]string, error) {
@@ -527,6 +525,15 @@ func convCompression(s string) (Compression, error) {
 		return GzipCompression, nil
 	}
 	return NoCompression, nil
+}
+
+func convDuration(s string) (time.Duration, error) {
+	d, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, err
+	}
+	// OTel durations are defined in milliseconds.
+	return time.Duration(d) * time.Millisecond, nil
 }
 
 // fallback returns a resolve that will set a setting value to val if it is not
