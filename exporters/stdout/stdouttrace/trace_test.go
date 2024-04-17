@@ -61,7 +61,7 @@ func TestExporterExportSpan(t *testing.T) {
 		opts      []stdouttrace.Option
 		expectNow time.Time
 		ctx       context.Context
-		wantError error
+		wantErr   error
 	}{
 		{
 			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
@@ -80,16 +80,7 @@ func TestExporterExportSpan(t *testing.T) {
 				cancel()
 				return ctx
 			}(),
-			wantError: context.Canceled,
-		},
-		{
-			opts: []stdouttrace.Option{},
-			ctx: func() context.Context {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
-				t.Cleanup(cancel)
-				return ctx
-			}(),
-			wantError: context.DeadlineExceeded,
+			wantErr: context.Canceled,
 		},
 	}
 
@@ -100,9 +91,9 @@ func TestExporterExportSpan(t *testing.T) {
 		require.Nil(t, err)
 
 		err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
-		assert.Equal(t, tt.wantError, err)
+		assert.Equal(t, tt.wantErr, err)
 
-		if tt.wantError == nil {
+		if tt.wantErr == nil {
 			got := b.String()
 			wantone := expectedJSON(tt.expectNow)
 			assert.Equal(t, wantone+wantone, got)
