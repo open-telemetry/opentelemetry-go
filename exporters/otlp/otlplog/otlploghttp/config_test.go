@@ -179,7 +179,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/traces"),
+				path:        newSetting("/prefix/v1/logs"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -201,7 +201,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/traces"),
+				path:        newSetting("/prefix/v1/logs"),
 				insecure:    newSetting(true),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -231,7 +231,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/traces"),
+				path:        newSetting("/prefix/v1/logs"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),

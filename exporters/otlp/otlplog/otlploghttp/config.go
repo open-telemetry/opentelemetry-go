@@ -497,7 +497,7 @@ func convPath(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Path + "/v1/traces", nil
+	return u.Path + "/v1/logs", nil
 }
 
 // convInsecure parses s as a URL string and returns if the connection should
