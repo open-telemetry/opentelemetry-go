@@ -10,10 +10,10 @@ import (
 )
 
 type client struct {
-	uploadLogs func(context.Context, *logpb.ResourceLogs) error
+	uploadLogs func(context.Context, []*logpb.ResourceLogs) error
 }
 
-func (c *client) UploadLogs(ctx context.Context, rl *logpb.ResourceLogs) error {
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error {
 	if c.uploadLogs != nil {
 		return c.uploadLogs(ctx, rl)
 	}

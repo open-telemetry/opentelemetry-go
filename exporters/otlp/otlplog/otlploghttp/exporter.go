@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -37,13 +38,19 @@ func newExporter(c *client, _ config) (*Exporter, error) {
 	return e, nil
 }
 
+// Used for testing.
+var transformResourceLogs = transform.ResourceLogs
+
 // Export transforms and transmits log records to an OTLP receiver.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}
-	// TODO: implement.
-	return nil
+	otlp := transformResourceLogs(records)
+	if otlp == nil {
+		return nil
+	}
+	return e.client.Load().UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
