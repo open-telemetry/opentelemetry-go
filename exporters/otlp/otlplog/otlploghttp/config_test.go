@@ -206,7 +206,7 @@ func TestNewConfig(t *testing.T) {
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://env.endpoint:8080/prefix",
 				"OTEL_EXPORTER_OTLP_HEADERS":            "a=A",
-				"OTEL_EXPORTER_OTLP_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "15000",
 				"OTEL_EXPORTER_OTLP_CERTIFICATE":        "cert_path",
 				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "cert_path",
@@ -218,7 +218,7 @@ func TestNewConfig(t *testing.T) {
 				insecure:    newSetting(true),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
-				compression: newSetting(GzipCompression),
+				compression: newSetting(NoCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
 			},

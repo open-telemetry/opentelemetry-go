@@ -565,8 +565,11 @@ func convHeaders(s string) (map[string]string, error) {
 // convCompression returns the parsed compression encoded in s. NoCompression
 // and an errors are returned if s is unknown.
 func convCompression(s string) (Compression, error) {
-	if s == "gzip" {
+	switch s {
+	case "gzip":
 		return GzipCompression, nil
+	case "none", "":
+		return NoCompression, nil
 	}
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
