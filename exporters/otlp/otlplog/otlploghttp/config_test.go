@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
 func TestNewConfig(t *testing.T) {
 	tlsCfg := &tls.Config{}
 	headers := map[string]string{"a": "A"}
-	rc := RetryConfig{}
+	rc := retry.Config{}
 
 	testcases := []struct {
 		name    string
@@ -43,7 +44,7 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
