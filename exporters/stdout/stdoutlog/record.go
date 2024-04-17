@@ -43,8 +43,8 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Attributes: make([]log.KeyValue, 0, r.AttributesLen()),
 
-		Resource:                  &res,
-		Scope:                     r.InstrumentationScope(),
+		Resource: &res,
+		Scope:    r.InstrumentationScope(),
 	}
 
 	r.WalkAttributes(func(kv log.KeyValue) bool {
