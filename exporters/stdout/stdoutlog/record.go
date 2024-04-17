@@ -45,8 +45,6 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Resource:                  &res,
 		Scope:                     r.InstrumentationScope(),
-		AttributeValueLengthLimit: r.AttributeValueLengthLimit(),
-		AttributeCountLimit:       r.AttributeCountLimit(),
 	}
 
 	r.WalkAttributes(func(kv log.KeyValue) bool {

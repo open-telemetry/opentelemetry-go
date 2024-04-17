@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"slices"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/log"
@@ -18,6 +19,20 @@ import (
 // performed a quantitative survey of log library use and found this value to
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
+
+// indexPool is a pool of index maps used for de-duplication.
+var indexPool = sync.Pool{
+	New: func() any { return make(map[string]int) },
+}
+
+func getIndex() map[string]int {
+	return indexPool.Get().(map[string]int)
+}
+
+func putIndex(index map[string]int) {
+	clear(index)
+	indexPool.Put(index)
+}
 
 // Record is a log record emitted by the Logger.
 type Record struct {
@@ -47,6 +62,10 @@ type Record struct {
 	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero-ed. Used to detect mistakes.
 	back []log.KeyValue
+
+	// dropped is the count of attributes that have been dropped when limits
+	// were reached.
+	dropped int
 
 	traceID    trace.TraceID
 	spanID     trace.SpanID
@@ -131,6 +150,99 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 
 // AddAttributes adds attributes to the log record.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
+	n := r.AttributesLen()
+	if n == 0 {
+		// Avoid the more complex duplicate map lookups bellow.
+		attrs, r.dropped = dedup(attrs)
+
+		var drop int
+		attrs, drop = head(attrs, r.attributeCountLimit)
+		r.dropped += drop
+
+		r.addAttrs(attrs)
+		return
+	}
+
+	// Used to find duplicates between attrs and existing attributes in r.
+	rIndex := r.attrIndex()
+	defer putIndex(rIndex)
+
+	// Unique attrs that need to be added to r. This uses the same underlying
+	// array as attrs.
+	//
+	// Note, do not iterate attrs twice by just calling dedup(attrs) here.
+	unique := attrs[:0]
+	// Used to find duplicates within attrs itself. The index value is the
+	// index of the element in unique.
+	uIndex := getIndex()
+	defer putIndex(uIndex)
+
+	// Deduplicate attrs within the scope of all existing attributes.
+	for _, a := range attrs {
+		// Last-value-wins for any duplicates in attrs.
+		idx, found := uIndex[a.Key]
+		if found {
+			r.dropped++
+			unique[idx] = a
+			continue
+		}
+
+		idx, found = rIndex[a.Key]
+		if found {
+			// New attrs overwrite any existing with the same key.
+			r.dropped++
+			if idx < 0 {
+				r.front[-(idx + 1)] = a
+			} else {
+				r.back[idx] = a
+			}
+		} else {
+			// Unique attribute.
+			// TODO: apply truncation to string and []string values.
+			// TODO: deduplicate map values.
+			unique = append(unique, a)
+			uIndex[a.Key] = len(unique) - 1
+		}
+	}
+	attrs = unique
+
+	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
+		// Truncate the now unique attributes to comply with limit.
+		//
+		// Do not use head(attrs, r.attributeCountLimit - n) here. If
+		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
+		last := max(0, (r.attributeCountLimit - n))
+		r.dropped += len(attrs) - last
+		attrs = attrs[:last]
+	}
+
+	r.addAttrs(attrs)
+}
+
+// attrIndex returns an index map for all attributes in the Record r. The index
+// maps the attribute key to location the attribute is stored. If the value is
+// < 0 then -(value + 1) (e.g. -1 -> 0, -2 -> 1, -3 -> 2) represents the index
+// in r.nFront. Otherwise, the index is the exact index of r.back.
+//
+// The returned index is taken from the indexPool. It is the callers
+// responsibility to return the index to that pool (putIndex) when done.
+func (r *Record) attrIndex() map[string]int {
+	index := getIndex()
+	for i := 0; i < r.nFront; i++ {
+		key := r.front[i].Key
+		index[key] = -i - 1 // stored in front: negative index.
+	}
+	for i := 0; i < len(r.back); i++ {
+		key := r.back[i].Key
+		index[key] = i // stored in back: positive index.
+	}
+	return index
+}
+
+// addAttrs adds attrs to the Record r. This does not validate any limits or
+// duplication of attributes, these tasks are left to the caller to handle
+// prior to calling.
+func (r *Record) addAttrs(attrs []log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
@@ -144,6 +256,14 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
+	// TODO: apply truncation to string and []string values.
+	// TODO: deduplicate map values.
+	attrs, r.dropped = dedup(attrs)
+
+	var drop int
+	attrs, drop = head(attrs, r.attributeCountLimit)
+	r.dropped += drop
+
 	r.nFront = 0
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
@@ -155,9 +275,43 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	r.back = slices.Clone(attrs[i:])
 }
 
+// head returns the first n values of kvs along with the number of elements
+// dropped. If n is less than or equal to zero, kvs is returned with 0.
+func head(kvs []log.KeyValue, n int) (out []log.KeyValue, dropped int) {
+	if n > 0 && len(kvs) > n {
+		return kvs[:n], len(kvs) - n
+	}
+	return kvs, 0
+}
+
+// dedup deduplicates kvs front-to-back with the last value saved.
+func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
+	index := getIndex()
+	defer putIndex(index)
+
+	unique = kvs[:0] // Use the same underlying array as kvs.
+	for _, a := range kvs {
+		idx, found := index[a.Key]
+		if found {
+			dropped++
+			unique[idx] = a
+		} else {
+			unique = append(unique, a)
+			index[a.Key] = len(unique) - 1
+		}
+	}
+	return unique, dropped
+}
+
 // AttributesLen returns the number of attributes in the log record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
+}
+
+// DroppedAttributes returns the number of attributes dropped due to limits
+// being reached.
+func (r *Record) DroppedAttributes() int {
+	return r.dropped
 }
 
 // TraceID returns the trace ID or empty array.
@@ -204,26 +358,6 @@ func (r *Record) InstrumentationScope() instrumentation.Scope {
 		return instrumentation.Scope{}
 	}
 	return *r.scope
-}
-
-// AttributeValueLengthLimit is the maximum allowed attribute value length.
-//
-// This limit only applies to string and string slice attribute values.
-// Any string longer than this value should be truncated to this length.
-//
-// Negative value means no limit should be applied.
-func (r *Record) AttributeValueLengthLimit() int {
-	return r.attributeValueLengthLimit
-}
-
-// AttributeCountLimit is the maximum allowed log record attribute count. Any
-// attribute added to a log record once this limit is reached should be dropped.
-//
-// Zero means no attributes should be recorded.
-//
-// Negative value means no limit should be applied.
-func (r *Record) AttributeCountLimit() int {
-	return r.attributeCountLimit
 }
 
 // Clone returns a copy of the record with no shared state. The original record
