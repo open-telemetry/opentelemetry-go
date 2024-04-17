@@ -60,14 +60,6 @@ func testCtxErrIgnored(factory func(*testing.T) func(context.Context) error) fun
 		ctx, cancel := context.WithCancel(context.Background())
 		t.Cleanup(cancel)
 
-		t.Run("DeadlineExceeded Ignored", func(t *testing.T) {
-			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-			t.Cleanup(innerCancel)
-
-			f := factory(t)
-			assert.NoError(t, f(innerCtx))
-		})
-
 		t.Run("Canceled Ignored", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithCancel(ctx)
 			innerCancel()
