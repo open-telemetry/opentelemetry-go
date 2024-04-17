@@ -392,6 +392,7 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 				var e error
 				certs, e = loadCertificates(cert, key)
 				err = errors.Join(err, e)
+				break
 			}
 		}
 
@@ -405,6 +406,7 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 	}
 }
 
+// readFile is used for testing.
 var readFile = os.ReadFile
 
 func loadCertPool(path string) (*x509.CertPool, error) {
