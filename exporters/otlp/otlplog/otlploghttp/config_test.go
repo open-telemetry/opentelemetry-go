@@ -179,13 +179,26 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/logs"),
+				path:        newSetting("/prefix"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "LogEnpointEnvironmentVariablesDefaultPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint"),
+				path:     newSetting("/"),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -211,6 +224,19 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "OTLPEnpointEnvironmentVariablesDefaultPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint"),
+				path:     newSetting(defaultPath),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
 			name: "EnvironmentVariablesPrecedence",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
@@ -221,7 +247,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "invalid_cert",
 				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "invalid_key",
 
-				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/path",
 				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "a=A",
 				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "gzip",
 				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "15000",
@@ -231,7 +257,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/logs"),
+				path:        newSetting("/path"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),

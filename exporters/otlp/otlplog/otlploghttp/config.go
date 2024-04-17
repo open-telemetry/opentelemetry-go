@@ -35,8 +35,11 @@ var (
 		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 		"OTEL_EXPORTER_OTLP_ENDPOINT",
 	}
-	envPath     = envEndpoint
 	envInsecure = envEndpoint
+
+	// Split because these are parsed differently.
+	envPathSignal = []string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"}
+	envPathOTLP   = []string{"OTEL_EXPORTER_OTLP_ENDPOINT"}
 
 	envHeaders = []string{
 		"OTEL_EXPORTER_OTLP_LOGS_HEADERS",
@@ -104,7 +107,8 @@ func newConfig(options []Option) config {
 		fallback[string](defaultEndpoint),
 	)
 	c.path = c.path.Resolve(
-		getenv[string](envPath, convPath),
+		getenv[string](envPathSignal, convPathExact),
+		getenv[string](envPathOTLP, convPath),
 		fallback[string](defaultPath),
 	)
 	c.insecure = c.insecure.Resolve(
@@ -490,8 +494,23 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convPath converts s from a URL string to a path if s is a valid URL.
-// Otherwise, "" and an error are returned.
+// convPathExact converts s from a URL string to the exact path if s is a valid
+// URL. Otherwise, "" and an error are returned.
+//
+// If the path contained in s is empty, "/" is returned.
+func convPathExact(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	if u.Path == "" {
+		return "/", nil
+	}
+	return u.Path, nil
+}
+
+// convPath converts s from a URL string to an OTLP endpoint path if s is a
+// valid URL. Otherwise, "" and an error are returned.
 func convPath(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
