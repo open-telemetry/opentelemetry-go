@@ -15,20 +15,17 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 	"go.opentelemetry.io/otel/internal/global"
 )
 
 // Default values.
 var (
-	defaultEndpoint    string                 = "localhost:4318"
-	defaultPath        string                 = "/v1/logs"
-	defaultInsecure    bool                   = false
-	defaultTlsCfg      *tls.Config            = nil
-	defaultHeaders     map[string]string      = nil
-	defaultCompression Compression            = NoCompression
-	defaultTimeout     time.Duration          = 10 * time.Second
-	defaultProxy       HTTPTransportProxyFunc = nil
-	defaultRetryCfg    RetryConfig            = RetryConfig{} // TODO: define.
+	defaultEndpoint                        = "localhost:4318"
+	defaultPath                            = "/v1/logs"
+	defaultTimeout                         = 10 * time.Second
+	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                        = RetryConfig(retry.DefaultConfig)
 )
 
 // Environment variable keys
@@ -115,19 +112,15 @@ func newConfig(options []Option) config {
 	)
 	c.insecure = c.insecure.Resolve(
 		getenv[bool](envInsecure, convInsecure),
-		fallback[bool](defaultInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
 		loadEnvTLS[*tls.Config](),
-		fallback[*tls.Config](defaultTlsCfg),
 	)
 	c.headers = c.headers.Resolve(
 		getenv[map[string]string](envHeaders, convHeaders),
-		fallback[map[string]string](defaultHeaders),
 	)
 	c.compression = c.compression.Resolve(
 		getenv[Compression](envCompression, convCompression),
-		fallback[Compression](defaultCompression),
 	)
 	c.timeout = c.timeout.Resolve(
 		getenv[time.Duration](envTimeout, time.ParseDuration),
@@ -186,6 +179,8 @@ func WithEndpointURL(rawURL string) Option {
 		c.path = newSetting(u.Path)
 		if u.Scheme != "https" {
 			c.insecure = newSetting(true)
+		} else {
+			c.insecure = newSetting(false)
 		}
 		return c
 	})
@@ -312,9 +307,7 @@ func WithTimeout(duration time.Duration) Option {
 
 // RetryConfig defines configuration for retrying the export of log data that
 // failed.
-type RetryConfig struct {
-	// TODO: implement.
-}
+type RetryConfig retry.Config
 
 // WithRetry sets the retry policy for transient retryable errors that are
 // returned by the target endpoint.
@@ -354,7 +347,7 @@ type setting[T any] struct {
 	Set   bool
 }
 
-// newSetting returns a new [setting] with the value set.
+// newSetting returns a new setting with the value set.
 func newSetting[T any](value T) setting[T] {
 	return setting[T]{Value: value, Set: true}
 }
