@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
 )
 
 var (
