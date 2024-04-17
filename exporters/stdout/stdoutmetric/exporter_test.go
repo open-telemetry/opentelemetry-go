@@ -102,20 +102,6 @@ func TestExporterShutdownIgnoresContextErrors(t *testing.T) {
 	}))
 }
 
-func TestExporterShutdown(t *testing.T) {
-	exporter, err := stdoutmetric.New(testEncoderOption())
-	assert.NoError(t, err)
-
-	assert.NoError(t, exporter.Shutdown(context.Background()))
-}
-
-func TestExporterForceFlush(t *testing.T) {
-	exporter, err := stdoutmetric.New(testEncoderOption())
-	assert.NoError(t, err)
-
-	assert.NoError(t, exporter.ForceFlush(context.Background()))
-}
-
 func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	var (
 		data     = new(metricdata.ResourceMetrics)
