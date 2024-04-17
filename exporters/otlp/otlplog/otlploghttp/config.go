@@ -368,6 +368,13 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 	return s
 }
 
+// loadEnvTLS returns a resolver that loads a *tls.Config from files defeind by
+// the OTLP TLS environment variables. This will load both the rootCAs and
+// certificates used for mTLS.
+//
+// If the filepath defined is invalid or does not contain valid TLS files, an
+// error is passed to the OTel ErrorHandler and no TLS configuration is
+// provided.
 func loadEnvTLS[T *tls.Config]() resolver[T] {
 	return func(s setting[T]) setting[T] {
 		if s.Set {
@@ -410,6 +417,8 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 // readFile is used for testing.
 var readFile = os.ReadFile
 
+// loadCertPool loads and returns the *x509.CertPool found at path if it exists
+// and is valid. Otherwise, nil and an error is returned.
 func loadCertPool(path string) (*x509.CertPool, error) {
 	b, err := readFile(path)
 	if err != nil {
@@ -422,6 +431,8 @@ func loadCertPool(path string) (*x509.CertPool, error) {
 	return cp, nil
 }
 
+// loadCertPool loads and returns the tls.Certificate found at path if it
+// exists and is valid. Otherwise, nil and an error is returned.
 func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	cert, err := readFile(certPath)
 	if err != nil {
@@ -440,12 +451,12 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 
 // getenv returns a resolver that will apply an environment variable value
 // associated with the first set key to a setting value. The conv function is
-// used to convert between the value.
+// used to convert between the environment variable value and the setting type.
 //
 // If the input setting to the resolver is set, the environment variable will
 // not be applied.
 //
-// For any error returned from conv is sent to the OTel error handler and the
+// Any error returned from conv is sent to the OTel ErrorHandler and the
 // setting will not be updated.
 func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
 	return func(s setting[T]) setting[T] {
@@ -469,6 +480,8 @@ func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
 	}
 }
 
+// convEndpoint converts s from a URL string to an endpoint if s is a valid
+// URL. Otherwise, "" and an error are returned.
 func convEndpoint(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -477,6 +490,8 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
+// convPath converts s from a URL string to a path if s is a valid URL.
+// Otherwise, "" and an error are returned.
 func convPath(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -485,6 +500,9 @@ func convPath(s string) (string, error) {
 	return u.Path + "/v1/traces", nil
 }
 
+// convInsecure parses s as a URL string and returns if the connection should
+// use client transport security or not. If s is an invalid URL, false and an
+// error are returned.
 func convInsecure(s string) (bool, error) {
 	u, err := url.Parse(s)
 	if err != nil {
@@ -493,6 +511,9 @@ func convInsecure(s string) (bool, error) {
 	return u.Scheme != "https", nil
 }
 
+// convHeaders converts the OTel environment variable header value s into a
+// mapping of header key to value. If s is invalid a partial result and error
+// are returned.
 func convHeaders(s string) (map[string]string, error) {
 	out := make(map[string]string)
 	var err error
@@ -522,6 +543,8 @@ func convHeaders(s string) (map[string]string, error) {
 	return out, err
 }
 
+// convCompression returns the parsed compression encoded in s. NoCompression
+// and an errors are returned if s is unknown.
 func convCompression(s string) (Compression, error) {
 	if s == "gzip" {
 		return GzipCompression, nil
@@ -529,6 +552,8 @@ func convCompression(s string) (Compression, error) {
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
+// convDuration converts s into a duration of milliseconds. If s does not
+// contain an integer, 0 and an error are returned.
 func convDuration(s string) (time.Duration, error) {
 	d, err := strconv.Atoi(s)
 	if err != nil {
