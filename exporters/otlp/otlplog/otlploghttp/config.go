@@ -29,7 +29,7 @@ var (
 	defaultRetryCfg                        = RetryConfig(retry.DefaultConfig)
 )
 
-// Environment variable keys
+// Environment variable keys.
 var (
 	envEndpoint = []string{
 		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
@@ -456,13 +456,12 @@ func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
 		for _, key := range keys {
 			if vStr := os.Getenv(key); vStr != "" {
 				v, err := conv(vStr)
-				if err != nil {
-					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
-				} else {
+				if err == nil {
 					s.Value = v
 					s.Set = true
 					break
 				}
+				otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
 			}
 		}
 		return s
