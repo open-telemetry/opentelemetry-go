@@ -195,21 +195,6 @@ func expectedJSON(now time.Time) string {
 `
 }
 
-func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
-	e, err := stdouttrace.New()
-	if err != nil {
-		t.Fatalf("failed to create exporter: %v", err)
-	}
-
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-	defer innerCancel()
-	err = e.Shutdown(innerCtx)
-	assert.NoError(t, err)
-}
-
 func TestExporterShutdownIgnoresContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
