@@ -583,7 +583,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			_ = e.Shutdown(context.Background())
-			assert.False(t, e.EnqueueExport(make([]Record, 1)))
+			assert.True(t, e.EnqueueExport(make([]Record, 1)))
 		})
 	})
 }
