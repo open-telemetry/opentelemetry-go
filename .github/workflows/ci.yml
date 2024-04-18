@@ -45,9 +45,9 @@ jobs:
           touch -t ${touchtime} "${filename}"
           ls -la --time-style=full-iso "${filename}"
       - name: Generate
-        run: make --debug=v generate
+        run: make generate
       - name: Run linters
-        run: make --debug=v dependabot-check license-check lint vanity-import-check verify-readmes
+        run: make dependabot-check license-check lint vanity-import-check verify-readmes
       - name: Build
         run: make build
       - name: Check clean repository
