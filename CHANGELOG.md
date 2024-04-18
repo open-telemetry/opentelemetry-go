@@ -14,11 +14,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `DroppedAttributes` is added to the `"go.opentelemetry.io/otel/sdk/log".Record` type.
   This method can be used to determine how many log attributes were dropped from the `Record` due to limits being exceeded. (#5190)
 - Add span flags to OTLP spans and links exported by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#5194)
-- Improve performance of baggage member character validation. (#5214)
 
 ### Changed
 
 - Update `go.opentelemetry.io/proto/otlp` from v1.1.0 to v1.2.0. (#5177)
+- Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
 
 ### Removed
 
