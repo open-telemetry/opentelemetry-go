@@ -6,7 +6,7 @@ package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 import (
 	"context"
 
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	logpb "go.opentelemetry.io/proto/slim/otlp/logs/v1"
 )
 
 type client struct {
