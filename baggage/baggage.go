@@ -633,7 +633,11 @@ func skipSpace(s string, offset int) int {
 
 var safeKeyCharset = [utf8.RuneSelf]bool{
 	// 0x23 to 0x27
-	'#': true, '$': true, '%': true, '&': true, '\'': true,
+	'#': true,
+	'$': true,
+	'%': true,
+	'&': true,
+	'\'': true,
 
 	// 0x30 to 0x39
 	'0': true,
