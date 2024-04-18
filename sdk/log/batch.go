@@ -48,7 +48,7 @@ type BatchProcessor struct {
 	// separate goroutine dedicated to the export. This asynchronous behavior
 	// allows the poll goroutine to maintain accurate interval polling.
 	//
-	//   __BatchProcessor__     __Poll Goroutine__     __Export Goroutine__
+	//   __BatchProcessor__        __Poll Goroutine__     __Export Goroutine__
 	// ||                     || ||                  || ||                    ||
 	// ||          ********** || ||                  || ||     **********     ||
 	// || Records=>* OnEmit * || ||   | - ticker     || ||     * export *     ||
