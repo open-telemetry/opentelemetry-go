@@ -163,7 +163,16 @@ var (
 
 func TestResourceLogs(t *testing.T) {
 	want := []*lpb.ResourceLogs{pbResourceLogs}
-	assert.Equal(t, want, ResourceLogs(records))
+	out, free := ResourceLogs(records)
+	assert.Equal(t, want, out)
+	free()
+	want = []*lpb.ResourceLogs{{
+		ScopeLogs: []*lpb.ScopeLogs{{
+			LogRecords: pbLogRecords[2:],
+		}},
+	}}
+	out, free = ResourceLogs(records[2:])
+	assert.Equal(t, want, out)
 }
 
 func TestSeverityNumber(t *testing.T) {

@@ -46,10 +46,11 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}
-	otlp := transformResourceLogs(records)
+	otlp, free := transformResourceLogs(records)
 	if otlp == nil {
 		return nil
 	}
+	defer free()
 	return e.client.Load().UploadLogs(ctx, otlp)
 }
 

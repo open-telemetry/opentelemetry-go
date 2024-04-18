@@ -44,9 +44,9 @@ func TestExporterExport(t *testing.T) {
 
 	orig := transformResourceLogs
 	var got []log.Record
-	transformResourceLogs = func(r []log.Record) []*logpb.ResourceLogs {
+	transformResourceLogs = func(r []log.Record) ([]*logpb.ResourceLogs, func()) {
 		got = r
-		return make([]*logpb.ResourceLogs, 1)
+		return make([]*logpb.ResourceLogs, 1), func() {}
 	}
 	t.Cleanup(func() { transformResourceLogs = orig })
 

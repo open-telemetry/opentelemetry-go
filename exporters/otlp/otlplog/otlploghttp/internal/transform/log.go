@@ -6,6 +6,7 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 
 import (
+	"sync"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
@@ -18,18 +19,26 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
-// ResourceLogs returns an slice of OTLP ResourceLogs generated from records.
-func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
-	if len(records) == 0 {
-		return nil
-	}
+var resourceLogsPool = sync.Pool{
+	New: func() any {
+		return []*lpb.ResourceLogs{}
+	},
+}
 
+// ResourceLogs returns a slice of OTLP ResourceLogs generated from records and a function that put it back to a pool.
+func ResourceLogs(records []log.Record) (out []*lpb.ResourceLogs, free func()) {
+	if len(records) == 0 {
+		return nil, func() {}
+	}
 	resMap := resourceLogsMap(records)
-	out := make([]*lpb.ResourceLogs, 0, len(resMap))
+	out = resourceLogsPool.Get().([]*lpb.ResourceLogs)
 	for _, rl := range resMap {
 		out = append(out, rl)
 	}
-	return out
+	return out, func() {
+		out = out[:0:0]
+		resourceLogsPool.Put(out)
+	}
 }
 
 func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceLogs {
