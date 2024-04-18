@@ -34,6 +34,13 @@ jobs:
         with:
           path: .tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      # The step below is needed to not rebuild all the build tools.
+      - name: Set internal/tools/go.mod timestamp
+        run: |
+          filename="internal/tools/go.mod"
+          unixtime=$(git log -1 --format="%at" -- "${filename}")
+          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
+          touch -t ${touchtime} "${filename}"
       - name: Generate
         run: make generate
       - name: Run linters
