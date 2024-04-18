@@ -149,36 +149,31 @@ var (
 	}}
 )
 
-// Collector is the collection target a Client sends logs uploads to.
-type Collector interface {
-	Collect() *Storage
-}
-
-type ExportResult struct {
+type exportResult struct {
 	Response *collogpb.ExportLogsServiceResponse
 	Err      error
 }
 
-// Storage stores uploaded OTLP log data in their proto form.
-type Storage struct {
+// storage stores uploaded OTLP log data in their proto form.
+type storage struct {
 	dataMu sync.Mutex
 	data   []*lpb.ResourceLogs
 }
 
-// NewStorage returns a configure storage ready to store received requests.
-func NewStorage() *Storage {
-	return &Storage{}
+// newStorage returns a configure storage ready to store received requests.
+func newStorage() *storage {
+	return &storage{}
 }
 
 // Add adds the request to the Storage.
-func (s *Storage) Add(request *collogpb.ExportLogsServiceRequest) {
+func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 	s.data = append(s.data, request.ResourceLogs...)
 }
 
 // Dump returns all added ResourceLogs and clears the storage.
-func (s *Storage) Dump() []*lpb.ResourceLogs {
+func (s *storage) Dump() []*lpb.ResourceLogs {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 
@@ -196,32 +191,32 @@ var emptyExportLogsServiceResponse = func() []byte {
 	return r
 }()
 
-type HTTPResponseError struct {
+type httpResponseError struct {
 	Err    error
 	Status int
 	Header http.Header
 }
 
-func (e *HTTPResponseError) Error() string {
+func (e *httpResponseError) Error() string {
 	return fmt.Sprintf("%d: %s", e.Status, e.Err)
 }
 
-func (e *HTTPResponseError) Unwrap() error { return e.Err }
+func (e *httpResponseError) Unwrap() error { return e.Err }
 
-// HTTPCollector is an OTLP HTTP server that collects all requests it receives.
-type HTTPCollector struct {
+// httpCollector is an OTLP HTTP server that collects all requests it receives.
+type httpCollector struct {
 	plainTextResponse bool
 
 	headersMu sync.Mutex
 	headers   http.Header
-	storage   *Storage
+	storage   *storage
 
-	resultCh <-chan ExportResult
+	resultCh <-chan exportResult
 	listener net.Listener
 	srv      *http.Server
 }
 
-// NewHTTPCollector returns a *HTTPCollector that is listening at the provided
+// newHTTPCollector returns a *HTTPCollector that is listening at the provided
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
@@ -234,7 +229,7 @@ type HTTPCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...func(*HTTPCollector)) (*HTTPCollector, error) {
+func newHTTPCollector(endpoint string, resultCh <-chan exportResult, opts ...func(*httpCollector)) (*httpCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -246,9 +241,9 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...fun
 		u.Path = defaultPath
 	}
 
-	c := &HTTPCollector{
+	c := &httpCollector{
 		headers:  http.Header{},
-		storage:  NewStorage(),
+		storage:  newStorage(),
 		resultCh: resultCh,
 	}
 	for _, opt := range opts {
@@ -282,58 +277,58 @@ func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...fun
 	return c, nil
 }
 
-// WithHTTPCollectorRespondingPlainText makes the HTTPCollector return
+// withHTTPCollectorRespondingPlainText makes the HTTPCollector return
 // a plaintext, instead of protobuf, response.
-func WithHTTPCollectorRespondingPlainText() func(*HTTPCollector) {
-	return func(s *HTTPCollector) {
+func withHTTPCollectorRespondingPlainText() func(*httpCollector) {
+	return func(s *httpCollector) {
 		s.plainTextResponse = true
 	}
 }
 
 // Shutdown shuts down the HTTP server closing all open connections and
 // listeners.
-func (c *HTTPCollector) Shutdown(ctx context.Context) error {
+func (c *httpCollector) Shutdown(ctx context.Context) error {
 	return c.srv.Shutdown(ctx)
 }
 
 // Addr returns the net.Addr c is listening at.
-func (c *HTTPCollector) Addr() net.Addr {
+func (c *httpCollector) Addr() net.Addr {
 	return c.listener.Addr()
 }
 
 // Collect returns the Storage holding all collected requests.
-func (c *HTTPCollector) Collect() *Storage {
+func (c *httpCollector) Collect() *storage {
 	return c.storage
 }
 
 // Headers returns the headers received for all requests.
-func (c *HTTPCollector) Headers() map[string][]string {
+func (c *httpCollector) Headers() map[string][]string {
 	// Makes a copy.
 	c.headersMu.Lock()
 	defer c.headersMu.Unlock()
 	return c.headers.Clone()
 }
 
-func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
+func (c *httpCollector) handler(w http.ResponseWriter, r *http.Request) {
 	c.respond(w, c.record(r))
 }
 
-func (c *HTTPCollector) record(r *http.Request) ExportResult {
+func (c *httpCollector) record(r *http.Request) exportResult {
 	// Currently only supports protobuf.
 	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
 		err := fmt.Errorf("content-type not supported: %s", v)
-		return ExportResult{Err: err}
+		return exportResult{Err: err}
 	}
 
 	body, err := c.readBody(r)
 	if err != nil {
-		return ExportResult{Err: err}
+		return exportResult{Err: err}
 	}
 	pbRequest := &collogpb.ExportLogsServiceRequest{}
 	err = proto.Unmarshal(body, pbRequest)
 	if err != nil {
-		return ExportResult{
-			Err: &HTTPResponseError{
+		return exportResult{
+			Err: &httpResponseError{
 				Err:    err,
 				Status: http.StatusInternalServerError,
 			},
@@ -352,17 +347,17 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 	if c.resultCh != nil {
 		return <-c.resultCh
 	}
-	return ExportResult{Err: err}
+	return exportResult{Err: err}
 }
 
-func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
+func (c *httpCollector) readBody(r *http.Request) (body []byte, err error) {
 	var reader io.ReadCloser
 	switch r.Header.Get("Content-Encoding") {
 	case "gzip":
 		reader, err = gzip.NewReader(r.Body)
 		if err != nil {
 			_ = reader.Close()
-			return nil, &HTTPResponseError{
+			return nil, &httpResponseError{
 				Err:    err,
 				Status: http.StatusInternalServerError,
 			}
@@ -374,7 +369,7 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 	defer func() {
 		cErr := reader.Close()
 		if err == nil && cErr != nil {
-			err = &HTTPResponseError{
+			err = &httpResponseError{
 				Err:    cErr,
 				Status: http.StatusInternalServerError,
 			}
@@ -382,7 +377,7 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 	}()
 	body, err = io.ReadAll(reader)
 	if err != nil {
-		err = &HTTPResponseError{
+		err = &httpResponseError{
 			Err:    err,
 			Status: http.StatusInternalServerError,
 		}
@@ -390,11 +385,11 @@ func (c *HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 	return body, err
 }
 
-func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
+func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		var e *HTTPResponseError
+		var e *httpResponseError
 		if errors.As(resp.Err, &e) {
 			for k, vals := range e.Header {
 				for _, v := range vals {
@@ -477,8 +472,8 @@ func weakCertificate() (tls.Certificate, error) {
 }
 
 func TestClient(t *testing.T) {
-	factory := func(rCh <-chan ExportResult) (*client, Collector) {
-		coll, err := NewHTTPCollector("", rCh)
+	factory := func(rCh <-chan exportResult) (*client, *httpCollector) {
+		coll, err := newHTTPCollector("", rCh)
 		require.NoError(t, err)
 
 		addr := coll.Addr().String()
@@ -526,8 +521,8 @@ func TestClient(t *testing.T) {
 
 	t.Run("PartialSuccess", func(t *testing.T) {
 		const n, msg = 2, "bad data"
-		rCh := make(chan ExportResult, 3)
-		rCh <- ExportResult{
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
 			Response: &collogpb.ExportLogsServiceResponse{
 				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 					RejectedLogRecords: n,
@@ -535,7 +530,7 @@ func TestClient(t *testing.T) {
 				},
 			},
 		}
-		rCh <- ExportResult{
+		rCh <- exportResult{
 			Response: &collogpb.ExportLogsServiceResponse{
 				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 					// Should not be logged.
@@ -544,7 +539,7 @@ func TestClient(t *testing.T) {
 				},
 			},
 		}
-		rCh <- ExportResult{
+		rCh <- exportResult{
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
@@ -571,7 +566,7 @@ func TestClient(t *testing.T) {
 
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	ctx := context.Background()
-	coll, err := NewHTTPCollector("", nil, WithHTTPCollectorRespondingPlainText())
+	coll, err := newHTTPCollector("", nil, withHTTPCollectorRespondingPlainText())
 	require.NoError(t, err)
 
 	addr := coll.Addr().String()
@@ -593,8 +588,8 @@ func TestNewWithInvalidEndpoint(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
-	factoryFunc := func(ePt string, rCh <-chan ExportResult, o ...Option) (log.Exporter, *HTTPCollector) {
-		coll, err := NewHTTPCollector(ePt, rCh)
+	factoryFunc := func(ePt string, rCh <-chan exportResult, o ...Option) (log.Exporter, *httpCollector) {
+		coll, err := newHTTPCollector(ePt, rCh)
 		require.NoError(t, err)
 
 		opts := []Option{WithEndpoint(coll.Addr().String())}
@@ -610,7 +605,7 @@ func TestConfig(t *testing.T) {
 	}
 
 	t.Run("WithEndpointURL", func(t *testing.T) {
-		coll, err := NewHTTPCollector("", nil)
+		coll, err := newHTTPCollector("", nil)
 		require.NoError(t, err)
 		ctx := context.Background()
 
@@ -642,7 +637,7 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithTimeout", func(t *testing.T) {
 		// Do not send on rCh so the Collector never responds to the client.
-		rCh := make(chan ExportResult)
+		rCh := make(chan exportResult)
 		exp, coll := factoryFunc(
 			"",
 			rCh,
@@ -669,27 +664,27 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
-		rCh := make(chan ExportResult, 5)
+		rCh := make(chan exportResult, 5)
 		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
 		// All retryable errors.
-		rCh <- ExportResult{Err: &HTTPResponseError{
+		rCh <- exportResult{Err: &httpResponseError{
 			Status: http.StatusServiceUnavailable,
 			Err:    emptyErr,
 			Header: header,
 		}}
-		rCh <- ExportResult{Err: &HTTPResponseError{
+		rCh <- exportResult{Err: &httpResponseError{
 			Status: http.StatusTooManyRequests,
 			Err:    emptyErr,
 		}}
-		rCh <- ExportResult{Err: &HTTPResponseError{
+		rCh <- exportResult{Err: &httpResponseError{
 			Status: http.StatusGatewayTimeout,
 			Err:    emptyErr,
 		}}
-		rCh <- ExportResult{Err: &HTTPResponseError{
+		rCh <- exportResult{Err: &httpResponseError{
 			Status: http.StatusBadGateway,
 			Err:    emptyErr,
 		}}
-		rCh <- ExportResult{}
+		rCh <- exportResult{}
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled:         true,
 			InitialInterval: time.Nanosecond,

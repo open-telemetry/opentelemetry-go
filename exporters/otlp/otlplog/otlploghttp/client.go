@@ -88,7 +88,7 @@ func newHTTPClient(cfg config) (*client, error) {
 		compression: cfg.compression.Value,
 		req:         req,
 		requestFunc: cfg.retryCfg.Value.RequestFunc(evaluate),
-		httpClient:  hc,
+		client:      hc,
 	}
 	return &client{uploadLogs: c.uploadLogs}, nil
 }
@@ -98,7 +98,7 @@ type httpClient struct {
 	req         *http.Request
 	compression Compression
 	requestFunc retry.RequestFunc
-	httpClient  *http.Client
+	client      *http.Client
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -140,7 +140,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		}
 
 		request.reset(iCtx)
-		resp, err := c.httpClient.Do(request.Request)
+		resp, err := c.client.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
 			return newResponseError(http.Header{})
