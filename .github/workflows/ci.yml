@@ -42,9 +42,9 @@ jobs:
           touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
           touch -t ${touchtime} "${filename}"
       - name: Generate
-        run: make generate
+        run: make --debug=v generate
       - name: Run linters
-        run: make dependabot-check license-check lint vanity-import-check verify-readmes
+        run: make --debug=v dependabot-check license-check lint vanity-import-check verify-readmes
       - name: Build
         run: make build
       - name: Check clean repository
