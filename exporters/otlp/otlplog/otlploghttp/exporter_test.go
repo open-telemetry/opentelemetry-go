@@ -15,39 +15,28 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/log"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	logpb "go.opentelemetry.io/proto/slim/otlp/logs/v1"
 )
 
 func TestExporterExportErrors(t *testing.T) {
-	var (
-		errUpload = errors.New("upload")
-		errTForm  = errors.New("transform")
-	)
-
+	errUpload := errors.New("upload")
 	c := &client{
-		uploadLogs: func(context.Context, *logpb.ResourceLogs) error {
+		uploadLogs: func(context.Context, []*logpb.ResourceLogs) error {
 			return errUpload
 		},
 	}
-
-	orig := transformResourceLogs
-	transformResourceLogs = func(r []log.Record) (*logpb.ResourceLogs, error) {
-		return new(logpb.ResourceLogs), errTForm
-	}
-	t.Cleanup(func() { transformResourceLogs = orig })
 
 	e, err := newExporter(c, config{})
 	require.NoError(t, err, "New")
 
 	err = e.Export(context.Background(), make([]log.Record, 1))
 	assert.ErrorIs(t, err, errUpload)
-	assert.ErrorIs(t, err, errTForm)
 }
 
 func TestExporterExport(t *testing.T) {
 	var uploads int
 	c := &client{
-		uploadLogs: func(context.Context, *logpb.ResourceLogs) error {
+		uploadLogs: func(context.Context, []*logpb.ResourceLogs) error {
 			uploads++
 			return nil
 		},
@@ -55,9 +44,9 @@ func TestExporterExport(t *testing.T) {
 
 	orig := transformResourceLogs
 	var got []log.Record
-	transformResourceLogs = func(r []log.Record) (*logpb.ResourceLogs, error) {
+	transformResourceLogs = func(r []log.Record) []*logpb.ResourceLogs {
 		got = r
-		return new(logpb.ResourceLogs), nil
+		return make([]*logpb.ResourceLogs, 1)
 	}
 	t.Cleanup(func() { transformResourceLogs = orig })
 
