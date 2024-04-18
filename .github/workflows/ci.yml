@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 ## Needed for "Set internal/tools/go.mod timestamp" step.
       - name: Install Go
         uses: actions/setup-go@v5
         with:
