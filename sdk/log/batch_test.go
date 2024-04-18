@@ -145,17 +145,17 @@ func TestNewBatchingConfig(t *testing.T) {
 	}
 }
 
-func TestBatchingProcessor(t *testing.T) {
+func TestBatchProcessor(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("NilExporter", func(t *testing.T) {
-		assert.NotPanics(t, func() { NewBatchingProcessor(nil) })
+		assert.NotPanics(t, func() { NewBatchProcessor(nil) })
 	})
 
 	t.Run("Polling", func(t *testing.T) {
 		e := newTestExporter(nil)
 		const size = 15
-		b := NewBatchingProcessor(
+		b := NewBatchProcessor(
 			e,
 			WithMaxQueueSize(2*size),
 			WithExportMaxBatchSize(2*size),
@@ -178,7 +178,7 @@ func TestBatchingProcessor(t *testing.T) {
 	t.Run("OnEmit", func(t *testing.T) {
 		const batch = 10
 		e := newTestExporter(nil)
-		b := NewBatchingProcessor(
+		b := NewBatchProcessor(
 			e,
 			WithMaxQueueSize(10*batch),
 			WithExportMaxBatchSize(batch),
@@ -201,7 +201,7 @@ func TestBatchingProcessor(t *testing.T) {
 		e.ExportTrigger = make(chan struct{})
 
 		const batch = 10
-		b := NewBatchingProcessor(
+		b := NewBatchProcessor(
 			e,
 			WithMaxQueueSize(3*batch),
 			WithExportMaxBatchSize(batch),
@@ -236,7 +236,7 @@ func TestBatchingProcessor(t *testing.T) {
 	})
 
 	t.Run("Enabled", func(t *testing.T) {
-		b := NewBatchingProcessor(defaultNoopExporter)
+		b := NewBatchProcessor(defaultNoopExporter)
 		assert.True(t, b.Enabled(ctx, Record{}))
 
 		_ = b.Shutdown(ctx)
@@ -246,14 +246,14 @@ func TestBatchingProcessor(t *testing.T) {
 	t.Run("Shutdown", func(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 			assert.NoError(t, b.Shutdown(ctx))
 		})
 
 		t.Run("Multiple", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 
 			const shutdowns = 3
 			for i := 0; i < shutdowns; i++ {
@@ -264,7 +264,7 @@ func TestBatchingProcessor(t *testing.T) {
 
 		t.Run("OnEmit", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 			assert.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
@@ -274,7 +274,7 @@ func TestBatchingProcessor(t *testing.T) {
 
 		t.Run("ForceFlush", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 
 			assert.NoError(t, b.OnEmit(ctx, Record{}))
 			assert.NoError(t, b.Shutdown(ctx))
@@ -287,7 +287,7 @@ func TestBatchingProcessor(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
 			t.Cleanup(func() { close(e.ExportTrigger) })
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 
 			ctx := context.Background()
 			c, cancel := context.WithCancel(ctx)
@@ -300,7 +300,7 @@ func TestBatchingProcessor(t *testing.T) {
 	t.Run("ForceFlush", func(t *testing.T) {
 		t.Run("Flush", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
-			b := NewBatchingProcessor(
+			b := NewBatchProcessor(
 				e,
 				WithMaxQueueSize(100),
 				WithExportMaxBatchSize(10),
@@ -336,7 +336,7 @@ func TestBatchingProcessor(t *testing.T) {
 			t.Cleanup(func() { ctxErr = orig })
 
 			const batch = 1
-			b := NewBatchingProcessor(
+			b := NewBatchProcessor(
 				e,
 				WithMaxQueueSize(10*batch),
 				WithExportMaxBatchSize(batch),
@@ -385,7 +385,7 @@ func TestBatchingProcessor(t *testing.T) {
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
-			b := NewBatchingProcessor(e)
+			b := NewBatchProcessor(e)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 			var r Record
@@ -404,7 +404,7 @@ func TestBatchingProcessor(t *testing.T) {
 		const goRoutines = 10
 
 		e := newTestExporter(nil)
-		b := NewBatchingProcessor(e)
+		b := NewBatchProcessor(e)
 
 		ctx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
