@@ -14,12 +14,16 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes test-default
+precommit: rm-tools generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes test-default
 ci: generate dependabot-check license-check lint vanity-import-check verify-readmes build test-default check-clean-work-tree test-coverage
 
 # Tools
 
 TOOLS = $(CURDIR)/.tools
+
+.PHONY: rm-tools
+rm-tools:
+	@rm -rf $(TOOLS)
 
 $(TOOLS):
 	@mkdir -p $@
