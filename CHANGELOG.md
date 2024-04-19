@@ -15,15 +15,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make the initial alpha release of `go.opentelemetry.io/otel/sdk/log`.
   This new module contains the Go implementation of the OpenTelemetry Logs SDK.
   This module is unstable and breaking changes may be introduced.
-  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#TBD)
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
 - Make the initial alpha release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
   This new module contains an OTLP exporter that transmits log telemetry using HTTP.
   This module is unstable and breaking changes may be introduced.
-  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#TBD)
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
 - Make the initial alpha release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
   This new module contains an exporter prints log records to STDOUT.
   This module is unstable and breaking changes may be introduced.
-  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#TBD)
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
 
 ### Changed
 
