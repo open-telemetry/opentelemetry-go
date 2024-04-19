@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -546,5 +547,33 @@ func TestQueue(t *testing.T) {
 		<-done
 
 		assert.Len(t, out, goRoutines, "flushed Records")
+	})
+}
+
+func BenchmarkBatchProcessorOnEmit(b *testing.B) {
+	var r Record
+	body := log.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	ctx := context.Background()
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(b.N+1),
+		WithExportMaxBatchSize(b.N+1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+
+	b.SetBytes(int64(rSize))
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		var err error
+		for pb.Next() {
+			err = bp.OnEmit(ctx, r)
+		}
+		_ = err
 	})
 }
