@@ -37,8 +37,6 @@
 //
 // There are known limitations to the trace bridge:
 //
-//   - The AddLink method for OpenCensus Spans is ignored, and an error is sent
-//     to the OpenTelemetry ErrorHandler.
 //   - The NewContext method of the OpenCensus Tracer cannot embed an OpenCensus
 //     Span in a context unless that Span was created by that Tracer.
 //   - Conversion of custom OpenCensus Samplers to OpenTelemetry is not

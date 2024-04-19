@@ -6,7 +6,7 @@ on:
   workflow_dispatch: 
 
 env:
-  DEFAULT_GO_VERSION: "~1.22.0"
+  DEFAULT_GO_VERSION: "~1.22.2"
 jobs:
   benchmark:
     name: Benchmarks
@@ -27,7 +27,7 @@ jobs:
           path: ./benchmarks
           key: ${{ runner.os }}-benchmark
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@v1.19.3
+        uses: benchmark-action/github-action-benchmark@v1.20.1
         with:
           name: Benchmarks
           tool: 'go'
@@ -35,6 +35,5 @@ jobs:
           external-data-json-path: ./benchmarks/data.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: benchmarks
-          auto-push: true
-          fail-on-alert: false
+          fail-on-alert: true
           alert-threshold: "400%"

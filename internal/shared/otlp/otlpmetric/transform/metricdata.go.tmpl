@@ -98,6 +98,8 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 		out.Data, err = ExponentialHistogram(a)
 	case metricdata.ExponentialHistogram[float64]:
 		out.Data, err = ExponentialHistogram(a)
+	case metricdata.Summary:
+		out.Data = Summary(a)
 	default:
 		return out, fmt.Errorf("%w: %T", errUnknownAggregation, a)
 	}
@@ -304,6 +306,47 @@ func Exemplars[N int64 | float64](exemplars []metricdata.Exemplar[N]) []*mpb.Exe
 			}
 		}
 		out = append(out, e)
+	}
+	return out
+}
+
+// Summary returns an OTLP Metric_Summary generated from s.
+func Summary(s metricdata.Summary) *mpb.Metric_Summary {
+	return &mpb.Metric_Summary{
+		Summary: &mpb.Summary{
+			DataPoints: SummaryDataPoints(s.DataPoints),
+		},
+	}
+}
+
+// SummaryDataPoints returns a slice of OTLP SummaryDataPoint generated from
+// dPts.
+func SummaryDataPoints(dPts []metricdata.SummaryDataPoint) []*mpb.SummaryDataPoint {
+	out := make([]*mpb.SummaryDataPoint, 0, len(dPts))
+	for _, dPt := range dPts {
+		sdp := &mpb.SummaryDataPoint{
+			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
+			TimeUnixNano:      timeUnixNano(dPt.Time),
+			Count:             dPt.Count,
+			Sum:               dPt.Sum,
+			QuantileValues:    QuantileValues(dPt.QuantileValues),
+		}
+		out = append(out, sdp)
+	}
+	return out
+}
+
+// QuantileValues returns a slice of OTLP SummaryDataPoint_ValueAtQuantile
+// generated from quantiles.
+func QuantileValues(quantiles []metricdata.QuantileValue) []*mpb.SummaryDataPoint_ValueAtQuantile {
+	out := make([]*mpb.SummaryDataPoint_ValueAtQuantile, 0, len(quantiles))
+	for _, q := range quantiles {
+		quantile := &mpb.SummaryDataPoint_ValueAtQuantile{
+			Quantile: q.Quantile,
+			Value:    q.Value,
+		}
+		out = append(out, quantile)
 	}
 	return out
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
@@ -173,11 +172,5 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 
 	mc.endpoint = ln.Addr().String()
 	mc.stopFunc = srv.Stop
-
-	// Wait until gRPC server is up.
-	conn, err := grpc.Dial(mc.endpoint, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err, "grpc.Dial")
-	require.NoError(t, conn.Close(), "conn.Close")
-
 	return mc
 }
