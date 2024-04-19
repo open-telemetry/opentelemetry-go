@@ -222,7 +222,7 @@ type Member struct {
 	hasData bool
 }
 
-// NewMemberRaw returns a new Member from the passed arguments.
+// NewMember returns a new Member from the passed arguments.
 //
 // The passed key must be compliant with W3C Baggage specification.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
