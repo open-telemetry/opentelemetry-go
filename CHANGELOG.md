@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Update `go.opentelemetry.io/proto/otlp` from v1.1.0 to v1.2.0. (#5177)
+- Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
 
 ### Removed
 
