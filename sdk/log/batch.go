@@ -25,20 +25,20 @@ const (
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
 
-// Compile-time check BatchingProcessor implements Processor.
-var _ Processor = (*BatchingProcessor)(nil)
+// Compile-time check BatchProcessor implements Processor.
+var _ Processor = (*BatchProcessor)(nil)
 
-// BatchingProcessor is a processor that exports batches of log records.
-// A BatchingProcessor must be created with [NewBatchingProcessor].
-type BatchingProcessor struct {
-	// The BatchingProcessor is designed to provide the highest throughput of
+// BatchProcessor is a processor that exports batches of log records.
+// A BatchProcessor must be created with [NewBatchProcessor].
+type BatchProcessor struct {
+	// The BatchProcessor is designed to provide the highest throughput of
 	// log records possible while being compatible with OpenTelemetry. The
 	// entry point of log records is the OnEmit method. This method is designed
 	// to receive records as fast as possible while still honoring shutdown
 	// commands. All records received are enqueued to queue.
 	//
 	// In order to block OnEmit as little as possible, a separate "poll"
-	// goroutine is spawned at the creation of a BatchingProcessor. This
+	// goroutine is spawned at the creation of a BatchProcessor. This
 	// goroutine is responsible for batching the queue at regular polled
 	// intervals, or when it is directly signaled to.
 	//
@@ -48,7 +48,7 @@ type BatchingProcessor struct {
 	// separate goroutine dedicated to the export. This asynchronous behavior
 	// allows the poll goroutine to maintain accurate interval polling.
 	//
-	//   __BatchingProcessor__     __Poll Goroutine__     __Export Goroutine__
+	//   __BatchProcessor__        __Poll Goroutine__     __Export Goroutine__
 	// ||                     || ||                  || ||                    ||
 	// ||          ********** || ||                  || ||     **********     ||
 	// || Records=>* OnEmit * || ||   | - ticker     || ||     * export *     ||
@@ -91,15 +91,15 @@ type BatchingProcessor struct {
 	// pollDone signals the poll goroutine has completed.
 	pollDone chan struct{}
 
-	// stopped holds the stopped state of the BatchingProcessor.
+	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 }
 
-// NewBatchingProcessor decorates the provided exporter
+// NewBatchProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
 //
 // All of the exporter's methods are called synchronously.
-func NewBatchingProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchingProcessor {
+func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchProcessor {
 	cfg := newBatchingConfig(opts)
 	if exporter == nil {
 		// Do not panic on nil export.
@@ -113,7 +113,7 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchProcessorOption) *Batc
 	// appropriately on export.
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
-	b := &BatchingProcessor{
+	b := &BatchProcessor{
 		// TODO: explore making the size of this configurable.
 		exporter: newBufferExporter(exporter, 1),
 
@@ -128,7 +128,7 @@ func NewBatchingProcessor(exporter Exporter, opts ...BatchProcessorOption) *Batc
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
 // returned done chan is closed when the spawned goroutine completes.
-func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
+func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 
 	ticker := time.NewTicker(interval)
@@ -169,7 +169,7 @@ func (b *BatchingProcessor) poll(interval time.Duration) (done chan struct{}) {
 }
 
 // OnEmit batches provided log record.
-func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
+func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
 	if b.stopped.Load() {
 		return nil
 	}
@@ -186,12 +186,12 @@ func (b *BatchingProcessor) OnEmit(_ context.Context, r Record) error {
 }
 
 // Enabled returns if b is enabled.
-func (b *BatchingProcessor) Enabled(context.Context, Record) bool {
+func (b *BatchProcessor) Enabled(context.Context, Record) bool {
 	return !b.stopped.Load()
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
-func (b *BatchingProcessor) Shutdown(ctx context.Context) error {
+func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) {
 		return nil
 	}
@@ -218,7 +218,7 @@ var ctxErr = func(ctx context.Context) error {
 }
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
-func (b *BatchingProcessor) ForceFlush(ctx context.Context) error {
+func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 	if b.stopped.Load() {
 		return nil
 	}
@@ -372,7 +372,7 @@ func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
 	return c
 }
 
-// BatchProcessorOption applies a configuration to a [BatchingProcessor].
+// BatchProcessorOption applies a configuration to a [BatchProcessor].
 type BatchProcessorOption interface {
 	apply(batchingConfig) batchingConfig
 }
