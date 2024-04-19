@@ -26,7 +26,7 @@ var (
 	defaultPath                            = "/v1/logs"
 	defaultTimeout                         = 10 * time.Second
 	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                        = RetryConfig(retry.DefaultConfig)
+	defaultRetryCfg                        = retry.DefaultConfig
 )
 
 // Environment variable keys.
@@ -93,7 +93,7 @@ type config struct {
 	compression setting[Compression]
 	timeout     setting[time.Duration]
 	proxy       setting[HTTPTransportProxyFunc]
-	retryCfg    setting[RetryConfig]
+	retryCfg    setting[retry.Config]
 }
 
 func newConfig(options []Option) config {
@@ -131,7 +131,7 @@ func newConfig(options []Option) config {
 		fallback[HTTPTransportProxyFunc](defaultProxy),
 	)
 	c.retryCfg = c.retryCfg.Resolve(
-		fallback[RetryConfig](defaultRetryCfg),
+		fallback[retry.Config](defaultRetryCfg),
 	)
 
 	return c
@@ -322,7 +322,7 @@ type RetryConfig retry.Config
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
 	return fnOpt(func(c config) config {
-		c.retryCfg = newSetting(rc)
+		c.retryCfg = newSetting(retry.Config(rc))
 		return c
 	})
 }

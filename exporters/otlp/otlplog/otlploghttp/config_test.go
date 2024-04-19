@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
 const (
@@ -79,7 +80,7 @@ func TestNewConfig(t *testing.T) {
 	require.NoError(t, err, "testing TLS config")
 
 	headers := map[string]string{"a": "A"}
-	rc := RetryConfig{}
+	rc := retry.Config{}
 
 	testcases := []struct {
 		name    string
@@ -107,7 +108,7 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
@@ -293,7 +294,7 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithRetry(RetryConfig(rc)),
 			},
 			want: config{
 				endpoint:    newSetting("test"),
