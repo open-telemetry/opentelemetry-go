@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestNewBatchingConfig(t *testing.T) {
+func TestNewBatchConfig(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		t.Log(err)
 	}))
@@ -27,11 +27,11 @@ func TestNewBatchingConfig(t *testing.T) {
 		name    string
 		envars  map[string]string
 		options []BatchProcessorOption
-		want    batchingConfig
+		want    batchConfig
 	}{
 		{
 			name: "Defaults",
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -46,7 +46,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
@@ -61,7 +61,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(1),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
@@ -76,7 +76,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(-1 * time.Hour),
 				WithExportMaxBatchSize(-2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -91,7 +91,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -113,7 +113,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(3),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
@@ -126,7 +126,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithMaxQueueSize(1),
 				WithExportMaxBatchSize(10),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(1),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -140,7 +140,7 @@ func TestNewBatchingConfig(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			assert.Equal(t, tc.want, newBatchingConfig(tc.options))
+			assert.Equal(t, tc.want, newBatchConfig(tc.options))
 		})
 	}
 }
