@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // config contains options for the exporter.
@@ -17,7 +18,7 @@ type config struct {
 	encoder             *encoderHolder
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
-	redactTimestamps    bool
+	redactors           []RedactorFunc
 }
 
 // newConfig creates a validated config configured with options.
@@ -126,7 +127,18 @@ func (t aggregationSelectorOption) apply(c config) config {
 // WithoutTimestamps sets all timestamps to zero in the output stream.
 func WithoutTimestamps() Option {
 	return optionFunc(func(c config) config {
-		c.redactTimestamps = true
+		c.redactors = append(c.redactors, redactTimestamps)
 		return c
 	})
 }
+
+// WithRedactor sets a redactor the exporter will use to redact metrics.
+func WithRedactor(redactor RedactorFunc) Option {
+	return optionFunc(func(c config) config {
+		c.redactors = append(c.redactors, redactor)
+		return c
+	})
+}
+
+// RedactorFunc supports redacting certain information from metrics.
+type RedactorFunc func(orig *metricdata.ResourceMetrics)
