@@ -263,7 +263,7 @@ func newHTTPCollector(endpoint string, resultCh <-chan exportResult, opts ...fun
 		WriteTimeout: 10 * time.Second,
 	}
 	if u.Scheme == "https" {
-		cert, err := weakCertificate()
+		cert, err := newWeakCertificate()
 		if err != nil {
 			return nil, err
 		}
@@ -427,7 +427,7 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 
 // Based on https://golang.org/src/crypto/tls/generate_cert.go,
 // simplified and weakened.
-func weakCertificate() (tls.Certificate, error) {
+func newWeakCertificate() (tls.Certificate, error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return tls.Certificate{}, err

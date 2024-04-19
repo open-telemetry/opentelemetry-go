@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-  "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
 const (
@@ -294,7 +294,7 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithRetry(RetryConfig(rc)),
 			},
 			want: config{
 				endpoint:    newSetting("test"),
