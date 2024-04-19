@@ -55,10 +55,10 @@ The user can configure custom processors and decorate built-in processors.
 The [Simple processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor)
 is implemented as `SimpleProcessor` struct in [simple.go](simple.go).
 
-### BatchingProcessor
+### BatchProcessor
 
 The [Batching processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#batching-processor)
-is implemented as `BatchingProcessor` struct in [batch.go](batch.go).
+is implemented as `BatchProcessor` struct in [batch.go](batch.go).
 
 The `Batcher` can be also configured using the `OTEL_BLRP_*` environment variables as
 [defined by the specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#batch-logrecord-processor).
