@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 ## Needed for "Set internal/tools/go.mod timestamp" step.
       - name: Install Go
         uses: actions/setup-go@v5
         with:
@@ -34,6 +36,14 @@ jobs:
         with:
           path: .tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      # The step below is needed to not rebuild all the build tools.
+      - name: Set internal/tools/go.mod timestamp
+        run: |
+          filename="internal/tools/go.mod"
+          unixtime=$(git log -1 --format="%at" -- "${filename}")
+          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
+          touch -t ${touchtime} "${filename}"
+          ls -la --time-style=full-iso "${filename}"
       - name: Generate
         run: make generate
       - name: Run linters
@@ -92,7 +102,7 @@ jobs:
           cp coverage.txt $TEST_RESULTS
           cp coverage.html $TEST_RESULTS
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.2.0
+        uses: codecov/codecov-action@v4.3.0
         with:
           file: ./coverage.txt
           fail_ci_if_error: true
