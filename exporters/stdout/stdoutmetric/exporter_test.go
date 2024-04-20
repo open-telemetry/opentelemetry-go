@@ -28,8 +28,7 @@ func testEncoderOption() stdoutmetric.Option {
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
-		t.Cleanup(cancel)
+		ctx := context.Background()
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -57,8 +56,7 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 func testCtxErrIgnored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
-		t.Cleanup(cancel)
+		ctx := context.Background()
 
 		t.Run("Canceled Ignored", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithCancel(ctx)
