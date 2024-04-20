@@ -5,6 +5,7 @@ package stdoutlog_test
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
