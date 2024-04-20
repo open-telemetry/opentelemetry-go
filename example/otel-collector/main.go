@@ -42,12 +42,9 @@ func initProvider() (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	// If the OpenTelemetry Collector is running on a local cluster (minikube or
-	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
-	// endpoint of your cluster. If you run the app inside k8s, then you can
-	// probably connect directly to the service through dns.
-	conn, err := grpc.NewClient("localhost:30080",
+	// It connects the OpenTelemetry Collector through local gRPC connection.
+	// You may replace `localhost:4317` with your endpoint.
+	conn, err := grpc.NewClient("localhost:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
