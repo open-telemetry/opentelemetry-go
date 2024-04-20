@@ -33,6 +33,7 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 		t.Run("DeadlineExceeded", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
 			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
 
 			f := factory(t)
 			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
