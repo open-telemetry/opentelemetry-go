@@ -46,7 +46,7 @@ type Property struct {
 //
 // If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
-	if !validateKey(key) {
+	if !validateBaggageName(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -56,12 +56,20 @@ func NewKeyProperty(key string) (Property, error) {
 
 // NewKeyValueProperty returns a new Property for key with value.
 //
-// The passed key must be compliant with W3C Baggage specification.
+// The passed key must be percent-encoded.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewKeyValuePropertyRaw] instead
-// that does not require percent-encoding of the value.
+// that does not require percent-encoding of the key and the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
+	if !validateKey(key) {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
+	}
+	decodedKey, err := url.PathUnescape(value)
+	if err != nil {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+	}
+
 	if !validateValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
@@ -69,15 +77,23 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 	if err != nil {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	return NewKeyValuePropertyRaw(key, decodedValue)
+	return NewKeyValuePropertyRaw(decodedKey, decodedValue)
 }
 
 // NewKeyValuePropertyRaw returns a new Property for key with value.
 //
-// The passed key must be compliant with W3C Baggage specification.
+// The passed key and value must be valid UTF-8 string.
+// However, the specific Propagators that are used to transmit baggage entries across
+// component boundaries may impose their own restrictions on Property key.
+// For example, the W3C Baggage specification restricts the Property keys to strings that
+// satisfy the token definition from RFC7230, Section 3.2.6.
+// For maximum compatibility, alpha-numeric value are strongly recommended to be used as Property key.
 func NewKeyValuePropertyRaw(key, value string) (Property, error) {
-	if !validateKey(key) {
+	if !validateBaggageName(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
+	}
+	if !validateValue(key) {
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
 	p := Property{
@@ -115,11 +131,14 @@ func (p Property) validate() error {
 		return fmt.Errorf("invalid property: %w", err)
 	}
 
-	if !validateKey(p.key) {
+	if !validateBaggageName(p.key) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidKey, p.key))
 	}
 	if !p.hasValue && p.value != "" {
 		return errFunc(errors.New("inconsistent value"))
+	}
+	if !validateValue(p.value) {
+		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	return nil
 }
@@ -136,11 +155,10 @@ func (p Property) Value() (string, bool) {
 	return p.value, p.hasValue
 }
 
-// String encodes Property into a header string compliant with the W3C Baggage
-// specification.
+// String encodes Property into a header string.
 func (p Property) String() string {
 	if p.hasValue {
-		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, valueEscape(p.value))
+		return fmt.Sprintf("%s%s%v", valueEscape(p.key), keyValueDelimiter, valueEscape(p.value))
 	}
 	return p.key
 }
@@ -224,12 +242,20 @@ type Member struct {
 
 // NewMember returns a new Member from the passed arguments.
 //
-// The passed key must be compliant with W3C Baggage specification.
+// The passed key must be percent-encoded.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewMemberRaw] instead
 // that does not require percent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
+	if !validateKey(key) {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
+	}
+	decodedKey, err := url.PathUnescape(key)
+	if err != nil {
+		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
+	}
+
 	if !validateValue(value) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
@@ -237,7 +263,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	return NewMemberRaw(key, decodedValue, props...)
+	return NewMemberRaw(decodedKey, decodedValue, props...)
 }
 
 // NewMemberRaw returns a new Member from the passed arguments.
@@ -340,10 +366,8 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // String encodes Member into a header string compliant with the W3C Baggage
 // specification.
 func (m Member) String() string {
-	// A key is just an ASCII string. A value is restricted to be
-	// US-ASCII characters excluding CTLs, whitespace,
-	// DQUOTE, comma, semicolon, and backslash.
-	s := fmt.Sprintf("%s%s%s", m.key, keyValueDelimiter, valueEscape(m.value))
+	// A key is can be a valid UTF-8 string.
+	s := fmt.Sprintf("%s%s%s", valueEscape(m.key), keyValueDelimiter, valueEscape(m.value))
 	if len(m.properties) > 0 {
 		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
 	}
