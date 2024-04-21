@@ -483,6 +483,11 @@ func TestBaggageParse(t *testing.T) {
 			err:  errInvalidValue,
 		},
 		{
+			name: "invalid member: improper url encoded key",
+			in:   "key%=val",
+			err:  errInvalidKey,
+		},
+		{
 			name: "invalid member: improper url encoded value",
 			in:   "key1=val%",
 			err:  errInvalidValue,
@@ -498,8 +503,18 @@ func TestBaggageParse(t *testing.T) {
 			err:  errInvalidProperty,
 		},
 		{
+			name: "invalid property: improper url encoded key",
+			in:   "foo=1;key%=v",
+			err:  errInvalidProperty,
+		},
+		{
 			name: "invalid property: invalid value",
 			in:   "foo=1;key=\\",
+			err:  errInvalidProperty,
+		},
+		{
+			name: "invalid property: improper url encoded value",
+			in:   "foo=1;key=val%",
 			err:  errInvalidProperty,
 		},
 		{
