@@ -160,7 +160,7 @@ func (p Property) String() string {
 	if p.hasValue {
 		return fmt.Sprintf("%s%s%v", valueEscape(p.key), keyValueDelimiter, valueEscape(p.value))
 	}
-	return p.key
+	return valueEscape(p.key)
 }
 
 type properties []Property

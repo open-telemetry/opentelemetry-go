@@ -458,6 +458,14 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "encoded UTF-8 string in property",
+			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87;%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"a":   {Value: "b"},
+				"ąść": {Value: "ąść", Properties: []baggage.Property{{Key: "ąść", HasValue: true, Value: "ąść"}}},
+			},
+		},
+		{
 			name: "invalid member: empty",
 			in:   "foo=,,bar=",
 			err:  errInvalidMember,
@@ -663,6 +671,23 @@ func TestBaggageString(t *testing.T) {
 				},
 				"bar": {
 					Value:      "2",
+					Properties: []baggage.Property{{Key: "yellow"}},
+				},
+			},
+		},
+		{
+			name: "utf-8 key and value",
+			out:  "%C4%85%C5%9B%C4%872=B%25%20%F0%9F%92%BC-2;yellow,%C4%85%C5%9B%C4%87=B%25%20%F0%9F%92%BC;%C4%85%C5%9B%C4%87-1=B%25%20%F0%9F%92%BC-1;%C4%85%C5%9B%C4%87-2",
+			baggage: baggage.List{
+				"ąść": {
+					Value: "B% 💼",
+					Properties: []baggage.Property{
+						{Key: "ąść-1", Value: "B% 💼-1", HasValue: true},
+						{Key: "ąść-2"},
+					},
+				},
+				"ąść2": {
+					Value:      "B% 💼-2",
 					Properties: []baggage.Property{{Key: "yellow"}},
 				},
 			},
@@ -1096,7 +1121,7 @@ func BenchmarkString(b *testing.B) {
 
 	addMember("key1", "val1")
 	addMember("key2", " ;,%")
-	addMember("key3", "Witaj świecie!")
+	addMember("B% 💼", "Witaj świecie!")
 	addMember("key4", strings.Repeat("Hello world!", 10))
 
 	bg, err := New(members...)
