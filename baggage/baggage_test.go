@@ -453,9 +453,8 @@ func TestBaggageParse(t *testing.T) {
 			name: "encoded UTF-8 string in key",
 			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"a": {Value: "b"},
-				// The percent-encoded key won't be decoded.
-				"%C4%85%C5%9B%C4%87": {Value: "ąść"},
+				"a":   {Value: "b"},
+				"ąść": {Value: "ąść"},
 			},
 		},
 		{
