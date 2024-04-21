@@ -123,12 +123,22 @@ func TestParsePropertyError(t *testing.T) {
 
 func TestNewKeyProperty(t *testing.T) {
 	p, err := NewKeyProperty(" ")
-	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Property{}, p)
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: " "}, p)
 
 	p, err = NewKeyProperty("key")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key"}, p)
+
+	// UTF-8 key
+	p, err = NewKeyProperty("B% 💼")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "B% 💼"}, p)
+
+	// Invalid UTF-8 key
+	p, err = NewKeyProperty(string([]byte{255}))
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
@@ -140,6 +150,11 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
+	// wrong key with wrong decoding
+	p, err = NewKeyValueProperty("%zzzzz", "value")
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
+
 	// wrong value with wrong decoding
 	p, err = NewKeyValueProperty("key", "%zzzzz")
 	assert.ErrorIs(t, err, errInvalidValue)
@@ -148,16 +163,32 @@ func TestNewKeyValueProperty(t *testing.T) {
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
+
+	// Percent-encoded key and value
+	p, err = NewKeyValueProperty("%C4%85%C5%9B%C4%87", "%C4%85%C5%9B%C4%87")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "ąść", value: "ąść", hasValue: true}, p)
 }
 
 func TestNewKeyValuePropertyRaw(t *testing.T) {
-	p, err := NewKeyValuePropertyRaw(" ", "")
+	// Empty key
+	p, err := NewKeyValuePropertyRaw("", " ")
 	assert.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
-	p, err = NewKeyValuePropertyRaw("key", "Witaj Świecie!")
+	// Empty value
+	p, err = NewKeyValuePropertyRaw(" ", "")
+	assert.ErrorIs(t, err, errInvalidValue)
+	assert.Equal(t, Property{}, p)
+
+	// Space value
+	p, err = NewKeyValuePropertyRaw(" ", " ")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key", value: "Witaj Świecie!", hasValue: true}, p)
+	assert.Equal(t, Property{key: " ", value: " ", hasValue: true}, p)
+
+	p, err = NewKeyValuePropertyRaw("B% 💼", "Witaj Świecie!")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "B% 💼", value: "Witaj Świecie!", hasValue: true}, p)
 }
 
 func TestPropertyValidate(t *testing.T) {
@@ -172,6 +203,10 @@ func TestPropertyValidate(t *testing.T) {
 
 	p.hasValue = true
 	assert.NoError(t, p.validate())
+
+	// Invalid value
+	p.value = string([]byte{255})
+	assert.ErrorIs(t, p.validate(), errInvalidValue)
 }
 
 func TestNewEmptyBaggage(t *testing.T) {
@@ -900,7 +935,13 @@ func TestNewMember(t *testing.T) {
 	}
 	assert.Equal(t, expected, m)
 
+	// wong key with wrong decoding
+	key = "%zzzzz"
+	_, err = NewMember(key, val, p)
+	assert.ErrorIs(t, err, errInvalidKey)
+
 	// wrong value with invalid token
+	key = "k"
 	val = ";"
 	_, err = NewMember(key, val, p)
 	assert.ErrorIs(t, err, errInvalidValue)

@@ -65,9 +65,9 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 	if !validateKey(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	decodedKey, err := url.PathUnescape(value)
+	decodedKey, err := url.PathUnescape(key)
 	if err != nil {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
+		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
 	if !validateValue(value) {
@@ -92,7 +92,7 @@ func NewKeyValuePropertyRaw(key, value string) (Property, error) {
 	if !validateBaggageName(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
-	if !validateValue(key) {
+	if !validateBaggageValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
 
@@ -137,7 +137,7 @@ func (p Property) validate() error {
 	if !p.hasValue && p.value != "" {
 		return errFunc(errors.New("inconsistent value"))
 	}
-	if !validateValue(p.value) {
+	if p.hasValue && !validateBaggageValue(p.value) {
 		return errFunc(fmt.Errorf("%w: %q", errInvalidValue, p.value))
 	}
 	return nil
@@ -765,6 +765,10 @@ func validateBaggageName(s string) bool {
 // validateBaggageValue checks if the string is a valid OpenTelemetry Baggage value.
 // Baggage value is a valid UTF-8 strings.
 func validateBaggageValue(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
 	return utf8.ValidString(s)
 }
 
