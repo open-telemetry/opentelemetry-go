@@ -37,9 +37,13 @@ type exporter struct{ io.Writer }
 func (e exporter) Export(ctx context.Context, records []log.Record) error {
 	for i, r := range records {
 		if i != 0 {
-			e.Write([]byte("\n"))
+			if _, err := e.Write([]byte("\n")); err != nil {
+				return err
+			}
 		}
-		fmt.Fprintf(e, "scope=%s msg=%s", r.InstrumentationScope().Name, r.Body().String())
+		if _, err := fmt.Fprintf(e, "scope=%s msg=%s", r.InstrumentationScope().Name, r.Body().String()); err != nil {
+			return err
+		}
 	}
 	return nil
 }
