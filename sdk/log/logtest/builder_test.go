@@ -75,15 +75,16 @@ func TestRecordBuilderMultiple(t *testing.T) {
 		SetDroppedAttributes(2).
 		Record()
 
-	assert.Equal(t, now, record1.Timestamp())
-	assertAttributes(t, attrs, record1)
-	assert.Equal(t, 1, record1.DroppedAttributes())
-	assert.Equal(t, scope, record1.InstrumentationScope())
-
 	assert.Equal(t, now, record2.Timestamp())
 	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)
 	assert.Equal(t, 2, record2.DroppedAttributes())
 	assert.Equal(t, scope, record2.InstrumentationScope())
+
+	// Previously returned record is unharmed by the builder changes.
+	assert.Equal(t, now, record1.Timestamp())
+	assertAttributes(t, attrs, record1)
+	assert.Equal(t, 1, record1.DroppedAttributes())
+	assert.Equal(t, scope, record1.InstrumentationScope())
 }
 
 func assertAttributes(t *testing.T, want []log.KeyValue, r sdklog.Record) {
