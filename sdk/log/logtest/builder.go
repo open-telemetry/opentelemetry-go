@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TODO: comment.
@@ -22,9 +23,9 @@ type RecordBuilder struct {
 	severityText      string
 	body              log.Value
 	attrs             []log.KeyValue
-	// traceID           trace.TraceID
-	// spanID            trace.SpanID
-	// traceFlags        trace.TraceFlags
+	traceID           trace.TraceID
+	spanID            trace.SpanID
+	traceFlags        trace.TraceFlags
 
 	resource *resource.Resource
 	scope    instrumentation.Scope
@@ -47,6 +48,10 @@ func (b RecordBuilder) Record() sdklog.Record {
 		for i := 0; i < b.dropped; i++ {
 			r.AddAttributes(log.KeyValue{})
 		}
+
+		r.SetTraceID(b.traceID)
+		r.SetSpanID(b.spanID)
+		r.SetTraceFlags(b.traceFlags)
 
 		record = r
 	})
@@ -116,14 +121,32 @@ func (b RecordBuilder) SetAttributes(attrs ...log.KeyValue) RecordBuilder {
 }
 
 // TODO: comment.
-func (b RecordBuilder) SetInstrumentationScope(scope instrumentation.Scope) RecordBuilder {
-	b.scope = scope
+func (b RecordBuilder) SetTraceID(traceID trace.TraceID) RecordBuilder {
+	b.traceID = traceID
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetSpanID(spanID trace.SpanID) RecordBuilder {
+	b.spanID = spanID
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetTraceFlags(flags trace.TraceFlags) RecordBuilder {
+	b.traceFlags = flags
 	return b
 }
 
 // TODO: comment.
 func (b RecordBuilder) SetResource(r *resource.Resource) RecordBuilder {
 	b.resource = r
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetInstrumentationScope(scope instrumentation.Scope) RecordBuilder {
+	b.scope = scope
 	return b
 }
 

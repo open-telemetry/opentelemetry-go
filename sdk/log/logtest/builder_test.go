@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestRecordBuilder(t *testing.T) {
@@ -28,6 +29,9 @@ func TestRecordBuilder(t *testing.T) {
 		log.String("str", "foo"),
 		log.Float64("flt", 3.14),
 	}
+	traceID := trace.TraceID([16]byte{1})
+	spanID := trace.SpanID([8]byte{2})
+	traceFlags := trace.FlagsSampled
 	dropped := 3
 	scope := instrumentation.Scope{
 		Name: t.Name(),
@@ -41,6 +45,9 @@ func TestRecordBuilder(t *testing.T) {
 		SetSeverityText(severityText).
 		SetBody(body).
 		SetAttributes(attrs...).
+		SetTraceID(traceID).
+		SetSpanID(spanID).
+		SetTraceFlags(traceFlags).
 		SetDroppedAttributes(dropped).
 		SetInstrumentationScope(scope).
 		SetResource(r)
@@ -53,6 +60,9 @@ func TestRecordBuilder(t *testing.T) {
 	assertBody(t, body, got)
 	assertAttributes(t, attrs, got)
 	assert.Equal(t, dropped, got.DroppedAttributes())
+	assert.Equal(t, traceID, got.TraceID())
+	assert.Equal(t, spanID, got.SpanID())
+	assert.Equal(t, traceFlags, got.TraceFlags())
 	assert.Equal(t, scope, got.InstrumentationScope())
 	assert.Equal(t, *r, got.Resource())
 }
