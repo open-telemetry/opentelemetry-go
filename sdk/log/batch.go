@@ -48,7 +48,7 @@ type BatchProcessor struct {
 	// separate goroutine dedicated to the export. This asynchronous behavior
 	// allows the poll goroutine to maintain accurate interval polling.
 	//
-	//   __BatchProcessor__        __Poll Goroutine__     __Export Goroutine__
+	//   ___BatchProcessor____     __Poll Goroutine__     __Export Goroutine__
 	// ||                     || ||                  || ||                    ||
 	// ||          ********** || ||                  || ||     **********     ||
 	// || Records=>* OnEmit * || ||   | - ticker     || ||     * export *     ||
@@ -100,7 +100,7 @@ type BatchProcessor struct {
 //
 // All of the exporter's methods are called synchronously.
 func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchProcessor {
-	cfg := newBatchingConfig(opts)
+	cfg := newBatchConfig(opts)
 	if exporter == nil {
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
@@ -330,15 +330,15 @@ func (q *queue) Flush() []Record {
 	return out
 }
 
-type batchingConfig struct {
+type batchConfig struct {
 	maxQSize        setting[int]
 	expInterval     setting[time.Duration]
 	expTimeout      setting[time.Duration]
 	expMaxBatchSize setting[int]
 }
 
-func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
-	var c batchingConfig
+func newBatchConfig(options []BatchProcessorOption) batchConfig {
+	var c batchConfig
 	for _, o := range options {
 		c = o.apply(c)
 	}
@@ -374,12 +374,12 @@ func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
 
 // BatchProcessorOption applies a configuration to a [BatchProcessor].
 type BatchProcessorOption interface {
-	apply(batchingConfig) batchingConfig
+	apply(batchConfig) batchConfig
 }
 
-type batchingOptionFunc func(batchingConfig) batchingConfig
+type batchOptionFunc func(batchConfig) batchConfig
 
-func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
+func (fn batchOptionFunc) apply(c batchConfig) batchConfig {
 	return fn(c)
 }
 
@@ -393,7 +393,7 @@ func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
 // passed, 2048 will be used.
 // The default value is also used when the provided value is less than one.
 func WithMaxQueueSize(size int) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.maxQSize = newSetting(size)
 		return cfg
 	})
@@ -408,7 +408,7 @@ func WithMaxQueueSize(size int) BatchProcessorOption {
 // passed, 1s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportInterval(d time.Duration) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expInterval = newSetting(d)
 		return cfg
 	})
@@ -423,7 +423,7 @@ func WithExportInterval(d time.Duration) BatchProcessorOption {
 // passed, 30s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportTimeout(d time.Duration) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expTimeout = newSetting(d)
 		return cfg
 	})
@@ -439,7 +439,7 @@ func WithExportTimeout(d time.Duration) BatchProcessorOption {
 // passed, 512 will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportMaxBatchSize(size int) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expMaxBatchSize = newSetting(size)
 		return cfg
 	})
