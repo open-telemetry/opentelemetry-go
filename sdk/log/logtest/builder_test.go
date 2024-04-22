@@ -21,6 +21,8 @@ func TestRecordBuilder(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
 	severity := log.SeverityDebug
+	severityText := "DBG"
+	body := log.StringValue("Message")
 	attrs := []log.KeyValue{
 		log.Int("int", 1),
 		log.String("str", "foo"),
@@ -36,6 +38,8 @@ func TestRecordBuilder(t *testing.T) {
 		SetTimestamp(now).
 		SetObservedTimestamp(observed).
 		SetSeverity(severity).
+		SetSeverityText(severityText).
+		SetBody(body).
 		SetAttributes(attrs...).
 		SetDroppedAttributes(dropped).
 		SetInstrumentationScope(scope).
@@ -45,6 +49,8 @@ func TestRecordBuilder(t *testing.T) {
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
 	assert.Equal(t, severity, got.Severity())
+	assert.Equal(t, severityText, got.SeverityText())
+	assertBody(t, body, got)
 	assertAttributes(t, attrs, got)
 	assert.Equal(t, dropped, got.DroppedAttributes())
 	assert.Equal(t, scope, got.InstrumentationScope())
@@ -85,6 +91,14 @@ func TestRecordBuilderMultiple(t *testing.T) {
 	assertAttributes(t, attrs, record1)
 	assert.Equal(t, 1, record1.DroppedAttributes())
 	assert.Equal(t, scope, record1.InstrumentationScope())
+}
+
+func assertBody(t *testing.T, want log.Value, r sdklog.Record) {
+	t.Helper()
+	got := r.Body()
+	if !got.Equal(want) {
+		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
+	}
 }
 
 func assertAttributes(t *testing.T, want []log.KeyValue, r sdklog.Record) {

@@ -19,9 +19,9 @@ type RecordBuilder struct {
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          log.Severity
-	// severityText      string
-	// body              log.Value
-	attrs []log.KeyValue
+	severityText      string
+	body              log.Value
+	attrs             []log.KeyValue
 	// traceID           trace.TraceID
 	// spanID            trace.SpanID
 	// traceFlags        trace.TraceFlags
@@ -39,6 +39,8 @@ func (b RecordBuilder) Record() sdklog.Record {
 		r.SetTimestamp(b.timestamp)
 		r.SetObservedTimestamp(b.observedTimestamp)
 		r.SetSeverity(b.severity)
+		r.SetSeverityText(b.severityText)
+		r.SetBody(b.body)
 		r.SetAttributes(b.attrs...)
 
 		// Generate dropped attributes.
@@ -85,6 +87,18 @@ func (b RecordBuilder) SetObservedTimestamp(t time.Time) RecordBuilder {
 // TODO: comment.
 func (b RecordBuilder) SetSeverity(severity log.Severity) RecordBuilder {
 	b.severity = severity
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetSeverityText(text string) RecordBuilder {
+	b.severityText = text
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetBody(v log.Value) RecordBuilder {
+	b.body = v
 	return b
 }
 
