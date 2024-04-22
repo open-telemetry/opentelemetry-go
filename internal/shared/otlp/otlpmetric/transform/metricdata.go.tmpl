@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	cpb "{{ .protoImportPrefix }}/otlp/common/v1"
+	mpb "{{ .protoImportPrefix }}/otlp/metrics/v1"
+	rpb "{{ .protoImportPrefix }}/otlp/resource/v1"
 )
 
 // ResourceMetrics returns an OTLP ResourceMetrics generated from rm. If rm

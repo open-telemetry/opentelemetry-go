@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -37,46 +34,18 @@ func ApplyGRPCEnvConfigs(cfg Config) Config {
 	return cfg
 }
 
-// ApplyHTTPEnvConfigs applies the env configurations for HTTP.
-func ApplyHTTPEnvConfigs(cfg Config) Config {
-	opts := getOptionsFromEnv()
-	for _, opt := range opts {
-		cfg = opt.ApplyHTTPOption(cfg)
-	}
-	return cfg
-}
-
-func getOptionsFromEnv() []GenericOption {
-	opts := []GenericOption{}
+func getOptionsFromEnv() []GRPCOption {
+	opts := []GRPCOption{}
 
 	tlsConf := &tls.Config{}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
 			opts = append(opts, withEndpointScheme(u))
-			opts = append(opts, newSplitOption(func(cfg Config) Config {
-				cfg.Metrics.Endpoint = u.Host
-				// For OTLP/HTTP endpoint URLs without a per-signal
-				// configuration, the passed endpoint is used as a base URL
-				// and the signals are sent to these paths relative to that.
-				cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
-				return cfg
-			}, withEndpointForGRPC(u)))
+			opts = append(opts, NewGRPCOption(withEndpointForGRPC(u)))
 		}),
 		envconfig.WithURL("METRICS_ENDPOINT", func(u *url.URL) {
 			opts = append(opts, withEndpointScheme(u))
-			opts = append(opts, newSplitOption(func(cfg Config) Config {
-				cfg.Metrics.Endpoint = u.Host
-				// For endpoint URLs for OTLP/HTTP per-signal variables, the
-				// URL MUST be used as-is without any modification. The only
-				// exception is that if an URL contains no path part, the root
-				// path / MUST be used.
-				path := u.Path
-				if path == "" {
-					path = "/"
-				}
-				cfg.Metrics.URLPath = path
-				return cfg
-			}, withEndpointForGRPC(u)))
+			opts = append(opts, NewGRPCOption(withEndpointForGRPC(u)))
 		}),
 		envconfig.WithCertPool("CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
 		envconfig.WithCertPool("METRICS_CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
@@ -121,7 +90,7 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 	}
 }
 
-func withEndpointScheme(u *url.URL) GenericOption {
+func withEndpointScheme(u *url.URL) GRPCOption {
 	switch strings.ToLower(u.Scheme) {
 	case "http", "unix":
 		return WithInsecure()
@@ -131,7 +100,7 @@ func withEndpointScheme(u *url.URL) GenericOption {
 }
 
 // revive:disable-next-line:flag-parameter
-func withInsecure(b bool) GenericOption {
+func withInsecure(b bool) GRPCOption {
 	if b {
 		return WithInsecure()
 	}
