@@ -24,13 +24,14 @@ type recordJSON struct {
 	TraceID                   trace.TraceID
 	SpanID                    trace.SpanID
 	TraceFlags                trace.TraceFlags
-	Resource                  resource.Resource
+	Resource                  *resource.Resource
 	Scope                     instrumentation.Scope
 	AttributeValueLengthLimit int
 	AttributeCountLimit       int
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
+	res := r.Resource()
 	newRecord := recordJSON{
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
@@ -42,7 +43,7 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Attributes: make([]log.KeyValue, 0, r.AttributesLen()),
 
-		Resource: r.Resource(),
+		Resource: &res,
 		Scope:    r.InstrumentationScope(),
 	}
 
