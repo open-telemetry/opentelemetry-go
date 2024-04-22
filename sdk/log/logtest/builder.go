@@ -77,80 +77,93 @@ func (b RecordBuilder) Record() sdklog.Record {
 	return record
 }
 
-// TODO: comment.
+// SetTimestamp sets the timestamp
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetTimestamp(t time.Time) RecordBuilder {
 	b.timestamp = t
 	return b
 }
 
-// TODO: comment.
+// SetObservedTimestamp sets the observed timestamp
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetObservedTimestamp(t time.Time) RecordBuilder {
 	b.observedTimestamp = t
 	return b
 }
 
-// TODO: comment.
+// SetSeverity sets the severity
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetSeverity(severity log.Severity) RecordBuilder {
 	b.severity = severity
 	return b
 }
 
-// TODO: comment.
+// SetSeverityText sets the severity text
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetSeverityText(text string) RecordBuilder {
 	b.severityText = text
 	return b
 }
 
-// TODO: comment.
+// SetBody sets the body
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetBody(v log.Value) RecordBuilder {
 	b.body = v
 	return b
 }
 
-// TODO: comment.
+// AddAttributes adds attributes
+// to the record that is going to be returned by the builder.
 func (b RecordBuilder) AddAttributes(attrs ...log.KeyValue) RecordBuilder {
 	b.attrs = slices.Clone(b.attrs)
 	b.attrs = append(b.attrs, attrs...)
 	return b
 }
 
-// TODO: comment.
+// SetAttributes sets the attributes
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetAttributes(attrs ...log.KeyValue) RecordBuilder {
 	b.attrs = slices.Clone(attrs)
 	return b
 }
 
-// TODO: comment.
+// SetTraceID sets the trace ID
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetTraceID(traceID trace.TraceID) RecordBuilder {
 	b.traceID = traceID
 	return b
 }
 
-// TODO: comment.
+// SetSpanID sets the span ID
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetSpanID(spanID trace.SpanID) RecordBuilder {
 	b.spanID = spanID
 	return b
 }
 
-// TODO: comment.
+// SetTraceFlags sets the trace flags
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetTraceFlags(flags trace.TraceFlags) RecordBuilder {
 	b.traceFlags = flags
 	return b
 }
 
-// TODO: comment.
+// SetResource sets the resource
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetResource(r *resource.Resource) RecordBuilder {
 	b.resource = r
 	return b
 }
 
-// TODO: comment.
+// SetInstrumentationScope sets the instrumentation scope
+// of the record that is going to be returned by the builder.
 func (b RecordBuilder) SetInstrumentationScope(scope instrumentation.Scope) RecordBuilder {
 	b.scope = scope
 	return b
 }
 
-// TODO: comment.
+// SetDroppedAttributes sets the dropped attributes
+// of the record that is going to be returned by the builder.
 //
 // Notice: The returned record is going to have an attribute count limit.
 // Therefore, it will not be possible to add additional attributes on the record
