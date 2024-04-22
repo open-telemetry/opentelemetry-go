@@ -3,9 +3,10 @@
 
 package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 import (
+	"time"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"time"
 )
 
 // Option applies an option to the Exporter.

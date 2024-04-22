@@ -128,7 +128,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /exporters/otlp/otlplog/otlploghttp
+    directory: /exporters/otlp/otlplog/otlploggrpc
     labels:
       - dependencies
       - go
@@ -137,7 +137,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /exporters/otlp/otlplog/otlploggrpc
+    directory: /exporters/otlp/otlplog/otlploghttp
     labels:
       - dependencies
       - go
