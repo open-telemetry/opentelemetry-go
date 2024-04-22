@@ -18,7 +18,7 @@ import (
 type RecordBuilder struct {
 	timestamp         time.Time
 	observedTimestamp time.Time
-	// severity          log.Severity
+	severity          log.Severity
 	// severityText      string
 	// body              log.Value
 	attrs []log.KeyValue
@@ -38,6 +38,7 @@ func (b RecordBuilder) Record() sdklog.Record {
 	p := processor(func(r sdklog.Record) {
 		r.SetTimestamp(b.timestamp)
 		r.SetObservedTimestamp(b.observedTimestamp)
+		r.SetSeverity(b.severity)
 		r.SetAttributes(b.attrs...)
 
 		// Generate dropped attributes.
@@ -78,6 +79,12 @@ func (b RecordBuilder) SetTimestamp(t time.Time) RecordBuilder {
 // TODO: comment.
 func (b RecordBuilder) SetObservedTimestamp(t time.Time) RecordBuilder {
 	b.observedTimestamp = t
+	return b
+}
+
+// TODO: comment.
+func (b RecordBuilder) SetSeverity(severity log.Severity) RecordBuilder {
+	b.severity = severity
 	return b
 }
 

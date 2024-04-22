@@ -20,6 +20,7 @@ import (
 func TestRecordBuilder(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
+	severity := log.SeverityDebug
 	attrs := []log.KeyValue{
 		log.Int("int", 1),
 		log.String("str", "foo"),
@@ -34,6 +35,7 @@ func TestRecordBuilder(t *testing.T) {
 	b := RecordBuilder{}.
 		SetTimestamp(now).
 		SetObservedTimestamp(observed).
+		SetSeverity(severity).
 		SetAttributes(attrs...).
 		SetDroppedAttributes(dropped).
 		SetInstrumentationScope(scope).
@@ -42,6 +44,7 @@ func TestRecordBuilder(t *testing.T) {
 
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
+	assert.Equal(t, severity, got.Severity())
 	assertAttributes(t, attrs, got)
 	assert.Equal(t, dropped, got.DroppedAttributes())
 	assert.Equal(t, scope, got.InstrumentationScope())
