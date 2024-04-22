@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+
 import (
 	"time"
 
