@@ -174,7 +174,7 @@ func TestExporterExport(t *testing.T) {
 func getJSON(now time.Time) string {
 	serializedNow, _ := json.Marshal(now)
 
-	return "{\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":{},\"Scope\":{\"Name\":\"\",\"Version\":\"\",\"SchemaURL\":\"\"},\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
+	return "{\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":null,\"Scope\":{\"Name\":\"\",\"Version\":\"\",\"SchemaURL\":\"\"},\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
 }
 
 func getJSONs(now time.Time) string {
@@ -219,7 +219,7 @@ func getPrettyJSON(now time.Time) string {
 	"TraceID": "0102030405060708090a0b0c0d0e0f10",
 	"SpanID": "0102030405060708",
 	"TraceFlags": "01",
-	"Resource": {},
+	"Resource": null,
 	"Scope": {
 		"Name": "",
 		"Version": "",
