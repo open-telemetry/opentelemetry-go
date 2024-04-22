@@ -43,14 +43,41 @@ func TestRecordBuilder(t *testing.T) {
 	assert.Equal(t, dropped, got.DroppedAttributes())
 	assert.Equal(t, scope, got.InstrumentationScope())
 	assert.Equal(t, *r, got.Resource())
+}
 
-	got = b.AddAttributes(log.Bool("added", true)).Record()
+func TestRecordBuilderMultiple(t *testing.T) {
+	now := time.Now()
+	attrs := []log.KeyValue{
+		log.Int("int", 1),
+		log.String("str", "foo"),
+		log.Float64("flt", 3.14),
+	}
+	scope := instrumentation.Scope{
+		Name: t.Name(),
+	}
 
-	assert.Equal(t, now, got.Timestamp())
-	assertAttributes(t, append(attrs, log.Bool("added", true)), got)
-	assert.Equal(t, dropped, got.DroppedAttributes())
-	assert.Equal(t, scope, got.InstrumentationScope())
-	assert.Equal(t, *r, got.Resource())
+	b := RecordBuilder{}.
+		SetTimestamp(now).
+		AddAttributes(attrs...).
+		SetDroppedAttributes(1).
+		SetInstrumentationScope(scope)
+
+	record1 := b.Record()
+
+	record2 := b.
+		AddAttributes(log.Bool("added", true)).
+		SetDroppedAttributes(2).
+		Record()
+
+	assert.Equal(t, now, record1.Timestamp())
+	assertAttributes(t, attrs, record1)
+	assert.Equal(t, 1, record1.DroppedAttributes())
+	assert.Equal(t, scope, record1.InstrumentationScope())
+
+	assert.Equal(t, now, record2.Timestamp())
+	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)
+	assert.Equal(t, 2, record2.DroppedAttributes())
+	assert.Equal(t, scope, record2.InstrumentationScope())
 }
 
 func assertAttributes(t *testing.T, want []log.KeyValue, r sdklog.Record) {
