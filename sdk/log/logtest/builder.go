@@ -18,6 +18,8 @@ import (
 // RecordBuilder is used to facilitate unit testing implementations of
 // [go.opentelemetry.io/otel/sdk/log.Exporter]
 // and [go.opentelemetry.io/otel/sdk/log.Processor].
+//
+// Do not use RecordBuilder to create records in production code.
 type RecordBuilder struct {
 	timestamp         time.Time
 	observedTimestamp time.Time
