@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using protobufs over HTTP.

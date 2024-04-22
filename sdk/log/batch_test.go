@@ -18,6 +18,18 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
+func TestEmptyBatchConfig(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var bp BatchProcessor
+		ctx := context.Background()
+		var record Record
+		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, bp.Enabled(ctx, record), "Enabled")
+		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
+		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
+	})
+}
+
 func TestNewBatchConfig(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		t.Log(err)
