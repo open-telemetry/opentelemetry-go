@@ -15,7 +15,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TODO: comment.
+// RecordBuilder is used to facilitate unit testing implementations of
+// [go.opentelemetry.io/otel/sdk/log.Exporter]
+// and [go.opentelemetry.io/otel/sdk/log.Processor].
 type RecordBuilder struct {
 	timestamp         time.Time
 	observedTimestamp time.Time
@@ -33,7 +35,7 @@ type RecordBuilder struct {
 	dropped int
 }
 
-// TODO: comment.
+// Record returns the accumulated log record.
 func (b RecordBuilder) Record() sdklog.Record {
 	var record sdklog.Record
 	p := processor(func(r sdklog.Record) {
