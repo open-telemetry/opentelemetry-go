@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This new module contains an exporter prints log records to STDOUT.
   This module is unstable and breaking changes may be introduced.
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
+- Add `RecordBuilder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the exporter and processor implementations. (#5234)
 
 ### Changed
 
