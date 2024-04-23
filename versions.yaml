@@ -41,7 +41,7 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
       - go.opentelemetry.io/otel/exporters/stdout/stdoutlog
   experimental-schema:
-    version: v0.0.9
+    version: v0.0.8
     modules:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
