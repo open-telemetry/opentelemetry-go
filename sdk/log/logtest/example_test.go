@@ -23,10 +23,10 @@ func ExampleRecordFactory() {
 	}
 
 	rf.Body = logapi.StringValue("foo")
-	r1 := rf.Record()
+	r1 := rf.NewRecord()
 
 	rf.Body = logapi.StringValue("bar")
-	r2 := rf.Record()
+	r2 := rf.NewRecord()
 
 	_ = exp.Export(context.Background(), []log.Record{r1, r2})
 

@@ -51,7 +51,7 @@ func TestRecordFactory(t *testing.T) {
 		DroppedAttributes:    dropped,
 		InstrumentationScope: scope,
 		Resource:             r,
-	}.Record()
+	}.NewRecord()
 
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
@@ -85,11 +85,11 @@ func TestRecordFactoryMultiple(t *testing.T) {
 		InstrumentationScope: scope,
 	}
 
-	record1 := f.Record()
+	record1 := f.NewRecord()
 
 	f.Attributes = append(f.Attributes, log.Bool("added", true))
 	f.DroppedAttributes = 2
-	record2 := f.Record()
+	record2 := f.NewRecord()
 
 	assert.Equal(t, now, record2.Timestamp())
 	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)

@@ -38,8 +38,8 @@ type RecordFactory struct {
 	DroppedAttributes int
 }
 
-// Record returns a log record.
-func (b RecordFactory) Record() sdklog.Record {
+// NewRecord returns a log record.
+func (b RecordFactory) NewRecord() sdklog.Record {
 	var record sdklog.Record
 	p := processor(func(r sdklog.Record) {
 		r.SetTimestamp(b.Timestamp)
