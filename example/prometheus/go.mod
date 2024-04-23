@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/prometheus/client_golang v1.19.0
 	go.opentelemetry.io/otel v1.26.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.47.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.48.0
 	go.opentelemetry.io/otel/metric v1.26.0
 	go.opentelemetry.io/otel/sdk/metric v1.26.0
 )
