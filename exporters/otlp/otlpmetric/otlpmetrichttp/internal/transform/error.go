@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	mpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 var (
