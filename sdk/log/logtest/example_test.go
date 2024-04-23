@@ -16,11 +16,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 )
 
-func ExampleRecordBuilder() {
+func ExampleRecordFactory() {
 	exp := exporter{os.Stdout}
-	b := logtest.RecordBuilder{}.SetInstrumentationScope(instrumentation.Scope{Name: "myapp"})
-	r1 := b.SetBody(logapi.StringValue("foo")).Record()
-	r2 := b.SetBody(logapi.StringValue("bar")).Record()
+	rf := logtest.RecordFactory{
+		InstrumentationScope: instrumentation.Scope{Name: "myapp"},
+	}
+
+	rf.Body = logapi.StringValue("foo")
+	r1 := rf.Record()
+
+	rf.Body = logapi.StringValue("bar")
+	r2 := rf.Record()
 
 	_ = exp.Export(context.Background(), []log.Record{r1, r2})
 

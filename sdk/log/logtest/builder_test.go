@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestRecordBuilder(t *testing.T) {
+func TestRecordFactory(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
 	severity := log.SeverityDebug
@@ -38,20 +38,20 @@ func TestRecordBuilder(t *testing.T) {
 	}
 	r := resource.NewSchemaless(attribute.Bool("works", true))
 
-	b := RecordBuilder{}.
-		SetTimestamp(now).
-		SetObservedTimestamp(observed).
-		SetSeverity(severity).
-		SetSeverityText(severityText).
-		SetBody(body).
-		SetAttributes(attrs...).
-		SetTraceID(traceID).
-		SetSpanID(spanID).
-		SetTraceFlags(traceFlags).
-		SetDroppedAttributes(dropped).
-		SetInstrumentationScope(scope).
-		SetResource(r)
-	got := b.Record()
+	got := RecordFactory{
+		Timestamp:            now,
+		ObservedTimestamp:    observed,
+		Severity:             severity,
+		SeverityText:         severityText,
+		Body:                 body,
+		Attributes:           attrs,
+		TraceID:              traceID,
+		SpanID:               spanID,
+		TraceFlags:           traceFlags,
+		DroppedAttributes:    dropped,
+		InstrumentationScope: scope,
+		Resource:             r,
+	}.Record()
 
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
@@ -67,7 +67,7 @@ func TestRecordBuilder(t *testing.T) {
 	assert.Equal(t, *r, got.Resource())
 }
 
-func TestRecordBuilderMultiple(t *testing.T) {
+func TestRecordFactoryMultiple(t *testing.T) {
 	now := time.Now()
 	attrs := []log.KeyValue{
 		log.Int("int", 1),
@@ -78,18 +78,18 @@ func TestRecordBuilderMultiple(t *testing.T) {
 		Name: t.Name(),
 	}
 
-	b := RecordBuilder{}.
-		SetTimestamp(now).
-		AddAttributes(attrs...).
-		SetDroppedAttributes(1).
-		SetInstrumentationScope(scope)
+	f := RecordFactory{
+		Timestamp:            now,
+		Attributes:           attrs,
+		DroppedAttributes:    1,
+		InstrumentationScope: scope,
+	}
 
-	record1 := b.Record()
+	record1 := f.Record()
 
-	record2 := b.
-		AddAttributes(log.Bool("added", true)).
-		SetDroppedAttributes(2).
-		Record()
+	f.Attributes = append(f.Attributes, log.Bool("added", true))
+	f.DroppedAttributes = 2
+	record2 := f.Record()
 
 	assert.Equal(t, now, record2.Timestamp())
 	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)
