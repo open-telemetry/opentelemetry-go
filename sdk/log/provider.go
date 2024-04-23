@@ -147,7 +147,7 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 
 // ForceFlush flushes all processors.
 //
-//	This method can be called concurrently.
+// This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	if p.stopped.Load() {
 		return nil
