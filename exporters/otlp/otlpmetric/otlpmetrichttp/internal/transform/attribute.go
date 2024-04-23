@@ -8,7 +8,7 @@ package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
 // AttrIter transforms an attribute iterator into OTLP key-values.

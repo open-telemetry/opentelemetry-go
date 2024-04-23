@@ -19,10 +19,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
-	collpb "{{ .protoImportPrefix }}/otlp/collector/metrics/v1"
-	cpb "{{ .protoImportPrefix }}/otlp/common/v1"
-	mpb "{{ .protoImportPrefix }}/otlp/metrics/v1"
-	rpb "{{ .protoImportPrefix }}/otlp/resource/v1"
+	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 var (

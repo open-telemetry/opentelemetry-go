@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	mpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type clientShim struct {
