@@ -386,6 +386,9 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(func() { close(trigger) })
 			e := newBufferExporter(exp, 1)
 
+			// Make sure there is something to flush.
+			require.True(t, e.EnqueueExport(make([]Record, 1)))
+
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 
