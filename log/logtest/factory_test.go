@@ -4,11 +4,11 @@
 package logtest
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slices"
 
 	"go.opentelemetry.io/otel/log"
 )
