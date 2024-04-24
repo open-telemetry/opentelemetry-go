@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest` to facilitate testing the exporter and processor implementations. (#5258)
+
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
 ### Added
@@ -28,7 +32,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
 - The `go.opentelemetry.io/otel/semconv/v1.25.0` package.
   The package contains semantic conventions from the `v1.25.0` version of the OpenTelemetry Semantic Conventions. (#5254)
-- Add `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest` to facilitate testing the exporter and processor implementations. (#5258)
 
 ### Changed
 
