@@ -38,7 +38,7 @@ func TestRecordFactory(t *testing.T) {
 	assert.Equal(t, observed, got.ObservedTimestamp())
 	assert.Equal(t, severity, got.Severity())
 	assert.Equal(t, severityText, got.SeverityText())
-	assert.Equal(t, body, got.Body())
+	assertBody(t, body, got)
 	assertAttributes(t, attrs, got)
 }
 
@@ -65,6 +65,14 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	// Previously returned record is unharmed by the builder changes.
 	assert.Equal(t, now, record1.Timestamp())
 	assertAttributes(t, attrs, record1)
+}
+
+func assertBody(t *testing.T, want log.Value, r log.Record) {
+	t.Helper()
+	got := r.Body()
+	if !got.Equal(want) {
+		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
+	}
 }
 
 func assertAttributes(t *testing.T, want []log.KeyValue, r log.Record) {
