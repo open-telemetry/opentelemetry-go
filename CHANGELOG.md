@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
 - The `go.opentelemetry.io/otel/semconv/v1.25.0` package.
   The package contains semantic conventions from the `v1.25.0` version of the OpenTelemetry Semantic Conventions. (#5254)
+- Add `RecordFactory` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the bridge implementations. (#5263)
 
 ### Changed
 
