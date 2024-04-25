@@ -4,7 +4,6 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
-	"container/ring"
 	"context"
 	"errors"
 	"slices"
@@ -29,7 +28,9 @@ const (
 var _ Processor = (*BatchProcessor)(nil)
 
 // BatchProcessor is a processor that exports batches of log records.
-// A BatchProcessor must be created with [NewBatchProcessor].
+//
+// Use [NewBatchProcessor] to create a BatchProcessor. An empty BatchProcessor
+// is shut down by default, no records will be batched or exported.
 type BatchProcessor struct {
 	// The BatchProcessor is designed to provide the highest throughput of
 	// log records possible while being compatible with OpenTelemetry. The
@@ -170,7 +171,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 // OnEmit batches provided log record.
 func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
-	if b.stopped.Load() {
+	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
 	if n := b.q.Enqueue(r); n >= b.batchSize {
@@ -187,12 +188,12 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
 
 // Enabled returns if b is enabled.
 func (b *BatchProcessor) Enabled(context.Context, Record) bool {
-	return !b.stopped.Load()
+	return !b.stopped.Load() && b.q != nil
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
-	if b.stopped.Swap(true) {
+	if b.stopped.Swap(true) || b.q == nil {
 		return nil
 	}
 
@@ -219,7 +220,7 @@ var ctxErr = func(ctx context.Context) error {
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
-	if b.stopped.Load() {
+	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
 
@@ -253,11 +254,11 @@ type queue struct {
 	sync.Mutex
 
 	cap, len    int
-	read, write *ring.Ring
+	read, write *ring
 }
 
 func newQueue(size int) *queue {
-	r := ring.New(size)
+	r := newRing(size)
 	return &queue{
 		cap:   size,
 		read:  r,
@@ -302,7 +303,7 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 
 	n := min(len(buf), q.len)
 	for i := 0; i < n; i++ {
-		buf[i] = q.read.Value.(Record)
+		buf[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 
@@ -322,7 +323,7 @@ func (q *queue) Flush() []Record {
 
 	out := make([]Record, q.len)
 	for i := range out {
-		out[i] = q.read.Value.(Record)
+		out[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 	q.len = 0
