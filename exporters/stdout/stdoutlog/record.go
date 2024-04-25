@@ -15,8 +15,8 @@ import (
 
 // recordJSON is a JSON-serializable representation of a Record.
 type recordJSON struct {
-	Timestamp                 time.Time
-	ObservedTimestamp         time.Time
+	Timestamp                 *time.Time `json:",omitempty"`
+	ObservedTimestamp         *time.Time `json:",omitempty"`
 	Severity                  log.Severity
 	SeverityText              string
 	Body                      log.Value
@@ -53,8 +53,11 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	})
 
 	if e.timestamps {
-		newRecord.Timestamp = r.Timestamp()
-		newRecord.ObservedTimestamp = r.ObservedTimestamp()
+		timestamp := r.Timestamp()
+		newRecord.Timestamp = &timestamp
+
+		observedTimestamp := r.ObservedTimestamp()
+		newRecord.ObservedTimestamp = &observedTimestamp
 	}
 
 	return newRecord

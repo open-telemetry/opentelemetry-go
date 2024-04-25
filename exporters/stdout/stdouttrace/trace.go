@@ -47,6 +47,9 @@ type Exporter struct {
 
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	e.stoppedMu.RLock()
 	stopped := e.stopped
 	e.stoppedMu.RUnlock()
@@ -88,11 +91,6 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.stopped = true
 	e.stoppedMu.Unlock()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	return nil
 }
 

@@ -60,30 +60,44 @@ func TestExporterExportSpan(t *testing.T) {
 	tests := []struct {
 		opts      []stdouttrace.Option
 		expectNow time.Time
+		ctx       context.Context
+		wantErr   error
 	}{
 		{
 			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
 			expectNow: now,
+			ctx:       context.Background(),
 		},
 		{
 			opts: []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithoutTimestamps()},
 			// expectNow is an empty time.Time
+			ctx: context.Background(),
+		},
+		{
+			opts: []stdouttrace.Option{},
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			}(),
+			wantErr: context.Canceled,
 		},
 	}
 
-	ctx := context.Background()
 	for _, tt := range tests {
 		// write to buffer for testing
 		var b bytes.Buffer
 		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
 		require.Nil(t, err)
 
-		err = ex.ExportSpans(ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
-		require.Nil(t, err)
+		err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
+		assert.Equal(t, tt.wantErr, err)
 
-		got := b.String()
-		wantone := expectedJSON(tt.expectNow)
-		assert.Equal(t, wantone+wantone, got)
+		if tt.wantErr == nil {
+			got := b.String()
+			wantone := expectedJSON(tt.expectNow)
+			assert.Equal(t, wantone+wantone, got)
+		}
 	}
 }
 
@@ -181,23 +195,7 @@ func expectedJSON(now time.Time) string {
 `
 }
 
-func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
-	e, err := stdouttrace.New()
-	if err != nil {
-		t.Fatalf("failed to create exporter: %v", err)
-	}
-
-	innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-	defer innerCancel()
-	<-innerCtx.Done()
-	err = e.Shutdown(innerCtx)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
-}
-
-func TestExporterShutdownHonorsCancel(t *testing.T) {
+func TestExporterShutdownIgnoresContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
@@ -209,7 +207,7 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 	innerCtx, innerCancel := context.WithCancel(ctx)
 	innerCancel()
 	err = e.Shutdown(innerCtx)
-	assert.ErrorIs(t, err, context.Canceled)
+	assert.NoError(t, err)
 }
 
 func TestExporterShutdownNoError(t *testing.T) {
