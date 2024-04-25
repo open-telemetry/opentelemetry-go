@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `RecordFactory` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the bridge implementations. (#5263)
 - Add `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest` to facilitate testing the exporter and processor implementations. (#5258)
+- Add example for `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5242)
 
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
