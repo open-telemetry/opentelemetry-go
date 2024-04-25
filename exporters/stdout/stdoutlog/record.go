@@ -15,8 +15,8 @@ import (
 
 // recordJSON is a JSON-serializable representation of a Record.
 type recordJSON struct {
-	Timestamp                 *time.Time
-	ObservedTimestamp         *time.Time
+	Timestamp                 *time.Time `json:",omitempty"`
+	ObservedTimestamp         *time.Time `json:",omitempty"`
 	Severity                  log.Severity
 	SeverityText              string
 	Body                      log.Value
