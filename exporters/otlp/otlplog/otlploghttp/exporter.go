@@ -32,7 +32,6 @@ func New(_ context.Context, options ...Option) (*Exporter, error) {
 }
 
 func newExporter(c *client, _ config) (*Exporter, error) {
-	// TODO: implement
 	e := &Exporter{}
 	e.client.Store(c)
 	return e, nil
