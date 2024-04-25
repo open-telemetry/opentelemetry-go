@@ -378,6 +378,13 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
+			// Discard error logs.
+			defer func(orig otel.ErrorHandler) {
+				otel.SetErrorHandler(orig)
+			}(otel.GetErrorHandler())
+			handler := otel.ErrorHandlerFunc(func(err error) {})
+			otel.SetErrorHandler(handler)
+
 			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
