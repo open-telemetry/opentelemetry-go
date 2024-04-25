@@ -4,7 +4,6 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
-	"container/ring"
 	"context"
 	"errors"
 	"slices"
@@ -255,11 +254,11 @@ type queue struct {
 	sync.Mutex
 
 	cap, len    int
-	read, write *ring.Ring
+	read, write *ring
 }
 
 func newQueue(size int) *queue {
-	r := ring.New(size)
+	r := newRing(size)
 	return &queue{
 		cap:   size,
 		read:  r,
@@ -304,7 +303,7 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 
 	n := min(len(buf), q.len)
 	for i := 0; i < n; i++ {
-		buf[i] = q.read.Value.(Record)
+		buf[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 
@@ -324,7 +323,7 @@ func (q *queue) Flush() []Record {
 
 	out := make([]Record, q.len)
 	for i := range out {
-		out[i] = q.read.Value.(Record)
+		out[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 	q.len = 0
