@@ -17,7 +17,7 @@ func Example() {
 		panic(err)
 	}
 
-	processor := log.NewBatchProcessor(exp)
+	processor := log.NewSimpleProcessor(exp)
 	provider := log.NewLoggerProvider(log.WithProcessor(processor))
 	defer func() {
 		if err := provider.Shutdown(context.Background()); err != nil {
