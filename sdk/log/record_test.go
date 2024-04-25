@@ -524,19 +524,6 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 		},
 	}
 
-	assertKV := func(t *testing.T, r Record, kv log.KeyValue) {
-		t.Helper()
-
-		var kvs []log.KeyValue
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			kvs = append(kvs, kv)
-			return true
-		})
-
-		require.Len(t, kvs, 1)
-		assert.Truef(t, kv.Equal(kvs[0]), "%s != %s", kv, kvs[0])
-	}
-
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			const key = "key"
