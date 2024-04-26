@@ -18,7 +18,7 @@ jobs:
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v1.9.3
+        uses: lycheeverse/lychee-action@v1.10.0
         with:
           fail: true
           args: --max-concurrency 5 --cache --max-cache-age 1d .
