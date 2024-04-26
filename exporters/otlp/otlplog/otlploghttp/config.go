@@ -435,7 +435,7 @@ func loadCertPool(path string) (*x509.CertPool, error) {
 	return cp, nil
 }
 
-// loadCertPool loads and returns the tls.Certificate found at path if it
+// loadCertificates loads and returns the tls.Certificate found at path if it
 // exists and is valid. Otherwise, nil and an error is returned.
 func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	cert, err := readFile(certPath)
