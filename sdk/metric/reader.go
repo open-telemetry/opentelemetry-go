@@ -166,7 +166,7 @@ type ReaderOption interface {
 	ManualReaderOption
 }
 
-// WithProducers registers producers as an external Producer of metric data
+// WithProducer registers producers as an external Producer of metric data
 // for this Reader.
 func WithProducer(p Producer) ReaderOption {
 	return producerOption{p: p}
