@@ -51,12 +51,8 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 }
 
 func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
-	select {
-	case <-ctx.Done():
-		// Don't do anything if the context has already timed out.
-		return ctx.Err()
-	default:
-		// Context is still valid, continue.
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if e.redactTimestamps {
 		redactTimestamps(data)
@@ -67,18 +63,18 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	return e.encVal.Load().(encoderHolder).Encode(data)
 }
 
-func (e *exporter) ForceFlush(ctx context.Context) error {
+func (e *exporter) ForceFlush(context.Context) error {
 	// exporter holds no state, nothing to flush.
-	return ctx.Err()
+	return nil
 }
 
-func (e *exporter) Shutdown(ctx context.Context) error {
+func (e *exporter) Shutdown(context.Context) error {
 	e.shutdownOnce.Do(func() {
 		e.encVal.Store(encoderHolder{
 			encoder: shutdownEncoder{},
 		})
 	})
-	return ctx.Err()
+	return nil
 }
 
 func (e *exporter) MarshalLog() interface{} {
