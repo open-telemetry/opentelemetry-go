@@ -17,7 +17,7 @@ exporters:
   prometheus:
     endpoint: 0.0.0.0:9090
     namespace: testapp
-  logging:
+  debug:
 
 service:
   extensions: [health_check]
@@ -25,9 +25,9 @@ service:
     traces:
       receivers: [otlp]
       processors: []
-      exporters: [otlp]
+      exporters: [otlp, debug]
 
     metrics:
       receivers: [otlp]
       processors: []
-      exporters: [prometheus, logging]
+      exporters: [prometheus, debug]
