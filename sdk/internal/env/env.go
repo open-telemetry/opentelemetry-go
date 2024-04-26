@@ -52,6 +52,19 @@ const (
 	// SpanLinkAttributeCountKey is the maximum allowed attribute per span
 	// link count.
 	SpanLinkAttributeCountKey = "OTEL_LINK_ATTRIBUTE_COUNT_LIMIT"
+
+	// BatchLogRecordProcessorScheduleDelayKey is the delay interval between two
+	// consecutive exports (i.e. 5000).
+	BatchLogRecordProcessorScheduleDelayKey = "OTEL_BLRP_SCHEDULE_DELAY"
+	// BatchLogRecordProcessorExportTimeoutKey is the maximum allowed time to
+	// export data (i.e. 3000).
+	BatchLogRecordProcessorExportTimeoutKey = "OTEL_BLRP_EXPORT_TIMEOUT"
+	// BatchLogRecordProcessorMaxQueueSizeKey is the maximum queue size (i.e. 2048).
+	BatchLogRecordProcessorMaxQueueSizeKey = "OTEL_BLRP_MAX_QUEUE_SIZE"
+	// BatchLogRecordProcessorMaxExportBatchSizeKey is the maximum batch size (i.e.
+	// 512). Note: it must be less than or equal to
+	// BatchLogRecordProcessorMaxQueueSize.
+	BatchLogRecordProcessorMaxExportBatchSizeKey = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
 
 // firstInt returns the value of the first matching environment variable from
@@ -163,4 +176,32 @@ func SpanLinkCount(defaultValue int) int {
 // returned.
 func SpanLinkAttributeCount(defaultValue int) int {
 	return IntEnvOr(SpanLinkAttributeCountKey, defaultValue)
+}
+
+// BatchLogRecordProcessorScheduleDelay returns the environment variable value for
+// the OTEL_BLRP_SCHEDULE_DELAY key if it exists, otherwise defaultValue is
+// returned.
+func BatchLogRecordProcessorScheduleDelay(defaultValue int) int {
+	return IntEnvOr(BatchLogRecordProcessorScheduleDelayKey, defaultValue)
+}
+
+// BatchLogRecordProcessorExportTimeout returns the environment variable value for
+// the OTEL_BLRP_EXPORT_TIMEOUT key if it exists, otherwise defaultValue is
+// returned.
+func BatchLogRecordProcessorExportTimeout(defaultValue int) int {
+	return IntEnvOr(BatchLogRecordProcessorExportTimeoutKey, defaultValue)
+}
+
+// BatchLogRecordProcessorMaxQueueSize returns the environment variable value for
+// the OTEL_BLRP_MAX_QUEUE_SIZE key if it exists, otherwise defaultValue is
+// returned.
+func BatchLogRecordProcessorMaxQueueSize(defaultValue int) int {
+	return IntEnvOr(BatchLogRecordProcessorMaxQueueSizeKey, defaultValue)
+}
+
+// BatchLogRecordProcessorMaxExportBatchSize returns the environment variable value for
+// the OTEL_BLRP_MAX_EXPORT_BATCH_SIZE key if it exists, otherwise defaultValue
+// is returned.
+func BatchLogRecordProcessorMaxExportBatchSize(defaultValue int) int {
+	return IntEnvOr(BatchLogRecordProcessorMaxExportBatchSizeKey, defaultValue)
 }

@@ -78,6 +78,30 @@ func TestEnvParse(t *testing.T) {
 			keys: []string{SpanLinkAttributeCountKey},
 			f:    SpanLinkAttributeCount,
 		},
+
+		{
+			name: "BatchLogRecordProcessorScheduleDelay",
+			keys: []string{BatchLogRecordProcessorScheduleDelayKey},
+			f:    BatchLogRecordProcessorScheduleDelay,
+		},
+
+		{
+			name: "BatchLogRecordProcessorExportTimeout",
+			keys: []string{BatchLogRecordProcessorExportTimeoutKey},
+			f:    BatchLogRecordProcessorExportTimeout,
+		},
+
+		{
+			name: "BatchLogRecordProcessorMaxQueueSize",
+			keys: []string{BatchLogRecordProcessorMaxQueueSizeKey},
+			f:    BatchLogRecordProcessorMaxQueueSize,
+		},
+
+		{
+			name: "BatchLogRecordProcessorMaxExportBatchSize",
+			keys: []string{BatchLogRecordProcessorMaxExportBatchSizeKey},
+			f:    BatchLogRecordProcessorMaxExportBatchSize,
+		},
 	}
 
 	const (
