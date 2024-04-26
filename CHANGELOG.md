@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest` to facilitate testing the exporter and processor implementations. (#5258)
 - Add example for `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5242)
 - Added support to configure the batch log processor with environment variables.
-  The following environment variables are used. ()
+  The following environment variables are used. (#5269)
   - `OTEL_BLRP_SCHEDULE_DELAY`
   - `OTEL_BLRP_EXPORT_TIMEOUT`
   - `OTEL_BLRP_MAX_QUEUE_SIZE`.
