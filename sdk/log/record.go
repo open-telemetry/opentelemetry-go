@@ -5,8 +5,10 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"slices"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -198,8 +200,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			}
 		} else {
 			// Unique attribute.
-			// TODO: apply truncation to string and []string values.
-			// TODO: deduplicate map values.
 			unique = append(unique, a)
 			uIndex[a.Key] = len(unique) - 1
 		}
@@ -246,10 +246,13 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
-		r.front[r.nFront] = a
+		r.front[r.nFront] = r.applyAttrLimits(a)
 		r.nFront++
 	}
 
+	for j, a := range attrs[i:] {
+		attrs[i+j] = r.applyAttrLimits(a)
+	}
 	r.back = slices.Grow(r.back, len(attrs[i:]))
 	r.back = append(r.back, attrs[i:]...)
 }
@@ -268,11 +271,14 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
-		r.front[r.nFront] = a
+		r.front[r.nFront] = r.applyAttrLimits(a)
 		r.nFront++
 	}
 
 	r.back = slices.Clone(attrs[i:])
+	for i, a := range r.back {
+		r.back[i] = r.applyAttrLimits(a)
+	}
 }
 
 // head returns the first n values of kvs along with the number of elements
@@ -366,4 +372,73 @@ func (r *Record) Clone() Record {
 	res := *r
 	res.back = slices.Clone(r.back)
 	return res
+}
+
+func (r Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
+	attr.Value = r.applyValueLimits(attr.Value)
+	return attr
+}
+
+func (r Record) applyValueLimits(val log.Value) log.Value {
+	switch val.Kind() {
+	case log.KindString:
+		s := val.AsString()
+		if len(s) > r.attributeValueLengthLimit {
+			val = log.StringValue(truncate(s, r.attributeValueLengthLimit))
+		}
+	case log.KindSlice:
+		sl := val.AsSlice()
+		for i := range sl {
+			sl[i] = r.applyValueLimits(sl[i])
+		}
+		val = log.SliceValue(sl...)
+	case log.KindMap:
+		// Deduplicate then truncate. Do not do at the same time to avoid
+		// wasted truncation operations.
+		kvs, dropped := dedup(val.AsMap())
+		r.dropped += dropped
+		for i := range kvs {
+			kvs[i] = r.applyAttrLimits(kvs[i])
+		}
+		val = log.MapValue(kvs...)
+	}
+	return val
+}
+
+// truncate returns a copy of str truncated to have a length of at most n
+// characters. If the length of str is less than n, str itself is returned.
+//
+// The truncate of str ensures that no valid UTF-8 code point is split. The
+// copy returned will be less than n if a characters straddles the length
+// limit.
+//
+// No truncation is performed if n is less than zero.
+func truncate(str string, n int) string {
+	if n < 0 {
+		return str
+	}
+
+	// cut returns a copy of the s truncated to not exceed a length of n. If
+	// invalid UTF-8 is encountered, s is returned with false. Otherwise, the
+	// truncated copy will be returned with true.
+	cut := func(s string) (string, bool) {
+		var i int
+		for i = 0; i < n; {
+			r, size := utf8.DecodeRuneInString(s[i:])
+			if r == utf8.RuneError {
+				return s, false
+			}
+			if i+size > n {
+				break
+			}
+			i += size
+		}
+		return s[:i], true
+	}
+
+	cp, ok := cut(str)
+	if !ok {
+		cp, _ = cut(strings.ToValidUTF8(str, ""))
+	}
+	return cp
 }
