@@ -4,7 +4,9 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"bytes"
 	"context"
+	stdlog "log"
 	"slices"
 	"strconv"
 	"sync"
@@ -12,10 +14,12 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -411,6 +415,41 @@ func TestBatchProcessor(t *testing.T) {
 			cancel()
 			assert.ErrorIs(t, b.ForceFlush(c), context.Canceled)
 		})
+	})
+
+	t.Run("DroppedLogs", func(t *testing.T) {
+		orig := global.GetLogger()
+		t.Cleanup(func() { global.SetLogger(orig) })
+		buf := new(bytes.Buffer)
+		stdr.SetVerbosity(1)
+		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
+
+		e := newTestExporter(nil)
+		e.ExportTrigger = make(chan struct{})
+
+		b := NewBatchProcessor(
+			e,
+			WithMaxQueueSize(1),
+			WithExportMaxBatchSize(1),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		var r Record
+		assert.NoError(t, b.OnEmit(ctx, r), "queued")
+		assert.NoError(t, b.OnEmit(ctx, r), "dropped")
+
+		var n int
+		require.Eventually(t, func() bool {
+			n = e.ExportN()
+			return n > 0
+		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
+
+		got := buf.String()
+		want := `"level"=1 "msg"="dropped log records" "dropped"=1`
+		assert.Contains(t, got, want)
+
+		close(e.ExportTrigger)
+		_ = b.Shutdown(ctx)
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {

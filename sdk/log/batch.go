@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -146,6 +148,10 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				ticker.Reset(interval)
 			case <-b.pollKill:
 				return
+			}
+
+			if d := b.q.Dropped(); d > 0 {
+				global.Warn("dropped log records", "dropped", d)
 			}
 
 			qLen := b.q.TryDequeue(buf, func(r []Record) bool {
