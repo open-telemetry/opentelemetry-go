@@ -9,7 +9,6 @@ The following exporter packages are provided with the following OpenTelemetry si
 
 |                                           Exporter Package                                            | Logs | Metrics | Traces |
 |:-----------------------------------------------------------------------------------------------------:|:------:|:------:|:------:|
-|       [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc](./otlp/otlplog/otlploggrpc)       |   ✓   |        |        |
 |       [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp](./otlp/otlplog/otlploghttp)       |   ✓   |        |        |
 | [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc](./otlp/otlpmetric/otlpmetricgrpc) |        |   ✓   |        |
 | [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp](./otlp/otlpmetric/otlpmetrichttp) |        |   ✓   |        |
