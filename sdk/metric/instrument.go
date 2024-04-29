@@ -52,6 +52,8 @@ const (
 	// InstrumentKindObservableGauge identifies a group of instruments that
 	// record current values in an asynchronous callback.
 	InstrumentKindObservableGauge
+
+	InstrumentKindGauge
 )
 
 type nonComparable [0]func() // nolint: unused  // This is indeed used.
@@ -174,12 +176,14 @@ type int64Inst struct {
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
+	embedded.Int64Gauge
 	embedded.Int64Histogram
 }
 
 var (
 	_ metric.Int64Counter       = (*int64Inst)(nil)
 	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
+	_ metric.Int64Gauge         = (*int64Inst)(nil)
 	_ metric.Int64Histogram     = (*int64Inst)(nil)
 )
 
@@ -204,12 +208,14 @@ type float64Inst struct {
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
+	embedded.Float64Gauge
 	embedded.Float64Histogram
 }
 
 var (
 	_ metric.Float64Counter       = (*float64Inst)(nil)
 	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
+	_ metric.Float64Gauge         = (*float64Inst)(nil)
 	_ metric.Float64Histogram     = (*float64Inst)(nil)
 )
 

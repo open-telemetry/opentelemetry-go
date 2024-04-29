@@ -94,6 +94,18 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 	return i, validateInstrumentName(name)
 }
 
+func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	cfg := metric.NewInt64GaugeConfig(options...)
+	p := int64InstProvider{m}
+	const kind = InstrumentKindGauge
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
+}
+
 // Int64Histogram returns a new instrument identified by name and configured
 // with options. The instrument is used to synchronously record the
 // distribution of int64 measurements during a computational operation.
@@ -218,6 +230,18 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 // float64 measurements during a computational operation.
 func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
+	const kind = InstrumentKindUpDownCounter
+	p := float64InstProvider{m}
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())
+	if err != nil {
+		return i, err
+	}
+
+	return i, validateInstrumentName(name)
+}
+
+func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	cfg := metric.NewFloat64GaugeConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	p := float64InstProvider{m}
 	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit())

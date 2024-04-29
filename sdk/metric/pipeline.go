@@ -496,6 +496,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 // |--------------------------|------|-----------|-----|-----------|-----------------------|
 // | Counter                  | ✓    |           | ✓   | ✓         | ✓                     |
 // | UpDownCounter            | ✓    |           | ✓   | ✓         | ✓                     |
+// | Gauge                    | ✓    | ✓         |     | ✓         | ✓                     |
 // | Histogram                | ✓    |           | ✓   | ✓         | ✓                     |
 // | Observable Counter       | ✓    |           | ✓   | ✓         | ✓                     |
 // | Observable UpDownCounter | ✓    |           | ✓   | ✓         | ✓                     |
@@ -508,6 +509,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 		switch kind {
 		case InstrumentKindCounter,
 			InstrumentKindUpDownCounter,
+			InstrumentKindGauge,
 			InstrumentKindHistogram,
 			InstrumentKindObservableCounter,
 			InstrumentKindObservableUpDownCounter,
@@ -526,7 +528,8 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 			return errIncompatibleAggregation
 		}
 	case AggregationLastValue:
-		if kind == InstrumentKindObservableGauge {
+		switch kind {
+		case InstrumentKindObservableGauge, InstrumentKindGauge:
 			return nil
 		}
 		// TODO: review need for aggregation check after
