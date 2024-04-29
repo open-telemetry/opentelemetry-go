@@ -488,6 +488,18 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, []Record{r, r}, q.Flush(), "flushed Records")
 	})
 
+	t.Run("Dropped", func(t *testing.T) {
+		q := newQueue(1)
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(1), q.Dropped(), "fist")
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(2), q.Dropped(), "second")
+	})
+
 	t.Run("Flush", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
