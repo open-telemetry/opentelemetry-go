@@ -70,6 +70,10 @@ func (Meter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (met
 	return Int64UpDownCounter{}, nil
 }
 
+func (Meter) Int64Gauge(string, ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	return Int64Gauge{}, nil
+}
+
 // Int64Histogram returns a Histogram used to record int64 measurements that
 // produces no telemetry.
 func (Meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
@@ -104,6 +108,10 @@ func (Meter) Float64Counter(string, ...metric.Float64CounterOption) (metric.Floa
 // measurements that produces no telemetry.
 func (Meter) Float64UpDownCounter(string, ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	return Float64UpDownCounter{}, nil
+}
+
+func (Meter) Float64Gauge(string, ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	return Float64Gauge{}, nil
 }
 
 // Float64Histogram returns a Histogram used to record int64 measurements that
@@ -179,6 +187,14 @@ func (Int64UpDownCounter) Add(context.Context, int64, ...metric.AddOption) {}
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64UpDownCounter struct{ embedded.Float64UpDownCounter }
+
+type Int64Gauge struct{ embedded.Int64Gauge }
+
+func (Int64Gauge) Record(context.Context, int64, ...metric.RecordOption) {}
+
+type Float64Gauge struct{ embedded.Float64Gauge }
+
+func (Float64Gauge) Record(context.Context, float64, ...metric.RecordOption) {}
 
 // Add performs no operation.
 func (Float64UpDownCounter) Add(context.Context, float64, ...metric.AddOption) {}

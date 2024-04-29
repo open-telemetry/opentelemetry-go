@@ -148,6 +148,7 @@ type testCountingFloatInstrument struct {
 	metric.Float64Observable
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
+	embedded.Float64Gauge
 	embedded.Float64Histogram
 	embedded.Float64ObservableCounter
 	embedded.Float64ObservableUpDownCounter
@@ -172,6 +173,7 @@ type testCountingIntInstrument struct {
 	metric.Int64Observable
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
+	embedded.Int64Gauge
 	embedded.Int64Histogram
 	embedded.Int64ObservableCounter
 	embedded.Int64ObservableUpDownCounter

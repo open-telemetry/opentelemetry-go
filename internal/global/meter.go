@@ -153,6 +153,17 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 	return i, nil
 }
 
+func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Int64Gauge(name, options...)
+	}
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	i := &siGauge{name: name, opts: options}
+	m.instruments = append(m.instruments, i)
+	return i, nil
+}
+
 func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	if del, ok := m.delegate.Load().(metric.Meter); ok {
 		return del.Int64Histogram(name, options...)
@@ -215,6 +226,17 @@ func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDow
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	i := &sfUpDownCounter{name: name, opts: options}
+	m.instruments = append(m.instruments, i)
+	return i, nil
+}
+
+func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	if del, ok := m.delegate.Load().(metric.Meter); ok {
+		return del.Float64Gauge(name, options...)
+	}
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	i := &sfGauge{name: name, opts: options}
 	m.instruments = append(m.instruments, i)
 	return i, nil
 }

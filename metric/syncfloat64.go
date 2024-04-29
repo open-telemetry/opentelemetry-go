@@ -114,6 +114,39 @@ type Float64UpDownCounterOption interface {
 	applyFloat64UpDownCounter(Float64UpDownCounterConfig) Float64UpDownCounterConfig
 }
 
+type Float64GaugeOption interface {
+	applyFloat64Gauge(Float64GaugeConfig) Float64GaugeConfig
+}
+
+type Float64Gauge interface {
+	embedded.Float64Gauge
+
+	Record(ctx context.Context, value float64, options ...RecordOption)
+}
+
+type Float64GaugeConfig struct {
+	description string
+	unit        string
+}
+
+func NewFloat64GaugeConfig(opts ...Float64GaugeOption) Float64GaugeConfig {
+	var config Float64GaugeConfig
+	for _, o := range opts {
+		config = o.applyFloat64Gauge(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Float64GaugeConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Float64GaugeConfig) Unit() string {
+	return c.unit
+}
+
 // Float64Histogram is an instrument that records a distribution of float64
 // values.
 //

@@ -114,6 +114,39 @@ type Int64UpDownCounterOption interface {
 	applyInt64UpDownCounter(Int64UpDownCounterConfig) Int64UpDownCounterConfig
 }
 
+type Int64GaugeOption interface {
+	applyInt64Gauge(Int64GaugeConfig) Int64GaugeConfig
+}
+
+type Int64Gauge interface {
+	embedded.Int64Gauge
+
+	Record(ctx context.Context, value int64, options ...RecordOption)
+}
+
+type Int64GaugeConfig struct {
+	description string
+	unit        string
+}
+
+func NewInt64GaugeConfig(opts ...Int64GaugeOption) Int64GaugeConfig {
+	var config Int64GaugeConfig
+	for _, o := range opts {
+		config = o.applyInt64Gauge(config)
+	}
+	return config
+}
+
+// Description returns the configured description.
+func (c Int64GaugeConfig) Description() string {
+	return c.description
+}
+
+// Unit returns the configured unit.
+func (c Int64GaugeConfig) Unit() string {
+	return c.unit
+}
+
 // Int64Histogram is an instrument that records a distribution of int64
 // values.
 //

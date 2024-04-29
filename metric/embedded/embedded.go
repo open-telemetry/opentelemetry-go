@@ -102,6 +102,8 @@ type Float64Counter interface{ float64Counter() }
 // the API package).
 type Float64Histogram interface{ float64Histogram() }
 
+type Float64Gauge interface{ float64Gauge() }
+
 // Float64ObservableCounter is embedded in
 // [go.opentelemetry.io/otel/metric.Float64ObservableCounter].
 //
@@ -173,6 +175,8 @@ type Int64Counter interface{ int64Counter() }
 // extended (which is something that can happen without a major version bump of
 // the API package).
 type Int64Histogram interface{ int64Histogram() }
+
+type Int64Gauge interface{ int64Gauge() }
 
 // Int64ObservableCounter is embedded in
 // [go.opentelemetry.io/otel/metric.Int64ObservableCounter].
