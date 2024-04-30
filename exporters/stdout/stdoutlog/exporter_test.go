@@ -294,7 +294,7 @@ func getRecord(now time.Time) sdklog.Record {
 			"https://example.com/custom-resource-schema",
 			attribute.String("foo", "bar"),
 		),
-		InstrumentationScope: instrumentation.Scope{Name: "name", Version: "version", SchemaURL: "https://example.com/custom-schema"},
+		InstrumentationScope: &instrumentation.Scope{Name: "name", Version: "version", SchemaURL: "https://example.com/custom-schema"},
 		DroppedAttributes:    10,
 	}
 
