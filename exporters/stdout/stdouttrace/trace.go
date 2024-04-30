@@ -6,7 +6,7 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -28,21 +28,18 @@ func New(options ...Option) (*Exporter, error) {
 	if cfg.PrettyPrint {
 		enc.SetIndent("", "\t")
 	}
-
-	return &Exporter{
-		encoder:    enc,
-		timestamps: cfg.Timestamps,
-	}, nil
+	exp := &Exporter{
+		encoder: enc,
+	}
+	exp.timestamps.Store(cfg.Timestamps)
+	return exp, nil
 }
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type Exporter struct {
 	encoder    *json.Encoder
-	encoderMu  sync.Mutex
-	timestamps bool
-
-	stoppedMu sync.RWMutex
-	stopped   bool
+	timestamps atomic.Bool
+	stopped    atomic.Bool
 }
 
 // ExportSpans writes spans in json format to stdout.
@@ -50,10 +47,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	e.stoppedMu.RLock()
-	stopped := e.stopped
-	e.stoppedMu.RUnlock()
-	if stopped {
+	if e.stopped.Load() {
 		return nil
 	}
 
@@ -63,12 +57,10 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 	stubs := tracetest.SpanStubsFromReadOnlySpans(spans)
 
-	e.encoderMu.Lock()
-	defer e.encoderMu.Unlock()
 	for i := range stubs {
 		stub := &stubs[i]
 		// Remove timestamps
-		if !e.timestamps {
+		if !(e.timestamps.Load()) {
 			stub.StartTime = zeroTime
 			stub.EndTime = zeroTime
 			for j := range stub.Events {
@@ -87,10 +79,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 // Shutdown is called to stop the exporter, it performs no action.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-	e.stoppedMu.Lock()
-	e.stopped = true
-	e.stoppedMu.Unlock()
-
+	e.stopped.Store(true)
 	return nil
 }
 
@@ -101,6 +90,6 @@ func (e *Exporter) MarshalLog() interface{} {
 		WithTimestamps bool
 	}{
 		Type:           "stdout",
-		WithTimestamps: e.timestamps,
+		WithTimestamps: e.timestamps.Load(),
 	}
 }
