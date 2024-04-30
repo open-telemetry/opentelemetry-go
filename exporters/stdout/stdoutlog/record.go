@@ -26,7 +26,6 @@ type recordJSON struct {
 	TraceFlags        trace.TraceFlags
 	Resource          *resource.Resource
 	Scope             instrumentation.Scope
-
 	DroppedAttributes int
 }
 
