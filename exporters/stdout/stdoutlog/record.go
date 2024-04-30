@@ -15,19 +15,18 @@ import (
 
 // recordJSON is a JSON-serializable representation of a Record.
 type recordJSON struct {
-	Timestamp                 *time.Time `json:",omitempty"`
-	ObservedTimestamp         *time.Time `json:",omitempty"`
-	Severity                  log.Severity
-	SeverityText              string
-	Body                      log.Value
-	Attributes                []log.KeyValue
-	TraceID                   trace.TraceID
-	SpanID                    trace.SpanID
-	TraceFlags                trace.TraceFlags
-	Resource                  *resource.Resource
-	Scope                     instrumentation.Scope
-	AttributeValueLengthLimit int
-	AttributeCountLimit       int
+	Timestamp         *time.Time `json:",omitempty"`
+	ObservedTimestamp *time.Time `json:",omitempty"`
+	Severity          log.Severity
+	SeverityText      string
+	Body              log.Value
+	Attributes        []log.KeyValue
+	TraceID           trace.TraceID
+	SpanID            trace.SpanID
+	TraceFlags        trace.TraceFlags
+	Resource          *resource.Resource
+	Scope             instrumentation.Scope
+	DroppedAttributes int
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
@@ -45,6 +44,8 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Resource: &res,
 		Scope:    r.InstrumentationScope(),
+
+		DroppedAttributes: r.DroppedAttributes(),
 	}
 
 	r.WalkAttributes(func(kv log.KeyValue) bool {
