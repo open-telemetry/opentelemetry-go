@@ -4,11 +4,13 @@
 package log
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
@@ -63,6 +65,7 @@ func TestRecordAttributes(t *testing.T) {
 		log.Bytes("6", []byte("six")),
 	}
 	r := new(Record)
+	r.attributeValueLengthLimit = -1
 	r.SetAttributes(attrs...)
 	r.SetAttributes(attrs[:2]...) // Overwrite existing.
 	r.AddAttributes(attrs[2:]...)
@@ -309,22 +312,317 @@ func TestRecordAttrDeduplication(t *testing.T) {
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r := new(Record)
+				r.attributeValueLengthLimit = -1
 				r.SetAttributes(tc.attrs...)
 				validate(t, r)
 			})
 
 			t.Run("AddAttributes/Empty", func(t *testing.T) {
 				r := new(Record)
+				r.attributeValueLengthLimit = -1
 				r.AddAttributes(tc.attrs...)
 				validate(t, r)
 			})
 
 			t.Run("AddAttributes/Duplicates", func(t *testing.T) {
 				r := new(Record)
+				r.attributeValueLengthLimit = -1
 				r.AddAttributes(tc.attrs...)
 				r.AddAttributes(tc.attrs...)
 				validate(t, r)
 			})
+		})
+	}
+}
+
+func TestApplyAttrLimitsDeduplication(t *testing.T) {
+	testcases := []struct {
+		name        string
+		limit       int
+		input, want log.Value
+	}{
+		{
+			// No de-duplication
+			name: "Slice",
+			input: log.SliceValue(
+				log.BoolValue(true),
+				log.BoolValue(true),
+				log.Float64Value(1.3),
+				log.Float64Value(1.3),
+				log.Int64Value(43),
+				log.Int64Value(43),
+				log.BytesValue([]byte("hello")),
+				log.BytesValue([]byte("hello")),
+				log.StringValue("foo"),
+				log.StringValue("foo"),
+				log.SliceValue(log.StringValue("baz")),
+				log.SliceValue(log.StringValue("baz")),
+				log.MapValue(log.String("a", "qux")),
+				log.MapValue(log.String("a", "qux")),
+			),
+			want: log.SliceValue(
+				log.BoolValue(true),
+				log.BoolValue(true),
+				log.Float64Value(1.3),
+				log.Float64Value(1.3),
+				log.Int64Value(43),
+				log.Int64Value(43),
+				log.BytesValue([]byte("hello")),
+				log.BytesValue([]byte("hello")),
+				log.StringValue("foo"),
+				log.StringValue("foo"),
+				log.SliceValue(log.StringValue("baz")),
+				log.SliceValue(log.StringValue("baz")),
+				log.MapValue(log.String("a", "qux")),
+				log.MapValue(log.String("a", "qux")),
+			),
+		},
+		{
+			name: "Map",
+			input: log.MapValue(
+				log.Bool("a", true),
+				log.Int64("b", 1),
+				log.Bool("a", false),
+				log.Float64("c", 2.),
+				log.String("b", "3"),
+				log.Slice("d", log.Int64Value(4)),
+				log.Map("a", log.Int("key", 5)),
+				log.Bytes("d", []byte("six")),
+				log.Bool("e", true),
+				log.Int("f", 1),
+				log.Int("f", 2),
+				log.Int("f", 3),
+				log.Float64("b", 0.0),
+				log.Float64("b", 0.0),
+				log.String("g", "G"),
+				log.String("h", "H"),
+				log.String("g", "GG"),
+				log.Bool("a", false),
+			),
+			want: log.MapValue(
+				// Order is important here.
+				log.Bool("a", false),
+				log.Float64("b", 0.0),
+				log.Float64("c", 2.),
+				log.Bytes("d", []byte("six")),
+				log.Bool("e", true),
+				log.Int("f", 3),
+				log.String("g", "GG"),
+				log.String("h", "H"),
+			),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			const key = "key"
+			kv := log.KeyValue{Key: key, Value: tc.input}
+			r := Record{attributeValueLengthLimit: -1}
+
+			t.Run("AddAttributes", func(t *testing.T) {
+				r.AddAttributes(kv)
+				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+			})
+
+			t.Run("SetAttributes", func(t *testing.T) {
+				r.SetAttributes(kv)
+				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+			})
+		})
+	}
+}
+
+func TestApplyAttrLimitsTruncation(t *testing.T) {
+	testcases := []struct {
+		name        string
+		limit       int
+		input, want log.Value
+	}{
+		{
+			name:  "Empty",
+			limit: 0,
+			input: log.Value{},
+			want:  log.Value{},
+		},
+		{
+			name:  "Bool",
+			limit: 0,
+			input: log.BoolValue(true),
+			want:  log.BoolValue(true),
+		},
+		{
+			name:  "Float64",
+			limit: 0,
+			input: log.Float64Value(1.3),
+			want:  log.Float64Value(1.3),
+		},
+		{
+			name:  "Int64",
+			limit: 0,
+			input: log.Int64Value(43),
+			want:  log.Int64Value(43),
+		},
+		{
+			name:  "Bytes",
+			limit: 0,
+			input: log.BytesValue([]byte("foo")),
+			want:  log.BytesValue([]byte("foo")),
+		},
+		{
+			name:  "String",
+			limit: 0,
+			input: log.StringValue("foo"),
+			want:  log.StringValue(""),
+		},
+		{
+			name:  "Slice",
+			limit: 0,
+			input: log.SliceValue(
+				log.BoolValue(true),
+				log.Float64Value(1.3),
+				log.Int64Value(43),
+				log.BytesValue([]byte("hello")),
+				log.StringValue("foo"),
+				log.StringValue("bar"),
+				log.SliceValue(log.StringValue("baz")),
+				log.MapValue(log.String("a", "qux")),
+			),
+			want: log.SliceValue(
+				log.BoolValue(true),
+				log.Float64Value(1.3),
+				log.Int64Value(43),
+				log.BytesValue([]byte("hello")),
+				log.StringValue(""),
+				log.StringValue(""),
+				log.SliceValue(log.StringValue("")),
+				log.MapValue(log.String("a", "")),
+			),
+		},
+		{
+			name:  "Map",
+			limit: 0,
+			input: log.MapValue(
+				log.Bool("0", true),
+				log.Float64("1", 1.3),
+				log.Int64("2", 43),
+				log.Bytes("3", []byte("hello")),
+				log.String("4", "foo"),
+				log.String("5", "bar"),
+				log.Slice("6", log.StringValue("baz")),
+				log.Map("7", log.String("a", "qux")),
+			),
+			want: log.MapValue(
+				log.Bool("0", true),
+				log.Float64("1", 1.3),
+				log.Int64("2", 43),
+				log.Bytes("3", []byte("hello")),
+				log.String("4", ""),
+				log.String("5", ""),
+				log.Slice("6", log.StringValue("")),
+				log.Map("7", log.String("a", "")),
+			),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			const key = "key"
+			kv := log.KeyValue{Key: key, Value: tc.input}
+			r := Record{attributeValueLengthLimit: tc.limit}
+
+			t.Run("AddAttributes", func(t *testing.T) {
+				r.AddAttributes(kv)
+				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+			})
+
+			t.Run("SetAttributes", func(t *testing.T) {
+				r.SetAttributes(kv)
+				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+			})
+		})
+	}
+}
+
+func assertKV(t *testing.T, r Record, kv log.KeyValue) {
+	t.Helper()
+
+	var kvs []log.KeyValue
+	r.WalkAttributes(func(kv log.KeyValue) bool {
+		kvs = append(kvs, kv)
+		return true
+	})
+
+	require.Len(t, kvs, 1)
+	assert.Truef(t, kv.Equal(kvs[0]), "%s != %s", kv, kvs[0])
+}
+
+func TestTruncate(t *testing.T) {
+	testcases := []struct {
+		input, want string
+		limit       int
+	}{
+		{
+			input: "value",
+			want:  "value",
+			limit: -1,
+		},
+		{
+			input: "value",
+			want:  "",
+			limit: 0,
+		},
+		{
+			input: "value",
+			want:  "v",
+			limit: 1,
+		},
+		{
+			input: "value",
+			want:  "va",
+			limit: 2,
+		},
+		{
+			input: "value",
+			want:  "val",
+			limit: 3,
+		},
+		{
+			input: "value",
+			want:  "valu",
+			limit: 4,
+		},
+		{
+			input: "value",
+			want:  "value",
+			limit: 5,
+		},
+		{
+			input: "value",
+			want:  "value",
+			limit: 6,
+		},
+		{
+			input: "€€€€", // 3 bytes each
+			want:  "€€€",
+			limit: 10,
+		},
+		{
+			input: "€"[0:2] + "hello€€", // corrupted first rune, then over limit
+			want:  "hello€",
+			limit: 10,
+		},
+		{
+			input: "€"[0:2] + "hello", // corrupted first rune, then not over limit
+			want:  "hello",
+			limit: 10,
+		},
+	}
+
+	for _, tc := range testcases {
+		name := fmt.Sprintf("%s/%d", tc.input, tc.limit)
+		t.Run(name, func(t *testing.T) {
+			t.Log(tc.input, len(tc.input), tc.limit)
+			assert.Equal(t, tc.want, truncate(tc.input, tc.limit))
 		})
 	}
 }

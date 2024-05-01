@@ -11,6 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/logtest"
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -178,7 +183,7 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + "\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":null,\"Scope\":{\"Name\":\"\",\"Version\":\"\",\"SchemaURL\":\"\"},\"AttributeValueLengthLimit\":0,\"AttributeCountLimit\":0}\n"
+	return "{" + timestamps + "\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\"},\"DroppedAttributes\":10}\n"
 }
 
 func getJSONs(now *time.Time) string {
@@ -225,14 +230,21 @@ func getPrettyJSON(now *time.Time) string {
 	"TraceID": "0102030405060708090a0b0c0d0e0f10",
 	"SpanID": "0102030405060708",
 	"TraceFlags": "01",
-	"Resource": null,
+	"Resource": [
+		{
+			"Key": "foo",
+			"Value": {
+				"Type": "STRING",
+				"Value": "bar"
+			}
+		}
+	],
 	"Scope": {
-		"Name": "",
-		"Version": "",
-		"SchemaURL": ""
+		"Name": "name",
+		"Version": "version",
+		"SchemaURL": "https://example.com/custom-schema"
 	},
-	"AttributeValueLengthLimit": 0,
-	"AttributeCountLimit": 0
+	"DroppedAttributes": 10
 }
 `
 }
@@ -259,27 +271,34 @@ func getRecord(now time.Time) sdklog.Record {
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
 
-	// Setup records
-	record := sdklog.Record{}
-	record.SetTimestamp(now)
-	record.SetObservedTimestamp(now)
-	record.SetSeverity(log.SeverityInfo1)
-	record.SetSeverityText("INFO")
-	record.SetBody(log.StringValue("test"))
-	record.SetAttributes([]log.KeyValue{
-		// More than 5 attributes to test back slice
-		log.String("key", "value"),
-		log.String("key2", "value"),
-		log.String("key3", "value"),
-		log.String("key4", "value"),
-		log.String("key5", "value"),
-		log.Bool("bool", true),
-	}...)
-	record.SetTraceID(traceID)
-	record.SetSpanID(spanID)
-	record.SetTraceFlags(trace.FlagsSampled)
+	rf := logtest.RecordFactory{
+		Timestamp:         now,
+		ObservedTimestamp: now,
+		Severity:          log.SeverityInfo1,
+		SeverityText:      "INFO",
+		Body:              log.StringValue("test"),
+		Attributes: []log.KeyValue{
+			// More than 5 attributes to test back slice
+			log.String("key", "value"),
+			log.String("key2", "value"),
+			log.String("key3", "value"),
+			log.String("key4", "value"),
+			log.String("key5", "value"),
+			log.Bool("bool", true),
+		},
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
 
-	return record
+		Resource: resource.NewWithAttributes(
+			"https://example.com/custom-resource-schema",
+			attribute.String("foo", "bar"),
+		),
+		InstrumentationScope: instrumentation.Scope{Name: "name", Version: "version", SchemaURL: "https://example.com/custom-schema"},
+		DroppedAttributes:    10,
+	}
+
+	return rf.NewRecord()
 }
 
 func TestExporterConcurrentSafe(t *testing.T) {

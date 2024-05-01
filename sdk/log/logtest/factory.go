@@ -67,8 +67,13 @@ func (b RecordFactory) NewRecord() sdklog.Record {
 		attributeCountLimit = len(b.Attributes)
 	}
 
+	res := b.Resource
+	if res == nil {
+		res = resource.Empty()
+	}
+
 	provider := sdklog.NewLoggerProvider(
-		sdklog.WithResource(b.Resource),
+		sdklog.WithResource(res),
 		sdklog.WithAttributeCountLimit(attributeCountLimit),
 		sdklog.WithAttributeValueLengthLimit(-1),
 		sdklog.WithProcessor(p),
