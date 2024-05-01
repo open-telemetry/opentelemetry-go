@@ -14,6 +14,8 @@ import (
 
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/logtest"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -60,51 +62,61 @@ var (
 	flagsB   = byte(0)
 
 	records = func() []log.Record {
-		r0 := new(log.Record)
-		r0.SetTimestamp(ts)
-		r0.SetObservedTimestamp(obs)
-		r0.SetSeverity(sevA)
-		r0.SetSeverityText("A")
-		r0.SetBody(bodyA)
-		r0.SetAttributes(alice)
-		r0.SetTraceID(trace.TraceID(traceIDA))
-		r0.SetSpanID(trace.SpanID(spanIDA))
-		r0.SetTraceFlags(trace.TraceFlags(flagsA))
+		var out []log.Record
 
-		r1 := new(log.Record)
-		r1.SetTimestamp(ts)
-		r1.SetObservedTimestamp(obs)
-		r1.SetSeverity(sevA)
-		r1.SetSeverityText("A")
-		r1.SetBody(bodyA)
-		r1.SetAttributes(bob)
-		r1.SetTraceID(trace.TraceID(traceIDA))
-		r1.SetSpanID(trace.SpanID(spanIDA))
-		r1.SetTraceFlags(trace.TraceFlags(flagsA))
+		out = append(out, logtest.RecordFactory{
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Severity:          sevA,
+			SeverityText:      "A",
+			Body:              bodyA,
+			Attributes:        []api.KeyValue{alice},
+			TraceID:           trace.TraceID(traceIDA),
+			SpanID:            trace.SpanID(spanIDA),
+			TraceFlags:        trace.TraceFlags(flagsA),
+			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+		}.NewRecord())
 
-		r2 := new(log.Record)
-		r2.SetTimestamp(ts)
-		r2.SetObservedTimestamp(obs)
-		r2.SetSeverity(sevB)
-		r2.SetSeverityText("B")
-		r2.SetBody(bodyB)
-		r2.SetAttributes(alice)
-		r2.SetTraceID(trace.TraceID(traceIDB))
-		r2.SetSpanID(trace.SpanID(spanIDB))
-		r2.SetTraceFlags(trace.TraceFlags(flagsB))
+		out = append(out, logtest.RecordFactory{
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Severity:          sevA,
+			SeverityText:      "A",
+			Body:              bodyA,
+			Attributes:        []api.KeyValue{bob},
+			TraceID:           trace.TraceID(traceIDA),
+			SpanID:            trace.SpanID(spanIDA),
+			TraceFlags:        trace.TraceFlags(flagsA),
+			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+		}.NewRecord())
 
-		r3 := new(log.Record)
-		r3.SetTimestamp(ts)
-		r3.SetObservedTimestamp(obs)
-		r3.SetSeverity(sevB)
-		r3.SetSeverityText("B")
-		r3.SetBody(bodyB)
-		r3.SetAttributes(bob)
-		r3.SetTraceID(trace.TraceID(traceIDB))
-		r3.SetSpanID(trace.SpanID(spanIDB))
-		r3.SetTraceFlags(trace.TraceFlags(flagsB))
+		out = append(out, logtest.RecordFactory{
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Severity:          sevB,
+			SeverityText:      "B",
+			Body:              bodyB,
+			Attributes:        []api.KeyValue{alice},
+			TraceID:           trace.TraceID(traceIDB),
+			SpanID:            trace.SpanID(spanIDB),
+			TraceFlags:        trace.TraceFlags(flagsB),
+			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+		}.NewRecord())
 
-		return []log.Record{*r0, *r1, *r2, *r3}
+		out = append(out, logtest.RecordFactory{
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Severity:          sevB,
+			SeverityText:      "B",
+			Body:              bodyB,
+			Attributes:        []api.KeyValue{bob},
+			TraceID:           trace.TraceID(traceIDB),
+			SpanID:            trace.SpanID(spanIDB),
+			TraceFlags:        trace.TraceFlags(flagsB),
+			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+		}.NewRecord())
+
+		return out
 	}()
 
 	pbLogRecords = []*lpb.LogRecord{
