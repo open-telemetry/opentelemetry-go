@@ -11,11 +11,14 @@ import (
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	api "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -61,59 +64,95 @@ var (
 	flagsA   = byte(1)
 	flagsB   = byte(0)
 
+	scope = instrumentation.Scope{
+		Name:      "test/code/path",
+		Version:   "v0.1.0",
+		SchemaURL: semconv.SchemaURL,
+	}
+	pbScope = &cpb.InstrumentationScope{
+		Name:    "test/code/path",
+		Version: "v0.1.0",
+	}
+
+	res = resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName("test server"),
+		semconv.ServiceVersion("v0.1.0"),
+	)
+	pbRes = &rpb.Resource{
+		Attributes: []*cpb.KeyValue{
+			{
+				Key: "service.name",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{StringValue: "test server"},
+				},
+			},
+			{
+				Key: "service.version",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{StringValue: "v0.1.0"},
+				},
+			},
+		},
+	}
+
 	records = func() []log.Record {
 		var out []log.Record
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:         ts,
-			ObservedTimestamp: obs,
-			Severity:          sevA,
-			SeverityText:      "A",
-			Body:              bodyA,
-			Attributes:        []api.KeyValue{alice},
-			TraceID:           trace.TraceID(traceIDA),
-			SpanID:            trace.SpanID(spanIDA),
-			TraceFlags:        trace.TraceFlags(flagsA),
-			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+			Timestamp:            ts,
+			ObservedTimestamp:    obs,
+			Severity:             sevA,
+			SeverityText:         "A",
+			Body:                 bodyA,
+			Attributes:           []api.KeyValue{alice},
+			TraceID:              trace.TraceID(traceIDA),
+			SpanID:               trace.SpanID(spanIDA),
+			TraceFlags:           trace.TraceFlags(flagsA),
+			InstrumentationScope: scope,
+			Resource:             res,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:         ts,
-			ObservedTimestamp: obs,
-			Severity:          sevA,
-			SeverityText:      "A",
-			Body:              bodyA,
-			Attributes:        []api.KeyValue{bob},
-			TraceID:           trace.TraceID(traceIDA),
-			SpanID:            trace.SpanID(spanIDA),
-			TraceFlags:        trace.TraceFlags(flagsA),
-			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+			Timestamp:            ts,
+			ObservedTimestamp:    obs,
+			Severity:             sevA,
+			SeverityText:         "A",
+			Body:                 bodyA,
+			Attributes:           []api.KeyValue{bob},
+			TraceID:              trace.TraceID(traceIDA),
+			SpanID:               trace.SpanID(spanIDA),
+			TraceFlags:           trace.TraceFlags(flagsA),
+			InstrumentationScope: scope,
+			Resource:             res,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:         ts,
-			ObservedTimestamp: obs,
-			Severity:          sevB,
-			SeverityText:      "B",
-			Body:              bodyB,
-			Attributes:        []api.KeyValue{alice},
-			TraceID:           trace.TraceID(traceIDB),
-			SpanID:            trace.SpanID(spanIDB),
-			TraceFlags:        trace.TraceFlags(flagsB),
-			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+			Timestamp:            ts,
+			ObservedTimestamp:    obs,
+			Severity:             sevB,
+			SeverityText:         "B",
+			Body:                 bodyB,
+			Attributes:           []api.KeyValue{alice},
+			TraceID:              trace.TraceID(traceIDB),
+			SpanID:               trace.SpanID(spanIDB),
+			TraceFlags:           trace.TraceFlags(flagsB),
+			InstrumentationScope: scope,
+			Resource:             res,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:         ts,
-			ObservedTimestamp: obs,
-			Severity:          sevB,
-			SeverityText:      "B",
-			Body:              bodyB,
-			Attributes:        []api.KeyValue{bob},
-			TraceID:           trace.TraceID(traceIDB),
-			SpanID:            trace.SpanID(spanIDB),
-			TraceFlags:        trace.TraceFlags(flagsB),
-			Resource:          resource.Empty(), // TODO(#5228): populate and test.
+			Timestamp:            ts,
+			ObservedTimestamp:    obs,
+			Severity:             sevB,
+			SeverityText:         "B",
+			Body:                 bodyB,
+			Attributes:           []api.KeyValue{bob},
+			TraceID:              trace.TraceID(traceIDB),
+			SpanID:               trace.SpanID(spanIDB),
+			TraceFlags:           trace.TraceFlags(flagsB),
+			InstrumentationScope: scope,
+			Resource:             res,
 		}.NewRecord())
 
 		return out
@@ -166,9 +205,15 @@ var (
 		},
 	}
 
-	pbScopeLogs = &lpb.ScopeLogs{LogRecords: pbLogRecords}
+	pbScopeLogs = &lpb.ScopeLogs{
+		Scope:      pbScope,
+		SchemaUrl:  semconv.SchemaURL,
+		LogRecords: pbLogRecords,
+	}
 
 	pbResourceLogs = &lpb.ResourceLogs{
+		Resource:  pbRes,
+		SchemaUrl: semconv.SchemaURL,
 		ScopeLogs: []*lpb.ScopeLogs{pbScopeLogs},
 	}
 )
