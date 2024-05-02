@@ -27,6 +27,37 @@ You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org
 
 You can check/report problems with `gorelease` [here](https://golang.org/issues/26420).
 
+## Verify changes for contrib repository
+
+If the changes in the main repository are going to affect the contrib repository, it is important to verify that the changes are compatible with the contrib repository.
+
+Follow the following steps in the local [contrib repository](https://github.com/open-telemetry/opentelemetry-go-contrib) to verify the changes.
+
+1. Pick the GIT SHA on the [main branch](https://github.com/open-telemetry/opentelemetry-go/commits/main) that you want to verify.
+2. Run the following command to update the OTel depencies with the GIT SHA picked in step 1.
+
+    ```sh
+    export GITSHA=<the GIT SHA you want to verify>
+    make update-all-otel-deps
+    make go-mod-tidy
+    ```
+
+3. Verify the changes.
+
+    ```
+    git diff
+    ```
+
+    This should have changed the version for all OTel modules to be the GIT SHA picked in step 1.
+
+4. Run the lint and tests to verify that the changes are compatible with the contrib repository.
+
+    ```sh
+    make precommit
+    ```
+
+    This command should be passed without any errors.
+
 ## Pre-Release
 
 First, decide which module sets will be released and update their versions
