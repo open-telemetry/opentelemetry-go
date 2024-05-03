@@ -3,9 +3,7 @@
 
 package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
 
-import (
-	"math"
-)
+import "math"
 
 // ValueType identifies the type of value used in exemplar data.
 type ValueType uint8
@@ -30,19 +28,11 @@ type Value struct {
 func NewValue[N int64 | float64](value N) Value {
 	switch v := any(value).(type) {
 	case int64:
-		return newInt64Value(v)
+		return Value{t: Int64ValueType, val: uint64(v)}
 	case float64:
-		return newFloat64Value(v)
+		return Value{t: Float64ValueType, val: math.Float64bits(v)}
 	}
 	return Value{}
-}
-
-func newInt64Value(val int64) Value {
-	return Value{t: Int64ValueType, val: uint64(val)}
-}
-
-func newFloat64Value(val float64) Value {
-	return Value{t: Float64ValueType, val: math.Float64bits(val)}
 }
 
 // Type returns the [ValueType] of data held by v.
