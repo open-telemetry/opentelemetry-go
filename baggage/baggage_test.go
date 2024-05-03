@@ -1027,3 +1027,18 @@ func BenchmarkValueEscape(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkMemberString(b *testing.B) {
+	b.ReportAllocs()
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	props := make([]Property, len(alphabet))
+	for i, r := range alphabet {
+		props[i] = Property{key: string(r)}
+	}
+	member, err := NewMember(alphabet, alphabet, props...)
+	require.NoError(b, err)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = member.String()
+	}
+}
