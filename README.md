@@ -99,10 +99,10 @@ All officially supported exporters for the OpenTelemetry project are contained i
 
 | Exporter                              | Logs | Metrics | Traces |
 |---------------------------------------|:----:|:-------:|:------:|
-| [OTLP](./exporters/otlp/)             |  ✓  |    ✓    |   ✓   |
+| [OTLP](./exporters/otlp/)             |  ✓   |    ✓    |   ✓    |
 | [Prometheus](./exporters/prometheus/) |      |    ✓    |        |
-| [stdout](./exporters/stdout/)         |  ✓  |    ✓    |   ✓   |
-| [Zipkin](./exporters/zipkin/)         |      |          |   ✓   |
+| [stdout](./exporters/stdout/)         |  ✓   |    ✓    |   ✓    |
+| [Zipkin](./exporters/zipkin/)         |      |         |   ✓    |
 
 ## Contributing
 
