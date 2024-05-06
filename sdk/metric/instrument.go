@@ -42,6 +42,10 @@ const (
 	// distribution of values synchronously with the code path they are
 	// measuring.
 	InstrumentKindHistogram
+	// InstrumentKindGauge identifies a group of instruments that record
+	// instantaneous values synchronously with the code path they are
+	// measuring.
+	InstrumentKindGauge
 	// InstrumentKindObservableCounter identifies a group of instruments that
 	// record increasing values in an asynchronous callback.
 	InstrumentKindObservableCounter
@@ -175,12 +179,14 @@ type int64Inst struct {
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
+	embedded.Int64Gauge
 }
 
 var (
 	_ metric.Int64Counter       = (*int64Inst)(nil)
 	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
 	_ metric.Int64Histogram     = (*int64Inst)(nil)
+	_ metric.Int64Gauge         = (*int64Inst)(nil)
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
@@ -205,12 +211,14 @@ type float64Inst struct {
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
+	embedded.Float64Gauge
 }
 
 var (
 	_ metric.Float64Counter       = (*float64Inst)(nil)
 	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
 	_ metric.Float64Histogram     = (*float64Inst)(nil)
+	_ metric.Float64Gauge         = (*float64Inst)(nil)
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {

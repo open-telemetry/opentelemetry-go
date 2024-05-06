@@ -464,7 +464,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 	case AggregationExplicitBucketHistogram:
 		var noSum bool
 		switch kind {
-		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge:
+		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge, InstrumentKindGauge:
 			// The sum should not be collected for any instrument that can make
 			// negative measurements:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#histogram-aggregations
@@ -474,7 +474,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 	case AggregationBase2ExponentialHistogram:
 		var noSum bool
 		switch kind {
-		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge:
+		case InstrumentKindUpDownCounter, InstrumentKindObservableUpDownCounter, InstrumentKindObservableGauge, InstrumentKindGauge:
 			// The sum should not be collected for any instrument that can make
 			// negative measurements:
 			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#histogram-aggregations
@@ -497,6 +497,7 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 // | Counter                  | ✓    |           | ✓   | ✓         | ✓                     |
 // | UpDownCounter            | ✓    |           | ✓   | ✓         | ✓                     |
 // | Histogram                | ✓    |           | ✓   | ✓         | ✓                     |
+// | Gauge                    | ✓    | ✓         |     | ✓         | ✓                     |
 // | Observable Counter       | ✓    |           | ✓   | ✓         | ✓                     |
 // | Observable UpDownCounter | ✓    |           | ✓   | ✓         | ✓                     |
 // | Observable Gauge         | ✓    | ✓         |     | ✓         | ✓                     |.
@@ -509,6 +510,7 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 		case InstrumentKindCounter,
 			InstrumentKindUpDownCounter,
 			InstrumentKindHistogram,
+			InstrumentKindGauge,
 			InstrumentKindObservableCounter,
 			InstrumentKindObservableUpDownCounter,
 			InstrumentKindObservableGauge:
@@ -526,7 +528,8 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 			return errIncompatibleAggregation
 		}
 	case AggregationLastValue:
-		if kind == InstrumentKindObservableGauge {
+		switch kind {
+		case InstrumentKindObservableGauge, InstrumentKindGauge:
 			return nil
 		}
 		// TODO: review need for aggregation check after

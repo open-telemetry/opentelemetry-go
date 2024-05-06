@@ -185,6 +185,7 @@ func TestNewViewMatch(t *testing.T) {
 				{},
 				{Kind: InstrumentKindUpDownCounter},
 				{Kind: InstrumentKindHistogram},
+				{Kind: InstrumentKindGauge},
 				{Kind: InstrumentKindObservableCounter},
 				{Kind: InstrumentKindObservableUpDownCounter},
 				{Kind: InstrumentKindObservableGauge},
