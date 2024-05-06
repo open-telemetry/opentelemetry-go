@@ -19,7 +19,7 @@ import (
 func ExampleRecordFactory() {
 	exp := exporter{os.Stdout}
 	rf := logtest.RecordFactory{
-		InstrumentationScope: instrumentation.Scope{Name: "myapp"},
+		InstrumentationScope: &instrumentation.Scope{Name: "myapp"},
 	}
 
 	rf.Body = logapi.StringValue("foo")

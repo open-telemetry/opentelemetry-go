@@ -18,6 +18,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func TestRecordFactoryEmpty(t *testing.T) {
+	assert.Equal(t, sdklog.Record{}, RecordFactory{}.NewRecord())
+}
+
 func TestRecordFactory(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
@@ -49,7 +53,7 @@ func TestRecordFactory(t *testing.T) {
 		SpanID:               spanID,
 		TraceFlags:           traceFlags,
 		DroppedAttributes:    dropped,
-		InstrumentationScope: scope,
+		InstrumentationScope: &scope,
 		Resource:             r,
 	}.NewRecord()
 
@@ -82,7 +86,7 @@ func TestRecordFactoryMultiple(t *testing.T) {
 		Timestamp:            now,
 		Attributes:           attrs,
 		DroppedAttributes:    1,
-		InstrumentationScope: scope,
+		InstrumentationScope: &scope,
 	}
 
 	record1 := f.NewRecord()

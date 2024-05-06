@@ -5,9 +5,9 @@
 package logtest // import "go.opentelemetry.io/otel/sdk/log/logtest"
 
 import (
-	"context"
-	"slices"
+	"reflect"
 	"time"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -33,75 +33,44 @@ type RecordFactory struct {
 	TraceFlags        trace.TraceFlags
 
 	Resource             *resource.Resource
-	InstrumentationScope instrumentation.Scope
+	InstrumentationScope *instrumentation.Scope
 
-	DroppedAttributes int
+	DroppedAttributes         int
+	AttributeValueLengthLimit int
+	AttributeCountLimit       int
 }
 
-// NewRecord returns a log record.
-func (b RecordFactory) NewRecord() sdklog.Record {
-	var record sdklog.Record
-	p := processor(func(r sdklog.Record) {
-		r.SetTimestamp(b.Timestamp)
-		r.SetObservedTimestamp(b.ObservedTimestamp)
-		r.SetSeverity(b.Severity)
-		r.SetSeverityText(b.SeverityText)
-		r.SetBody(b.Body)
-		r.SetAttributes(slices.Clone(b.Attributes)...)
+// NewRecord returns a [sdklog.Record] configured from the values of f.
+func (f RecordFactory) NewRecord() sdklog.Record {
+	// r needs to be addressable for set() below.
+	r := new(sdklog.Record)
 
-		// Generate dropped attributes.
-		for i := 0; i < b.DroppedAttributes; i++ {
-			r.AddAttributes(log.KeyValue{})
-		}
+	// Set to unlimited so attributes are set exactly.
+	set(r, "attributeCountLimit", -1)
+	set(r, "attributeValueLengthLimit", -1)
 
-		r.SetTraceID(b.TraceID)
-		r.SetSpanID(b.SpanID)
-		r.SetTraceFlags(b.TraceFlags)
+	r.SetTimestamp(f.Timestamp)
+	r.SetObservedTimestamp(f.ObservedTimestamp)
+	r.SetSeverity(f.Severity)
+	r.SetSeverityText(f.SeverityText)
+	r.SetBody(f.Body)
+	r.SetAttributes(f.Attributes...)
+	r.SetTraceID(f.TraceID)
+	r.SetSpanID(f.SpanID)
+	r.SetTraceFlags(f.TraceFlags)
 
-		record = r
-	})
+	set(r, "resource", f.Resource)
+	set(r, "scope", f.InstrumentationScope)
+	set(r, "dropped", f.DroppedAttributes)
+	set(r, "attributeCountLimit", f.AttributeCountLimit)
+	set(r, "attributeValueLengthLimit", f.AttributeValueLengthLimit)
 
-	attributeCountLimit := -1
-	if b.DroppedAttributes > 0 {
-		// Make sure that we can generate dropped attributes.
-		attributeCountLimit = len(b.Attributes)
-	}
-
-	res := b.Resource
-	if res == nil {
-		res = resource.Empty()
-	}
-
-	provider := sdklog.NewLoggerProvider(
-		sdklog.WithResource(res),
-		sdklog.WithAttributeCountLimit(attributeCountLimit),
-		sdklog.WithAttributeValueLengthLimit(-1),
-		sdklog.WithProcessor(p),
-	)
-
-	l := provider.Logger(b.InstrumentationScope.Name,
-		log.WithInstrumentationVersion(b.InstrumentationScope.Version),
-		log.WithSchemaURL(b.InstrumentationScope.SchemaURL),
-	)
-	l.Emit(context.Background(), log.Record{}) // This executes the processor function.
-	return record
+	return *r
 }
 
-type processor func(r sdklog.Record)
-
-func (p processor) OnEmit(ctx context.Context, r sdklog.Record) error {
-	p(r)
-	return nil
-}
-
-func (processor) Enabled(context.Context, sdklog.Record) bool {
-	return true
-}
-
-func (processor) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (processor) ForceFlush(context.Context) error {
-	return nil
+func set(r *sdklog.Record, name string, value any) {
+	rVal := reflect.ValueOf(r).Elem()
+	rf := rVal.FieldByName(name)
+	rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem()
+	rf.Set(reflect.ValueOf(value))
 }
