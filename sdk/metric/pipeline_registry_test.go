@@ -724,7 +724,7 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			agg:  AggregationDrop{},
 		},
 		{
-			name: "SyncGauge and LastValue{}",
+			name: "SyncGauge and LastValue",
 			kind: InstrumentKindGauge,
 			agg:  AggregationLastValue{},
 		},
