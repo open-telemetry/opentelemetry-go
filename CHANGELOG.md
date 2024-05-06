@@ -48,6 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Update `go.opentelemetry.io/proto/otlp` from v1.1.0 to v1.2.0. (#5177)
 - Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
+- The `otel-collector` example now uses docker compose to bring up services instead of kubernetes. (#5244)
 
 ## [1.25.0/0.47.0/0.0.8/0.1.0-alpha] 2024-04-05
 
