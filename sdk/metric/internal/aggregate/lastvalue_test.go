@@ -13,12 +13,13 @@ import (
 func TestLastValue(t *testing.T) {
 	t.Cleanup(mockTime(now))
 
-	t.Run("Int64", testLastValue[int64]())
-	t.Run("Float64", testLastValue[float64]())
+	t.Run("Int64/DeltaLastValue", testDeltaLastValue[int64]())
+	t.Run("Float64/DeltaLastValue", testDeltaLastValue[float64]())
 }
 
-func testLastValue[N int64 | float64]() func(*testing.T) {
+func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.LastValue()
@@ -42,11 +43,13 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      -10,
 						},
@@ -68,11 +71,13 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      3,
 						},
@@ -93,16 +98,19 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
+							StartTime:  staticTime,
 							Time:       staticTime,
 							Value:      1,
 						},
@@ -114,6 +122,6 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.LastValue))
-	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.LastValue))
+	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
+	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
 }
