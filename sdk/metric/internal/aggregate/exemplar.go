@@ -32,13 +32,11 @@ func collectExemplars[N int64 | float64](out *[]metricdata.Exemplar[N], f func(*
 		(*out)[i].SpanID = e.SpanID
 		(*out)[i].TraceID = e.TraceID
 
-		val := (*out)[i].Value
-		valPtr := any(&val)
-		switch v := valPtr.(type) {
-		case *int64:
-			*v = e.Value.Int64()
-		case *float64:
-			*v = e.Value.Float64()
+		switch e.Value.Type() {
+		case exemplar.Int64ValueType:
+			(*out)[i].Value = N(e.Value.Int64())
+		case exemplar.Float64ValueType:
+			(*out)[i].Value = N(e.Value.Float64())
 		}
 	}
 }
