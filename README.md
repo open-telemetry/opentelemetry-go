@@ -97,12 +97,12 @@ export pipeline to send that telemetry to an observability platform.
 
 All officially supported exporters for the OpenTelemetry project are contained in the [exporters directory](./exporters).
 
-| Exporter                              | Metrics | Traces |
-|---------------------------------------|:-------:|:------:|
-| [OTLP](./exporters/otlp/)             |    ✓    |   ✓    |
-| [Prometheus](./exporters/prometheus/) |    ✓    |        |
-| [stdout](./exporters/stdout/)         |    ✓    |   ✓    |
-| [Zipkin](./exporters/zipkin/)         |         |   ✓    |
+| Exporter                              | Logs | Metrics | Traces |
+|---------------------------------------|:----:|:-------:|:------:|
+| [OTLP](./exporters/otlp/)             |  ✓   |    ✓    |   ✓    |
+| [Prometheus](./exporters/prometheus/) |      |    ✓    |        |
+| [stdout](./exporters/stdout/)         |  ✓   |    ✓    |   ✓    |
+| [Zipkin](./exporters/zipkin/)         |      |         |   ✓    |
 
 ## Contributing
 
