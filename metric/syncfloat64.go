@@ -28,7 +28,7 @@ type Float64Counter interface {
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
-// record int64 values.
+// record float64 values.
 type Float64CounterConfig struct {
 	description string
 	unit        string
@@ -81,7 +81,7 @@ type Float64UpDownCounter interface {
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
-// instruments that record int64 values.
+// instruments that record float64 values.
 type Float64UpDownCounterConfig struct {
 	description string
 	unit        string
@@ -134,7 +134,7 @@ type Float64Histogram interface {
 }
 
 // Float64HistogramConfig contains options for synchronous histogram
-// instruments that record int64 values.
+// instruments that record float64 values.
 type Float64HistogramConfig struct {
 	description              string
 	unit                     string
