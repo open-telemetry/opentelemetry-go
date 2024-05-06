@@ -133,8 +133,8 @@ type Float64Histogram interface {
 	Record(ctx context.Context, incr float64, options ...RecordOption)
 }
 
-// Float64HistogramConfig contains options for synchronous counter instruments
-// that record int64 values.
+// Float64HistogramConfig contains options for synchronous histogram
+// instruments that record int64 values.
 type Float64HistogramConfig struct {
 	description              string
 	unit                     string
