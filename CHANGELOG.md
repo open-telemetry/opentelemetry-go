@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Apply the value length limits to `Record` attributes in `go.opentelemetry.io/otel/sdk/log`. (#5230)
 - De-duplicate map attributes added to a `Record` in `go.opentelemetry.io/otel/sdk/log`. (#5230)
 - The `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` exporter won't print `AttributeValueLengthLimit` and `AttributeCountLimit` fields now, instead it prints the `DroppedAttributes` field. (#5272)
+- Improved performance in the `Stringer` implementation of `go.opentelemetry.io/otel/baggage.Member` by reducing the number of allocations. (#5286)
 
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
@@ -50,6 +51,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update `go.opentelemetry.io/proto/otlp` from v1.1.0 to v1.2.0. (#5177)
 - Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
 - The `otel-collector` example now uses docker compose to bring up services instead of kubernetes. (#5244)
+
+### Fixed
+
+- Slice attribute values in `go.opentelemetry.io/otel/attribute` are now emitted as their JSON representation. (#5159)
 
 ## [1.25.0/0.47.0/0.0.8/0.1.0-alpha] 2024-04-05
 
