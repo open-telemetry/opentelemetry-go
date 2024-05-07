@@ -32,6 +32,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix the empty output of `go.opentelemetry.io/otel/log.Value` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5311)
 
+### Fixed
+
+- Comparison of unordered slices and maps in `go.opentelemetry.io/otel/log.KeyValue` and `go.opentelemetry.io/otel/log.Value`. (#)
+
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
 ### Added
