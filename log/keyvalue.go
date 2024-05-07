@@ -7,6 +7,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
@@ -254,8 +255,24 @@ func (v Value) Equal(w Value) bool {
 	case KindFloat64:
 		return v.asFloat64() == w.asFloat64()
 	case KindSlice:
-		return slices.EqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
+		sv := v.asSlice()
+		sw := w.asSlice()
+		slices.SortFunc(sv, func(a, b Value) int {
+			return cmp.Compare(a.String(), b.String())
+		})
+		slices.SortFunc(sw, func(a, b Value) int {
+			return cmp.Compare(a.String(), b.String())
+		})
+		return slices.EqualFunc(sv, sw, Value.Equal)
 	case KindMap:
+		sv := v.asMap()
+		slices.SortFunc(sv, func(a, b KeyValue) int {
+			return cmp.Compare(a.Key, b.Key)
+		})
+		sw := w.asMap()
+		slices.SortFunc(sw, func(a, b KeyValue) int {
+			return cmp.Compare(a.Key, b.Key)
+		})
 		return slices.EqualFunc(v.asMap(), w.asMap(), KeyValue.Equal)
 	case KindBytes:
 		return bytes.Equal(v.asBytes(), w.asBytes())
