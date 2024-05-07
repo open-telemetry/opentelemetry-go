@@ -44,7 +44,7 @@ func (v value) MarshalJSON() ([]byte, error) {
 		jsonVal.Value = v.AsBytes()
 	case log.KindMap:
 		m := v.AsMap()
-		var values = make([]keyValue, 0, len(m))
+		values := make([]keyValue, 0, len(m))
 		for _, kv := range m {
 			values = append(values, keyValue{
 				Key:   kv.Key,
@@ -55,7 +55,7 @@ func (v value) MarshalJSON() ([]byte, error) {
 		jsonVal.Value = values
 	case log.KindSlice:
 		s := v.AsSlice()
-		var values = make([]value, 0, len(s))
+		values := make([]value, 0, len(s))
 		for _, e := range s {
 			values = append(values, newValue(e))
 		}
