@@ -255,15 +255,7 @@ func (v Value) Equal(w Value) bool {
 	case KindFloat64:
 		return v.asFloat64() == w.asFloat64()
 	case KindSlice:
-		sv := v.asSlice()
-		sw := w.asSlice()
-		slices.SortFunc(sv, func(a, b Value) int {
-			return cmp.Compare(a.String(), b.String())
-		})
-		slices.SortFunc(sw, func(a, b Value) int {
-			return cmp.Compare(a.String(), b.String())
-		})
-		return slices.EqualFunc(sv, sw, Value.Equal)
+		return slices.EqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
 	case KindMap:
 		sv := v.asMap()
 		slices.SortFunc(sv, func(a, b KeyValue) int {

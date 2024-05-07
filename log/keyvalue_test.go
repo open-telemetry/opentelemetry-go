@@ -76,10 +76,6 @@ func TestSortedValueEqual(t *testing.T) {
 		value2 log.Value
 	}{
 		{
-			value:  log.SliceValue(log.IntValue(3), log.StringValue("foo")),
-			value2: log.SliceValue(log.StringValue("foo"), log.IntValue(3)),
-		},
-		{
 			value: log.MapValue(
 				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
 				log.Bytes("b", []byte{3, 5, 7}),
