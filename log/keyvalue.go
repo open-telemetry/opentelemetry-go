@@ -7,6 +7,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -298,6 +299,38 @@ func (v Value) String() string {
 		// have a "unhandled: " prefix than say that their code is panicking.
 		return fmt.Sprintf("<unhandled log.Kind: %s>", v.Kind())
 	}
+}
+
+// MarshalJSON implements a custom marshal function to encode Value.
+func (v Value) MarshalJSON() ([]byte, error) {
+	var jsonVal struct {
+		Type  string
+		Value interface{}
+	}
+	jsonVal.Type = v.Kind().String()
+
+	switch v.Kind() {
+	case KindString:
+		jsonVal.Value = v.asString()
+	case KindInt64:
+		jsonVal.Value = v.asInt64()
+	case KindFloat64:
+		jsonVal.Value = v.asFloat64()
+	case KindBool:
+		jsonVal.Value = v.asBool()
+	case KindBytes:
+		jsonVal.Value = v.asBytes()
+	case KindMap:
+		jsonVal.Value = v.asMap()
+	case KindSlice:
+		jsonVal.Value = v.asSlice()
+	case KindEmpty:
+		jsonVal.Value = nil
+	default:
+		return nil, errKind
+	}
+
+	return json.Marshal(jsonVal)
 }
 
 // A KeyValue is a key-value pair used to represent a log attribute (a
