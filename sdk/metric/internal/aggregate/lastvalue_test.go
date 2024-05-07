@@ -18,6 +18,12 @@ func TestLastValue(t *testing.T) {
 
 	t.Run("Int64/CumulativeLastValue", testCumulativeLastValue[int64]())
 	t.Run("Float64/CumulativeLastValue", testCumulativeLastValue[float64]())
+
+	t.Run("Int64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValue[int64]())
+	t.Run("Float64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValue[float64]())
+
+	t.Run("Int64/CumulativePrecomputedLastValue", testCumulativePrecomputedLastValue[int64]())
+	t.Run("Float64/CumulativePrecomputedLastValue", testCumulativePrecomputedLastValue[float64]())
 }
 
 func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
@@ -185,6 +191,214 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					},
 				},
 			},
+		}, {
+			input: []arg[N]{
+				{ctx, 10, alice},
+				{ctx, 3, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      10,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      3,
+						},
+					},
+				},
+			},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedLastValue()
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			// Empty output if nothing is measured.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, -1, bob},
+				{ctx, 1, fltrAlice},
+				{ctx, 2, alice},
+				{ctx, -10, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      -10,
+						},
+					},
+				},
+			},
+		}, {
+			// Everything resets, do not report old measurements.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
+		}, {
+			input: []arg[N]{
+				{ctx, 10, alice},
+				{ctx, 3, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      10,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      3,
+						},
+					},
+				},
+			},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+				// These will exceed cardinality limit.
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 3,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedLastValue()
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			// Empty output if nothing is measured.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
+		}, {
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, -1, bob},
+				{ctx, 1, fltrAlice},
+				{ctx, 2, alice},
+				{ctx, -10, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Gauge[N]{
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      2,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  staticTime,
+							Time:       staticTime,
+							Value:      -10,
+						},
+					},
+				},
+			},
+		}, {
+			// Everything resets, do not report old measurements.
+			input:  []arg[N]{},
+			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
 				{ctx, 10, alice},
