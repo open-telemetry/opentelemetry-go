@@ -51,6 +51,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
 - The `otel-collector` example now uses docker compose to bring up services instead of kubernetes. (#5244)
 
+### Fixed
+
+- Slice attribute values in `go.opentelemetry.io/otel/attribute` are now emitted as their JSON representation. (#5159)
+
 ## [1.25.0/0.47.0/0.0.8/0.1.0-alpha] 2024-04-05
 
 ### Added
