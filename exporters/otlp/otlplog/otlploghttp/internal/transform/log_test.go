@@ -109,7 +109,7 @@ var (
 			TraceID:              trace.TraceID(traceIDA),
 			SpanID:               trace.SpanID(spanIDA),
 			TraceFlags:           trace.TraceFlags(flagsA),
-			InstrumentationScope: scope,
+			InstrumentationScope: &scope,
 			Resource:             res,
 		}.NewRecord())
 
@@ -123,7 +123,7 @@ var (
 			TraceID:              trace.TraceID(traceIDA),
 			SpanID:               trace.SpanID(spanIDA),
 			TraceFlags:           trace.TraceFlags(flagsA),
-			InstrumentationScope: scope,
+			InstrumentationScope: &scope,
 			Resource:             res,
 		}.NewRecord())
 
@@ -137,7 +137,7 @@ var (
 			TraceID:              trace.TraceID(traceIDB),
 			SpanID:               trace.SpanID(spanIDB),
 			TraceFlags:           trace.TraceFlags(flagsB),
-			InstrumentationScope: scope,
+			InstrumentationScope: &scope,
 			Resource:             res,
 		}.NewRecord())
 
@@ -151,7 +151,7 @@ var (
 			TraceID:              trace.TraceID(traceIDB),
 			SpanID:               trace.SpanID(spanIDB),
 			TraceFlags:           trace.TraceFlags(flagsB),
-			InstrumentationScope: scope,
+			InstrumentationScope: &scope,
 			Resource:             res,
 		}.NewRecord())
 
