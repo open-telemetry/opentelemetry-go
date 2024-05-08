@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -48,6 +49,31 @@ var (
 		return func() { now = orig }
 	}
 )
+
+// y2kPlus returns the timestamp at n seconds past Sat Jan 01 2000 00:00:00 GMT+0000.
+func y2kPlus(n int64) time.Time {
+	d := time.Duration(n) * time.Second
+	return staticTime.Add(d)
+}
+
+type clock struct {
+	ticks atomic.Int64
+}
+
+// Now returns the mocked time starting at staticTime(0). Each call to Now will
+// increment the returned value by one second.
+func (c *clock) Now() time.Time {
+	old := c.ticks.Add(1) - 1
+	return y2kPlus(old)
+}
+
+func (c *clock) Reset() { c.ticks.Store(0) }
+
+func (c *clock) Register() (unregister func()) {
+	orig := now
+	now = c.Now
+	return func() { now = orig }
+}
 
 func dropExemplars[N int64 | float64]() exemplar.Reservoir {
 	return exemplar.Drop()
