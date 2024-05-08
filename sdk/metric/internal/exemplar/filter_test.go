@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -21,14 +20,14 @@ func TestSampledFilter(t *testing.T) {
 }
 
 func testSampledFiltered[N int64 | float64](t *testing.T) {
-	under := &res[N]{}
+	under := &res{}
 
-	r := SampledFilter[N](under)
+	r := SampledFilter(under)
 
 	ctx := context.Background()
-	r.Offer(ctx, staticTime, 0, nil)
+	r.Offer(ctx, staticTime, NewValue(N(0)), nil)
 	assert.False(t, under.OfferCalled, "underlying Reservoir Offer called")
-	r.Offer(sample(ctx), staticTime, 0, nil)
+	r.Offer(sample(ctx), staticTime, NewValue(N(0)), nil)
 	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
 
 	r.Collect(nil)
@@ -44,15 +43,15 @@ func sample(parent context.Context) context.Context {
 	return trace.ContextWithSpanContext(parent, sc)
 }
 
-type res[N int64 | float64] struct {
+type res struct {
 	OfferCalled   bool
 	CollectCalled bool
 }
 
-func (r *res[N]) Offer(context.Context, time.Time, N, []attribute.KeyValue) {
+func (r *res) Offer(context.Context, time.Time, Value, []attribute.KeyValue) {
 	r.OfferCalled = true
 }
 
-func (r *res[N]) Collect(*[]metricdata.Exemplar[N]) {
+func (r *res) Collect(*[]Exemplar) {
 	r.CollectCalled = true
 }

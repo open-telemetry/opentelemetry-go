@@ -8,11 +8,11 @@ import (
 )
 
 func TestDrop(t *testing.T) {
-	t.Run("Int64", ReservoirTest[int64](func(int) (Reservoir[int64], int) {
-		return Drop[int64](), 0
+	t.Run("Int64", ReservoirTest[int64](func(int) (Reservoir, int) {
+		return Drop(), 0
 	}))
 
-	t.Run("Float64", ReservoirTest[float64](func(int) (Reservoir[float64], int) {
-		return Drop[float64](), 0
+	t.Run("Float64", ReservoirTest[float64](func(int) (Reservoir, int) {
+		return Drop(), 0
 	}))
 }

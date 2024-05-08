@@ -49,8 +49,8 @@ var (
 	}
 )
 
-func dropExemplars[N int64 | float64]() exemplar.Reservoir[N] {
-	return exemplar.Drop[N]()
+func dropExemplars[N int64 | float64]() exemplar.Reservoir {
+	return exemplar.Drop()
 }
 
 func TestBuilderFilter(t *testing.T) {
