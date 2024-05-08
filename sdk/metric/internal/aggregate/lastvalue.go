@@ -18,10 +18,10 @@ type datapoint[N int64 | float64] struct {
 	attrs     attribute.Set
 	timestamp time.Time
 	value     N
-	res       exemplar.Reservoir[N]
+	res       exemplar.Reservoir
 }
 
-func newLastValue[N int64 | float64](limit int, r func() exemplar.Reservoir[N]) *lastValue[N] {
+func newLastValue[N int64 | float64](limit int, r func() exemplar.Reservoir) *lastValue[N] {
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
@@ -33,7 +33,7 @@ func newLastValue[N int64 | float64](limit int, r func() exemplar.Reservoir[N]) 
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
-	newRes func() exemplar.Reservoir[N]
+	newRes func() exemplar.Reservoir
 	limit  limiter[datapoint[N]]
 	values map[attribute.Distinct]datapoint[N]
 }
@@ -53,7 +53,7 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.
 	d.attrs = attr
 	d.timestamp = t
 	d.value = value
-	d.res.Offer(ctx, t, value, droppedAttr)
+	d.res.Offer(ctx, t, exemplar.NewValue(value), droppedAttr)
 
 	s.values[attr.Equivalent()] = d
 }
@@ -72,7 +72,7 @@ func (s *lastValue[N]) computeAggregation(dest *[]metricdata.DataPoint[N]) {
 		// ignored.
 		(*dest)[i].Time = v.timestamp
 		(*dest)[i].Value = v.value
-		v.res.Collect(&(*dest)[i].Exemplars)
+		collectExemplars(&(*dest)[i].Exemplars, v.res.Collect)
 		i++
 	}
 	// Do not report stale values.

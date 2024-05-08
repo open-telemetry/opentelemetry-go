@@ -64,9 +64,19 @@ func TestEmit(t *testing.T) {
 			want: "true",
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
+			v:    attribute.Int64SliceValue([]int64{1, 42}),
+			want: `[1,42]`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.INT64`,
 			v:    attribute.Int64Value(42),
 			want: "42",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.FLOAT64SLICE`,
+			v:    attribute.Float64SliceValue([]float64{1.0, 42.5}),
+			want: `[1,42.5]`,
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
@@ -77,6 +87,11 @@ func TestEmit(t *testing.T) {
 			name: `test Key.Emit() can emit a string representing self.STRING`,
 			v:    attribute.StringValue("foo"),
 			want: "foo",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.STRINGSLICE`,
+			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
+			want: `["foo","bar"]`,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
