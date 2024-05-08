@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -148,6 +150,10 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				return
 			}
 
+			if d := b.q.Dropped(); d > 0 {
+				global.Warn("dropped log records", "dropped", d)
+			}
+
 			qLen := b.q.TryDequeue(buf, func(r []Record) bool {
 				ok := b.exporter.EnqueueExport(r)
 				if ok {
@@ -253,6 +259,7 @@ func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 type queue struct {
 	sync.Mutex
 
+	dropped     atomic.Uint64
 	cap, len    int
 	read, write *ring
 }
@@ -264,6 +271,12 @@ func newQueue(size int) *queue {
 		read:  r,
 		write: r,
 	}
+}
+
+// Dropped returns the number of Records dropped during enqueueing since the
+// last time Dropped was called.
+func (q *queue) Dropped() uint64 {
+	return q.dropped.Swap(0)
 }
 
 // Enqueue adds r to the queue. The queue size, including the addition of r, is
@@ -283,6 +296,7 @@ func (q *queue) Enqueue(r Record) int {
 		// Overflow. Advance read to be the new "oldest".
 		q.len = q.cap
 		q.read = q.read.Next()
+		q.dropped.Add(1)
 	}
 	return q.len
 }
