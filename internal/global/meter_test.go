@@ -136,18 +136,18 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Co
 	}, afcounter)
 	require.NoError(t, err)
 
-	sfcounter, err := m.Float64Counter("test_Async_Counter")
+	sfcounter, err := m.Float64Counter("test_Sync_Counter")
 	require.NoError(t, err)
-	_, err = m.Float64UpDownCounter("test_Async_UpDownCounter")
+	_, err = m.Float64UpDownCounter("test_Sync_UpDownCounter")
 	assert.NoError(t, err)
-	_, err = m.Float64Histogram("test_Async_Histogram")
+	_, err = m.Float64Histogram("test_Sync_Histogram")
 	assert.NoError(t, err)
 
-	_, err = m.Int64Counter("test_Async_Counter")
+	_, err = m.Int64Counter("test_Sync_Counter")
 	assert.NoError(t, err)
-	_, err = m.Int64UpDownCounter("test_Async_UpDownCounter")
+	_, err = m.Int64UpDownCounter("test_Sync_UpDownCounter")
 	assert.NoError(t, err)
-	_, err = m.Int64Histogram("test_Async_Histogram")
+	_, err = m.Int64Histogram("test_Sync_Histogram")
 	assert.NoError(t, err)
 
 	return sfcounter, afcounter
