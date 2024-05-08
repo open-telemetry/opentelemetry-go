@@ -40,13 +40,13 @@ var (
 	fltrBob   = attribute.NewSet(userBob)
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	staticTime = time.Unix(946684800, 0)
+	y2k = time.Unix(946684800, 0)
 )
 
 // y2kPlus returns the timestamp at n seconds past Sat Jan 01 2000 00:00:00 GMT+0000.
 func y2kPlus(n int64) time.Time {
 	d := time.Duration(n) * time.Second
-	return staticTime.Add(d)
+	return y2k.Add(d)
 }
 
 type clock struct {
