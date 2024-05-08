@@ -343,7 +343,9 @@ func TestCumulativeHistogramImutableCounts(t *testing.T) {
 }
 
 func TestDeltaHistogramReset(t *testing.T) {
-	t.Cleanup(mockTime(now))
+	orig := now
+	now = func() time.Time { return staticTime }
+	t.Cleanup(func() { now = orig })
 
 	h := newHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
 

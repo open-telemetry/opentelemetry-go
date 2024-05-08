@@ -40,14 +40,7 @@ var (
 	fltrBob   = attribute.NewSet(userBob)
 
 	// Sat Jan 01 2000 00:00:00 GMT+0000.
-	staticTime    = time.Unix(946684800, 0)
-	staticNowFunc = func() time.Time { return staticTime }
-	// Pass to t.Cleanup to override the now function with staticNowFunc and
-	// revert once the test completes. E.g. t.Cleanup(mockTime(now)).
-	mockTime = func(orig func() time.Time) (cleanup func()) {
-		now = staticNowFunc
-		return func() { now = orig }
-	}
+	staticTime = time.Unix(946684800, 0)
 )
 
 // y2kPlus returns the timestamp at n seconds past Sat Jan 01 2000 00:00:00 GMT+0000.
