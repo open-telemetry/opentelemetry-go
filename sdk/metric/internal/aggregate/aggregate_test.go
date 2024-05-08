@@ -49,19 +49,24 @@ func y2kPlus(n int64) time.Time {
 	return y2k.Add(d)
 }
 
+// clock is a test clock. It provides a predictable value for now() that can be
+// reset.
 type clock struct {
 	ticks atomic.Int64
 }
 
-// Now returns the mocked time starting at staticTime(0). Each call to Now will
+// Now returns the mocked time starting at y2kPlus(0). Each call to Now will
 // increment the returned value by one second.
 func (c *clock) Now() time.Time {
 	old := c.ticks.Add(1) - 1
 	return y2kPlus(old)
 }
 
+// Reset resets the clock c to tick from y2kPlus(0).
 func (c *clock) Reset() { c.ticks.Store(0) }
 
+// Register registers clock c's Now method as the now var. It returns an
+// unregister func that should be called to restore the original now value.
 func (c *clock) Register() (unregister func()) {
 	orig := now
 	now = c.Now
