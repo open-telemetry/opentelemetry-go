@@ -11,9 +11,12 @@ import (
 )
 
 func TestLastValue(t *testing.T) {
-	t.Cleanup(mockTime(now))
+	c := new(clock)
+	t.Cleanup(c.Register())
 
 	t.Run("Int64", testLastValue[int64]())
+	c.Reset()
+
 	t.Run("Float64", testLastValue[float64]())
 }
 
@@ -42,12 +45,12 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							Time:       staticTime,
+							Time:       y2kPlus(3),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							Time:       staticTime,
+							Time:       y2kPlus(4),
 							Value:      -10,
 						},
 					},
@@ -68,12 +71,12 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							Time:       staticTime,
+							Time:       y2kPlus(5),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
-							Time:       staticTime,
+							Time:       y2kPlus(6),
 							Value:      3,
 						},
 					},
@@ -93,17 +96,17 @@ func testLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							Time:       staticTime,
+							Time:       y2kPlus(7),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							Time:       staticTime,
+							Time:       y2kPlus(8),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							Time:       staticTime,
+							Time:       y2kPlus(10),
 							Value:      1,
 						},
 					},
