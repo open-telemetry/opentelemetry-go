@@ -629,7 +629,6 @@ should be canceled.
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
-- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 
 ### Maintainers
 
@@ -643,6 +642,7 @@ should be canceled.
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 
 ### Become an Approver or a Maintainer
 
