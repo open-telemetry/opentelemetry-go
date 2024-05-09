@@ -15,22 +15,22 @@ import (
 
 // recordJSON is a JSON-serializable representation of a Record.
 type recordJSON struct {
-	Timestamp                 time.Time
-	ObservedTimestamp         time.Time
-	Severity                  log.Severity
-	SeverityText              string
-	Body                      log.Value
-	Attributes                []log.KeyValue
-	TraceID                   trace.TraceID
-	SpanID                    trace.SpanID
-	TraceFlags                trace.TraceFlags
-	Resource                  resource.Resource
-	Scope                     instrumentation.Scope
-	AttributeValueLengthLimit int
-	AttributeCountLimit       int
+	Timestamp         *time.Time `json:",omitempty"`
+	ObservedTimestamp *time.Time `json:",omitempty"`
+	Severity          log.Severity
+	SeverityText      string
+	Body              log.Value
+	Attributes        []log.KeyValue
+	TraceID           trace.TraceID
+	SpanID            trace.SpanID
+	TraceFlags        trace.TraceFlags
+	Resource          *resource.Resource
+	Scope             instrumentation.Scope
+	DroppedAttributes int
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
+	res := r.Resource()
 	newRecord := recordJSON{
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
@@ -42,8 +42,10 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Attributes: make([]log.KeyValue, 0, r.AttributesLen()),
 
-		Resource: r.Resource(),
+		Resource: &res,
 		Scope:    r.InstrumentationScope(),
+
+		DroppedAttributes: r.DroppedAttributes(),
 	}
 
 	r.WalkAttributes(func(kv log.KeyValue) bool {
@@ -52,8 +54,11 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	})
 
 	if e.timestamps {
-		newRecord.Timestamp = r.Timestamp()
-		newRecord.ObservedTimestamp = r.ObservedTimestamp()
+		timestamp := r.Timestamp()
+		newRecord.Timestamp = &timestamp
+
+		observedTimestamp := r.ObservedTimestamp()
+		newRecord.ObservedTimestamp = &observedTimestamp
 	}
 
 	return newRecord

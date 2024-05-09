@@ -4,13 +4,14 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
-	"container/ring"
 	"context"
 	"errors"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -29,7 +30,9 @@ const (
 var _ Processor = (*BatchProcessor)(nil)
 
 // BatchProcessor is a processor that exports batches of log records.
-// A BatchProcessor must be created with [NewBatchProcessor].
+//
+// Use [NewBatchProcessor] to create a BatchProcessor. An empty BatchProcessor
+// is shut down by default, no records will be batched or exported.
 type BatchProcessor struct {
 	// The BatchProcessor is designed to provide the highest throughput of
 	// log records possible while being compatible with OpenTelemetry. The
@@ -48,7 +51,7 @@ type BatchProcessor struct {
 	// separate goroutine dedicated to the export. This asynchronous behavior
 	// allows the poll goroutine to maintain accurate interval polling.
 	//
-	//   __BatchProcessor__        __Poll Goroutine__     __Export Goroutine__
+	//   ___BatchProcessor____     __Poll Goroutine__     __Export Goroutine__
 	// ||                     || ||                  || ||                    ||
 	// ||          ********** || ||                  || ||     **********     ||
 	// || Records=>* OnEmit * || ||   | - ticker     || ||     * export *     ||
@@ -100,7 +103,7 @@ type BatchProcessor struct {
 //
 // All of the exporter's methods are called synchronously.
 func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchProcessor {
-	cfg := newBatchingConfig(opts)
+	cfg := newBatchConfig(opts)
 	if exporter == nil {
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
@@ -147,6 +150,10 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				return
 			}
 
+			if d := b.q.Dropped(); d > 0 {
+				global.Warn("dropped log records", "dropped", d)
+			}
+
 			qLen := b.q.TryDequeue(buf, func(r []Record) bool {
 				ok := b.exporter.EnqueueExport(r)
 				if ok {
@@ -170,7 +177,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 // OnEmit batches provided log record.
 func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
-	if b.stopped.Load() {
+	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
 	if n := b.q.Enqueue(r); n >= b.batchSize {
@@ -187,12 +194,12 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
 
 // Enabled returns if b is enabled.
 func (b *BatchProcessor) Enabled(context.Context, Record) bool {
-	return !b.stopped.Load()
+	return !b.stopped.Load() && b.q != nil
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
-	if b.stopped.Swap(true) {
+	if b.stopped.Swap(true) || b.q == nil {
 		return nil
 	}
 
@@ -219,7 +226,7 @@ var ctxErr = func(ctx context.Context) error {
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
-	if b.stopped.Load() {
+	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
 
@@ -252,17 +259,24 @@ func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 type queue struct {
 	sync.Mutex
 
+	dropped     atomic.Uint64
 	cap, len    int
-	read, write *ring.Ring
+	read, write *ring
 }
 
 func newQueue(size int) *queue {
-	r := ring.New(size)
+	r := newRing(size)
 	return &queue{
 		cap:   size,
 		read:  r,
 		write: r,
 	}
+}
+
+// Dropped returns the number of Records dropped during enqueueing since the
+// last time Dropped was called.
+func (q *queue) Dropped() uint64 {
+	return q.dropped.Swap(0)
 }
 
 // Enqueue adds r to the queue. The queue size, including the addition of r, is
@@ -282,6 +296,7 @@ func (q *queue) Enqueue(r Record) int {
 		// Overflow. Advance read to be the new "oldest".
 		q.len = q.cap
 		q.read = q.read.Next()
+		q.dropped.Add(1)
 	}
 	return q.len
 }
@@ -302,7 +317,7 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 
 	n := min(len(buf), q.len)
 	for i := 0; i < n; i++ {
-		buf[i] = q.read.Value.(Record)
+		buf[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 
@@ -322,7 +337,7 @@ func (q *queue) Flush() []Record {
 
 	out := make([]Record, q.len)
 	for i := range out {
-		out[i] = q.read.Value.(Record)
+		out[i] = q.read.Value
 		q.read = q.read.Next()
 	}
 	q.len = 0
@@ -330,15 +345,15 @@ func (q *queue) Flush() []Record {
 	return out
 }
 
-type batchingConfig struct {
+type batchConfig struct {
 	maxQSize        setting[int]
 	expInterval     setting[time.Duration]
 	expTimeout      setting[time.Duration]
 	expMaxBatchSize setting[int]
 }
 
-func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
-	var c batchingConfig
+func newBatchConfig(options []BatchProcessorOption) batchConfig {
+	var c batchConfig
 	for _, o := range options {
 		c = o.apply(c)
 	}
@@ -374,12 +389,12 @@ func newBatchingConfig(options []BatchProcessorOption) batchingConfig {
 
 // BatchProcessorOption applies a configuration to a [BatchProcessor].
 type BatchProcessorOption interface {
-	apply(batchingConfig) batchingConfig
+	apply(batchConfig) batchConfig
 }
 
-type batchingOptionFunc func(batchingConfig) batchingConfig
+type batchOptionFunc func(batchConfig) batchConfig
 
-func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
+func (fn batchOptionFunc) apply(c batchConfig) batchConfig {
 	return fn(c)
 }
 
@@ -393,7 +408,7 @@ func (fn batchingOptionFunc) apply(c batchingConfig) batchingConfig {
 // passed, 2048 will be used.
 // The default value is also used when the provided value is less than one.
 func WithMaxQueueSize(size int) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.maxQSize = newSetting(size)
 		return cfg
 	})
@@ -408,7 +423,7 @@ func WithMaxQueueSize(size int) BatchProcessorOption {
 // passed, 1s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportInterval(d time.Duration) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expInterval = newSetting(d)
 		return cfg
 	})
@@ -423,7 +438,7 @@ func WithExportInterval(d time.Duration) BatchProcessorOption {
 // passed, 30s will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportTimeout(d time.Duration) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expTimeout = newSetting(d)
 		return cfg
 	})
@@ -439,7 +454,7 @@ func WithExportTimeout(d time.Duration) BatchProcessorOption {
 // passed, 512 will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportMaxBatchSize(size int) BatchProcessorOption {
-	return batchingOptionFunc(func(cfg batchingConfig) batchingConfig {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expMaxBatchSize = newSetting(size)
 		return cfg
 	})

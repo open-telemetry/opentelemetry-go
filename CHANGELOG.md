@@ -10,20 +10,51 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `RecordFactory` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the bridge implementations. (#5263)
+- Add `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest` to facilitate testing the exporter and processor implementations. (#5258)
+- Add example for `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5242)
+- The count of dropped records from the `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` is logged. (#5276)
+
+### Changed
+
+- `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` won't print timestamps when `WithoutTimestamps` option is set. (#5241)
+- The `Shutdown` method of `Exporter` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` ignores the context cancellation and always returns `nil`. (#5189)
+- The `ForceFlush` and `Shutdown` methods of the exporter returned by `New` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` ignore the context cancellation and always return `nil`. (#5189)
+- Apply the value length limits to `Record` attributes in `go.opentelemetry.io/otel/sdk/log`. (#5230)
+- De-duplicate map attributes added to a `Record` in `go.opentelemetry.io/otel/sdk/log`. (#5230)
+- The `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` exporter won't print `AttributeValueLengthLimit` and `AttributeCountLimit` fields now, instead it prints the `DroppedAttributes` field. (#5272)
+- Improved performance in the `Stringer` implementation of `go.opentelemetry.io/otel/baggage.Member` by reducing the number of allocations. (#5286)
+
+## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
+
+### Added
+
 - Add `Recorder` in `go.opentelemetry.io/otel/log/logtest` to facilitate testing the log bridge implementations. (#5134)
-- The `DroppedAttributes` is added to the `"go.opentelemetry.io/otel/sdk/log".Record` type.
-  This method can be used to determine how many log attributes were dropped from the `Record` due to limits being exceeded. (#5190)
 - Add span flags to OTLP spans and links exported by `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#5194)
+- Make the initial alpha release of `go.opentelemetry.io/otel/sdk/log`.
+  This new module contains the Go implementation of the OpenTelemetry Logs SDK.
+  This module is unstable and breaking changes may be introduced.
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
+- Make the initial alpha release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
+  This new module contains an OTLP exporter that transmits log telemetry using HTTP.
+  This module is unstable and breaking changes may be introduced.
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
+- Make the initial alpha release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
+  This new module contains an exporter prints log records to STDOUT.
+  This module is unstable and breaking changes may be introduced.
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5240)
+- The `go.opentelemetry.io/otel/semconv/v1.25.0` package.
+  The package contains semantic conventions from the `v1.25.0` version of the OpenTelemetry Semantic Conventions. (#5254)
 
 ### Changed
 
 - Update `go.opentelemetry.io/proto/otlp` from v1.1.0 to v1.2.0. (#5177)
 - Improve performance of baggage member character validation in `go.opentelemetry.io/otel/baggage`. (#5214)
+- The `otel-collector` example now uses docker compose to bring up services instead of kubernetes. (#5244)
 
-### Removed
+### Fixed
 
-- The `AttributeCountLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#5190)
-- The `AttributeValueLengthLimit` on the `"go.opentelemetry.io/otel/sdk/log".Record` type is removed. (#5190)
+- Slice attribute values in `go.opentelemetry.io/otel/attribute` are now emitted as their JSON representation. (#5159)
 
 ## [1.25.0/0.47.0/0.0.8/0.1.0-alpha] 2024-04-05
 
@@ -2912,7 +2943,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.26.0...HEAD
+[1.26.0/0.48.0/0.2.0-alpha]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.26.0
 [1.25.0/0.47.0/0.0.8/0.1.0-alpha]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.25.0
 [1.24.0/0.46.0/0.0.1-alpha]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.24.0
 [1.23.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.23.1

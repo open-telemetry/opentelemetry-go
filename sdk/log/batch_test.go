@@ -4,21 +4,38 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"bytes"
 	"context"
+	stdlog "log"
 	"slices"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestNewBatchingConfig(t *testing.T) {
+func TestEmptyBatchConfig(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var bp BatchProcessor
+		ctx := context.Background()
+		var record Record
+		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, bp.Enabled(ctx, record), "Enabled")
+		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
+		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
+	})
+}
+
+func TestNewBatchConfig(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		t.Log(err)
 	}))
@@ -27,11 +44,11 @@ func TestNewBatchingConfig(t *testing.T) {
 		name    string
 		envars  map[string]string
 		options []BatchProcessorOption
-		want    batchingConfig
+		want    batchConfig
 	}{
 		{
 			name: "Defaults",
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -46,7 +63,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
@@ -61,7 +78,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(1),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
@@ -76,7 +93,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(-1 * time.Hour),
 				WithExportMaxBatchSize(-2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -91,7 +108,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -113,7 +130,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(3),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
@@ -126,7 +143,7 @@ func TestNewBatchingConfig(t *testing.T) {
 				WithMaxQueueSize(1),
 				WithExportMaxBatchSize(10),
 			},
-			want: batchingConfig{
+			want: batchConfig{
 				maxQSize:        newSetting(1),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
@@ -140,7 +157,7 @@ func TestNewBatchingConfig(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			assert.Equal(t, tc.want, newBatchingConfig(tc.options))
+			assert.Equal(t, tc.want, newBatchConfig(tc.options))
 		})
 	}
 }
@@ -400,6 +417,41 @@ func TestBatchProcessor(t *testing.T) {
 		})
 	})
 
+	t.Run("DroppedLogs", func(t *testing.T) {
+		orig := global.GetLogger()
+		t.Cleanup(func() { global.SetLogger(orig) })
+		buf := new(bytes.Buffer)
+		stdr.SetVerbosity(1)
+		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
+
+		e := newTestExporter(nil)
+		e.ExportTrigger = make(chan struct{})
+
+		b := NewBatchProcessor(
+			e,
+			WithMaxQueueSize(1),
+			WithExportMaxBatchSize(1),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		var r Record
+		assert.NoError(t, b.OnEmit(ctx, r), "queued")
+		assert.NoError(t, b.OnEmit(ctx, r), "dropped")
+
+		var n int
+		require.Eventually(t, func() bool {
+			n = e.ExportN()
+			return n > 0
+		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
+
+		got := buf.String()
+		want := `"level"=1 "msg"="dropped log records" "dropped"=1`
+		assert.Contains(t, got, want)
+
+		close(e.ExportTrigger)
+		_ = b.Shutdown(ctx)
+	})
+
 	t.Run("ConcurrentSafe", func(t *testing.T) {
 		const goRoutines = 10
 
@@ -475,6 +527,18 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, []Record{r, r}, q.Flush(), "flushed Records")
 	})
 
+	t.Run("Dropped", func(t *testing.T) {
+		q := newQueue(1)
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(1), q.Dropped(), "fist")
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(2), q.Dropped(), "second")
+	})
+
 	t.Run("Flush", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
@@ -546,5 +610,33 @@ func TestQueue(t *testing.T) {
 		<-done
 
 		assert.Len(t, out, goRoutines, "flushed Records")
+	})
+}
+
+func BenchmarkBatchProcessorOnEmit(b *testing.B) {
+	var r Record
+	body := log.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	ctx := context.Background()
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(b.N+1),
+		WithExportMaxBatchSize(b.N+1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+
+	b.SetBytes(int64(rSize))
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		var err error
+		for pb.Next() {
+			err = bp.OnEmit(ctx, r)
+		}
+		_ = err
 	})
 }
