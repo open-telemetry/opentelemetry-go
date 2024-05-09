@@ -26,6 +26,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improved performance in the `Stringer` implementation of `go.opentelemetry.io/otel/baggage.Member` by reducing the number of allocations. (#5286)
 - The `Span` in `go.opentelemetry.io/otel/sdk/trace` will record links without span context if either non-empty `TraceState` or attributes are provided. (#5315)
 
+### Fixed
+
+- Fix the empty output of `go.opentelemetry.io/otel/log.Value` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5311)
+
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
 ### Added

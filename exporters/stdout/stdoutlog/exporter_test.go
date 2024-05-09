@@ -183,7 +183,7 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + "\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{},\"Attributes\":[{\"Key\":\"key\",\"Value\":{}},{\"Key\":\"key2\",\"Value\":{}},{\"Key\":\"key3\",\"Value\":{}},{\"Key\":\"key4\",\"Value\":{}},{\"Key\":\"key5\",\"Value\":{}},{\"Key\":\"bool\",\"Value\":{}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\"},\"DroppedAttributes\":10}\n"
+	return "{" + timestamps + "\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{\"Type\":\"String\",\"Value\":\"test\"},\"Attributes\":[{\"Key\":\"key\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key2\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key3\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key4\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key5\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"bool\",\"Value\":{\"Type\":\"Bool\",\"Value\":true}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\"},\"DroppedAttributes\":10}\n"
 }
 
 func getJSONs(now *time.Time) string {
@@ -200,31 +200,52 @@ func getPrettyJSON(now *time.Time) string {
 	return `{` + timestamps + `
 	"Severity": 9,
 	"SeverityText": "INFO",
-	"Body": {},
+	"Body": {
+		"Type": "String",
+		"Value": "test"
+	},
 	"Attributes": [
 		{
 			"Key": "key",
-			"Value": {}
+			"Value": {
+				"Type": "String",
+				"Value": "value"
+			}
 		},
 		{
 			"Key": "key2",
-			"Value": {}
+			"Value": {
+				"Type": "String",
+				"Value": "value"
+			}
 		},
 		{
 			"Key": "key3",
-			"Value": {}
+			"Value": {
+				"Type": "String",
+				"Value": "value"
+			}
 		},
 		{
 			"Key": "key4",
-			"Value": {}
+			"Value": {
+				"Type": "String",
+				"Value": "value"
+			}
 		},
 		{
 			"Key": "key5",
-			"Value": {}
+			"Value": {
+				"Type": "String",
+				"Value": "value"
+			}
 		},
 		{
 			"Key": "bool",
-			"Value": {}
+			"Value": {
+				"Type": "Bool",
+				"Value": true
+			}
 		}
 	],
 	"TraceID": "0102030405060708090a0b0c0d0e0f10",
@@ -341,6 +362,87 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				}()
 			}
 			wg.Wait()
+		})
+	}
+}
+
+func TestValueMarshalJSON(t *testing.T) {
+	testCases := []struct {
+		value log.Value
+		want  string
+	}{
+		{
+			value: log.Empty("test").Value,
+			want:  `{"Type":"Empty","Value":null}`,
+		},
+		{
+			value: log.BoolValue(true),
+			want:  `{"Type":"Bool","Value":true}`,
+		},
+		{
+			value: log.Float64Value(3.14),
+			want:  `{"Type":"Float64","Value":3.14}`,
+		},
+		{
+			value: log.Int64Value(42),
+			want:  `{"Type":"Int64","Value":42}`,
+		},
+		{
+			value: log.StringValue("hello"),
+			want:  `{"Type":"String","Value":"hello"}`,
+		},
+		{
+			value: log.BytesValue([]byte{1, 2, 3}),
+			// The base64 encoding of []byte{1, 2, 3} is "AQID".
+			want: `{"Type":"Bytes","Value":"AQID"}`,
+		},
+		{
+			value: log.SliceValue(
+				log.Empty("empty").Value,
+				log.BoolValue(true),
+				log.Float64Value(2.2),
+				log.IntValue(3),
+				log.StringValue("4"),
+				log.BytesValue([]byte{5}),
+				log.SliceValue(
+					log.IntValue(6),
+					log.MapValue(
+						log.Int("seven", 7),
+					),
+				),
+				log.MapValue(
+					log.Int("nine", 9),
+				),
+			),
+			want: `{"Type":"Slice","Value":[{"Type":"Empty","Value":null},{"Type":"Bool","Value":true},{"Type":"Float64","Value":2.2},{"Type":"Int64","Value":3},{"Type":"String","Value":"4"},{"Type":"Bytes","Value":"BQ=="},{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]},{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}]}`,
+		},
+		{
+			value: log.MapValue(
+				log.Empty("empty"),
+				log.Bool("one", true),
+				log.Float64("two", 2.2),
+				log.Int("three", 3),
+				log.String("four", "4"),
+				log.Bytes("five", []byte{5}),
+				log.Slice("six",
+					log.IntValue(6),
+					log.MapValue(
+						log.Int("seven", 7),
+					),
+				),
+				log.Map("eight",
+					log.Int("nine", 9),
+				),
+			),
+			want: `{"Type":"Map","Value":[{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"five","Value":{"Type":"Bytes","Value":"BQ=="}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}}]}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.value.String(), func(t *testing.T) {
+			got, err := json.Marshal(value{Value: tc.value})
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.want, string(got))
 		})
 	}
 }
