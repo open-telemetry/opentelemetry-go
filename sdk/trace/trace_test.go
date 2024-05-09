@@ -47,6 +47,7 @@ var (
 	tid trace.TraceID
 	sid trace.SpanID
 	sc  trace.SpanContext
+	ts  trace.TraceState
 
 	handler = &storingHandler{}
 )
@@ -59,6 +60,7 @@ func init() {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	})
+	ts, _ = trace.ParseTraceState("k=v")
 
 	otel.SetErrorHandler(handler)
 }
@@ -330,10 +332,6 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := trace.ParseTraceState("k=v")
-	if err != nil {
-		t.Error(err)
-	}
 	sc2 := sc.WithTraceState(ts)
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(t, sc2, s3); err != nil {
@@ -1934,7 +1932,6 @@ func TestSpanAddLink(t *testing.T) {
 			attrLinkCountLimit: 128,
 			link: trace.Link{
 				SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID([16]byte{}), SpanID: [8]byte{}}),
-				Attributes:  []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
 			},
 			want: &snapshot{
 				name: "span0",
@@ -2002,6 +1999,50 @@ func TestSpanAddLink(t *testing.T) {
 				instrumentationScope: instrumentation.Scope{Name: "AddLinkWithMoreAttributesThanLimit"},
 			},
 		},
+		{
+			name:               "AddLinkWithAttributesEmptySpanContext",
+			attrLinkCountLimit: 128,
+			link: trace.Link{
+				Attributes: []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+			},
+			want: &snapshot{
+				name: "span0",
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				parent: sc.WithRemote(true),
+				links: []Link{
+					{
+						Attributes: []attribute.KeyValue{{Key: "k1", Value: attribute.StringValue("v1")}},
+					},
+				},
+				spanKind:             trace.SpanKindInternal,
+				instrumentationScope: instrumentation.Scope{Name: "AddLinkWithAttributesEmptySpanContext"},
+			},
+		},
+		{
+			name:               "AddLinkWithTraceStateEmptySpanContext",
+			attrLinkCountLimit: 128,
+			link: trace.Link{
+				SpanContext: trace.SpanContext{}.WithTraceState(ts),
+			},
+			want: &snapshot{
+				name: "span0",
+				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    tid,
+					TraceFlags: 0x1,
+				}),
+				parent: sc.WithRemote(true),
+				links: []Link{
+					{
+						SpanContext: trace.SpanContext{}.WithTraceState(ts),
+					},
+				},
+				spanKind:             trace.SpanKindInternal,
+				instrumentationScope: instrumentation.Scope{Name: "AddLinkWithTraceStateEmptySpanContext"},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -2024,5 +2065,45 @@ func TestSpanAddLink(t *testing.T) {
 				t.Errorf("-got +want %s", diff)
 			}
 		})
+	}
+}
+
+func TestAddLinkToNonRecordingSpan(t *testing.T) {
+	te := NewTestExporter()
+	sl := NewSpanLimits()
+	tp := NewTracerProvider(
+		WithSpanLimits(sl),
+		WithSyncer(te),
+		WithResource(resource.Empty()),
+	)
+
+	attrs := []attribute.KeyValue{{Key: "k", Value: attribute.StringValue("v")}}
+
+	span := startSpan(tp, "AddLinkToNonRecordingSpan")
+	_, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	// Add link to ended, non-recording, span. The link should be dropped.
+	span.AddLink(trace.Link{
+		SpanContext: sc,
+		Attributes:  attrs,
+	})
+
+	require.Equal(t, 1, te.Len())
+	got := te.Spans()[0]
+	want := &snapshot{
+		name: "span0",
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:               sc.WithRemote(true),
+		links:                nil,
+		spanKind:             trace.SpanKindInternal,
+		instrumentationScope: instrumentation.Scope{Name: "AddLinkToNonRecordingSpan"},
+	}
+
+	if diff := cmpDiff(got, want); diff != "" {
+		t.Errorf("AddLinkToNonRecordingSpan: -got +want %s", diff)
 	}
 }
