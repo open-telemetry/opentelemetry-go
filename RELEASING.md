@@ -31,7 +31,7 @@ You can check/report problems with `gorelease` [here](https://golang.org/issues/
 
 If the changes in the main repository are going to affect the contrib repository, it is important to verify that the changes are compatible with the contrib repository.
 
-Follow [the steps](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/RELEASING.md#verify-otel-changes) in the contrib repostory to verify OTel changes.
+Follow [the steps](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/RELEASING.md#verify-otel-changes) in the contrib repository to verify OTel changes.
 
 ## Pre-Release
 
