@@ -378,6 +378,13 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
+			// Discard error logs.
+			defer func(orig otel.ErrorHandler) {
+				otel.SetErrorHandler(orig)
+			}(otel.GetErrorHandler())
+			handler := otel.ErrorHandlerFunc(func(err error) {})
+			otel.SetErrorHandler(handler)
+
 			exp := newTestExporter(assert.AnError)
 			t.Cleanup(exp.Stop)
 
@@ -385,6 +392,9 @@ func TestBufferExporter(t *testing.T) {
 			exp.ExportTrigger = trigger
 			t.Cleanup(func() { close(trigger) })
 			e := newBufferExporter(exp, 1)
+
+			// Make sure there is something to flush.
+			require.True(t, e.EnqueueExport(make([]Record, 1)))
 
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -583,7 +593,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			_ = e.Shutdown(context.Background())
-			assert.False(t, e.EnqueueExport(make([]Record, 1)))
+			assert.True(t, e.EnqueueExport(make([]Record, 1)))
 		})
 	})
 }

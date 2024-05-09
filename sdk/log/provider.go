@@ -129,7 +129,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	return l
 }
 
-// Shutdown flushes queued log records and shuts down the decorated expoter.
+// Shutdown shuts down the provider and all processors.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
@@ -145,9 +145,9 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// ForceFlush flushes all exporters.
+// ForceFlush flushes all processors.
 //
-//	This method can be called concurrently.
+// This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	if p.stopped.Load() {
 		return nil
@@ -192,7 +192,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // Each WithProcessor creates a separate pipeline. Use custom decorators
 // for advanced scenarios such as enriching with attributes.
 //
-// For production, use [NewBatchingProcessor] to batch log records before they are exported.
+// For production, use [NewBatchProcessor] to batch log records before they are exported.
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {

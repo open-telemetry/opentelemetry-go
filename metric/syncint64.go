@@ -133,7 +133,7 @@ type Int64Histogram interface {
 	Record(ctx context.Context, incr int64, options ...RecordOption)
 }
 
-// Int64HistogramConfig contains options for synchronous counter instruments
+// Int64HistogramConfig contains options for synchronous histogram instruments
 // that record int64 values.
 type Int64HistogramConfig struct {
 	description              string

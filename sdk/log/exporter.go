@@ -15,6 +15,10 @@ import (
 )
 
 // Exporter handles the delivery of log records to external receivers.
+//
+// Any of the Exporter's methods may be called concurrently with itself
+// or with other methods. It is the responsibility of the Exporter to manage
+// this concurrency.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
@@ -215,14 +219,33 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 }
 
 // EnqueueExport enqueues an export of records in the context of ctx to be
-// performed asynchronously. This will return true if the exported is
-// successfully enqueued, false otherwise.
+// performed asynchronously. This will return true if the records are
+// successfully enqueued (or the bufferExporter is shut down), false otherwise.
+//
+// The passed records are held after this call returns.
 func (e *bufferExporter) EnqueueExport(records []Record) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
 		return true
 	}
-	return e.enqueue(context.Background(), records, nil) == nil
+
+	data := exportData{ctx: context.Background(), records: records}
+
+	e.inputMu.Lock()
+	defer e.inputMu.Unlock()
+
+	// Check stopped before enqueueing now that e.inputMu is held. This
+	// prevents sends on a closed chan when Shutdown is called concurrently.
+	if e.stopped.Load() {
+		return true
+	}
+
+	select {
+	case e.input <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 // Export synchronously exports records in the context of ctx. This will not
