@@ -39,7 +39,7 @@ type Builder[N int64 | float64] struct {
 	//
 	// If this is not provided a default factory function that returns an
 	// exemplar.Drop reservoir will be used.
-	ReservoirFunc func() exemplar.Reservoir[N]
+	ReservoirFunc func() exemplar.Reservoir
 	// AggregationLimit is the cardinality limit of measurement attributes. Any
 	// measurement for new attributes once the limit has been reached will be
 	// aggregated into a single aggregate for the "otel.metric.overflow"
@@ -50,12 +50,12 @@ type Builder[N int64 | float64] struct {
 	AggregationLimit int
 }
 
-func (b Builder[N]) resFunc() func() exemplar.Reservoir[N] {
+func (b Builder[N]) resFunc() func() exemplar.Reservoir {
 	if b.ReservoirFunc != nil {
 		return b.ReservoirFunc
 	}
 
-	return exemplar.Drop[N]
+	return exemplar.Drop
 }
 
 type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
