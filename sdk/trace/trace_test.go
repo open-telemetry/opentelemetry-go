@@ -2083,7 +2083,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	_, err := endSpan(te, span)
 	require.NoError(t, err)
 
-	// Add link after ending span
+	// Add link to ended, non-recording, span. The link should be dropped.
 	span.AddLink(trace.Link{
 		SpanContext: sc,
 		Attributes:  attrs,
