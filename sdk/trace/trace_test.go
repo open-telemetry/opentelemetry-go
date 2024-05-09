@@ -47,6 +47,7 @@ var (
 	tid trace.TraceID
 	sid trace.SpanID
 	sc  trace.SpanContext
+	ts  trace.TraceState
 
 	handler = &storingHandler{}
 )
@@ -59,6 +60,7 @@ func init() {
 		SpanID:     sid,
 		TraceFlags: 0x1,
 	})
+	ts, _ = trace.ParseTraceState("k=v")
 
 	otel.SetErrorHandler(handler)
 }
@@ -330,10 +332,6 @@ func TestStartSpanWithParent(t *testing.T) {
 		t.Error(err)
 	}
 
-	ts, err := trace.ParseTraceState("k=v")
-	if err != nil {
-		t.Error(err)
-	}
 	sc2 := sc.WithTraceState(ts)
 	_, s3 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc2), "span3-sampled-parent2")
 	if err := checkChild(t, sc2, s3); err != nil {
@@ -1923,9 +1921,6 @@ func TestEmptyRecordingSpanDroppedAttributes(t *testing.T) {
 }
 
 func TestSpanAddLink(t *testing.T) {
-	ts, err := trace.ParseTraceState("k=v")
-	require.NoError(t, err)
-
 	tests := []struct {
 		name               string
 		attrLinkCountLimit int
