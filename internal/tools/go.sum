@@ -480,8 +480,6 @@ go.opentelemetry.io/build-tools v0.13.0 h1:0I3jJQ2zcJU8k4ZjyHNqUBX2Len1UvBIOzVP4
 go.opentelemetry.io/build-tools v0.13.0/go.mod h1:PEtg5iWjNI9WAlKXP/xll/hgbq/Cp4Ma4T1ssKB2T0Q=
 go.opentelemetry.io/build-tools/crosslink v0.13.0 h1:R0V89bTYzoJpasiOIYiQo6txL/ZTzMdEuthJ4gLUTF8=
 go.opentelemetry.io/build-tools/crosslink v0.13.0/go.mod h1:aYIwOj9b3Nmgm6nIZZk28tF/JjpicI8xenEVUeoVNp0=
-go.opentelemetry.io/build-tools/dbotconf v0.13.0 h1:yu/2zZn96+wfdEY/rg/LPH+ScodwAhPylQKQO0YpWmk=
-go.opentelemetry.io/build-tools/dbotconf v0.13.0/go.mod h1:5qJOERSYF2p4tOXoV02oBsdspvax2OCWGbUqgnYoB+8=
 go.opentelemetry.io/build-tools/gotmpl v0.13.0 h1:JSNKw7dg2RNTxVREYL0nlmdL6eH22xKGj6s1V2gAC+Y=
 go.opentelemetry.io/build-tools/gotmpl v0.13.0/go.mod h1:oNosRsW9ExQDrRd2YTd4U20Jt5AD9CG+Ef3EPyjOTE4=
 go.opentelemetry.io/build-tools/multimod v0.13.0 h1:HGAP3zCM8vOTNJSQbjQ5VbKZSctIZxppPBxRTzye7ic=
