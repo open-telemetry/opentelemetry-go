@@ -8,6 +8,8 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
 // Option applies an option to the Exporter.
@@ -32,9 +34,7 @@ func newConfig(options []Option) config {
 //
 // This configuration does not define any network retry strategy. That is
 // entirely handled by the gRPC ClientConn.
-type RetryConfig struct {
-	// TODO: implement.
-}
+type RetryConfig retry.Config
 
 // WithInsecure disables client transport security for the Exporter's gRPC
 // connection, just like grpc.WithInsecure()
