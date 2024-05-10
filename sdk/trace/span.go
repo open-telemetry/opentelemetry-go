@@ -630,7 +630,11 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) AddLink(link trace.Link) {
-	if !s.IsRecording() || !link.SpanContext.IsValid() {
+	if !s.IsRecording() {
+		return
+	}
+	if !link.SpanContext.IsValid() && len(link.Attributes) == 0 &&
+		link.SpanContext.TraceState().Len() == 0 {
 		return
 	}
 

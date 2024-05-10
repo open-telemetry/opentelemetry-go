@@ -25,7 +25,7 @@ func BenchmarkInstrument(b *testing.B) {
 		build := aggregate.Builder[int64]{}
 		var meas []aggregate.Measure[int64]
 
-		in, _ := build.LastValue()
+		in, _ := build.PrecomputedLastValue()
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
@@ -50,7 +50,7 @@ func BenchmarkInstrument(b *testing.B) {
 		build := aggregate.Builder[int64]{}
 		var meas []aggregate.Measure[int64]
 
-		in, _ := build.LastValue()
+		in, _ := build.PrecomputedLastValue()
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
