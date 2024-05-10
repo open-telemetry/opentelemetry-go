@@ -447,10 +447,12 @@ func (i *inserter[N]) aggregateFunc(b aggregate.Builder[N], agg Aggregation, kin
 	case AggregationDrop:
 		// Return nil in and out to signify the drop aggregator.
 	case AggregationLastValue:
-		if kind == InstrumentKindObservableGauge {
+		switch kind {
+		case InstrumentKindGauge:
+			meas, comp = b.LastValue()
+		case InstrumentKindObservableGauge:
 			meas, comp = b.PrecomputedLastValue()
 		}
-		// TODO (#5304): Support synchronous gauges.
 	case AggregationSum:
 		switch kind {
 		case InstrumentKindObservableCounter:
