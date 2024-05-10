@@ -50,8 +50,9 @@ The user set processors for the `LoggerProvider` using
 
 The user can configure custom processors and decorate built-in processors.
 
-The specification may add new operations to `Processor`.
-[CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
+The specification may add new operations to the
+[LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor).
+If it happens, [CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
 describes how the SDK can be extended in a backwards-compatible way.
 
 ### SimpleProcessor
@@ -78,8 +79,9 @@ so that the caller can reuse the passed slice
 (e.g. using [`sync.Pool`](https://pkg.go.dev/sync#Pool))
 to avoid heap allocations on each call.
 
-The specification may add new operations to `Exporter`.
-[CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
+The specification may add new operations to the
+[LogRecordExporter](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter).
+If it happens, [CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
 describes how the SDK can be extended in a backwards-compatible way.
 
 ### Record
