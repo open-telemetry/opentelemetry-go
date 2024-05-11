@@ -74,21 +74,26 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 }
 
 // LastValue returns a last-value aggregate function input and output.
-//
-// The Builder.Temporality is ignored and delta is use always.
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
-	// Delta temporality is the only temporality that makes semantic sense for
-	// a last-value aggregate.
 	lv := newLastValue[N](b.AggregationLimit, b.resFunc())
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		return b.filter(lv.measure), lv.delta
+	default:
+		return b.filter(lv.measure), lv.cumulative
+	}
+}
 
-	return b.filter(lv.measure), func(dest *metricdata.Aggregation) int {
-		// Ignore if dest is not a metricdata.Gauge. The chance for memory
-		// reuse of the DataPoints is missed (better luck next time).
-		gData, _ := (*dest).(metricdata.Gauge[N])
-		lv.computeAggregation(&gData.DataPoints)
-		*dest = gData
-
-		return len(gData.DataPoints)
+// PrecomputedLastValue returns a last-value aggregate function input and
+// output. The aggregation returned from the returned ComputeAggregation
+// function will always only return values from the previous collection cycle.
+func (b Builder[N]) PrecomputedLastValue() (Measure[N], ComputeAggregation) {
+	lv := newPrecomputedLastValue[N](b.AggregationLimit, b.resFunc())
+	switch b.Temporality {
+	case metricdata.DeltaTemporality:
+		return b.filter(lv.measure), lv.delta
+	default:
+		return b.filter(lv.measure), lv.cumulative
 	}
 }
 
