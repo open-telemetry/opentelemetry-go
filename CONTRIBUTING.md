@@ -570,6 +570,9 @@ functionality should be added, each one will need their own super-set
 interfaces and will duplicate the pattern. For this reason, the simple targeted
 interface that defines the specific functionality should be preferred.
 
+See also:
+[Keeping Your Modules Compatible: Working with interfaces](https://go.dev/blog/module-compatibility#working-with-interfaces).
+
 ### Testing
 
 The tests should never leak goroutines.
