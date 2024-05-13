@@ -120,7 +120,7 @@ func (Meter) Float64Histogram(string, ...metric.Float64HistogramOption) (metric.
 	return Float64Histogram{}, nil
 }
 
-// Float64Gauge returns a Gauge used to record int64 measurements that
+// Float64Gauge returns a Gauge used to record float64 measurements that
 // produces no telemetry.
 func (Meter) Float64Gauge(string, ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	return Float64Gauge{}, nil
