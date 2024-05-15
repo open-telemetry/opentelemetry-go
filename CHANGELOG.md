@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the synchronous gauge instrument to `go.opentelemetry.io/otel/metric`. (#5304)
   - An `int64` or `float64` synchronous gauge instrument can now be created from a `Meter`.
   - All implementations of the API (`go.opentelemetry.io/otel/metric/noop`, `go.opentelemetry.io/otel/sdk/metric`) are updated to support this instrument.
+- Add logs to `go.opentelemetry.io/otel/example/dice`. (#5349)
 
 ### Changed
 
@@ -33,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix the empty output of `go.opentelemetry.io/otel/log.Value` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5311)
+- Comparison of unordered maps in `go.opentelemetry.io/otel/log.KeyValue` and `go.opentelemetry.io/otel/log.Value`. (#5306)
 
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 

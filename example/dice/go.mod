@@ -3,12 +3,16 @@ module go.opentelemetry.io/otel/example/dice
 go 1.21
 
 require (
+	go.opentelemetry.io/contrib/bridges/otelslog v0.1.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0
 	go.opentelemetry.io/otel v1.26.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.2.0-alpha
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.26.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.26.0
+	go.opentelemetry.io/otel/log v0.2.0-alpha
 	go.opentelemetry.io/otel/metric v1.26.0
 	go.opentelemetry.io/otel/sdk v1.26.0
+	go.opentelemetry.io/otel/sdk/log v0.2.0-alpha
 	go.opentelemetry.io/otel/sdk/metric v1.26.0
 )
 
@@ -33,3 +37,9 @@ replace go.opentelemetry.io/otel/metric => ../../metric
 replace go.opentelemetry.io/otel/sdk/metric => ../../sdk/metric
 
 replace go.opentelemetry.io/otel/sdk => ../../sdk
+
+replace go.opentelemetry.io/otel/exporters/stdout/stdoutlog => ../../exporters/stdout/stdoutlog
+
+replace go.opentelemetry.io/otel/log => ../../log
+
+replace go.opentelemetry.io/otel/sdk/log => ../../sdk/log
