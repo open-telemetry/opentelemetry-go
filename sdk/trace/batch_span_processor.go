@@ -328,15 +328,8 @@ func (bsp *batchSpanProcessor) processQueue() {
 				close(ffs.flushed)
 				continue
 			}
-			// bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
 			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
-			// bsp.batchMutex.Unlock()
-
-			// select {
-			// case processingChan <- struct{}{}:
-			// default:
-			// }
 
 			if shouldExport {
 				if !bsp.timer.Stop() {
@@ -347,40 +340,6 @@ func (bsp *batchSpanProcessor) processQueue() {
 		}
 	}
 }
-
-// func (bsp *batchSpanProcessor) processQueue2() {
-// 	defer bsp.timer.Stop()
-
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	for {
-// 		select {
-// 		case <-bsp.stopCh:
-// 			return
-// 		case <-bsp.timer.C:
-// 			if err := bsp.exportSpans(ctx); err != nil {
-// 				otel.Handle(err)
-// 			}
-// 		case sd := <-bsp.queue:
-// 			if ffs, ok := sd.(forceFlushSpan); ok {
-// 				close(ffs.flushed)
-// 				continue
-// 			}
-// 			bsp.batchMutex.Lock()
-// 			bsp.batch = append(bsp.batch, sd)
-// 			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
-// 			bsp.batchMutex.Unlock()
-// 			if shouldExport {
-// 				if !bsp.timer.Stop() {
-// 					<-bsp.timer.C
-// 				}
-// 				if err := bsp.exportSpans(ctx); err != nil {
-// 					otel.Handle(err)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
 
 // drainQueue awaits the any caller that had added to bsp.stopWait
 // to finish the enqueue, then exports the final batch.
