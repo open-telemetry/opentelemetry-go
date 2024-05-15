@@ -117,8 +117,8 @@ func newLoggerProvider() (*log.LoggerProvider, error) {
 		return nil, err
 	}
 
-	meterProvider := log.NewLoggerProvider(
+	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
 	)
-	return meterProvider, nil
+	return loggerProvider, nil
 }
