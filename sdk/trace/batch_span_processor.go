@@ -11,8 +11,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/internal/env"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/otel/sdk/internal/env"
 )
 
 // Defaults for BatchSpanProcessorOptions.
@@ -203,7 +204,7 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 
 		wait := make(chan error)
 		go func() {
-			wait <- bsp.exportSpans(ctx)
+			wait <- bsp.exportSpans(ctx, bsp.batch)
 			close(wait)
 		}()
 		// Wait until the export is finished or the context is cancelled/timed out
@@ -260,11 +261,8 @@ func WithBlocking() BatchSpanProcessorOption {
 }
 
 // exportSpans is a subroutine of processing and draining the queue.
-func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
+func (bsp *batchSpanProcessor) exportSpans(ctx context.Context, batch []ReadOnlySpan) error {
 	bsp.timer.Reset(bsp.o.BatchTimeout)
-
-	bsp.batchMutex.Lock()
-	defer bsp.batchMutex.Unlock()
 
 	if bsp.o.ExportTimeout > 0 {
 		var cancel context.CancelFunc
@@ -272,19 +270,18 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		defer cancel()
 	}
 
-	if l := len(bsp.batch); l > 0 {
-		global.Debug("exporting spans", "count", len(bsp.batch), "total_dropped", atomic.LoadUint32(&bsp.dropped))
+	if l := len(batch); l > 0 {
+		global.Debug("exporting spans", "count", len(batch), "total_dropped", atomic.LoadUint32(&bsp.dropped))
+
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 
 		// A new batch is always created after exporting, even if the batch failed to be exported.
 		//
 		// It is up to the exporter to implement any type of retry logic if a batch is failing
 		// to be exported, since it is specific to the protocol and backend being sent to.
-		bsp.batch = bsp.batch[:0]
+		bsp.batch = make([]ReadOnlySpan, 0, bsp.o.MaxExportBatchSize)
 
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	return nil
 }
@@ -297,34 +294,93 @@ func (bsp *batchSpanProcessor) processQueue() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	processingChan := make(chan []ReadOnlySpan)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		for batch := range processingChan {
+
+			copiedBatch := make([]ReadOnlySpan, len(batch))
+			copy(copiedBatch, batch)
+
+			if err := bsp.exportSpans(ctx, copiedBatch); err != nil {
+				otel.Handle(err)
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-bsp.stopCh:
+			close(processingChan)
+			wg.Wait()
 			return
 		case <-bsp.timer.C:
-			if err := bsp.exportSpans(ctx); err != nil {
-				otel.Handle(err)
+			if len(bsp.batch) > 0 {
+				processingChan <- bsp.batch
 			}
 		case sd := <-bsp.queue:
 			if ffs, ok := sd.(forceFlushSpan); ok {
 				close(ffs.flushed)
 				continue
 			}
-			bsp.batchMutex.Lock()
+			// bsp.batchMutex.Lock()
 			bsp.batch = append(bsp.batch, sd)
 			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
-			bsp.batchMutex.Unlock()
+			// bsp.batchMutex.Unlock()
+
+			// select {
+			// case processingChan <- struct{}{}:
+			// default:
+			// }
+
 			if shouldExport {
 				if !bsp.timer.Stop() {
 					<-bsp.timer.C
 				}
-				if err := bsp.exportSpans(ctx); err != nil {
-					otel.Handle(err)
-				}
+				processingChan <- bsp.batch
 			}
 		}
 	}
 }
+
+// func (bsp *batchSpanProcessor) processQueue2() {
+// 	defer bsp.timer.Stop()
+
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
+// 	for {
+// 		select {
+// 		case <-bsp.stopCh:
+// 			return
+// 		case <-bsp.timer.C:
+// 			if err := bsp.exportSpans(ctx); err != nil {
+// 				otel.Handle(err)
+// 			}
+// 		case sd := <-bsp.queue:
+// 			if ffs, ok := sd.(forceFlushSpan); ok {
+// 				close(ffs.flushed)
+// 				continue
+// 			}
+// 			bsp.batchMutex.Lock()
+// 			bsp.batch = append(bsp.batch, sd)
+// 			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
+// 			bsp.batchMutex.Unlock()
+// 			if shouldExport {
+// 				if !bsp.timer.Stop() {
+// 					<-bsp.timer.C
+// 				}
+// 				if err := bsp.exportSpans(ctx); err != nil {
+// 					otel.Handle(err)
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 // drainQueue awaits the any caller that had added to bsp.stopWait
 // to finish the enqueue, then exports the final batch.
@@ -345,13 +401,13 @@ func (bsp *batchSpanProcessor) drainQueue() {
 			bsp.batchMutex.Unlock()
 
 			if shouldExport {
-				if err := bsp.exportSpans(ctx); err != nil {
+				if err := bsp.exportSpans(ctx, bsp.batch); err != nil {
 					otel.Handle(err)
 				}
 			}
 		default:
 			// There are no more enqueued spans. Make final export.
-			if err := bsp.exportSpans(ctx); err != nil {
+			if err := bsp.exportSpans(ctx, bsp.batch); err != nil {
 				otel.Handle(err)
 			}
 			return
