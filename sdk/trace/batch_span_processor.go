@@ -320,9 +320,7 @@ func (bsp *batchSpanProcessor) processQueue() {
 			wg.Wait()
 			return
 		case <-bsp.timer.C:
-			if len(bsp.batch) > 0 {
-				processingChan <- bsp.batch
-			}
+			processingChan <- bsp.batch
 		case sd := <-bsp.queue:
 			if ffs, ok := sd.(forceFlushSpan); ok {
 				close(ffs.flushed)
