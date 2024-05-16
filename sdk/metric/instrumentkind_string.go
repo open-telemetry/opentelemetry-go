@@ -12,14 +12,15 @@ func _() {
 	_ = x[InstrumentKindCounter-1]
 	_ = x[InstrumentKindUpDownCounter-2]
 	_ = x[InstrumentKindHistogram-3]
-	_ = x[InstrumentKindObservableCounter-4]
-	_ = x[InstrumentKindObservableUpDownCounter-5]
-	_ = x[InstrumentKindObservableGauge-6]
+	_ = x[InstrumentKindGauge-4]
+	_ = x[InstrumentKindObservableCounter-5]
+	_ = x[InstrumentKindObservableUpDownCounter-6]
+	_ = x[InstrumentKindObservableGauge-7]
 }
 
-const _InstrumentKind_name = "instrumentKindUndefinedCounterUpDownCounterHistogramObservableCounterObservableUpDownCounterObservableGauge"
+const _InstrumentKind_name = "instrumentKindUndefinedCounterUpDownCounterHistogramGaugeObservableCounterObservableUpDownCounterObservableGauge"
 
-var _InstrumentKind_index = [...]uint8{0, 23, 30, 43, 52, 69, 92, 107}
+var _InstrumentKind_index = [...]uint8{0, 23, 30, 43, 52, 57, 74, 97, 112}
 
 func (i InstrumentKind) String() string {
 	if i >= InstrumentKind(len(_InstrumentKind_index)-1) {

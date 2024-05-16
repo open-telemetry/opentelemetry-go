@@ -61,9 +61,11 @@ func TestMeterConcurrentSafe(t *testing.T) {
 			_, _ = mtr.Float64Counter(name)
 			_, _ = mtr.Float64UpDownCounter(name)
 			_, _ = mtr.Float64Histogram(name)
+			_, _ = mtr.Float64Gauge(name)
 			_, _ = mtr.Int64Counter(name)
 			_, _ = mtr.Int64UpDownCounter(name)
 			_, _ = mtr.Int64Histogram(name)
+			_, _ = mtr.Int64Gauge(name)
 			_, _ = mtr.RegisterCallback(zeroCallback)
 			if !once {
 				wg.Done()
@@ -142,12 +144,16 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Co
 	assert.NoError(t, err)
 	_, err = m.Float64Histogram("test_Sync_Histogram")
 	assert.NoError(t, err)
+	_, err = m.Float64Gauge("test_Sync_Gauge")
+	assert.NoError(t, err)
 
 	_, err = m.Int64Counter("test_Sync_Counter")
 	assert.NoError(t, err)
 	_, err = m.Int64UpDownCounter("test_Sync_UpDownCounter")
 	assert.NoError(t, err)
 	_, err = m.Int64Histogram("test_Sync_Histogram")
+	assert.NoError(t, err)
+	_, err = m.Int64Gauge("test_Sync_Gauge")
 	assert.NoError(t, err)
 
 	return sfcounter, afcounter

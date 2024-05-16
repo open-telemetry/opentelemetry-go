@@ -128,7 +128,7 @@ func (r *Record) SetSeverity(s Severity)
 `Severity` type is defined in [severity.go](severity.go).
 The constants are are based on
 [Displaying Severity recommendation](https://opentelemetry.io/docs/specs/otel/logs/data-model/#displaying-severity).
-Additionally, `Severity[Level]1` constants are defined to make the API more readable and user friendly.
+Additionally, `Severity[Level]` constants are defined to make the API more readable and user friendly.
 
 [`SeverityText`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitytext)
 is accessed using following methods:
@@ -187,7 +187,7 @@ are defined in [keyvalue.go](keyvalue.go).
 `KindMap` is used for a slice of key-value pairs (in spec: `map<string, any>`).
 
 These types are defined in `go.opentelemetry.io/otel/log` package
-as their are tightly coupled with the API and different from common attributes.
+as they are tightly coupled with the API and different from common attributes.
 
 The internal implementation of `Value` is based on
 [`slog.Value`](https://pkg.go.dev/log/slog#Value)
@@ -372,7 +372,7 @@ Similarly to `Logger.Emit`, we could have something like:
 ```go
 type LoggerProvider interface{
 	embedded.LoggerProvider
-	Logger(name context.Context, config LoggerConfig)
+	Logger(name string, config LoggerConfig)
 }
 ```
 

@@ -148,7 +148,7 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 	switch ik {
 	case InstrumentKindCounter, InstrumentKindUpDownCounter, InstrumentKindObservableCounter, InstrumentKindObservableUpDownCounter:
 		return AggregationSum{}
-	case InstrumentKindObservableGauge:
+	case InstrumentKindObservableGauge, InstrumentKindGauge:
 		return AggregationLastValue{}
 	case InstrumentKindHistogram:
 		return AggregationExplicitBucketHistogram{
