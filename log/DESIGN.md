@@ -372,7 +372,7 @@ Similarly to `Logger.Emit`, we could have something like:
 ```go
 type LoggerProvider interface{
 	embedded.LoggerProvider
-	Logger(name context.Context, config LoggerConfig)
+	Logger(name string, config LoggerConfig)
 }
 ```
 
