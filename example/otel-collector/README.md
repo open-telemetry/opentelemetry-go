@@ -52,7 +52,7 @@ web-browser to view the generated traces.
 
 The Prometheus UI is available at
 [http://localhost:9090](http://localhost:9090). Navigate there in your favorite
-web-browser to view the generated metrics.
+web-browser to view the generated metrics, for instance, `testapp_run_total`.
 
 # Shutting down
 
