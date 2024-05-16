@@ -135,7 +135,7 @@ func (r *Recorder) Reset() {
 }
 
 type logger struct {
-	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
+	embedded.Logger
 
 	mu          sync.Mutex
 	scopeRecord *ScopeRecords
