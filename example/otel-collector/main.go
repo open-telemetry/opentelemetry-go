@@ -49,19 +49,9 @@ func initConn() (*grpc.ClientConn, error) {
 }
 
 // Initializes an OTLP exporter, and configures the corresponding trace provider.
-func initTracerProvider(ctx context.Context, conn *grpc.ClientConn) (func(context.Context) error, error) {
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			// The service name used to display traces in backends
-			serviceName,
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-
+func initTracerProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
 	// Set up a trace exporter
-	traceExporter, err := otlptracegrpc.New(context.Background(), otlptracegrpc.WithGRPCConn(conn))
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
@@ -84,17 +74,7 @@ func initTracerProvider(ctx context.Context, conn *grpc.ClientConn) (func(contex
 }
 
 // Initializes an OTLP exporter, and configures the corresponding meter provider.
-func initMeterProvider(ctx context.Context, conn *grpc.ClientConn) (func(context.Context) error, error) {
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			// The service name used to display traces in backends
-			serviceName,
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-
+func initMeterProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
 	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
@@ -120,7 +100,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	shutdownTracerProvider, err := initTracerProvider(ctx, conn)
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// The service name used to display traces in backends
+			serviceName,
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,7 +120,7 @@ func main() {
 		}
 	}()
 
-	shutdownMeterProvider, err := initMeterProvider(ctx, conn)
+	shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
