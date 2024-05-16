@@ -140,7 +140,7 @@ type logger struct {
 	mu          sync.Mutex
 	scopeRecord *ScopeRecords
 
-	// enabledFn decides whether the recorder should enable logging of a record or not
+	// enabledFn decides whether the recorder should enable logging of a record or not.
 	enabledFn enabledFn
 }
 
