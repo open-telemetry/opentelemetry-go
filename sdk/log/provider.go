@@ -95,25 +95,23 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 // If p is shut down, a [noop.Logger] instace is returned.
 //
 // This method can be called concurrently.
-func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
-	if name == "" {
-		global.Warn("Invalid Logger name.", "name", name)
+func (p *LoggerProvider) Logger(cfg log.LoggerConfig) log.Logger {
+	if cfg.Name == "" {
+		global.Warn("Invalid Logger name.", "name", cfg.Name)
 	}
 
 	if p.stopped.Load() {
-		return noop.NewLoggerProvider().Logger(name, opts...)
-	}
-
-	cfg := log.NewLoggerConfig(opts...)
-	scope := instrumentation.Scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
+		return noop.NewLoggerProvider().Logger(cfg)
 	}
 
 	p.loggersMu.Lock()
 	defer p.loggersMu.Unlock()
 
+	scope := instrumentation.Scope{
+		Name:      cfg.Name,
+		Version:   cfg.Version,
+		SchemaURL: cfg.SchemaURL,
+	}
 	if p.loggers == nil {
 		l := newLogger(p, scope)
 		p.loggers = map[instrumentation.Scope]*logger{scope: l}

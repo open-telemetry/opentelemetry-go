@@ -3,7 +3,10 @@
 
 package log // import "go.opentelemetry.io/otel/log"
 
-import "go.opentelemetry.io/otel/log/embedded"
+import (
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log/embedded"
+)
 
 // LoggerProvider provides access to [Logger].
 //
@@ -22,5 +25,16 @@ type LoggerProvider interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Logger(name string, options ...LoggerOption) Logger
+	Logger(cfg LoggerConfig) Logger
+}
+
+// LoggerConfig contains options for a [Logger].
+type LoggerConfig struct {
+	// Ensure forward compatibility by explicitly making this not comparable.
+	noCmp [0]func() //nolint: unused  // This is indeed used.
+
+	Name       string
+	Version    string
+	SchemaURL  string
+	Attributes attribute.Set
 }

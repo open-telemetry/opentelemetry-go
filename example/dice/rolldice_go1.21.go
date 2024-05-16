@@ -22,14 +22,10 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 
 	roll := 1 + rand.Intn(6)
 
-	logger.InfoContext(ctx, "Anonymous player is rolling the dice", "result", roll)
-
 	rollValueAttr := attribute.Int("roll.value", roll)
 	span.SetAttributes(rollValueAttr)
 	rollCnt.Add(ctx, 1, metric.WithAttributes(rollValueAttr))
 
 	resp := strconv.Itoa(roll) + "\n"
-	if _, err := io.WriteString(w, resp); err != nil {
-		logger.ErrorContext(ctx, "Write failed", "error", err)
-	}
+	_, _ = io.WriteString(w, resp)
 }

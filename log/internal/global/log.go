@@ -28,19 +28,18 @@ type loggerProvider struct {
 // Compile-time guarantee loggerProvider implements LoggerProvider.
 var _ log.LoggerProvider = (*loggerProvider)(nil)
 
-func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+func (p *loggerProvider) Logger(cfg log.LoggerConfig) log.Logger {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.delegate != nil {
-		return p.delegate.Logger(name, options...)
+		return p.delegate.Logger(cfg)
 	}
 
-	cfg := log.NewLoggerConfig(options...)
-	key := instLib{name, cfg.InstrumentationVersion()}
+	key := instLib{cfg.Name, cfg.Version}
 
 	if p.loggers == nil {
-		l := &logger{name: name, options: options}
+		l := &logger{cfg: cfg}
 		p.loggers = map[instLib]*logger{key: l}
 		return l
 	}
@@ -49,7 +48,7 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 		return l
 	}
 
-	l := &logger{name: name, options: options}
+	l := &logger{cfg: cfg}
 	p.loggers[key] = l
 	return l
 }
@@ -68,8 +67,7 @@ func (p *loggerProvider) setDelegate(provider log.LoggerProvider) {
 type logger struct {
 	embedded.Logger
 
-	name    string
-	options []log.LoggerOption
+	cfg log.LoggerConfig
 
 	delegate atomic.Value // log.Logger
 }
@@ -92,5 +90,5 @@ func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
 }
 
 func (l *logger) setDelegate(provider log.LoggerProvider) {
-	l.delegate.Store(provider.Logger(l.name, l.options...))
+	l.delegate.Store(provider.Logger(l.cfg))
 }

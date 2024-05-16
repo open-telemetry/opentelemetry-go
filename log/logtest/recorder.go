@@ -95,14 +95,12 @@ type Recorder struct {
 
 // Logger returns a copy of Recorder as a [log.Logger] with the provided scope
 // information.
-func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
-	cfg := log.NewLoggerConfig(opts...)
-
+func (r *Recorder) Logger(cfg log.LoggerConfig) log.Logger {
 	nr := &Recorder{
 		currentScopeRecord: &ScopeRecords{
-			Name:      name,
-			Version:   cfg.InstrumentationVersion(),
-			SchemaURL: cfg.SchemaURL(),
+			Name:      cfg.Name,
+			Version:   cfg.Version,
+			SchemaURL: cfg.SchemaURL,
 		},
 		enabledFn: r.enabledFn,
 	}

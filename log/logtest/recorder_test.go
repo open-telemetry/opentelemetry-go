@@ -18,8 +18,7 @@ func TestRecorderLogger(t *testing.T) {
 		name    string
 		options []Option
 
-		loggerName    string
-		loggerOptions []log.LoggerOption
+		loggerCfg log.LoggerConfig
 
 		wantLogger log.Logger
 	}{
@@ -33,10 +32,10 @@ func TestRecorderLogger(t *testing.T) {
 		{
 			name: "provides a logger with a configured scope",
 
-			loggerName: "test",
-			loggerOptions: []log.LoggerOption{
-				log.WithInstrumentationVersion("logtest v42"),
-				log.WithSchemaURL("https://example.com"),
+			loggerCfg: log.LoggerConfig{
+				Name:      "test",
+				Version:   "logtest v42",
+				SchemaURL: "https://example.com",
 			},
 
 			wantLogger: &Recorder{
@@ -49,7 +48,7 @@ func TestRecorderLogger(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
+			l := NewRecorder(tt.options...).Logger(tt.loggerCfg)
 			// unset enabledFn to allow comparison
 			l.(*Recorder).enabledFn = nil
 
@@ -60,7 +59,7 @@ func TestRecorderLogger(t *testing.T) {
 
 func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 	r := &Recorder{}
-	assert.NotEqual(t, r, r.Logger("test"))
+	assert.NotEqual(t, r, r.Logger(log.LoggerConfig{Name: "test"}))
 }
 
 func TestRecorderEnabled(t *testing.T) {
@@ -117,7 +116,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	r.Emit(context.Background(), r1)
 	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
 
-	l := r.Logger("test")
+	l := r.Logger(log.LoggerConfig{Name: "test"})
 	assert.Empty(t, r.Result()[1].Records)
 
 	r2 := log.Record{}
@@ -143,7 +142,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			nr := r.Logger("test")
+			nr := r.Logger(log.LoggerConfig{Name: "test"})
 			nr.Enabled(context.Background(), log.Record{})
 			nr.Emit(context.Background(), log.Record{})
 

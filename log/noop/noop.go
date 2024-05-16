@@ -36,7 +36,7 @@ func NewLoggerProvider() LoggerProvider {
 }
 
 // Logger returns an OpenTelemetry Logger that does not record any telemetry.
-func (LoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
+func (LoggerProvider) Logger(log.LoggerConfig) log.Logger {
 	return Logger{}
 }
 

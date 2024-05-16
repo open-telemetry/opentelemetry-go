@@ -28,8 +28,8 @@ import (
 // This is a convenience function. It is equivalent to:
 //
 //	GetLoggerProvider().Logger(name, options...)
-func Logger(name string, options ...log.LoggerOption) log.Logger {
-	return GetLoggerProvider().Logger(name, options...)
+func Logger(cfg log.LoggerConfig) log.Logger {
+	return GetLoggerProvider().Logger(cfg)
 }
 
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].

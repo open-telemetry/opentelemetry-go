@@ -25,7 +25,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 		defer close(done)
 		var logger log.Logger
 		for i := 0; ; i++ {
-			logger = p.Logger(fmt.Sprintf("a%d", i))
+			logger = p.Logger(log.LoggerConfig{Name: fmt.Sprintf("a%d", i)})
 			select {
 			case <-stop:
 				_ = logger
@@ -78,21 +78,21 @@ type testLoggerProvider struct {
 	loggerN int
 }
 
-func (p *testLoggerProvider) Logger(name string, _ ...log.LoggerOption) log.Logger {
+func (p *testLoggerProvider) Logger(cfg log.LoggerConfig) log.Logger {
 	if p.loggers == nil {
 		l := &testLogger{}
-		p.loggers = map[string]*testLogger{name: l}
+		p.loggers = map[string]*testLogger{cfg.Name: l}
 		p.loggerN++
 		return l
 	}
 
-	if l, ok := p.loggers[name]; ok {
+	if l, ok := p.loggers[cfg.Name]; ok {
 		return l
 	}
 
 	p.loggerN++
 	l := &testLogger{}
-	p.loggers[name] = l
+	p.loggers[cfg.Name] = l
 	return l
 }
 
@@ -120,10 +120,10 @@ func TestDelegation(t *testing.T) {
 	provider := &loggerProvider{}
 
 	const preName = "pre"
-	pre0, pre1 := provider.Logger(preName), provider.Logger(preName)
+	pre0, pre1 := provider.Logger(log.LoggerConfig{Name: preName}), provider.Logger(log.LoggerConfig{Name: preName})
 	assert.Same(t, pre0, pre1, "same logger instance not returned")
 
-	alt := provider.Logger("alt")
+	alt := provider.Logger(log.LoggerConfig{Name: "alt"})
 	assert.NotSame(t, pre0, alt)
 
 	delegate := &testLoggerProvider{}
@@ -134,12 +134,12 @@ func TestDelegation(t *testing.T) {
 		want = delegate.loggerN
 	}
 
-	pre2 := provider.Logger(preName)
+	pre2 := provider.Logger(log.LoggerConfig{Name: preName})
 	if !assert.Equal(t, want, delegate.loggerN, "previous Logger recreated") {
 		want = delegate.loggerN
 	}
 
-	post := provider.Logger("test")
+	post := provider.Logger(log.LoggerConfig{Name: "test"})
 	want++
 	assert.Equal(t, want, delegate.loggerN, "new Logger not delegated")
 

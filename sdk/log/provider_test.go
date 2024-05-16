@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -168,7 +169,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			_ = p.Logger(name)
+			_ = p.Logger(log.LoggerConfig{Name: name})
 			_ = p.Shutdown(ctx)
 			_ = p.ForceFlush(ctx)
 		}()
@@ -200,7 +201,7 @@ func TestLoggerProviderLogger(t *testing.T) {
 			return func() { global.SetLogger(orig) }
 		}(global.GetLogger()))
 
-		_ = NewLoggerProvider().Logger("")
+		_ = NewLoggerProvider().Logger(log.LoggerConfig{})
 		assert.Equal(t, 1, l.level, "logged level")
 		assert.Equal(t, "Invalid Logger name.", l.msg, "logged message")
 		require.Len(t, l.keysAndValues, 2, "logged key values")
@@ -211,7 +212,7 @@ func TestLoggerProviderLogger(t *testing.T) {
 		ctx := context.Background()
 		p := NewLoggerProvider()
 		_ = p.Shutdown(ctx)
-		l := p.Logger("testing")
+		l := p.Logger(log.LoggerConfig{Name: "testing"})
 
 		assert.NotNil(t, l)
 		assert.IsType(t, noop.Logger{}, l)
@@ -220,8 +221,8 @@ func TestLoggerProviderLogger(t *testing.T) {
 	t.Run("SameLoggers", func(t *testing.T) {
 		p := NewLoggerProvider()
 
-		l0, l1 := p.Logger("l0"), p.Logger("l1")
-		l2, l3 := p.Logger("l0"), p.Logger("l1")
+		l0, l1 := p.Logger(log.LoggerConfig{Name: "l0"}), p.Logger(log.LoggerConfig{Name: "l1"})
+		l2, l3 := p.Logger(log.LoggerConfig{Name: "l0"}), p.Logger(log.LoggerConfig{Name: "l1"})
 
 		assert.Same(t, l0, l2)
 		assert.Same(t, l1, l3)
