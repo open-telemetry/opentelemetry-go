@@ -172,7 +172,7 @@ func WithEndpoint(endpoint string) Option {
 func WithEndpointURL(rawURL string) Option {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		global.Error(err, "otlpmetric: parse endpoint url", "url", rawURL)
+		global.Error(err, "otlplog: parse endpoint url", "url", rawURL)
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
