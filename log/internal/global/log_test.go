@@ -158,3 +158,48 @@ func TestDelegation(t *testing.T) {
 		assert.Equal(t, 1, post.(*testLogger).enabledN, "Enabled not delegated")
 	}
 }
+
+func TestLoggerIdentity(t *testing.T) {
+	type id struct{ name, ver, url string }
+
+	ids := []id{
+		{"name-a", "version-a", "url-a"},
+		{"name-a", "version-a", "url-b"},
+		{"name-a", "version-b", "url-a"},
+		{"name-a", "version-b", "url-b"},
+		{"name-b", "version-a", "url-a"},
+		{"name-b", "version-a", "url-b"},
+		{"name-b", "version-b", "url-a"},
+		{"name-b", "version-b", "url-b"},
+	}
+
+	provider := &loggerProvider{}
+	for _, i := range ids {
+		_ = provider.Logger(
+			i.name,
+			log.WithInstrumentationVersion(i.ver),
+			log.WithSchemaURL(i.url),
+		)
+	}
+
+	for i, id0 := range ids {
+		for j, id1 := range ids {
+			l0 := provider.Logger(
+				id0.name,
+				log.WithInstrumentationVersion(id0.ver),
+				log.WithSchemaURL(id0.url),
+			)
+			l1 := provider.Logger(
+				id1.name,
+				log.WithInstrumentationVersion(id1.ver),
+				log.WithSchemaURL(id1.url),
+			)
+
+			if i == j {
+				assert.Samef(t, l0, l1, "logger(%v) != logger(%v)", id0, id1)
+			} else {
+				assert.NotSamef(t, l0, l1, "logger(%v) == logger(%v)", id0, id1)
+			}
+		}
+	}
+}
