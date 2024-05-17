@@ -26,8 +26,8 @@ func TestRecorderLogger(t *testing.T) {
 		{
 			name: "provides a default logger",
 
-			wantLogger: &Recorder{
-				currentScopeRecord: &ScopeRecords{},
+			wantLogger: &logger{
+				scopeRecord: &ScopeRecords{},
 			},
 		},
 		{
@@ -39,8 +39,8 @@ func TestRecorderLogger(t *testing.T) {
 				log.WithSchemaURL("https://example.com"),
 			},
 
-			wantLogger: &Recorder{
-				currentScopeRecord: &ScopeRecords{
+			wantLogger: &logger{
+				scopeRecord: &ScopeRecords{
 					Name:      "test",
 					Version:   "logtest v42",
 					SchemaURL: "https://example.com",
@@ -51,7 +51,7 @@ func TestRecorderLogger(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
 			// unset enabledFn to allow comparison
-			l.(*Recorder).enabledFn = nil
+			l.(*logger).enabledFn = nil
 
 			assert.Equal(t, tt.wantLogger, l)
 		})
@@ -63,7 +63,7 @@ func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 	assert.NotEqual(t, r, r.Logger("test"))
 }
 
-func TestRecorderEnabled(t *testing.T) {
+func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		options     []Option
@@ -97,32 +97,33 @@ func TestRecorderEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Enabled(tt.ctx, tt.buildRecord())
+			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildRecord())
 			assert.Equal(t, tt.isEnabled, e)
 		})
 	}
 }
 
-func TestRecorderEnabledFnUnset(t *testing.T) {
-	r := &Recorder{}
+func TestLoggerEnabledFnUnset(t *testing.T) {
+	r := &logger{}
 	assert.True(t, r.Enabled(context.Background(), log.Record{}))
 }
 
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
+	l := r.Logger("test")
 	assert.Len(t, r.Result()[0].Records, 0)
 
 	r1 := log.Record{}
 	r1.SetSeverity(log.SeverityInfo)
-	r.Emit(context.Background(), r1)
+	l.Emit(context.Background(), r1)
 	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
 
-	l := r.Logger("test")
+	nl := r.Logger("test")
 	assert.Empty(t, r.Result()[1].Records)
 
 	r2 := log.Record{}
 	r2.SetSeverity(log.SeverityError)
-	l.Emit(context.Background(), r2)
+	nl.Emit(context.Background(), r2)
 	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
 	assert.Equal(t, r.Result()[1].Records, []log.Record{r2})
 
