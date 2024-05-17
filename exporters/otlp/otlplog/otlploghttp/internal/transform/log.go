@@ -6,6 +6,7 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 
 import (
+	"sync"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -25,6 +26,11 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 	}
 
 	resMap := resourceLogsMap(records)
+	defer func() {
+		clear(resMap)
+		resourceLogsMapPool.Put(resMap)
+	}()
+
 	out := make([]*lpb.ResourceLogs, 0, len(resMap))
 	for _, rl := range resMap {
 		out = append(out, rl)
@@ -32,8 +38,14 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 	return out
 }
 
+var resourceLogsMapPool = sync.Pool{
+	New: func() any {
+		return make(map[attribute.Distinct]*lpb.ResourceLogs)
+	},
+}
+
 func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceLogs {
-	out := make(map[attribute.Distinct]*lpb.ResourceLogs)
+	out := resourceLogsMapPool.Get().(map[attribute.Distinct]*lpb.ResourceLogs)
 	for _, r := range records {
 		res := r.Resource()
 		rl, ok := out[res.Equivalent()]
