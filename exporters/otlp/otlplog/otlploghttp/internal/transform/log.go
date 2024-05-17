@@ -67,6 +67,11 @@ func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceL
 // ScopeLogs returns a slice of OTLP ScopeLogs generated from recoreds.
 func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
 	scopeMap := scopeLogsMap(records)
+	defer func() {
+		clear(scopeMap)
+		scopeLogsMapPool.Put(scopeMap)
+	}()
+
 	out := make([]*lpb.ScopeLogs, 0, len(scopeMap))
 	for _, sl := range scopeMap {
 		out = append(out, sl)
@@ -74,8 +79,14 @@ func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
 	return out
 }
 
+var scopeLogsMapPool = sync.Pool{
+	New: func() any {
+		return make(map[instrumentation.Scope]*lpb.ScopeLogs)
+	},
+}
+
 func scopeLogsMap(records []log.Record) map[instrumentation.Scope]*lpb.ScopeLogs {
-	out := make(map[instrumentation.Scope]*lpb.ScopeLogs)
+	out := scopeLogsMapPool.Get().(map[instrumentation.Scope]*lpb.ScopeLogs)
 	for _, r := range records {
 		scope := r.InstrumentationScope()
 		sl, ok := out[scope]
