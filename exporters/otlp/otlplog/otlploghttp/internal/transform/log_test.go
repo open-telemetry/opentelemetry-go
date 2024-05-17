@@ -230,3 +230,14 @@ func TestSeverityNumber(t *testing.T) {
 		assert.Equal(t, want, SeverityNumber(api.Severity(i)))
 	}
 }
+
+func BenchmarkResourceLogs(b *testing.B) {
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		var out []*lpb.ResourceLogs
+		for pb.Next() {
+			out = ResourceLogs(records)
+		}
+		_ = out
+	})
+}
