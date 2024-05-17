@@ -174,8 +174,8 @@ func TestLoggerIdentity(t *testing.T) {
 	}
 
 	provider := &loggerProvider{}
-	for _, i := range ids {
-		_ = provider.Logger(
+	newLogger := func(i id) log.Logger {
+		return provider.Logger(
 			i.name,
 			log.WithInstrumentationVersion(i.ver),
 			log.WithSchemaURL(i.url),
@@ -184,16 +184,7 @@ func TestLoggerIdentity(t *testing.T) {
 
 	for i, id0 := range ids {
 		for j, id1 := range ids {
-			l0 := provider.Logger(
-				id0.name,
-				log.WithInstrumentationVersion(id0.ver),
-				log.WithSchemaURL(id0.url),
-			)
-			l1 := provider.Logger(
-				id1.name,
-				log.WithInstrumentationVersion(id1.ver),
-				log.WithSchemaURL(id1.url),
-			)
+			l0, l1 := newLogger(id0), newLogger(id1)
 
 			if i == j {
 				assert.Samef(t, l0, l1, "logger(%v) != logger(%v)", id0, id1)
