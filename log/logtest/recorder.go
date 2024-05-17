@@ -162,7 +162,5 @@ func (l *logger) Reset() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.scopeRecord != nil {
-		l.scopeRecord.Records = nil
-	}
+	l.scopeRecord.Records = nil
 }
