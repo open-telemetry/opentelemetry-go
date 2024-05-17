@@ -196,14 +196,23 @@ func TestRecordClone(t *testing.T) {
 }
 
 func TestRecordDroppedAttributes(t *testing.T) {
+	orig := logAttrDropped
+	t.Cleanup(func() { logAttrDropped = orig })
+
 	for i := 1; i < attributesInlineCount*5; i++ {
+		var called bool
+		logAttrDropped = func() { called = true }
+
 		r := new(Record)
 		r.attributeCountLimit = 1
 
 		attrs := make([]log.KeyValue, i)
 		attrs[0] = log.Bool("only key different then the rest", true)
+		assert.False(t, called, "non-dropped attributed logged")
+
 		r.AddAttributes(attrs...)
 		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: AddAttributes", i)
+		assert.True(t, called, "dropped attributes not logged")
 
 		r.AddAttributes(attrs...)
 		assert.Equalf(t, 2*i-1, r.DroppedAttributes(), "%d: second AddAttributes", i)
