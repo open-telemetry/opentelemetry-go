@@ -15,7 +15,7 @@ import (
 // instLib defines the instrumentation library a logger is created for.
 //
 // Do not use sdk/instrumentation (API cannot depend on the SDK).
-type instLib struct{ name, version string }
+type instLib struct{ name, version, schemaURL string }
 
 type loggerProvider struct {
 	embedded.LoggerProvider
@@ -37,7 +37,11 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 	}
 
 	cfg := log.NewLoggerConfig(options...)
-	key := instLib{name, cfg.InstrumentationVersion()}
+	key := instLib{
+		name:      name,
+		version:   cfg.InstrumentationVersion(),
+		schemaURL: cfg.SchemaURL(),
+	}
 
 	if p.loggers == nil {
 		l := &logger{name: name, options: options}

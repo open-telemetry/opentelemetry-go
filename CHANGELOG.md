@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Comparison of unordered maps in `go.opentelemetry.io/otel/log.KeyValue` and `go.opentelemetry.io/otel/log.Value`. (#5306)
 - Fix wrong package name of the error message when parsing endpoint URL in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#5371)
 - Split the behavior of `Recorder` in `go.opentelemetry.io/otel/log/logtest` so it behaves as a `LoggerProvider` only. (#5365)
+- Identify the `Logger` returned from the global `LoggerProvider` in `go.opentelemetry.io/otel/log/global` with its schama URL. (#5375)
 
 ## [1.26.0/0.48.0/0.2.0-alpha] 2024-04-24
 
