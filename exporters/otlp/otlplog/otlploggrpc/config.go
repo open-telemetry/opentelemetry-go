@@ -4,28 +4,58 @@
 package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 
 import (
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/otlpconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
+type wrappedOption struct {
+	otlpconf.Option
+}
+
+func (w wrappedOption) applyOption(cfg config) config {
+	cfg.Config = w.Option.ApplyOption(cfg.Config)
+	return cfg
+}
+
+type fnOpt func(config) config
+
+func (f fnOpt) applyOption(c config) config { return f(c) }
+
 // Option applies an option to the Exporter.
 type Option interface {
-	applyHTTPOption(config) config
+	applyOption(config) config
 }
 
 type config struct {
-	// TODO: implement.
+	otlpconf.Config
+
+	// gRPC configurations
+	gRPCCredentials    otlpconf.Setting[credentials.TransportCredentials]
+	serviceConfig      otlpconf.Setting[string]
+	reconnectionPeriod otlpconf.Setting[time.Duration]
+	dialOptions        otlpconf.Setting[[]grpc.DialOption]
+	gRPCConn           otlpconf.Setting[*grpc.ClientConn]
 }
 
 func newConfig(options []Option) config {
 	var c config
 	for _, opt := range options {
-		c = opt.applyHTTPOption(c)
+		c = opt.applyOption(c)
 	}
+
+	c.Config = otlpconf.LoadConfig(c.Config)
+
+	if !c.gRPCCredentials.Set && c.Config.TLSCfg.Set {
+		c.gRPCCredentials = otlpconf.NewSetting(credentials.NewTLS(c.Config.TLSCfg.Value))
+	}
+
 	return c
 }
 
@@ -51,8 +81,7 @@ type RetryConfig retry.Config
 //
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithInsecure()}
 }
 
 // WithEndpoint sets the target endpoint the Exporter will connect to.
@@ -70,8 +99,7 @@ func WithInsecure() Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithEndpoint(endpoint)}
 }
 
 // WithEndpointURL sets the target endpoint URL the Exporter will connect to.
@@ -91,8 +119,7 @@ func WithEndpoint(endpoint string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithEndpointURL(u string) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithEndpointURL(u)}
 }
 
 // WithReconnectionPeriod set the minimum amount of time between connection
@@ -100,8 +127,10 @@ func WithEndpointURL(u string) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithReconnectionPeriod(rp time.Duration) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.reconnectionPeriod = otlpconf.NewSetting(rp)
+		return c
+	})
 }
 
 // WithCompressor sets the compressor the gRPC client uses.
@@ -118,8 +147,7 @@ func WithReconnectionPeriod(rp time.Duration) Option {
 //
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithCompression(compressorToCompression(compressor))}
 }
 
 // WithHeaders will send the provided headers with each gRPC requests.
@@ -134,8 +162,7 @@ func WithCompressor(compressor string) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithHeaders(headers)}
 }
 
 // WithTLSCredentials sets the gRPC connection to use creds.
@@ -150,17 +177,21 @@ func WithHeaders(headers map[string]string) Option {
 // passed, no TLS credentials will be used.
 //
 // This option has no effect if WithGRPCConn is used.
-func WithTLSCredentials(_ credentials.TransportCredentials) Option {
-	// TODO: implement.
-	return nil
+func WithTLSCredentials(credential credentials.TransportCredentials) Option {
+	return fnOpt(func(c config) config {
+		c.gRPCCredentials = otlpconf.NewSetting(credential)
+		return c
+	})
 }
 
 // WithServiceConfig defines the default gRPC service config used.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithServiceConfig(serviceConfig string) Option {
-	// TODO: implement.
-	return nil
+	return fnOpt(func(c config) config {
+		c.serviceConfig = otlpconf.NewSetting(serviceConfig)
+		return c
+	})
 }
 
 // WithDialOption sets explicit grpc.DialOptions to use when establishing a
@@ -171,9 +202,11 @@ func WithServiceConfig(serviceConfig string) Option {
 // grpc.DialOptions are ignored.
 //
 // This option has no effect if WithGRPCConn is used.
-func WithDialOption(_ ...grpc.DialOption) Option {
-	// TODO: implement.
-	return nil
+func WithDialOption(opts ...grpc.DialOption) Option {
+	return fnOpt(func(c config) config {
+		c.dialOptions = otlpconf.NewSetting(opts)
+		return c
+	})
 }
 
 // WithGRPCConn sets conn as the gRPC ClientConn used for all communication.
@@ -184,9 +217,11 @@ func WithDialOption(_ ...grpc.DialOption) Option {
 //
 // It is the callers responsibility to close the passed conn. The Exporter
 // Shutdown method will not close this connection.
-func WithGRPCConn(_ *grpc.ClientConn) Option {
-	// TODO: implement.
-	return nil
+func WithGRPCConn(conn *grpc.ClientConn) Option {
+	return fnOpt(func(c config) config {
+		c.gRPCConn = otlpconf.NewSetting(conn)
+		return c
+	})
 }
 
 // WithTimeout sets the max amount of time an Exporter will attempt an export.
@@ -204,8 +239,7 @@ func WithGRPCConn(_ *grpc.ClientConn) Option {
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithTimeout(duration)}
 }
 
 // WithRetry sets the retry policy for transient retryable errors that are
@@ -222,6 +256,14 @@ func WithTimeout(duration time.Duration) Option {
 // 5 seconds after receiving a retryable error and increase exponentially
 // after each error for no more than a total time of 1 minute.
 func WithRetry(settings RetryConfig) Option {
-	// TODO: implement.
-	return nil
+	return wrappedOption{Option: otlpconf.WithRetry(retry.Config(settings))}
+}
+
+func compressorToCompression(compressor string) otlpconf.Compression {
+	if compressor == "gzip" {
+		return otlpconf.GzipCompression
+	}
+
+	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
+	return otlpconf.NoCompression
 }
