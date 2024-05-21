@@ -27,7 +27,7 @@ jobs:
           path: ./benchmarks
           key: ${{ runner.os }}-benchmark
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@v1.20.1
+        uses: benchmark-action/github-action-benchmark@v1.20.3
         with:
           name: Benchmarks
           tool: 'go'

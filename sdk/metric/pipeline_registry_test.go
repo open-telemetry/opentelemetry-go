@@ -145,14 +145,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	)
 
 	instruments := []Instrument{
-		{Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
-		{Name: "foo", Kind: InstrumentKindCounter},
-		{Name: "foo", Kind: InstrumentKindUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindHistogram},
-		{Name: "foo", Kind: InstrumentKindGauge},
-		{Name: "foo", Kind: InstrumentKindObservableCounter},
-		{Name: "foo", Kind: InstrumentKindObservableUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindObservableGauge},
+		InstrumentKind(0):                     {Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
+		InstrumentKindCounter:                 {Name: "foo", Kind: InstrumentKindCounter},
+		InstrumentKindUpDownCounter:           {Name: "foo", Kind: InstrumentKindUpDownCounter},
+		InstrumentKindHistogram:               {Name: "foo", Kind: InstrumentKindHistogram},
+		InstrumentKindGauge:                   {Name: "foo", Kind: InstrumentKindGauge},
+		InstrumentKindObservableCounter:       {Name: "foo", Kind: InstrumentKindObservableCounter},
+		InstrumentKindObservableUpDownCounter: {Name: "foo", Kind: InstrumentKindObservableUpDownCounter},
+		InstrumentKindObservableGauge:         {Name: "foo", Kind: InstrumentKindObservableGauge},
 	}
 
 	testcases := []struct {
