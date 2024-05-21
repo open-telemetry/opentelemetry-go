@@ -15,7 +15,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 |---------|--------------------|
 | Traces  | Stable             |
 | Metrics | Stable             |
-| Logs    | Alpha[^1]          |
+| Logs    | Beta[^1]           |
 
 Progress and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
