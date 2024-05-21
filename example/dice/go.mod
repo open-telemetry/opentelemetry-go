@@ -6,13 +6,13 @@ require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.1.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0
 	go.opentelemetry.io/otel v1.27.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.2.0-alpha
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.3.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.27.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0
-	go.opentelemetry.io/otel/log v0.2.0-alpha
+	go.opentelemetry.io/otel/log v0.3.0
 	go.opentelemetry.io/otel/metric v1.27.0
 	go.opentelemetry.io/otel/sdk v1.27.0
-	go.opentelemetry.io/otel/sdk/log v0.2.0-alpha
+	go.opentelemetry.io/otel/sdk/log v0.3.0
 	go.opentelemetry.io/otel/sdk/metric v1.27.0
 )
 
