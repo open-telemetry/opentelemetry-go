@@ -9,6 +9,7 @@ import (
 	stdlog "log"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -444,9 +445,10 @@ func TestBatchProcessor(t *testing.T) {
 			return n > 0
 		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
 
-		got := buf.String()
-		want := `"level"=1 "msg"="dropped log records" "dropped"=1`
-		assert.Contains(t, got, want)
+		wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=1`
+		assert.Eventually(t, func() bool {
+			return strings.Contains(buf.String(), wantMsg)
+		}, 2*time.Second, time.Microsecond)
 
 		close(e.ExportTrigger)
 		_ = b.Shutdown(ctx)
