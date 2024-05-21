@@ -70,6 +70,31 @@ func TestValueEqual(t *testing.T) {
 	}
 }
 
+func TestSortedValueEqual(t *testing.T) {
+	testCases := []struct {
+		value  log.Value
+		value2 log.Value
+	}{
+		{
+			value: log.MapValue(
+				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
+				log.Bytes("b", []byte{3, 5, 7}),
+				log.Empty("e"),
+			),
+			value2: log.MapValue(
+				log.Bytes("b", []byte{3, 5, 7}),
+				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
+				log.Empty("e"),
+			),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.value.String(), func(t *testing.T) {
+			assert.Equal(t, true, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
+		})
+	}
+}
+
 func TestValueEmpty(t *testing.T) {
 	v := log.Value{}
 	t.Run("Value.Empty", func(t *testing.T) {

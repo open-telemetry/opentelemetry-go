@@ -7,6 +7,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
@@ -256,7 +257,9 @@ func (v Value) Equal(w Value) bool {
 	case KindSlice:
 		return slices.EqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
 	case KindMap:
-		return slices.EqualFunc(v.asMap(), w.asMap(), KeyValue.Equal)
+		sv := sortMap(v.asMap())
+		sw := sortMap(w.asMap())
+		return slices.EqualFunc(sv, sw, KeyValue.Equal)
 	case KindBytes:
 		return bytes.Equal(v.asBytes(), w.asBytes())
 	case KindEmpty:
@@ -265,6 +268,16 @@ func (v Value) Equal(w Value) bool {
 		global.Error(errKind, "Equal", "Kind", k1)
 		return false
 	}
+}
+
+func sortMap(m []KeyValue) []KeyValue {
+	sm := make([]KeyValue, len(m))
+	copy(sm, m)
+	slices.SortFunc(sm, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	return sm
 }
 
 // String returns Value's value as a string, formatted like [fmt.Sprint].

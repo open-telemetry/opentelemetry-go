@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 var (
@@ -601,8 +601,9 @@ func TestWithProcessCommandArgs(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
 	require.EqualValues(t, map[string]string{
-		"process.command_args": fmt.Sprint(fakeCommandArgs),
+		"process.command_args": string(jsonCommandArgs),
 	}, toMap(res))
 }
 
@@ -671,11 +672,12 @@ func TestWithProcess(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
 	require.EqualValues(t, map[string]string{
 		"process.pid":                 fmt.Sprint(fakePID),
 		"process.executable.name":     fakeExecutableName,
 		"process.executable.path":     fakeExecutablePath,
-		"process.command_args":        fmt.Sprint(fakeCommandArgs),
+		"process.command_args":        string(jsonCommandArgs),
 		"process.owner":               fakeOwner,
 		"process.runtime.name":        fakeRuntimeName,
 		"process.runtime.version":     fakeRuntimeVersion,

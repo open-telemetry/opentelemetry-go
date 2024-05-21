@@ -172,7 +172,7 @@ func WithEndpoint(endpoint string) Option {
 func WithEndpointURL(rawURL string) Option {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		global.Error(err, "otlpmetric: parse endpoint url", "url", rawURL)
+		global.Error(err, "otlplog: parse endpoint url", "url", rawURL)
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
@@ -435,7 +435,7 @@ func loadCertPool(path string) (*x509.CertPool, error) {
 	return cp, nil
 }
 
-// loadCertPool loads and returns the tls.Certificate found at path if it
+// loadCertificates loads and returns the tls.Certificate found at path if it
 // exists and is valid. Otherwise, nil and an error is returned.
 func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	cert, err := readFile(certPath)

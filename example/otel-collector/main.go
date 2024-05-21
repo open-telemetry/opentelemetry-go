@@ -19,35 +19,25 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Initializes an OTLP exporter, and configures the corresponding trace and
-// metric providers.
-func initProvider() (func(context.Context) error, error) {
-	ctx := context.Background()
+var serviceName = semconv.ServiceNameKey.String("test-service")
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			// the service name used to display traces in backends
-			semconv.ServiceName("test-service"),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-
-	// If the OpenTelemetry Collector is running on a local cluster (minikube or
-	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
-	// endpoint of your cluster. If you run the app inside k8s, then you can
-	// probably connect directly to the service through dns.
-	conn, err := grpc.NewClient("localhost:30080",
+// Initialize a gRPC connection to be used by both the tracer and meter
+// providers.
+func initConn() (*grpc.ClientConn, error) {
+	// It connects the OpenTelemetry Collector through local gRPC connection.
+	// You may replace `localhost:4317` with your endpoint.
+	conn, err := grpc.NewClient("localhost:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -55,8 +45,13 @@ func initProvider() (func(context.Context) error, error) {
 		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
 	}
 
+	return conn, err
+}
+
+// Initializes an OTLP exporter, and configures the corresponding trace provider.
+func initTracerProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
 	// Set up a trace exporter
-	traceExporter, err := otlptracegrpc.New(context.Background(), otlptracegrpc.WithGRPCConn(conn))
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
@@ -71,11 +66,27 @@ func initProvider() (func(context.Context) error, error) {
 	)
 	otel.SetTracerProvider(tracerProvider)
 
-	// set global propagator to tracecontext (the default is no-op).
+	// Set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// Shutdown will flush any remaining spans and shut down the exporter.
 	return tracerProvider.Shutdown, nil
+}
+
+// Initializes an OTLP exporter, and configures the corresponding meter provider.
+func initMeterProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
+	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+		sdkmetric.WithResource(res),
+	)
+	otel.SetMeterProvider(meterProvider)
+
+	return meterProvider.Shutdown, nil
 }
 
 func main() {
@@ -84,17 +95,43 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	shutdown, err := initProvider()
+	conn, err := initConn()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// The service name used to display traces in backends
+			serviceName,
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer func() {
-		if err := shutdown(ctx); err != nil {
-			log.Fatal("failed to shutdown TracerProvider: %w", err)
+		if err := shutdownTracerProvider(ctx); err != nil {
+			log.Fatalf("failed to shutdown TracerProvider: %s", err)
+		}
+	}()
+
+	shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdownMeterProvider(ctx); err != nil {
+			log.Fatalf("failed to shutdown MeterProvider: %s", err)
 		}
 	}()
 
 	tracer := otel.Tracer("test-tracer")
+	meter := otel.Meter("test-meter")
 
 	// Attributes represent additional key-value descriptors that can be bound
 	// to a metric observer or recorder.
@@ -104,7 +141,12 @@ func main() {
 		attribute.String("attrC", "vanilla"),
 	}
 
-	// work begins
+	runCount, err := meter.Int64Counter("run", metric.WithDescription("The number of times the iteration ran"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Work begins
 	ctx, span := tracer.Start(
 		ctx,
 		"CollectorExporter-Example",
@@ -112,6 +154,7 @@ func main() {
 	defer span.End()
 	for i := 0; i < 10; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
+		runCount.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 
 		<-time.After(time.Second)

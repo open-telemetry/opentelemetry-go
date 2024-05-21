@@ -78,7 +78,8 @@ func newHTTPHandler() http.Handler {
 	}
 
 	// Register handlers.
-	handleFunc("/rolldice", rolldice)
+	handleFunc("/rolldice/", rolldice)
+	handleFunc("/rolldice/{player}", rolldice)
 
 	// Add HTTP instrumentation for the whole server.
 	handler := otelhttp.NewHandler(mux, "/")

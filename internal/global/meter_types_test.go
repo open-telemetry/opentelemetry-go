@@ -36,10 +36,12 @@ type testMeter struct {
 	sfCount   int
 	sfUDCount int
 	sfHist    int
+	sfGauge   int
 
 	siCount   int
 	siUDCount int
 	siHist    int
+	siGauge   int
 
 	callbacks []metric.Callback
 }
@@ -56,6 +58,11 @@ func (m *testMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDow
 
 func (m *testMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	m.siHist++
+	return &testCountingIntInstrument{}, nil
+}
+
+func (m *testMeter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	m.siGauge++
 	return &testCountingIntInstrument{}, nil
 }
 
@@ -86,6 +93,11 @@ func (m *testMeter) Float64UpDownCounter(name string, options ...metric.Float64U
 
 func (m *testMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	m.sfHist++
+	return &testCountingFloatInstrument{}, nil
+}
+
+func (m *testMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	m.sfGauge++
 	return &testCountingFloatInstrument{}, nil
 }
 
