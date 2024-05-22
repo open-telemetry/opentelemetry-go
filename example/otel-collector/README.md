@@ -1,4 +1,4 @@
-# OpenTelemetry Collector Traces Example
+# OpenTelemetry Collector Example
 
 This example illustrates how to export trace and metric data from the
 OpenTelemetry-Go SDK to the OpenTelemetry Collector. From there, we bring the
