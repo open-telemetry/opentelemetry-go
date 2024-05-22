@@ -6,6 +6,7 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 
 import (
+	"sync"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -24,7 +25,13 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 		return nil
 	}
 
-	resMap := resourceLogsMap(records)
+	resMap := resourceLogsMapPool.Get().(map[attribute.Distinct]*lpb.ResourceLogs)
+	defer func() {
+		clear(resMap)
+		resourceLogsMapPool.Put(resMap)
+	}()
+	resourceLogsMap(&resMap, records)
+
 	out := make([]*lpb.ResourceLogs, 0, len(resMap))
 	for _, rl := range resMap {
 		out = append(out, rl)
@@ -32,11 +39,16 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 	return out
 }
 
-func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceLogs {
-	out := make(map[attribute.Distinct]*lpb.ResourceLogs)
+var resourceLogsMapPool = sync.Pool{
+	New: func() any {
+		return make(map[attribute.Distinct]*lpb.ResourceLogs)
+	},
+}
+
+func resourceLogsMap(dst *map[attribute.Distinct]*lpb.ResourceLogs, records []log.Record) {
 	for _, r := range records {
 		res := r.Resource()
-		rl, ok := out[res.Equivalent()]
+		rl, ok := (*dst)[res.Equivalent()]
 		if !ok {
 			rl = new(lpb.ResourceLogs)
 			if res.Len() > 0 {
@@ -45,16 +57,21 @@ func resourceLogsMap(records []log.Record) map[attribute.Distinct]*lpb.ResourceL
 				}
 			}
 			rl.SchemaUrl = res.SchemaURL()
-			out[res.Equivalent()] = rl
+			(*dst)[res.Equivalent()] = rl
 		}
 		rl.ScopeLogs = ScopeLogs(records)
 	}
-	return out
 }
 
 // ScopeLogs returns a slice of OTLP ScopeLogs generated from recoreds.
 func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
-	scopeMap := scopeLogsMap(records)
+	scopeMap := scopeLogsMapPool.Get().(map[instrumentation.Scope]*lpb.ScopeLogs)
+	defer func() {
+		clear(scopeMap)
+		scopeLogsMapPool.Put(scopeMap)
+	}()
+	scopeLogsMap(&scopeMap, records)
+
 	out := make([]*lpb.ScopeLogs, 0, len(scopeMap))
 	for _, sl := range scopeMap {
 		out = append(out, sl)
@@ -62,11 +79,16 @@ func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
 	return out
 }
 
-func scopeLogsMap(records []log.Record) map[instrumentation.Scope]*lpb.ScopeLogs {
-	out := make(map[instrumentation.Scope]*lpb.ScopeLogs)
+var scopeLogsMapPool = sync.Pool{
+	New: func() any {
+		return make(map[instrumentation.Scope]*lpb.ScopeLogs)
+	},
+}
+
+func scopeLogsMap(dst *map[instrumentation.Scope]*lpb.ScopeLogs, records []log.Record) {
 	for _, r := range records {
 		scope := r.InstrumentationScope()
-		sl, ok := out[scope]
+		sl, ok := (*dst)[scope]
 		if !ok {
 			sl = new(lpb.ScopeLogs)
 			var emptyScope instrumentation.Scope
@@ -77,11 +99,10 @@ func scopeLogsMap(records []log.Record) map[instrumentation.Scope]*lpb.ScopeLogs
 				}
 				sl.SchemaUrl = scope.SchemaURL
 			}
-			out[scope] = sl
+			(*dst)[scope] = sl
 		}
 		sl.LogRecords = append(sl.LogRecords, LogRecord(r))
 	}
-	return out
 }
 
 // LogRecord returns an OTLP LogRecord generated from record.
