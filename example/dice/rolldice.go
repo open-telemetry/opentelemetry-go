@@ -7,19 +7,14 @@ import (
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 const name = "rolldice"
 
 var (
-	tracer = otel.Tracer(name)
-	meter  = otel.Meter(name)
-	logger = otelslog.NewLogger(
-		otelslog.WithInstrumentationScope(instrumentation.Scope{
-			Name: name,
-		}),
-	)
+	tracer  = otel.Tracer(name)
+	meter   = otel.Meter(name)
+	logger  = otelslog.NewLogger(name)
 	rollCnt metric.Int64Counter
 )
 

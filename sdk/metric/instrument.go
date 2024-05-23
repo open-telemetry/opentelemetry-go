@@ -30,32 +30,32 @@ type InstrumentKind uint8
 const (
 	// instrumentKindUndefined is an undefined instrument kind, it should not
 	// be used by any initialized type.
-	instrumentKindUndefined InstrumentKind = iota // nolint:deadcode,varcheck,unused
+	instrumentKindUndefined InstrumentKind = 0 // nolint:deadcode,varcheck,unused
 	// InstrumentKindCounter identifies a group of instruments that record
 	// increasing values synchronously with the code path they are measuring.
-	InstrumentKindCounter
+	InstrumentKindCounter InstrumentKind = 1
 	// InstrumentKindUpDownCounter identifies a group of instruments that
 	// record increasing and decreasing values synchronously with the code path
 	// they are measuring.
-	InstrumentKindUpDownCounter
+	InstrumentKindUpDownCounter InstrumentKind = 2
 	// InstrumentKindHistogram identifies a group of instruments that record a
 	// distribution of values synchronously with the code path they are
 	// measuring.
-	InstrumentKindHistogram
-	// InstrumentKindGauge identifies a group of instruments that record
-	// instantaneous values synchronously with the code path they are
-	// measuring.
-	InstrumentKindGauge
+	InstrumentKindHistogram InstrumentKind = 3
 	// InstrumentKindObservableCounter identifies a group of instruments that
 	// record increasing values in an asynchronous callback.
-	InstrumentKindObservableCounter
+	InstrumentKindObservableCounter InstrumentKind = 4
 	// InstrumentKindObservableUpDownCounter identifies a group of instruments
 	// that record increasing and decreasing values in an asynchronous
 	// callback.
-	InstrumentKindObservableUpDownCounter
+	InstrumentKindObservableUpDownCounter InstrumentKind = 5
 	// InstrumentKindObservableGauge identifies a group of instruments that
 	// record current values in an asynchronous callback.
-	InstrumentKindObservableGauge
+	InstrumentKindObservableGauge InstrumentKind = 6
+	// InstrumentKindGauge identifies a group of instruments that record
+	// instantaneous values synchronously with the code path they are
+	// measuring.
+	InstrumentKindGauge InstrumentKind = 7
 )
 
 type nonComparable [0]func() // nolint: unused  // This is indeed used.
