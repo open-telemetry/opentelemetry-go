@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlpconf // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/otlpconf"
+package otlploggrpc
 
 import (
 	"crypto/tls"
@@ -13,8 +13,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/conf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
@@ -40,18 +43,6 @@ kbQ/kxzi9Ego0ZJdiXxkmv/C05QFddCW7Y0ZsJCLHGogQsYnWJBXUZOV
 -----END PRIVATE KEY-----
 `
 )
-
-// This is only for testing, as the package that is using this utility has its own newConfig function.
-func newConfig(options []Option) Config {
-	var c Config
-	for _, opt := range options {
-		c = opt.ApplyOption(c)
-	}
-
-	c = LoadConfig(c)
-
-	return c
-}
 
 func newTLSConf(cert, key []byte) (*tls.Config, error) {
 	cp := x509.NewCertPool()
@@ -92,43 +83,51 @@ func TestNewConfig(t *testing.T) {
 	headers := map[string]string{"a": "A"}
 	rc := retry.Config{}
 
+	dialOptions := []grpc.DialOption{grpc.WithUserAgent("test-agent")}
+
 	testcases := []struct {
 		name    string
 		options []Option
 		envars  map[string]string
-		want    Config
+		want    config
 		errs    []string
 	}{
 		{
 			name: "Defaults",
-			want: Config{
-				Endpoint: NewSetting(defaultEndpoint),
-				Path:     NewSetting(defaultPath),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting(defaultEndpoint),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
 			name: "Options",
 			options: []Option{
-				WithEndpoint("test"),
-				WithURLPath("/path"),
 				WithInsecure(),
-				WithTLSClientConfig(tlsCfg),
-				WithCompression(GzipCompression),
+				WithEndpoint("test"),
+				WithEndpointURL("http://test:8080/path"),
+				WithReconnectionPeriod(time.Second),
+				WithCompressor("gzip"),
 				WithHeaders(headers),
-				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithTLSCredentials(credentials.NewTLS(tlsCfg)),
+				WithServiceConfig("{}"),
+				WithDialOption(dialOptions...),
+				WithGRPCConn(&grpc.ClientConn{}),
+				WithTimeout(2 * time.Second),
+				WithRetry(RetryConfig(rc)),
 			},
-			want: Config{
-				Endpoint:    NewSetting("test"),
-				Path:        NewSetting("/path"),
-				Insecure:    NewSetting(true),
-				TLSCfg:      NewSetting(tlsCfg),
-				Headers:     NewSetting(headers),
-				Compression: NewSetting(GzipCompression),
-				Timeout:     NewSetting(time.Second),
-				RetryCfg:    NewSetting(rc),
+			want: config{
+				endpoint:           conf.NewSetting("test:8080"),
+				insecure:           conf.NewSetting(true),
+				headers:            conf.NewSetting(headers),
+				compression:        conf.NewSetting(GzipCompression),
+				timeout:            conf.NewSetting(2 * time.Second),
+				retryCfg:           conf.NewSetting(rc),
+				gRPCCredentials:    conf.NewSetting(credentials.NewTLS(tlsCfg)),
+				serviceConfig:      conf.NewSetting("{}"),
+				reconnectionPeriod: conf.NewSetting(time.Second),
+				gRPCConn:           conf.NewSetting(&grpc.ClientConn{}),
+				dialOptions:        conf.NewSetting(dialOptions),
 			},
 		},
 		{
@@ -136,44 +135,39 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithEndpointURL("http://test:8080/path"),
 			},
-			want: Config{
-				Endpoint: NewSetting("test:8080"),
-				Path:     NewSetting("/path"),
-				Insecure: NewSetting(true),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting("test:8080"),
+				insecure: conf.NewSetting(true),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
-			name: "EndpointPrecidence",
+			name: "EndpointPrecedence",
 			options: []Option{
 				WithEndpointURL("https://test:8080/path"),
 				WithEndpoint("not-test:9090"),
-				WithURLPath("/alt"),
 				WithInsecure(),
 			},
-			want: Config{
-				Endpoint: NewSetting("not-test:9090"),
-				Path:     NewSetting("/alt"),
-				Insecure: NewSetting(true),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting("not-test:9090"),
+				insecure: conf.NewSetting(true),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
-			name: "EndpointURLPrecidence",
+			name: "EndpointURLPrecedence",
 			options: []Option{
 				WithEndpoint("not-test:9090"),
-				WithURLPath("/alt"),
 				WithInsecure(),
 				WithEndpointURL("https://test:8080/path"),
 			},
-			want: Config{
-				Endpoint: NewSetting("test:8080"),
-				Path:     NewSetting("/path"),
-				Insecure: NewSetting(false),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting("test:8080"),
+				insecure: conf.NewSetting(false),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -187,15 +181,14 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "key_path",
 			},
-			want: Config{
-				Endpoint:    NewSetting("env.endpoint:8080"),
-				Path:        NewSetting("/prefix"),
-				Insecure:    NewSetting(false),
-				TLSCfg:      NewSetting(tlsCfg),
-				Headers:     NewSetting(headers),
-				Compression: NewSetting(GzipCompression),
-				Timeout:     NewSetting(15 * time.Second),
-				RetryCfg:    NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint:    conf.NewSetting("env.endpoint:8080"),
+				insecure:    conf.NewSetting(false),
+				tlsCfg:      conf.NewSetting(tlsCfg),
+				headers:     conf.NewSetting(headers),
+				compression: conf.NewSetting(GzipCompression),
+				timeout:     conf.NewSetting(15 * time.Second),
+				retryCfg:    conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -203,12 +196,11 @@ func TestNewConfig(t *testing.T) {
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint",
 			},
-			want: Config{
-				Endpoint: NewSetting("env.endpoint"),
-				Path:     NewSetting("/"),
-				Insecure: NewSetting(true),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting("env.endpoint"),
+				insecure: conf.NewSetting(true),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -222,15 +214,14 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "cert_path",
 				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "key_path",
 			},
-			want: Config{
-				Endpoint:    NewSetting("env.endpoint:8080"),
-				Path:        NewSetting("/prefix/v1/logs"),
-				Insecure:    NewSetting(true),
-				TLSCfg:      NewSetting(tlsCfg),
-				Headers:     NewSetting(headers),
-				Compression: NewSetting(NoCompression),
-				Timeout:     NewSetting(15 * time.Second),
-				RetryCfg:    NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint:    conf.NewSetting("env.endpoint:8080"),
+				insecure:    conf.NewSetting(true),
+				tlsCfg:      conf.NewSetting(tlsCfg),
+				headers:     conf.NewSetting(headers),
+				compression: conf.NewSetting(NoCompression),
+				timeout:     conf.NewSetting(15 * time.Second),
+				retryCfg:    conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -238,12 +229,11 @@ func TestNewConfig(t *testing.T) {
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
 			},
-			want: Config{
-				Endpoint: NewSetting("env.endpoint"),
-				Path:     NewSetting(defaultPath),
-				Insecure: NewSetting(true),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting("env.endpoint"),
+				insecure: conf.NewSetting(true),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -265,15 +255,14 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "key_path",
 			},
-			want: Config{
-				Endpoint:    NewSetting("env.endpoint:8080"),
-				Path:        NewSetting("/path"),
-				Insecure:    NewSetting(false),
-				TLSCfg:      NewSetting(tlsCfg),
-				Headers:     NewSetting(headers),
-				Compression: NewSetting(GzipCompression),
-				Timeout:     NewSetting(15 * time.Second),
-				RetryCfg:    NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint:    conf.NewSetting("env.endpoint:8080"),
+				insecure:    conf.NewSetting(false),
+				tlsCfg:      conf.NewSetting(tlsCfg),
+				headers:     conf.NewSetting(headers),
+				compression: conf.NewSetting(GzipCompression),
+				timeout:     conf.NewSetting(15 * time.Second),
+				retryCfg:    conf.NewSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -296,24 +285,24 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "key_path",
 			},
 			options: []Option{
-				WithEndpoint("test"),
-				WithURLPath("/path"),
+				WithEndpoint("foo"),
+				WithEndpointURL("https://test/path"),
 				WithInsecure(),
-				WithTLSClientConfig(tlsCfg),
-				WithCompression(GzipCompression),
+				WithTLSCredentials(credentials.NewTLS(tlsCfg)),
+				WithCompressor("gzip"),
 				WithHeaders(headers),
 				WithTimeout(time.Second),
-				WithRetry(rc),
+				WithRetry(RetryConfig(rc)),
 			},
-			want: Config{
-				Endpoint:    NewSetting("test"),
-				Path:        NewSetting("/path"),
-				Insecure:    NewSetting(true),
-				TLSCfg:      NewSetting(tlsCfg),
-				Headers:     NewSetting(headers),
-				Compression: NewSetting(GzipCompression),
-				Timeout:     NewSetting(time.Second),
-				RetryCfg:    NewSetting(rc),
+			want: config{
+				endpoint:        conf.NewSetting("test"),
+				insecure:        conf.NewSetting(true),
+				tlsCfg:          conf.NewSetting(tlsCfg),
+				headers:         conf.NewSetting(headers),
+				compression:     conf.NewSetting(GzipCompression),
+				timeout:         conf.NewSetting(time.Second),
+				retryCfg:        conf.NewSetting(rc),
+				gRPCCredentials: conf.NewSetting(credentials.NewTLS(tlsCfg)),
 			},
 		},
 		{
@@ -327,11 +316,10 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "invalid_cert",
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "invalid_key",
 			},
-			want: Config{
-				Endpoint: NewSetting(defaultEndpoint),
-				Path:     NewSetting(defaultPath),
-				Timeout:  NewSetting(defaultTimeout),
-				RetryCfg: NewSetting(defaultRetryCfg),
+			want: config{
+				endpoint: conf.NewSetting(defaultEndpoint),
+				timeout:  conf.NewSetting(defaultTimeout),
+				retryCfg: conf.NewSetting(defaultRetryCfg),
 			},
 			errs: []string{
 				`invalid OTEL_EXPORTER_OTLP_LOGS_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
@@ -364,9 +352,9 @@ func TestNewConfig(t *testing.T) {
 			c := newConfig(tc.options)
 
 			// Do not compare pointer values.
-			assertTLSConfig(t, tc.want.TLSCfg, c.TLSCfg)
-			var emptyTLS Setting[*tls.Config]
-			c.TLSCfg, tc.want.TLSCfg = emptyTLS, emptyTLS
+			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
+			var emptyTLS conf.Setting[*tls.Config]
+			c.tlsCfg, tc.want.tlsCfg = emptyTLS, emptyTLS
 
 			assert.Equal(t, tc.want, c)
 
@@ -377,7 +365,7 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
-func assertTLSConfig(t *testing.T, want, got Setting[*tls.Config]) {
+func assertTLSConfig(t *testing.T, want, got conf.Setting[*tls.Config]) {
 	t.Helper()
 
 	assert.Equal(t, want.Set, got.Set, "setting Set")
