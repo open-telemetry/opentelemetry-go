@@ -136,7 +136,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "EndpointPrecidence",
+			name: "EndpointPrecedence",
 			options: []Option{
 				WithEndpointURL("https://test:8080/path"),
 				WithEndpoint("not-test:9090"),
@@ -152,7 +152,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "EndpointURLPrecidence",
+			name: "EndpointURLPrecedence",
 			options: []Option{
 				WithEndpoint("not-test:9090"),
 				WithURLPath("/alt"),
