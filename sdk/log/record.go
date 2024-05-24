@@ -154,7 +154,7 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	n := r.AttributesLen()
 	if n == 0 {
-		// Avoid the more complex duplicate map lookups bellow.
+		// Avoid the more complex duplicate map lookups below.
 		attrs, r.dropped = dedup(attrs)
 
 		var drop int

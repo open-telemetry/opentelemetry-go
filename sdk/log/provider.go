@@ -92,7 +92,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
-// If p is shut down, a [noop.Logger] instace is returned.
+// If p is shut down, a [noop.Logger] instance is returned.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
