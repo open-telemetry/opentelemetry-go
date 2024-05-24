@@ -116,12 +116,12 @@ single `Expoter` interface.[^2]
 
 However, introducing a `Processor` interface makes it easier
 to create custom processor decorators[^3]
-and makes the design more aligned with the specifiation.
+and makes the design more aligned with the specification.
 
-### Embedd log.Record
+### Embed log.Record
 
 Because [`Record`](#record) and [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
-are very similar, there was a proposal to embedd `log.Record` in `Record` definition.
+are very similar, there was a proposal to embed `log.Record` in `Record` definition.
 
 [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
 supports only adding attributes.
