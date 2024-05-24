@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -24,18 +24,25 @@ func BenchmarkLoggerNewRecord(b *testing.B) {
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 
-	attrs5 := []log.KeyValue{
+	r.AddAttributes(
 		log.String("k1", "str"),
 		log.Float64("k2", 1.0),
 		log.Int("k3", 2),
 		log.Bool("k4", true),
 		log.Bytes("k5", []byte{1}),
-	}
-	r.AddAttributes(attrs5...)
+	)
 
 	r10 := r
-	r10.AddAttributes(attrs5...)
-	assert.Equal(b, 10, r10.AttributesLen())
+	r10.AddAttributes(
+		log.String("k6", "str"),
+		log.Float64("k7", 1.0),
+		log.Int("k8", 2),
+		log.Bool("k9", true),
+		log.Bytes("k10", []byte{1}),
+	)
+
+	require.Equal(b, 5, r.AttributesLen())
+	require.Equal(b, 10, r10.AttributesLen())
 
 	b.Run("5 attributes", func(b *testing.B) {
 		b.ReportAllocs()
