@@ -29,12 +29,6 @@ type concurrentBuffer struct {
 	m sync.Mutex
 }
 
-func (b *concurrentBuffer) Read(p []byte) (n int, err error) {
-	b.m.Lock()
-	defer b.m.Unlock()
-	return b.b.Read(p)
-}
-
 func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
 	b.m.Lock()
 	defer b.m.Unlock()
