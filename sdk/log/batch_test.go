@@ -469,7 +469,7 @@ func TestBatchProcessor(t *testing.T) {
 		// Second record will be written to export queue
 		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
 		require.Eventually(t, func() bool {
-			return len(b.exporter.input) == 1
+			return len(b.exporter.input) == cap(b.exporter.input)
 		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")
 
 		// Third record will be written to BatchProcessor.q
