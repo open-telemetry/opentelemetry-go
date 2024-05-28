@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.27.0
 	go.opentelemetry.io/otel/sdk/metric v1.27.0
 	go.opentelemetry.io/proto/otlp v1.2.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528155852-a33235495d66
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 )
