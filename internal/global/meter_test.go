@@ -375,3 +375,39 @@ func TestRegistrationDelegation(t *testing.T) {
 		assert.NoError(t, reg1.Unregister(), "duplicate unregister calls")
 	})
 }
+
+func TestMeterIdentity(t *testing.T) {
+	type id struct{ name, ver, url string }
+
+	ids := []id{
+		{"name-a", "version-a", "url-a"},
+		{"name-a", "version-a", "url-b"},
+		{"name-a", "version-b", "url-a"},
+		{"name-a", "version-b", "url-b"},
+		{"name-b", "version-a", "url-a"},
+		{"name-b", "version-a", "url-b"},
+		{"name-b", "version-b", "url-a"},
+		{"name-b", "version-b", "url-b"},
+	}
+
+	provider := &meterProvider{}
+	newMeter := func(i id) metric.Meter {
+		return provider.Meter(
+			i.name,
+			metric.WithInstrumentationVersion(i.ver),
+			metric.WithSchemaURL(i.url),
+		)
+	}
+
+	for i, id0 := range ids {
+		for j, id1 := range ids {
+			l0, l1 := newMeter(id0), newMeter(id1)
+
+			if i == j {
+				assert.Samef(t, l0, l1, "Meter(%v) != Meter(%v)", id0, id1)
+			} else {
+				assert.NotSamef(t, l0, l1, "Meter(%v) == Meter(%v)", id0, id1)
+			}
+		}
+	}
+}
