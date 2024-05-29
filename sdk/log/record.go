@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -21,6 +22,10 @@ import (
 // performed a quantitative survey of log library use and found this value to
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
+
+var logAttrDropped = sync.OnceFunc(func() {
+	global.Warn("limit reached: dropping log Record attributes")
+})
 
 // indexPool is a pool of index maps used for de-duplication.
 var indexPool = sync.Pool{
@@ -81,6 +86,16 @@ type Record struct {
 
 	attributeValueLengthLimit int
 	attributeCountLimit       int
+}
+
+func (r *Record) addDropped(n int) {
+	logAttrDropped()
+	r.dropped += n
+}
+
+func (r *Record) setDropped(n int) {
+	logAttrDropped()
+	r.dropped = n
 }
 
 // Timestamp returns the time when the log record occurred.
@@ -155,11 +170,12 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	n := r.AttributesLen()
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
-		attrs, r.dropped = dedup(attrs)
-
 		var drop int
+		attrs, drop = dedup(attrs)
+		r.setDropped(drop)
+
 		attrs, drop = head(attrs, r.attributeCountLimit)
-		r.dropped += drop
+		r.addDropped(drop)
 
 		r.addAttrs(attrs)
 		return
@@ -184,7 +200,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		// Last-value-wins for any duplicates in attrs.
 		idx, found := uIndex[a.Key]
 		if found {
-			r.dropped++
+			r.addDropped(1)
 			unique[idx] = a
 			continue
 		}
@@ -192,7 +208,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		idx, found = rIndex[a.Key]
 		if found {
 			// New attrs overwrite any existing with the same key.
-			r.dropped++
+			r.addDropped(1)
 			if idx < 0 {
 				r.front[-(idx + 1)] = a
 			} else {
@@ -212,7 +228,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
 		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
 		last := max(0, (r.attributeCountLimit - n))
-		r.dropped += len(attrs) - last
+		r.addDropped(len(attrs) - last)
 		attrs = attrs[:last]
 	}
 
@@ -261,11 +277,12 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	// TODO: apply truncation to string and []string values.
 	// TODO: deduplicate map values.
-	attrs, r.dropped = dedup(attrs)
-
 	var drop int
+	attrs, drop = dedup(attrs)
+	r.setDropped(drop)
+
 	attrs, drop = head(attrs, r.attributeCountLimit)
-	r.dropped += drop
+	r.addDropped(drop)
 
 	r.nFront = 0
 	var i int
@@ -396,7 +413,7 @@ func (r Record) applyValueLimits(val log.Value) log.Value {
 		// Deduplicate then truncate. Do not do at the same time to avoid
 		// wasted truncation operations.
 		kvs, dropped := dedup(val.AsMap())
-		r.dropped += dropped
+		r.addDropped(dropped)
 		for i := range kvs {
 			kvs[i] = r.applyAttrLimits(kvs[i])
 		}
