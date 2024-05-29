@@ -17,6 +17,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -137,6 +138,7 @@ type recordingSpan struct {
 	// ReadOnlySpan exported when the span ends.
 	attributes        []attribute.KeyValue
 	droppedAttributes int
+	logDropAttrsOnce  sync.Once
 
 	// events are stored in FIFO queue capped by configured limit.
 	events evictedQueue[Event]
@@ -219,7 +221,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
 		// No attributes allowed.
-		s.droppedAttributes += len(attributes)
+		s.addDroppedAttr(len(attributes))
 		return
 	}
 
@@ -236,12 +238,28 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 			continue
 		}
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
+}
+
+// Declared as a var so tests can override.
+var logDropAttrs = func() {
+	global.Warn("limit reached: dropping trace Span attributes")
+}
+
+// addDroppedAttr adds incr to the count of dropped attributes.
+//
+// The first, and only the first, time this method is called a warning will be
+// logged.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) addDroppedAttr(incr int) {
+	s.droppedAttributes += incr
+	s.logDropAttrsOnce.Do(logDropAttrs)
 }
 
 // addOverCapAttrs adds the attributes attrs to the span s while
@@ -273,7 +291,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 			continue
 		}
 
@@ -286,7 +304,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 		if len(s.attributes) >= limit {
 			// Do not just drop all of the remaining attributes, make sure
 			// updates are checked and performed.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 		} else {
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
