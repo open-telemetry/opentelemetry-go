@@ -34,7 +34,7 @@ func TestDropCount(t *testing.T) {
 		t.Errorf("got drop count %d want %d", gotDropCount, wantDropCount)
 	}
 	wantArr := []string{"value3", "value1", "value4"}
-	gotArr := q.queue
+	gotArr := q.copy()
 
 	if wantLen, gotLen := len(wantArr), len(gotArr); gotLen != wantLen {
 		t.Errorf("got array len %d want %d", gotLen, wantLen)

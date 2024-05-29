@@ -603,7 +603,7 @@ func (s *recordingSpan) Links() []Link {
 	if len(s.links.queue) == 0 {
 		return []Link{}
 	}
-	return s.interfaceArrayToLinksArray()
+	return s.links.copy()
 }
 
 // Events returns the events of this span.
@@ -613,7 +613,7 @@ func (s *recordingSpan) Events() []Event {
 	if len(s.events.queue) == 0 {
 		return []Event{}
 	}
-	return s.interfaceArrayToEventArray()
+	return s.events.copy()
 }
 
 // Status returns the status of this span.
@@ -735,30 +735,14 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	}
 	sd.droppedAttributeCount = s.droppedAttributes
 	if len(s.events.queue) > 0 {
-		sd.events = s.interfaceArrayToEventArray()
+		sd.events = s.events.copy()
 		sd.droppedEventCount = s.events.droppedCount
 	}
 	if len(s.links.queue) > 0 {
-		sd.links = s.interfaceArrayToLinksArray()
+		sd.links = s.links.copy()
 		sd.droppedLinkCount = s.links.droppedCount
 	}
 	return &sd
-}
-
-func (s *recordingSpan) interfaceArrayToLinksArray() []Link {
-	linkArr := make([]Link, 0)
-	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value)
-	}
-	return linkArr
-}
-
-func (s *recordingSpan) interfaceArrayToEventArray() []Event {
-	eventArr := make([]Event, 0)
-	for _, value := range s.events.queue {
-		eventArr = append(eventArr, value)
-	}
-	return eventArr
 }
 
 func (s *recordingSpan) addChild() {

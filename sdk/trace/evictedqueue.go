@@ -5,6 +5,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -45,4 +46,9 @@ func (eq *evictedQueue[T]) add(value T) {
 		eq.logDropped()
 	}
 	eq.queue = append(eq.queue, value)
+}
+
+// copy returns a copy of the evictedQueue.
+func (eq *evictedQueue[T]) copy() []T {
+	return slices.Clone(eq.queue)
 }
