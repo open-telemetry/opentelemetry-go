@@ -438,7 +438,7 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("DroppedLogs", func(t *testing.T) {
 		orig := global.GetLogger()
 		t.Cleanup(func() { global.SetLogger(orig) })
-		// Use concurrentBuffer for thread-safe reading buffer
+		// Use concurrentBuffer for concurrent-safe reading.
 		buf := new(concurrentBuffer)
 		stdr.SetVerbosity(1)
 		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
