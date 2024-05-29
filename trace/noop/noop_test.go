@@ -101,6 +101,14 @@ func TestTracerStartPropagatesSpanContext(t *testing.T) {
 	assert.False(t, span.IsRecording(), "recording span returned")
 }
 
+func TestStartSpanWithNilContext(t *testing.T) {
+	tp := NewTracerProvider()
+	tr := tp.Tracer("NoPanic")
+
+	// nolint:staticcheck // no nil context, but that's the point of the test.
+	assert.NotPanics(t, func() { tr.Start(nil, "should-not-panic") })
+}
+
 type recordingSpan struct{ Span }
 
 func (recordingSpan) IsRecording() bool { return true }

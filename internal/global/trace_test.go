@@ -235,3 +235,12 @@ func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
 	assert.Equal(t, sc, span.SpanContext())
 	assert.False(t, span.IsRecording())
 }
+
+func TestStartSpanWithNilContext(t *testing.T) {
+	ResetForTest(t)
+
+	tr := TracerProvider().Tracer("NoPanic")
+
+	// nolint:staticcheck // no nil context, but that's the point of the test.
+	assert.NotPanics(t, func() { tr.Start(nil, "should-not-panic") })
+}
