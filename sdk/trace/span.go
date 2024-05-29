@@ -139,10 +139,10 @@ type recordingSpan struct {
 	droppedAttributes int
 
 	// events are stored in FIFO queue capped by configured limit.
-	events evictedQueue
+	events evictedQueue[Event]
 
 	// links are stored in FIFO queue capped by configured limit.
-	links evictedQueue
+	links evictedQueue[Link]
 
 	// executionTracerTaskEnd ends the execution tracer span.
 	executionTracerTaskEnd func()
@@ -730,7 +730,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 func (s *recordingSpan) interfaceArrayToLinksArray() []Link {
 	linkArr := make([]Link, 0)
 	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(Link))
+		linkArr = append(linkArr, value)
 	}
 	return linkArr
 }
@@ -738,7 +738,7 @@ func (s *recordingSpan) interfaceArrayToLinksArray() []Link {
 func (s *recordingSpan) interfaceArrayToEventArray() []Event {
 	eventArr := make([]Event, 0)
 	for _, value := range s.events.queue {
-		eventArr = append(eventArr, value.(Event))
+		eventArr = append(eventArr, value)
 	}
 	return eventArr
 }
