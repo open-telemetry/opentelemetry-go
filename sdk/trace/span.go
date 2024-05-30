@@ -17,6 +17,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -137,12 +138,13 @@ type recordingSpan struct {
 	// ReadOnlySpan exported when the span ends.
 	attributes        []attribute.KeyValue
 	droppedAttributes int
+	logDropAttrsOnce  sync.Once
 
 	// events are stored in FIFO queue capped by configured limit.
-	events evictedQueue
+	events evictedQueue[Event]
 
 	// links are stored in FIFO queue capped by configured limit.
-	links evictedQueue
+	links evictedQueue[Link]
 
 	// executionTracerTaskEnd ends the execution tracer span.
 	executionTracerTaskEnd func()
@@ -219,7 +221,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
 		// No attributes allowed.
-		s.droppedAttributes += len(attributes)
+		s.addDroppedAttr(len(attributes))
 		return
 	}
 
@@ -236,12 +238,28 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 			continue
 		}
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
+}
+
+// Declared as a var so tests can override.
+var logDropAttrs = func() {
+	global.Warn("limit reached: dropping trace Span attributes")
+}
+
+// addDroppedAttr adds incr to the count of dropped attributes.
+//
+// The first, and only the first, time this method is called a warning will be
+// logged.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) addDroppedAttr(incr int) {
+	s.droppedAttributes += incr
+	s.logDropAttrsOnce.Do(logDropAttrs)
 }
 
 // addOverCapAttrs adds the attributes attrs to the span s while
@@ -273,7 +291,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 			continue
 		}
 
@@ -286,7 +304,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 		if len(s.attributes) >= limit {
 			// Do not just drop all of the remaining attributes, make sure
 			// updates are checked and performed.
-			s.droppedAttributes++
+			s.addDroppedAttr(1)
 		} else {
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
@@ -585,7 +603,7 @@ func (s *recordingSpan) Links() []Link {
 	if len(s.links.queue) == 0 {
 		return []Link{}
 	}
-	return s.interfaceArrayToLinksArray()
+	return s.links.copy()
 }
 
 // Events returns the events of this span.
@@ -595,7 +613,7 @@ func (s *recordingSpan) Events() []Event {
 	if len(s.events.queue) == 0 {
 		return []Event{}
 	}
-	return s.interfaceArrayToEventArray()
+	return s.events.copy()
 }
 
 // Status returns the status of this span.
@@ -717,30 +735,14 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	}
 	sd.droppedAttributeCount = s.droppedAttributes
 	if len(s.events.queue) > 0 {
-		sd.events = s.interfaceArrayToEventArray()
+		sd.events = s.events.copy()
 		sd.droppedEventCount = s.events.droppedCount
 	}
 	if len(s.links.queue) > 0 {
-		sd.links = s.interfaceArrayToLinksArray()
+		sd.links = s.links.copy()
 		sd.droppedLinkCount = s.links.droppedCount
 	}
 	return &sd
-}
-
-func (s *recordingSpan) interfaceArrayToLinksArray() []Link {
-	linkArr := make([]Link, 0)
-	for _, value := range s.links.queue {
-		linkArr = append(linkArr, value.(Link))
-	}
-	return linkArr
-}
-
-func (s *recordingSpan) interfaceArrayToEventArray() []Event {
-	eventArr := make([]Event, 0)
-	for _, value := range s.events.queue {
-		eventArr = append(eventArr, value.(Event))
-	}
-	return eventArr
 }
 
 func (s *recordingSpan) addChild() {

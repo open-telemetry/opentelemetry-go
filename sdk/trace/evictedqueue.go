@@ -3,23 +3,38 @@
 
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
+import (
+	"fmt"
+	"slices"
+	"sync"
+
+	"go.opentelemetry.io/otel/internal/global"
+)
+
 // evictedQueue is a FIFO queue with a configurable capacity.
-type evictedQueue struct {
-	queue        []interface{}
+type evictedQueue[T any] struct {
+	queue        []T
 	capacity     int
 	droppedCount int
+	logDropped   func()
 }
 
-func newEvictedQueue(capacity int) evictedQueue {
+func newEvictedQueue[T any](capacity int) evictedQueue[T] {
+	var tVal T
+	msg := fmt.Sprintf("limit reached: dropping trace %T", tVal)
 	// Do not pre-allocate queue, do this lazily.
-	return evictedQueue{capacity: capacity}
+	return evictedQueue[T]{
+		capacity:   capacity,
+		logDropped: sync.OnceFunc(func() { global.Warn(msg) }),
+	}
 }
 
 // add adds value to the evictedQueue eq. If eq is at capacity, the oldest
 // queued value will be discarded and the drop count incremented.
-func (eq *evictedQueue) add(value interface{}) {
+func (eq *evictedQueue[T]) add(value T) {
 	if eq.capacity == 0 {
 		eq.droppedCount++
+		eq.logDropped()
 		return
 	}
 
@@ -28,6 +43,12 @@ func (eq *evictedQueue) add(value interface{}) {
 		copy(eq.queue[:eq.capacity-1], eq.queue[1:])
 		eq.queue = eq.queue[:eq.capacity-1]
 		eq.droppedCount++
+		eq.logDropped()
 	}
 	eq.queue = append(eq.queue, value)
+}
+
+// copy returns a copy of the evictedQueue.
+func (eq *evictedQueue[T]) copy() []T {
+	return slices.Clone(eq.queue)
 }
