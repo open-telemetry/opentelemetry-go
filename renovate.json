@@ -20,5 +20,10 @@
       "matchDepTypes": ["indirect"],
       "enabled": false
     }
+    {
+      "matchManagers": ["pip_requirements"],
+      "packageNames": ["codespell"],
+      "enabled": true
+    }
   ]
 }
