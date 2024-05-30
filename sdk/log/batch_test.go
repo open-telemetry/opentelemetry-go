@@ -384,7 +384,7 @@ func TestBatchProcessor(t *testing.T) {
 				require.NoError(t, b.OnEmit(ctx, Record{}))
 			}
 			assert.Eventually(t, func() bool {
-				return e.ExportN() > 0
+				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
 			}, 2*time.Second, time.Microsecond)
 			// 1 export being performed, 1 export in buffer chan, >1 batch
 			// still in queue that an attempt to flush will be made on.

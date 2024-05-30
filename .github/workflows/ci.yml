@@ -103,11 +103,12 @@ jobs:
           cp coverage.html $TEST_RESULTS
       - name: Upload coverage report
         uses: codecov/codecov-action@v4.4.1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./coverage.txt
           fail_ci_if_error: true
           verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Store coverage test output
         uses: actions/upload-artifact@v4
         with:
