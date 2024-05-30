@@ -234,6 +234,22 @@ func TestTruncateAttr(t *testing.T) {
 	}
 }
 
+func TestLogDropAttrs(t *testing.T) {
+	orig := logDropAttrs
+	t.Cleanup(func() { logDropAttrs = orig })
+
+	var called bool
+	logDropAttrs = func() { called = true }
+
+	s := &recordingSpan{}
+	s.addDroppedAttr(1)
+	assert.True(t, called, "logDropAttrs not called")
+
+	called = false
+	s.addDroppedAttr(1)
+	assert.False(t, called, "logDropAttrs called multiple times for same Span")
+}
+
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 	var attrs []attribute.KeyValue
 	for i := 0; i < 100; i++ {
