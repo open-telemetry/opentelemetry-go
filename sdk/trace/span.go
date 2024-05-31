@@ -383,9 +383,17 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		return
 	}
 
+	config := trace.NewSpanEndConfig(options...)
+
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime)
+	var et time.Time
+	// Setting endTime to non-zero marks the span as ended and not recording.
+	if config.Timestamp().IsZero() {
+		et = internal.MonotonicEndTime(s.startTime)
+	} else {
+		et = config.Timestamp()
+	}
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -393,7 +401,6 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		return
 	}
 
-	config := trace.NewSpanEndConfig(options...)
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
@@ -418,12 +425,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 
 	s.mu.Lock()
-	// Setting endTime to non-zero marks the span as ended and not recording.
-	if config.Timestamp().IsZero() {
-		s.endTime = et
-	} else {
-		s.endTime = config.Timestamp()
-	}
+	s.endTime = et
 	s.mu.Unlock()
 
 	sps := s.tracer.provider.getSpanProcessors()
