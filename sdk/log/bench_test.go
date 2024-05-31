@@ -31,15 +31,27 @@ func BenchmarkProcessor(b *testing.B) {
 			},
 		},
 		{
-			name: "ModifySimple",
+			name: "ModifyTimestampSimple",
 			f: func() Processor {
 				return timestampDecorator{NewSimpleProcessor(noopExporter{})}
 			},
 		},
 		{
-			name: "ModifyBatch",
+			name: "ModifyTimestampBatch",
 			f: func() Processor {
 				return timestampDecorator{NewBatchProcessor(noopExporter{})}
+			},
+		},
+		{
+			name: "ModifyAttributesSimple",
+			f: func() Processor {
+				return attrDecorator{NewSimpleProcessor(noopExporter{})}
+			},
+		},
+		{
+			name: "ModifyAttributesBatch",
+			f: func() Processor {
+				return attrDecorator{NewBatchProcessor(noopExporter{})}
 			},
 		},
 	} {
@@ -74,5 +86,15 @@ type timestampDecorator struct {
 func (e timestampDecorator) OnEmit(ctx context.Context, r Record) error {
 	r = r.Clone()
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
+	return e.Processor.OnEmit(ctx, r)
+}
+
+type attrDecorator struct {
+	Processor
+}
+
+func (e attrDecorator) OnEmit(ctx context.Context, r Record) error {
+	r = r.Clone()
+	r.SetAttributes(log.String("replace", "me"))
 	return e.Processor.OnEmit(ctx, r)
 }
