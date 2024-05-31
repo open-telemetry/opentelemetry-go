@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"go.opentelemetry.io/otel/trace"
@@ -385,7 +384,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 
 	// Store the end time as soon as possible to avoid artificially increasing
 	// the span's duration in case some operation below takes a while.
-	et := internal.MonotonicEndTime(s.startTime)
+	et := monotonicEndTime(s.startTime)
 
 	// Do relative expensive check now that we have an end time and see if we
 	// need to do any more processing.
@@ -434,6 +433,16 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	for _, sp := range sps {
 		sp.sp.OnEnd(snap)
 	}
+}
+
+// monotonicEndTime returns the end time at present but offset from start,
+// monotonically.
+//
+// The monotonic clock is used in subtractions hence the duration since start
+// added back to start gives end as a monotonic time. See
+// https://golang.org/pkg/time/#hdr-Monotonic_Clocks
+func monotonicEndTime(start time.Time) time.Time {
+	return start.Add(time.Since(start))
 }
 
 // RecordError will record err as a span event for this span. An additional call to
