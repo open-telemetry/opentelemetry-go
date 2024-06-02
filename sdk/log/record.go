@@ -391,12 +391,12 @@ func (r *Record) Clone() Record {
 	return res
 }
 
-func (r Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
+func (r *Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
 	attr.Value = r.applyValueLimits(attr.Value)
 	return attr
 }
 
-func (r Record) applyValueLimits(val log.Value) log.Value {
+func (r *Record) applyValueLimits(val log.Value) log.Value {
 	switch val.Kind() {
 	case log.KindString:
 		s := val.AsString()

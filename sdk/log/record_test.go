@@ -446,6 +446,8 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 		name        string
 		limit       int
 		input, want log.Value
+
+		expectedDropped int
 	}{
 		{
 			name:  "Empty",
@@ -531,6 +533,18 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 				log.Map("7", log.String("a", "")),
 			),
 		},
+		{
+			name:  "MapWithDuplicate",
+			limit: 0,
+			input: log.MapValue(
+				log.Bool("subKey", true),
+				log.Bool("subKey", false),
+			),
+			want: log.MapValue(
+				log.Bool("subKey", false),
+			),
+			expectedDropped: 1,
+		},
 	}
 
 	for _, tc := range testcases {
@@ -548,6 +562,8 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 				r.SetAttributes(kv)
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
 			})
+
+			require.Equal(t, tc.expectedDropped, r.DroppedAttributes())
 		})
 	}
 }
