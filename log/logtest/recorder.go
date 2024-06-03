@@ -80,7 +80,8 @@ type EmittedRecord struct {
 	ctx context.Context
 }
 
-func (rwc EmittedRecord) Contect() context.Context {
+// Context provides the context emitted with the record.
+func (rwc EmittedRecord) Context() context.Context {
 	return rwc.ctx
 }
 
