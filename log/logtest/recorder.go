@@ -77,7 +77,11 @@ type ScopeRecords struct {
 type RecordWithContext struct {
 	log.Record
 
-	Context context.Context
+	ctx context.Context
+}
+
+func (rwc RecordWithContext) Contect() context.Context {
+	return rwc.ctx
 }
 
 // Recorder is a recorder that stores all received log records
