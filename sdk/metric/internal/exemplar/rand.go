@@ -7,16 +7,21 @@ import (
 	"context"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// rng is used to make sampling decisions.
-//
-// Do not use crypto/rand. There is no reason for the decrease in performance
-// given this is not a security sensitive decision.
-var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+var (
+	// rng is used to make sampling decisions.
+	//
+	// Do not use crypto/rand. There is no reason for the decrease in performance
+	// given this is not a security sensitive decision.
+	rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	// Ensure concurrent safe accecess to rng and its underlying source.
+	rngMu sync.Mutex
+)
 
 // random returns, as a float64, a uniform pseudo-random number in the open
 // interval (0.0,1.0).
@@ -37,6 +42,9 @@ func random() float64 {
 	//   (float64(rng.Int63()>>11) + 0.5) * (1.0 / 4503599627370496.0)
 	//
 	// There are likely many other methods to explore here as well.
+
+	rngMu.Lock()
+	defer rngMu.Unlock()
 
 	f := rng.Float64()
 	for f == 0 {
