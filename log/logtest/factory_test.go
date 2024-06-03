@@ -67,6 +67,23 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	assertAttributes(t, attrs, record1)
 }
 
+func assertRecord(t *testing.T, want log.Record, got log.Record) {
+	t.Helper()
+
+	assert.Equal(t, want.Timestamp(), got.Timestamp())
+	assert.Equal(t, want.ObservedTimestamp(), got.ObservedTimestamp())
+	assert.Equal(t, want.Severity(), got.Severity())
+	assert.Equal(t, want.SeverityText(), got.SeverityText())
+	assertBody(t, want.Body(), got)
+
+	var attrs []log.KeyValue
+	want.WalkAttributes(func(kv log.KeyValue) bool {
+		attrs = append(attrs, kv)
+		return true
+	})
+	assertAttributes(t, attrs, got)
+}
+
 func assertBody(t *testing.T, want log.Value, r log.Record) {
 	t.Helper()
 	got := r.Body()
