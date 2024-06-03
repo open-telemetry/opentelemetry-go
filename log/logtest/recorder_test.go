@@ -111,25 +111,37 @@ func TestLoggerEnabledFnUnset(t *testing.T) {
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
 	l := r.Logger("test")
-	assert.Len(t, r.Result()[0].Records, 0)
+	assert.Len(t, r.Result()[0].RecordsWithContext, 0)
 
 	r1 := log.Record{}
 	r1.SetSeverity(log.SeverityInfo)
-	l.Emit(context.Background(), r1)
-	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
+	ctx := context.Background()
+
+	l.Emit(ctx, r1)
+	assert.Equal(t, r.Result()[0].RecordsWithContext, []RecordWithContext{
+		{r1, ctx},
+	})
 
 	nl := r.Logger("test")
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[1].RecordsWithContext)
 
 	r2 := log.Record{}
 	r2.SetSeverity(log.SeverityError)
-	nl.Emit(context.Background(), r2)
-	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
-	assert.Equal(t, r.Result()[1].Records, []log.Record{r2})
+	// We want a non-background context here so it's different from `ctx`.
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	nl.Emit(ctx2, r2)
+	assert.Equal(t, r.Result()[0].RecordsWithContext, []RecordWithContext{
+		{r1, ctx},
+	})
+	assert.Equal(t, r.Result()[1].RecordsWithContext, []RecordWithContext{
+		{r2, ctx2},
+	})
 
 	r.Reset()
-	assert.Empty(t, r.Result()[0].Records)
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[0].RecordsWithContext)
+	assert.Empty(t, r.Result()[1].RecordsWithContext)
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {

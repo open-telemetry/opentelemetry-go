@@ -67,8 +67,17 @@ type ScopeRecords struct {
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
 
-	// Records are the log records this instrumentation scope recorded.
-	Records []log.Record
+	// RecordsWithContext are the log records, and their associated context this
+	// instrumentation scope recorded.
+	RecordsWithContext []RecordWithContext
+}
+
+// RecordWithContext holds a log record the instrumentation received, alongside
+// its context.
+type RecordWithContext struct {
+	log.Record
+
+	Context context.Context
 }
 
 // Recorder is a recorder that stores all received log records
@@ -150,11 +159,11 @@ func (l *logger) Enabled(ctx context.Context, record log.Record) bool {
 }
 
 // Emit stores the log record.
-func (l *logger) Emit(_ context.Context, record log.Record) {
+func (l *logger) Emit(ctx context.Context, record log.Record) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.scopeRecord.Records = append(l.scopeRecord.Records, record)
+	l.scopeRecord.RecordsWithContext = append(l.scopeRecord.RecordsWithContext, RecordWithContext{record, ctx})
 }
 
 // Reset clears the in-memory log records.
@@ -162,5 +171,5 @@ func (l *logger) Reset() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.scopeRecord.Records = nil
+	l.scopeRecord.RecordsWithContext = nil
 }
