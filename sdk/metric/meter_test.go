@@ -168,7 +168,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
-	// The synchronous measurement methods must ignore the context cancelation.
+	// The synchronous measurement methods must ignore the context cancellation.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
