@@ -103,6 +103,7 @@ type timestampSetter struct {
 }
 
 func (e timestampSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
+	r = r.Clone()
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
 	return r, nil
 }
@@ -123,6 +124,7 @@ type attrSetter struct {
 }
 
 func (e attrSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
+	r = r.Clone()
 	r.SetAttributes(log.String("replace", "me"))
 	return r, nil
 }
