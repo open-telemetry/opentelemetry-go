@@ -31,8 +31,8 @@ func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimplePr
 }
 
 // OnEmit batches provided log record.
-func (s *SimpleProcessor) OnEmit(ctx context.Context, r Record) error {
-	return s.exporter.Export(ctx, []Record{r})
+func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
+	return s.exporter.Export(ctx, []Record{*r})
 }
 
 // Enabled returns true.

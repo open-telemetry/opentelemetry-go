@@ -31,9 +31,6 @@ type Exporter interface {
 	// Handler.
 	//
 	// Implementations must not retain the records slice.
-	//
-	// Before modifying a Record, the implementation must use Record.Clone
-	// to create a copy that shares no state with the original.
 	Export(ctx context.Context, records []Record) error
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.

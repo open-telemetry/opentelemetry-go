@@ -45,9 +45,9 @@ func TestEmptyBatchConfig(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var bp BatchProcessor
 		ctx := context.Background()
-		var record Record
+		record := new(Record)
 		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
-		assert.False(t, bp.Enabled(ctx, record), "Enabled")
+		assert.False(t, bp.Enabled(ctx, *record), "Enabled")
 		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
 		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
 	})
@@ -198,7 +198,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for _, r := range make([]Record, size) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+			assert.NoError(t, b.OnEmit(ctx, &r))
 		}
 		var got []Record
 		assert.Eventually(t, func() bool {
@@ -221,7 +221,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for _, r := range make([]Record, 10*batch) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+			assert.NoError(t, b.OnEmit(ctx, &r))
 		}
 		assert.Eventually(t, func() bool {
 			return e.ExportN() > 1
@@ -244,7 +244,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for _, r := range make([]Record, 2*batch) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+			assert.NoError(t, b.OnEmit(ctx, &r))
 		}
 
 		var n int
@@ -255,7 +255,7 @@ func TestBatchProcessor(t *testing.T) {
 
 		var err error
 		require.Eventually(t, func() bool {
-			err = b.OnEmit(ctx, Record{})
+			err = b.OnEmit(ctx, new(Record))
 			return true
 		}, time.Second, time.Microsecond, "OnEmit blocked")
 		assert.NoError(t, err)
@@ -303,7 +303,7 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
-			assert.NoError(t, b.OnEmit(ctx, Record{}))
+			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.Equal(t, want, e.ExportN(), "Export called after shutdown")
 		})
 
@@ -311,7 +311,7 @@ func TestBatchProcessor(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
 
-			assert.NoError(t, b.OnEmit(ctx, Record{}))
+			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
 
 			assert.NoError(t, b.ForceFlush(ctx))
@@ -344,7 +344,7 @@ func TestBatchProcessor(t *testing.T) {
 			)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
-			var r Record
+			r := new(Record)
 			r.SetBody(log.BoolValue(true))
 			require.NoError(t, b.OnEmit(ctx, r))
 
@@ -353,7 +353,7 @@ func TestBatchProcessor(t *testing.T) {
 			if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
 				got := e.Records()
 				if assert.Len(t, got[0], 1, "records received") {
-					assert.Equal(t, r, got[0][0])
+					assert.Equal(t, *r, got[0][0])
 				}
 			}
 		})
@@ -381,7 +381,7 @@ func TestBatchProcessor(t *testing.T) {
 
 			// Enqueue 10 x "batch size" amount of records.
 			for i := 0; i < 10*batch; i++ {
-				require.NoError(t, b.OnEmit(ctx, Record{}))
+				require.NoError(t, b.OnEmit(ctx, new(Record)))
 			}
 			assert.Eventually(t, func() bool {
 				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
@@ -423,7 +423,7 @@ func TestBatchProcessor(t *testing.T) {
 			b := NewBatchProcessor(e)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
-			var r Record
+			r := new(Record)
 			r.SetBody(log.BoolValue(true))
 			_ = b.OnEmit(ctx, r)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
@@ -453,7 +453,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		var r Record
+		r := new(Record)
 		// First record will be blocked by testExporter.Export
 		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
 		require.Eventually(t, func() bool {
@@ -497,7 +497,7 @@ func TestBatchProcessor(t *testing.T) {
 					case <-ctx.Done():
 						return
 					default:
-						assert.NoError(t, b.OnEmit(ctx, Record{}))
+						assert.NoError(t, b.OnEmit(ctx, new(Record)))
 						// Ignore partial flush errors.
 						_ = b.ForceFlush(ctx)
 					}
@@ -642,7 +642,7 @@ func TestQueue(t *testing.T) {
 }
 
 func BenchmarkBatchProcessorOnEmit(b *testing.B) {
-	var r Record
+	r := new(Record)
 	body := log.BoolValue(true)
 	r.SetBody(body)
 
