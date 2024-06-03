@@ -275,8 +275,6 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
-	// TODO: apply truncation to string and []string values.
-	// TODO: deduplicate map values.
 	var drop int
 	attrs, drop = dedup(attrs)
 	r.setDropped(drop)

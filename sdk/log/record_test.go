@@ -434,14 +434,14 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				require.Equal(t, tc.droppedAttrs, r.DroppedAttributes())
 			})
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r.SetAttributes(kv)
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				require.Equal(t, tc.droppedAttrs, r.DroppedAttributes())
 			})
-
-			require.Equal(t, tc.droppedAttrs, r.DroppedAttributes())
 		})
 	}
 }
