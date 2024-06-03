@@ -420,7 +420,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 				log.String("g", "GG"),
 				log.String("h", "H"),
 			),
-			droppedAttrs: 10,
+			wantDroppedAttrs: 10,
 		},
 	}
 
