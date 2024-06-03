@@ -99,8 +99,7 @@ func BenchmarkProcessor(b *testing.B) {
 	}
 }
 
-type timestampSetter struct {
-}
+type timestampSetter struct{}
 
 func (e timestampSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
 	r = r.Clone()
@@ -120,8 +119,7 @@ func (e timestampSetter) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-type attrSetter struct {
-}
+type attrSetter struct{}
 
 func (e attrSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
 	r = r.Clone()
