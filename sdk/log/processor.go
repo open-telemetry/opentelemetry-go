@@ -26,8 +26,6 @@ type Processor interface {
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
 	//
-	// The modification done to the record are visible
-	// to the subsequent registered processors.
 	// Implementations must not modify the record after OnEmit returns.
 	OnEmit(ctx context.Context, record *Record) error
 	// Enabled returns whether the Processor will process for the given context
