@@ -109,7 +109,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		exporter = defaultNoopExporter
 	}
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
-	// to ensure each export completes in timeout (instead of all chuncked
+	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
 	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched

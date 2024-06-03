@@ -566,7 +566,7 @@ The `Logger` does not have methods like `Enabled`, `SetSeverity`, etc.
 as the Bridge API needs to follow (be compliant with)
 the [specification](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/)
 
-Moreover, the Bridge API is intendend to be used to implement bridges.
+Moreover, the Bridge API is intended to be used to implement bridges.
 Applications should not use it directly. The applications should use logging packages
 such as [`slog`](https://pkg.go.dev/log/slog),
 [`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus),

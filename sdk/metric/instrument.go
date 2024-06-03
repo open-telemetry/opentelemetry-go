@@ -18,10 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
-var (
-	zeroInstrumentKind InstrumentKind
-	zeroScope          instrumentation.Scope
-)
+var zeroScope instrumentation.Scope
 
 // InstrumentKind is the identifier of a group of instruments that all
 // performing the same function.
@@ -77,11 +74,11 @@ type Instrument struct {
 	nonComparable // nolint: unused
 }
 
-// empty returns if all fields of i are their zero-value.
-func (i Instrument) empty() bool {
+// IsEmpty returns if all Instrument fields are their zero-value.
+func (i Instrument) IsEmpty() bool {
 	return i.Name == "" &&
 		i.Description == "" &&
-		i.Kind == zeroInstrumentKind &&
+		i.Kind == instrumentKindUndefined &&
 		i.Unit == "" &&
 		i.Scope == zeroScope
 }
@@ -112,7 +109,7 @@ func (i Instrument) matchesDescription(other Instrument) bool {
 // matchesKind returns true if the Kind of i is its zero-value or it equals the
 // Kind of other, otherwise false.
 func (i Instrument) matchesKind(other Instrument) bool {
-	return i.Kind == zeroInstrumentKind || i.Kind == other.Kind
+	return i.Kind == instrumentKindUndefined || i.Kind == other.Kind
 }
 
 // matchesUnit returns true if the Unit of i is its zero-value or it equals the

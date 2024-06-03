@@ -124,6 +124,8 @@ linters-settings:
           - "**/example/**/*.go"
           - "**/trace/*.go"
           - "**/trace/**/*.go"
+          - "**/log/*.go"
+          - "**/log/**/*.go"
         deny:
           - pkg: "go.opentelemetry.io/otel/internal$"
             desc: Do not use cross-module internal packages.

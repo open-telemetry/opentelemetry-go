@@ -235,3 +235,39 @@ func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
 	assert.Equal(t, sc, span.SpanContext())
 	assert.False(t, span.IsRecording())
 }
+
+func TestTracerIdentity(t *testing.T) {
+	type id struct{ name, ver, url string }
+
+	ids := []id{
+		{"name-a", "version-a", "url-a"},
+		{"name-a", "version-a", "url-b"},
+		{"name-a", "version-b", "url-a"},
+		{"name-a", "version-b", "url-b"},
+		{"name-b", "version-a", "url-a"},
+		{"name-b", "version-a", "url-b"},
+		{"name-b", "version-b", "url-a"},
+		{"name-b", "version-b", "url-b"},
+	}
+
+	provider := &tracerProvider{}
+	newTracer := func(i id) trace.Tracer {
+		return provider.Tracer(
+			i.name,
+			trace.WithInstrumentationVersion(i.ver),
+			trace.WithSchemaURL(i.url),
+		)
+	}
+
+	for i, id0 := range ids {
+		for j, id1 := range ids {
+			l0, l1 := newTracer(id0), newTracer(id1)
+
+			if i == j {
+				assert.Samef(t, l0, l1, "Tracer(%v) != Tracer(%v)", id0, id1)
+			} else {
+				assert.NotSamef(t, l0, l1, "Tracer(%v) == Tracer(%v)", id0, id1)
+			}
+		}
+	}
+}

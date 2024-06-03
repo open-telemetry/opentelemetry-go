@@ -5,17 +5,17 @@ go 1.21
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint v1.58.2
-	github.com/itchyny/gojq v0.12.15
+	github.com/golangci/golangci-lint v1.59.0
+	github.com/itchyny/gojq v0.12.16
 	github.com/jcchavezs/porto v0.6.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.13.0
 	go.opentelemetry.io/build-tools/gotmpl v0.13.0
 	go.opentelemetry.io/build-tools/multimod v0.13.0
 	go.opentelemetry.io/build-tools/semconvgen v0.13.0
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/tools v0.21.0
-	golang.org/x/vuln v1.1.0
+	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
+	golang.org/x/tools v0.21.1-0.20240603183908-4478db00aae5
+	golang.org/x/vuln v1.1.1
 )
 
 require (
@@ -26,8 +26,8 @@ require (
 	github.com/Abirdcfly/dupword v0.0.14 // indirect
 	github.com/Antonboom/errname v0.1.13 // indirect
 	github.com/Antonboom/nilnil v0.1.9 // indirect
-	github.com/Antonboom/testifylint v1.2.0 // indirect
-	github.com/BurntSushi/toml v1.3.2 // indirect
+	github.com/Antonboom/testifylint v1.3.0 // indirect
+	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Crocmagnon/fatcontext v0.2.2 // indirect
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.2.0 // indirect
@@ -69,7 +69,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.6 // indirect
-	github.com/go-critic/go-critic v0.11.3 // indirect
+	github.com/go-critic/go-critic v0.11.4 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.11.0 // indirect
@@ -98,11 +98,11 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
+	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/itchyny/timefmt-go v0.1.5 // indirect
+	github.com/itchyny/timefmt-go v0.1.6 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jgautheron/goconst v1.7.1 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
@@ -160,7 +160,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.25.0 // indirect
-	github.com/securego/gosec/v2 v2.20.0 // indirect
+	github.com/securego/gosec/v2 v2.20.1-0.20240525090044-5f0084eb01a9 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -197,7 +197,7 @@ require (
 	github.com/ykadowak/zerologlint v0.1.5 // indirect
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.12.2 // indirect
-	go-simpler.org/sloglint v0.6.0 // indirect
+	go-simpler.org/sloglint v0.7.0 // indirect
 	go.opentelemetry.io/build-tools v0.13.0 // indirect
 	go.uber.org/automaxprocs v1.5.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
