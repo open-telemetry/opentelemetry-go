@@ -44,10 +44,11 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 
 	var r log.Record
 	r.SetSeverityText("test")
-	_ = s.OnEmit(context.Background(), r)
+	nextR, _ := s.OnEmit(context.Background(), r)
 
 	require.True(t, e.exportCalled, "exporter Export not called")
 	assert.Equal(t, []log.Record{r}, e.records)
+	assert.Equal(t, r, nextR)
 }
 
 func TestSimpleProcessorEnabled(t *testing.T) {
@@ -83,7 +84,7 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			_ = s.OnEmit(ctx, r)
+			_, _ = s.OnEmit(ctx, r)
 			_ = s.Enabled(ctx, r)
 			_ = s.Shutdown(ctx)
 			_ = s.ForceFlush(ctx)
@@ -105,7 +106,7 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 		var out error
 
 		for pb.Next() {
-			out = s.OnEmit(ctx, r)
+			r, out = s.OnEmit(ctx, r)
 		}
 
 		_ = out

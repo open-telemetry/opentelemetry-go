@@ -16,47 +16,67 @@ import (
 func BenchmarkProcessor(b *testing.B) {
 	for _, tc := range []struct {
 		name string
-		f    func() Processor
+		f    func() []Processor
 	}{
 		{
 			name: "Simple",
-			f: func() Processor {
-				return NewSimpleProcessor(noopExporter{})
+			f: func() []Processor {
+				return []Processor{
+					NewSimpleProcessor(noopExporter{}),
+				}
 			},
 		},
 		{
 			name: "Batch",
-			f: func() Processor {
-				return NewBatchProcessor(noopExporter{})
+			f: func() []Processor {
+				return []Processor{
+					NewBatchProcessor(noopExporter{}),
+				}
 			},
 		},
 		{
 			name: "ModifyTimestampSimple",
-			f: func() Processor {
-				return timestampDecorator{NewSimpleProcessor(noopExporter{})}
+			f: func() []Processor {
+				return []Processor{
+					timestampSetter{},
+					NewSimpleProcessor(noopExporter{}),
+				}
 			},
 		},
 		{
 			name: "ModifyTimestampBatch",
-			f: func() Processor {
-				return timestampDecorator{NewBatchProcessor(noopExporter{})}
+			f: func() []Processor {
+				return []Processor{
+					timestampSetter{},
+					NewBatchProcessor(noopExporter{}),
+				}
 			},
 		},
 		{
 			name: "ModifyAttributesSimple",
-			f: func() Processor {
-				return attrDecorator{NewSimpleProcessor(noopExporter{})}
+			f: func() []Processor {
+				return []Processor{
+					attrSetter{},
+					NewSimpleProcessor(noopExporter{}),
+				}
 			},
 		},
 		{
 			name: "ModifyAttributesBatch",
-			f: func() Processor {
-				return attrDecorator{NewBatchProcessor(noopExporter{})}
+			f: func() []Processor {
+				return []Processor{
+					attrSetter{},
+					NewBatchProcessor(noopExporter{}),
+				}
 			},
 		},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
-			provider := NewLoggerProvider(WithProcessor(tc.f()))
+			var opts []LoggerProviderOption
+			for _, p := range tc.f() {
+				opts = append(opts, WithProcessor(p))
+			}
+			provider := NewLoggerProvider(opts...)
 			b.Cleanup(func() { assert.NoError(b, provider.Shutdown(context.Background())) })
 			logger := provider.Logger(b.Name())
 
@@ -79,22 +99,42 @@ func BenchmarkProcessor(b *testing.B) {
 	}
 }
 
-type timestampDecorator struct {
-	Processor
+type timestampSetter struct {
 }
 
-func (e timestampDecorator) OnEmit(ctx context.Context, r Record) error {
-	r = r.Clone()
+func (e timestampSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
-	return e.Processor.OnEmit(ctx, r)
+	return r, nil
 }
 
-type attrDecorator struct {
-	Processor
+func (e timestampSetter) Enabled(context.Context, Record) bool {
+	return true
 }
 
-func (e attrDecorator) OnEmit(ctx context.Context, r Record) error {
-	r = r.Clone()
+func (e timestampSetter) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (e timestampSetter) ForceFlush(ctx context.Context) error {
+	return nil
+}
+
+type attrSetter struct {
+}
+
+func (e attrSetter) OnEmit(ctx context.Context, r Record) (Record, error) {
 	r.SetAttributes(log.String("replace", "me"))
-	return e.Processor.OnEmit(ctx, r)
+	return r, nil
+}
+
+func (e attrSetter) Enabled(context.Context, Record) bool {
+	return true
+}
+
+func (e attrSetter) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (e attrSetter) ForceFlush(ctx context.Context) error {
+	return nil
 }

@@ -34,9 +34,10 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
-	newRecord := l.newRecord(ctx, r)
+	record := l.newRecord(ctx, r)
 	for _, p := range l.provider.processors {
-		if err := p.OnEmit(ctx, newRecord); err != nil {
+		var err error
+		if record, err = p.OnEmit(ctx, record); err != nil {
 			otel.Handle(err)
 		}
 	}

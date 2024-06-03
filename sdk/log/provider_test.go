@@ -36,13 +36,13 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name, enabled: true}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r Record) error {
+func (p *processor) OnEmit(ctx context.Context, r Record) (Record, error) {
 	if p.Err != nil {
-		return p.Err
+		return r, p.Err
 	}
 
 	p.records = append(p.records, r)
-	return nil
+	return r, nil
 }
 
 func (p *processor) Enabled(context.Context, Record) bool {

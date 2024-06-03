@@ -28,7 +28,9 @@ type Processor interface {
 	//
 	// Before modifying a Record, the implementation must use Record.Clone
 	// to create a copy that shares no state with the original.
-	OnEmit(ctx context.Context, record Record) error
+	//
+	// The returned record is passed to the next registered processor.
+	OnEmit(ctx context.Context, record Record) (Record, error)
 	// Enabled returns whether the Processor will process for the given context
 	// and record.
 	//
