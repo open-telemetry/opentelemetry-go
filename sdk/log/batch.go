@@ -180,7 +180,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
-	if n := b.q.Enqueue(*r); n >= b.batchSize {
+	if n := b.q.Enqueue(r.Clone()); n >= b.batchSize {
 		select {
 		case b.pollTrigger <- struct{}{}:
 		default:
