@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 )
 
 // Resource describes an entity about which identifying information
@@ -230,6 +231,18 @@ func Default() *Resource {
 		// If Detect did not return a valid resource, fall back to emptyResource.
 		if defaultResource == nil {
 			defaultResource = &Resource{}
+		}
+
+		if x.Resource.Enabled() {
+			instanceIDResource, err := defaultServiceInstanceIDDetector{}.Detect(context.Background())
+
+			if err == nil {
+				defaultResource, err = Merge(defaultResource, instanceIDResource)
+			}
+
+			if err != nil {
+				otel.Handle(err)
+			}
 		}
 	})
 	return defaultResource
