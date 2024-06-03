@@ -640,3 +640,12 @@ func TestTruncate(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkSetAddAttributes(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		kv := log.String("key", "value")
+		var r Record
+		r.SetAttributes(kv)
+		r.AddAttributes(kv)
+	}
+}
