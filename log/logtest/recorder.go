@@ -69,18 +69,18 @@ type ScopeRecords struct {
 
 	// Records are the log records, and their associated context this
 	// instrumentation scope recorded.
-	Records []RecordWithContext
+	Records []EmittedRecord
 }
 
-// RecordWithContext holds a log record the instrumentation received, alongside
-// its context.
-type RecordWithContext struct {
+// EmittedRecord holds a log record the instrumentation received, alongside its
+// context.
+type EmittedRecord struct {
 	log.Record
 
 	ctx context.Context
 }
 
-func (rwc RecordWithContext) Contect() context.Context {
+func (rwc EmittedRecord) Contect() context.Context {
 	return rwc.ctx
 }
 
@@ -167,7 +167,7 @@ func (l *logger) Emit(ctx context.Context, record log.Record) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.scopeRecord.Records = append(l.scopeRecord.Records, RecordWithContext{record, ctx})
+	l.scopeRecord.Records = append(l.scopeRecord.Records, EmittedRecord{record, ctx})
 }
 
 // Reset clears the in-memory log records.
