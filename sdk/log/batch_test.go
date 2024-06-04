@@ -45,7 +45,7 @@ func TestEmptyBatchConfig(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var bp BatchProcessor
 		ctx := context.Background()
-		var record Record
+		record := new(Record)
 		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
 		assert.False(t, bp.Enabled(ctx, record), "Enabled")
 		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
@@ -197,10 +197,10 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Nanosecond),
 			WithExportTimeout(time.Hour),
 		)
-		for _, r := range make([]Record, size) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+		for i := 0; i < size; i++ {
+			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
-		var got []Record
+		var got []*Record
 		assert.Eventually(t, func() bool {
 			for _, r := range e.Records() {
 				got = append(got, r...)
@@ -220,8 +220,8 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for _, r := range make([]Record, 10*batch) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+		for i := 0; i < 10*batch; i++ {
+			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		assert.Eventually(t, func() bool {
 			return e.ExportN() > 1
@@ -243,8 +243,8 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for _, r := range make([]Record, 2*batch) {
-			assert.NoError(t, b.OnEmit(ctx, r))
+		for i := 0; i < 2*batch; i++ {
+			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 
 		var n int
@@ -255,7 +255,7 @@ func TestBatchProcessor(t *testing.T) {
 
 		var err error
 		require.Eventually(t, func() bool {
-			err = b.OnEmit(ctx, Record{})
+			err = b.OnEmit(ctx, &Record{})
 			return true
 		}, time.Second, time.Microsecond, "OnEmit blocked")
 		assert.NoError(t, err)
@@ -272,10 +272,10 @@ func TestBatchProcessor(t *testing.T) {
 
 	t.Run("Enabled", func(t *testing.T) {
 		b := NewBatchProcessor(defaultNoopExporter)
-		assert.True(t, b.Enabled(ctx, Record{}))
+		assert.True(t, b.Enabled(ctx, &Record{}))
 
 		_ = b.Shutdown(ctx)
-		assert.False(t, b.Enabled(ctx, Record{}))
+		assert.False(t, b.Enabled(ctx, &Record{}))
 	})
 
 	t.Run("Shutdown", func(t *testing.T) {
@@ -303,7 +303,7 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
-			assert.NoError(t, b.OnEmit(ctx, Record{}))
+			assert.NoError(t, b.OnEmit(ctx, &Record{}))
 			assert.Equal(t, want, e.ExportN(), "Export called after shutdown")
 		})
 
@@ -311,7 +311,7 @@ func TestBatchProcessor(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
 
-			assert.NoError(t, b.OnEmit(ctx, Record{}))
+			assert.NoError(t, b.OnEmit(ctx, &Record{}))
 			assert.NoError(t, b.Shutdown(ctx))
 
 			assert.NoError(t, b.ForceFlush(ctx))
@@ -344,7 +344,7 @@ func TestBatchProcessor(t *testing.T) {
 			)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
-			var r Record
+			r := new(Record)
 			r.SetBody(log.BoolValue(true))
 			require.NoError(t, b.OnEmit(ctx, r))
 
@@ -381,7 +381,7 @@ func TestBatchProcessor(t *testing.T) {
 
 			// Enqueue 10 x "batch size" amount of records.
 			for i := 0; i < 10*batch; i++ {
-				require.NoError(t, b.OnEmit(ctx, Record{}))
+				require.NoError(t, b.OnEmit(ctx, &Record{}))
 			}
 			assert.Eventually(t, func() bool {
 				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
@@ -423,7 +423,7 @@ func TestBatchProcessor(t *testing.T) {
 			b := NewBatchProcessor(e)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
-			var r Record
+			r := new(Record)
 			r.SetBody(log.BoolValue(true))
 			_ = b.OnEmit(ctx, r)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
@@ -453,7 +453,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		var r Record
+		r := new(Record)
 		// First record will be blocked by testExporter.Export
 		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
 		require.Eventually(t, func() bool {
@@ -497,7 +497,7 @@ func TestBatchProcessor(t *testing.T) {
 					case <-ctx.Done():
 						return
 					default:
-						assert.NoError(t, b.OnEmit(ctx, Record{}))
+						assert.NoError(t, b.OnEmit(ctx, &Record{}))
 						// Ignore partial flush errors.
 						_ = b.ForceFlush(ctx)
 					}
@@ -521,7 +521,7 @@ func TestBatchProcessor(t *testing.T) {
 }
 
 func TestQueue(t *testing.T) {
-	var r Record
+	r := new(Record)
 	r.SetBody(log.BoolValue(true))
 
 	t.Run("newQueue", func(t *testing.T) {
@@ -537,7 +537,7 @@ func TestQueue(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
 
-		var notR Record
+		notR := new(Record)
 		notR.SetBody(log.IntValue(10))
 
 		assert.Equal(t, 1, q.Enqueue(notR), "incomplete batch")
@@ -552,7 +552,7 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, []Record{r, r}, q.Flush(), "flushed Records")
+		assert.Equal(t, []*Record{r, r}, q.Flush(), "flushed Records")
 	})
 
 	t.Run("Dropped", func(t *testing.T) {
@@ -574,7 +574,7 @@ func TestQueue(t *testing.T) {
 		q.write = q.write.Next()
 		q.len = 1
 
-		assert.Equal(t, []Record{r}, q.Flush(), "flushed")
+		assert.Equal(t, []*Record{r}, q.Flush(), "flushed")
 	})
 
 	t.Run("TryFlush", func(t *testing.T) {
@@ -586,33 +586,34 @@ func TestQueue(t *testing.T) {
 			q.len++
 		}
 
-		buf := make([]Record, 1)
-		f := func([]Record) bool { return false }
+		buf := make([]*Record, 1)
+		buf[0] = new(Record)
+		f := func([]*Record) bool { return false }
 		assert.Equal(t, size-1, q.TryDequeue(buf, f), "not flushed")
 		require.Equal(t, size-1, q.len, "length")
 		require.NotSame(t, q.read, q.write, "read ring advanced")
 
-		var flushed []Record
-		f = func(r []Record) bool {
+		var flushed []*Record
+		f = func(r []*Record) bool {
 			flushed = append(flushed, r...)
 			return true
 		}
 		if assert.Equal(t, size-2, q.TryDequeue(buf, f), "did not flush len(buf)") {
-			assert.Equal(t, []Record{r}, flushed, "Records")
+			assert.Equal(t, []*Record{r}, flushed, "Records")
 		}
 
 		buf = slices.Grow(buf, size)
 		flushed = flushed[:0]
 		if assert.Equal(t, 0, q.TryDequeue(buf, f), "did not flush len(queue)") {
-			assert.Equal(t, []Record{r}, flushed, "Records")
+			assert.Equal(t, []*Record{r}, flushed, "Records")
 		}
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
 		const goRoutines = 10
 
-		flushed := make(chan []Record, goRoutines)
-		out := make([]Record, 0, goRoutines)
+		flushed := make(chan []*Record, goRoutines)
+		out := make([]*Record, 0, goRoutines)
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
@@ -628,7 +629,7 @@ func TestQueue(t *testing.T) {
 		for i := 0; i < goRoutines; i++ {
 			go func() {
 				defer wg.Done()
-				b.Enqueue(Record{})
+				b.Enqueue(&Record{})
 				flushed <- b.Flush()
 			}()
 		}
@@ -642,7 +643,7 @@ func TestQueue(t *testing.T) {
 }
 
 func BenchmarkBatchProcessorOnEmit(b *testing.B) {
-	var r Record
+	r := new(Record)
 	body := log.BoolValue(true)
 	r.SetBody(body)
 

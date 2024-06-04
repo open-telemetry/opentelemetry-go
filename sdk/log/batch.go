@@ -136,7 +136,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 	ticker := time.NewTicker(interval)
 	// TODO: investigate using a sync.Pool instead of cloning.
-	buf := make([]Record, b.batchSize)
+	buf := make([]*Record, b.batchSize)
 	go func() {
 		defer close(done)
 		defer ticker.Stop()
@@ -154,7 +154,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				global.Warn("dropped log records", "dropped", d)
 			}
 
-			qLen := b.q.TryDequeue(buf, func(r []Record) bool {
+			qLen := b.q.TryDequeue(buf, func(r []*Record) bool {
 				ok := b.exporter.EnqueueExport(r)
 				if ok {
 					buf = slices.Clone(buf)
@@ -176,7 +176,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 }
 
 // OnEmit batches provided log record.
-func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
+func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
@@ -193,7 +193,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
 }
 
 // Enabled returns if b is enabled.
-func (b *BatchProcessor) Enabled(context.Context, Record) bool {
+func (b *BatchProcessor) Enabled(context.Context, *Record) bool {
 	return !b.stopped.Load() && b.q != nil
 }
 
@@ -230,10 +230,10 @@ func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 		return nil
 	}
 
-	buf := make([]Record, b.q.cap)
+	buf := make([]*Record, b.q.cap)
 	notFlushed := func() bool {
 		var flushed bool
-		_ = b.q.TryDequeue(buf, func(r []Record) bool {
+		_ = b.q.TryDequeue(buf, func(r []*Record) bool {
 			flushed = b.exporter.EnqueueExport(r)
 			return flushed
 		})
@@ -284,7 +284,7 @@ func (q *queue) Dropped() uint64 {
 //
 // If enqueueing r will exceed the capacity of q, the oldest Record held in q
 // will be dropped and r retained.
-func (q *queue) Enqueue(r Record) int {
+func (q *queue) Enqueue(r *Record) int {
 	q.Lock()
 	defer q.Unlock()
 
@@ -309,7 +309,7 @@ func (q *queue) Enqueue(r Record) int {
 //
 // When write is called the lock of q is held. The write function must not call
 // other methods of this q that acquire the lock.
-func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
+func (q *queue) TryDequeue(buf []*Record, write func([]*Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
 
@@ -331,11 +331,11 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 
 // Flush returns all the Records held in the queue and resets it to be
 // empty.
-func (q *queue) Flush() []Record {
+func (q *queue) Flush() []*Record {
 	q.Lock()
 	defer q.Unlock()
 
-	out := make([]Record, q.len)
+	out := make([]*Record, q.len)
 	for i := range out {
 		out[i] = q.read.Value
 		q.read = q.read.Next()

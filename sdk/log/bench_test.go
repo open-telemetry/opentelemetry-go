@@ -83,7 +83,7 @@ type timestampDecorator struct {
 	Processor
 }
 
-func (e timestampDecorator) OnEmit(ctx context.Context, r Record) error {
+func (e timestampDecorator) OnEmit(ctx context.Context, r *Record) error {
 	r = r.Clone()
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
 	return e.Processor.OnEmit(ctx, r)
@@ -93,7 +93,7 @@ type attrDecorator struct {
 	Processor
 }
 
-func (e attrDecorator) OnEmit(ctx context.Context, r Record) error {
+func (e attrDecorator) OnEmit(ctx context.Context, r *Record) error {
 	r = r.Clone()
 	r.SetAttributes(log.String("replace", "me"))
 	return e.Processor.OnEmit(ctx, r)

@@ -57,7 +57,7 @@ func TestLoggerEmit(t *testing.T) {
 		logger          *logger
 		ctx             context.Context
 		record          log.Record
-		expectedRecords []Record
+		expectedRecords []*Record
 	}{
 		{
 			name:   "NoProcessors",
@@ -76,7 +76,7 @@ func TestLoggerEmit(t *testing.T) {
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
 			record: r,
-			expectedRecords: []Record{
+			expectedRecords: []*Record{
 				{
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
@@ -116,7 +116,7 @@ func TestLoggerEmit(t *testing.T) {
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    contextWithSpanContext,
 			record: r,
-			expectedRecords: []Record{
+			expectedRecords: []*Record{
 				{
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
@@ -149,7 +149,7 @@ func TestLoggerEmit(t *testing.T) {
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
 			record: r,
-			expectedRecords: []Record{
+			expectedRecords: []*Record{
 				{
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
@@ -179,7 +179,7 @@ func TestLoggerEmit(t *testing.T) {
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
 			record: rWithNoObservedTimestamp,
-			expectedRecords: []Record{
+			expectedRecords: []*Record{
 				{
 					timestamp:                 rWithNoObservedTimestamp.Timestamp(),
 					body:                      rWithNoObservedTimestamp.Body(),

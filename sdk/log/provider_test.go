@@ -28,7 +28,7 @@ type processor struct {
 	shutdownCalls   int
 	forceFlushCalls int
 
-	records []Record
+	records []*Record
 	enabled bool
 }
 
@@ -36,7 +36,7 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name, enabled: true}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r Record) error {
+func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
 	}
@@ -45,7 +45,7 @@ func (p *processor) OnEmit(ctx context.Context, r Record) error {
 	return nil
 }
 
-func (p *processor) Enabled(context.Context, Record) bool {
+func (p *processor) Enabled(context.Context, *Record) bool {
 	return p.enabled
 }
 
