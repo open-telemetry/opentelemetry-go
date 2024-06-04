@@ -275,8 +275,6 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
-	// TODO: apply truncation to string and []string values.
-	// TODO: deduplicate map values.
 	var drop int
 	attrs, drop = dedup(attrs)
 	r.setDropped(drop)
@@ -391,12 +389,12 @@ func (r *Record) Clone() Record {
 	return res
 }
 
-func (r Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
+func (r *Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
 	attr.Value = r.applyValueLimits(attr.Value)
 	return attr
 }
 
-func (r Record) applyValueLimits(val log.Value) log.Value {
+func (r *Record) applyValueLimits(val log.Value) log.Value {
 	switch val.Kind() {
 	case log.KindString:
 		s := val.AsString()
