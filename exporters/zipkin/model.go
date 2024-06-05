@@ -182,8 +182,6 @@ var extraZipkinTagsLen = len([]attribute.Key{
 	semconv.OTelStatusCodeKey,
 	semconv.OTelScopeNameKey,
 	semconv.OTelScopeVersionKey,
-	semconv.OTelLibraryNameKey,
-	semconv.OTelLibraryVersionKey,
 })
 
 func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
@@ -213,10 +211,8 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 
 	if is := data.InstrumentationScope(); is.Name != "" {
 		m[string(semconv.OTelScopeNameKey)] = is.Name
-		m[string(semconv.OTelLibraryNameKey)] = is.Name
 		if is.Version != "" {
 			m[string(semconv.OTelScopeVersionKey)] = is.Version
-			m[string(semconv.OTelLibraryVersionKey)] = is.Version
 		}
 	}
 
