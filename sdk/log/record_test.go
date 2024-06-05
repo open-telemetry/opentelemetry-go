@@ -346,9 +346,10 @@ func TestRecordAttrDeduplication(t *testing.T) {
 
 func TestApplyAttrLimitsDeduplication(t *testing.T) {
 	testcases := []struct {
-		name        string
-		limit       int
-		input, want log.Value
+		name             string
+		limit            int
+		input, want      log.Value
+		wantDroppedAttrs int
 	}{
 		{
 			// No de-duplication
@@ -419,6 +420,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 				log.String("g", "GG"),
 				log.String("h", "H"),
 			),
+			wantDroppedAttrs: 10,
 		},
 	}
 
@@ -431,11 +433,13 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assert.Equal(t, tc.wantDroppedAttrs, r.DroppedAttributes())
 			})
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r.SetAttributes(kv)
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assert.Equal(t, tc.wantDroppedAttrs, r.DroppedAttributes())
 			})
 		})
 	}
@@ -633,5 +637,17 @@ func TestTruncate(t *testing.T) {
 			t.Log(tc.input, len(tc.input), tc.limit)
 			assert.Equal(t, tc.want, truncate(tc.input, tc.limit))
 		})
+	}
+}
+
+func BenchmarkSetAddAttributes(b *testing.B) {
+	kv := log.String("key", "value")
+	records := make([]Record, b.N)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		records[i].SetAttributes(kv)
+		records[i].AddAttributes(kv)
 	}
 }
