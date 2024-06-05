@@ -19,6 +19,7 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv120 "go.opentelemetry.io/otel/semconv/v1.20.0"
 	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -236,7 +237,7 @@ var remoteEndpointKeyRank = map[attribute.Key]int{
 	semconv120.NetSockPeerAddrKey:     8,
 	keyPeerHostname:                   9,
 	keyPeerAddress:                    10,
-	semconv.DBNameKey:                 11,
+	semconv125.DBNameKey:              11,
 }
 
 func toZipkinRemoteEndpoint(data tracesdk.ReadOnlySpan) *zkmodel.Endpoint {
