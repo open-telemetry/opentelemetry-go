@@ -101,6 +101,19 @@ func TestTracerStartPropagatesSpanContext(t *testing.T) {
 	assert.False(t, span.IsRecording(), "recording span returned")
 }
 
+func BenchmarkNoopInstance(b *testing.B) {
+	tracer := NewTracerProvider().Tracer("")
+	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "")
+		span.End()
+	}
+}
+
 type recordingSpan struct{ Span }
 
 func (recordingSpan) IsRecording() bool { return true }
