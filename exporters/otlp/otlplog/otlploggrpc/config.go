@@ -18,7 +18,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/conf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -82,20 +81,20 @@ type Option interface {
 }
 
 type config struct {
-	endpoint    conf.Setting[string]
-	insecure    conf.Setting[bool]
-	tlsCfg      conf.Setting[*tls.Config]
-	headers     conf.Setting[map[string]string]
-	compression conf.Setting[Compression]
-	timeout     conf.Setting[time.Duration]
-	retryCfg    conf.Setting[retry.Config]
+	endpoint    setting[string]
+	insecure    setting[bool]
+	tlsCfg      setting[*tls.Config]
+	headers     setting[map[string]string]
+	compression setting[Compression]
+	timeout     setting[time.Duration]
+	retryCfg    setting[retry.Config]
 
 	// gRPC configurations
-	gRPCCredentials    conf.Setting[credentials.TransportCredentials]
-	serviceConfig      conf.Setting[string]
-	reconnectionPeriod conf.Setting[time.Duration]
-	dialOptions        conf.Setting[[]grpc.DialOption]
-	gRPCConn           conf.Setting[*grpc.ClientConn]
+	gRPCCredentials    setting[credentials.TransportCredentials]
+	serviceConfig      setting[string]
+	reconnectionPeriod setting[time.Duration]
+	dialOptions        setting[[]grpc.DialOption]
+	gRPCConn           setting[*grpc.ClientConn]
 }
 
 func newConfig(options []Option) config {
@@ -106,27 +105,27 @@ func newConfig(options []Option) config {
 
 	// Apply environment value and default value
 	c.endpoint = c.endpoint.Resolve(
-		conf.GetEnv[string](envEndpoint, convEndpoint),
-		conf.Fallback[string](defaultEndpoint),
+		getEnv[string](envEndpoint, convEndpoint),
+		fallback[string](defaultEndpoint),
 	)
 	c.insecure = c.insecure.Resolve(
-		conf.GetEnv[bool](envInsecure, convInsecure),
+		getEnv[bool](envInsecure, convInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
 		loadEnvTLS[*tls.Config](),
 	)
 	c.headers = c.headers.Resolve(
-		conf.GetEnv[map[string]string](envHeaders, convHeaders),
+		getEnv[map[string]string](envHeaders, convHeaders),
 	)
 	c.compression = c.compression.Resolve(
-		conf.GetEnv[Compression](envCompression, convCompression),
+		getEnv[Compression](envCompression, convCompression),
 	)
 	c.timeout = c.timeout.Resolve(
-		conf.GetEnv[time.Duration](envTimeout, convDuration),
-		conf.Fallback[time.Duration](defaultTimeout),
+		getEnv[time.Duration](envTimeout, convDuration),
+		fallback[time.Duration](defaultTimeout),
 	)
 	c.retryCfg = c.retryCfg.Resolve(
-		conf.Fallback[retry.Config](defaultRetryCfg),
+		fallback[retry.Config](defaultRetryCfg),
 	)
 
 	return c
@@ -155,7 +154,7 @@ type RetryConfig retry.Config
 // This option has no effect if WithGRPCConn is used.
 func WithInsecure() Option {
 	return fnOpt(func(c config) config {
-		c.insecure = conf.NewSetting(true)
+		c.insecure = newSetting(true)
 		return c
 	})
 }
@@ -176,7 +175,7 @@ func WithInsecure() Option {
 // This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
 	return fnOpt(func(c config) config {
-		c.endpoint = conf.NewSetting(endpoint)
+		c.endpoint = newSetting(endpoint)
 		return c
 	})
 }
@@ -204,11 +203,11 @@ func WithEndpointURL(rawURL string) Option {
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
-		c.endpoint = conf.NewSetting(u.Host)
+		c.endpoint = newSetting(u.Host)
 		if u.Scheme != "https" {
-			c.insecure = conf.NewSetting(true)
+			c.insecure = newSetting(true)
 		} else {
-			c.insecure = conf.NewSetting(false)
+			c.insecure = newSetting(false)
 		}
 		return c
 	})
@@ -220,7 +219,7 @@ func WithEndpointURL(rawURL string) Option {
 // This option has no effect if WithGRPCConn is used.
 func WithReconnectionPeriod(rp time.Duration) Option {
 	return fnOpt(func(c config) config {
-		c.reconnectionPeriod = conf.NewSetting(rp)
+		c.reconnectionPeriod = newSetting(rp)
 		return c
 	})
 }
@@ -250,7 +249,7 @@ const (
 // This option has no effect if WithGRPCConn is used.
 func WithCompressor(compressor string) Option {
 	return fnOpt(func(c config) config {
-		c.compression = conf.NewSetting(compressorToCompression(compressor))
+		c.compression = newSetting(compressorToCompression(compressor))
 		return c
 	})
 }
@@ -268,7 +267,7 @@ func WithCompressor(compressor string) Option {
 // passed, no user headers will be set.
 func WithHeaders(headers map[string]string) Option {
 	return fnOpt(func(c config) config {
-		c.headers = conf.NewSetting(headers)
+		c.headers = newSetting(headers)
 		return c
 	})
 }
@@ -287,7 +286,7 @@ func WithHeaders(headers map[string]string) Option {
 // This option has no effect if WithGRPCConn is used.
 func WithTLSCredentials(credential credentials.TransportCredentials) Option {
 	return fnOpt(func(c config) config {
-		c.gRPCCredentials = conf.NewSetting(credential)
+		c.gRPCCredentials = newSetting(credential)
 		return c
 	})
 }
@@ -297,7 +296,7 @@ func WithTLSCredentials(credential credentials.TransportCredentials) Option {
 // This option has no effect if WithGRPCConn is used.
 func WithServiceConfig(serviceConfig string) Option {
 	return fnOpt(func(c config) config {
-		c.serviceConfig = conf.NewSetting(serviceConfig)
+		c.serviceConfig = newSetting(serviceConfig)
 		return c
 	})
 }
@@ -312,7 +311,7 @@ func WithServiceConfig(serviceConfig string) Option {
 // This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
 	return fnOpt(func(c config) config {
-		c.dialOptions = conf.NewSetting(opts)
+		c.dialOptions = newSetting(opts)
 		return c
 	})
 }
@@ -327,7 +326,7 @@ func WithDialOption(opts ...grpc.DialOption) Option {
 // Shutdown method will not close this connection.
 func WithGRPCConn(conn *grpc.ClientConn) Option {
 	return fnOpt(func(c config) config {
-		c.gRPCConn = conf.NewSetting(conn)
+		c.gRPCConn = newSetting(conn)
 		return c
 	})
 }
@@ -348,7 +347,7 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 // passed, a timeout of 10 seconds will be used.
 func WithTimeout(duration time.Duration) Option {
 	return fnOpt(func(c config) config {
-		c.timeout = conf.NewSetting(duration)
+		c.timeout = newSetting(duration)
 		return c
 	})
 }
@@ -368,7 +367,7 @@ func WithTimeout(duration time.Duration) Option {
 // after each error for no more than a total time of 1 minute.
 func WithRetry(rc RetryConfig) Option {
 	return fnOpt(func(c config) config {
-		c.retryCfg = conf.NewSetting(retry.Config(rc))
+		c.retryCfg = newSetting(retry.Config(rc))
 		return c
 	})
 }
@@ -456,8 +455,8 @@ func convDuration(s string) (time.Duration, error) {
 // If the filepath defined is invalid or does not contain valid TLS files, an
 // error is passed to the OTel ErrorHandler and no TLS configuration is
 // provided.
-func loadEnvTLS[T *tls.Config]() conf.Resolver[T] {
-	return func(s conf.Setting[T]) conf.Setting[T] {
+func loadEnvTLS[T *tls.Config]() resolver[T] {
+	return func(s setting[T]) setting[T] {
 		if s.Set {
 			// Passed, valid, options have precedence.
 			return s
@@ -538,4 +537,80 @@ func compressorToCompression(compressor string) Compression {
 	}
 
 	return c
+}
+
+// setting is a configuration setting value.
+type setting[T any] struct {
+	Value T
+	Set   bool
+}
+
+// newSetting returns a new setting with the value set.
+func newSetting[T any](value T) setting[T] {
+	return setting[T]{Value: value, Set: true}
+}
+
+// resolver returns an updated setting after applying an resolution operation.
+type resolver[T any] func(setting[T]) setting[T]
+
+// Resolve returns a resolved version of s.
+//
+// It will apply all the passed fn in the order provided, chaining together the
+// return setting to the next input. The setting s is used as the initial
+// argument to the first fn.
+//
+// Each fn needs to validate if it should apply given the Set state of the
+// setting. This will not perform any checks on the set state when chaining
+// function.
+func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
+	for _, f := range fn {
+		s = f(s)
+	}
+	return s
+}
+
+// getEnv returns a resolver that will apply an environment variable value
+// associated with the first set key to a setting value. The conv function is
+// used to convert between the environment variable value and the setting type.
+//
+// If the input setting to the resolver is set, the environment variable will
+// not be applied.
+//
+// Any error returned from conv is sent to the OTel ErrorHandler and the
+// setting will not be updated.
+func getEnv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		for _, key := range keys {
+			if vStr := os.Getenv(key); vStr != "" {
+				v, err := conv(vStr)
+				if err == nil {
+					s.Value = v
+					s.Set = true
+					break
+				}
+				otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+			}
+		}
+		return s
+	}
+}
+
+// fallback returns a resolve that will set a setting value to val if it is not
+// already set.
+//
+// This is usually passed at the end of a resolver chain to ensure a default is
+// applied if the setting has not already been set.
+func fallback[T any](val T) resolver[T] {
+	return func(s setting[T]) setting[T] {
+		if !s.Set {
+			s.Value = val
+			s.Set = true
+		}
+		return s
+	}
 }
