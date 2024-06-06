@@ -7,6 +7,7 @@ import (
 	"context"
 	"math"
 	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,4 +49,19 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func TestRandomConcurrentSafe(t *testing.T) {
+	const goRoutines = 10
+
+	var wg sync.WaitGroup
+	for n := 0; n < goRoutines; n++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = random()
+		}()
+	}
+
+	wg.Wait()
 }
