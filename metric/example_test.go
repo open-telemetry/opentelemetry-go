@@ -142,6 +142,23 @@ func ExampleMeter_upDownCounter() {
 	}
 }
 
+// Gauges can be used to record non-additive values when changes occur.
+//
+// Here's how you might report the speed of cpu fan.
+func ExampleMeter_gauge() {
+	speedGauge, err := meter.Int64Gauge(
+		"cpu.fan.speed",
+		metric.WithDescription("Speed of CPU fan"),
+		metric.WithUnit("RPM"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		speedGauge.Record(r.Context(), 1500)
+	})
+}
+
 // Histograms are used to measure a distribution of values over time.
 //
 // Here's how you might report a distribution of response times for an HTTP handler.
