@@ -2107,3 +2107,16 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 		t.Errorf("AddLinkToNonRecordingSpan: -got +want %s", diff)
 	}
 }
+
+func BenchmarkTraceStart(b *testing.B) {
+	tracer := NewTracerProvider().Tracer("")
+	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "")
+		span.End()
+	}
+}

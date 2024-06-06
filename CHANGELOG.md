@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `Tracer.Start` in `go.opentelemetry.io/otel/trace/noop` no longer allocates a span for empty span context. (#5457)
+- `Tracer.Start` in `go.opentelemetry.io/otel/sdk/trace` use non-generic to replace `newEvictedQueue` to reduce memory allocation. (#5497)
 
 ### Fixed
 
