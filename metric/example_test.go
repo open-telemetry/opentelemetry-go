@@ -144,7 +144,7 @@ func ExampleMeter_upDownCounter() {
 
 // Gauges can be used to record non-additive values when changes occur.
 //
-// Here's how you might report the speed of cpu fan.
+// Here's how you might report the current speed of a cpu fan.
 func ExampleMeter_gauge() {
 	speedGauge, err := meter.Int64Gauge(
 		"cpu.fan.speed",
@@ -155,6 +155,7 @@ func ExampleMeter_gauge() {
 		panic(err)
 	}
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// hard-code 1500 RPM for demonstrative purposes
 		speedGauge.Record(r.Context(), 1500)
 	})
 }
