@@ -133,11 +133,11 @@ func TestRecorderEmitAndReset(t *testing.T) {
 
 	nl.Emit(ctx2, r2)
 	assert.Len(t, r.Result()[0].Records, 1)
-	assertRecord(t, r.Result()[0].Records[0].Record, r1)
+	AssertRecordEqual(t, r.Result()[0].Records[0].Record, r1)
 	assert.Equal(t, r.Result()[0].Records[0].Context(), ctx)
 
 	assert.Len(t, r.Result()[1].Records, 1)
-	assertRecord(t, r.Result()[1].Records[0].Record, r2)
+	AssertRecordEqual(t, r.Result()[1].Records[0].Record, r2)
 	assert.Equal(t, r.Result()[1].Records[0].Context(), ctx2)
 
 	r.Reset()
