@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
