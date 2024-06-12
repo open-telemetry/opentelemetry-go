@@ -115,17 +115,30 @@ func TestRecorderEmitAndReset(t *testing.T) {
 
 	r1 := log.Record{}
 	r1.SetSeverity(log.SeverityInfo)
-	l.Emit(context.Background(), r1)
-	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
+	ctx := context.Background()
+
+	l.Emit(ctx, r1)
+	assert.Equal(t, r.Result()[0].Records, []EmittedRecord{
+		{r1, ctx},
+	})
 
 	nl := r.Logger("test")
 	assert.Empty(t, r.Result()[1].Records)
 
 	r2 := log.Record{}
 	r2.SetSeverity(log.SeverityError)
-	nl.Emit(context.Background(), r2)
-	assert.Equal(t, r.Result()[0].Records, []log.Record{r1})
-	assert.Equal(t, r.Result()[1].Records, []log.Record{r2})
+	// We want a non-background context here so it's different from `ctx`.
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	nl.Emit(ctx2, r2)
+	assert.Len(t, r.Result()[0].Records, 1)
+	AssertRecordEqual(t, r.Result()[0].Records[0].Record, r1)
+	assert.Equal(t, r.Result()[0].Records[0].Context(), ctx)
+
+	assert.Len(t, r.Result()[1].Records, 1)
+	AssertRecordEqual(t, r.Result()[1].Records[0].Record, r2)
+	assert.Equal(t, r.Result()[1].Records[0].Context(), ctx2)
 
 	r.Reset()
 	assert.Empty(t, r.Result()[0].Records)

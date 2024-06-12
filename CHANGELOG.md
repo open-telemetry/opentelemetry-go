@@ -14,10 +14,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.26.0` version of the OpenTelemetry Semantic Conventions. (#5476)
 - The `IsEmpty` method is added to the `Instrument` type in `go.opentelemetry.io/otel/sdk/metric`.
   This method is used to check if an `Instrument` instance is a zero-value. (#5431)
+- Store and provide the emitted `context.Context` in `ScopeRecords` of `go.opentelemetry.io/otel/sdk/log/logtest`. (#5468)
+- `SimpleProcessor.OnEmit` in `go.opentelemetry.io/otel/sdk/log` no longer allocates a slice which makes it possible to have a zero-allocation log processing using `SimpleProcessor`. (#5493)
+- The `AssertRecordEqual` method to `go.opentelemetry.io/otel/log/logtest` to allow comparison of two log records in tests. (#5499)
 
 ### Changed
 
 - `Tracer.Start` in `go.opentelemetry.io/otel/trace/noop` no longer allocates a span for empty span context. (#5457)
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/example/otel-collector`. (#5490)
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/example/zipkin`. (#5490)
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/exporters/zipkin`. (#5490)
+  - The exporter no longer exports the deprecated "otel.library.name" or "otel.library.version" attributes.
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/sdk/resource`. (#5490)
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/sdk/trace`. (#5490)
 
 ### Fixed
 
