@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"sync"
 )
 
 // Compile-time check SimpleProcessor implements Processor.
@@ -30,9 +31,22 @@ func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimplePr
 	return &SimpleProcessor{exporter: exporter}
 }
 
+var simpleProcRecordsPool = sync.Pool{
+	New: func() any {
+		records := make([]Record, 1)
+		return &records
+	},
+}
+
 // OnEmit batches provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r Record) error {
-	return s.exporter.Export(ctx, []Record{r})
+	records := simpleProcRecordsPool.Get().(*[]Record)
+	(*records)[0] = r
+	defer func() {
+		simpleProcRecordsPool.Put(records)
+	}()
+
+	return s.exporter.Export(ctx, *records)
 }
 
 // Enabled returns true.
