@@ -154,10 +154,21 @@ func ExampleMeter_gauge() {
 	if err != nil {
 		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+	getCPUFanSpeed := func() int64 {
 		// hard-code 1500 RPM for demonstrative purposes
-		speedGauge.Record(r.Context(), 1500)
-	})
+		// do the real work to get the cpu fan speed
+		return 1500
+	}
+
+	_ = func() {
+		go func() {
+			for {
+				time.Sleep(time.Second * 3)
+				speedGauge.Record(context.Background(), getCPUFanSpeed())
+			}
+		}()
+	}
 }
 
 // Histograms are used to measure a distribution of values over time.
