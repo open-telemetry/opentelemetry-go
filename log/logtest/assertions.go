@@ -12,7 +12,7 @@ import (
 
 // AssertRecordEqual compares two log records, and fails the test if they are
 // not equal.
-func AssertRecordEqual(t testing.TB, want log.Record, got log.Record) {
+func AssertRecordEqual(t testing.TB, want, got log.Record) {
 	t.Helper()
 
 	if !want.Timestamp().Equal(got.Timestamp()) {
