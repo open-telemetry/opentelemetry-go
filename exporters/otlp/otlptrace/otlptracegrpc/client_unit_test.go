@@ -202,3 +202,75 @@ func TestExportContextLinksStopSignal(t *testing.T) {
 		return false
 	}, 10*time.Second, time.Microsecond)
 }
+
+func TestWithEndpointWithEnv(t *testing.T) {
+	testCases := []struct {
+		name    string
+		options []Option
+		envs    map[string]string
+		want    string
+	}{
+		{
+			name: "WithEndpointURL last",
+			options: []Option{
+				WithEndpoint("foo"),
+				WithEndpointURL("http://bar:8080/path"),
+			},
+			want: "bar:8080",
+		},
+		{
+			name: "WithEndpoint last",
+			options: []Option{
+				WithEndpointURL("http://bar:8080/path"),
+				WithEndpoint("foo"),
+			},
+			want: "foo",
+		},
+		{
+			name: "OTEL_EXPORTER_OTLP_ENDPOINT only",
+			envs: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "foo2",
+			},
+			want: "foo2",
+		},
+		{
+			name: "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT only",
+			envs: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "bar2",
+			},
+			want: "bar2",
+		},
+		{
+			name: "both OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+			envs: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "foo2",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "bar2",
+			},
+			want: "bar2",
+		},
+		{
+			name: "both options and envs",
+			envs: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "foo2",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "bar2",
+			},
+			options: []Option{
+				WithEndpointURL("http://bar:8080/path"),
+				WithEndpoint("foo"),
+			},
+			want: "foo",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for key, value := range tc.envs {
+				t.Setenv(key, value)
+			}
+
+			client := newClient(tc.options...)
+
+			assert.Equal(t, tc.want, client.endpoint)
+		})
+	}
+}
