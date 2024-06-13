@@ -59,7 +59,7 @@ func WithInsecure() Option {
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
-// value will be used. If both environment variable are set,
+// value will be used. If both environment variables are set,
 // OTEL_EXPORTER_OTLP_TRACES_ENDPOINT will take precedence. If the environment
 // variable is set, and this option is passed, this option will take precedence.
 //
@@ -80,7 +80,7 @@ func WithEndpoint(endpoint string) Option {
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
-// value will be used. If both environment variable are set,
+// value will be used. If both environment variables are set,
 // OTEL_EXPORTER_OTLP_TRACES_ENDPOINT will take precedence. If the environment
 // variable is set, and this option is passed, this option will take precedence.
 //
