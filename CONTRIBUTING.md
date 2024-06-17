@@ -628,7 +628,6 @@ should be canceled.
 
 ### Approvers
 
-- [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
@@ -646,6 +645,7 @@ should be canceled.
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Evan Torrie](https://github.com/evantorrie), Yahoo
 
 ### Become an Approver or a Maintainer
 

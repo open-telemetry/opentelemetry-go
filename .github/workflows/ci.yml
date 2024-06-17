@@ -102,7 +102,7 @@ jobs:
           cp coverage.txt $TEST_RESULTS
           cp coverage.html $TEST_RESULTS
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

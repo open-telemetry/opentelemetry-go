@@ -4,7 +4,6 @@
 package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
-	"fmt"
 	"slices"
 	"sync"
 
@@ -19,13 +18,19 @@ type evictedQueue[T any] struct {
 	logDropped   func()
 }
 
-func newEvictedQueue[T any](capacity int) evictedQueue[T] {
-	var tVal T
-	msg := fmt.Sprintf("limit reached: dropping trace %T", tVal)
+func newEvictedQueueEvent(capacity int) evictedQueue[Event] {
 	// Do not pre-allocate queue, do this lazily.
-	return evictedQueue[T]{
+	return evictedQueue[Event]{
 		capacity:   capacity,
-		logDropped: sync.OnceFunc(func() { global.Warn(msg) }),
+		logDropped: sync.OnceFunc(func() { global.Warn("limit reached: dropping trace trace.Event") }),
+	}
+}
+
+func newEvictedQueueLink(capacity int) evictedQueue[Link] {
+	// Do not pre-allocate queue, do this lazily.
+	return evictedQueue[Link]{
+		capacity:   capacity,
+		logDropped: sync.OnceFunc(func() { global.Warn("limit reached: dropping trace trace.Link") }),
 	}
 }
 
