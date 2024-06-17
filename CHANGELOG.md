@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Document instrument name requirements in `go.opentelemetry.io/otel/metric`. (#5435)
 - Prevent random number generation data-race for experimental rand exemplars in `go.opentelemetry.io/otel/sdk/metric`. (#5456)
 - Fix counting number of dropped attributes of `Record` in `go.opentelemetry.io/otel/sdk/log`. (#5464)
+- Fix panic in baggage creation when a member contains 0x80 char in key or value. (#5494)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
