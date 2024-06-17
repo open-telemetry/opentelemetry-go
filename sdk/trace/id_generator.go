@@ -44,10 +44,9 @@ func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.Trace
 	for {
 		_, _ = gen.randSource.Read(sid[:])
 		if sid.IsValid() {
-			break
+			return sid
 		}
 	}
-	return sid
 }
 
 // NewIDs returns a non-zero trace ID and a non-zero span ID from a
