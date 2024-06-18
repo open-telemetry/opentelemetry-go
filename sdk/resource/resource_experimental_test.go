@@ -32,5 +32,4 @@ func TestDefaultExperimental(t *testing.T) {
 	matched, err := regexp.MatchString("^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$", serviceInstanceID.AsString())
 	require.NoError(t, err)
 	require.True(t, matched)
-
 }
