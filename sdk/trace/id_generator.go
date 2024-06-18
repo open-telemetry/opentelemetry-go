@@ -65,9 +65,10 @@ func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.
 	for {
 		_, _ = gen.randSource.Read(sid[:])
 		if sid.IsValid() {
-			return tid, sid
+			break
 		}
 	}
+	return tid, sid
 }
 
 func defaultIDGenerator() IDGenerator {
