@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 
@@ -625,6 +627,38 @@ func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func TestBatchSpanLeak(t *testing.T) {
+	ctx := context.Background()
+
+	getBatch := func(bsp sdktrace.SpanProcessor) []sdktrace.ReadOnlySpan {
+		batchField := reflect.ValueOf(bsp).Elem().FieldByName("batch")
+		require.True(t, batchField.IsValid())
+		return unsafe.Slice((*sdktrace.ReadOnlySpan)(batchField.UnsafePointer()), batchField.Cap())[:batchField.Len()]
+	}
+	bsp := sdktrace.NewBatchSpanProcessor(tracetest.NewInMemoryExporter(), []sdktrace.BatchSpanProcessorOption{}...)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(bsp),
+	)
+
+	_, span := tp.Tracer("tracer").Start(ctx, "leaked_span")
+	span.End()
+
+	err := tp.ForceFlush(ctx)
+	assert.NoError(t, err)
+
+	err = bsp.Shutdown(ctx)
+	assert.NoError(t, err)
+
+	batch := getBatch(bsp)
+	assert.Equal(t, 0, len(batch))
+	assert.NotEqual(t, 0, cap(batch))
+	batch = batch[:cap(batch)]
+
+	for _, span := range batch {
+		require.Nil(t, span)
+	}
 }
 
 func BenchmarkSpanProcessor(b *testing.B) {
