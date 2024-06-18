@@ -260,6 +260,18 @@ func TestWithEndpointWithEnv(t *testing.T) {
 			},
 			want: "foo",
 		},
+		{
+			name: "both options and envs",
+			envs: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "foo2",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "bar2",
+			},
+			options: []Option{
+				WithEndpoint("foo"),
+				WithEndpointURL("http://bar:8080/path"),
+			},
+			want: "bar:8080",
+		},
 	}
 
 	for _, tc := range testCases {
