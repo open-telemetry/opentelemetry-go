@@ -219,11 +219,17 @@ func Empty() *Resource {
 func Default() *Resource {
 	defaultResourceOnce.Do(func() {
 		var err error
-		defaultResource, err = Detect(
-			context.Background(),
+		defaultDetectors := []Detector{
 			defaultServiceNameDetector{},
 			fromEnv{},
 			telemetrySDK{},
+		}
+		if x.Resource.Enabled() {
+			defaultDetectors = append([]Detector{ defaultServiceInstanceIDDetector{} }, defaultDetectors...)
+		}
+		defaultResource, err = Detect(
+			context.Background(),
+			defaultDetectors...
 		)
 		if err != nil {
 			otel.Handle(err)
@@ -231,18 +237,6 @@ func Default() *Resource {
 		// If Detect did not return a valid resource, fall back to emptyResource.
 		if defaultResource == nil {
 			defaultResource = &Resource{}
-		}
-
-		if x.Resource.Enabled() {
-			instanceIDResource, err := defaultServiceInstanceIDDetector{}.Detect(context.Background())
-
-			if err == nil {
-				defaultResource, err = Merge(defaultResource, instanceIDResource)
-			}
-
-			if err != nil {
-				otel.Handle(err)
-			}
 		}
 	})
 	return defaultResource
