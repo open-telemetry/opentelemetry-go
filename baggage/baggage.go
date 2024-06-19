@@ -768,6 +768,7 @@ var safeKeyCharset = [utf8.RuneSelf]bool{
 
 // validateBaggageName checks if the string is a valid OpenTelemetry Baggage name.
 // Baggage name is a valid UTF-8 string.
+// Empty string is also a valid UTF-8 string.
 func validateBaggageName(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -778,11 +779,8 @@ func validateBaggageName(s string) bool {
 
 // validateBaggageValue checks if the string is a valid OpenTelemetry Baggage value.
 // Baggage value is a valid UTF-8 strings.
+// Empty string is also a valid UTF-8 string.
 func validateBaggageValue(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
-
 	return utf8.ValidString(s)
 }
 

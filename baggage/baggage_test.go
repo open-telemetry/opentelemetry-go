@@ -177,9 +177,10 @@ func TestNewKeyValuePropertyRaw(t *testing.T) {
 	assert.Equal(t, Property{}, p)
 
 	// Empty value
+	// Empty string is also a valid UTF-8 string.
 	p, err = NewKeyValuePropertyRaw(" ", "")
-	assert.ErrorIs(t, err, errInvalidValue)
-	assert.Equal(t, Property{}, p)
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: " ", hasValue: true}, p)
 
 	// Space value
 	p, err = NewKeyValuePropertyRaw(" ", " ")
