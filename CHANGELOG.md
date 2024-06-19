@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Retry trace and span ID generation if it generated an invalid one in `go.opentelemetry.io/otel/sdk/trace`. (#5514)
 - Log a warning to the OpenTelemetry internal logger when a `Record` in `go.opentelemetry.io/otel/sdk/log` drops an attribute due to a limit being reached. (#5376)
 - Identify the `Tracer` returned from the global `TracerProvider` in `go.opentelemetry.io/otel/global` with its schema URL. (#5426)
 - Identify the `Meter` returned from the global `MeterProvider` in `go.opentelemetry.io/otel/global` with its schema URL. (#5426)
@@ -39,6 +40,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent random number generation data-race for experimental rand exemplars in `go.opentelemetry.io/otel/sdk/metric`. (#5456)
 - Fix counting number of dropped attributes of `Record` in `go.opentelemetry.io/otel/sdk/log`. (#5464)
 - Fix panic in baggage creation when a member contains 0x80 char in key or value. (#5494)
+- Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their coresponding environment variables in  in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#5508)
+- Fix stale timestamps reported by the lastvalue aggregation. (#5517)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
