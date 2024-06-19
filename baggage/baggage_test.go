@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -469,6 +470,13 @@ func TestBaggageParse(t *testing.T) {
 			in:   tooManyMembers,
 			err:  errMemberNumber,
 		},
+		{
+			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
+			in:   "k=aa%ffcc",
+			want: baggage.List{
+				"k": {Value: "aa�cc"},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -476,6 +484,47 @@ func TestBaggageParse(t *testing.T) {
 			actual, err := Parse(tc.in)
 			assert.ErrorIs(t, err, tc.err)
 			assert.Equal(t, Baggage{list: tc.want}, actual)
+		})
+	}
+}
+
+func TestBaggageParseValue(t *testing.T) {
+	testcases := []struct {
+		name          string
+		in            string
+		valueWant     string
+		valueWantSize int
+	}{
+		{
+			name:          "percent encoded octet sequence matches UTF-8 encoding scheme",
+			in:            "k=aa%26cc",
+			valueWant:     "aa&cc",
+			valueWantSize: 5,
+		},
+		{
+			name:          "percent encoded octet sequence doesn't match UTF-8 encoding scheme",
+			in:            "k=aa%ffcc",
+			valueWant:     "aa�cc",
+			valueWantSize: 7,
+		},
+		{
+			name:          "raw value",
+			in:            "k=aacc",
+			valueWant:     "aacc",
+			valueWantSize: 4,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Parse(tc.in)
+			assert.Empty(t, err)
+
+			val := b.Members()[0].Value()
+
+			assert.EqualValues(t, val, tc.valueWant)
+			assert.Equal(t, len(val), tc.valueWantSize)
+			assert.True(t, utf8.ValidString(val))
 		})
 	}
 }
