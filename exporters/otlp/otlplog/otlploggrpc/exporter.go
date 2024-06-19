@@ -10,7 +10,6 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/log"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
@@ -54,7 +53,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 
-	var otlp []*lpb.ResourceLogs
+	var otlp []*logpb.ResourceLogs
 	// TODO: transform records to otlp.
 
 	if otlp == nil {
