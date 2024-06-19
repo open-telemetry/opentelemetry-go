@@ -508,6 +508,12 @@ func TestBaggageParseValue(t *testing.T) {
 			valueWantSize: 7,
 		},
 		{
+			name:          "multiple percent encoded octet sequences don't match UTF-8 encoding scheme",
+			in:            "k=aa%ffcc%fedd%fa",
+			valueWant:     "aa�cc�dd�",
+			valueWantSize: 15,
+		},
+		{
 			name:          "raw value",
 			in:            "k=aacc",
 			valueWant:     "aacc",
