@@ -14,7 +14,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.22.2"
+  DEFAULT_GO_VERSION: "~1.22.4"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
       - name: Generate
         run: make generate
       - name: Run linters
-        run: make dependabot-check license-check lint vanity-import-check verify-readmes
+        run: make license-check lint vanity-import-check verify-readmes
       - name: Build
         run: make build
       - name: Check clean repository
@@ -102,12 +102,13 @@ jobs:
           cp coverage.txt $TEST_RESULTS
           cp coverage.html $TEST_RESULTS
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.3.0
+        uses: codecov/codecov-action@v4.5.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./coverage.txt
           fail_ci_if_error: true
           verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Store coverage test output
         uses: actions/upload-artifact@v4
         with:
@@ -117,7 +118,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.22.2", "~1.21.9"]
+        go-version: ["~1.22.4", "~1.21.11"]
         platform:
           - os: ubuntu-latest
             arch: "386"

@@ -373,9 +373,9 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // specification.
 func (m Member) String() string {
 	// A key is can be a valid UTF-8 string.
-	s := fmt.Sprintf("%s%s%s", valueEscape(m.key), keyValueDelimiter, valueEscape(m.value))
+	s := valueEscape(m.key) + keyValueDelimiter + valueEscape(m.value)
 	if len(m.properties) > 0 {
-		s = fmt.Sprintf("%s%s%s", s, propertyDelimiter, m.properties.String())
+		s += propertyDelimiter + m.properties.String()
 	}
 	return s
 }
@@ -801,7 +801,7 @@ func validateKey(s string) bool {
 }
 
 func validateKeyChar(c int32) bool {
-	return c >= 0 && c <= int32(utf8.RuneSelf) && safeKeyCharset[c]
+	return c >= 0 && c < int32(utf8.RuneSelf) && safeKeyCharset[c]
 }
 
 // validateValue checks if the string is a valid W3C Baggage value.
@@ -917,7 +917,7 @@ var safeValueCharset = [utf8.RuneSelf]bool{
 }
 
 func validateValueChar(c int32) bool {
-	return c >= 0 && c <= int32(utf8.RuneSelf) && safeValueCharset[c]
+	return c >= 0 && c < int32(utf8.RuneSelf) && safeValueCharset[c]
 }
 
 // valueEscape escapes the string so it can be safely placed inside a baggage value,

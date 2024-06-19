@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package logtest is a testing helper package. Users can retrieve an in-memory
-// logger to verify the behavior of their integrations.
 package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
@@ -12,10 +10,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 )
-
-// embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
-// with the Logger method of the Recorder when it is embedded.
-type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
 type enabledFn func(context.Context, log.Record) bool
 
@@ -59,11 +53,8 @@ func WithEnabledFunc(fn func(context.Context, log.Record) bool) Option {
 func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
 
-	sr := &ScopeRecords{}
-
 	return &Recorder{
-		currentScopeRecord: sr,
-		enabledFn:          cfg.enabledFn,
+		enabledFn: cfg.enabledFn,
 	}
 }
 
@@ -76,20 +67,31 @@ type ScopeRecords struct {
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
 
-	// Records are the log records this instrumentation scope recorded.
-	Records []log.Record
+	// Records are the log records, and their associated context this
+	// instrumentation scope recorded.
+	Records []EmittedRecord
+}
+
+// EmittedRecord holds a log record the instrumentation received, alongside its
+// context.
+type EmittedRecord struct {
+	log.Record
+
+	ctx context.Context
+}
+
+// Context provides the context emitted with the record.
+func (rwc EmittedRecord) Context() context.Context {
+	return rwc.ctx
 }
 
 // Recorder is a recorder that stores all received log records
 // in-memory.
 type Recorder struct {
 	embedded.LoggerProvider
-	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
-	mu sync.Mutex
-
-	loggers            []*Recorder
-	currentScopeRecord *ScopeRecords
+	mu      sync.Mutex
+	loggers []*logger
 
 	// enabledFn decides whether the recorder should enable logging of a record or not
 	enabledFn enabledFn
@@ -100,41 +102,24 @@ type Recorder struct {
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
-	nr := &Recorder{
-		currentScopeRecord: &ScopeRecords{
+	nl := &logger{
+		scopeRecord: &ScopeRecords{
 			Name:      name,
 			Version:   cfg.InstrumentationVersion(),
 			SchemaURL: cfg.SchemaURL(),
 		},
 		enabledFn: r.enabledFn,
 	}
-	r.addChildLogger(nr)
+	r.addChildLogger(nl)
 
-	return nr
+	return nl
 }
 
-func (r *Recorder) addChildLogger(nr *Recorder) {
+func (r *Recorder) addChildLogger(nl *logger) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.loggers = append(r.loggers, nr)
-}
-
-// Enabled indicates whether a specific record should be stored.
-func (r *Recorder) Enabled(ctx context.Context, record log.Record) bool {
-	if r.enabledFn == nil {
-		return defaultEnabledFunc(ctx, record)
-	}
-
-	return r.enabledFn(ctx, record)
-}
-
-// Emit stores the log record.
-func (r *Recorder) Emit(_ context.Context, record log.Record) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.currentScopeRecord.Records = append(r.currentScopeRecord.Records, record)
+	r.loggers = append(r.loggers, nl)
 }
 
 // Result returns the current in-memory recorder log records.
@@ -143,22 +128,53 @@ func (r *Recorder) Result() []*ScopeRecords {
 	defer r.mu.Unlock()
 
 	ret := []*ScopeRecords{}
-	ret = append(ret, r.currentScopeRecord)
 	for _, l := range r.loggers {
-		ret = append(ret, l.Result()...)
+		ret = append(ret, l.scopeRecord)
 	}
 	return ret
 }
 
-// Reset clears the in-memory log records.
+// Reset clears the in-memory log records for all loggers.
 func (r *Recorder) Reset() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.currentScopeRecord != nil {
-		r.currentScopeRecord.Records = nil
-	}
 	for _, l := range r.loggers {
 		l.Reset()
 	}
+}
+
+type logger struct {
+	embedded.Logger
+
+	mu          sync.Mutex
+	scopeRecord *ScopeRecords
+
+	// enabledFn decides whether the recorder should enable logging of a record or not.
+	enabledFn enabledFn
+}
+
+// Enabled indicates whether a specific record should be stored.
+func (l *logger) Enabled(ctx context.Context, record log.Record) bool {
+	if l.enabledFn == nil {
+		return defaultEnabledFunc(ctx, record)
+	}
+
+	return l.enabledFn(ctx, record)
+}
+
+// Emit stores the log record.
+func (l *logger) Emit(ctx context.Context, record log.Record) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.scopeRecord.Records = append(l.scopeRecord.Records, EmittedRecord{record, ctx})
+}
+
+// Reset clears the in-memory log records.
+func (l *logger) Reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.scopeRecord.Records = nil
 }

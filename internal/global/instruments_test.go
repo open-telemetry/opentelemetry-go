@@ -117,6 +117,12 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v float64) { delegate.Record(context.Background(), v) }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
+
+		t.Run("Gauge", func(t *testing.T) {
+			delegate := &sfGauge{}
+			f := func(v float64) { delegate.Record(context.Background(), v) }
+			testFloat64ConcurrentSafe(f, delegate.setDelegate)
+		})
 	})
 
 	// Int64 Instruments
@@ -139,6 +145,12 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v int64) { delegate.Record(context.Background(), v) }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
+
+		t.Run("Gauge", func(t *testing.T) {
+			delegate := &siGauge{}
+			f := func(v int64) { delegate.Record(context.Background(), v) }
+			testInt64ConcurrentSafe(f, delegate.setDelegate)
+		})
 	})
 }
 
@@ -149,6 +161,7 @@ type testCountingFloatInstrument struct {
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
+	embedded.Float64Gauge
 	embedded.Float64ObservableCounter
 	embedded.Float64ObservableUpDownCounter
 	embedded.Float64ObservableGauge
@@ -173,6 +186,7 @@ type testCountingIntInstrument struct {
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
+	embedded.Int64Gauge
 	embedded.Int64ObservableCounter
 	embedded.Int64ObservableUpDownCounter
 	embedded.Int64ObservableGauge

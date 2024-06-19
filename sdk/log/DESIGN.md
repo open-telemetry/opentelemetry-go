@@ -50,6 +50,11 @@ The user set processors for the `LoggerProvider` using
 
 The user can configure custom processors and decorate built-in processors.
 
+The specification may add new operations to the
+[LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor).
+If it happens, [CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
+describes how the SDK can be extended in a backwards-compatible way.
+
 ### SimpleProcessor
 
 The [Simple processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor)
@@ -73,6 +78,11 @@ The slice passed to `Export` must not be retained by the implementation
 so that the caller can reuse the passed slice
 (e.g. using [`sync.Pool`](https://pkg.go.dev/sync#Pool))
 to avoid heap allocations on each call.
+
+The specification may add new operations to the
+[LogRecordExporter](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter).
+If it happens, [CONTRIBUTING.md](../../CONTRIBUTING.md#how-to-change-other-interfaces)
+describes how the SDK can be extended in a backwards-compatible way.
 
 ### Record
 
@@ -106,12 +116,12 @@ single `Expoter` interface.[^2]
 
 However, introducing a `Processor` interface makes it easier
 to create custom processor decorators[^3]
-and makes the design more aligned with the specifiation.
+and makes the design more aligned with the specification.
 
-### Embedd log.Record
+### Embed log.Record
 
 Because [`Record`](#record) and [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
-are very similar, there was a proposal to embedd `log.Record` in `Record` definition.
+are very similar, there was a proposal to embed `log.Record` in `Record` definition.
 
 [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
 supports only adding attributes.

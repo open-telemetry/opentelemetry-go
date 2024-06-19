@@ -92,7 +92,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
-// If p is shut down, a [noop.Logger] instace is returned.
+// If p is shut down, a [noop.Logger] instance is returned.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
@@ -129,7 +129,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	return l
 }
 
-// Shutdown flushes queued log records and shuts down the decorated expoter.
+// Shutdown shuts down the provider and all processors.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
@@ -145,9 +145,9 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// ForceFlush flushes all exporters.
+// ForceFlush flushes all processors.
 //
-//	This method can be called concurrently.
+// This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	if p.stopped.Load() {
 		return nil

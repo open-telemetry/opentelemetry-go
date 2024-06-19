@@ -199,3 +199,34 @@ func BenchmarkString(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkValueEqual(b *testing.B) {
+	vals := []log.Value{
+		{},
+		log.Int64Value(1),
+		log.Int64Value(2),
+		log.Float64Value(3.5),
+		log.Float64Value(3.7),
+		log.BoolValue(true),
+		log.BoolValue(false),
+		log.StringValue("hi"),
+		log.StringValue("bye"),
+		log.BytesValue([]byte{1, 3, 5}),
+		log.SliceValue(log.StringValue("foo")),
+		log.SliceValue(log.IntValue(3), log.StringValue("foo")),
+		log.MapValue(log.Bool("b", true), log.Int("i", 3)),
+		log.MapValue(
+			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
+			log.Bytes("b", []byte{3, 5, 7}),
+			log.Empty("e"),
+		),
+	}
+	for _, v1 := range vals {
+		for _, v2 := range vals {
+			b.Run(v1.String()+" with "+v2.String(), func(b *testing.B) {
+				b.ReportAllocs()
+				_ = v1.Equal(v2)
+			})
+		}
+	}
+}

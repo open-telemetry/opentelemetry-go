@@ -31,7 +31,7 @@ func TestValidateKeyChar(t *testing.T) {
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
 		'\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F', ' ',
 		'(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?',
-		'=', '{', '}', '\x7F', 2 >> 20,
+		'=', '{', '}', '\x7F', 2 >> 20, '\x80',
 	}
 
 	for _, ch := range invalidKeyRune {
@@ -46,7 +46,7 @@ func TestValidateValueChar(t *testing.T) {
 		'\x08', '\x09', '\x0A', '\x0B', '\x0C', '\x0D', '\x0E', '\x0F',
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
 		'\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F', ' ',
-		'"', ',', ';', '\\', '\x7F',
+		'"', ',', ';', '\\', '\x7F', '\x80',
 	}
 
 	for _, ch := range invalidValueRune {
@@ -1153,5 +1153,20 @@ func BenchmarkValueEscape(b *testing.B) {
 				_ = valueEscape(tc.in)
 			}
 		})
+	}
+}
+
+func BenchmarkMemberString(b *testing.B) {
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	props := make([]Property, len(alphabet))
+	for i, r := range alphabet {
+		props[i] = Property{key: string(r)}
+	}
+	member, err := NewMember(alphabet, alphabet, props...)
+	require.NoError(b, err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = member.String()
 	}
 }

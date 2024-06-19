@@ -34,6 +34,10 @@ func TestInt64Configuration(t *testing.T) {
 	t.Run("Int64Histogram", run(
 		NewInt64HistogramConfig(WithDescription(desc), WithUnit(uBytes)),
 	))
+
+	t.Run("Int64Gauge", run(
+		NewInt64GaugeConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
 }
 
 type int64Config interface {

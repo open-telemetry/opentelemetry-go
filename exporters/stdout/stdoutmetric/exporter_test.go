@@ -28,8 +28,7 @@ func testEncoderOption() stdoutmetric.Option {
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
-		t.Cleanup(cancel)
+		ctx := context.Background()
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -55,19 +54,27 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 	}
 }
 
-func TestExporterHonorsContextErrors(t *testing.T) {
-	t.Run("Shutdown", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption())
-		require.NoError(t, err)
-		return exp.Shutdown
-	}))
+func testCtxErrIgnored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx := context.Background()
 
-	t.Run("ForceFlush", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
-		exp, err := stdoutmetric.New(testEncoderOption())
-		require.NoError(t, err)
-		return exp.ForceFlush
-	}))
+		t.Run("Canceled Ignored", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
 
+			f := factory(t)
+			assert.NoError(t, f(innerCtx))
+		})
+
+		t.Run("NoError", func(t *testing.T) {
+			f := factory(t)
+			assert.NoError(t, f(ctx))
+		})
+	}
+}
+
+func TestExporterExportHonorsContextErrors(t *testing.T) {
 	t.Run("Export", testCtxErrHonored(func(t *testing.T) func(context.Context) error {
 		exp, err := stdoutmetric.New(testEncoderOption())
 		require.NoError(t, err)
@@ -75,6 +82,22 @@ func TestExporterHonorsContextErrors(t *testing.T) {
 			data := new(metricdata.ResourceMetrics)
 			return exp.Export(ctx, data)
 		}
+	}))
+}
+
+func TestExporterForceFlushIgnoresContextErrors(t *testing.T) {
+	t.Run("ForceFlush", testCtxErrIgnored(func(t *testing.T) func(context.Context) error {
+		exp, err := stdoutmetric.New(testEncoderOption())
+		require.NoError(t, err)
+		return exp.ForceFlush
+	}))
+}
+
+func TestExporterShutdownIgnoresContextErrors(t *testing.T) {
+	t.Run("Shutdown", testCtxErrIgnored(func(t *testing.T) func(context.Context) error {
+		exp, err := stdoutmetric.New(testEncoderOption())
+		require.NoError(t, err)
+		return exp.Shutdown
 	}))
 }
 

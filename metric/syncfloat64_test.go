@@ -34,6 +34,10 @@ func TestFloat64Configuration(t *testing.T) {
 	t.Run("Float64Histogram", run(
 		NewFloat64HistogramConfig(WithDescription(desc), WithUnit(uBytes)),
 	))
+
+	t.Run("Float64Gauge", run(
+		NewFloat64GaugeConfig(WithDescription(desc), WithUnit(uBytes)),
+	))
 }
 
 type float64Config interface {

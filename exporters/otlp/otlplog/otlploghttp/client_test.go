@@ -32,13 +32,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
-	collogpb "go.opentelemetry.io/proto/slim/otlp/collector/logs/v1"
-	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
-	lpb "go.opentelemetry.io/proto/slim/otlp/logs/v1"
-	rpb "go.opentelemetry.io/proto/slim/otlp/resource/v1"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/sdk/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var (

@@ -4,19 +4,54 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"bytes"
 	"context"
+	stdlog "log"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 )
+
+type concurrentBuffer struct {
+	b bytes.Buffer
+	m sync.Mutex
+}
+
+func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *concurrentBuffer) String() string {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.String()
+}
+
+func TestEmptyBatchConfig(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var bp BatchProcessor
+		ctx := context.Background()
+		var record Record
+		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, bp.Enabled(ctx, record), "Enabled")
+		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
+		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
+	})
+}
 
 func TestNewBatchConfig(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
@@ -349,7 +384,7 @@ func TestBatchProcessor(t *testing.T) {
 				require.NoError(t, b.OnEmit(ctx, Record{}))
 			}
 			assert.Eventually(t, func() bool {
-				return e.ExportN() > 0
+				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
 			}, 2*time.Second, time.Microsecond)
 			// 1 export being performed, 1 export in buffer chan, >1 batch
 			// still in queue that an attempt to flush will be made on.
@@ -398,6 +433,51 @@ func TestBatchProcessor(t *testing.T) {
 			cancel()
 			assert.ErrorIs(t, b.ForceFlush(c), context.Canceled)
 		})
+	})
+
+	t.Run("DroppedLogs", func(t *testing.T) {
+		orig := global.GetLogger()
+		t.Cleanup(func() { global.SetLogger(orig) })
+		// Use concurrentBuffer for concurrent-safe reading.
+		buf := new(concurrentBuffer)
+		stdr.SetVerbosity(1)
+		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
+
+		e := newTestExporter(nil)
+		e.ExportTrigger = make(chan struct{})
+
+		b := NewBatchProcessor(
+			e,
+			WithMaxQueueSize(1),
+			WithExportMaxBatchSize(1),
+			WithExportInterval(time.Hour),
+			WithExportTimeout(time.Hour),
+		)
+		var r Record
+		// First record will be blocked by testExporter.Export
+		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
+		require.Eventually(t, func() bool {
+			return e.ExportN() > 0
+		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
+
+		// Second record will be written to export queue
+		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
+		require.Eventually(t, func() bool {
+			return len(b.exporter.input) == cap(b.exporter.input)
+		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")
+
+		// Third record will be written to BatchProcessor.q
+		assert.NoError(t, b.OnEmit(ctx, r), "first queued")
+		// The previous record will be dropped, as the new one will be written to BatchProcessor.q
+		assert.NoError(t, b.OnEmit(ctx, r), "second queued")
+
+		wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=1`
+		assert.Eventually(t, func() bool {
+			return strings.Contains(buf.String(), wantMsg)
+		}, 2*time.Second, time.Microsecond)
+
+		close(e.ExportTrigger)
+		_ = b.Shutdown(ctx)
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
@@ -475,6 +555,18 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, []Record{r, r}, q.Flush(), "flushed Records")
 	})
 
+	t.Run("Dropped", func(t *testing.T) {
+		q := newQueue(1)
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(1), q.Dropped(), "fist")
+
+		_ = q.Enqueue(r)
+		_ = q.Enqueue(r)
+		assert.Equal(t, uint64(2), q.Dropped(), "second")
+	})
+
 	t.Run("Flush", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
@@ -546,5 +638,33 @@ func TestQueue(t *testing.T) {
 		<-done
 
 		assert.Len(t, out, goRoutines, "flushed Records")
+	})
+}
+
+func BenchmarkBatchProcessorOnEmit(b *testing.B) {
+	var r Record
+	body := log.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	ctx := context.Background()
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(b.N+1),
+		WithExportMaxBatchSize(b.N+1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+
+	b.SetBytes(int64(rSize))
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		var err error
+		for pb.Next() {
+			err = bp.OnEmit(ctx, r)
+		}
+		_ = err
 	})
 }
