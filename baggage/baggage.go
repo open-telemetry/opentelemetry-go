@@ -308,9 +308,7 @@ func parseMember(member string) (Member, error) {
 	if !utf8.ValidString(value) {
 		// Handle invalid UTF-8 sequences
 		// Replace them with a replacement code point or handle them as needed
-		invalidSequences := findInvalidUTF8Sequences(value)
-		// Replace invalid sequence with a replacement code point
-		for _, is := range invalidSequences {
+		for _, is := range findInvalidUTF8Sequences(value) {
 			value = strings.ReplaceAll(value, is, "�")
 		}
 	}
