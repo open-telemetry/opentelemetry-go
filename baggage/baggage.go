@@ -306,8 +306,8 @@ func parseMember(member string) (Member, error) {
 	}
 
 	if !utf8.ValidString(value) {
-		// Handle invalid UTF-8 sequences
-		// Replace them with a replacement code point or handle them as needed
+		// W3C baggage spec:
+		// https://github.com/w3c/baggage/blob/main/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
 		for _, is := range findInvalidUTF8Sequences(value) {
 			value = strings.ReplaceAll(value, is, "�")
 		}
