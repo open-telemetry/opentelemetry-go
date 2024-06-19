@@ -225,11 +225,11 @@ func Default() *Resource {
 			telemetrySDK{},
 		}
 		if x.Resource.Enabled() {
-			defaultDetectors = append([]Detector{ defaultServiceInstanceIDDetector{} }, defaultDetectors...)
+			defaultDetectors = append([]Detector{defaultServiceInstanceIDDetector{}}, defaultDetectors...)
 		}
 		defaultResource, err = Detect(
 			context.Background(),
-			defaultDetectors...
+			defaultDetectors...,
 		)
 		if err != nil {
 			otel.Handle(err)
