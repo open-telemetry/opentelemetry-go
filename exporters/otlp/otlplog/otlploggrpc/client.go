@@ -36,7 +36,7 @@ type client struct {
 }
 
 // Used for testing.
-var newGRPCClient = grpc.NewClient
+var newGRPCClientFn = grpc.NewClient
 
 // newClient creates a new gRPC log client.
 func newClient(cfg config) (*client, error) {
