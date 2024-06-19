@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
@@ -155,19 +156,29 @@ func ExampleMeter_gauge() {
 		panic(err)
 	}
 
-	getCPUFanSpeed := func() int64 {
-		// hard-code 1500 RPM for demonstrative purposes
-		// do the real work to get the cpu fan speed
-		return 1500
+	getCpuFanSpeed := func() int64 {
+		// Generates a random fan speed for demonstration purpose.
+		// In real wordl applications, replace this to get the actual fan speed.
+		return int64(1500 * rand.Intn(1000))
 	}
 
-	_ = func() {
-		go func() {
-			for {
-				time.Sleep(time.Second * 3)
-				speedGauge.Record(context.Background(), getCPUFanSpeed())
-			}
-		}()
+	fanSpeedSubscription := make(chan int64, 1)
+	go func() {
+		defer close(fanSpeedSubscription)
+
+		for idx := 0; idx < 5; idx++ {
+			// Synchronous gauges are used when the measurement cycle is
+			// synchronous to an external change.
+			// Simulate that external cycle here.
+			time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
+			fanSpeed := getCpuFanSpeed()
+			fanSpeedSubscription <- fanSpeed
+		}
+	}()
+
+	ctx := context.Background()
+	for fanSpeed := range fanSpeedSubscription {
+		speedGauge.Record(ctx, fanSpeed)
 	}
 }
 
