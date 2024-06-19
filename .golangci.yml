@@ -11,6 +11,7 @@ linters:
   enable:
     - depguard
     - errcheck
+    - exportloopref
     - godot
     - gofumpt
     - goimports
@@ -21,6 +22,7 @@ linters:
     - misspell
     - revive
     - staticcheck
+    - tenv
     - typecheck
     - unused
 
