@@ -372,7 +372,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Timeout",
 			opts: []GenericOption{
-				WithTimeout(time.Duration(5 * time.Second)),
+				WithTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, 5*time.Second, c.Traces.Timeout)

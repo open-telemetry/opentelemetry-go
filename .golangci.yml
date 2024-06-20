@@ -22,6 +22,7 @@ linters:
     - revive
     - staticcheck
     - typecheck
+    - unconvert
     - unused
 
 issues:
