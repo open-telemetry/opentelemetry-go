@@ -26,9 +26,10 @@ const (
 
 // Exporter exports spans to the zipkin collector.
 type Exporter struct {
-	url    string
-	client *http.Client
-	logger logr.Logger
+	url     string
+	client  *http.Client
+	logger  logr.Logger
+	headers map[string]string
 
 	stoppedMu sync.RWMutex
 	stopped   bool
@@ -40,8 +41,9 @@ var emptyLogger = logr.Logger{}
 
 // Options contains configuration for the exporter.
 type config struct {
-	client *http.Client
-	logger logr.Logger
+	client  *http.Client
+	logger  logr.Logger
+	headers map[string]string
 }
 
 // Option defines a function that configures the exporter.
@@ -66,6 +68,14 @@ func WithLogger(logger *log.Logger) Option {
 func WithLogr(logger logr.Logger) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.logger = logger
+		return cfg
+	})
+}
+
+// WithHeaders configures the exporter to use the passed http request headers.
+func WithHeaders(headers map[string]string) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.headers = headers
 		return cfg
 	})
 }
@@ -101,9 +111,10 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 		cfg.client = http.DefaultClient
 	}
 	return &Exporter{
-		url:    collectorURL,
-		client: cfg.client,
-		logger: cfg.logger,
+		url:     collectorURL,
+		client:  cfg.client,
+		logger:  cfg.logger,
+		headers: cfg.headers,
 	}, nil
 }
 
@@ -132,6 +143,15 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 		return e.errf("failed to create request to %s: %v", e.url, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+
+	for k, v := range e.headers {
+		if k == "host" {
+			req.Host = v
+		} else {
+			req.Header.Set(k, v)
+		}
+	}
+
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return e.errf("request to %s failed: %v", e.url, err)

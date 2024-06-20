@@ -375,3 +375,17 @@ func TestLogrFormatting(t *testing.T) {
 	got := buf.String()
 	assert.Equal(t, want, got)
 }
+
+func TestWithHeaders(t *testing.T) {
+	headers := map[string]string{
+		"name1": "value1",
+		"name2": "value2",
+	}
+
+	exp, err := New("", WithHeaders(headers))
+	require.NoError(t, err)
+
+	want := headers
+	got := exp.headers
+	assert.Equal(t, want, got)
+}
