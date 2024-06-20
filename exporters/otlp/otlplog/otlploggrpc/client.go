@@ -55,7 +55,7 @@ func newClient(cfg config) (*client, error) {
 		// created, create one using the configuration they did provide.
 		dialOpts := newGRPCDialOptions(cfg)
 
-		conn, err := newGRPCClient(cfg.endpoint.Value, dialOpts...)
+		conn, err := newGRPCClientFn(cfg.endpoint.Value, dialOpts...)
 		if err != nil {
 			return nil, err
 		}
