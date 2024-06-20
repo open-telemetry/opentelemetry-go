@@ -23,6 +23,7 @@ linters:
     - staticcheck
     - typecheck
     - unused
+    - unparam
 
 issues:
   # Maximum issues count per one linter.
