@@ -21,6 +21,7 @@ linters:
     - misspell
     - revive
     - staticcheck
+    - tenv
     - typecheck
     - unused
     - unparam
