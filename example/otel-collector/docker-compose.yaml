@@ -11,7 +11,7 @@ services:
       - 4317:4317
 
   prometheus:
-    image: prom/prometheus:v2.52.0
+    image: prom/prometheus:v2.53.0
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
