@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix counting number of dropped attributes of `Record` in `go.opentelemetry.io/otel/sdk/log`. (#5464)
 - Fix panic in baggage creation when a member contains 0x80 char in key or value. (#5494)
 - Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their coresponding environment variables in  in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#5508)
+- Fix stale timestamps reported by the lastvalue aggregation. (#5517)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
