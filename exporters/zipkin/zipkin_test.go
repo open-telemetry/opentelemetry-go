@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -324,6 +325,28 @@ func TestExportSpans(t *testing.T) {
 	}
 	require.Eventually(t, checkFunc, time.Second, 10*time.Millisecond)
 	require.Equal(t, models, collector.StealModels())
+
+	got := make(chan *http.Request, 1)
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		got <- r
+		w.WriteHeader(http.StatusOK)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+
+	headers := map[string]string{"name1": "value1", "name2": "value2"}
+	e := &Exporter{
+		url:     srv.URL,
+		client:  srv.Client(),
+		headers: headers,
+	}
+
+	_ = e.ExportSpans(context.Background(), spans)
+	req := <-got
+
+	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
+	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
