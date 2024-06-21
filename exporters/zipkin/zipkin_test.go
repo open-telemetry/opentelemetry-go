@@ -335,7 +335,7 @@ func TestExportSpans(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(handler))
 	defer srv.Close()
 
-	headers := map[string]string{"name1": "value1", "name2": "value2"}
+	headers := map[string]string{"name1": "value1", "name2": "value2", "host": "example"}
 	e := &Exporter{
 		url:     srv.URL,
 		client:  srv.Client(),
@@ -345,6 +345,7 @@ func TestExportSpans(t *testing.T) {
 	_ = e.ExportSpans(context.Background(), spans)
 	req := <-got
 
+	assert.Equal(t, headers["host"], req.Host)
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
 	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }
