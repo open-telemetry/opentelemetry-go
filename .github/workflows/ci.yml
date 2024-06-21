@@ -51,7 +51,7 @@ jobs:
       - name: Build
         run: make build
       - name: Check clean repository
-        run: make check-clean-work-tree
+        run: make check-clean-work-tree verify-mods
   test-bench:
     runs-on: ubuntu-latest
     steps:
