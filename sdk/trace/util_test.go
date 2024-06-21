@@ -9,7 +9,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func basicTracerProvider(t *testing.T) *sdktrace.TracerProvider {
+func basicTracerProvider(_ *testing.T) *sdktrace.TracerProvider {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
 	return tp
 }
