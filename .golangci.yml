@@ -23,6 +23,7 @@ linters:
     - staticcheck
     - tenv
     - typecheck
+    - unconvert
     - unused
 
 issues:
