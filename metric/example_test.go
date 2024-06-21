@@ -156,10 +156,10 @@ func ExampleMeter_gauge() {
 		panic(err)
 	}
 
-	getCpuFanSpeed := func() int64 {
+	getCPUFanSpeed := func() int64 {
 		// Generates a random fan speed for demonstration purpose.
-		// In real wordl applications, replace this to get the actual fan speed.
-		return int64(1500 * rand.Intn(1000))
+		// In real world applications, replace this to get the actual fan speed.
+		return int64(1500 + rand.Intn(1000))
 	}
 
 	fanSpeedSubscription := make(chan int64, 1)
@@ -171,7 +171,7 @@ func ExampleMeter_gauge() {
 			// synchronous to an external change.
 			// Simulate that external cycle here.
 			time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
-			fanSpeed := getCpuFanSpeed()
+			fanSpeed := getCPUFanSpeed()
 			fanSpeedSubscription <- fanSpeed
 		}
 	}()
