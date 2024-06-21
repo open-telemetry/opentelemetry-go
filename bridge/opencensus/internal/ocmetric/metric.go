@@ -233,7 +233,7 @@ func convertKV(key string, value any) attribute.KeyValue {
 	case uintptr:
 		return uint64KV(key, uint64(typedVal))
 	case uint64:
-		return uint64KV(key, uint64(typedVal))
+		return uint64KV(key, typedVal)
 	case float32:
 		return attribute.Float64(key, float64(typedVal))
 	case float64:
