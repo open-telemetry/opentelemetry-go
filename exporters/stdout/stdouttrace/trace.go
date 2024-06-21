@@ -19,10 +19,7 @@ var _ trace.SpanExporter = &Exporter{}
 
 // New creates an Exporter with the passed options.
 func New(options ...Option) (*Exporter, error) {
-	cfg, err := newConfig(options...)
-	if err != nil {
-		return nil, err
-	}
+	cfg := newConfig(options...)
 
 	enc := json.NewEncoder(cfg.Writer)
 	if cfg.PrettyPrint {
