@@ -14,17 +14,19 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/retry"
-	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type client struct {
@@ -189,11 +191,21 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			// Retry-able failure.
 			rErr = newResponseError(resp.Header)
 
-			// Going to retry, drain the body to reuse the connection.
-			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-				_ = resp.Body.Close()
+			// In all these cases, since the response body is
+			// not getting parsed, actual reason of failure is
+			// very hard to find out for the user.
+			// If body is not empty, then we can use the msg
+			// of underlying service as error message.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
 				return err
 			}
+
+			respStr := strings.TrimSpace(respData.String())
+			if respStr != "" {
+				rErr = errors.New(respStr)
+			}
+
 		default:
 			rErr = fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
 		}
