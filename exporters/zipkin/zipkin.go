@@ -86,7 +86,7 @@ func New(collectorURL string, opts ...Option) (*Exporter, error) {
 	}
 	u, err := url.Parse(collectorURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid collector URL %q: %v", collectorURL, err)
+		return nil, fmt.Errorf("invalid collector URL %q: %w", collectorURL, err)
 	}
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("invalid collector URL %q: no scheme or host", collectorURL)
