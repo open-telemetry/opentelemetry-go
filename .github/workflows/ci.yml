@@ -47,11 +47,11 @@ jobs:
       - name: Generate
         run: make generate
       - name: Run linters
-        run: make license-check lint vanity-import-check verify-readmes
+        run: make license-check lint vanity-import-check verify-readmes verify-mods
       - name: Build
         run: make build
       - name: Check clean repository
-        run: make check-clean-work-tree verify-mods
+        run: make check-clean-work-tree
   test-bench:
     runs-on: ubuntu-latest
     steps:
