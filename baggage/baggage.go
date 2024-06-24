@@ -318,13 +318,14 @@ func parseMember(member string) (Member, error) {
 
 func findInvalidUTF8Sequences(input string) []string {
 	var invalidSequences []string
-	for i := 0; i < len(input); i++ {
+	for i := 0; i < len(input); {
 		r, size := utf8.DecodeRuneInString(input[i:])
 
 		if r == utf8.RuneError && size == 1 {
 			// RuneError indicates an invalid UTF-8 sequence
 			invalidSequences = append(invalidSequences, input[i:i+size])
 		}
+		i += size
 	}
 
 	return invalidSequences
