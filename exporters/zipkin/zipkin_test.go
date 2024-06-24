@@ -325,29 +325,6 @@ func TestExportSpans(t *testing.T) {
 	}
 	require.Eventually(t, checkFunc, time.Second, 10*time.Millisecond)
 	require.Equal(t, models, collector.StealModels())
-
-	got := make(chan *http.Request, 1)
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		got <- r
-		w.WriteHeader(http.StatusOK)
-	}
-
-	srv := httptest.NewServer(http.HandlerFunc(handler))
-	defer srv.Close()
-
-	headers := map[string]string{"name1": "value1", "name2": "value2", "host": "example"}
-	e := &Exporter{
-		url:     srv.URL,
-		client:  srv.Client(),
-		headers: headers,
-	}
-
-	_ = e.ExportSpans(context.Background(), spans)
-	req := <-got
-
-	assert.Equal(t, headers["host"], req.Host)
-	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
-	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
@@ -404,6 +381,7 @@ func TestWithHeaders(t *testing.T) {
 	headers := map[string]string{
 		"name1": "value1",
 		"name2": "value2",
+		"host":  "example",
 	}
 
 	exp, err := New("", WithHeaders(headers))
@@ -412,4 +390,26 @@ func TestWithHeaders(t *testing.T) {
 	want := headers
 	got := exp.headers
 	assert.Equal(t, want, got)
+
+	ch := make(chan *http.Request, 1)
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		ch <- r
+		w.WriteHeader(http.StatusOK)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+
+	e := &Exporter{
+		url:     srv.URL,
+		client:  srv.Client(),
+		headers: headers,
+	}
+
+	_ = e.ExportSpans(context.Background(), tracetest.SpanStubs{}.Snapshots())
+	req := <-ch
+
+	assert.Equal(t, headers["host"], req.Host)
+	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
+	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }
