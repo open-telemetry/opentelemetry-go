@@ -177,7 +177,7 @@ type HTTPResponseError struct {
 }
 
 func (e *HTTPResponseError) Error() string {
-	return fmt.Sprintf("%d: %s", e.Status, e.Err)
+        return e.Err.Error()
 }
 
 func (e *HTTPResponseError) Unwrap() error { return e.Err }
