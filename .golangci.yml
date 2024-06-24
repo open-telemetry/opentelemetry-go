@@ -21,8 +21,11 @@ linters:
     - misspell
     - revive
     - staticcheck
+    - tenv
     - typecheck
+    - unconvert
     - unused
+    - unparam
 
 issues:
   # Maximum issues count per one linter.
