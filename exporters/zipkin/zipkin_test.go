@@ -391,9 +391,18 @@ func TestWithHeaders(t *testing.T) {
 	got := exp.headers
 	assert.Equal(t, want, got)
 
-	ch := make(chan *http.Request, 1)
+	spans := tracetest.SpanStubs{
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+		},
+	}.Snapshots()
+
+	var req *http.Request
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		ch <- r
+		req = r
 		w.WriteHeader(http.StatusOK)
 	}
 
@@ -406,8 +415,7 @@ func TestWithHeaders(t *testing.T) {
 		headers: headers,
 	}
 
-	_ = e.ExportSpans(context.Background(), tracetest.SpanStubs{}.Snapshots())
-	req := <-ch
+	_ = e.ExportSpans(context.Background(), spans)
 
 	assert.Equal(t, headers["host"], req.Host)
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
