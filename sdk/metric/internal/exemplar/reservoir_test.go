@@ -50,8 +50,8 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 			want := Exemplar{
 				Time:    staticTime,
 				Value:   NewValue(N(10)),
-				SpanID:  []byte(sID[:]),
-				TraceID: []byte(tID[:]),
+				SpanID:  sID[:],
+				TraceID: tID[:],
 			}
 			require.Len(t, dest, 1, "number of collected exemplars")
 			assert.Equal(t, want, dest[0])
