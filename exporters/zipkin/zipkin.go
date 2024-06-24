@@ -72,7 +72,7 @@ func WithLogr(logger logr.Logger) Option {
 	})
 }
 
-// WithHeaders configures the exporter to use the passed http request headers.
+// WithHeaders configures the exporter to use the passed HTTP request headers.
 func WithHeaders(headers map[string]string) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.headers = headers
