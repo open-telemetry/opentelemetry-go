@@ -69,7 +69,7 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 		}
 	}
 	return func(ctx context.Context, n N, a attribute.Set) {
-		f(ctx, n, a, nil)
+		// f(ctx, n, a, nil)
 	}
 }
 
