@@ -186,9 +186,11 @@ var (
 	_ metric.Int64Gauge         = (*int64Inst)(nil)
 )
 
+var empty = attribute.EmptySet()
+
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
-	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	// c := metric.NewAddConfig(opts)
+	i.aggregate(ctx, val, *empty)
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
