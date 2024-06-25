@@ -17,13 +17,11 @@ import (
 )
 
 func BenchmarkPrometheusCounter(b *testing.B) {
-	reg := promsdk.NewRegistry()
 	opts := promsdk.CounterOpts{
 		Name: "test_counter",
 		Help: "help",
 	}
 	cv := promsdk.NewCounterVec(opts, []string{"tag1"})
-	reg.MustRegister(cv)
 	counter := cv.WithLabelValues("value1")
 
 	b.ResetTimer()
