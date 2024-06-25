@@ -197,9 +197,13 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 }
 
 func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
-	for _, in := range i.measures {
-		in(ctx, val, s)
+	if len(i.measures) != 1 {
+		panic("wrong")
 	}
+	i.measures[0](ctx, val, s)
+	// for _, in := range i.measures {
+	// 	in(ctx, val, s)
+	// }
 }
 
 type float64Inst struct {
