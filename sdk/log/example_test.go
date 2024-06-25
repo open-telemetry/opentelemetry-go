@@ -33,8 +33,8 @@ type MinSeverityProcessor struct {
 }
 
 // NewMinSeverityProcessor returns a [MinSeverityProcessor] that decorates the
-// processor such that only [logsdk.Record]s with a [log.Severity] greater than or
-// equal to minimum will be processed.
+// processor such that only [logsdk.Record] with a [log.Severity] greater than or
+// equal to minimum is processed.
 func NewMinSeverityProcessor(minimum log.Severity, processor logsdk.Processor) *MinSeverityProcessor {
 	return &MinSeverityProcessor{
 		Processor: processor,
@@ -42,9 +42,9 @@ func NewMinSeverityProcessor(minimum log.Severity, processor logsdk.Processor) *
 	}
 }
 
-// OnEmit passes the context and record to the underlying [logsdk.Processor] s
-// decorates if the [log.Severity] of record is greater than or equal to the
-// minimum severity s is configured at.
+// OnEmit passes the context and record to the underlying [logsdk.Processor]
+// if the [log.Severity] of record is greater than or equal to the
+// minimum severity is configured at.
 func (s *MinSeverityProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
 	if !s.enabled(record) {
 		return nil
@@ -52,8 +52,8 @@ func (s *MinSeverityProcessor) OnEmit(ctx context.Context, record logsdk.Record)
 	return s.Processor.OnEmit(ctx, record)
 }
 
-// Enabled returns true the [log.Severity] of record is greater than or equal
-// to the minimum severity s is configured at. It will return false if the
+// Enabled returns true if the [log.Severity] of record is greater than or equal
+// to the minimum severity is configured at. It will return false if the
 // severity is less than the minimum.
 //
 // If the record severity is unset, this will return true.
