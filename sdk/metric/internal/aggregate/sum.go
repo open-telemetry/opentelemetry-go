@@ -36,20 +36,20 @@ func newValueMap[N int64 | float64](limit int, r func() exemplar.Reservoir) *val
 }
 
 func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	t := now()
+	// t := now()
 
 	s.Lock()
 	defer s.Unlock()
 
 	attr := s.limit.Attributes(fltrAttr, s.values)
-	v, ok := s.values[attr.Equivalent()]
-	if !ok {
-		v.res = s.newRes()
-	}
+	v := s.values[attr.Equivalent()]
+	// if !ok {
+	// v.res = s.newRes()
+	// }
 
 	v.attrs = attr
 	v.n += value
-	v.res.Offer(ctx, t, exemplar.NewValue(value), droppedAttr)
+	// v.res.Offer(ctx, t, exemplar.NewValue(value), droppedAttr)
 
 	s.values[attr.Equivalent()] = v
 }
