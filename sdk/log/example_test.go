@@ -11,7 +11,7 @@ import (
 )
 
 // Use a processor which sets the minimum log level for the Logs SDK.
-func ExampleProcessor() {
+func ExampleProcessor_filtering() {
 	// Existing processor that emits telemetry.
 	var processor logsdk.Processor = logsdk.NewBatchProcessor(nil)
 
