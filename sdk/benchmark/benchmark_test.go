@@ -12,8 +12,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-
-	promExporter "go.opentelemetry.io/otel/exporters/prometheus"
 )
 
 func BenchmarkPrometheusCounter(b *testing.B) {
@@ -53,11 +51,8 @@ func BenchmarkOTELCounterWithLabel(b *testing.B) {
 }
 
 func otelCounter(b *testing.B) metric.Int64Counter {
-	registry := promsdk.NewRegistry()
-	exporter, err := promExporter.New(promExporter.WithRegisterer(registry))
-	require.NoError(b, err)
 	meterProvider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(exporter),
+		sdkmetric.WithReader(sdkmetric.NewManualReader()),
 	)
 
 	meter := meterProvider.Meter("test")
