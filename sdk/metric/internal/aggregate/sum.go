@@ -22,10 +22,9 @@ type sumValue[N int64 | float64] struct {
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
-	newRes                 func() exemplar.Reservoir
-	limit                  limiter[sumValue[N]]
-	values                 map[attribute.Distinct]sumValue[N]
-	hypotheticalBoundValue sumValue[N]
+	newRes func() exemplar.Reservoir
+	limit  limiter[sumValue[N]]
+	values map[attribute.Distinct]sumValue[N]
 }
 
 func newValueMap[N int64 | float64](limit int, r func() exemplar.Reservoir) *valueMap[N] {
@@ -39,8 +38,8 @@ func newValueMap[N int64 | float64](limit int, r func() exemplar.Reservoir) *val
 func (s *valueMap[N]) measure(ctx context.Context, value N, attr attribute.Set, droppedAttr []attribute.KeyValue) {
 	// t := now()
 
-	s.Lock()
-	defer s.Unlock()
+	// s.Lock()
+	// defer s.Unlock()
 
 	// attr := s.limit.Attributes(fltrAttr, s.values)
 	// v := s.values[attr.Equivalent()]
@@ -48,8 +47,8 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, attr attribute.Set, 
 	// v.res = s.newRes()
 	// }
 
-	s.hypotheticalBoundValue.attrs = attr
-	s.hypotheticalBoundValue.n += value
+	// s.hypotheticalBoundValue.attrs = attr
+	// s.hypotheticalBoundValue.n += value
 	// v.res.Offer(ctx, t, exemplar.NewValue(value), droppedAttr)
 
 	// s.values[attr.Equivalent()] = v
