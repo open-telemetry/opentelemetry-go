@@ -532,7 +532,7 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 func compressorToCompression(compressor string) Compression {
 	c, err := convCompression(compressor)
 	if err != nil {
-		otel.Handle(fmt.Errorf("%s, using no compression as default", err))
+		otel.Handle(fmt.Errorf("%w, using no compression as default", err))
 		return NoCompression
 	}
 
