@@ -642,12 +642,24 @@ func TestTruncate(t *testing.T) {
 
 func BenchmarkSetAddAttributes(b *testing.B) {
 	kv := log.String("key", "value")
-	records := make([]Record, b.N)
 
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		records[i].SetAttributes(kv)
-		records[i].AddAttributes(kv)
-	}
+	b.Run("SetAttributes", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].SetAttributes(kv)
+		}
+	})
+
+	b.Run("AddAttributes", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].AddAttributes(kv)
+		}
+	})
 }
