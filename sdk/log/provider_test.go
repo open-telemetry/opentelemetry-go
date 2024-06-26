@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -286,4 +287,15 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		ctx := context.Background()
 		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
 	})
+}
+
+func BenchmarkLoggerProviderLogger(b *testing.B) {
+	p := NewLoggerProvider()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = p.Logger(fmt.Sprintf("%d logger", i))
+	}
 }
