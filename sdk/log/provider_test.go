@@ -291,11 +291,15 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 
 func BenchmarkLoggerProviderLogger(b *testing.B) {
 	p := NewLoggerProvider()
+	names := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		names[i] = fmt.Sprintf("%d logger", i)
+	}
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_ = p.Logger(fmt.Sprintf("%d logger", i))
+		_ = p.Logger(names[i])
 	}
 }
