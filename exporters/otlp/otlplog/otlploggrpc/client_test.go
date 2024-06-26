@@ -140,15 +140,15 @@ func TestRetryableGRPCStatusResourceExhaustedWithRetryInfo(t *testing.T) {
 }
 
 func TestNewClient(t *testing.T) {
-	newGRPCClientSwap := newGRPCClient
+	newGRPCClientFnSwap := newGRPCClientFn
 	t.Cleanup(func() {
-		newGRPCClient = newGRPCClientSwap
+		newGRPCClientFn = newGRPCClientFnSwap
 	})
 
 	// The gRPC connection created by newClient.
 	conn, err := grpc.NewClient("test", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	newGRPCClient = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	newGRPCClientFn = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 		return conn, nil
 	}
 

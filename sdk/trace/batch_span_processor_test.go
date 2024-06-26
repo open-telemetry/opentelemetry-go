@@ -329,7 +329,7 @@ func TestBatchSpanProcessorExportTimeout(t *testing.T) {
 	generateSpan(t, tr, testOption{genNumSpans: 1})
 	tp.UnregisterSpanProcessor(bsp)
 
-	if exp.err != context.DeadlineExceeded {
+	if !errors.Is(exp.err, context.DeadlineExceeded) {
 		t.Errorf("context deadline error not returned: got %+v", exp.err)
 	}
 }
@@ -340,7 +340,7 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) sdktrace
 	return sdktrace.NewBatchSpanProcessor(te, options...)
 }
 
-func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
+func generateSpan(_ *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
@@ -353,7 +353,7 @@ func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
 	}
 }
 
-func generateSpanParallel(t *testing.T, tr trace.Tracer, option testOption) {
+func generateSpanParallel(_ *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	wg := &sync.WaitGroup{}
