@@ -20,14 +20,12 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
 	"go.opentelemetry.io/otel"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/retry"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type client struct {
@@ -149,7 +147,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		resp, err := c.httpClient.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{})
+			return newResponseError(http.Header{}, err.Error())
 		}
 		if err != nil {
 			return err
@@ -190,21 +188,24 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			sc == http.StatusServiceUnavailable,
 			sc == http.StatusGatewayTimeout:
 			// Retry-able failure.
-			rErr = newResponseError(resp.Header)
+			rErr = newResponseError(resp.Header, "")
 
-			// In all these cases, since the response body is
-			// not getting parsed, actual reason of failure is
-			// very hard to find out for the user.
-			// If body is not empty, then we can use the msg
-			// of underlying service as error message.
+			// server may return a message with the response
+			// body, so we read it to include in the error
+			// message to be returned. It will help in
+			// debugging the actual issue.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
 				return err
 			}
 
+			// overwrite the error message with the response body
+			// if it is not empty
 			respStr := strings.TrimSpace(respData.String())
 			if respStr != "" {
-				rErr = errors.New(respStr)
+				// pass the error message along with retry-able error,
+				// so that it can be retried and also passes the message
+				rErr = newResponseError(resp.Header, respStr)
 			}
 
 		default:
@@ -282,21 +283,30 @@ func (r *request) reset(ctx context.Context) {
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
 	throttle int64
+	errMsg   string
 }
 
 // newResponseError returns a retryableError and will extract any explicit
-// throttle delay contained in headers.
-func newResponseError(header http.Header) error {
+// throttle delay contained in headers and if there is message in the response
+// body, it will be used as the error message. If errMsg is not empty, it will
+// be used as the error message instead of the standard "retry-able" failure.
+func newResponseError(header http.Header, errMsg string) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
 		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
 			rErr.throttle = t
 		}
 	}
+
+	rErr.errMsg = errMsg
 	return rErr
 }
 
 func (e retryableError) Error() string {
+	if e.errMsg != "" {
+		return e.errMsg
+	}
+
 	return "retry-able request failure"
 }
 

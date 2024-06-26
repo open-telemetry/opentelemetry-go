@@ -17,13 +17,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type clientShim struct {
@@ -189,26 +187,21 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
-		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx))})
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
+
 	})
 
 	t.Run("WithRetryAndExporterErr", func(t *testing.T) {
 		exporterErr := errors.New("rpc error: code = Unavailable desc = service.name not found in resource attributes")
 		rCh := make(chan otest.ExportResult, 1)
-		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
-			Status: http.StatusServiceUnavailable,
+			Status: http.StatusTooManyRequests,
 			Err:    exporterErr,
-			Header: header,
 		}}
-
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
-			Enabled:         true,
-			InitialInterval: time.Nanosecond,
-			MaxInterval:     time.Millisecond,
-			MaxElapsedTime:  time.Minute,
+			Enabled: false,
 		}))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
@@ -216,9 +209,8 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-		target := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorAs(t, fmt.Errorf("failed to upload metrics: %s", exporterErr.Error()), &target)
-		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		assert.EqualError(t, err, fmt.Sprintf("failed to upload metrics: %d: %v", http.StatusTooManyRequests, exporterErr))
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {
