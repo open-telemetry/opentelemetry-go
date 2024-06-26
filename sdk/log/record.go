@@ -166,7 +166,7 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
-// It replaces the attributes with the same key.
+// Attributes in attrs will overwrite any attribute already added to r with the same key.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	n := r.AttributesLen()
 	if n == 0 {

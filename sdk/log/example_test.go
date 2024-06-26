@@ -12,7 +12,7 @@ import (
 )
 
 // Use a processor which redacts sensitive data from some attributes.
-func ExampleProcessor_altering() {
+func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
 	var processor logsdk.Processor = logsdk.NewBatchProcessor(nil)
 
