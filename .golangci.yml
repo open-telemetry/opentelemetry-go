@@ -11,6 +11,7 @@ linters:
   enable:
     - depguard
     - errcheck
+    - errorlint
     - godot
     - gofumpt
     - goimports
@@ -23,7 +24,9 @@ linters:
     - staticcheck
     - tenv
     - typecheck
+    - unconvert
     - unused
+    - unparam
 
 issues:
   # Maximum issues count per one linter.
