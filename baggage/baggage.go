@@ -302,7 +302,7 @@ func parseMember(member string) (Member, error) {
 	// Decode a percent-encoded value.
 	value, err := url.PathUnescape(val)
 	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidValue, err)
+		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidValue, err)
 	}
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
