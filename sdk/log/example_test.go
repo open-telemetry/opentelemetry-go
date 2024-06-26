@@ -32,7 +32,8 @@ type RedactTokensProcessor struct {
 	logsdk.Processor
 }
 
-// OnEmit redacts values from attributes containing "token" in the key.
+// OnEmit redacts values from attributes containing "token" in the key
+// by replacing them with a REDACTED value.
 func (s *RedactTokensProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
 	record.WalkAttributes(func(kv log.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "token") {
