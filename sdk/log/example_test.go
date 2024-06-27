@@ -46,11 +46,11 @@ func NewMinSeverityProcessor(minimum log.Severity, processor logsdk.Processor) *
 // OnEmit passes the context and record to the underlying [logsdk.Processor]
 // if the [log.Severity] of record is greater than or equal to the
 // minimum severity is configured at.
-func (s *MinSeverityProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
-	if !s.enabled(record) {
+func (p *MinSeverityProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
+	if !p.enabled(record) {
 		return nil
 	}
-	return s.Processor.OnEmit(ctx, record)
+	return p.Processor.OnEmit(ctx, record)
 }
 
 // Enabled returns true if the [log.Severity] of record is greater than or equal
@@ -90,12 +90,12 @@ type RedactTokensProcessor struct {
 
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
-func (s *RedactTokensProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
+func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
 	record.WalkAttributes(func(kv log.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "token") {
 			record.AddAttributes(log.String(kv.Key, "REDACTED"))
 		}
 		return true
 	})
-	return s.Processor.OnEmit(ctx, record)
+	return p.Processor.OnEmit(ctx, record)
 }
