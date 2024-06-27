@@ -2112,11 +2112,17 @@ func BenchmarkTraceStart(b *testing.B) {
 	tracer := NewTracerProvider().Tracer("")
 	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
 
+	spans := make([]trace.Span, b.N)
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		_, span := tracer.Start(ctx, "")
-		span.End()
+		spans[i] = span
+	}
+
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		spans[i].End()
 	}
 }
