@@ -18,7 +18,7 @@ func ExampleProcessor_filtering() {
 
 	// Wrap the processor so that it respects minimum serverity level.
 	processor = NewMinSeverityProcessor(log.SeverityInfo, processor)
-  
+
 	// The created processor can then be registered with
 	// the OpenTelemetry Logs SDK using the WithProcessor option.
 	_ = logsdk.NewLoggerProvider(
