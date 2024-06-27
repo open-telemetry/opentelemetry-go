@@ -94,3 +94,42 @@ func TestSliceValue(t *testing.T) {
 		})
 	}
 }
+
+// sync is a global used to ensure the benchmark are not optimized away.
+var sync any
+
+func BenchmarkBoolSliceValue(b *testing.B) {
+	b.ReportAllocs()
+	s := []bool{true, false, true, false}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		sync = BoolSliceValue(s)
+	}
+}
+
+func BenchmarkInt64SliceValue(b *testing.B) {
+	b.ReportAllocs()
+	s := []int64{1, 2, 3, 4}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		sync = Int64SliceValue(s)
+	}
+}
+
+func BenchmarkFloat64SliceValue(b *testing.B) {
+	b.ReportAllocs()
+	s := []float64{1.2, 3.4, 5.6, 7.8}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		sync = Float64SliceValue(s)
+	}
+}
+
+func BenchmarkStringSliceValue(b *testing.B) {
+	b.ReportAllocs()
+	s := []string{"a", "b", "c", "d"}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		sync = StringSliceValue(s)
+	}
+}
