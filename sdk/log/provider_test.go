@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -299,7 +300,11 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
+	loggers := make([]log.Logger, b.N)
 	for i := 0; i < b.N; i++ {
-		_ = p.Logger(names[i])
+		loggers[i] = p.Logger(names[i])
 	}
+
+	b.StopTimer()
+	loggers[0].Enabled(context.Background(), log.Record{})
 }
