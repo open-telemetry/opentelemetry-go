@@ -58,13 +58,13 @@ func (p *MinSeverityProcessor) OnEmit(ctx context.Context, record logsdk.Record)
 // severity is less than the minimum.
 //
 // If the record severity is unset, this will return true.
-func (s *MinSeverityProcessor) Enabled(_ context.Context, record logsdk.Record) bool {
-	return s.enabled(record)
+func (p *MinSeverityProcessor) Enabled(ctx context.Context, record logsdk.Record) bool {
+	return p.enabled(record) && p.Processor.Enabled(ctx, record)
 }
 
-func (s *MinSeverityProcessor) enabled(r logsdk.Record) bool {
+func (p *MinSeverityProcessor) enabled(r logsdk.Record) bool {
 	severity := r.Severity()
-	return severity == log.SeverityUndefined || s.minimum <= severity
+	return severity == log.SeverityUndefined || p.minimum <= severity
 }
 
 // Use a processor which redacts sensitive data from some attributes.
