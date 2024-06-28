@@ -51,6 +51,8 @@ Change unreleased content
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
+Change released content
+
 ### Added
 
 - Add example for `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#5242)
