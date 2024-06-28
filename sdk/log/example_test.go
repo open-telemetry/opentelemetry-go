@@ -11,7 +11,7 @@ import (
 	logsdk "go.opentelemetry.io/otel/sdk/log"
 )
 
-// Use a processor which sets the minimum log level.
+// Use a processor that filters out records based on the provided context.
 func ExampleProcessor_filtering() {
 	// Existing processor that emits telemetry.
 	var processor logsdk.Processor = logsdk.NewBatchProcessor(nil)
