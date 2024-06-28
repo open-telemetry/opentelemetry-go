@@ -187,10 +187,9 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
-		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx))})
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
-
 	})
 
 	t.Run("WithRetryAndExporterErr", func(t *testing.T) {
@@ -208,7 +207,6 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
 		assert.EqualError(t, err, fmt.Sprintf("failed to upload metrics: %d: %v", http.StatusTooManyRequests, exporterErr))
 	})
