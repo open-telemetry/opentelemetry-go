@@ -37,10 +37,10 @@ jobs:
           CURRENT_LOCKED_FILE="$TEMP_DIR/current_locked_section.md"
           
           # Extract sections excluding '## [Unreleased]' from the previous version
-          awk '/^## \[Unreleased\]/ {flag=0} /^## \[/ && !/^## \[Unreleased\]/ {flag=1} /^\<\!-- Reference link --\>/ {flag=0} flag' "$PREVIOUS_FILE" > "$PREVIOUS_LOCKED_FILE"
+          awk '/^## \[Unreleased\]/ {flag=0} /^## \[/ && !/^## \[Unreleased\]/ {flag=1} /^\<!-- Reference link --\>/ {flag=0} flag' "$PREVIOUS_FILE" > "$PREVIOUS_LOCKED_FILE"
           
           # Extract sections excluding '## [Unreleased]' from the current version
-          awk '/^## \[Unreleased\]/ {flag=0} /^## \[/ && !/^## \[Unreleased\]/ {flag=1} /^\<\!-- Reference link --\>/ {flag=0} flag' "$CURRENT_FILE" > "$CURRENT_LOCKED_FILE"
+          awk '/^## \[Unreleased\]/ {flag=0} /^## \[/ && !/^## \[Unreleased\]/ {flag=1} /^\<!-- Reference link --\>/ {flag=0} flag' "$CURRENT_FILE" > "$CURRENT_LOCKED_FILE"
           
           # Compare the unchanged sections
           if ! diff -q "$PREVIOUS_LOCKED_FILE" "$CURRENT_LOCKED_FILE"; then
