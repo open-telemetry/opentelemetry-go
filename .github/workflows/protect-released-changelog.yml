@@ -1,6 +1,6 @@
 # This action against that any PR targeting the main branch touches released
 # sections in CHANGELOG file. If change to released CHANGELOG is required, like
-# doing a release, add the \"Unlock Changelog\" label to disable this action.
+# doing a release, add the \"Unlock Released Changelog\" label to disable this action.
 
 name: Protect released changelog
 
@@ -12,7 +12,7 @@ on:
 jobs:
   protect-released-changelog:
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'Unlock Changelog')}}
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'Unlock Released Changelog')}}
 
     steps:
       - uses: actions/checkout@v4
