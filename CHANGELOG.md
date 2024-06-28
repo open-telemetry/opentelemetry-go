@@ -47,6 +47,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix stale timestamps reported by the lastvalue aggregation. (#5517)
 - Indicate the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` must be created by the `New` method. (#5521)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
 ### Added
@@ -3082,7 +3085,7 @@ It contains api and sdk for trace and meter.
 [0.1.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.1
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
 
-<!-- Reference link -->
+<!-- Released section ended -->
 
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
