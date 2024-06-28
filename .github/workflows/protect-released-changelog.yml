@@ -10,7 +10,7 @@ on:
     branches:
       - main
 jobs:
-  changelog:
+  protect-released-changelog:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'Unlock Changelog')}}
 
