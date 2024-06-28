@@ -640,14 +640,55 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func BenchmarkWalkAttributes(b *testing.B) {
+	for _, tt := range []struct {
+		attrCount int
+	}{
+		{attrCount: 1},
+		{attrCount: 10},
+		{attrCount: 100},
+		{attrCount: 1000},
+	} {
+		b.Run(fmt.Sprintf("%d attributes", tt.attrCount), func(b *testing.B) {
+			record := &Record{}
+			for i := 0; i < tt.attrCount; i++ {
+				record.SetAttributes(
+					log.String(fmt.Sprintf("key-%d", tt.attrCount), "value"),
+				)
+			}
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				record.WalkAttributes(func(log.KeyValue) bool {
+					return true
+				})
+			}
+		})
+	}
+}
+
 func BenchmarkSetAddAttributes(b *testing.B) {
 	kv := log.String("key", "value")
-	records := make([]Record, b.N)
 
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		records[i].SetAttributes(kv)
-		records[i].AddAttributes(kv)
-	}
+	b.Run("SetAttributes", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].SetAttributes(kv)
+		}
+	})
+
+	b.Run("AddAttributes", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].AddAttributes(kv)
+		}
+	})
 }
