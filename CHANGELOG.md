@@ -8,8 +8,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-Change unreleased content
-
 ### Added
 
 - The `go.opentelemetry.io/otel/semconv/v1.26.0` package.
@@ -50,8 +48,6 @@ Change unreleased content
 - Indicate the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` must be created by the `New` method. (#5521)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
-
-Change released content
 
 ### Added
 
