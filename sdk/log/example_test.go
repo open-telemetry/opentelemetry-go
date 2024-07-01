@@ -34,12 +34,17 @@ type RedactTokensProcessor struct {
 
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
-func (s *RedactTokensProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
+func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record logsdk.Record) error {
+	cloned := false
 	record.WalkAttributes(func(kv log.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "token") {
+			if !cloned {
+				record = record.Clone()
+				cloned = true
+			}
 			record.AddAttributes(log.String(kv.Key, "REDACTED"))
 		}
 		return true
 	})
-	return s.Processor.OnEmit(ctx, record)
+	return p.Processor.OnEmit(ctx, record)
 }
