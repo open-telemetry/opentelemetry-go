@@ -31,7 +31,7 @@ const (
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs attribute.Set
-	res   exemplar.Reservoir
+	res   exemplar.FilteredReservoir[N]
 
 	count uint64
 	min   N
@@ -282,7 +282,7 @@ func (b *expoBuckets) downscale(delta int) {
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int, r func() exemplar.Reservoir) *expoHistogram[N] {
+func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int, r func() exemplar.FilteredReservoir[N]) *expoHistogram[N] {
 	return &expoHistogram[N]{
 		noSum:    noSum,
 		noMinMax: noMinMax,
@@ -305,7 +305,7 @@ type expoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int
 
-	newRes   func() exemplar.Reservoir
+	newRes   func() exemplar.FilteredReservoir[N]
 	limit    limiter[*expoHistogramDataPoint[N]]
 	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
@@ -319,8 +319,6 @@ func (e *expoHistogram[N]) measure(ctx context.Context, value N, fltrAttr attrib
 		return
 	}
 
-	t := now()
-
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
@@ -333,7 +331,7 @@ func (e *expoHistogram[N]) measure(ctx context.Context, value N, fltrAttr attrib
 		e.values[attr.Equivalent()] = v
 	}
 	v.record(value)
-	v.res.Offer(ctx, t, exemplar.NewValue(value), droppedAttr)
+	v.res.Offer(ctx, value, droppedAttr)
 }
 
 func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
