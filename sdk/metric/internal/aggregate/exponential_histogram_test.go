@@ -778,7 +778,7 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(9),
+							Time:       y2kPlus(2),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -832,8 +832,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(10),
-							Time:       y2kPlus(24),
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(4),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -850,8 +850,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(10),
-							Time:       y2kPlus(24),
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(4),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -905,7 +905,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(9),
+							Time:       y2kPlus(2),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -938,7 +938,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(13),
+							Time:       y2kPlus(3),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -967,7 +967,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(14),
+							Time:       y2kPlus(4),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1004,7 +1004,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(21),
+							Time:       y2kPlus(5),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1022,7 +1022,7 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: overflowSet,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(21),
+							Time:       y2kPlus(5),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
