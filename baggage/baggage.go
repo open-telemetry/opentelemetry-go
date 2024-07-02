@@ -308,27 +308,27 @@ func parseMember(member string) (Member, error) {
 	if !utf8.ValidString(value) {
 		// W3C baggage spec:
 		// https://github.com/w3c/baggage/blob/main/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
-		for _, is := range findInvalidUTF8Sequences(value) {
-			value = strings.ReplaceAll(value, is, "�")
-		}
+		value = replaceInvalidUTF8Sequences(value)
 	}
 
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
-func findInvalidUTF8Sequences(input string) []string {
-	var invalidSequences []string
+func replaceInvalidUTF8Sequences(input string) string {
+	var output []rune
 	for i := 0; i < len(input); {
 		r, size := utf8.DecodeRuneInString(input[i:])
 
 		if r == utf8.RuneError && size == 1 {
-			// RuneError indicates an invalid UTF-8 sequence
-			invalidSequences = append(invalidSequences, input[i:i+size])
+			// Invalid UTF-8 sequence found, replace it with '�'
+			output = append(output, '�')
+		} else {
+			output = append(output, r)
 		}
 		i += size
 	}
 
-	return invalidSequences
+	return string(output)
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
