@@ -80,8 +80,8 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.DeltaTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 3, y2kPlus(1), y2kPlus(7)),
-						c.hPt(fltrBob, 10, 2, y2kPlus(1), y2kPlus(7)),
+						c.hPt(fltrAlice, 2, 3, y2kPlus(1), y2kPlus(2)),
+						c.hPt(fltrBob, 10, 2, y2kPlus(1), y2kPlus(2)),
 					},
 				},
 			},
@@ -96,8 +96,8 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.DeltaTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 10, 1, y2kPlus(7), y2kPlus(10)),
-						c.hPt(fltrBob, 3, 1, y2kPlus(7), y2kPlus(10)),
+						c.hPt(fltrAlice, 10, 1, y2kPlus(2), y2kPlus(3)),
+						c.hPt(fltrBob, 3, 1, y2kPlus(2), y2kPlus(3)),
 					},
 				},
 			},
@@ -126,9 +126,9 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.DeltaTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 1, 1, y2kPlus(11), y2kPlus(16)),
-						c.hPt(fltrBob, 1, 1, y2kPlus(11), y2kPlus(16)),
-						c.hPt(overflowSet, 1, 2, y2kPlus(11), y2kPlus(16)),
+						c.hPt(fltrAlice, 1, 1, y2kPlus(4), y2kPlus(5)),
+						c.hPt(fltrBob, 1, 1, y2kPlus(4), y2kPlus(5)),
+						c.hPt(overflowSet, 1, 2, y2kPlus(4), y2kPlus(5)),
 					},
 				},
 			},
@@ -167,8 +167,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 3, y2kPlus(0), y2kPlus(7)),
-						c.hPt(fltrBob, 10, 2, y2kPlus(0), y2kPlus(7)),
+						c.hPt(fltrAlice, 2, 3, y2kPlus(0), y2kPlus(2)),
+						c.hPt(fltrBob, 10, 2, y2kPlus(0), y2kPlus(2)),
 					},
 				},
 			},
@@ -183,8 +183,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(10)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(10)),
+						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(3)),
+						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(3)),
 					},
 				},
 			},
@@ -196,8 +196,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(11)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(11)),
+						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(4)),
+						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(4)),
 					},
 				},
 			},
@@ -213,9 +213,9 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(14)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(14)),
-						c.hPt(overflowSet, 1, 2, y2kPlus(0), y2kPlus(14)),
+						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(5)),
+						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(5)),
+						c.hPt(overflowSet, 1, 2, y2kPlus(0), y2kPlus(5)),
 					},
 				},
 			},
