@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `AssertRecordEqual` method to `go.opentelemetry.io/otel/log/logtest` to allow comparison of two log records in tests. (#5499)
 - The `WithHeaders` option to `go.opentelemetry.io/otel/exporters/zipkin` to allow configuring custom http headers while exporting spans. (#5530)
 - `service.instance.id` is populated for a `Resource` created with `"go.opentelemetry.io/otel/sdk/resource".Default` with a default value when `OTEL_GO_X_RESOURCE` is set. (#5520)
+- The `WithAttributes` and `WithLinks` options to create spans and events in `go.opentelemetry.io/otel/trace` no longer allocates a slice on their first call. (#5567)
 
 ### Changed
 
