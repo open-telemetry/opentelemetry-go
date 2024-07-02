@@ -29,7 +29,7 @@ type config struct {
 }
 
 // newConfig creates a validated Config configured with options.
-func newConfig(options ...Option) (config, error) {
+func newConfig(options ...Option) config {
 	cfg := config{
 		Writer:      defaultWriter,
 		PrettyPrint: defaultPrettyPrint,
@@ -38,7 +38,7 @@ func newConfig(options ...Option) (config, error) {
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
 	}
-	return cfg, nil
+	return cfg
 }
 
 // Option sets the value of an option for a Config.

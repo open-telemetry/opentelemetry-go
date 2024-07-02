@@ -321,7 +321,7 @@ func traceBenchmark(b *testing.B, name string, fn func(*testing.B, trace.Tracer)
 	})
 }
 
-func tracer(b *testing.B, name string, sampler sdktrace.Sampler) trace.Tracer {
+func tracer(_ *testing.B, name string, sampler sdktrace.Sampler) trace.Tracer {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSampler(sampler))
 	return tp.Tracer(name)
 }
