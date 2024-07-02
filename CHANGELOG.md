@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.28.0/0.50.0/0.4.0] 2024-07-02
 
 ### Added
@@ -49,9 +52,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix stale timestamps reported by the last-value aggregation. (#5517)
 - Indicate the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` must be created by the `New` method. (#5521)
 - Improved performance in all `{Bool,Int64,Float64,String}SliceValue` functions of `go.opentelemetry.io/attributes` by reducing the number of allocations. (#5549)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
