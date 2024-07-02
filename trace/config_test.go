@@ -273,6 +273,13 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			},
 		},
 		{
+			name: "with attributes set multiple times",
+			options: []SpanStartOption{
+				WithAttributes(attribute.Bool("key", true)),
+				WithAttributes(attribute.Bool("secondKey", false)),
+			},
+		},
+		{
 			name: "with a timestamp",
 			options: []SpanStartOption{
 				WithTimestamp(time.Now()),
@@ -281,6 +288,13 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 		{
 			name: "with links",
 			options: []SpanStartOption{
+				WithLinks(Link{}),
+			},
+		},
+		{
+			name: "with links set multiple times",
+			options: []SpanStartOption{
+				WithLinks(Link{}),
 				WithLinks(Link{}),
 			},
 		},
@@ -352,6 +366,13 @@ func BenchmarkNewEventConfig(b *testing.B) {
 			name: "with attributes",
 			options: []EventOption{
 				WithAttributes(attribute.Bool("key", true)),
+			},
+		},
+		{
+			name: "with attributes set multiple times",
+			options: []EventOption{
+				WithAttributes(attribute.Bool("key", true)),
+				WithAttributes(attribute.Bool("secondKey", false)),
 			},
 		},
 		{
