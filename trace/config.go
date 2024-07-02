@@ -200,12 +200,22 @@ type SpanEndEventOption interface {
 type attributeOption []attribute.KeyValue
 
 func (o attributeOption) applySpan(c SpanConfig) SpanConfig {
-	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
+	if len(c.attributes) == 0 {
+		c.attributes = o
+		return c
+	}
+
+	c.attributes = append(c.attributes, o...)
 	return c
 }
 func (o attributeOption) applySpanStart(c SpanConfig) SpanConfig { return o.applySpan(c) }
 func (o attributeOption) applyEvent(c EventConfig) EventConfig {
-	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
+	if len(c.attributes) == 0 {
+		c.attributes = o
+		return c
+	}
+
+	c.attributes = append(c.attributes, o...)
 	return c
 }
 
@@ -273,6 +283,11 @@ func WithStackTrace(b bool) SpanEndEventOption {
 // links, i.e. this does not overwrite. Links with invalid span context are ignored.
 func WithLinks(links ...Link) SpanStartOption {
 	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		if len(cfg.links) == 0 {
+			cfg.links = links
+			return cfg
+		}
+
 		cfg.links = append(cfg.links, links...)
 		return cfg
 	})
