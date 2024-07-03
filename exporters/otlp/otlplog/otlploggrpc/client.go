@@ -151,7 +151,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	})
 }
 
-// Shutdown shuts down the client, freeing all resource.
+// Shutdown shuts down the client, freeing all resources.
 //
 // Any active connections to a remote endpoint are closed if they were created
 // by the client. Any gRPC connection passed during creation using
