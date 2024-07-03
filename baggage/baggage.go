@@ -155,12 +155,18 @@ func (p Property) Value() (string, bool) {
 	return p.value, p.hasValue
 }
 
-// String encodes Property into a header string.
+// String encodes Property into a header string compliant with the W3C Baggage
+// specification.
 func (p Property) String() string {
-	if p.hasValue {
-		return fmt.Sprintf("%s%s%v", valueEscape(p.key), keyValueDelimiter, valueEscape(p.value))
+	//  W3C Baggage specification does not allow percent-encoded keys.
+	if !validateKey(p.key) {
+		return ""
 	}
-	return valueEscape(p.key)
+
+	if p.hasValue {
+		return fmt.Sprintf("%s%s%v", p.key, keyValueDelimiter, valueEscape(p.value))
+	}
+	return p.key
 }
 
 type properties []Property
@@ -221,9 +227,14 @@ func (p properties) validate() error {
 // String encodes properties into a header string compliant with the W3C Baggage
 // specification.
 func (p properties) String() string {
-	props := make([]string, len(p))
-	for i, prop := range p {
-		props[i] = prop.String()
+	props := make([]string, 0, len(p))
+	for _, prop := range p {
+		s := prop.String()
+
+		// Ignored empty properties.
+		if s != "" {
+			props = append(props, s)
+		}
 	}
 	return strings.Join(props, propertyDelimiter)
 }
@@ -333,7 +344,7 @@ func parseMember(member string) (Member, error) {
 	// Decode a percent-encoded key.
 	unescapedKey, err := url.PathUnescape(key)
 	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %v", errInvalidKey, err)
+		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidKey, err)
 	}
 
 	// Decode a percent-encoded value.
@@ -372,6 +383,11 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 // String encodes Member into a header string compliant with the W3C Baggage
 // specification.
 func (m Member) String() string {
+	//  W3C Baggage specification does not allow percent-encoded keys.
+	if !validateKey(m.key) {
+		return ""
+	}
+
 	// A key is can be a valid UTF-8 string.
 	s := valueEscape(m.key) + keyValueDelimiter + valueEscape(m.value)
 	if len(m.properties) > 0 {
@@ -571,11 +587,16 @@ func (b Baggage) Len() int {
 func (b Baggage) String() string {
 	members := make([]string, 0, len(b.list))
 	for k, v := range b.list {
-		members = append(members, Member{
+		s := Member{
 			key:        k,
 			value:      v.Value,
 			properties: fromInternalProperties(v.Properties),
-		}.String())
+		}.String()
+
+		// Ignored empty members.
+		if s != "" {
+			members = append(members, s)
+		}
 	}
 	return strings.Join(members, listDelimiter)
 }

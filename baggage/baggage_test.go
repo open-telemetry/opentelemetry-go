@@ -677,8 +677,10 @@ func TestBaggageString(t *testing.T) {
 			},
 		},
 		{
+			// W3C does not allow percent-encoded keys.
+			// The baggage that has percent-encoded keys should be ignored.
 			name: "utf-8 key and value",
-			out:  "%C4%85%C5%9B%C4%872=B%25%20%F0%9F%92%BC-2;yellow,%C4%85%C5%9B%C4%87=B%25%20%F0%9F%92%BC;%C4%85%C5%9B%C4%87-1=B%25%20%F0%9F%92%BC-1;%C4%85%C5%9B%C4%87-2",
+			out:  "foo=B%25%20%F0%9F%92%BC-2;foo-1=B%25%20%F0%9F%92%BC-4;foo-2",
 			baggage: baggage.List{
 				"ąść": {
 					Value: "B% 💼",
@@ -687,9 +689,13 @@ func TestBaggageString(t *testing.T) {
 						{Key: "ąść-2"},
 					},
 				},
-				"ąść2": {
-					Value:      "B% 💼-2",
-					Properties: []baggage.Property{{Key: "yellow"}},
+				"foo": {
+					Value: "B% 💼-2",
+					Properties: []baggage.Property{
+						{Key: "ąść", Value: "B% 💼-3", HasValue: true},
+						{Key: "foo-1", Value: "B% 💼-4", HasValue: true},
+						{Key: "foo-2"},
+					},
 				},
 			},
 		},
