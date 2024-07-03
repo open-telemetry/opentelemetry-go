@@ -2112,11 +2112,48 @@ func BenchmarkTraceStart(b *testing.B) {
 	tracer := NewTracerProvider().Tracer("")
 	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
+	l2 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
 
-	for i := 0; i < b.N; i++ {
-		_, span := tracer.Start(ctx, "")
-		span.End()
+	links := []trace.Link{l1, l2}
+
+	for _, tt := range []struct {
+		name    string
+		options []trace.SpanStartOption
+	}{
+		{
+			name: "with a simple span",
+		},
+		{
+			name: "with several links",
+			options: []trace.SpanStartOption{
+				trace.WithLinks(links...),
+			},
+		},
+		{
+			name: "with attributes",
+			options: []trace.SpanStartOption{
+				trace.WithAttributes(
+					attribute.String("key1", "value1"),
+					attribute.String("key2", "value2"),
+				),
+			},
+		},
+	} {
+		b.Run(tt.name, func(b *testing.B) {
+			spans := make([]trace.Span, b.N)
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				_, span := tracer.Start(ctx, "", tt.options...)
+				spans[i] = span
+			}
+
+			b.StopTimer()
+			for i := 0; i < b.N; i++ {
+				spans[i].End()
+			}
+		})
 	}
 }
