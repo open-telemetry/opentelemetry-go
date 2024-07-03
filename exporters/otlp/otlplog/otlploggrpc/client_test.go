@@ -26,7 +26,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-	collpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
@@ -285,7 +285,7 @@ func TestNewClient(t *testing.T) {
 			cli: &client{
 				ourConn: true,
 				conn:    conn,
-				lsc:     collpb.NewLogsServiceClient(conn),
+				lsc:     collogpb.NewLogsServiceClient(conn),
 			},
 		},
 		{
@@ -298,7 +298,7 @@ func TestNewClient(t *testing.T) {
 			cli: &client{
 				ourConn:  true,
 				conn:     conn,
-				lsc:      collpb.NewLogsServiceClient(conn),
+				lsc:      collogpb.NewLogsServiceClient(conn),
 				metadata: map[string][]string{"key": {"value"}},
 			},
 		},
@@ -310,7 +310,7 @@ func TestNewClient(t *testing.T) {
 			cli: &client{
 				ourConn: false,
 				conn:    userConn,
-				lsc:     collpb.NewLogsServiceClient(userConn),
+				lsc:     collogpb.NewLogsServiceClient(userConn),
 			},
 		},
 		{
@@ -326,7 +326,7 @@ func TestNewClient(t *testing.T) {
 			cli: &client{
 				ourConn: true,
 				conn:    conn,
-				lsc:     collpb.NewLogsServiceClient(conn),
+				lsc:     collogpb.NewLogsServiceClient(conn),
 			},
 		},
 	}
@@ -346,7 +346,7 @@ func TestNewClient(t *testing.T) {
 }
 
 type exportResult struct {
-	Response *collpb.ExportLogsServiceResponse
+	Response *collogpb.ExportLogsServiceResponse
 	Err      error
 }
 
@@ -362,7 +362,7 @@ func newStorage() *storage {
 }
 
 // Add adds the request to the Storage.
-func (s *storage) Add(request *collpb.ExportLogsServiceRequest) {
+func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 	s.data = append(s.data, request.ResourceLogs...)
@@ -380,7 +380,7 @@ func (s *storage) Dump() []*lpb.ResourceLogs {
 
 // grpcCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcCollector struct {
-	collpb.UnimplementedLogsServiceServer
+	collogpb.UnimplementedLogsServiceServer
 
 	headersMu sync.Mutex
 	headers   metadata.MD
@@ -391,7 +391,7 @@ type grpcCollector struct {
 	srv      *grpc.Server
 }
 
-var _ collpb.LogsServiceServer = (*grpcCollector)(nil)
+var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 
 // newGRPCCollector returns a *grpcCollector that is listening at the provided
 // endpoint.
@@ -419,14 +419,14 @@ func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcColle
 	}
 
 	c.srv = grpc.NewServer()
-	collpb.RegisterLogsServiceServer(c.srv, c)
+	collogpb.RegisterLogsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
 	return c, nil
 }
 
 // Export handles the export req.
-func (c *grpcCollector) Export(ctx context.Context, req *collpb.ExportLogsServiceRequest) (*collpb.ExportLogsServiceResponse, error) {
+func (c *grpcCollector) Export(ctx context.Context, req *collogpb.ExportLogsServiceRequest) (*collogpb.ExportLogsServiceResponse, error) {
 	c.storage.Add(req)
 
 	if h, ok := metadata.FromIncomingContext(ctx); ok {
@@ -438,11 +438,11 @@ func (c *grpcCollector) Export(ctx context.Context, req *collpb.ExportLogsServic
 	if c.resultCh != nil {
 		r := <-c.resultCh
 		if r.Response == nil {
-			return &collpb.ExportLogsServiceResponse{}, r.Err
+			return &collogpb.ExportLogsServiceResponse{}, r.Err
 		}
 		return r.Response, r.Err
 	}
-	return &collpb.ExportLogsServiceResponse{}, nil
+	return &collogpb.ExportLogsServiceResponse{}, nil
 }
 
 // Collect returns the Storage holding all collected requests.
@@ -519,16 +519,16 @@ func TestClient(t *testing.T) {
 			const n, msg = 2, "bad data"
 			rCh := make(chan exportResult, 3)
 			rCh <- exportResult{
-				Response: &collpb.ExportLogsServiceResponse{
-					PartialSuccess: &collpb.ExportLogsPartialSuccess{
+				Response: &collogpb.ExportLogsServiceResponse{
+					PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 						RejectedLogRecords: n,
 						ErrorMessage:       msg,
 					},
 				},
 			}
 			rCh <- exportResult{
-				Response: &collpb.ExportLogsServiceResponse{
-					PartialSuccess: &collpb.ExportLogsPartialSuccess{
+				Response: &collogpb.ExportLogsServiceResponse{
+					PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 						// Should not be logged.
 						RejectedLogRecords: 0,
 						ErrorMessage:       "",
@@ -536,7 +536,7 @@ func TestClient(t *testing.T) {
 				},
 			}
 			rCh <- exportResult{
-				Response: &collpb.ExportLogsServiceResponse{},
+				Response: &collogpb.ExportLogsServiceResponse{},
 			}
 
 			ctx := context.Background()
