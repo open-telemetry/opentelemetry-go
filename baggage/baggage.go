@@ -341,18 +341,12 @@ func parseMember(member string) (Member, error) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
 	}
 
-	// Decode a percent-encoded key.
-	unescapedKey, err := url.PathUnescape(key)
-	if err != nil {
-		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidKey, err)
-	}
-
 	// Decode a percent-encoded value.
 	unescapedValue, err := url.PathUnescape(val)
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidValue, err)
 	}
-	return Member{key: unescapedKey, value: unescapedValue, properties: props, hasData: true}, nil
+	return Member{key: key, value: unescapedValue, properties: props, hasData: true}, nil
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
@@ -438,10 +432,8 @@ func New(members ...Member) (Baggage, error) {
 }
 
 // Parse attempts to decode a baggage-string from the passed string. It
-// returns an error if the input is invalid according to the OpenTelemetry Baggage
+// returns an error if the input is invalid according to the W3C Baggage
 // specification.
-// The OpenTelemetry Baggage specification has less strict requirements than the
-// W3C Baggage specification, as it allows UTF-8 characters in keys.
 //
 // If there are duplicate list-members contained in baggage, the last one
 // defined (reading left-to-right) will be the only one kept. This diverges
@@ -667,12 +659,6 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 		return
 	}
 
-	// Decode a percent-encoded key.
-	key, err := url.PathUnescape(s[keyStart:keyEnd])
-	if err != nil {
-		return
-	}
-
 	// Decode a percent-encoded value.
 	value, err := url.PathUnescape(s[valueStart:valueEnd])
 	if err != nil {
@@ -680,7 +666,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	ok = true
-	p.key = key
+	p.key = s[keyStart:keyEnd]
 	p.hasValue = true
 
 	p.value = value
@@ -805,6 +791,7 @@ func validateBaggageValue(s string) bool {
 	return utf8.ValidString(s)
 }
 
+// validateValue checks if the string is a valid W3C Baggage key.
 func validateKey(s string) bool {
 	if len(s) == 0 {
 		return false

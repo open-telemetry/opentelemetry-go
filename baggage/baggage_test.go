@@ -454,16 +454,18 @@ func TestBaggageParse(t *testing.T) {
 			name: "encoded UTF-8 string in key",
 			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"a":   {Value: "b"},
-				"ąść": {Value: "ąść"},
+				"a":                  {Value: "b"},
+				"%C4%85%C5%9B%C4%87": {Value: "ąść"},
 			},
 		},
 		{
 			name: "encoded UTF-8 string in property",
 			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87;%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"a":   {Value: "b"},
-				"ąść": {Value: "ąść", Properties: []baggage.Property{{Key: "ąść", HasValue: true, Value: "ąść"}}},
+				"a": {Value: "b"},
+				"%C4%85%C5%9B%C4%87": {Value: "ąść", Properties: []baggage.Property{
+					{Key: "%C4%85%C5%9B%C4%87", HasValue: true, Value: "ąść"},
+				}},
 			},
 		},
 		{
@@ -492,11 +494,6 @@ func TestBaggageParse(t *testing.T) {
 			err:  errInvalidValue,
 		},
 		{
-			name: "invalid member: improper url encoded key",
-			in:   "key%=val",
-			err:  errInvalidKey,
-		},
-		{
 			name: "invalid member: improper url encoded value",
 			in:   "key1=val%",
 			err:  errInvalidValue,
@@ -509,11 +506,6 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid property: invalid key",
 			in:   "foo=1;key\\=v",
-			err:  errInvalidProperty,
-		},
-		{
-			name: "invalid property: improper url encoded key",
-			in:   "foo=1;key%=v",
 			err:  errInvalidProperty,
 		},
 		{
