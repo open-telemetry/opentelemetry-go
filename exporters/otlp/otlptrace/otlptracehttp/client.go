@@ -326,7 +326,7 @@ func newResponseError(header http.Header, body string) error {
 	}
 
 	// Extract the error message from the response body.
-	st, ok := status.FromError(errors.New(body))
+	st, ok := status.FromError(fmt.Errorf(body))
 	rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
 
 	// if response body is not in expected format
