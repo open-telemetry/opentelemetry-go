@@ -472,9 +472,14 @@ func TestBaggageParse(t *testing.T) {
 		},
 		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
-			in:   "k=aa%ffcc",
+			in:   "k=aa%ffcc;p=d%fff",
 			want: baggage.List{
-				"k": {Value: "aa�cc"},
+				"k": {
+					Value: "aa�cc",
+					Properties: []baggage.Property{
+						{Key: "p", Value: "d�f", HasValue: true},
+					},
+				},
 			},
 		},
 	}
@@ -1034,7 +1039,7 @@ func BenchmarkParse(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchBaggage, _ = Parse("userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, propKeyUtf8=pr%ffo%ffp%fcValue")
+		benchBaggage, _ = Parse("userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, invalidUtf8=pr%ffo%ffp%fcValue")
 	}
 }
 

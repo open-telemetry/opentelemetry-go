@@ -633,10 +633,12 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	// Decode a percent-encoded value.
-	value, err := url.PathUnescape(s[valueStart:valueEnd])
+	rawVal := s[valueStart:valueEnd]
+	unescapeVal, err := url.PathUnescape(rawVal)
 	if err != nil {
 		return
 	}
+	value := replaceInvalidUTF8Sequences(rawVal, unescapeVal)
 
 	ok = true
 	p.key = s[keyStart:keyEnd]
