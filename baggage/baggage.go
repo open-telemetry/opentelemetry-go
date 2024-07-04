@@ -314,21 +314,22 @@ func parseMember(member string) (Member, error) {
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
-func replaceInvalidUTF8Sequences(input string) string {
-	var output []rune
-	for i := 0; i < len(input); {
-		r, size := utf8.DecodeRuneInString(input[i:])
+func replaceInvalidUTF8Sequences(old string) string {
+	var b strings.Builder
+	b.Grow(len(old))
+	for i := 0; i < len(old); {
 
+		r, size := utf8.DecodeRuneInString(old[i:])
 		if r == utf8.RuneError && size == 1 {
 			// Invalid UTF-8 sequence found, replace it with '�'
-			output = append(output, '�')
+			b.WriteString("�")
 		} else {
-			output = append(output, r)
+			b.WriteRune(r)
 		}
 		i += size
 	}
 
-	return string(output)
+	return b.String()
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
