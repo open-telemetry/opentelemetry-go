@@ -20,7 +20,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Pass the underlying error rather than a generic retry-able failure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#5541)
 - `Tracer.Start` in `go.opentelemetry.io/otel/trace/noop` no longer allocates a span for empty span context. (#5457)
 - Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/example/otel-collector`. (#5490)
 - Upgrade `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/otel/example/zipkin`. (#5490)
@@ -43,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix panic in baggage creation when a member contains 0x80 char in key or value. (#5494)
 - Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their coresponding environment variables in  in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#5508)
 - Fix stale timestamps reported by the lastvalue aggregation. (#5517)
+- Pass the underlying error rather than a generic retry-able failure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#5541)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 

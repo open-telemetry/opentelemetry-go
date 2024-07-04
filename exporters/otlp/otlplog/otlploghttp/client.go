@@ -14,9 +14,11 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -143,7 +145,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		resp, err := c.client.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{})
+			return newResponseError(http.Header{}, err.Error())
 		}
 		if err != nil {
 			return err
@@ -184,12 +186,25 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			sc == http.StatusServiceUnavailable,
 			sc == http.StatusGatewayTimeout:
 			// Retry-able failure.
-			rErr = newResponseError(resp.Header)
+			rErr = newResponseError(resp.Header, "")
 
-			// Going to retry, drain the body to reuse the connection.
-			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+			// server may return a message with the response
+			// body, so we read it to include in the error
+			// message to be returned. It will help in
+			// debugging the actual issue.
+			var respData bytes.Buffer
+			if _, err := io.Copy(&respData, resp.Body); err != nil {
 				_ = resp.Body.Close()
 				return err
+			}
+
+			// overwrite the error message with the response body
+			// if it is not empty
+			respStr := strings.TrimSpace(respData.String())
+			if respStr != "" {
+				// pass the error message along with retry-able error,
+				// so that it can be retried and also passes the message
+				rErr = newResponseError(resp.Header, respStr)
 			}
 		default:
 			rErr = fmt.Errorf("failed to send logs to %s: %s", request.URL, resp.Status)
@@ -266,21 +281,38 @@ func (r *request) reset(ctx context.Context) {
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
 	throttle int64
+	errMsg   string
 }
 
 // newResponseError returns a retryableError and will extract any explicit
-// throttle delay contained in headers.
-func newResponseError(header http.Header) error {
+// throttle delay contained in headers and if there is message in the response
+// body, it will be used as the error message. If errMsg is not empty, it will
+// be used as the error message instead of the standard "retry-able" failure.
+func newResponseError(header http.Header, body string) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
 		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
 			rErr.throttle = t
 		}
 	}
+
+	// Extract the error message from the response body.
+	st, ok := status.FromError(errors.New(body))
+	rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
+
+	// if response body is not in expected format
+	if !ok {
+		rErr.errMsg = body
+	}
+
 	return rErr
 }
 
 func (e retryableError) Error() string {
+	if e.errMsg != "" {
+		return e.errMsg
+	}
+
 	return "retry-able request failure"
 }
 

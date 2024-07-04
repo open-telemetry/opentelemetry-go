@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -196,6 +197,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			// debugging the actual issue.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
+				_ = resp.Body.Close()
 				return err
 			}
 
@@ -290,7 +292,7 @@ type retryableError struct {
 // throttle delay contained in headers and if there is message in the response
 // body, it will be used as the error message. If errMsg is not empty, it will
 // be used as the error message instead of the standard "retry-able" failure.
-func newResponseError(header http.Header, errMsg string) error {
+func newResponseError(header http.Header, body string) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
 		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
@@ -298,7 +300,15 @@ func newResponseError(header http.Header, errMsg string) error {
 		}
 	}
 
-	rErr.errMsg = errMsg
+	// Extract the error message from the response body.
+	st, ok := status.FromError(errors.New(body))
+	rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
+
+	// if response body is not in expected format
+	if !ok {
+		rErr.errMsg = body
+	}
+
 	return rErr
 }
 
