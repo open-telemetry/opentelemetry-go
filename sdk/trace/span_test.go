@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestSetStatus(t *testing.T) {
@@ -275,5 +276,22 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 				span.End()
 			}
 		})
+	}
+}
+
+func BenchmarkSpanEnd(b *testing.B) {
+	tracer := NewTracerProvider().Tracer("")
+	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+
+	spans := make([]trace.Span, b.N)
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "")
+		spans[i] = span
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		spans[i].End()
 	}
 }
