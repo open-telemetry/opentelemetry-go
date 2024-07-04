@@ -6,11 +6,9 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exempla
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -20,18 +18,10 @@ func TestSampledFilter(t *testing.T) {
 }
 
 func testSampledFiltered[N int64 | float64](t *testing.T) {
-	under := &res{}
-
-	r := SampledFilter(under)
-
 	ctx := context.Background()
-	r.Offer(ctx, staticTime, NewValue(N(0)), nil)
-	assert.False(t, under.OfferCalled, "underlying Reservoir Offer called")
-	r.Offer(sample(ctx), staticTime, NewValue(N(0)), nil)
-	assert.True(t, under.OfferCalled, "underlying Reservoir Offer not called")
 
-	r.Collect(nil)
-	assert.True(t, under.CollectCalled, "underlying Reservoir Collect not called")
+	assert.False(t, SampledFilter(ctx), "non-sampled context should not be offered")
+	assert.True(t, SampledFilter(sample(ctx)), "sampled context should be offered")
 }
 
 func sample(parent context.Context) context.Context {
@@ -43,15 +33,14 @@ func sample(parent context.Context) context.Context {
 	return trace.ContextWithSpanContext(parent, sc)
 }
 
-type res struct {
-	OfferCalled   bool
-	CollectCalled bool
+func TestAlwaysOnFilter(t *testing.T) {
+	t.Run("Int64", testAlwaysOnFiltered[int64])
+	t.Run("Float64", testAlwaysOnFiltered[float64])
 }
 
-func (r *res) Offer(context.Context, time.Time, Value, []attribute.KeyValue) {
-	r.OfferCalled = true
-}
+func testAlwaysOnFiltered[N int64 | float64](t *testing.T) {
+	ctx := context.Background()
 
-func (r *res) Collect(*[]Exemplar) {
-	r.CollectCalled = true
+	assert.True(t, AlwaysOnFilter(ctx), "non-sampled context should not be offered")
+	assert.True(t, AlwaysOnFilter(sample(ctx)), "sampled context should be offered")
 }
