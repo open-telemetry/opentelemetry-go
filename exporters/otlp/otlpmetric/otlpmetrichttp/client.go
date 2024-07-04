@@ -283,6 +283,8 @@ func (r *request) reset(ctx context.Context) {
 }
 
 // retryableError represents a request failure that can be retried.
+//
+// If the `errMsg` attribute is not empty, it will be used as the error message.
 type retryableError struct {
 	throttle int64
 	errMsg   string
@@ -290,8 +292,7 @@ type retryableError struct {
 
 // newResponseError returns a retryableError and will extract any explicit
 // throttle delay contained in headers and if there is message in the response
-// body, it will be used as the error message. If errMsg is not empty, it will
-// be used as the error message instead of the standard "retry-able" failure.
+// body, it will be used as the error message.
 func newResponseError(header http.Header, body string) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
@@ -300,13 +301,10 @@ func newResponseError(header http.Header, body string) error {
 		}
 	}
 
+	rErr.errMsg = body
 	// Extract the error message from the response body.
-	st, ok := status.FromError(fmt.Errorf(body))
-	rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
-
-	// if response body is not in expected format
-	if !ok {
-		rErr.errMsg = body
+	if st, ok := status.FromError(fmt.Errorf(body)); ok {
+		rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
 	}
 
 	return rErr
