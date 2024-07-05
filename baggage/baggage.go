@@ -323,9 +323,9 @@ func replaceInvalidUTF8Sequences(cap int, unescapeVal string) string {
 		r, size := utf8.DecodeRuneInString(unescapeVal[i:])
 		if r == utf8.RuneError && size == 1 {
 			// Invalid UTF-8 sequence found, replace it with '�'
-			b.WriteString("�")
+			_, _ = b.WriteString("�")
 		} else {
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		}
 		i += size
 	}
