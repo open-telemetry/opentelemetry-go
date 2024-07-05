@@ -204,7 +204,6 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	return ctx, cancel
 }
 
-
 type noopClient struct{}
 
 func newNoopClient() *noopClient {

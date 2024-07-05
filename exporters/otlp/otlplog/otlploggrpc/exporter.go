@@ -13,15 +13,17 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
+type logClient interface {
+	UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
+	Shutdown(context.Context) error
+}
+
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
 // OTLP protobufs using gRPC.
 type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
-	client   interface {
-		UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
-		Shutdown(context.Context) error
-	}
+	client   logClient
 
 	stopped atomic.Bool
 }
@@ -36,13 +38,13 @@ func New(_ context.Context, options ...Option) (*Exporter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newExporter(c)
+	return newExporter(c), nil
 }
 
-func newExporter(c *client) (*Exporter, error) {
+func newExporter(c logClient) *Exporter {
 	var e Exporter
 	e.client = c
-	return &e, nil
+	return &e
 }
 
 var transformResourceLogs = transform.ResourceLogs
