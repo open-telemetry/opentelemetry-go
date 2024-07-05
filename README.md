@@ -57,6 +57,8 @@ Currently, this project supports the following environments.
 | Linux   | 1.21       | arm64        |
 | MacOS   | 1.22       | amd64        |
 | MacOS   | 1.21       | amd64        |
+| MacOS   | 1.22       | arm64        |
+| MacOS   | 1.21       | arm64        |
 | Windows | 1.22       | amd64        |
 | Windows | 1.21       | amd64        |
 | Windows | 1.22       | 386          |
