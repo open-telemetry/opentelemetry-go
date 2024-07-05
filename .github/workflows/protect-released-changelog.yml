@@ -17,6 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the released changelog
+      - name: Protect the released changelog
         run: |
           ./verify_released_changelog.sh ${{ github.base_ref }}
