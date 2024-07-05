@@ -7,8 +7,6 @@ name: Protect released changelog
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    branches:
-      - main
 jobs:
   protect-released-changelog:
     runs-on: ubuntu-latest
