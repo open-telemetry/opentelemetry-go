@@ -305,12 +305,12 @@ func parseMember(member string) (Member, error) {
 		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidValue, err)
 	}
 
-	value := replaceInvalidUTF8Sequences(rawVal, unescapeVal)
+	value := replaceInvalidUTF8Sequences(len(rawVal), unescapeVal)
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
 }
 
 // replaceInvalidUTF8Sequences replaces invalid UTF-8 sequences with '�'.
-func replaceInvalidUTF8Sequences(rawVal, unescapeVal string) string {
+func replaceInvalidUTF8Sequences(cap int, unescapeVal string) string {
 	if utf8.ValidString(unescapeVal) {
 		return unescapeVal
 	}
@@ -318,7 +318,7 @@ func replaceInvalidUTF8Sequences(rawVal, unescapeVal string) string {
 	// https://github.com/w3c/baggage/blob/main/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
 
 	var b strings.Builder
-	b.Grow(len(rawVal))
+	b.Grow(cap)
 	for i := 0; i < len(unescapeVal); {
 		r, size := utf8.DecodeRuneInString(unescapeVal[i:])
 		if r == utf8.RuneError && size == 1 {
@@ -638,7 +638,7 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	if err != nil {
 		return
 	}
-	value := replaceInvalidUTF8Sequences(rawVal, unescapeVal)
+	value := replaceInvalidUTF8Sequences(len(rawVal), unescapeVal)
 
 	ok = true
 	p.key = s[keyStart:keyEnd]
