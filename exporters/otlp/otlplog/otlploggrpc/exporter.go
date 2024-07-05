@@ -19,6 +19,9 @@ type Exporter struct {
 var _ log.Exporter = (*Exporter)(nil)
 
 // New returns a new [Exporter].
+//
+// It is recommended to use it with [BatchProcessor]
+// or other asynchronous processor.
 func New(_ context.Context, options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 	c, err := newClient(cfg)

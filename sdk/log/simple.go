@@ -17,12 +17,6 @@ type SimpleProcessor struct {
 }
 
 // NewSimpleProcessor is a simple Processor adapter.
-//
-// This Processor is not recommended for production use. The synchronous
-// nature of this Processor make it good for testing, debugging, or
-// showing examples of other features, but it can be slow and have a high
-// computation resource usage overhead. [NewBatchProcessor] is recommended
-// for production use instead.
 func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
 	if exporter == nil {
 		// Do not panic on nil exporter.
