@@ -315,7 +315,7 @@ func replaceInvalidUTF8Sequences(cap int, unescapeVal string) string {
 		return unescapeVal
 	}
 	// W3C baggage spec:
-	// https://github.com/w3c/baggage/blob/main/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
+	// https://github.com/w3c/baggage/blob/8c215efbeebd3fa4b1aceb937a747e56444f22f3/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
 
 	var b strings.Builder
 	b.Grow(cap)
