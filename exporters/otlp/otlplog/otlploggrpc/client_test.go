@@ -450,113 +450,113 @@ func (c *grpcCollector) Collect() *storage {
 	return c.storage
 }
 
-func TestClient(t *testing.T) {
-	factory := func(rCh <-chan exportResult) (*client, *grpcCollector) {
-		coll, err := newGRPCCollector("", rCh)
-		require.NoError(t, err)
+func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
+	coll, err := newGRPCCollector("", rCh)
+	require.NoError(t, err)
 
-		addr := coll.listener.Addr().String()
-		opts := []Option{WithEndpoint(addr), WithInsecure()}
-		cfg := newConfig(opts)
-		client, err := newClient(cfg)
-		require.NoError(t, err)
-		return client, coll
+	addr := coll.listener.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	cfg := newConfig(opts)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	return client, coll
+}
+
+func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
+
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
+
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
+		})
 	}
+}
 
+func TestClient(t *testing.T) {
 	t.Run("ClientHonorsContextErrors", func(t *testing.T) {
-		testCtxErrs := func(factory func() func(context.Context) error) func(t *testing.T) {
-			return func(t *testing.T) {
-				t.Helper()
-				ctx, cancel := context.WithCancel(context.Background())
-				t.Cleanup(cancel)
-
-				t.Run("DeadlineExceeded", func(t *testing.T) {
-					innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
-					t.Cleanup(innerCancel)
-					<-innerCtx.Done()
-
-					f := factory()
-					assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
-				})
-
-				t.Run("Canceled", func(t *testing.T) {
-					innerCtx, innerCancel := context.WithCancel(ctx)
-					innerCancel()
-
-					f := factory()
-					assert.ErrorIs(t, f(innerCtx), context.Canceled)
-				})
-			}
-		}
-
 		t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
-			c, _ := factory(nil)
+			c, _ := clientFactory(t, nil)
 			return c.Shutdown
 		}))
 
 		t.Run("UploadLog", testCtxErrs(func() func(context.Context) error {
-			c, _ := factory(nil)
+			c, _ := clientFactory(t, nil)
 			return func(ctx context.Context) error {
 				return c.UploadLogs(ctx, nil)
 			}
 		}))
+	})
 
-		t.Run("UploadLogs", func(t *testing.T) {
-			ctx := context.Background()
-			client, coll := factory(nil)
+	t.Run("UploadLogs", func(t *testing.T) {
+		ctx := context.Background()
+		client, coll := clientFactory(t, nil)
 
-			require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-			require.NoError(t, client.Shutdown(ctx))
-			got := coll.Collect().Dump()
-			require.Len(t, got, 1, "upload of one ResourceLogs")
-			diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
-			if diff != "" {
-				t.Fatalf("unexpected ResourceLogs:\n%s", diff)
-			}
-		})
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.Shutdown(ctx))
+		got := coll.Collect().Dump()
+		require.Len(t, got, 1, "upload of one ResourceLogs")
+		diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+		if diff != "" {
+			t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+		}
+	})
 
-		t.Run("PartialSuccess", func(t *testing.T) {
-			const n, msg = 2, "bad data"
-			rCh := make(chan exportResult, 3)
-			rCh <- exportResult{
-				Response: &collogpb.ExportLogsServiceResponse{
-					PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-						RejectedLogRecords: n,
-						ErrorMessage:       msg,
-					},
+	t.Run("PartialSuccess", func(t *testing.T) {
+		const n, msg = 2, "bad data"
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: n,
+					ErrorMessage:       msg,
 				},
-			}
-			rCh <- exportResult{
-				Response: &collogpb.ExportLogsServiceResponse{
-					PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-						// Should not be logged.
-						RejectedLogRecords: 0,
-						ErrorMessage:       "",
-					},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					// Should not be logged.
+					RejectedLogRecords: 0,
+					ErrorMessage:       "",
 				},
-			}
-			rCh <- exportResult{
-				Response: &collogpb.ExportLogsServiceResponse{},
-			}
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
 
-			ctx := context.Background()
-			client, _ := factory(rCh)
+		ctx := context.Background()
+		client, _ := clientFactory(t, rCh)
 
-			defer func(orig otel.ErrorHandler) {
-				otel.SetErrorHandler(orig)
-			}(otel.GetErrorHandler())
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
 
-			var errs []error
-			eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-			otel.SetErrorHandler(eh)
+		var errs []error
+		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+		otel.SetErrorHandler(eh)
 
-			require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-			require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-			require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 
-			require.Equal(t, 1, len(errs))
-			want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-			assert.ErrorContains(t, errs[0], want)
-		})
+		require.Equal(t, 1, len(errs))
+		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
+		assert.ErrorContains(t, errs[0], want)
 	})
 }
