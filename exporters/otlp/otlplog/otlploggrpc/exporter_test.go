@@ -6,6 +6,7 @@ package otlploggrpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -14,9 +15,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/log"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
+
+var records []sdklog.Record
+
+func init() {
+	var r sdklog.Record
+	r.SetTimestamp(ts)
+	r.SetBody(log.StringValue("A"))
+	records = append(records, r)
+
+	r.SetBody(log.StringValue("B"))
+	records = append(records, r)
+}
 
 type mockClient struct {
 	err error
@@ -36,20 +52,20 @@ func (m *mockClient) Shutdown(context.Context) error {
 func TestExporterExport(t *testing.T) {
 	testCases := []struct {
 		name string
-		logs []log.Record
+		logs []sdklog.Record
 		err  error
 
-		wantLogs []log.Record
+		wantLogs []sdklog.Record
 		wantErr  error
 	}{
 		{
 			name:     "NoError",
-			logs:     make([]log.Record, 2),
-			wantLogs: make([]log.Record, 2),
+			logs:     make([]sdklog.Record, 2),
+			wantLogs: make([]sdklog.Record, 2),
 		},
 		{
 			name:    "Error",
-			logs:    make([]log.Record, 2),
+			logs:    make([]sdklog.Record, 2),
 			err:     errors.New("test"),
 			wantErr: errors.New("test"),
 		},
@@ -58,8 +74,8 @@ func TestExporterExport(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			orig := transformResourceLogs
-			var got []log.Record
-			transformResourceLogs = func(r []log.Record) []*logpb.ResourceLogs {
+			var got []sdklog.Record
+			transformResourceLogs = func(r []sdklog.Record) []*logpb.ResourceLogs {
 				got = r
 				return make([]*logpb.ResourceLogs, len(r))
 			}
@@ -85,7 +101,7 @@ func TestExporterShutdown(t *testing.T) {
 
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
-	r := make([]log.Record, 1)
+	r := make([]sdklog.Record, 1)
 	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
@@ -114,7 +130,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			r := make([]log.Record, 1)
+			r := make([]sdklog.Record, 1)
 			for {
 				select {
 				case <-ctx.Done():
@@ -135,4 +151,85 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	_ = e.Shutdown(ctx)
 	cancel()
 	wg.Wait()
+}
+
+// TestExporter runs integration test against the real OTLP collector.
+func TestExporter(t *testing.T) {
+	t.Run("ExporterHonorsContextErrors", func(t *testing.T) {
+		t.Run("Export", testCtxErrs(func() func(context.Context) error {
+			c, _ := clientFactory(t, nil)
+			e := newExporter(c)
+			return func(ctx context.Context) error {
+				return e.Export(ctx, []sdklog.Record{{}})
+			}
+		}))
+
+		t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
+			c, _ := clientFactory(t, nil)
+			e := newExporter(c)
+			return e.Shutdown
+		}))
+	})
+
+	t.Run("Export", func(t *testing.T) {
+		ctx := context.Background()
+		c, coll := clientFactory(t, nil)
+		e := newExporter(c)
+
+		require.NoError(t, e.Export(ctx, records))
+		require.NoError(t, e.Shutdown(ctx))
+		got := coll.Collect().Dump()
+		require.Len(t, got, 1, "upload of one ResourceLogs")
+		require.Len(t, got[0].ScopeLogs, 1, "upload of one ScopeLogs")
+		require.Len(t, got[0].ScopeLogs[0].LogRecords, 2, "upload of two ScopeLogs")
+
+		// Check body
+		assert.Equal(t, "A", got[0].ScopeLogs[0].LogRecords[0].Body.GetStringValue())
+		assert.Equal(t, "B", got[0].ScopeLogs[0].LogRecords[1].Body.GetStringValue())
+	})
+
+	t.Run("PartialSuccess", func(t *testing.T) {
+		const n, msg = 2, "bad data"
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: n,
+					ErrorMessage:       msg,
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					// Should not be logged.
+					RejectedLogRecords: 0,
+					ErrorMessage:       "",
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
+
+		ctx := context.Background()
+		c, _ := clientFactory(t, rCh)
+		e := newExporter(c)
+
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+
+		var errs []error
+		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+		otel.SetErrorHandler(eh)
+
+		require.NoError(t, e.Export(ctx, records))
+		require.NoError(t, e.Export(ctx, records))
+		require.NoError(t, e.Export(ctx, records))
+
+		require.Equal(t, 1, len(errs))
+		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
+		assert.ErrorContains(t, errs[0], want)
+	})
 }
