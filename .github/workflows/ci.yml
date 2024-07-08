@@ -12,7 +12,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.22.4"
+  DEFAULT_GO_VERSION: "~1.22.5"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -118,14 +118,16 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.22.4", "~1.21.11"]
+        go-version: ["~1.22.5", "~1.21.12"]
         platform:
           - os: ubuntu-latest
             arch: "386"
           - os: ubuntu-latest
             arch: amd64
-          - os: macos-latest
+          - os: macos-13
             arch: amd64
+          - os: macos-latest
+            arch: arm64
           - os: windows-latest
             arch: "386"
           - os: windows-latest
