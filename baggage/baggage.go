@@ -294,17 +294,43 @@ func parseMember(member string) (Member, error) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
-	val := strings.TrimSpace(v)
-	if !validateValue(val) {
+	rawVal := strings.TrimSpace(v)
+	if !validateValue(rawVal) {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, v)
 	}
 
 	// Decode a percent-encoded value.
-	value, err := url.PathUnescape(val)
+	unescapeVal, err := url.PathUnescape(rawVal)
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %w", errInvalidValue, err)
 	}
+
+	value := replaceInvalidUTF8Sequences(len(rawVal), unescapeVal)
 	return Member{key: key, value: value, properties: props, hasData: true}, nil
+}
+
+// replaceInvalidUTF8Sequences replaces invalid UTF-8 sequences with '�'.
+func replaceInvalidUTF8Sequences(cap int, unescapeVal string) string {
+	if utf8.ValidString(unescapeVal) {
+		return unescapeVal
+	}
+	// W3C baggage spec:
+	// https://github.com/w3c/baggage/blob/8c215efbeebd3fa4b1aceb937a747e56444f22f3/baggage/HTTP_HEADER_FORMAT.md?plain=1#L69
+
+	var b strings.Builder
+	b.Grow(cap)
+	for i := 0; i < len(unescapeVal); {
+		r, size := utf8.DecodeRuneInString(unescapeVal[i:])
+		if r == utf8.RuneError && size == 1 {
+			// Invalid UTF-8 sequence found, replace it with '�'
+			_, _ = b.WriteString("�")
+		} else {
+			_, _ = b.WriteRune(r)
+		}
+		i += size
+	}
+
+	return b.String()
 }
 
 // validate ensures m conforms to the W3C Baggage specification.
@@ -607,10 +633,12 @@ func parsePropertyInternal(s string) (p Property, ok bool) {
 	}
 
 	// Decode a percent-encoded value.
-	value, err := url.PathUnescape(s[valueStart:valueEnd])
+	rawVal := s[valueStart:valueEnd]
+	unescapeVal, err := url.PathUnescape(rawVal)
 	if err != nil {
 		return
 	}
+	value := replaceInvalidUTF8Sequences(len(rawVal), unescapeVal)
 
 	ok = true
 	p.key = s[keyStart:keyEnd]
