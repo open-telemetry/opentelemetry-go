@@ -329,7 +329,7 @@ func TestBatchSpanProcessorExportTimeout(t *testing.T) {
 	generateSpan(t, tr, testOption{genNumSpans: 1})
 	tp.UnregisterSpanProcessor(bsp)
 
-	if exp.err != context.DeadlineExceeded {
+	if !errors.Is(exp.err, context.DeadlineExceeded) {
 		t.Errorf("context deadline error not returned: got %+v", exp.err)
 	}
 }

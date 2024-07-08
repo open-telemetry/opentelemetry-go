@@ -6,7 +6,7 @@ on:
   workflow_dispatch: 
 
 env:
-  DEFAULT_GO_VERSION: "~1.22.4"
+  DEFAULT_GO_VERSION: "~1.22.5"
 jobs:
   benchmark:
     name: Benchmarks
@@ -37,3 +37,5 @@ jobs:
           gh-pages-branch: benchmarks
           fail-on-alert: true
           alert-threshold: "400%"
+          # Add benchmark summary to GitHub workflow run report
+          summary-always: true

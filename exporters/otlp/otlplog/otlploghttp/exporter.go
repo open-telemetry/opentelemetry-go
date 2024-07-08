@@ -13,6 +13,7 @@ import (
 
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
 // OTLP protobufs using HTTP.
+// Exporter must be created with [New].
 type Exporter struct {
 	client  atomic.Pointer[client]
 	stopped atomic.Bool
