@@ -12,6 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their corresponding environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5584)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.28.0/0.50.0/0.4.0] 2024-07-02
 
 ### Added
@@ -3090,6 +3093,8 @@ It contains api and sdk for trace and meter.
 [0.1.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.2
 [0.1.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.1
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
+
+<!-- Released section ended -->
 
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
