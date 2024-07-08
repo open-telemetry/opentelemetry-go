@@ -37,3 +37,5 @@ jobs:
           gh-pages-branch: benchmarks
           fail-on-alert: true
           alert-threshold: "400%"
+          # Add benchmark summary to GitHub workflow run report
+          summary-always: true
