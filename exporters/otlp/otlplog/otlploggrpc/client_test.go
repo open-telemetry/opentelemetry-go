@@ -451,6 +451,7 @@ func (c *grpcCollector) Collect() *storage {
 }
 
 func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
+	t.Helper()
 	coll, err := newGRPCCollector("", rCh)
 	require.NoError(t, err)
 
