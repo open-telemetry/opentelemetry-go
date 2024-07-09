@@ -47,6 +47,8 @@ func (m *mockClient) Shutdown(context.Context) error {
 }
 
 func TestExporterExport(t *testing.T) {
+	errClient := errors.New("client")
+
 	testCases := []struct {
 		name string
 		logs []sdklog.Record
@@ -63,8 +65,8 @@ func TestExporterExport(t *testing.T) {
 		{
 			name:    "Error",
 			logs:    make([]sdklog.Record, 2),
-			err:     errors.New("test"),
-			wantErr: errors.New("test"),
+			err:     errClient,
+			wantErr: errClient,
 		},
 	}
 
