@@ -18,8 +18,8 @@ produce some of the largest improvements in performance.[^1]
 
 The main and recommended use case is to configure the SDK to use an OTLP
 exporter with a batch processor.[^2] Therefore, the implementation aims to be
-high-performant in this scenario. Some users that require high throuput may also
-want to use e.g. an [user_events](https://docs.kernel.org/trace/user_events.html),
+high-performant in this scenario. Some users that require high throughput may
+also want to use e.g. an [user_events](https://docs.kernel.org/trace/user_events.html),
 [LLTng](https://lttng.org/docs/v2.13/#doc-tracing-your-own-user-application)
 or [ETW](https://learn.microsoft.com/en-us/windows/win32/etw/about-event-tracing)
 exporter with a simple processor. Users may also want to use
