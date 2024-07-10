@@ -32,7 +32,7 @@
 // at a single endpoint their origin is decipherable.
 //
 // To avoid leaking memory, the SDK returns the same instrument for calls to
-// create new instruments with the same Unit, Name, and Description.
+// create new instruments with the same Name, Unit, and Description.
 // Importantly, callbacks provided using metric.WithFloat64Callback or
 // metric.WithInt64Callback will only apply for the first instrument created
 // with a given Name, Unit, and Description. Instead, use
