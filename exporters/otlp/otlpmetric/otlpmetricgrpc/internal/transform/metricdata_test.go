@@ -954,7 +954,7 @@ func BenchmarkResourceMetrics(b *testing.B) {
 			},
 		},
 		{
-			name: "with an histogram",
+			name: "with a histogram",
 			aggregation: metricdata.Histogram[int64]{
 				DataPoints: []metricdata.HistogramDataPoint[int64]{
 					{
@@ -980,7 +980,7 @@ func BenchmarkResourceMetrics(b *testing.B) {
 			},
 		},
 		{
-			name: "with a symmary",
+			name: "with a summary",
 			aggregation: metricdata.Summary{
 				DataPoints: []metricdata.SummaryDataPoint{
 					{
