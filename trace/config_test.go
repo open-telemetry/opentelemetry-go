@@ -163,6 +163,19 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 }
 
+func TestSpanStartConfigAttributeMutability(t *testing.T) {
+	a := attribute.String("a", "val")
+	b := attribute.String("b", "val")
+	attrs := []attribute.KeyValue{a, b}
+	conf := NewSpanStartConfig(WithAttributes(attrs...))
+
+	// Mutating passed arg should not change configured attributes.
+	attrs[0] = attribute.String("c", "val")
+
+	want := SpanConfig{attributes: []attribute.KeyValue{a, b}}
+	assert.Equal(t, want, conf)
+}
+
 func TestEndSpanConfig(t *testing.T) {
 	timestamp := time.Unix(0, 0)
 
