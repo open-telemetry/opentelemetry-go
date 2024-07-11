@@ -351,16 +351,19 @@ func Bool(key string, value bool) KeyValue {
 }
 
 // Bytes returns a KeyValue for a []byte value.
+// The passed slice must not be changed after it is passed.
 func Bytes(key string, value []byte) KeyValue {
 	return KeyValue{key, BytesValue(value)}
 }
 
 // Slice returns a KeyValue for a []Value value.
+// The passed slice must not be changed after it is passed.
 func Slice(key string, value ...Value) KeyValue {
 	return KeyValue{key, SliceValue(value...)}
 }
 
 // Map returns a KeyValue for a map value.
+// The passed slice must not be changed after it is passed.
 func Map(key string, value ...KeyValue) KeyValue {
 	return KeyValue{key, MapValue(value...)}
 }
