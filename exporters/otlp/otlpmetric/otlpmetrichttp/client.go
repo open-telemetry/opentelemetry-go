@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -283,16 +282,14 @@ func (r *request) reset(ctx context.Context) {
 }
 
 // retryableError represents a request failure that can be retried.
-//
-// If the `errMsg` attribute is not empty, it will be used as the error message.
 type retryableError struct {
 	throttle int64
-	errMsg   string
+	err      error
 }
 
 // newResponseError returns a retryableError and will extract any explicit
 // throttle delay contained in headers and if there is message in the response
-// body, it will be used as the error message.
+// body, it will be passed as error.
 func newResponseError(header http.Header, body string) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
@@ -301,21 +298,34 @@ func newResponseError(header http.Header, body string) error {
 		}
 	}
 
-	rErr.errMsg = body
-	// Extract the error message from the response body.
-	if st, ok := status.FromError(fmt.Errorf(body)); ok {
-		rErr.errMsg = fmt.Sprintf("rpc error: code = %s desc = %s", st.Code(), st.Message())
-	}
-
+	rErr.err = fmt.Errorf("retry-able request failure: %s", body)
 	return rErr
 }
 
 func (e retryableError) Error() string {
-	if e.errMsg != "" {
-		return e.errMsg
+	if e.err != nil {
+		return e.err.Error()
 	}
 
 	return "retry-able request failure"
+}
+
+func (e retryableError) Unwrap() error {
+	return e.err
+}
+
+func (e retryableError) As(target interface{}) bool {
+	if e.err == nil {
+		return false
+	}
+
+	switch v := target.(type) {
+	case **retryableError:
+		*v = &e
+		return true
+	default:
+		return false
+	}
 }
 
 // evaluate returns if err is retry-able. If it is and it includes an explicit
