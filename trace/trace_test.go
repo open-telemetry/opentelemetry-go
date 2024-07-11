@@ -643,3 +643,21 @@ func TestLinkFromContext(t *testing.T) {
 	}
 	assert.Equal(t, link.Attributes[0], k1v1)
 }
+
+func TestConfigLinkMutability(t *testing.T) {
+	sc0 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{1}})
+	sc1 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{2}})
+	sc2 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{3}})
+	l0 := Link{SpanContext: sc0}
+	l1 := Link{SpanContext: sc1}
+	l2 := Link{SpanContext: sc2}
+
+	links := []Link{l0, l1}
+	conf := NewSpanStartConfig(WithLinks(links...))
+
+	// Mutating passed arg should not change configured links.
+	links[0] = l2
+
+	want := SpanConfig{links: []Link{l0, l1}}
+	assert.Equal(t, want, conf)
+}

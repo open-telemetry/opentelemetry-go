@@ -32,6 +32,9 @@ type Exporter struct {
 var _ log.Exporter = (*Exporter)(nil)
 
 // New returns a new [Exporter].
+//
+// It is recommended to use it with a [BatchProcessor]
+// or other processor exporting records asynchronously.
 func New(_ context.Context, options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 	c, err := newClient(cfg)
@@ -51,7 +54,7 @@ var transformResourceLogs = transform.ResourceLogs
 
 // Export transforms and transmits log records to an OTLP receiver.
 //
-// This method returns nil error if called after Shutdown.
+// This method returns nil and drops records if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {

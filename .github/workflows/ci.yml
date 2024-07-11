@@ -124,8 +124,10 @@ jobs:
             arch: "386"
           - os: ubuntu-latest
             arch: amd64
-          - os: macos-latest
+          - os: macos-13
             arch: amd64
+          - os: macos-latest
+            arch: arm64
           - os: windows-latest
             arch: "386"
           - os: windows-latest
