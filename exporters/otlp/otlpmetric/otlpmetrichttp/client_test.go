@@ -212,7 +212,7 @@ func TestConfig(t *testing.T) {
 
 		var retryErr *retryableError
 		assert.True(t, errors.As(err, &retryErr))
-		assert.Equal(t, fmt.Sprintf("retry-able request failure: 429: %v", exporterErr), retryErr.Unwrap().Error())
+		assert.Equal(t, fmt.Sprintf("429: %v", exporterErr), retryErr.Unwrap().Error())
 
 		var newErr *retryableError
 		assert.True(t, retryErr.As(&newErr))

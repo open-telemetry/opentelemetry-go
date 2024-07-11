@@ -147,7 +147,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		resp, err := c.httpClient.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{}, err.Error())
+			return newResponseError(http.Header{}, err)
 		}
 		if err != nil {
 			return err
@@ -188,7 +188,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			sc == http.StatusServiceUnavailable,
 			sc == http.StatusGatewayTimeout:
 			// Retry-able failure.
-			rErr = newResponseError(resp.Header, "")
+			rErr = newResponseError(resp.Header, nil)
 
 			// server may return a message with the response
 			// body, so we read it to include in the error
@@ -202,13 +202,11 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// overwrite the error message with the response body
 			// if it is not empty
-			respStr := strings.TrimSpace(respData.String())
-			if respStr != "" {
-				// pass the error message along with retry-able error,
-				// so that it can be retried and also passes the message
-				rErr = newResponseError(resp.Header, respStr)
+			if respStr := strings.TrimSpace(respData.String()); respStr != "" {
+				// Include response for context.
+				e := errors.New(respStr)
+				rErr = newResponseError(resp.Header, e)
 			}
-
 		default:
 			rErr = fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
 		}
@@ -290,7 +288,7 @@ type retryableError struct {
 // newResponseError returns a retryableError and will extract any explicit
 // throttle delay contained in headers and if there is message in the response
 // body, it will be passed as error.
-func newResponseError(header http.Header, body string) error {
+func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
 		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
@@ -298,13 +296,13 @@ func newResponseError(header http.Header, body string) error {
 		}
 	}
 
-	rErr.err = fmt.Errorf("retry-able request failure: %s", body)
+	rErr.err = wrapped
 	return rErr
 }
 
 func (e retryableError) Error() string {
 	if e.err != nil {
-		return e.err.Error()
+		return fmt.Sprintf("retry-able request failure: %s", e.err.Error())
 	}
 
 	return "retry-able request failure"
