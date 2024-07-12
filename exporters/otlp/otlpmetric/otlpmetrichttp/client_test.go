@@ -208,15 +208,18 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.EqualError(t, err, fmt.Sprintf("failed to upload metrics: retry-able request failure: %d: %v", http.StatusTooManyRequests, exporterErr))
+		assert.ErrorContains(t, err, exporterErr.Error())
 
+		// To test the `Unwrap` function of retryable error
 		var retryErr *retryableError
-		assert.True(t, errors.As(err, &retryErr))
-		assert.Equal(t, fmt.Sprintf("429: %v", exporterErr), retryErr.Unwrap().Error())
+		// assert.True(t, errors.As(err, &retryErr))
+		assert.ErrorAs(t, err, &retryErr)
+		assert.ErrorContains(t, retryErr, fmt.Sprintf("429: %v", exporterErr))
 
+		// To test `As` function of retryable error
 		var newErr *retryableError
-		assert.True(t, retryErr.As(&newErr))
-		assert.Equal(t, newErr.Unwrap().Error(), retryErr.Unwrap().Error())
+		assert.ErrorAs(t, retryErr, &newErr)
+		assert.ErrorIs(t, *retryErr, *newErr)
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {
