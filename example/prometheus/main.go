@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-const meterName = "github.com/open-telemetry/opentelemetry-go/example/prometheus"
+const meterName = "go.opentelemetry.io/otel/example/prometheus"
 
 func main() {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
