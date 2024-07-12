@@ -30,7 +30,7 @@ func New(next func(r *http.Request)) *Handler {
 	// global progatators and tracer providers.
 	return &Handler{
 		propagators: otel.GetTextMapPropagator(),
-		tracer:      otel.Tracer("examples/passthrough/handler"),
+		tracer:      otel.Tracer("go.opentelemetry.io/otel/example/passthrough/handler"),
 		next:        next,
 	}
 }
