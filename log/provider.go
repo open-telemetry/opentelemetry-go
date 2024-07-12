@@ -24,12 +24,12 @@ type LoggerProvider interface {
 	// commonly, this means a bridge will need to accept this value from its
 	// users.
 	//
+	// If name is empty, implementations need to provide a default name.
+	//
 	// The version of the packages using a bridge can be critical information
 	// to include when logging. The bridge should accept this version
 	// information and use the [WithInstrumentationVersion] option to configure
 	// the Logger appropriately.
-	//
-	// If name is empty, implementations need to provide a default name.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
