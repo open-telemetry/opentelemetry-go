@@ -929,3 +929,93 @@ func TestTransformations(t *testing.T) {
 	assert.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbResourceMetrics, rm)
 }
+
+func BenchmarkResourceMetrics(b *testing.B) {
+	for _, bb := range []struct {
+		name        string
+		aggregation metricdata.Aggregation
+	}{
+		{
+			name: "with a gauge",
+			aggregation: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Value: 1},
+					{Value: 2},
+				},
+			},
+		},
+		{
+			name: "with a sum",
+			aggregation: metricdata.Sum[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Value: 1},
+					{Value: 2},
+				},
+			},
+		},
+		{
+			name: "with a histogram",
+			aggregation: metricdata.Histogram[int64]{
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
+					{
+						Count: 2,
+						Min:   metricdata.NewExtrema[int64](2),
+						Max:   metricdata.NewExtrema[int64](3),
+						Sum:   5,
+					},
+				},
+			},
+		},
+		{
+			name: "with an exponential histogram",
+			aggregation: metricdata.ExponentialHistogram[int64]{
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+					{
+						Count: 2,
+						Min:   metricdata.NewExtrema[int64](2),
+						Max:   metricdata.NewExtrema[int64](3),
+						Sum:   5,
+					},
+				},
+			},
+		},
+		{
+			name: "with a summary",
+			aggregation: metricdata.Summary{
+				DataPoints: []metricdata.SummaryDataPoint{
+					{
+						Count: 1,
+						Sum:   5,
+						QuantileValues: []metricdata.QuantileValue{
+							{Quantile: 0.5, Value: 5},
+						},
+					},
+				},
+			},
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			records := &metricdata.ResourceMetrics{
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Data: bb.aggregation,
+							},
+						},
+					},
+				},
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				var out *mpb.ResourceMetrics
+				for pb.Next() {
+					out, _ = ResourceMetrics(records)
+				}
+				_ = out
+			})
+		})
+	}
+}
