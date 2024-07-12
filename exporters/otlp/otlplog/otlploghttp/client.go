@@ -283,7 +283,7 @@ type retryableError struct {
 }
 
 // newResponseError returns a retryableError and will extract any explicit
-// throttle delay contained in headers. The returned error wraps wrapped 
+// throttle delay contained in headers. The returned error wraps wrapped
 // if it is not nil.
 func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError

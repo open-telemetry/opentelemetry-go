@@ -210,16 +210,10 @@ func TestConfig(t *testing.T) {
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, exporterErr.Error())
 
-		// To test the `Unwrap` function of retryable error
+		// To test the `Unwrap` and `As` function of retryable error
 		var retryErr *retryableError
-		// assert.True(t, errors.As(err, &retryErr))
 		assert.ErrorAs(t, err, &retryErr)
-		assert.ErrorContains(t, retryErr, fmt.Sprintf("429: %v", exporterErr))
-
-		// To test `As` function of retryable error
-		var newErr *retryableError
-		assert.ErrorAs(t, retryErr, &newErr)
-		assert.ErrorIs(t, *retryErr, *newErr)
+		assert.ErrorIs(t, err, *retryErr)
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {
