@@ -348,3 +348,33 @@ func TestSpanDataNilResource(t *testing.T) {
 		}.Snapshots())
 	})
 }
+
+func BenchmarkSpans(b *testing.B) {
+	records := []tracesdk.ReadOnlySpan{
+		tracetest.SpanStub{
+			Attributes: []attribute.KeyValue{
+				attribute.String("a", "b"),
+				attribute.String("b", "b"),
+				attribute.String("c", "b"),
+				attribute.String("d", "b"),
+			},
+			Links: []tracesdk.Link{
+				{},
+				{},
+				{},
+				{},
+				{},
+			},
+		}.Snapshot(),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		var out []*tracepb.ResourceSpans
+		for pb.Next() {
+			out = Spans(records)
+		}
+		_ = out
+	})
+}
