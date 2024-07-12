@@ -31,27 +31,39 @@ func BenchmarkProcessor(b *testing.B) {
 			},
 		},
 		{
-			name: "ModifyTimestampSimple",
+			name: "SetTimestampSimple",
 			f: func() Processor {
 				return timestampDecorator{NewSimpleProcessor(noopExporter{})}
 			},
 		},
 		{
-			name: "ModifyTimestampBatch",
+			name: "SetTimestampBatch",
 			f: func() Processor {
 				return timestampDecorator{NewBatchProcessor(noopExporter{})}
 			},
 		},
 		{
-			name: "ModifyAttributesSimple",
+			name: "AddAttributesSimple",
 			f: func() Processor {
-				return attrDecorator{NewSimpleProcessor(noopExporter{})}
+				return attrAddDecorator{NewSimpleProcessor(noopExporter{})}
 			},
 		},
 		{
-			name: "ModifyAttributesBatch",
+			name: "AddAttributesBatch",
 			f: func() Processor {
-				return attrDecorator{NewBatchProcessor(noopExporter{})}
+				return attrAddDecorator{NewBatchProcessor(noopExporter{})}
+			},
+		},
+		{
+			name: "SetAttributesSimple",
+			f: func() Processor {
+				return attrSetDecorator{NewSimpleProcessor(noopExporter{})}
+			},
+		},
+		{
+			name: "SetAttributesBatch",
+			f: func() Processor {
+				return attrSetDecorator{NewBatchProcessor(noopExporter{})}
 			},
 		},
 	} {
@@ -89,11 +101,21 @@ func (e timestampDecorator) OnEmit(ctx context.Context, r Record) error {
 	return e.Processor.OnEmit(ctx, r)
 }
 
-type attrDecorator struct {
+type attrAddDecorator struct {
 	Processor
 }
 
-func (e attrDecorator) OnEmit(ctx context.Context, r Record) error {
+func (e attrAddDecorator) OnEmit(ctx context.Context, r Record) error {
+	r = r.Clone()
+	r.AddAttributes(log.String("add", "me"))
+	return e.Processor.OnEmit(ctx, r)
+}
+
+type attrSetDecorator struct {
+	Processor
+}
+
+func (e attrSetDecorator) OnEmit(ctx context.Context, r Record) error {
 	r = r.Clone()
 	r.SetAttributes(log.String("replace", "me"))
 	return e.Processor.OnEmit(ctx, r)
