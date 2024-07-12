@@ -25,10 +25,10 @@ PREVIOUS_LOCKED_FILE="$TEMP_DIR/previous_locked_section.md"
 CURRENT_LOCKED_FILE="$TEMP_DIR/current_locked_section.md"
 
 # Extract released sections from the previous version
-awk '/^\<!-- Released section --\>/ {flag=1} /^\<!-- Released section ended --\>/ {flag=0} flag' "$PREVIOUS_FILE" > "$PREVIOUS_LOCKED_FILE"
+awk '/^<!-- Released section -->/ {flag=1} /^<!-- Released section ended -->/ {flag=0} flag' "$PREVIOUS_FILE" > "$PREVIOUS_LOCKED_FILE"
 
 # Extract released sections from the current version
-awk '/^\<!-- Released section --\>/ {flag=1} /^\<!-- Released section ended --\>/ {flag=0} flag' "$CURRENT_FILE" > "$CURRENT_LOCKED_FILE"
+awk '/^<!-- Released section -->/ {flag=1} /^<!-- Released section ended -->/ {flag=0} flag' "$CURRENT_FILE" > "$CURRENT_LOCKED_FILE"
 
 # Compare the released sections
 if ! diff -q "$PREVIOUS_LOCKED_FILE" "$CURRENT_LOCKED_FILE"; then
