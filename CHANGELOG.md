@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add macOS ARM64 platform to the compatibility testing suite. (#5577)
+- Add `NoopProcessor` in `go.opentelemetry.io/otel/sdk/log`. (#5618)
 
 ### Fixed
 
