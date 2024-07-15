@@ -130,8 +130,9 @@ func main() {
 		}
 	}()
 
-	tracer := otel.Tracer("test-tracer")
-	meter := otel.Meter("test-meter")
+	name := "go.opentelemetry.io/otel/example/otel-collector"
+	tracer := otel.Tracer(name)
+	meter := otel.Meter(name)
 
 	// Attributes represent additional key-value descriptors that can be bound
 	// to a metric observer or recorder.

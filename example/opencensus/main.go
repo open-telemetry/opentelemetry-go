@@ -76,7 +76,8 @@ func tracing(otExporter sdktrace.SpanExporter) {
 	tp.ForceFlush(ctx)
 
 	log.Println("Creating OpenTelemetry span\n-- It should have the OpenCensus span as a parent, since the OpenCensus span was written with using OpenTelemetry APIs.")
-	ctx, otspan := tp.Tracer("simple").Start(ctx, "OpenTelemetrySpan")
+	tracer := tp.Tracer("go.opentelemetry.io/otel/example/opencensus")
+	ctx, otspan := tracer.Start(ctx, "OpenTelemetrySpan")
 	otspan.End()
 	tp.ForceFlush(ctx)
 
