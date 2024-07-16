@@ -4,21 +4,140 @@
 package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 
 import (
+	"context"
+	"fmt"
+	"net"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"go.opentelemetry.io/otel"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+)
 
-	"github.com/stretchr/testify/assert"
+var (
+	// Sat Jan 01 2000 00:00:00 GMT+0000.
+	ts  = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
+	obs = ts.Add(30 * time.Second)
+
+	kvAlice = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "alice"},
+	}}
+	kvBob = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "bob"},
+	}}
+	kvSrvName = &cpb.KeyValue{Key: "service.name", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "test server"},
+	}}
+	kvSrvVer = &cpb.KeyValue{Key: "service.version", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "v0.1.0"},
+	}}
+
+	pbSevA = lpb.SeverityNumber_SEVERITY_NUMBER_INFO
+	pbSevB = lpb.SeverityNumber_SEVERITY_NUMBER_ERROR
+
+	pbBodyA = &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{
+			StringValue: "a",
+		},
+	}
+	pbBodyB = &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{
+			StringValue: "b",
+		},
+	}
+
+	spanIDA  = []byte{0, 0, 0, 0, 0, 0, 0, 1}
+	spanIDB  = []byte{0, 0, 0, 0, 0, 0, 0, 2}
+	traceIDA = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	traceIDB = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+	flagsA   = byte(1)
+	flagsB   = byte(0)
+
+	logRecords = []*lpb.LogRecord{
+		{
+			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevA,
+			SeverityText:         "A",
+			Body:                 pbBodyA,
+			Attributes:           []*cpb.KeyValue{kvAlice},
+			Flags:                uint32(flagsA),
+			TraceId:              traceIDA,
+			SpanId:               spanIDA,
+		},
+		{
+			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevA,
+			SeverityText:         "A",
+			Body:                 pbBodyA,
+			Attributes:           []*cpb.KeyValue{kvBob},
+			Flags:                uint32(flagsA),
+			TraceId:              traceIDA,
+			SpanId:               spanIDA,
+		},
+		{
+			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevB,
+			SeverityText:         "B",
+			Body:                 pbBodyB,
+			Attributes:           []*cpb.KeyValue{kvAlice},
+			Flags:                uint32(flagsB),
+			TraceId:              traceIDB,
+			SpanId:               spanIDB,
+		},
+		{
+			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevB,
+			SeverityText:         "B",
+			Body:                 pbBodyB,
+			Attributes:           []*cpb.KeyValue{kvBob},
+			Flags:                uint32(flagsB),
+			TraceId:              traceIDB,
+			SpanId:               spanIDB,
+		},
+	}
+
+	scope = &cpb.InstrumentationScope{
+		Name:    "test/code/path",
+		Version: "v0.1.0",
+	}
+	scopeLogs = []*lpb.ScopeLogs{
+		{
+			Scope:      scope,
+			LogRecords: logRecords,
+			SchemaUrl:  semconv.SchemaURL,
+		},
+	}
+
+	res = &rpb.Resource{
+		Attributes: []*cpb.KeyValue{kvSrvName, kvSrvVer},
+	}
+	resourceLogs = []*lpb.ResourceLogs{{
+		Resource:  res,
+		ScopeLogs: scopeLogs,
+		SchemaUrl: semconv.SchemaURL,
+	}}
 )
 
 func TestThrottleDelay(t *testing.T) {
@@ -224,4 +343,221 @@ func TestNewClient(t *testing.T) {
 			assert.Equal(t, tc.cli.lsc, cli.lsc)
 		})
 	}
+}
+
+type exportResult struct {
+	Response *collogpb.ExportLogsServiceResponse
+	Err      error
+}
+
+// storage stores uploaded OTLP log data in their proto form.
+type storage struct {
+	dataMu sync.Mutex
+	data   []*lpb.ResourceLogs
+}
+
+// newStorage returns a configure storage ready to store received requests.
+func newStorage() *storage {
+	return &storage{}
+}
+
+// Add adds the request to the Storage.
+func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+	s.data = append(s.data, request.ResourceLogs...)
+}
+
+// Dump returns all added ResourceLogs and clears the storage.
+func (s *storage) Dump() []*lpb.ResourceLogs {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+
+	var data []*lpb.ResourceLogs
+	data, s.data = s.data, []*lpb.ResourceLogs{}
+	return data
+}
+
+// grpcCollector is an OTLP gRPC server that collects all requests it receives.
+type grpcCollector struct {
+	collogpb.UnimplementedLogsServiceServer
+
+	headersMu sync.Mutex
+	headers   metadata.MD
+	storage   *storage
+
+	resultCh <-chan exportResult
+	listener net.Listener
+	srv      *grpc.Server
+}
+
+var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
+
+// newGRPCCollector returns a *grpcCollector that is listening at the provided
+// endpoint.
+//
+// If endpoint is an empty string, the returned collector will be listening on
+// the localhost interface at an OS chosen port.
+//
+// If errCh is not nil, the collector will respond to Export calls with errors
+// sent on that channel. This means that if errCh is not nil Export calls will
+// block until an error is received.
+func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+	if endpoint == "" {
+		endpoint = "localhost:0"
+	}
+
+	c := &grpcCollector{
+		storage:  newStorage(),
+		resultCh: resultCh,
+	}
+
+	var err error
+	c.listener, err = net.Listen("tcp", endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	c.srv = grpc.NewServer()
+	collogpb.RegisterLogsServiceServer(c.srv, c)
+	go func() { _ = c.srv.Serve(c.listener) }()
+
+	return c, nil
+}
+
+// Export handles the export req.
+func (c *grpcCollector) Export(ctx context.Context, req *collogpb.ExportLogsServiceRequest) (*collogpb.ExportLogsServiceResponse, error) {
+	c.storage.Add(req)
+
+	if h, ok := metadata.FromIncomingContext(ctx); ok {
+		c.headersMu.Lock()
+		c.headers = metadata.Join(c.headers, h)
+		c.headersMu.Unlock()
+	}
+
+	if c.resultCh != nil {
+		r := <-c.resultCh
+		if r.Response == nil {
+			return &collogpb.ExportLogsServiceResponse{}, r.Err
+		}
+		return r.Response, r.Err
+	}
+	return &collogpb.ExportLogsServiceResponse{}, nil
+}
+
+// Collect returns the Storage holding all collected requests.
+func (c *grpcCollector) Collect() *storage {
+	return c.storage
+}
+
+func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
+	t.Helper()
+	coll, err := newGRPCCollector("", rCh)
+	require.NoError(t, err)
+
+	addr := coll.listener.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	cfg := newConfig(opts)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	return client, coll
+}
+
+func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+
+		t.Run("DeadlineExceeded", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
+			t.Cleanup(innerCancel)
+			<-innerCtx.Done()
+
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.DeadlineExceeded)
+		})
+
+		t.Run("Canceled", func(t *testing.T) {
+			innerCtx, innerCancel := context.WithCancel(ctx)
+			innerCancel()
+
+			f := factory()
+			assert.ErrorIs(t, f(innerCtx), context.Canceled)
+		})
+	}
+}
+
+func TestClient(t *testing.T) {
+	t.Run("ClientHonorsContextErrors", func(t *testing.T) {
+		t.Run("Shutdown", testCtxErrs(func() func(context.Context) error {
+			c, _ := clientFactory(t, nil)
+			return c.Shutdown
+		}))
+
+		t.Run("UploadLog", testCtxErrs(func() func(context.Context) error {
+			c, _ := clientFactory(t, nil)
+			return func(ctx context.Context) error {
+				return c.UploadLogs(ctx, nil)
+			}
+		}))
+	})
+
+	t.Run("UploadLogs", func(t *testing.T) {
+		ctx := context.Background()
+		client, coll := clientFactory(t, nil)
+
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.Shutdown(ctx))
+		got := coll.Collect().Dump()
+		require.Len(t, got, 1, "upload of one ResourceLogs")
+		diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+		if diff != "" {
+			t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+		}
+	})
+
+	t.Run("PartialSuccess", func(t *testing.T) {
+		const n, msg = 2, "bad data"
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: n,
+					ErrorMessage:       msg,
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					// Should not be logged.
+					RejectedLogRecords: 0,
+					ErrorMessage:       "",
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
+
+		ctx := context.Background()
+		client, _ := clientFactory(t, rCh)
+
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+
+		var errs []error
+		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+		otel.SetErrorHandler(eh)
+
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+
+		require.Equal(t, 1, len(errs))
+		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
+		assert.ErrorContains(t, errs[0], want)
+	})
 }

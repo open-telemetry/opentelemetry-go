@@ -5,12 +5,27 @@
 `go.opentelemetry.io/otel/sdk/log` provides Logs SDK compliant with the
 [specification](https://opentelemetry.io/docs/specs/otel/logs/sdk/).
 
-The main and recommended use case is to configure the SDK to use an OTLP
-exporter with a batch processor.[^1] Therefore, the design aims to be
-high-performant in this scenario.
-
 The prototype was created in
 [#4955](https://github.com/open-telemetry/opentelemetry-go/pull/4955).
+
+## Background
+
+The goal is to design the exported API of the SDK would have low performance
+overhead. Most importantly, have a design that reduces the amount of heap
+allocations and even make it possible to have a zero-allocation implementation.
+Eliminating the amount of heap allocations reduces the GC pressure which can
+produce some of the largest improvements in performance.[^1]
+
+The main and recommended use case is to configure the SDK to use an OTLP
+exporter with a batch processor.[^2] Therefore, the implementation aims to be
+high-performant in this scenario. Some users that require high throughput may
+also want to use e.g. an [user_events](https://docs.kernel.org/trace/user_events.html),
+[LLTng](https://lttng.org/docs/v2.13/#doc-tracing-your-own-user-application)
+or [ETW](https://learn.microsoft.com/en-us/windows/win32/etw/about-event-tracing)
+exporter with a simple processor. Users may also want to use
+[OTLP File](https://opentelemetry.io/docs/specs/otel/protocol/file-exporter/)
+or [Standard Output](https://opentelemetry.io/docs/specs/otel/logs/sdk_exporters/stdout/)
+exporter in order to emit logs to standard output/error or files.
 
 ## Modules structure
 
@@ -112,10 +127,10 @@ The benchmark results can be found in [the prototype](https://github.com/open-te
 Because the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 and the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter)
 abstractions are so similar, there was a proposal to unify them under
-single `Expoter` interface.[^2]
+single `Expoter` interface.[^3]
 
 However, introducing a `Processor` interface makes it easier
-to create custom processor decorators[^3]
+to create custom processor decorators[^4]
 and makes the design more aligned with the specification.
 
 ### Embed log.Record
@@ -131,6 +146,7 @@ provided via API.
 Moreover it is safer to have these abstraction decoupled.
 E.g. there can be a need for some fields that can be set via API and cannot be modified by the processors.
 
-[^1]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
-[^2]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
-[^3]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)
+[^1]: [A Guide to the Go Garbage Collector](https://tip.golang.org/doc/gc-guide)
+[^2]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
+[^3]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
+[^4]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)

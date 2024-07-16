@@ -8,10 +8,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add macOS ARM64 platform to the compatibility testing suite. (#5577)
+
 ### Changed
 
 - `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` allow percent-encoded UTF-8 string in key. (#5132)
 - `NewMemberRaw`, `NewKeyProperty` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage` allow UTF-8 string in key. (#5132)
+
+### Fixed
+
+- Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their corresponding environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5584)
+- Correct the `Tracer`, `Meter`, and `Logger` names used in `go.opentelemetry.io/otel/example/dice`. (#5612)
+- Correct the `Tracer` names used in `go.opentelemetry.io/otel/example/namedtracer`. (#5612)
+- Correct the `Tracer` name used in `go.opentelemetry.io/otel/example/opencensus`. (#5612)
+- Correct the `Tracer` and `Meter` names used in `go.opentelemetry.io/otel/example/otel-collector`. (#5612)
+- Correct the `Tracer` names used in `go.opentelemetry.io/otel/example/passthrough`. (#5612)
+- Correct the `Meter` name used in `go.opentelemetry.io/otel/example/prometheus`. (#5612)
+- Correct the `Tracer` names used in `go.opentelemetry.io/otel/example/zipkin`. (#5612)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
 
 ## [1.28.0/0.50.0/0.4.0] 2024-07-02
 
@@ -54,6 +72,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix stale timestamps reported by the last-value aggregation. (#5517)
 - Indicate the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` must be created by the `New` method. (#5521)
 - Improved performance in all `{Bool,Int64,Float64,String}SliceValue` functions of `go.opentelemetry.io/attributes` by reducing the number of allocations. (#5549)
+- Replace invalid percent-encoded octet sequences with replacement char in `go.opentelemetry.io/otel/baggage`. (#5528)
 
 ## [1.27.0/0.49.0/0.3.0] 2024-05-21
 
@@ -180,7 +199,7 @@ The next release will require at least [Go 1.21].
   This module includes OpenTelemetry Go's implementation of the Logs Bridge API.
   This module is in an alpha state, it is subject to breaking changes.
   See our [versioning policy](./VERSIONING.md) for more info. (#4961)
-- ARM64 platform to the compatibility testing suite. (#4994)
+- Add ARM64 platform to the compatibility testing suite. (#4994)
 
 ### Fixed
 
@@ -3090,6 +3109,8 @@ It contains api and sdk for trace and meter.
 [0.1.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.2
 [0.1.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.1
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
+
+<!-- Released section ended -->
 
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
