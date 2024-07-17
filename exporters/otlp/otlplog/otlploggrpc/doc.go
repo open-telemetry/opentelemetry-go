@@ -5,7 +5,7 @@
 Package otlploggrpc provides an OTLP log exporter using gRPC. The exporter uses gRPC to
 transport OTLP protobuf payloads.
 
-All Exporters should be created using [New].
+All Exporters must be created with [New].
 
 The environment variables described below can be used for configuration.
 
