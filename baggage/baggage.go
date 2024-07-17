@@ -82,7 +82,8 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 
 // NewKeyValuePropertyRaw returns a new Property for key with value.
 //
-// The passed key and value must be valid UTF-8 string.
+// The passed key must be valid, non-empty UTF-8 string.
+// The passed value must be valid UTF-8 string.
 // However, the specific Propagators that are used to transmit baggage entries across
 // component boundaries may impose their own restrictions on Property key.
 // For example, the W3C Baggage specification restricts the Property keys to strings that
@@ -253,7 +254,7 @@ type Member struct {
 
 // NewMember returns a new Member from the passed arguments.
 //
-// The passed key must be percent-encoded.
+// The passed key must be non-empty percent-encoded.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewMemberRaw] instead
@@ -279,7 +280,8 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 
 // NewMemberRaw returns a new Member from the passed arguments.
 //
-// The passed key and value must be valid UTF-8 string.
+// The passed key must be valid, non-empty UTF-8 string.
+// The passed value must be valid UTF-8 string.
 // However, the specific Propagators that are used to transmit baggage entries across
 // component boundaries may impose their own restrictions on baggage key.
 // For example, the W3C Baggage specification restricts the baggage keys to strings that
@@ -802,8 +804,7 @@ var safeKeyCharset = [utf8.RuneSelf]bool{
 }
 
 // validateBaggageName checks if the string is a valid OpenTelemetry Baggage name.
-// Baggage name is a valid UTF-8 string.
-// Empty string is also a valid UTF-8 string.
+// Baggage name is a valid, non-empty UTF-8 string.
 func validateBaggageName(s string) bool {
 	if len(s) == 0 {
 		return false
