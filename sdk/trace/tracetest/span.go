@@ -61,7 +61,7 @@ type SpanStub struct {
 	ChildSpanCount         int
 	Resource               *resource.Resource
 	InstrumentationScope   instrumentation.Scope
-	InstrumentationLibrary instrumentation.Library
+	InstrumentationLibrary instrumentation.Library // Deprecated: use InstrumentationScope instead.
 }
 
 // SpanStubFromReadOnlySpan returns a SpanStub populated from ro.
