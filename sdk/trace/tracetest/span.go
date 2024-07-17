@@ -45,23 +45,25 @@ func (s SpanStubs) Snapshots() []tracesdk.ReadOnlySpan {
 
 // SpanStub is a stand-in for a Span.
 type SpanStub struct {
-	Name                   string
-	SpanContext            trace.SpanContext
-	Parent                 trace.SpanContext
-	SpanKind               trace.SpanKind
-	StartTime              time.Time
-	EndTime                time.Time
-	Attributes             []attribute.KeyValue
-	Events                 []tracesdk.Event
-	Links                  []tracesdk.Link
-	Status                 tracesdk.Status
-	DroppedAttributes      int
-	DroppedEvents          int
-	DroppedLinks           int
-	ChildSpanCount         int
-	Resource               *resource.Resource
-	InstrumentationScope   instrumentation.Scope
-	InstrumentationLibrary instrumentation.Library // Deprecated: use InstrumentationScope instead.
+	Name                 string
+	SpanContext          trace.SpanContext
+	Parent               trace.SpanContext
+	SpanKind             trace.SpanKind
+	StartTime            time.Time
+	EndTime              time.Time
+	Attributes           []attribute.KeyValue
+	Events               []tracesdk.Event
+	Links                []tracesdk.Link
+	Status               tracesdk.Status
+	DroppedAttributes    int
+	DroppedEvents        int
+	DroppedLinks         int
+	ChildSpanCount       int
+	Resource             *resource.Resource
+	InstrumentationScope instrumentation.Scope
+
+	// Deprecated: use InstrumentationScope instead.
+	InstrumentationLibrary instrumentation.Library //nolint:staticcheck // This method needs to be define for backwards compatibility
 }
 
 // SpanStubFromReadOnlySpan returns a SpanStub populated from ro.
@@ -159,6 +161,6 @@ func (s spanSnapshot) InstrumentationScope() instrumentation.Scope {
 	return s.instrumentationScope
 }
 
-func (s spanSnapshot) InstrumentationLibrary() instrumentation.Library {
+func (s spanSnapshot) InstrumentationLibrary() instrumentation.Library { //nolint:staticcheck // This method needs to be define for backwards compatibility
 	return s.instrumentationScope
 }
