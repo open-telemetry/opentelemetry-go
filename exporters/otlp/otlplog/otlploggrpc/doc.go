@@ -5,7 +5,7 @@
 Package otlploggrpc provides an OTLP log exporter using gRPC. The exporter uses gRPC to
 transport OTLP protobuf payloads.
 
-Exporter should be created using [New].
+All Exporters should be created using [New].
 
 The environment variables described below can be used for configuration.
 
@@ -13,7 +13,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_LOGS_ENDPOINT (default: "https:/
 target to which the exporter sends telemetry.
 The target syntax is defined in https://github.com/grpc/grpc/blob/master/doc/naming.md.
 The value must contain a host.
-The value may additionally a port, a scheme, and a path.
+The value may additionally contain a port, a scheme, and a path.
 The value accepts "http" and "https" scheme.
 The value should not contain a query string or fragment.
 OTEL_EXPORTER_OTLP_LOGS_ENDPOINT takes precedence over OTEL_EXPORTER_OTLP_ENDPOINT.
