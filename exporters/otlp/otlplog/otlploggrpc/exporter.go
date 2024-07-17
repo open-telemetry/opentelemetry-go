@@ -20,6 +20,7 @@ type logClient interface {
 
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
 // OTLP protobufs using gRPC.
+// All Exporters must be created with [New].
 type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
