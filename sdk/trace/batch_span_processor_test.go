@@ -627,23 +627,32 @@ func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-func BenchmarkSpanProcessor(b *testing.B) {
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(
-			tracetest.NewNoopExporter(),
-			sdktrace.WithMaxExportBatchSize(10),
-		))
-	tracer := tp.Tracer("bench")
-	ctx := context.Background()
+func BenchmarkSpanProcessorOnEnd(b *testing.B) {
+	for _, bb := range []struct {
+		batchSize  int
+		spansCount int
+	}{
+		{batchSize: 10, spansCount: 10},
+		{batchSize: 10, spansCount: 100},
+		{batchSize: 100, spansCount: 10},
+		{batchSize: 100, spansCount: 100},
+	} {
+		b.Run(fmt.Sprintf("batch: %d, spans: %d", bb.batchSize, bb.spansCount), func(b *testing.B) {
+			bsp := sdktrace.NewBatchSpanProcessor(
+				tracetest.NewNoopExporter(),
+				sdktrace.WithMaxExportBatchSize(bb.batchSize),
+			)
+			snap := tracetest.SpanStub{}.Snapshot()
 
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10; j++ {
-			_, span := tracer.Start(ctx, "bench")
-			span.End()
-		}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				// Ensure the export happens for every run
+				for j := 0; j < bb.spansCount; j++ {
+					bsp.OnEnd(snap)
+				}
+			}
+		})
 	}
 }
 

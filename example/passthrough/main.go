@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const name = "go.opentelemetry.io/otel/example/passthrough"
+
 func main() {
 	ctx := context.Background()
 
@@ -37,16 +39,22 @@ func main() {
 	// This is roughly what an instrumented http client does.
 	log.Println("The \"make outer request\" span should be recorded, because it is recorded with a Tracer from the SDK TracerProvider")
 	var span trace.Span
-	ctx, span = tp.Tracer("example/passthrough/outer").Start(ctx, "make outer request")
+	tracer := tp.Tracer(name)
+	ctx, span = tracer.Start(ctx, "make outer request")
 	defer span.End()
 	r = r.WithContext(ctx)
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	backendFunc := func(r *http.Request) {
 		// This is roughly what an instrumented http server does.
-		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		ctx := r.Context()
+
+		tp := trace.SpanFromContext(ctx).TracerProvider()
+		tracer := tp.Tracer(name)
+
+		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(r.Header))
 		log.Println("The \"handle inner request\" span should be recorded, because it is recorded with a Tracer from the SDK TracerProvider")
-		_, span := tp.Tracer("example/passthrough/inner").Start(ctx, "handle inner request")
+		_, span := tracer.Start(ctx, "handle inner request")
 		defer span.End()
 
 		// Do "backend work"
