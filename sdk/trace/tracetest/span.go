@@ -60,6 +60,7 @@ type SpanStub struct {
 	DroppedLinks           int
 	ChildSpanCount         int
 	Resource               *resource.Resource
+	InstrumentationScope   instrumentation.Scope
 	InstrumentationLibrary instrumentation.Library
 }
 
@@ -85,12 +86,18 @@ func SpanStubFromReadOnlySpan(ro tracesdk.ReadOnlySpan) SpanStub {
 		DroppedLinks:           ro.DroppedLinks(),
 		ChildSpanCount:         ro.ChildSpanCount(),
 		Resource:               ro.Resource(),
+		InstrumentationScope:   ro.InstrumentationScope(),
 		InstrumentationLibrary: ro.InstrumentationScope(),
 	}
 }
 
 // Snapshot returns a read-only copy of the SpanStub.
 func (s SpanStub) Snapshot() tracesdk.ReadOnlySpan {
+	scopeOrLibrary := s.InstrumentationScope
+	if scopeOrLibrary.Name == "" && scopeOrLibrary.Version == "" && scopeOrLibrary.SchemaURL == "" {
+		scopeOrLibrary = s.InstrumentationLibrary
+	}
+
 	return spanSnapshot{
 		name:                 s.Name,
 		spanContext:          s.SpanContext,
@@ -107,7 +114,7 @@ func (s SpanStub) Snapshot() tracesdk.ReadOnlySpan {
 		droppedLinks:         s.DroppedLinks,
 		childSpanCount:       s.ChildSpanCount,
 		resource:             s.Resource,
-		instrumentationScope: s.InstrumentationLibrary,
+		instrumentationScope: scopeOrLibrary,
 	}
 }
 
