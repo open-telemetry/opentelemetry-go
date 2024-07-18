@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Correct the `Tracer` names used in `go.opentelemetry.io/otel/example/passthrough`. (#5612)
 - Correct the `Meter` name used in `go.opentelemetry.io/otel/example/prometheus`. (#5612)
 - Correct the `Tracer` names used in `go.opentelemetry.io/otel/example/zipkin`. (#5612)
+- Pass the underlying error rather than a generic retry-able failure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5541)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
