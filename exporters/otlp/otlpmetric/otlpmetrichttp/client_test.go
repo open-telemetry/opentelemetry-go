@@ -192,6 +192,30 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
 	})
 
+	t.Run("WithRetryAndExporterErr", func(t *testing.T) {
+		exporterErr := errors.New("rpc error: code = Unavailable desc = service.name not found in resource attributes")
+		rCh := make(chan otest.ExportResult, 1)
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusTooManyRequests,
+			Err:    exporterErr,
+		}}
+		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
+			Enabled: false,
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		// Push this after Shutdown so the HTTP server doesn't hang.
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		assert.ErrorContains(t, err, exporterErr.Error())
+
+		// To test the `Unwrap` and `As` function of retryable error
+		var retryErr *retryableError
+		assert.ErrorAs(t, err, &retryErr)
+		assert.ErrorIs(t, err, *retryErr)
+	})
+
 	t.Run("WithURLPath", func(t *testing.T) {
 		path := "/prefix/v2/metrics"
 		ePt := fmt.Sprintf("http://localhost:0%s", path)
