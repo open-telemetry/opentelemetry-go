@@ -254,17 +254,13 @@ type Member struct {
 
 // NewMember returns a new Member from the passed arguments.
 //
-// The passed key must be non-empty percent-encoded.
+// The passed key must be compliant with W3C Baggage specification.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewMemberRaw] instead
 // that does not require percent-encoding of the value.
 func NewMember(key, value string, props ...Property) (Member, error) {
 	if !validateKey(key) {
-		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
-	}
-	decodedKey, err := url.PathUnescape(key)
-	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -275,7 +271,7 @@ func NewMember(key, value string, props ...Property) (Member, error) {
 	if err != nil {
 		return newInvalidMember(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	return NewMemberRaw(decodedKey, decodedValue, props...)
+	return NewMemberRaw(key, decodedValue, props...)
 }
 
 // NewMemberRaw returns a new Member from the passed arguments.

@@ -1033,10 +1033,17 @@ func TestNewMember(t *testing.T) {
 	}
 	assert.Equal(t, expected, m)
 
-	// wong key with wrong decoding
-	key = "%zzzzz"
-	_, err = NewMember(key, val, p)
-	assert.ErrorIs(t, err, errInvalidKey)
+	// it won't use percent decoding for key
+	key = "%3B"
+	m, err = NewMember(key, val, p)
+	assert.NoError(t, err)
+	expected = Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.Equal(t, expected, m)
 
 	// wrong value with invalid token
 	key = "k"
