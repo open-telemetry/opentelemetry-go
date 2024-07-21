@@ -14,7 +14,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `NewMember` and `NewKeyValueProperty` in `go.opentelemetry.io/otel/baggage` allow percent-encoded UTF-8 string in key. (#5132)
 - `NewMemberRaw`, `NewKeyProperty` and `NewKeyValuePropertyRaw` in `go.opentelemetry.io/otel/baggage` allow UTF-8 string in key. (#5132)
 
 ### Fixed
