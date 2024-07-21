@@ -151,10 +151,10 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
-	// wrong key with wrong decoding
+	// it won't use percent decoding for key
 	p, err = NewKeyValueProperty("%zzzzz", "value")
-	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Property{}, p)
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "%zzzzz", value: "value", hasValue: true}, p)
 
 	// wrong value with wrong decoding
 	p, err = NewKeyValueProperty("key", "%zzzzz")
@@ -165,10 +165,10 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
 
-	// Percent-encoded key and value
-	p, err = NewKeyValueProperty("%C4%85%C5%9B%C4%87", "%C4%85%C5%9B%C4%87")
+	// Percent-encoded value
+	p, err = NewKeyValueProperty("key", "%C4%85%C5%9B%C4%87")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "ąść", value: "ąść", hasValue: true}, p)
+	assert.Equal(t, Property{key: "key", value: "ąść", hasValue: true}, p)
 }
 
 func TestNewKeyValuePropertyRaw(t *testing.T) {

@@ -56,17 +56,13 @@ func NewKeyProperty(key string) (Property, error) {
 
 // NewKeyValueProperty returns a new Property for key with value.
 //
-// The passed key must be percent-encoded.
+// The passed key must be compliant with W3C Baggage specification.
 // The passed value must be percent-encoded as defined in W3C Baggage specification.
 //
 // Notice: Consider using [NewKeyValuePropertyRaw] instead
-// that does not require percent-encoding of the key and the value.
+// that does not require percent-encoding of the value.
 func NewKeyValueProperty(key, value string) (Property, error) {
 	if !validateKey(key) {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
-	}
-	decodedKey, err := url.PathUnescape(key)
-	if err != nil {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
 	}
 
@@ -77,7 +73,7 @@ func NewKeyValueProperty(key, value string) (Property, error) {
 	if err != nil {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	return NewKeyValuePropertyRaw(decodedKey, decodedValue)
+	return NewKeyValuePropertyRaw(key, decodedValue)
 }
 
 // NewKeyValuePropertyRaw returns a new Property for key with value.
