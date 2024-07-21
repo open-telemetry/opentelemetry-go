@@ -44,6 +44,7 @@ type Property struct {
 
 // NewKeyProperty returns a new Property for key.
 //
+// The passed key must be valid, non-empty UTF-8 string.
 // If key is invalid, an error will be returned.
 func NewKeyProperty(key string) (Property, error) {
 	if !validateBaggageName(key) {
