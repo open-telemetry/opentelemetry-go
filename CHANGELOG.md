@@ -18,8 +18,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `Processor` in `go.opentelemetry.io/otel/sdk/log` now accepts a pointer to `Record` instead of a value so that the record modifications done in a processor are propagated to subsequent registered processors. (#TODO)
-- `Record.Clone` in `go.opentelemetry.io/otel/sdk/log` now returns a pointer to `Record`. (#TODO)
+- `Processor` in `go.opentelemetry.io/otel/sdk/log` now accepts a pointer to `Record` instead of a value so that the record modifications done in a processor are propagated to subsequent registered processors. (#5636)
+- `Record.Clone` in `go.opentelemetry.io/otel/sdk/log` now returns a pointer to `Record`. (#5636)
 
 ### Fixed
 
