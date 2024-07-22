@@ -26,6 +26,8 @@ type Processor interface {
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
 	//
+	// The SDK invokes the processors sequentially in the same order as
+	// they were registered using [WithProcessor].
 	// Implementations may synchronously modify the record so that the changes
 	// are visible in the next registered processor.
 	// Notice that [Record] is not concurrent safe. Therefore, asynchronous
@@ -47,6 +49,8 @@ type Processor interface {
 	// indeterminate state, but may return false if valid reasons in particular
 	// circumstances exist (e.g. performance, correctness).
 	//
+	// The SDK invokes the processors sequentially in the same order as
+	// they were registered using [WithProcessor] until any processor returns true.
 	// Implementations may synchronously modify the record so that the changes
 	// are visible in the next registered processor.
 	// Notice that [Record] is not concurrent safe. Therefore, asynchronous
