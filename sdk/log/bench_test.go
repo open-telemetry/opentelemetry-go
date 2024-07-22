@@ -109,8 +109,7 @@ func BenchmarkProcessor(b *testing.B) {
 	}
 }
 
-type timestampProcessor struct {
-}
+type timestampProcessor struct{}
 
 func (p timestampProcessor) OnEmit(ctx context.Context, r *Record) error {
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
@@ -129,8 +128,7 @@ func (p timestampProcessor) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-type attrAddProcessor struct {
-}
+type attrAddProcessor struct{}
 
 func (p attrAddProcessor) OnEmit(ctx context.Context, r *Record) error {
 	r.AddAttributes(log.String("add", "me"))
@@ -149,8 +147,7 @@ func (p attrAddProcessor) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-type attrSetDecorator struct {
-}
+type attrSetDecorator struct{}
 
 func (p attrSetDecorator) OnEmit(ctx context.Context, r *Record) error {
 	r.SetAttributes(log.String("replace", "me"))
