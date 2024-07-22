@@ -238,7 +238,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.ErrorContains(t, err, "context deadline exceeded")
+	assert.ErrorContains(t, err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestNoRetry(t *testing.T) {
