@@ -52,10 +52,10 @@ func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
 	return false
 }
 
-func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
+func (l *logger) newRecord(ctx context.Context, r log.Record) *Record {
 	sc := trace.SpanContextFromContext(ctx)
 
-	newRecord := Record{
+	newRecord := &Record{
 		timestamp:         r.Timestamp(),
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),

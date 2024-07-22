@@ -384,10 +384,10 @@ func (r *Record) InstrumentationScope() instrumentation.Scope {
 
 // Clone returns a copy of the record with no shared state. The original record
 // and the clone can both be modified without interfering with each other.
-func (r *Record) Clone() Record {
+func (r *Record) Clone() *Record {
 	res := *r
 	res.back = slices.Clone(r.back)
-	return res
+	return &res
 }
 
 func (r *Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {

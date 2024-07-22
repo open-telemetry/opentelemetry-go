@@ -83,14 +83,14 @@ type ContextFilterProcessor struct {
 	log.Processor
 }
 
-func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record log.Record) error {
+func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if ignoreLogs(ctx) {
 		return nil
 	}
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, record *log.Record) bool {
 	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, record)
 }
 
@@ -104,35 +104,44 @@ func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
-	// Wrap the processor so that it redacts values from token attributes.
-	processor = &RedactTokensProcessor{processor}
+	// Add a processor so that it redacts values from token attributes.
+	redactProcessor := &RedactTokensProcessor{}
 
 	// The created processor can then be registered with
 	// the OpenTelemetry Logs SDK using the WithProcessor option.
 	_ = log.NewLoggerProvider(
+		log.WithProcessor(redactProcessor),
 		log.WithProcessor(processor),
 	)
 }
 
 // RedactTokensProcessor is a [log.Processor] decorator that redacts values
 // from attributes containing "token" in the key.
-type RedactTokensProcessor struct {
-	log.Processor
-}
+type RedactTokensProcessor struct{}
 
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
-func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record log.Record) error {
-	cloned := false
+func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv logapi.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "token") {
-			if !cloned {
-				record = record.Clone()
-				cloned = true
-			}
 			record.AddAttributes(logapi.String(kv.Key, "REDACTED"))
 		}
 		return true
 	})
-	return p.Processor.OnEmit(ctx, record)
+	return nil
+}
+
+// Enabled returns true.
+func (p *RedactTokensProcessor) Enabled(context.Context, *log.Record) bool {
+	return true
+}
+
+// Shutdown returns nil.
+func (p *RedactTokensProcessor) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+// ForceFlush returns nil.
+func (p *RedactTokensProcessor) ForceFlush(ctx context.Context) error {
+	return nil
 }

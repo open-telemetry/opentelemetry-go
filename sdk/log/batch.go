@@ -176,11 +176,11 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 }
 
 // OnEmit batches provided log record.
-func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
+func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
-	if n := b.q.Enqueue(r); n >= b.batchSize {
+	if n := b.q.Enqueue(*r); n >= b.batchSize {
 		select {
 		case b.pollTrigger <- struct{}{}:
 		default:
@@ -193,7 +193,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r Record) error {
 }
 
 // Enabled returns if b is enabled.
-func (b *BatchProcessor) Enabled(context.Context, Record) bool {
+func (b *BatchProcessor) Enabled(context.Context, *Record) bool {
 	return !b.stopped.Load() && b.q != nil
 }
 

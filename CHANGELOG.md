@@ -16,6 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This module is unstable and breaking changes may be introduced.
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5629)
 
+### Changed
+
+- `Processor` in `go.opentelemetry.io/otel/sdk/log` now accepts a pointer to `Record` instead of a value so that the record modifications done in a processor are propagated to subsequent registered processors. (#TODO)
+- `Record.Clone` in `go.opentelemetry.io/otel/sdk/log` now returns a pointer to `Record`. (#TODO)
+
 ### Fixed
 
 - Correct comments for the priority of the `WithEndpoint` and `WithEndpointURL` options and their corresponding environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5584)
