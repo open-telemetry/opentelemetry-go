@@ -474,7 +474,7 @@ func (b Baggage) Member(key string) Member {
 }
 
 // Members returns all the baggage list-members.
-// The order of the returned list-members does not have significance.
+// The order of the returned list-members is not significant.
 //
 // The returned members are not validated, as we assume the validation happened
 // when they were added to the Baggage.
@@ -495,8 +495,8 @@ func (b Baggage) Members() []Member {
 	return members
 }
 
-// SetMember returns a copy the Baggage with the member included. If the
-// baggage contains a Member with the same key the existing Member is
+// SetMember returns a copy of the Baggage with the member included. If the
+// baggage contains a Member with the same key, the existing Member is
 // replaced.
 //
 // If member is invalid according to the W3C Baggage specification, an error
