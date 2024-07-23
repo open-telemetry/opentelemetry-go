@@ -1,8 +1,8 @@
 name: Benchmark
 on:
   push:
-    tags:
-      - v1.* 
+    branches:
+      - main
   workflow_dispatch: 
 
 env:
@@ -10,7 +10,7 @@ env:
 jobs:
   benchmark:
     name: Benchmarks
-    runs-on: ubuntu-latest
+    runs-on: actuated-arm64-4cpu-4gb
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
