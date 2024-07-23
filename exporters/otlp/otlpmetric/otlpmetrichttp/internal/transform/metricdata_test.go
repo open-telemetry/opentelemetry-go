@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
@@ -432,6 +432,83 @@ var (
 		DataPoints:             pbEHDPFloat64,
 	}
 
+	quantileValuesA = []metricdata.QuantileValue{
+		{
+			Quantile: 0.0,
+			Value:    0.1,
+		},
+		{
+			Quantile: 0.5,
+			Value:    1.0,
+		},
+		{
+			Quantile: 1.0,
+			Value:    10.4,
+		},
+	}
+	quantileValuesB = []metricdata.QuantileValue{
+		{
+			Quantile: 0.0,
+			Value:    0.5,
+		},
+		{
+			Quantile: 0.5,
+			Value:    3.1,
+		},
+		{
+			Quantile: 1.0,
+			Value:    8.3,
+		},
+	}
+
+	pbQuantileValuesA = []*mpb.SummaryDataPoint_ValueAtQuantile{
+		{
+			Quantile: 0.0,
+			Value:    0.1,
+		},
+		{
+			Quantile: 0.5,
+			Value:    1.0,
+		},
+		{
+			Quantile: 1.0,
+			Value:    10.4,
+		},
+	}
+	pbQuantileValuesB = []*mpb.SummaryDataPoint_ValueAtQuantile{
+		{
+			Quantile: 0.0,
+			Value:    0.5,
+		},
+		{
+			Quantile: 0.5,
+			Value:    3.1,
+		},
+		{
+			Quantile: 1.0,
+			Value:    8.3,
+		},
+	}
+
+	otelSummaryDPts = []metricdata.SummaryDataPoint{
+		{
+			Attributes:     alice,
+			StartTime:      start,
+			Time:           end,
+			Count:          20,
+			Sum:            sumA,
+			QuantileValues: quantileValuesA,
+		},
+		{
+			Attributes:     bob,
+			StartTime:      start,
+			Time:           end,
+			Count:          26,
+			Sum:            sumB,
+			QuantileValues: quantileValuesB,
+		},
+	}
+
 	otelDPtsInt64 = []metricdata.DataPoint[int64]{
 		{
 			Attributes: alice,
@@ -498,6 +575,25 @@ var (
 		},
 	}
 
+	pbDPtsSummary = []*mpb.SummaryDataPoint{
+		{
+			Attributes:        []*cpb.KeyValue{pbAlice},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             20,
+			Sum:               sumA,
+			QuantileValues:    pbQuantileValuesA,
+		},
+		{
+			Attributes:        []*cpb.KeyValue{pbBob},
+			StartTimeUnixNano: uint64(start.UnixNano()),
+			TimeUnixNano:      uint64(end.UnixNano()),
+			Count:             26,
+			Sum:               sumB,
+			QuantileValues:    pbQuantileValuesB,
+		},
+	}
+
 	otelSumInt64 = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: true,
@@ -550,6 +646,10 @@ var (
 			Exemplars:         []*mpb.Exemplar{pbExemplarInt64A},
 		},
 	}}
+
+	pbSummary = &mpb.Summary{DataPoints: pbDPtsSummary}
+
+	otelSummary = metricdata.Summary{DataPoints: otelSummaryDPts}
 
 	unknownAgg  unknownAggT
 	otelMetrics = []metricdata.Metrics{
@@ -631,6 +731,12 @@ var (
 			Unit:        "1",
 			Data:        otelGaugeZeroStartTime,
 		},
+		{
+			Name:        "summary",
+			Description: "Summary metric",
+			Unit:        "1",
+			Data:        otelSummary,
+		},
 	}
 
 	pbMetrics = []*mpb.Metric{
@@ -687,6 +793,12 @@ var (
 			Description: "Gauge with 0 StartTime",
 			Unit:        "1",
 			Data:        &mpb.Metric_Gauge{Gauge: pbGaugeZeroStartTime},
+		},
+		{
+			Name:        "summary",
+			Description: "Summary metric",
+			Unit:        "1",
+			Data:        &mpb.Metric_Summary{Summary: pbSummary},
 		},
 	}
 
@@ -761,6 +873,7 @@ func TestTransformations(t *testing.T) {
 	assert.Equal(t, pbEHDPInt64, ExponentialHistogramDataPoints(otelEHDPInt64))
 	assert.Equal(t, pbEHDPFloat64, ExponentialHistogramDataPoints(otelEHDPFloat64))
 	assert.Equal(t, pbEHDPBA, ExponentialHistogramDataPointBuckets(otelEBucketA))
+	assert.Equal(t, pbDPtsSummary, SummaryDataPoints(otelSummaryDPts))
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
@@ -796,6 +909,8 @@ func TestTransformations(t *testing.T) {
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, e)
 
+	require.Equal(t, &mpb.Metric_Summary{Summary: pbSummary}, Summary(otelSummary))
+
 	// Metrics.
 	m, err := Metrics(otelMetrics)
 	assert.ErrorIs(t, err, errUnknownTemporality)
@@ -813,4 +928,94 @@ func TestTransformations(t *testing.T) {
 	assert.ErrorIs(t, err, errUnknownTemporality)
 	assert.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbResourceMetrics, rm)
+}
+
+func BenchmarkResourceMetrics(b *testing.B) {
+	for _, bb := range []struct {
+		name        string
+		aggregation metricdata.Aggregation
+	}{
+		{
+			name: "with a gauge",
+			aggregation: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Value: 1},
+					{Value: 2},
+				},
+			},
+		},
+		{
+			name: "with a sum",
+			aggregation: metricdata.Sum[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Value: 1},
+					{Value: 2},
+				},
+			},
+		},
+		{
+			name: "with a histogram",
+			aggregation: metricdata.Histogram[int64]{
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
+					{
+						Count: 2,
+						Min:   metricdata.NewExtrema[int64](2),
+						Max:   metricdata.NewExtrema[int64](3),
+						Sum:   5,
+					},
+				},
+			},
+		},
+		{
+			name: "with an exponential histogram",
+			aggregation: metricdata.ExponentialHistogram[int64]{
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+					{
+						Count: 2,
+						Min:   metricdata.NewExtrema[int64](2),
+						Max:   metricdata.NewExtrema[int64](3),
+						Sum:   5,
+					},
+				},
+			},
+		},
+		{
+			name: "with a summary",
+			aggregation: metricdata.Summary{
+				DataPoints: []metricdata.SummaryDataPoint{
+					{
+						Count: 1,
+						Sum:   5,
+						QuantileValues: []metricdata.QuantileValue{
+							{Quantile: 0.5, Value: 5},
+						},
+					},
+				},
+			},
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			records := &metricdata.ResourceMetrics{
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Data: bb.aggregation,
+							},
+						},
+					},
+				},
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				var out *mpb.ResourceMetrics
+				for pb.Next() {
+					out, _ = ResourceMetrics(records)
+				}
+				_ = out
+			})
+		})
+	}
 }

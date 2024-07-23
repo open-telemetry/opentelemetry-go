@@ -17,9 +17,11 @@ import (
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+const name = "go.opentelemetry.io/otel/example/zipkin"
 
 var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
@@ -69,7 +71,7 @@ func main() {
 		}
 	}()
 
-	tr := otel.GetTracerProvider().Tracer("component-main")
+	tr := otel.GetTracerProvider().Tracer(name)
 	ctx, span := tr.Start(ctx, "foo", trace.WithSpanKind(trace.SpanKindServer))
 	<-time.After(6 * time.Millisecond)
 	bar(ctx)
@@ -78,7 +80,7 @@ func main() {
 }
 
 func bar(ctx context.Context) {
-	tr := otel.GetTracerProvider().Tracer("component-bar")
+	tr := trace.SpanFromContext(ctx).TracerProvider().Tracer(name)
 	_, span := tr.Start(ctx, "bar")
 	<-time.After(6 * time.Millisecond)
 	span.End()

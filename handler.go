@@ -7,12 +7,8 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 )
 
-var (
-	// Compile-time check global.ErrDelegator implements ErrorHandler.
-	_ ErrorHandler = (*global.ErrDelegator)(nil)
-	// Compile-time check global.ErrLogger implements ErrorHandler.
-	_ ErrorHandler = (*global.ErrLogger)(nil)
-)
+// Compile-time check global.ErrDelegator implements ErrorHandler.
+var _ ErrorHandler = (*global.ErrDelegator)(nil)
 
 // GetErrorHandler returns the global ErrorHandler instance.
 //
@@ -33,5 +29,5 @@ func GetErrorHandler() ErrorHandler { return global.GetErrorHandler() }
 // delegate errors to h.
 func SetErrorHandler(h ErrorHandler) { global.SetErrorHandler(h) }
 
-// Handle is a convenience function for ErrorHandler().Handle(err).
-func Handle(err error) { global.Handle(err) }
+// Handle is a convenience function for GetErrorHandler().Handle(err).
+func Handle(err error) { global.GetErrorHandler().Handle(err) }

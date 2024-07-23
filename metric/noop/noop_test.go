@@ -55,6 +55,14 @@ func TestImplementationNoPanics(t *testing.T) {
 		reflect.ValueOf(Float64Histogram{}),
 		reflect.TypeOf((*metric.Float64Histogram)(nil)).Elem(),
 	))
+	t.Run("Int64Gauge", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Int64Gauge{}),
+		reflect.TypeOf((*metric.Int64Gauge)(nil)).Elem(),
+	))
+	t.Run("Float64Gauge", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Float64Gauge{}),
+		reflect.TypeOf((*metric.Float64Gauge)(nil)).Elem(),
+	))
 	t.Run("Int64ObservableCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableCounter{}),
 		reflect.TypeOf((*metric.Int64ObservableCounter)(nil)).Elem(),

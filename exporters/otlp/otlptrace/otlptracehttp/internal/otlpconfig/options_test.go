@@ -8,6 +8,8 @@ package otlpconfig
 
 import (
 	"errors"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -126,6 +128,26 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Endpoint last used",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/somepath"),
+				WithEndpoint("someendpoint2"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint2", c.Traces.Endpoint)
+			},
+		},
+		{
+			name: "Test With WithEndpointURL last used",
+			opts: []GenericOption{
+				WithEndpoint("someendpoint2"),
+				WithEndpointURL("https://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
@@ -157,13 +179,29 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Mixed Environment and With Endpoint",
 			opts: []GenericOption{
+				WithEndpointURL("https://traces_endpoint2/somepath"),
 				WithEndpoint("traces_endpoint"),
 			},
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "env_endpoint",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "env_endpoint2",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "traces_endpoint", c.Traces.Endpoint)
+			},
+		},
+		{
+			name: "Test Mixed Environment and With Endpoint",
+			opts: []GenericOption{
+				WithEndpoint("traces_endpoint"),
+				WithEndpointURL("https://traces_endpoint2/somepath"),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "env_endpoint",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "env_endpoint2",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "traces_endpoint2", c.Traces.Endpoint)
 			},
 		},
 		{
@@ -370,7 +408,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Timeout",
 			opts: []GenericOption{
-				WithTimeout(time.Duration(5 * time.Second)),
+				WithTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, 5*time.Second, c.Traces.Timeout)
@@ -406,6 +444,29 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
+			},
+		},
+
+		// Proxy Tests
+		{
+			name: "Test With Proxy",
+			opts: []GenericOption{
+				WithProxy(func(r *http.Request) (*url.URL, error) {
+					return url.Parse("http://proxy.com")
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Traces.Proxy)
+				proxyURL, err := c.Traces.Proxy(&http.Request{})
+				assert.NoError(t, err)
+				assert.Equal(t, "http://proxy.com", proxyURL.String())
+			},
+		},
+		{
+			name: "Test Without Proxy",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Traces.Proxy)
 			},
 		},
 	}

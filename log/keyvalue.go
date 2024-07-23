@@ -7,9 +7,12 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
+	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -34,6 +37,7 @@ const (
 )
 
 // A Value represents a structured log value.
+// A zero value is valid and represents an empty value.
 type Value struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -253,7 +257,9 @@ func (v Value) Equal(w Value) bool {
 	case KindSlice:
 		return slices.EqualFunc(v.asSlice(), w.asSlice(), Value.Equal)
 	case KindMap:
-		return slices.EqualFunc(v.asMap(), w.asMap(), KeyValue.Equal)
+		sv := sortMap(v.asMap())
+		sw := sortMap(w.asMap())
+		return slices.EqualFunc(sv, sw, KeyValue.Equal)
 	case KindBytes:
 		return bytes.Equal(v.asBytes(), w.asBytes())
 	case KindEmpty:
@@ -264,7 +270,50 @@ func (v Value) Equal(w Value) bool {
 	}
 }
 
-// An KeyValue is a key-value pair used to represent a log attribute (a
+func sortMap(m []KeyValue) []KeyValue {
+	sm := make([]KeyValue, len(m))
+	copy(sm, m)
+	slices.SortFunc(sm, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	return sm
+}
+
+// String returns Value's value as a string, formatted like [fmt.Sprint].
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (v Value) String() string {
+	switch v.Kind() {
+	case KindString:
+		return v.asString()
+	case KindInt64:
+		return strconv.FormatInt(int64(v.num), 10)
+	case KindFloat64:
+		return strconv.FormatFloat(v.asFloat64(), 'g', -1, 64)
+	case KindBool:
+		return strconv.FormatBool(v.asBool())
+	case KindBytes:
+		return fmt.Sprint(v.asBytes())
+	case KindMap:
+		return fmt.Sprint(v.asMap())
+	case KindSlice:
+		return fmt.Sprint(v.asSlice())
+	case KindEmpty:
+		return "<nil>"
+	default:
+		// Try to handle this as gracefully as possible.
+		//
+		// Don't panic here. The goal here is to have developers find this
+		// first if a slog.Kind is is not handled. It is
+		// preferable to have user's open issue asking why their attributes
+		// have a "unhandled: " prefix than say that their code is panicking.
+		return fmt.Sprintf("<unhandled log.Kind: %s>", v.Kind())
+	}
+}
+
+// A KeyValue is a key-value pair used to represent a log attribute (a
 // superset of [go.opentelemetry.io/otel/attribute.KeyValue]) and map item.
 type KeyValue struct {
 	Key   string
@@ -276,42 +325,58 @@ func (a KeyValue) Equal(b KeyValue) bool {
 	return a.Key == b.Key && a.Value.Equal(b.Value)
 }
 
-// String returns an KeyValue for a string value.
+// String returns a KeyValue for a string value.
 func String(key, value string) KeyValue {
 	return KeyValue{key, StringValue(value)}
 }
 
-// Int64 returns an KeyValue for an int64 value.
+// Int64 returns a KeyValue for an int64 value.
 func Int64(key string, value int64) KeyValue {
 	return KeyValue{key, Int64Value(value)}
 }
 
-// Int returns an KeyValue for an int value.
+// Int returns a KeyValue for an int value.
 func Int(key string, value int) KeyValue {
 	return KeyValue{key, IntValue(value)}
 }
 
-// Float64 returns an KeyValue for a float64 value.
+// Float64 returns a KeyValue for a float64 value.
 func Float64(key string, value float64) KeyValue {
 	return KeyValue{key, Float64Value(value)}
 }
 
-// Bool returns an KeyValue for a bool value.
+// Bool returns a KeyValue for a bool value.
 func Bool(key string, value bool) KeyValue {
 	return KeyValue{key, BoolValue(value)}
 }
 
-// Bytes returns an KeyValue for a []byte value.
+// Bytes returns a KeyValue for a []byte value.
+// The passed slice must not be changed after it is passed.
 func Bytes(key string, value []byte) KeyValue {
 	return KeyValue{key, BytesValue(value)}
 }
 
-// Slice returns an KeyValue for a []Value value.
+// Slice returns a KeyValue for a []Value value.
+// The passed slice must not be changed after it is passed.
 func Slice(key string, value ...Value) KeyValue {
 	return KeyValue{key, SliceValue(value...)}
 }
 
-// Map returns an KeyValue for a map value.
+// Map returns a KeyValue for a map value.
+// The passed slice must not be changed after it is passed.
 func Map(key string, value ...KeyValue) KeyValue {
 	return KeyValue{key, MapValue(value...)}
+}
+
+// Empty returns a KeyValue with an empty value.
+func Empty(key string) KeyValue {
+	return KeyValue{key, Value{}}
+}
+
+// String returns key-value pair as a string, formatted like "key:value".
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (a KeyValue) String() string {
+	return fmt.Sprintf("%s:%s", a.Key, a.Value)
 }

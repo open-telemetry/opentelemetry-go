@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -117,12 +117,12 @@ func TestLinks(t *testing.T) {
 		return
 	}
 
-	// Empty should be empty and not remote.
+	// Empty should be empty.
 	expected := &tracepb.Span_Link{
 		TraceId:                []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		SpanId:                 []uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		DroppedAttributesCount: 3,
-		Flags:                  spanFlagsHasIsRemote,
+		Flags:                  0x100,
 	}
 	assert.Equal(t, expected, got[0])
 
@@ -164,6 +164,30 @@ func TestStatus(t *testing.T) {
 	} {
 		expected := &tracepb.Status{Code: test.otlpStatus, Message: test.message}
 		assert.Equal(t, expected, status(test.code, test.message))
+	}
+}
+
+func TestBuildSpanFlags(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		spanContext trace.SpanContext
+		wantFlags   uint32
+	}{
+		{
+			name:      "with an empty span context",
+			wantFlags: 0x100,
+		},
+		{
+			name: "with a remote span context",
+			spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				Remote: true,
+			}),
+			wantFlags: 0x300,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantFlags, buildSpanFlags(tt.spanContext))
+		})
 	}
 }
 
@@ -271,7 +295,7 @@ func TestSpanData(t *testing.T) {
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		TraceState:             "key1=val1,key2=val2",
-		Flags:                  spanFlagsHasIsRemote,
+		Flags:                  0x300,
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),
@@ -322,5 +346,35 @@ func TestSpanDataNilResource(t *testing.T) {
 		Spans(tracetest.SpanStubs{
 			{},
 		}.Snapshots())
+	})
+}
+
+func BenchmarkSpans(b *testing.B) {
+	records := []tracesdk.ReadOnlySpan{
+		tracetest.SpanStub{
+			Attributes: []attribute.KeyValue{
+				attribute.String("a", "b"),
+				attribute.String("b", "b"),
+				attribute.String("c", "b"),
+				attribute.String("d", "b"),
+			},
+			Links: []tracesdk.Link{
+				{},
+				{},
+				{},
+				{},
+				{},
+			},
+		}.Snapshot(),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		var out []*tracepb.ResourceSpans
+		for pb.Next() {
+			out = Spans(records)
+		}
+		_ = out
 	})
 }

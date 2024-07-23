@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -374,4 +375,49 @@ func TestLogrFormatting(t *testing.T) {
 	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
 	got := buf.String()
 	assert.Equal(t, want, got)
+}
+
+func TestWithHeaders(t *testing.T) {
+	headers := map[string]string{
+		"name1": "value1",
+		"name2": "value2",
+		"host":  "example",
+	}
+
+	exp, err := New("", WithHeaders(headers))
+	require.NoError(t, err)
+
+	want := headers
+	got := exp.headers
+	assert.Equal(t, want, got)
+
+	spans := tracetest.SpanStubs{
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
+				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+			}),
+		},
+	}.Snapshots()
+
+	var req *http.Request
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		req = r
+		w.WriteHeader(http.StatusOK)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+
+	e := &Exporter{
+		url:     srv.URL,
+		client:  srv.Client(),
+		headers: headers,
+	}
+
+	_ = e.ExportSpans(context.Background(), spans)
+
+	assert.Equal(t, headers["host"], req.Host)
+	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
+	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }

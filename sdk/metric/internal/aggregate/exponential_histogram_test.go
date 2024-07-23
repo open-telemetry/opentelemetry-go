@@ -130,7 +130,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[N](tt.maxSize, 20, false, false)
+			dp := newExpoHistogramDataPoint[N](alice, tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
@@ -176,7 +176,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, nil)
 			}
-			dp := h.values[alice]
+			dp := h.values[alice.Equivalent()]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -218,7 +218,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, nil)
 			}
-			dp := h.values[alice]
+			dp := h.values[alice.Equivalent()]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -305,7 +305,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramDataPoint[float64](tt.maxSize, 20, false, false)
+			dp := newExpoHistogramDataPoint[float64](alice, tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
 				dp.record(v)
 				dp.record(-v)
@@ -322,21 +322,21 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	// These bins are calculated from the following formula:
 	// floor( log2( value) * 2^20 ) using an arbitrary precision calculator.
 
-	fdp := newExpoHistogramDataPoint[float64](4, 20, false, false)
+	fdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 	fdp.record(math.MaxFloat64)
 
 	if fdp.posBuckets.startBin != 1073741823 {
 		t.Errorf("Expected startBin to be 1073741823, got %d", fdp.posBuckets.startBin)
 	}
 
-	fdp = newExpoHistogramDataPoint[float64](4, 20, false, false)
+	fdp = newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 	fdp.record(math.SmallestNonzeroFloat64)
 
 	if fdp.posBuckets.startBin != -1126170625 {
 		t.Errorf("Expected startBin to be -1126170625, got %d", fdp.posBuckets.startBin)
 	}
 
-	idp := newExpoHistogramDataPoint[int64](4, 20, false, false)
+	idp := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false)
 	idp.record(math.MaxInt64)
 
 	if idp.posBuckets.startBin != 66060287 {
@@ -641,7 +641,7 @@ func TestScaleChange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newExpoHistogramDataPoint[float64](tt.args.maxSize, 20, false, false)
+			p := newExpoHistogramDataPoint[float64](alice, tt.args.maxSize, 20, false, false)
 			got := p.scaleChange(tt.args.bin, tt.args.startBin, tt.args.length)
 			if got != tt.want {
 				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
@@ -652,7 +652,7 @@ func TestScaleChange(t *testing.T) {
 
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](1024, 20, false, false)
+		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := math.MaxFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -663,7 +663,7 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](1024, 20, false, false)
+		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := smallestNonZeroNormalFloat64
 		for j := 0; j < 1024; j++ {
 			agg.record(n)
@@ -704,6 +704,7 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 
 func TestSubNormal(t *testing.T) {
 	want := &expoHistogramDataPoint[float64]{
+		attrs:   alice,
 		maxSize: 4,
 		count:   3,
 		min:     math.SmallestNonzeroFloat64,
@@ -717,7 +718,7 @@ func TestSubNormal(t *testing.T) {
 		},
 	}
 
-	ehdp := newExpoHistogramDataPoint[float64](4, 20, false, false)
+	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
@@ -726,11 +727,18 @@ func TestSubNormal(t *testing.T) {
 }
 
 func TestExponentialHistogramAggregation(t *testing.T) {
-	t.Cleanup(mockTime(now))
+	c := new(clock)
+	t.Cleanup(c.Register())
 
 	t.Run("Int64/Delta", testDeltaExpoHist[int64]())
+	c.Reset()
+
 	t.Run("Float64/Delta", testDeltaExpoHist[float64]())
+	c.Reset()
+
 	t.Run("Int64/Cumulative", testCumulativeExpoHist[int64]())
+	c.Reset()
+
 	t.Run("Float64/Cumulative", testCumulativeExpoHist[float64]())
 }
 
@@ -769,8 +777,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(1),
+							Time:       y2kPlus(2),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -824,8 +832,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(4),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -842,8 +850,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(4),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -896,8 +904,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(2),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -929,8 +937,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(3),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -958,8 +966,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(4),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -995,8 +1003,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(5),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1013,8 +1021,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  staticTime,
-							Time:       staticTime,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(5),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1060,7 +1068,7 @@ func FuzzGetBin(f *testing.F) {
 			t.Skip("skipping test for zero")
 		}
 
-		p := newExpoHistogramDataPoint[float64](4, 20, false, false)
+		p := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 		// scale range is -10 to 20.
 		p.scale = (scale%31+31)%31 - 10
 		got := p.getBin(v)

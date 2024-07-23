@@ -12,16 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // Sat Jan 01 2000 00:00:00 GMT+0000.
 var staticTime = time.Unix(946684800, 0)
 
-type factory[N int64 | float64] func(requstedCap int) (r Reservoir[N], actualCap int)
+type factory func(requstedCap int) (r Reservoir, actualCap int)
 
-func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
+func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
@@ -43,16 +42,16 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			})
 			ctx := trace.ContextWithSpanContext(ctx, sc)
 
-			r.Offer(ctx, staticTime, 10, nil)
+			r.Offer(ctx, staticTime, NewValue(N(10)), nil)
 
-			var dest []metricdata.Exemplar[N]
+			var dest []Exemplar
 			r.Collect(&dest)
 
-			want := metricdata.Exemplar[N]{
+			want := Exemplar{
 				Time:    staticTime,
-				Value:   10,
-				SpanID:  []byte(sID[:]),
-				TraceID: []byte(tID[:]),
+				Value:   NewValue(N(10)),
+				SpanID:  sID[:],
+				TraceID: tID[:],
 			}
 			require.Len(t, dest, 1, "number of collected exemplars")
 			assert.Equal(t, want, dest[0])
@@ -67,15 +66,15 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			}
 
 			adminTrue := attribute.Bool("admin", true)
-			r.Offer(ctx, staticTime, 10, []attribute.KeyValue{adminTrue})
+			r.Offer(ctx, staticTime, NewValue(N(10)), []attribute.KeyValue{adminTrue})
 
-			var dest []metricdata.Exemplar[N]
+			var dest []Exemplar
 			r.Collect(&dest)
 
-			want := metricdata.Exemplar[N]{
+			want := Exemplar{
 				FilteredAttributes: []attribute.KeyValue{adminTrue},
 				Time:               staticTime,
-				Value:              10,
+				Value:              NewValue(N(10)),
 			}
 			require.Len(t, dest, 1, "number of collected exemplars")
 			assert.Equal(t, want, dest[0])
@@ -89,9 +88,9 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity less than 2:", n)
 			}
 
-			r.Offer(ctx, staticTime, 10, nil)
+			r.Offer(ctx, staticTime, NewValue(N(10)), nil)
 
-			var dest []metricdata.Exemplar[N]
+			var dest []Exemplar
 			r.Collect(&dest)
 			// No empty exemplars are exported.
 			require.Len(t, dest, 1, "number of collected exemplars")
@@ -106,17 +105,17 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 			}
 
 			for i := 0; i < n+1; i++ {
-				v := N(i)
+				v := NewValue(N(i))
 				r.Offer(ctx, staticTime, v, nil)
 			}
 
-			var dest []metricdata.Exemplar[N]
+			var dest []Exemplar
 			r.Collect(&dest)
 			assert.Len(t, dest, n, "multiple offers did not fill reservoir")
 
 			// Ensure the collect reset also resets any counting state.
 			for i := 0; i < n+1; i++ {
-				v := N(i)
+				v := NewValue(N(i))
 				r.Offer(ctx, staticTime, v, nil)
 			}
 
@@ -133,9 +132,9 @@ func ReservoirTest[N int64 | float64](f factory[N]) func(*testing.T) {
 				t.Skip("skipping, reservoir capacity greater than 0:", n)
 			}
 
-			r.Offer(context.Background(), staticTime, 10, nil)
+			r.Offer(context.Background(), staticTime, NewValue(N(10)), nil)
 
-			dest := []metricdata.Exemplar[N]{{}} // Should be reset to empty.
+			dest := []Exemplar{{}} // Should be reset to empty.
 			r.Collect(&dest)
 			assert.Len(t, dest, 0, "no exemplars should be collected")
 		})

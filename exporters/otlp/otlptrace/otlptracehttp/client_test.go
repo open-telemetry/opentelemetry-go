@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +36,10 @@ var (
 
 	customUserAgentHeader = map[string]string{
 		"user-agent": "custome-user-agent",
+	}
+
+	customProxyHeader = map[string]string{
+		"header-added-via-proxy": "proxy-value",
 	}
 )
 
@@ -150,6 +155,20 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customUserAgentHeader,
 			},
 		},
+		{
+			name: "with custom proxy",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProxy(func(r *http.Request) (*url.URL, error) {
+					for k, v := range customProxyHeader {
+						r.Header.Set(k, v)
+					}
+					return r.URL, nil
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: customProxyHeader,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -219,7 +238,7 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.ErrorContains(t, err, "retry-able request failure")
+	assert.ErrorContains(t, err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestNoRetry(t *testing.T) {

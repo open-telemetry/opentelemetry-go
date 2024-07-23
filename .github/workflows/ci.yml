@@ -5,8 +5,6 @@ on:
       - main
   pull_request:
 env:
-  # Path to where test results will be saved.
-  TEST_RESULTS: /tmp/test-results
   # Default version of Go to use by CI workflows. This should be the latest
   # release of Go; developers likely use the latest release in development and
   # we want to catch any bugs (e.g. lint errors, race detection) with this
@@ -14,13 +12,15 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.22.0"
+  DEFAULT_GO_VERSION: "~1.22.5"
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 ## Needed for "Set internal/tools/go.mod timestamp" step.
       - name: Install Go
         uses: actions/setup-go@v5
         with:
@@ -34,10 +34,18 @@ jobs:
         with:
           path: .tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      # The step below is needed to not rebuild all the build tools.
+      - name: Set internal/tools/go.mod timestamp
+        run: |
+          filename="internal/tools/go.mod"
+          unixtime=$(git log -1 --format="%at" -- "${filename}")
+          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
+          touch -t ${touchtime} "${filename}"
+          ls -la --time-style=full-iso "${filename}"
       - name: Generate
         run: make generate
       - name: Run linters
-        run: make dependabot-check license-check lint vanity-import-check
+        run: make license-check lint vanity-import-check verify-readmes verify-mods
       - name: Build
         run: make build
       - name: Check clean repository
@@ -85,40 +93,50 @@ jobs:
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run coverage tests
-        run: |
-          make test-coverage
-          mkdir $TEST_RESULTS
-          cp coverage.out $TEST_RESULTS
-          cp coverage.txt $TEST_RESULTS
-          cp coverage.html $TEST_RESULTS
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4.1.0
-        with:
-          file: ./coverage.txt
-          fail_ci_if_error: true
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+        run: make test-coverage
       - name: Store coverage test output
         uses: actions/upload-artifact@v4
         with:
-          name: opentelemetry-go-test-output
-          path: ${{ env.TEST_RESULTS }}
+          name: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
+          path: coverage.txt
+
+  codecov:
+    runs-on: ubuntu-latest
+    needs: [test-coverage]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4.5.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          file: ./coverage.txt
+          verbose: true
 
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.22.0", "~1.21.3"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        # GitHub Actions does not support arm* architectures on default
-        # runners. It is possible to accomplish this with a self-hosted runner
-        # if we want to add this in the future:
-        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
-        arch: ["386", amd64]
-        exclude:
-          # Not a supported Go OS/architecture.
-          - os: macos-latest
+        go-version: ["~1.22.5", "~1.21.12"]
+        platform:
+          - os: ubuntu-latest
             arch: "386"
-    runs-on: ${{ matrix.os }}
+          - os: ubuntu-latest
+            arch: amd64
+          - os: macos-13
+            arch: amd64
+          - os: macos-latest
+            arch: arm64
+          - os: windows-latest
+            arch: "386"
+          - os: windows-latest
+            arch: amd64
+          # ARM64 compatibility tests are using actuated runners
+          # See https://github.com/open-telemetry/community/blob/main/docs/using-actuated.md
+          - os: actuated-arm64-2cpu-8gb
+            arch: arm64
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,7 +148,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - name: Run tests
         env:
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.platform.arch }}
         run: make test-short
 
   test-compatibility:

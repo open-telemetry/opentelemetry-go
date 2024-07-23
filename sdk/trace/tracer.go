@@ -72,6 +72,11 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 		// bitmask.
 		if _, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator); isW3CRandom {
 			psc = psc.WithTraceFlags(trace.FlagsRandom)
+		} else {
+			// TODO
+			//rnd = ...
+			//ts, err := trace.ParseTraceState(combineTracestate(psc.Tracestate.AsRaw(), )
+			//psc = psc.WithTraceState(trace.NewTraceState())
 		}
 		ctx = trace.ContextWithSpanContext(ctx, psc)
 	} else {
@@ -138,13 +143,13 @@ func (tr *tracer) newRecordingSpan(psc, sc trace.SpanContext, name string, sr Sa
 		spanKind:    trace.ValidateSpanKind(config.SpanKind()),
 		name:        name,
 		startTime:   startTime,
-		events:      newEvictedQueue(tr.provider.spanLimits.EventCountLimit),
-		links:       newEvictedQueue(tr.provider.spanLimits.LinkCountLimit),
+		events:      newEvictedQueueEvent(tr.provider.spanLimits.EventCountLimit),
+		links:       newEvictedQueueLink(tr.provider.spanLimits.LinkCountLimit),
 		tracer:      tr,
 	}
 
 	for _, l := range config.Links() {
-		s.addLink(l)
+		s.AddLink(l)
 	}
 
 	s.SetAttributes(sr.Attributes...)

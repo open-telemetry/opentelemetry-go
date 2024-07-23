@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestSetStatus(t *testing.T) {
@@ -234,6 +235,22 @@ func TestTruncateAttr(t *testing.T) {
 	}
 }
 
+func TestLogDropAttrs(t *testing.T) {
+	orig := logDropAttrs
+	t.Cleanup(func() { logDropAttrs = orig })
+
+	var called bool
+	logDropAttrs = func() { called = true }
+
+	s := &recordingSpan{}
+	s.addDroppedAttr(1)
+	assert.True(t, called, "logDropAttrs not called")
+
+	called = false
+	s.addDroppedAttr(1)
+	assert.False(t, called, "logDropAttrs called multiple times for same Span")
+}
+
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 	var attrs []attribute.KeyValue
 	for i := 0; i < 100; i++ {
@@ -259,5 +276,22 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 				span.End()
 			}
 		})
+	}
+}
+
+func BenchmarkSpanEnd(b *testing.B) {
+	tracer := NewTracerProvider().Tracer("")
+	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+
+	spans := make([]trace.Span, b.N)
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "")
+		spans[i] = span
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		spans[i].End()
 	}
 }

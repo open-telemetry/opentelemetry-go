@@ -41,7 +41,7 @@ func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption
 	span := SpanFromContext(ctx)
 	if _, ok := span.(nonRecordingSpan); !ok {
 		// span is likely already a noopSpan, but let's be sure
-		span = noopSpan{}
+		span = noopSpanInstance
 	}
 	return ContextWithSpan(ctx, span), span
 }
@@ -49,7 +49,7 @@ func (t noopTracer) Start(ctx context.Context, name string, _ ...SpanStartOption
 // noopSpan is an implementation of Span that performs no operations.
 type noopSpan struct{ embedded.Span }
 
-var _ Span = noopSpan{}
+var noopSpanInstance Span = noopSpan{}
 
 // SpanContext returns an empty span context.
 func (noopSpan) SpanContext() SpanContext { return SpanContext{} }
@@ -74,6 +74,9 @@ func (noopSpan) RecordError(error, ...EventOption) {}
 
 // AddEvent does nothing.
 func (noopSpan) AddEvent(string, ...EventOption) {}
+
+// AddLink does nothing.
+func (noopSpan) AddLink(Link) {}
 
 // SetName does nothing.
 func (noopSpan) SetName(string) {}

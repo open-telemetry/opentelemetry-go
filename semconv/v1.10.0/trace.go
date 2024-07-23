@@ -1191,7 +1191,7 @@ const (
 	// Stability: stable
 	// Examples: 'Users', 'CatsTable'
 	AWSDynamoDBExclusiveStartTableKey = attribute.Key("aws.dynamodb.exclusive_start_table")
-	// The the number of items in the `TableNames` response parameter.
+	// The number of items in the `TableNames` response parameter.
 	//
 	// Type: int
 	// Required: No
@@ -1252,7 +1252,7 @@ const (
 	// Stability: stable
 	// Examples: '{ "AttributeName": "string", "AttributeType": "string" }'
 	AWSDynamoDBAttributeDefinitionsKey = attribute.Key("aws.dynamodb.attribute_definitions")
-	// The JSON-serialized value of each item in the the `GlobalSecondaryIndexUpdates`
+	// The JSON-serialized value of each item in the `GlobalSecondaryIndexUpdates`
 	// request field.
 	//
 	// Type: string[]

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestValidateKeyChar(t *testing.T) {
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
 		'\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F', ' ',
 		'(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?',
-		'=', '{', '}', '\x7F',
+		'=', '{', '}', '\x7F', 2 >> 20, '\x80',
 	}
 
 	for _, ch := range invalidKeyRune {
@@ -46,7 +47,7 @@ func TestValidateValueChar(t *testing.T) {
 		'\x08', '\x09', '\x0A', '\x0B', '\x0C', '\x0D', '\x0E', '\x0F',
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
 		'\x18', '\x19', '\x1A', '\x1B', '\x1C', '\x1D', '\x1E', '\x1F', ' ',
-		'"', ',', ';', '\\', '\x7F',
+		'"', ',', ';', '\\', '\x7F', '\x80',
 	}
 
 	for _, ch := range invalidValueRune {
@@ -469,6 +470,18 @@ func TestBaggageParse(t *testing.T) {
 			in:   tooManyMembers,
 			err:  errMemberNumber,
 		},
+		{
+			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
+			in:   "k=aa%ffcc;p=d%fff",
+			want: baggage.List{
+				"k": {
+					Value: "aa�cc",
+					Properties: []baggage.Property{
+						{Key: "p", Value: "d�f", HasValue: true},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -476,6 +489,53 @@ func TestBaggageParse(t *testing.T) {
 			actual, err := Parse(tc.in)
 			assert.ErrorIs(t, err, tc.err)
 			assert.Equal(t, Baggage{list: tc.want}, actual)
+		})
+	}
+}
+
+func TestBaggageParseValue(t *testing.T) {
+	testcases := []struct {
+		name          string
+		in            string
+		valueWant     string
+		valueWantSize int
+	}{
+		{
+			name:          "percent encoded octet sequence matches UTF-8 encoding scheme",
+			in:            "k=aa%26cc",
+			valueWant:     "aa&cc",
+			valueWantSize: 5,
+		},
+		{
+			name:          "percent encoded octet sequence doesn't match UTF-8 encoding scheme",
+			in:            "k=aa%ffcc",
+			valueWant:     "aa�cc",
+			valueWantSize: 7,
+		},
+		{
+			name:          "multiple percent encoded octet sequences don't match UTF-8 encoding scheme",
+			in:            "k=aa%ffcc%fedd%fa",
+			valueWant:     "aa�cc�dd�",
+			valueWantSize: 15,
+		},
+		{
+			name:          "raw value",
+			in:            "k=aacc",
+			valueWant:     "aacc",
+			valueWantSize: 4,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Parse(tc.in)
+			assert.Empty(t, err)
+
+			val := b.Members()[0].Value()
+
+			assert.EqualValues(t, val, tc.valueWant)
+			assert.Equal(t, len(val), tc.valueWantSize)
+			assert.True(t, utf8.ValidString(val))
 		})
 	}
 }
@@ -979,7 +1039,7 @@ func BenchmarkParse(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchBaggage, _ = Parse(`userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value`)
+		benchBaggage, _ = Parse("userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, invalidUtf8=pr%ffo%ffp%fcValue")
 	}
 }
 
@@ -1025,5 +1085,20 @@ func BenchmarkValueEscape(b *testing.B) {
 				_ = valueEscape(tc.in)
 			}
 		})
+	}
+}
+
+func BenchmarkMemberString(b *testing.B) {
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	props := make([]Property, len(alphabet))
+	for i, r := range alphabet {
+		props[i] = Property{key: string(r)}
+	}
+	member, err := NewMember(alphabet, alphabet, props...)
+	require.NoError(b, err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = member.String()
 	}
 }

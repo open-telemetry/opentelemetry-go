@@ -96,11 +96,14 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 		} else if pos := strings.Index(existOtts, ";rv:"); pos > 0 {
 			low = pos + 4
 		}
-		randomIn := existOtts[low : low+14]
-		if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
-			randomness = rv
-			hasRandom = true
-		} else {
+		if len(existOtts) >= low+14 {
+			randomIn := existOtts[low : low+14]
+			if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
+				randomness = rv
+				hasRandom = true
+			}
+		}
+		if !hasRandom {
 			otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q", randomIn))
 		}
 	}

@@ -15,7 +15,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 |---------|--------------------|
 | Traces  | Stable             |
 | Metrics | Stable             |
-| Logs    | In development[^1] |
+| Logs    | Beta[^1]           |
 
 Progress and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
@@ -47,18 +47,22 @@ stop ensuring compatibility with these versions in the following manner:
 
 Currently, this project supports the following environments.
 
-| OS      | Go Version | Architecture |
-|---------|------------|--------------|
-| Ubuntu  | 1.22       | amd64        |
-| Ubuntu  | 1.21       | amd64        |
-| Ubuntu  | 1.22       | 386          |
-| Ubuntu  | 1.21       | 386          |
-| MacOS   | 1.22       | amd64        |
-| MacOS   | 1.21       | amd64        |
-| Windows | 1.22       | amd64        |
-| Windows | 1.21       | amd64        |
-| Windows | 1.22       | 386          |
-| Windows | 1.21       | 386          |
+| OS       | Go Version | Architecture |
+|----------|------------|--------------|
+| Ubuntu   | 1.22       | amd64        |
+| Ubuntu   | 1.21       | amd64        |
+| Ubuntu   | 1.22       | 386          |
+| Ubuntu   | 1.21       | 386          |
+| Linux    | 1.22       | arm64        |
+| Linux    | 1.21       | arm64        |
+| macOS 13 | 1.22       | amd64        |
+| macOS 13 | 1.21       | amd64        |
+| macOS    | 1.22       | arm64        |
+| macOS    | 1.21       | arm64        |
+| Windows  | 1.22       | amd64        |
+| Windows  | 1.21       | amd64        |
+| Windows  | 1.22       | 386          |
+| Windows  | 1.21       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
@@ -95,12 +99,12 @@ export pipeline to send that telemetry to an observability platform.
 
 All officially supported exporters for the OpenTelemetry project are contained in the [exporters directory](./exporters).
 
-| Exporter                              | Metrics | Traces |
-|---------------------------------------|:-------:|:------:|
-| [OTLP](./exporters/otlp/)             |    ✓    |   ✓    |
-| [Prometheus](./exporters/prometheus/) |    ✓    |        |
-| [stdout](./exporters/stdout/)         |    ✓    |   ✓    |
-| [Zipkin](./exporters/zipkin/)         |         |   ✓    |
+| Exporter                              | Logs | Metrics | Traces |
+|---------------------------------------|:----:|:-------:|:------:|
+| [OTLP](./exporters/otlp/)             |  ✓   |    ✓    |   ✓    |
+| [Prometheus](./exporters/prometheus/) |      |    ✓    |        |
+| [stdout](./exporters/stdout/)         |  ✓   |    ✓    |   ✓    |
+| [Zipkin](./exporters/zipkin/)         |      |         |   ✓    |
 
 ## Contributing
 

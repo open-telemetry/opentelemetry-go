@@ -8,6 +8,8 @@ package oconf
 
 import (
 	"errors"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -374,7 +376,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Timeout",
 			opts: []GenericOption{
-				WithTimeout(time.Duration(5 * time.Second)),
+				WithTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, 5*time.Second, c.Metrics.Timeout)
@@ -442,6 +444,29 @@ func TestConfigs(t *testing.T) {
 				var undefinedKind metric.InstrumentKind
 				got := c.Metrics.AggregationSelector
 				assert.Equal(t, metric.AggregationDrop{}, got(undefinedKind))
+			},
+		},
+
+		// Proxy Tests
+		{
+			name: "Test With Proxy",
+			opts: []GenericOption{
+				WithProxy(func(r *http.Request) (*url.URL, error) {
+					return url.Parse("http://proxy.com")
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Metrics.Proxy)
+				proxyURL, err := c.Metrics.Proxy(&http.Request{})
+				assert.NoError(t, err)
+				assert.Equal(t, "http://proxy.com", proxyURL.String())
+			},
+		},
+		{
+			name: "Test Without Proxy",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Metrics.Proxy)
 			},
 		},
 	}

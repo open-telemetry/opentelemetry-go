@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var meter = otel.Meter("my-service-meter")
@@ -139,6 +140,45 @@ func ExampleMeter_upDownCounter() {
 	_ = func() {
 		// code that removes an item from the collection
 		itemsCounter.Add(context.Background(), -1)
+	}
+}
+
+// Gauges can be used to record non-additive values when changes occur.
+//
+// Here's how you might report the current speed of a cpu fan.
+func ExampleMeter_gauge() {
+	speedGauge, err := meter.Int64Gauge(
+		"cpu.fan.speed",
+		metric.WithDescription("Speed of CPU fan"),
+		metric.WithUnit("RPM"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	getCPUFanSpeed := func() int64 {
+		// Generates a random fan speed for demonstration purpose.
+		// In real world applications, replace this to get the actual fan speed.
+		return int64(1500 + rand.Intn(1000))
+	}
+
+	fanSpeedSubscription := make(chan int64, 1)
+	go func() {
+		defer close(fanSpeedSubscription)
+
+		for idx := 0; idx < 5; idx++ {
+			// Synchronous gauges are used when the measurement cycle is
+			// synchronous to an external change.
+			// Simulate that external cycle here.
+			time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
+			fanSpeed := getCPUFanSpeed()
+			fanSpeedSubscription <- fanSpeed
+		}
+	}()
+
+	ctx := context.Background()
+	for fanSpeed := range fanSpeedSubscription {
+		speedGauge.Record(ctx, fanSpeed)
 	}
 }
 

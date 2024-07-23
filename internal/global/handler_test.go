@@ -6,225 +6,35 @@ package global
 import (
 	"bytes"
 	"errors"
-	"io"
 	"log"
-	"sync"
+	"os"
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
-type testErrCatcher []string
+func TestErrDelegator(t *testing.T) {
+	buf := new(bytes.Buffer)
+	log.Default().SetOutput(buf)
+	t.Cleanup(func() { log.Default().SetOutput(os.Stderr) })
 
-func (l *testErrCatcher) Write(p []byte) (int, error) {
-	msg := bytes.TrimRight(p, "\n")
-	(*l) = append(*l, string(msg))
-	return len(msg), nil
-}
+	e := &ErrDelegator{}
 
-func (l *testErrCatcher) Reset() {
-	*l = testErrCatcher([]string{})
-}
+	err := errors.New("testing")
+	e.Handle(err)
 
-func (l *testErrCatcher) Got() []string {
-	return []string(*l)
-}
-
-func causeErr(text string) {
-	Handle(errors.New(text))
-}
-
-type HandlerTestSuite struct {
-	suite.Suite
-
-	origHandler ErrorHandler
-	errCatcher  *testErrCatcher
-}
-
-func (s *HandlerTestSuite) SetupSuite() {
-	s.errCatcher = new(testErrCatcher)
-	s.origHandler = GlobalErrorHandler.getDelegate()
-
-	GlobalErrorHandler.setDelegate(&ErrLogger{l: log.New(s.errCatcher, "", 0)})
-}
-
-func (s *HandlerTestSuite) TearDownSuite() {
-	GlobalErrorHandler.setDelegate(s.origHandler)
-}
-
-func (s *HandlerTestSuite) SetupTest() {
-	s.errCatcher.Reset()
-}
-
-func (s *HandlerTestSuite) TearDownTest() {
-	GlobalErrorHandler.setDelegate(&ErrLogger{l: log.New(s.errCatcher, "", 0)})
-}
-
-func (s *HandlerTestSuite) TestGlobalHandler() {
-	errs := []string{"one", "two"}
-	GetErrorHandler().Handle(errors.New(errs[0]))
-	Handle(errors.New(errs[1]))
-	s.Assert().Equal(errs, s.errCatcher.Got())
-}
-
-func (s *HandlerTestSuite) TestDelegatedHandler() {
-	eh := GetErrorHandler()
-
-	newErrLogger := new(testErrCatcher)
-	SetErrorHandler(&ErrLogger{l: log.New(newErrLogger, "", 0)})
-
-	errs := []string{"TestDelegatedHandler"}
-	eh.Handle(errors.New(errs[0]))
-	s.Assert().Equal(errs, newErrLogger.Got())
-}
-
-func (s *HandlerTestSuite) TestNoDropsOnDelegate() {
-	causeErr("")
-	s.Require().Len(s.errCatcher.Got(), 1)
-
-	// Change to another Handler. We are testing this is loss-less.
-	newErrLogger := new(testErrCatcher)
-	secondary := &ErrLogger{
-		l: log.New(newErrLogger, "", 0),
+	got := buf.String()
+	if !strings.Contains(got, err.Error()) {
+		t.Error("default handler did not log")
 	}
-	SetErrorHandler(secondary)
+	buf.Reset()
 
-	causeErr("")
-	s.Assert().Len(s.errCatcher.Got(), 1, "original Handler used after delegation")
-	s.Assert().Len(newErrLogger.Got(), 1, "new Handler not used after delegation")
-}
+	var gotErr error
+	e.setDelegate(fnErrHandler(func(e error) { gotErr = e }))
+	e.Handle(err)
 
-func (s *HandlerTestSuite) TestAllowMultipleSets() {
-	notUsed := new(testErrCatcher)
-
-	secondary := &ErrLogger{l: log.New(notUsed, "", 0)}
-	SetErrorHandler(secondary)
-	s.Require().Same(GetErrorHandler(), GlobalErrorHandler, "set changed globalErrorHandler")
-	s.Require().Same(GlobalErrorHandler.getDelegate(), secondary, "new Handler not set")
-
-	tertiary := &ErrLogger{l: log.New(notUsed, "", 0)}
-	SetErrorHandler(tertiary)
-	s.Require().Same(GetErrorHandler(), GlobalErrorHandler, "set changed globalErrorHandler")
-	s.Assert().Same(GlobalErrorHandler.getDelegate(), tertiary, "user Handler not overridden")
-}
-
-func TestHandlerTestSuite(t *testing.T) {
-	suite.Run(t, new(HandlerTestSuite))
-}
-
-func TestHandlerConcurrentSafe(t *testing.T) {
-	// In order not to pollute the test output.
-	SetErrorHandler(&ErrLogger{log.New(io.Discard, "", 0)})
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		SetErrorHandler(&ErrLogger{log.New(io.Discard, "", 0)})
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Handle(errors.New("error"))
-	}()
-
-	wg.Wait()
-	reset()
-}
-
-func BenchmarkErrorHandler(b *testing.B) {
-	primary := &ErrLogger{l: log.New(io.Discard, "", 0)}
-	secondary := &ErrLogger{l: log.New(io.Discard, "", 0)}
-	tertiary := &ErrLogger{l: log.New(io.Discard, "", 0)}
-
-	GlobalErrorHandler.setDelegate(primary)
-
-	err := errors.New("benchmark error handler")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		GetErrorHandler().Handle(err)
-		Handle(err)
-
-		SetErrorHandler(secondary)
-		GetErrorHandler().Handle(err)
-		Handle(err)
-
-		SetErrorHandler(tertiary)
-		GetErrorHandler().Handle(err)
-		Handle(err)
-
-		GlobalErrorHandler.setDelegate(primary)
+	if buf.String() != "" {
+		t.Error("delegate not set")
+	} else if !errors.Is(gotErr, err) {
+		t.Error("error not passed to delegate")
 	}
-
-	reset()
-}
-
-var eh ErrorHandler
-
-func BenchmarkGetDefaultErrorHandler(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		eh = GetErrorHandler()
-	}
-}
-
-func BenchmarkGetDelegatedErrorHandler(b *testing.B) {
-	SetErrorHandler(&ErrLogger{l: log.New(io.Discard, "", 0)})
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		eh = GetErrorHandler()
-	}
-
-	reset()
-}
-
-func BenchmarkDefaultErrorHandlerHandle(b *testing.B) {
-	GlobalErrorHandler.setDelegate(
-		&ErrLogger{l: log.New(io.Discard, "", 0)},
-	)
-
-	eh := GetErrorHandler()
-	err := errors.New("benchmark default error handler handle")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		eh.Handle(err)
-	}
-
-	reset()
-}
-
-func BenchmarkDelegatedErrorHandlerHandle(b *testing.B) {
-	eh := GetErrorHandler()
-	SetErrorHandler(&ErrLogger{l: log.New(io.Discard, "", 0)})
-	err := errors.New("benchmark delegated error handler handle")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		eh.Handle(err)
-	}
-
-	reset()
-}
-
-func BenchmarkSetErrorHandlerDelegation(b *testing.B) {
-	alt := &ErrLogger{l: log.New(io.Discard, "", 0)}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		SetErrorHandler(alt)
-
-		reset()
-	}
-}
-
-func reset() {
-	GlobalErrorHandler = defaultErrorHandler()
 }

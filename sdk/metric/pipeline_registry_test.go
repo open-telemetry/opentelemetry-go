@@ -145,13 +145,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	)
 
 	instruments := []Instrument{
-		{Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
-		{Name: "foo", Kind: InstrumentKindCounter},
-		{Name: "foo", Kind: InstrumentKindUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindHistogram},
-		{Name: "foo", Kind: InstrumentKindObservableCounter},
-		{Name: "foo", Kind: InstrumentKindObservableUpDownCounter},
-		{Name: "foo", Kind: InstrumentKindObservableGauge},
+		InstrumentKind(0):                     {Name: "foo", Kind: InstrumentKind(0)}, // Unknown kind
+		InstrumentKindCounter:                 {Name: "foo", Kind: InstrumentKindCounter},
+		InstrumentKindUpDownCounter:           {Name: "foo", Kind: InstrumentKindUpDownCounter},
+		InstrumentKindHistogram:               {Name: "foo", Kind: InstrumentKindHistogram},
+		InstrumentKindGauge:                   {Name: "foo", Kind: InstrumentKindGauge},
+		InstrumentKindObservableCounter:       {Name: "foo", Kind: InstrumentKindObservableCounter},
+		InstrumentKindObservableUpDownCounter: {Name: "foo", Kind: InstrumentKindObservableUpDownCounter},
+		InstrumentKindObservableGauge:         {Name: "foo", Kind: InstrumentKindObservableGauge},
 	}
 
 	testcases := []struct {
@@ -183,6 +184,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
 			inst:     instruments[InstrumentKindHistogram],
 			validate: assertHist[N](metricdata.DeltaTemporality),
+		},
+		{
+			name:     "Default/Delta/Gauge",
+			reader:   NewManualReader(WithTemporalitySelector(deltaTemporalitySelector)),
+			inst:     instruments[InstrumentKindGauge],
+			validate: assertLastValue[N],
 		},
 		{
 			name:     "Default/Delta/PrecomputedSum/Monotonic",
@@ -219,6 +226,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(),
 			inst:     instruments[InstrumentKindHistogram],
 			validate: assertHist[N](metricdata.CumulativeTemporality),
+		},
+		{
+			name:     "Default/Cumulative/Gauge",
+			reader:   NewManualReader(),
+			inst:     instruments[InstrumentKindGauge],
+			validate: assertLastValue[N],
 		},
 		{
 			name:     "Default/Cumulative/PrecomputedSum/Monotonic",
@@ -306,6 +319,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
 			inst:     instruments[InstrumentKindHistogram],
 			validate: assertHist[N](metricdata.CumulativeTemporality),
+		},
+		{
+			name:     "Reader/Default/Cumulative/Gauge",
+			reader:   NewManualReader(WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} })),
+			inst:     instruments[InstrumentKindGauge],
+			validate: assertLastValue[N],
 		},
 		{
 			name:     "Reader/Default/Cumulative/PrecomputedSum/Monotonic",
@@ -697,6 +716,32 @@ func TestIsAggregatorCompatible(t *testing.T) {
 		{
 			name: "SyncHistogram and ExponentialHistogram",
 			kind: InstrumentKindHistogram,
+			agg:  AggregationBase2ExponentialHistogram{},
+		},
+		{
+			name: "SyncGauge and Drop",
+			kind: InstrumentKindGauge,
+			agg:  AggregationDrop{},
+		},
+		{
+			name: "SyncGauge and LastValue",
+			kind: InstrumentKindGauge,
+			agg:  AggregationLastValue{},
+		},
+		{
+			name: "SyncGauge and Sum",
+			kind: InstrumentKindGauge,
+			agg:  AggregationSum{},
+			want: errIncompatibleAggregation,
+		},
+		{
+			name: "SyncGauge and ExplicitBucketHistogram",
+			kind: InstrumentKindGauge,
+			agg:  AggregationExplicitBucketHistogram{},
+		},
+		{
+			name: "SyncGauge and ExponentialHistogram",
+			kind: InstrumentKindGauge,
 			agg:  AggregationBase2ExponentialHistogram{},
 		},
 		{

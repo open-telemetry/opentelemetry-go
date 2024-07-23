@@ -60,6 +60,7 @@ func TestValueEqual(t *testing.T) {
 		log.MapValue(
 			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
 			log.Bytes("b", []byte{3, 5, 7}),
+			log.Empty("e"),
 		),
 	}
 	for i, v1 := range vals {
@@ -69,7 +70,32 @@ func TestValueEqual(t *testing.T) {
 	}
 }
 
-func TestEmpty(t *testing.T) {
+func TestSortedValueEqual(t *testing.T) {
+	testCases := []struct {
+		value  log.Value
+		value2 log.Value
+	}{
+		{
+			value: log.MapValue(
+				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
+				log.Bytes("b", []byte{3, 5, 7}),
+				log.Empty("e"),
+			),
+			value2: log.MapValue(
+				log.Bytes("b", []byte{3, 5, 7}),
+				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
+				log.Empty("e"),
+			),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.value.String(), func(t *testing.T) {
+			assert.Equal(t, true, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
+		})
+	}
+}
+
+func TestValueEmpty(t *testing.T) {
 	v := log.Value{}
 	t.Run("Value.Empty", func(t *testing.T) {
 		assert.True(t, v.Empty())
@@ -105,9 +131,9 @@ func TestEmptyGroupsPreserved(t *testing.T) {
 }
 
 func TestBool(t *testing.T) {
-	const key, val = "key", true
+	const key, val = "boolKey", true
 	kv := log.Bool(key, val)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindBool
 	t.Run("AsBool", func(t *testing.T) {
@@ -122,9 +148,9 @@ func TestBool(t *testing.T) {
 }
 
 func TestFloat64(t *testing.T) {
-	const key, val = "key", 3.0
+	const key, val = "float64Key", 3.0
 	kv := log.Float64(key, val)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindFloat64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -139,9 +165,9 @@ func TestFloat64(t *testing.T) {
 }
 
 func TestInt(t *testing.T) {
-	const key, val = "key", 1
+	const key, val = "intKey", 1
 	kv := log.Int(key, val)
-	testKV[int64](t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindInt64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -156,9 +182,9 @@ func TestInt(t *testing.T) {
 }
 
 func TestInt64(t *testing.T) {
-	const key, val = "key", 1
+	const key, val = "int64Key", 1
 	kv := log.Int64(key, val)
-	testKV[int64](t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindInt64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -173,9 +199,9 @@ func TestInt64(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	const key, val = "key", "test string value"
+	const key, val = "stringKey", "test string value"
 	kv := log.String(key, val)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindString
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -190,10 +216,10 @@ func TestString(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-	const key = "key"
+	const key = "bytesKey"
 	val := []byte{3, 2, 1}
 	kv := log.Bytes(key, val)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindBytes
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -208,10 +234,10 @@ func TestBytes(t *testing.T) {
 }
 
 func TestSlice(t *testing.T) {
-	const key = "key"
+	const key = "sliceKey"
 	val := []log.Value{log.IntValue(3), log.StringValue("foo")}
 	kv := log.Slice(key, val...)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindSlice
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -226,13 +252,13 @@ func TestSlice(t *testing.T) {
 }
 
 func TestMap(t *testing.T) {
-	const key = "key"
+	const key = "mapKey"
 	val := []log.KeyValue{
 		log.Slice("l", log.IntValue(3), log.StringValue("foo")),
 		log.Bytes("b", []byte{3, 5, 7}),
 	}
 	kv := log.Map(key, val...)
-	testKV(t, key, val, kv)
+	testKV(t, key, kv)
 
 	v, k := kv.Value, log.KindMap
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
@@ -244,6 +270,42 @@ func TestMap(t *testing.T) {
 	t.Run("AsMap", func(t *testing.T) {
 		assert.Equal(t, val, v.AsMap(), "AsMap")
 	})
+}
+
+func TestEmpty(t *testing.T) {
+	const key = "key"
+	kv := log.Empty(key)
+
+	assert.Equal(t, key, kv.Key, "incorrect key")
+	assert.True(t, kv.Value.Empty(), "value not empty")
+
+	v, k := kv.Value, log.KindEmpty
+	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
+	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
+	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
+	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
+	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
+	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
+}
+
+func TestValueString(t *testing.T) {
+	for _, test := range []struct {
+		v    log.Value
+		want string
+	}{
+		{log.Int64Value(-3), "-3"},
+		{log.Float64Value(.15), "0.15"},
+		{log.BoolValue(true), "true"},
+		{log.StringValue("foo"), "foo"},
+		{log.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
+		{log.SliceValue(log.IntValue(3), log.StringValue("foo")), "[3 foo]"},
+		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a:1 b:true]"},
+		{log.Value{}, "<nil>"},
+	} {
+		got := test.v.String()
+		assert.Equal(t, test.want, got)
+	}
 }
 
 type logSink struct {
@@ -277,7 +339,7 @@ func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
 	}
 }
 
-func testKV[T any](t *testing.T, key string, val T, kv log.KeyValue) {
+func testKV(t *testing.T, key string, kv log.KeyValue) {
 	t.Helper()
 
 	assert.Equal(t, key, kv.Key, "incorrect key")

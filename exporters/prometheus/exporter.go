@@ -5,6 +5,7 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -32,6 +33,9 @@ const (
 
 	scopeInfoMetricName  = "otel_scope_info"
 	scopeInfoDescription = "Instrumentation Scope metadata"
+
+	traceIDExemplarKey = "trace_id"
+	spanIDExemplarKey  = "span_id"
 )
 
 var (
@@ -188,7 +192,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		if !c.disableScopeInfo {
 			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
-			if err == errScopeInvalid {
+			if errors.Is(err, errScopeInvalid) {
 				// Do not report the same error multiple times.
 				continue
 			}
@@ -238,7 +242,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, ks, vs [2]string, name string, resourceKV keyVals) {
-	// TODO(https://github.com/open-telemetry/opentelemetry-go/issues/3163): support exemplars
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes, ks, vs, resourceKV)
 
@@ -255,6 +258,7 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 			otel.Handle(err)
 			continue
 		}
+		m = addExemplars(m, dp.Exemplars)
 		ch <- m
 	}
 }
@@ -274,6 +278,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 			otel.Handle(err)
 			continue
 		}
+		m = addExemplars(m, dp.Exemplars)
 		ch <- m
 	}
 }
@@ -548,4 +553,38 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 	}
 
 	return false, ""
+}
+
+func addExemplars[N int64 | float64](m prometheus.Metric, exemplars []metricdata.Exemplar[N]) prometheus.Metric {
+	if len(exemplars) == 0 {
+		return m
+	}
+	promExemplars := make([]prometheus.Exemplar, len(exemplars))
+	for i, exemplar := range exemplars {
+		labels := attributesToLabels(exemplar.FilteredAttributes)
+		// Overwrite any existing trace ID or span ID attributes
+		labels[traceIDExemplarKey] = hex.EncodeToString(exemplar.TraceID[:])
+		labels[spanIDExemplarKey] = hex.EncodeToString(exemplar.SpanID[:])
+		promExemplars[i] = prometheus.Exemplar{
+			Value:     float64(exemplar.Value),
+			Timestamp: exemplar.Time,
+			Labels:    labels,
+		}
+	}
+	metricWithExemplar, err := prometheus.NewMetricWithExemplars(m, promExemplars...)
+	if err != nil {
+		// If there are errors creating the metric with exemplars, just warn
+		// and return the metric without exemplars.
+		otel.Handle(err)
+		return m
+	}
+	return metricWithExemplar
+}
+
+func attributesToLabels(attrs []attribute.KeyValue) prometheus.Labels {
+	labels := make(map[string]string)
+	for _, attr := range attrs {
+		labels[string(attr.Key)] = attr.Value.Emit()
+	}
+	return labels
 }

@@ -16,7 +16,8 @@ import (
 )
 
 type buckets[N int64 | float64] struct {
-	res exemplar.Reservoir[N]
+	attrs attribute.Set
+	res   exemplar.FilteredReservoir[N]
 
 	counts   []uint64
 	count    uint64
@@ -25,8 +26,8 @@ type buckets[N int64 | float64] struct {
 }
 
 // newBuckets returns buckets with n bins.
-func newBuckets[N int64 | float64](n int) *buckets[N] {
-	return &buckets[N]{counts: make([]uint64, n)}
+func newBuckets[N int64 | float64](attrs attribute.Set, n int) *buckets[N] {
+	return &buckets[N]{attrs: attrs, counts: make([]uint64, n)}
 }
 
 func (b *buckets[N]) sum(value N) { b.total += value }
@@ -47,13 +48,13 @@ type histValues[N int64 | float64] struct {
 	noSum  bool
 	bounds []float64
 
-	newRes   func() exemplar.Reservoir[N]
+	newRes   func() exemplar.FilteredReservoir[N]
 	limit    limiter[*buckets[N]]
-	values   map[attribute.Set]*buckets[N]
+	values   map[attribute.Distinct]*buckets[N]
 	valuesMu sync.Mutex
 }
 
-func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int, r func() exemplar.Reservoir[N]) *histValues[N] {
+func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int, r func() exemplar.FilteredReservoir[N]) *histValues[N] {
 	// The responsibility of keeping all buckets correctly associated with the
 	// passed boundaries is ultimately this type's responsibility. Make a copy
 	// here so we can always guarantee this. Or, in the case of failure, have
@@ -65,7 +66,7 @@ func newHistValues[N int64 | float64](bounds []float64, noSum bool, limit int, r
 		bounds: b,
 		newRes: r,
 		limit:  newLimiter[*buckets[N]](limit),
-		values: make(map[attribute.Set]*buckets[N]),
+		values: make(map[attribute.Distinct]*buckets[N]),
 	}
 }
 
@@ -79,13 +80,11 @@ func (s *histValues[N]) measure(ctx context.Context, value N, fltrAttr attribute
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
 
-	t := now()
-
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
 	attr := s.limit.Attributes(fltrAttr, s.values)
-	b, ok := s.values[attr]
+	b, ok := s.values[attr.Equivalent()]
 	if !ok {
 		// N+1 buckets. For example:
 		//
@@ -94,23 +93,23 @@ func (s *histValues[N]) measure(ctx context.Context, value N, fltrAttr attribute
 		// Then,
 		//
 		//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-		b = newBuckets[N](len(s.bounds) + 1)
+		b = newBuckets[N](attr, len(s.bounds)+1)
 		b.res = s.newRes()
 
 		// Ensure min and max are recorded values (not zero), for new buckets.
 		b.min, b.max = value, value
-		s.values[attr] = b
+		s.values[attr.Equivalent()] = b
 	}
 	b.bin(idx, value)
 	if !s.noSum {
 		b.sum(value)
 	}
-	b.res.Offer(ctx, t, value, droppedAttr)
+	b.res.Offer(ctx, value, droppedAttr)
 }
 
 // newHistogram returns an Aggregator that summarizes a set of measurements as
 // an histogram.
-func newHistogram[N int64 | float64](boundaries []float64, noMinMax, noSum bool, limit int, r func() exemplar.Reservoir[N]) *histogram[N] {
+func newHistogram[N int64 | float64](boundaries []float64, noMinMax, noSum bool, limit int, r func() exemplar.FilteredReservoir[N]) *histogram[N] {
 	return &histogram[N]{
 		histValues: newHistValues[N](boundaries, noSum, limit, r),
 		noMinMax:   noMinMax,
@@ -145,24 +144,24 @@ func (s *histogram[N]) delta(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for a, b := range s.values {
-		hDPts[i].Attributes = a
+	for _, val := range s.values {
+		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
-		hDPts[i].Count = b.count
+		hDPts[i].Count = val.count
 		hDPts[i].Bounds = bounds
-		hDPts[i].BucketCounts = b.counts
+		hDPts[i].BucketCounts = val.counts
 
 		if !s.noSum {
-			hDPts[i].Sum = b.total
+			hDPts[i].Sum = val.total
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(b.min)
-			hDPts[i].Max = metricdata.NewExtrema(b.max)
+			hDPts[i].Min = metricdata.NewExtrema(val.min)
+			hDPts[i].Max = metricdata.NewExtrema(val.max)
 		}
 
-		b.res.Collect(&hDPts[i].Exemplars)
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
 	}
@@ -195,11 +194,11 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for a, b := range s.values {
-		hDPts[i].Attributes = a
+	for _, val := range s.values {
+		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
-		hDPts[i].Count = b.count
+		hDPts[i].Count = val.count
 		hDPts[i].Bounds = bounds
 
 		// The HistogramDataPoint field values returned need to be copies of
@@ -207,18 +206,18 @@ func (s *histogram[N]) cumulative(dest *metricdata.Aggregation) int {
 		//
 		// TODO (#3047): Making copies for bounds and counts incurs a large
 		// memory allocation footprint. Alternatives should be explored.
-		hDPts[i].BucketCounts = slices.Clone(b.counts)
+		hDPts[i].BucketCounts = slices.Clone(val.counts)
 
 		if !s.noSum {
-			hDPts[i].Sum = b.total
+			hDPts[i].Sum = val.total
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(b.min)
-			hDPts[i].Max = metricdata.NewExtrema(b.max)
+			hDPts[i].Min = metricdata.NewExtrema(val.min)
+			hDPts[i].Max = metricdata.NewExtrema(val.max)
 		}
 
-		b.res.Collect(&hDPts[i].Exemplars)
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there

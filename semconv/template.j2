@@ -108,16 +108,16 @@ package semconv  // import [[IMPORTPATH]]
 import "go.opentelemetry.io/otel/attribute"
 
 {% for semconv in semconvs -%}
-{%- if semconvs[semconv].attributes | rejectattr("ref") | selectattr("is_local") | sort(attribute=fqn) | length > 0 -%}
+{%- if semconvs[semconv].attributes | rejectattr("ref") | rejectattr("deprecated") | selectattr("is_local") | sort(attribute=fqn) | length > 0 -%}
 // {{ sentence_case(semconvs[semconv].brief | replace("This document defines ", "")) | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}
 const (
-{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref %}
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref and not attr.deprecated %}
 	// {{ keydoc(attr) | wordwrap(72, break_long_words=false, break_on_hyphens=false, wrapstring="\n\t// ") }}
 	// {{ keydetails(attr) | wordwrap(72, break_long_words=false, break_on_hyphens=false, wrapstring="\n\t// ") }}
 	{{to_go_name(attr.fqn)}}Key = attribute.Key("{{attr.fqn}}")
 {% endfor -%}
 )
-{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref and not attr.deprecated -%}
 {%- if attr.attr_type is not string %}
 
 var (
@@ -132,7 +132,7 @@ var (
 )
 {%- endif -%}
 {%- endfor %}
-{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref -%}
+{%- for attr in semconvs[semconv].attributes if attr.is_local and not attr.ref and not attr.deprecated -%}
 {%- if attr.attr_type is string %}
 
 {{ fndoc(attr) | wordwrap(76, break_long_words=false, break_on_hyphens=false, wrapstring="\n// ") }}

@@ -86,6 +86,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	key := il{
 		name:    name,
 		version: c.InstrumentationVersion(),
+		schema:  c.SchemaURL(),
 	}
 
 	if p.tracers == nil {
@@ -101,10 +102,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	return t
 }
 
-type il struct {
-	name    string
-	version string
-}
+type il struct{ name, version, schema string }
 
 // tracer is a placeholder for a trace.Tracer.
 //
@@ -181,6 +179,9 @@ func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
 
 // AddEvent does nothing.
 func (nonRecordingSpan) AddEvent(string, ...trace.EventOption) {}
+
+// AddLink does nothing.
+func (nonRecordingSpan) AddLink(trace.Link) {}
 
 // SetName does nothing.
 func (nonRecordingSpan) SetName(string) {}

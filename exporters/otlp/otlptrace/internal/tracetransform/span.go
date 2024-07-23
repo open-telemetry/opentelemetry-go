@@ -81,23 +81,6 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 	return rss
 }
 
-const (
-	spanFlagsHasIsRemote = 0x100 //  SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
-	spanFlagsIsRemote    = 0x200 //  SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
-)
-
-func spanContextToSpanFlags(sc trace.SpanContext) uint32 {
-	var flags uint32
-	traceFlags := sc.TraceFlags()
-
-	flags |= uint32(traceFlags & trace.FlagsValidMask)
-	flags |= spanFlagsHasIsRemote // SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
-	if sc.IsRemote() {
-		flags |= spanFlagsIsRemote // SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
-	}
-	return flags
-}
-
 // span transforms a Span into an OTLP span.
 func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if sd == nil {
@@ -111,7 +94,6 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
 		TraceState:             sd.SpanContext().TraceState().String(),
-		Flags:                  spanContextToSpanFlags(sd.SpanContext()),
 		Status:                 status(sd.Status().Code, sd.Status().Description),
 		StartTimeUnixNano:      uint64(sd.StartTime().UnixNano()),
 		EndTimeUnixNano:        uint64(sd.EndTime().UnixNano()),
@@ -128,6 +110,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if psid := sd.Parent().SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
+	s.Flags = buildSpanFlags(sd.Parent())
 
 	return s
 }
@@ -164,15 +147,26 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		tid := otLink.SpanContext.TraceID()
 		sid := otLink.SpanContext.SpanID()
 
+		flags := buildSpanFlags(otLink.SpanContext)
+
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:                tid[:],
 			SpanId:                 sid[:],
-			Flags:                  spanContextToSpanFlags(otLink.SpanContext),
 			Attributes:             KeyValues(otLink.Attributes),
 			DroppedAttributesCount: uint32(otLink.DroppedAttributeCount),
+			Flags:                  flags,
 		})
 	}
 	return sl
+}
+
+func buildSpanFlags(sc trace.SpanContext) uint32 {
+	flags := tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK
+	if sc.IsRemote() {
+		flags |= tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK
+	}
+
+	return uint32(flags)
 }
 
 // spanEvents transforms span Events to an OTLP span events.

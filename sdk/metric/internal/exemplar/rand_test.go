@@ -7,18 +7,19 @@ import (
 	"context"
 	"math"
 	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFixedSize(t *testing.T) {
-	t.Run("Int64", ReservoirTest[int64](func(n int) (Reservoir[int64], int) {
-		return FixedSize[int64](n), n
+	t.Run("Int64", ReservoirTest[int64](func(n int) (Reservoir, int) {
+		return FixedSize(n), n
 	}))
 
-	t.Run("Float64", ReservoirTest[float64](func(n int) (Reservoir[float64], int) {
-		return FixedSize[float64](n), n
+	t.Run("Float64", ReservoirTest[float64](func(n int) (Reservoir, int) {
+		return FixedSize(n), n
 	}))
 }
 
@@ -34,18 +35,33 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	// Sort to test position bias.
 	slices.Sort(data)
 
-	r := FixedSize[float64](sampleSize)
+	r := FixedSize(sampleSize)
 	for _, value := range data {
-		r.Offer(context.Background(), staticTime, value, nil)
+		r.Offer(context.Background(), staticTime, NewValue(value), nil)
 	}
 
 	var sum float64
-	for _, m := range r.(*randRes[float64]).store {
-		sum += m.Value
+	for _, m := range r.(*randRes).store {
+		sum += m.Value.Float64()
 	}
 	mean := sum / float64(sampleSize)
 
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func TestRandomConcurrentSafe(t *testing.T) {
+	const goRoutines = 10
+
+	var wg sync.WaitGroup
+	for n := 0; n < goRoutines; n++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = random()
+		}()
+	}
+
+	wg.Wait()
 }
