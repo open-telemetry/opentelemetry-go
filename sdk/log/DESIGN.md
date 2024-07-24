@@ -161,10 +161,11 @@ current "mutable" processor design.
 The performance disadvantages caused by using a pointer (which at the time of
 writing causes an additional heap allocation) may be mitigated by future
 versions of the Go compiler, thanks to improved escape analysis and
-profile-guided optimization (PGO).
+profile-guided optimization (PGO)[^6].
 
 [^1]: [A Guide to the Go Garbage Collector](https://tip.golang.org/doc/gc-guide)
 [^2]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
 [^3]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
 [^4]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)
 [^5]: [Log record mutations do not have to be visible in next registered processors](https://github.com/open-telemetry/opentelemetry-specification/pull/4067)
+[^6]: [Profile-guided optimization](https://go.dev/doc/pgo)
