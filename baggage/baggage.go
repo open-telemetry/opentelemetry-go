@@ -403,8 +403,7 @@ func (m Member) String() string {
 		return ""
 	}
 
-	// A key is can be a valid UTF-8 string.
-	s := valueEscape(m.key) + keyValueDelimiter + valueEscape(m.value)
+	s := m.key + keyValueDelimiter + valueEscape(m.value)
 	if len(m.properties) > 0 {
 		s += propertyDelimiter + m.properties.String()
 	}
