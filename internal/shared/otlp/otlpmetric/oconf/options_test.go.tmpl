@@ -185,7 +185,7 @@ func TestConfigs(t *testing.T) {
 				WithEndpoint("metrics_endpoint"),
 			},
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "env_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_endpoint2",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
@@ -199,7 +199,7 @@ func TestConfigs(t *testing.T) {
 				WithEndpointURL("https://metrics_endpoint2/somepath"),
 			},
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":        "env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "env_endpoint",
 				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_endpoint2",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
