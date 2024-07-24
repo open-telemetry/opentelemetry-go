@@ -5,6 +5,8 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -67,16 +69,25 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
 	if config.NewRoot() {
-		// If the generator meets the W3C trace context level
-		// 2 randomness requirement, include the associated
-		// bitmask.
-		if _, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator); isW3CRandom {
-			psc = psc.WithTraceFlags(trace.FlagsRandom)
-		} else {
-			// TODO
-			//rnd = ...
-			//ts, err := trace.ParseTraceState(combineTracestate(psc.Tracestate.AsRaw(), )
-			//psc = psc.WithTraceState(trace.NewTraceState())
+		ts := trace.SpanContextFromContext(ctx).TraceState()
+		otts := ts.Get("ot")
+		_, hasRandomness := tracestateHasRandomness(otts)
+
+		if !hasRandomness {
+			// If the generator meets the W3C trace context level
+			// 2 randomness requirement, include the associated
+			// bitmask.
+			if _, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator); isW3CRandom {
+				psc = psc.WithTraceFlags(trace.FlagsRandom)
+			} else {
+				// If the TraceID generator is not
+				// random, create a new randomness value
+				// and set it in the "rv" field
+				rnd := uint64(rand.Int63n(int64(maxAdjustedCount)))
+				newOtts := combineTracestate(otts, fmt.Sprintf("rv:%14x", rnd))
+				ts.Insert("ot", newOtts)
+				psc = psc.WithTraceState(ts)
+			}
 		}
 		ctx = trace.ContextWithSpanContext(ctx, psc)
 	} else {

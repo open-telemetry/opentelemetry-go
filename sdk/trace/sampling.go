@@ -80,6 +80,25 @@ type traceIDRatioSampler struct {
 	description string
 }
 
+func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
+	var low int
+	if has := strings.HasPrefix(otts, "rv:"); has {
+		low = 3
+	} else if pos := strings.Index(otts, ";rv:"); pos > 0 {
+		low = pos + 4
+	}
+	if len(otts) >= low+14 {
+		randomIn := otts[low : low+14]
+		if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
+			randomness = rv
+			hasRandom = true
+		} else {
+			otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", randomIn, err))
+		}
+	}
+	return
+}
+
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
@@ -90,22 +109,7 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 	var randomness uint64
 	var hasRandom bool
 	if existOtts != "" {
-		var low int
-		if has := strings.HasPrefix(existOtts, "rv:"); has {
-			low = 3
-		} else if pos := strings.Index(existOtts, ";rv:"); pos > 0 {
-			low = pos + 4
-		}
-		if len(existOtts) >= low+14 {
-			randomIn := existOtts[low : low+14]
-			if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
-				randomness = rv
-				hasRandom = true
-			}
-		}
-		if !hasRandom {
-			otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q", randomIn))
-		}
+		randomness, hasRandom = tracestateHasRandomness(existOtts)
 	}
 	if !hasRandom {
 		// Interpret the least-significant 8-bytes as an unsigned number
