@@ -88,8 +88,14 @@ func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
 		low = 3
 	} else if pos := strings.Index(otts, ";rv:"); pos > 0 {
 		low = pos + 4
+	} else {
+		return 0, false
 	}
-	if len(otts) >= low+14 {
+	if len(otts) < low+14 {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", otts, strconv.ErrSyntax))
+	} else if len(otts) > low+14 && otts[low+14] != ';' {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", otts, strconv.ErrSyntax))
+	} else {
 		randomIn := otts[low : low+14]
 		if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
 			randomness = rv
@@ -101,7 +107,6 @@ func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
 	return
 }
 
-// ShouldSample
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
@@ -307,8 +312,10 @@ type alwaysOnSampler struct{}
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	ts := trace.SpanContextFromContext(p.ParentContext).TraceState()
 	// 100% sampling equals zero rejection threshold.
-	if mod, err := ts.Insert("ot", "th:0"); err == nil {
+	if mod, err := ts.Insert("ot", combineTracestate(ts.Get("ot"), "th:0")); err == nil {
 		ts = mod
+	} else {
+		otel.Handle(fmt.Errorf("could not update tracestate: %w", err))
 	}
 	return SamplingResult{
 		Decision:   RecordAndSample,

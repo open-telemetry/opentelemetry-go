@@ -24,14 +24,6 @@ const (
 	// Since W3C Trace Context Level 2.
 	FlagsRandom = TraceFlags(0x02)
 
-	// FlagsValidMask is a Tracemask value consisting of all
-	// potentially valid W3C trace flags bits, a value with the 8
-	// least significant bits set.  Context propagation is expected
-	// to propagate these bits even if they are unrecognized.
-	//
-	// In the OTLP protocol, this is defined as SPAN_FLAGS_TRACE_FLAGS_MASK.
-	FlagsValidMask = TraceFlags(0xFF)
-
 	errInvalidHexID errorConst = "trace-id and span-id can only contain [0-9a-f] characters, all lowercase"
 
 	errInvalidTraceIDLength errorConst = "hex encoded trace-id must have length equals to 32"

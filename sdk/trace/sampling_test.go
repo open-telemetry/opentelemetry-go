@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -458,7 +459,53 @@ func TestCombineTracestate(t *testing.T) {
 		{"ex1:xyz;th:456;ex2:zyx", "th:12345", "ex1:xyz;th:12345;ex2:zyx"},
 		// Ex1, Ex2 : T-value added
 		{"ex1:xyz;ex2:zyx", "th:12345", "ex1:xyz;ex2:zyx;th:12345"},
+
+		// R-value added
+		{"ex:xyz", "rv:01230123012301", "ex:xyz;rv:01230123012301"},
+		// R-value only
+		{"", "rv:01230123012301", "rv:01230123012301"},
+		// R-value incorrect, overwritten
+		{"ex:xyz;rv:0123", "rv:01230123012301", "ex:xyz;rv:01230123012301"},
 	} {
 		require.Equal(t, tc.out, combineTracestate(tc.orig, tc.add))
+	}
+}
+
+// TestTraceStateHasRandomness ensures the tracestateHasRandomness
+// method works as expected.
+func TestTraceStateHasRandomness(t *testing.T) {
+	for _, tc := range []struct {
+		in  string
+		rnd uint64
+		has bool
+		err error
+	}{
+		// R-value parse errors
+		{"rv:", 0, false, strconv.ErrSyntax},
+		{"rv:0123", 0, false, strconv.ErrSyntax},
+		{"rv:0123012301230", 0, false, strconv.ErrSyntax},
+		{"rv:012301230123012", 0, false, strconv.ErrSyntax},
+
+		// R-value is correct
+		{"rv:abcdef01234567", 0xabcdef01234567, true, nil},
+		{"rv:01230123012301", 0x01230123012301, true, nil},
+		{"rv:01230123012301;xyz=123", 0x01230123012301, true, nil},
+		{"xy:123;rv:01230123012301", 0x01230123012301, true, nil},
+		{"xy:123;rv:01230123012301;zz:def", 0x01230123012301, true, nil},
+
+		// R-value is not set
+		{"xyz:123", 0, false, nil},
+		{"xyz:123;th=123", 0, false, nil},
+	} {
+		handler.Reset()
+		rnd, has := tracestateHasRandomness(tc.in)
+		require.Equal(t, tc.has, has)
+		require.Equal(t, tc.rnd, rnd)
+		if tc.err == nil {
+			assert.Equal(t, 0, len(handler.errs), "unexpected errors: %v", handler.errs)
+		} else {
+			assert.Equal(t, 1, len(handler.errs), "expected errors: %v: %v", tc.in, handler.errs)
+			assert.ErrorIs(t, handler.errs[0], tc.err)
+		}
 	}
 }

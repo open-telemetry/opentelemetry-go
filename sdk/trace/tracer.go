@@ -104,7 +104,7 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 				// If the TraceID generator is not random, create a
 				// new randomness value and set it in the "rv" field.
 				rnd := uint64(rand.Int63n(int64(maxAdjustedCount)))
-				ts, err := ts.Insert("ot", combineTracestate(otts, fmt.Sprintf("rv:%14x", rnd)))
+				ts, err := ts.Insert("ot", combineTracestate(otts, fmt.Sprintf("rv:%014x", rnd)))
 				if err == nil {
 					psc = psc.WithTraceState(ts)
 				} else {

@@ -1974,6 +1974,7 @@ func TestWithIDGenerator(t *testing.T) {
 		numSpan      = 5
 	)
 
+	// Note that testIDGen does not implement the W3C option interface
 	gen := &testIDGenerator{traceID: startTraceID, spanID: startSpanID}
 	te := NewTestExporter()
 	tp := NewTracerProvider(
@@ -1992,6 +1993,43 @@ func TestWithIDGenerator(t *testing.T) {
 			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
 			require.NoError(t, err)
 			assert.Equal(t, uint64(startTraceID+i), gotTraceID)
+
+			// Random flag is not set.
+			require.Equal(t, span.SpanContext().TraceFlags(), trace.FlagsSampled)
+
+			// The tracestate has a random value suitable for sampling.
+			ts := span.SpanContext().TraceState()
+			otts := ts.Get("ot")
+			rnd, has := tracestateHasRandomness(otts)
+			require.True(t, has, "tracestate has R-value randomness: %v", ts)
+
+			// Any value less than maxAdjustedCount is permitted.
+			require.Less(t, rnd, maxAdjustedCount)
+		}()
+	}
+}
+
+func TestWithBuiltinIDGenerator(t *testing.T) {
+	const (
+		startTraceID = 1
+		startSpanID  = 10
+		numSpan      = 5
+	)
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+	)
+	for i := 0; i < numSpan; i++ {
+		func() {
+			_, span := tp.Tracer(t.Name()).Start(context.Background(), strconv.Itoa(i))
+			defer span.End()
+
+			// Random flag is set.
+			require.Equal(t, span.SpanContext().TraceFlags(), trace.FlagsSampled|trace.FlagsRandom)
+
+			// The tracestate equals "ot=th:0"
+			require.Equal(t, "ot=th:0", span.SpanContext().TraceState().String())
 		}()
 	}
 }
