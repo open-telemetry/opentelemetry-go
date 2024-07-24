@@ -1015,7 +1015,7 @@ func TestTagsTransformation(t *testing.T) {
 		{
 			name: "instrLib-empty",
 			data: tracetest.SpanStub{
-				InstrumentationLibrary: instrumentation.Library{},
+				InstrumentationScope: instrumentation.Scope{},
 			},
 			want: nil,
 		},
@@ -1023,7 +1023,7 @@ func TestTagsTransformation(t *testing.T) {
 			name: "instrLib-noversion",
 			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{},
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationScope: instrumentation.Scope{
 					Name: instrLibName,
 				},
 			},
@@ -1035,7 +1035,7 @@ func TestTagsTransformation(t *testing.T) {
 			name: "instrLib-with-version",
 			data: tracetest.SpanStub{
 				Attributes: []attribute.KeyValue{},
-				InstrumentationLibrary: instrumentation.Library{
+				InstrumentationScope: instrumentation.Scope{
 					Name:    instrLibName,
 					Version: instrLibVersion,
 				},
