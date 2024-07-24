@@ -180,6 +180,8 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
+	// The record is cloned so that changes done by subsequent processors
+	// are not going to lead to a data race.
 	if n := b.q.Enqueue(r.Clone()); n >= b.batchSize {
 		select {
 		case b.pollTrigger <- struct{}{}:
