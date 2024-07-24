@@ -2022,6 +2022,7 @@ func TestSpanAddLink(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: mustParseTraceState("ot=th:0"),
 				}),
 				parent:               sc.WithRemote(true),
 				links:                nil,
@@ -2041,6 +2042,7 @@ func TestSpanAddLink(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: mustParseTraceState("ot=th:0"),
 				}),
 				parent: sc.WithRemote(true),
 				links: []Link{
@@ -2070,6 +2072,7 @@ func TestSpanAddLink(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: mustParseTraceState("ot=th:0"),
 				}),
 				parent: sc.WithRemote(true),
 				links: []Link{
@@ -2094,6 +2097,7 @@ func TestSpanAddLink(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: mustParseTraceState("ot=th:0"),
 				}),
 				parent: sc.WithRemote(true),
 				links: []Link{
@@ -2116,6 +2120,7 @@ func TestSpanAddLink(t *testing.T) {
 				spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 					TraceID:    tid,
 					TraceFlags: 0x1,
+					TraceState: mustParseTraceState("ot=th:0"),
 				}),
 				parent: sc.WithRemote(true),
 				links: []Link{
@@ -2180,6 +2185,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    tid,
 			TraceFlags: 0x1,
+			TraceState: mustParseTraceState("ot=th:0"),
 		}),
 		parent:               sc.WithRemote(true),
 		links:                nil,

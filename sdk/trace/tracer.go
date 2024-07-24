@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -68,29 +69,8 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
-	if config.NewRoot() {
-		ts := trace.SpanContextFromContext(ctx).TraceState()
-		otts := ts.Get("ot")
-		_, hasRandomness := tracestateHasRandomness(otts)
-
-		if !hasRandomness {
-			// If the generator meets the W3C trace context level
-			// 2 randomness requirement, include the associated
-			// bitmask.
-			if _, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator); isW3CRandom {
-				psc = psc.WithTraceFlags(trace.FlagsRandom)
-			} else {
-				// If the TraceID generator is not
-				// random, create a new randomness value
-				// and set it in the "rv" field
-				rnd := uint64(rand.Int63n(int64(maxAdjustedCount)))
-				newOtts := combineTracestate(otts, fmt.Sprintf("rv:%14x", rnd))
-				ts.Insert("ot", newOtts)
-				psc = psc.WithTraceState(ts)
-			}
-		}
-		ctx = trace.ContextWithSpanContext(ctx, psc)
-	} else {
+	if !config.NewRoot() {
+		// Load the incoming span context.
 		psc = trace.SpanContextFromContext(ctx)
 	}
 
@@ -100,11 +80,48 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	var tid trace.TraceID
 	var sid trace.SpanID
 	if !psc.TraceID().IsValid() {
+		// It's a root span.  It may be possible for the incoming context to
+		// specify a randomness value via TraceState.  However, since the
 		tid, sid = tr.provider.idGenerator.NewIDs(ctx)
+
+		_, isW3CRandom := tr.provider.idGenerator.(W3CTraceContextIDGenerator)
+		if isW3CRandom {
+			// If the generator meets the W3C trace context level 2
+			// randomness requirement, include the associated flag.
+			psc = psc.WithTraceFlags(trace.FlagsRandom)
+		} else {
+			// Trace ID is invalid, so an arriving value for
+			// trace.FlagsRandom is meaningless.
+			psc = psc.WithTraceFlags(0)
+		}
+
+		if !isW3CRandom {
+			ts := trace.SpanContextFromContext(ctx).TraceState()
+			otts := ts.Get("ot")
+			_, isTraceStateRandom := tracestateHasRandomness(otts)
+
+			if !isTraceStateRandom {
+				// If the TraceID generator is not random, create a
+				// new randomness value and set it in the "rv" field.
+				rnd := uint64(rand.Int63n(int64(maxAdjustedCount)))
+				ts, err := ts.Insert("ot", combineTracestate(otts, fmt.Sprintf("rv:%14x", rnd)))
+				if err == nil {
+					psc = psc.WithTraceState(ts)
+				} else {
+					otel.Handle(fmt.Errorf("tracestate format: %w", err))
+				}
+			}
+		}
+
 	} else {
+		// It's a child span.
 		tid = psc.TraceID()
 		sid = tr.provider.idGenerator.NewSpanID(ctx, tid)
 	}
+
+	// Reset to the effective parent span context, which includes the potentially
+	// modified tracestate including randomness value and/or Random flag.
+	ctx = trace.ContextWithSpanContext(ctx, psc)
 
 	samplingResult := tr.provider.sampler.ShouldSample(SamplingParameters{
 		ParentContext: ctx,

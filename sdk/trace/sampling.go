@@ -80,6 +80,8 @@ type traceIDRatioSampler struct {
 	description string
 }
 
+// tracestateHasRandomness determines whether there is a "rv" sub-key
+// in `otts` which is the OTel tracestate value (i.e., the top-level "ot" value).
 func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
 	var low int
 	if has := strings.HasPrefix(otts, "rv:"); has {
@@ -99,30 +101,28 @@ func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
 	return
 }
 
+// ShouldSample
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
 
-	// When the OTel trace state field exists.
 	existOtts := state.Get("ot")
 
 	var randomness uint64
 	var hasRandom bool
 	if existOtts != "" {
+		// When the OTel trace state field exists, we will
+		// inspect for a "rv", otherwise assume that the
+		// TraceID is random.
 		randomness, hasRandom = tracestateHasRandomness(existOtts)
 	}
 	if !hasRandom {
-		// Interpret the least-significant 8-bytes as an unsigned number
-		// then zero the top 8 bits, yielding the least-significant 56 bits
-		// as randomness.
+		// Interpret the least-significant 8-bytes as an
+		// unsigned number, then zero the top 8 bits using
+		// randomnessMask, yielding the least-significant 56
+		// bits of randomness, as specified in W3C Trace
+		// Context Level 2.
 		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
-
-		// Note: if the trace flag 0x2 is not set, it means either
-		// (1) this span is a root, but a foreign IdGenerator was used
-		// (2) this span is not a root, and propagation broke the randomness flag
-		// (3) this span is not a root, and the root span did not set the random flag.
-		// There is a potential warning about this, but it would not be very
-		// actionable for the user.
 	}
 	if ts.threshold > randomness {
 		return SamplingResult{
@@ -142,16 +142,33 @@ func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult 
 	}
 }
 
+// combineTracestate combines an existing OTel tracestate fragment,
+// which is the value of a top-level "ot" tracestate vendor tag.
 func combineTracestate(incoming, updated string) string {
+	// `incoming` is formatted according to the OTel tracestate
+	// spec, with colon separating two-byte key and value, with
+	// semi-colon separating key-value pairs.
+	//
+	// `updated` should be a single two-byte key:value to modify
+	// or insert therefore colonOffset is 2 bytes, valueOffset is
+	// 3 bytes into `incoming`.
+	const colonOffset = 2
+	const valueOffset = colonOffset + 1
+
 	if incoming == "" {
 		return updated
 	}
 	var out strings.Builder
 
-	// In this case, there is an existing field under "ot" and we need
-	// to combine.  We will pass the parts of "incoming" through except
-	// "th", which we will modify if it is found.
-	foundTh := false
+	// The update is expected to be a single key-value of the form
+	// `XX:value` for with two-character key.
+	upkey := updated[:colonOffset]
+
+	// In this case, there is an existing field under "ot" and we
+	// need to combine.  We will pass the parts of "incoming"
+	// through except the field we are updating, which we will
+	// modify if it is found.
+	foundUp := false
 
 	for count := 0; len(incoming) != 0; count++ {
 		key, rest, hasCol := strings.Cut(incoming, ":")
@@ -161,9 +178,9 @@ func combineTracestate(incoming, updated string) string {
 		}
 		value, next, _ := strings.Cut(rest, ";")
 
-		if key == "th" {
-			value = updated[3:]
-			foundTh = true
+		if key == upkey {
+			value = updated[valueOffset:]
+			foundUp = true
 		}
 		if count != 0 {
 			out.WriteString(";")
@@ -174,7 +191,7 @@ func combineTracestate(incoming, updated string) string {
 
 		incoming = next
 	}
-	if !foundTh {
+	if !foundUp {
 		out.WriteString(";")
 		out.WriteString(updated)
 	}
