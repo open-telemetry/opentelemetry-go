@@ -812,7 +812,7 @@ func validateBaggageValue(s string) bool {
 	return utf8.ValidString(s)
 }
 
-// validateValue checks if the string is a valid W3C Baggage key.
+// validateKey checks if the string is a valid W3C Baggage key.
 func validateKey(s string) bool {
 	if len(s) == 0 {
 		return false
