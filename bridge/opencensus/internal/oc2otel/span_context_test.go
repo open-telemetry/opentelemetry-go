@@ -13,6 +13,14 @@ import (
 )
 
 func TestSpanContextConversion(t *testing.T) {
+	tsOc, _ := tracestate.New(nil,
+		tracestate.Entry{"key1", "value1"},
+		tracestate.Entry{"key2", "value2"},
+	)
+	tsOtel := trace.TraceState{}
+	tsOtel, _ = tsOtel.Insert("key1", "value1")
+	tsOtel, _ = tsOtel.Insert("key2", "value2")
+
 	for _, tc := range []struct {
 		description string
 		input       octrace.SpanContext
@@ -47,15 +55,16 @@ func TestSpanContextConversion(t *testing.T) {
 			}),
 		},
 		{
-			description: "trace state is ignored",
+			description: "trace state should be propagated",
 			input: octrace.SpanContext{
 				TraceID:    octrace.TraceID([16]byte{1}),
 				SpanID:     octrace.SpanID([8]byte{2}),
-				Tracestate: &tracestate.Tracestate{},
+				Tracestate: tsOc,
 			},
 			expected: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID([16]byte{1}),
-				SpanID:  trace.SpanID([8]byte{2}),
+				TraceID:    trace.TraceID([16]byte{1}),
+				SpanID:     trace.SpanID([8]byte{2}),
+				TraceState: tsOtel,
 			}),
 		},
 	} {

@@ -5,7 +5,6 @@ package oc2otel // import "go.opentelemetry.io/otel/bridge/opencensus/internal/o
 
 import (
 	octrace "go.opencensus.io/trace"
-
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -14,9 +13,16 @@ func SpanContext(sc octrace.SpanContext) trace.SpanContext {
 	if sc.IsSampled() {
 		traceFlags = trace.FlagsSampled
 	}
+
+	tsOtel := trace.TraceState{}
+	for _, entry := range sc.Tracestate.Entries() {
+		tsOtel, _ = tsOtel.Insert(entry.Key, entry.Value)
+	}
+
 	return trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID(sc.TraceID),
 		SpanID:     trace.SpanID(sc.SpanID),
 		TraceFlags: traceFlags,
+		TraceState: tsOtel,
 	})
 }

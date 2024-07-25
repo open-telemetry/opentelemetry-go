@@ -260,6 +260,17 @@ func (ts TraceState) Get(key string) string {
 	return ""
 }
 
+// Keys return all the keys from the TraceState in the insertion order.
+func (ts TraceState) Keys() []string {
+	keys := make([]string, 0, len(ts.list))
+	// Members are stored in reverse order.
+	for i := ts.Len() - 1; i >= 0; i-- {
+		member := ts.list[i]
+		keys = append(keys, member.Key)
+	}
+	return keys
+}
+
 // Insert adds a new list-member defined by the key/value pair to the
 // TraceState. If a list-member already exists for the given key, that
 // list-member's value is updated. The new or updated list-member is always
