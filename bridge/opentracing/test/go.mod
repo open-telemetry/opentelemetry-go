@@ -1,6 +1,8 @@
 module go.opentelemetry.io/otel/bridge/opentracing/test
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.5
 
 replace go.opentelemetry.io/otel => ../../..
 
@@ -9,7 +11,7 @@ replace go.opentelemetry.io/otel/bridge/opentracing => ../
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
 require (
-	github.com/opentracing-contrib/go-grpc v0.0.0-20210225150812-73cb765af46e
+	github.com/opentracing-contrib/go-grpc v0.0.0-20240724223109-9dec25a38fa8
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.28.0
@@ -28,7 +30,7 @@ require (
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240725223205-93522f1f2a9f // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
