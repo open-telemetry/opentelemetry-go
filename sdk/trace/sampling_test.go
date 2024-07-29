@@ -177,42 +177,9 @@ func TestTraceIDRatioBasedDescription(t *testing.T) {
 		desc string
 	}{
 		// Some well-known values
-		{0.5, "TraceIDRatioBased{0.5;th:8}"},
-		{1 / 3.0, "TraceIDRatioBased{0.3333333333333333;th:aaab}"},
-		{2 / 3.0, "TraceIDRatioBased{0.6666666666666666;th:5555}"},
-		{1 / 10.0, "TraceIDRatioBased{0.1;th:e666}"},
-
-		// Small powers of two
-		{1 / 256.0, "TraceIDRatioBased{0.00390625;th:ff}"},
-		{1 / 65536.0, "TraceIDRatioBased{1.52587890625e-05;th:ffff}"},
-		{1 / 1048576.0, "TraceIDRatioBased{9.5367431640625e-07;th:fffff}"},
-
-		// Threshold precision automatically rises for small values
-		{1 / 100.0, "TraceIDRatioBased{0.01;th:fd70a}"},                       // precision 5
-		{1 / 1000.0, "TraceIDRatioBased{0.001;th:ffbe77}"},                    // precision 6
-		{1 / 10000.0, "TraceIDRatioBased{0.0001;th:fff9724}"},                 // precision 7
-		{1 / 100000.0, "TraceIDRatioBased{1e-05;th:ffff583a}"},                // precision 8
-		{1 / 1000000.0, "TraceIDRatioBased{1e-06;th:ffffef39}"},               // precision 8
-		{1 / 10000000.0, "TraceIDRatioBased{1e-07;th:fffffe528}"},             // precision 9
-		{1 / 100000000.0, "TraceIDRatioBased{1e-08;th:ffffffd50d}"},           // precision 10
-		{1 / 1000000000.0, "TraceIDRatioBased{1e-09;th:fffffffbb48}"},         // precision 11
-		{1 / 10000000000.0, "TraceIDRatioBased{1e-10;th:ffffffff920d}"},       // precision 12
-		{1 / 100000000000.0, "TraceIDRatioBased{1e-11;th:fffffffff5014}"},     // precision 13
-		{1 / 1000000000000.0, "TraceIDRatioBased{1e-12;th:fffffffffee68}"},    // precision 13
-		{1 / 10000000000000.0, "TraceIDRatioBased{1e-13;th:ffffffffffe3da}"},  // precision 14
-		{1 / 100000000000000.0, "TraceIDRatioBased{1e-14;th:fffffffffffd2f}"}, // precision 14
-
-		// Note this has 13 'f' digits.
-		{0x1p-52, "TraceIDRatioBased{2.220446049250313e-16;th:fffffffffffff}"},
-
-		// This has 12 '0' digits and a 1.
-		{1 - 0x1p-52, "TraceIDRatioBased{0.9999999999999998;th:0000000000001}"},
-
-		// Values very close to 0.0
-		{0x1p-53, "TraceIDRatioBased{1.1102230246251565e-16;th:fffffffffffff8}"},
-		{0x1p-54, "TraceIDRatioBased{5.551115123125783e-17;th:fffffffffffffc}"},
-		{0x1p-55, "TraceIDRatioBased{2.7755575615628914e-17;th:fffffffffffffe}"},
-		{0x1p-56, "TraceIDRatioBased{1.3877787807814457e-17;th:ffffffffffffff}"},
+		{0.5, "TraceIDRatioBased{0.5}"},
+		{1. / 3, "TraceIDRatioBased{0.3333333333333333}"},
+		{1. / 10000, "TraceIDRatioBased{0.0001}"},
 
 		// Values very close to 1.0 round up to 1.0
 		{1, "AlwaysOnSampler"},

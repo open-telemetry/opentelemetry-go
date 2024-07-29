@@ -303,7 +303,7 @@ func TraceIDRatioBased(fraction float64) Sampler {
 	return &traceIDRatioSampler{
 		threshold:   threshold,
 		otts:        fmt.Sprint("th:", tvalue),
-		description: fmt.Sprintf("TraceIDRatioBased{%g;th:%s}", fraction, tvalue),
+		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
 
