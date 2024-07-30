@@ -318,7 +318,7 @@ type logSink struct {
 
 func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
 	l.err, l.msg, l.keysAndValues = err, msg, keysAndValues
-	l.LogSink.Error(err, msg, keysAndValues)
+	l.LogSink.Error(err, msg, keysAndValues...)
 }
 
 func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
