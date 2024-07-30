@@ -260,13 +260,11 @@ func (ts TraceState) Get(key string) string {
 	return ""
 }
 
-// Keys return all the keys from the TraceState in the insertion order.
+// Keys return all the keys from the TraceState in the reverse of insertion order.
 func (ts TraceState) Keys() []string {
 	keys := make([]string, 0, len(ts.list))
-	// Members are stored in reverse order.
-	for i := ts.Len() - 1; i >= 0; i-- {
-		member := ts.list[i]
-		keys = append(keys, member.Key)
+	for _, m := range ts.list {
+		keys = append(keys, m.Key)
 	}
 	return keys
 }

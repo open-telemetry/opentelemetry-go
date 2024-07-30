@@ -20,7 +20,7 @@ func SpanContext(sc trace.SpanContext) octrace.SpanContext {
 	keys := sc.TraceState().Keys()
 	entries := make([]tracestate.Entry, 0, len(keys))
 	for _, key := range keys {
-		entries = append(entries, tracestate.Entry{key, sc.TraceState().Get(key)})
+		entries = append(entries, tracestate.Entry{Key: key, Value: sc.TraceState().Get(key)})
 	}
 	tsOc, _ := tracestate.New(nil, entries...)
 

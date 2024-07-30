@@ -15,8 +15,9 @@ import (
 
 func TestSpanContextConversion(t *testing.T) {
 	tsOc, _ := tracestate.New(nil,
-		tracestate.Entry{"key1", "value1"},
+		// Oc has a reverse order of TraceState entries compared to OTel
 		tracestate.Entry{"key2", "value2"},
+		tracestate.Entry{"key1", "value1"},
 	)
 	tsOtel := trace.TraceState{}
 	tsOtel, _ = tsOtel.Insert("key1", "value1")
@@ -90,10 +91,10 @@ func equal(t1, t2 octrace.SpanContext) bool {
 func toString(t *tracestate.Tracestate) string {
 	result := new(strings.Builder)
 	for _, e := range t.Entries() {
-		result.WriteString(e.Key)
-		result.WriteString("=")
-		result.WriteString(e.Value)
-		result.WriteString(",")
+		_, _ = result.WriteString(e.Key)
+		_, _ = result.WriteString("=")
+		_, _ = result.WriteString(e.Value)
+		_, _ = result.WriteString(",")
 	}
 	return result.String()
 }
