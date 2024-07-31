@@ -4,9 +4,10 @@
 package otel2oc
 
 import (
-	"go.opencensus.io/trace/tracestate"
 	"strings"
 	"testing"
+
+	"go.opencensus.io/trace/tracestate"
 
 	octrace "go.opencensus.io/trace"
 
