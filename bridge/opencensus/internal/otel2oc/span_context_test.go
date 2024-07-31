@@ -16,8 +16,8 @@ import (
 func TestSpanContextConversion(t *testing.T) {
 	tsOc, _ := tracestate.New(nil,
 		// Oc has a reverse order of TraceState entries compared to OTel
-		tracestate.Entry{"key2", "value2"},
-		tracestate.Entry{"key1", "value1"},
+		tracestate.Entry{Key: "key2", Value: "value2"},
+		tracestate.Entry{Key: "key1", Value: "value1"},
 	)
 	tsOtel := trace.TraceState{}
 	tsOtel, _ = tsOtel.Insert("key1", "value1")

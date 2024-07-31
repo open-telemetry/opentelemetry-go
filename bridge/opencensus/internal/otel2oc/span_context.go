@@ -17,11 +17,11 @@ func SpanContext(sc trace.SpanContext) octrace.SpanContext {
 		to = 0x1
 	}
 
-	keys := sc.TraceState().Keys()
-	entries := make([]tracestate.Entry, 0, len(keys))
-	for _, key := range keys {
-		entries = append(entries, tracestate.Entry{Key: key, Value: sc.TraceState().Get(key)})
-	}
+	entries := make([]tracestate.Entry, 0, sc.TraceState().Len())
+	sc.TraceState().Walk(func(key, value string) bool {
+		entries = append(entries, tracestate.Entry{Key: key, Value: value})
+		return true
+	})
 	tsOc, _ := tracestate.New(nil, entries...)
 
 	return octrace.SpanContext{

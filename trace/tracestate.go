@@ -261,12 +261,12 @@ func (ts TraceState) Get(key string) string {
 }
 
 // Keys return all the keys from the TraceState in the reverse of insertion order.
-func (ts TraceState) Keys() []string {
-	keys := make([]string, 0, len(ts.list))
+func (ts TraceState) Walk(f func(key, value string) bool) {
 	for _, m := range ts.list {
-		keys = append(keys, m.Key)
+		if !f(m.Key, m.Value) {
+			break
+		}
 	}
-	return keys
 }
 
 // Insert adds a new list-member defined by the key/value pair to the

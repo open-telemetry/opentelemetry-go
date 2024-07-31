@@ -409,11 +409,11 @@ func TestTraceStateDelete(t *testing.T) {
 	}
 }
 
-func TestTraceStateKeys(t *testing.T) {
+func TestTraceStateWalk(t *testing.T) {
 	testCases := []struct {
 		name       string
 		tracestate TraceState
-		expected   []string
+		expected   [][]string
 	}{
 		{
 			name: "With keys",
@@ -421,18 +421,23 @@ func TestTraceStateKeys(t *testing.T) {
 				{Key: "key1", Value: "val1"},
 				{Key: "key2", Value: "val2"},
 			}},
-			expected: []string{"key1", "key2"},
+			expected: [][]string{{"key1", "val1"}, {"key2", "val2"}},
 		},
 		{
 			name:       "Without keys",
 			tracestate: TraceState{list: []member{}},
-			expected:   []string{},
+			expected:   [][]string{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.tracestate.Keys())
+			var got = [][]string{}
+			tc.tracestate.Walk(func(key, value string) bool {
+				got = append(got, []string{key, value})
+				return true
+			})
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
