@@ -191,7 +191,7 @@ func (l *logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
-	l.LogSink.Info(level, msg, keysAndValues)
+	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func TestLoggerProviderLogger(t *testing.T) {
