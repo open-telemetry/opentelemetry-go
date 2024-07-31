@@ -35,6 +35,7 @@ type Exporter interface {
 	// Before modifying a Record, the implementation must use Record.Clone
 	// to create a copy that shares no state with the original.
 	Export(ctx context.Context, records []Record) error
+
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
@@ -44,6 +45,7 @@ type Exporter interface {
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
 	Shutdown(ctx context.Context) error
+
 	// ForceFlush exports log records to the configured Exporter that have not yet
 	// been exported.
 	//
