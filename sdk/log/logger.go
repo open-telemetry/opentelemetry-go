@@ -36,7 +36,7 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 func (l *logger) Emit(ctx context.Context, r log.Record) {
 	newRecord := l.newRecord(ctx, r)
 	for _, p := range l.provider.processors {
-		if err := p.OnEmit(ctx, newRecord); err != nil {
+		if err := p.OnEmit(ctx, &newRecord); err != nil {
 			otel.Handle(err)
 		}
 	}
@@ -52,10 +52,10 @@ func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
 	return false
 }
 
-func (l *logger) newRecord(ctx context.Context, r log.Record) *Record {
+func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
 
-	newRecord := &Record{
+	newRecord := Record{
 		timestamp:         r.Timestamp(),
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),

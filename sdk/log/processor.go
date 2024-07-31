@@ -51,12 +51,9 @@ type Processor interface {
 	//
 	// The SDK invokes the processors sequentially in the same order as
 	// they were registered using [WithProcessor] until any processor returns true.
-	// Implementations may synchronously modify the record so that the changes
-	// are visible in the next registered processor.
-	// Notice that [Record] is not concurrent safe. Therefore, asynchronous
-	// processing may cause race conditions. Use [Record.Clone]
-	// to create a copy that shares no state with the original.
-	Enabled(ctx context.Context, record *Record) bool
+	//
+	// Implementations should not modify the record.
+	Enabled(ctx context.Context, record Record) bool
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//

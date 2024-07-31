@@ -90,7 +90,7 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, record *log.Record) bool {
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
 	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, record)
 }
 
@@ -133,7 +133,7 @@ func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record *log.Record) 
 }
 
 // Enabled returns true.
-func (p *RedactTokensProcessor) Enabled(context.Context, *log.Record) bool {
+func (p *RedactTokensProcessor) Enabled(context.Context, log.Record) bool {
 	return true
 }
 

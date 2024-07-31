@@ -51,7 +51,7 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 }
 
 // Enabled returns true.
-func (s *SimpleProcessor) Enabled(context.Context, *Record) bool {
+func (s *SimpleProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 

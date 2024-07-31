@@ -52,7 +52,7 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 
 func TestSimpleProcessorEnabled(t *testing.T) {
 	s := log.NewSimpleProcessor(nil)
-	assert.True(t, s.Enabled(context.Background(), new(log.Record)))
+	assert.True(t, s.Enabled(context.Background(), log.Record{}))
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {
@@ -84,7 +84,7 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			_ = s.OnEmit(ctx, r)
-			_ = s.Enabled(ctx, r)
+			_ = s.Enabled(ctx, *r)
 			_ = s.Shutdown(ctx)
 			_ = s.ForceFlush(ctx)
 		}()

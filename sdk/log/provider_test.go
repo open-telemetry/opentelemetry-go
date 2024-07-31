@@ -47,7 +47,7 @@ func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p *processor) Enabled(context.Context, *Record) bool {
+func (p *processor) Enabled(context.Context, Record) bool {
 	return p.enabled
 }
 
