@@ -260,7 +260,8 @@ func (ts TraceState) Get(key string) string {
 	return ""
 }
 
-// Keys return all the keys from the TraceState in the reverse of insertion order.
+// Walk walks all key value pairs in the TraceState by calling f
+// Iteration stops if f returns false.
 func (ts TraceState) Walk(f func(key, value string) bool) {
 	for _, m := range ts.list {
 		if !f(m.Key, m.Value) {
