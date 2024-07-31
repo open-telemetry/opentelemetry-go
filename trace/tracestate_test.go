@@ -432,7 +432,7 @@ func TestTraceStateWalk(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var got = [][]string{}
+			got := [][]string{}
 			tc.tracestate.Walk(func(key, value string) bool {
 				got = append(got, []string{key, value})
 				return true
