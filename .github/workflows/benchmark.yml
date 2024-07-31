@@ -10,8 +10,7 @@ env:
 jobs:
   benchmark:
     name: Benchmarks
-    runs-on: actuated-arm64-4cpu-4gb
-    timeout-minutes: 15
+    runs-on: actuated-arm64-4cpu-16gb
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
