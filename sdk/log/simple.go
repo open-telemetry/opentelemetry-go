@@ -12,6 +12,8 @@ import (
 var _ Processor = (*SimpleProcessor)(nil)
 
 // SimpleProcessor is an processor that synchronously exports log records.
+//
+// Use [NewSimpleProcessor] to create a SimpleProcessor.
 type SimpleProcessor struct {
 	exporter Exporter
 }
@@ -25,10 +27,6 @@ type SimpleProcessor struct {
 // [NewBatchProcessor] instead. However, there may be exceptions where certain
 // [Exporter] implementations perform better with this Processor.
 func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
-	if exporter == nil {
-		// Do not panic on nil exporter.
-		exporter = defaultNoopExporter
-	}
 	return &SimpleProcessor{exporter: exporter}
 }
 
@@ -41,6 +39,10 @@ var simpleProcRecordsPool = sync.Pool{
 
 // OnEmit batches provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
+	if s.exporter == nil {
+		return nil
+	}
+
 	records := simpleProcRecordsPool.Get().(*[]Record)
 	(*records)[0] = *r
 	defer func() {
@@ -50,18 +52,26 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	return s.exporter.Export(ctx, *records)
 }
 
-// Enabled returns true.
+// Enabled returns true if the exporter is not nil.
 func (s *SimpleProcessor) Enabled(context.Context, Record) bool {
-	return true
+	return s.exporter != nil
 }
 
 // Shutdown shuts down the expoter.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
+	if s.exporter == nil {
+		return nil
+	}
+
 	return s.exporter.Shutdown(ctx)
 }
 
 // ForceFlush flushes the exporter.
 func (s *SimpleProcessor) ForceFlush(ctx context.Context) error {
+	if s.exporter == nil {
+		return nil
+	}
+
 	return s.exporter.ForceFlush(ctx)
 }
 
