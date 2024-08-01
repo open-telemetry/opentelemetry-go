@@ -38,12 +38,12 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name, enabled: true}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r Record) error {
+func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
 	}
 
-	p.records = append(p.records, r)
+	p.records = append(p.records, *r)
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (l *logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
-	l.LogSink.Info(level, msg, keysAndValues)
+	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func TestLoggerProviderLogger(t *testing.T) {

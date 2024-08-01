@@ -40,9 +40,9 @@ var simpleProcRecordsPool = sync.Pool{
 }
 
 // OnEmit batches provided log record.
-func (s *SimpleProcessor) OnEmit(ctx context.Context, r Record) error {
+func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	records := simpleProcRecordsPool.Get().(*[]Record)
-	(*records)[0] = r
+	(*records)[0] = *r
 	defer func() {
 		simpleProcRecordsPool.Put(records)
 	}()
