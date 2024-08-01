@@ -146,7 +146,31 @@ provided via API.
 Moreover it is safer to have these abstraction decoupled.
 E.g. there can be a need for some fields that can be set via API and cannot be modified by the processors.
 
+### Processor.OnEmit to accept Record values
+
+There was a proposal to make the [Processor](#processor)'s `OnEmit`
+to accept a [Record](#record) value instead of a pointer to reduce allocations
+as well as to have design similar to [`slog.Handler`](https://pkg.go.dev/log/slog#Handler).
+
+There have been long discussions within the OpenTelemetry Specification SIG[^5]
+about whether such a design would comply with the specification. The summary
+was that the current processor design flaws are present in other languages as
+well. Therefore, it would be favorable to introduce new processing concepts
+(e.g. chaining processors) in the specification that would coexist with the
+current "mutable" processor design.
+
+The performance disadvantages caused by using a pointer (which at the time of
+writing causes an additional heap allocation) may be mitigated by future
+versions of the Go compiler, thanks to improved escape analysis and
+profile-guided optimization (PGO)[^6].
+
+On the other hand, [Processor](#processor)'s `Enabled` is fine to accept
+a [Record](#record) value as the processors should not mutate the passed
+parameters.
+
 [^1]: [A Guide to the Go Garbage Collector](https://tip.golang.org/doc/gc-guide)
 [^2]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
 [^3]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
 [^4]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)
+[^5]: [Log record mutations do not have to be visible in next registered processors](https://github.com/open-telemetry/opentelemetry-specification/pull/4067)
+[^6]: [Profile-guided optimization](https://go.dev/doc/pgo)
