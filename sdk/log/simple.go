@@ -13,6 +13,7 @@ var _ Processor = (*SimpleProcessor)(nil)
 
 // SimpleProcessor is an processor that synchronously exports log records.
 type SimpleProcessor struct {
+	mu       sync.Mutex
 	exporter Exporter
 }
 
@@ -41,6 +42,9 @@ var simpleProcRecordsPool = sync.Pool{
 
 // OnEmit batches provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	records := simpleProcRecordsPool.Get().(*[]Record)
 	(*records)[0] = *r
 	defer func() {

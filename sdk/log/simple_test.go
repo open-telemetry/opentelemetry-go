@@ -5,6 +5,8 @@ package log_test
 
 import (
 	"context"
+	"io"
+	"strings"
 	"sync"
 	"testing"
 
@@ -69,6 +71,25 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
 }
 
+type writerExporter struct {
+	io.Writer
+}
+
+func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
+	for _, r := range records {
+		_, _ = io.WriteString(e.Writer, r.Body().String())
+	}
+	return nil
+}
+
+func (e *writerExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (e *writerExporter) ForceFlush(context.Context) error {
+	return nil
+}
+
 func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
@@ -78,7 +99,8 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	r := new(log.Record)
 	r.SetSeverityText("test")
 	ctx := context.Background()
-	s := log.NewSimpleProcessor(nil)
+	e := &writerExporter{new(strings.Builder)}
+	s := log.NewSimpleProcessor(e)
 	for i := 0; i < goRoutineN; i++ {
 		go func() {
 			defer wg.Done()
