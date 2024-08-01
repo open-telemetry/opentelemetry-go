@@ -46,6 +46,11 @@ type Property struct {
 //
 // The passed key must be valid, non-empty UTF-8 string.
 // If key is invalid, an error will be returned.
+// However, the specific Propagators that are used to transmit baggage entries across
+// component boundaries may impose their own restrictions on Property key.
+// For example, the W3C Baggage specification restricts the Property keys to strings that
+// satisfy the token definition from RFC7230, Section 3.2.6.
+// For maximum compatibility, alpha-numeric value are strongly recommended to be used as Property key.
 func NewKeyProperty(key string) (Property, error) {
 	if !validateBaggageName(key) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
@@ -155,6 +160,9 @@ func (p Property) Value() (string, bool) {
 
 // String encodes Property into a header string compliant with the W3C Baggage
 // specification.
+// It would return empty string if the key is invalid with the W3C Baggage
+// specification. This could happen for a UTF-8 key, as it may contain
+// invalid characters.
 func (p Property) String() string {
 	//  W3C Baggage specification does not allow percent-encoded keys.
 	if !validateKey(p.key) {
@@ -397,6 +405,9 @@ func (m Member) Properties() []Property { return m.properties.Copy() }
 
 // String encodes Member into a header string compliant with the W3C Baggage
 // specification.
+// It would return empty string if the key is invalid with the W3C Baggage
+// specification. This could happen for a UTF-8 key, as it may contain
+// invalid characters.
 func (m Member) String() string {
 	//  W3C Baggage specification does not allow percent-encoded keys.
 	if !validateKey(m.key) {
@@ -596,6 +607,9 @@ func (b Baggage) Len() int {
 
 // String encodes Baggage into a header string compliant with the W3C Baggage
 // specification.
+// It would ignore members where the member key is invalid with the W3C Baggage
+// specification. This could happen for a UTF-8 key, as it may contain
+// invalid characters.
 func (b Baggage) String() string {
 	members := make([]string, 0, len(b.list))
 	for k, v := range b.list {
