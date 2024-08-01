@@ -2,8 +2,6 @@ module go.opentelemetry.io/otel/bridge/opentracing/test
 
 go 1.21.0
 
-toolchain go1.22.5
-
 replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/bridge/opentracing => ../
