@@ -4,8 +4,9 @@
 package otel2oc
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.opencensus.io/trace/tracestate"
 
