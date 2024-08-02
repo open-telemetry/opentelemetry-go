@@ -288,6 +288,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			options: []Option{
 				WithEndpoint("test"),
+				WithEndpointURL("https://test2/path2"),
 				WithURLPath("/path"),
 				WithInsecure(),
 				WithTLSClientConfig(tlsCfg),
@@ -297,7 +298,7 @@ func TestNewConfig(t *testing.T) {
 				WithRetry(RetryConfig(rc)),
 			},
 			want: config{
-				endpoint:    newSetting("test"),
+				endpoint:    newSetting("test2"),
 				path:        newSetting("/path"),
 				insecure:    newSetting(true),
 				tlsCfg:      newSetting(tlsCfg),
