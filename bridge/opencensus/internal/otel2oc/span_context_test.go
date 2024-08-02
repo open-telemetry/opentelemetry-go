@@ -4,7 +4,7 @@
 package otel2oc
 
 import (
-	"strings"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"go.opencensus.io/trace/tracestate"
@@ -74,28 +74,7 @@ func TestSpanContextConversion(t *testing.T) {
 	} {
 		t.Run(tc.description, func(t *testing.T) {
 			output := SpanContext(tc.input)
-			if !equal(output, tc.expected) {
-				t.Fatalf("Got %+v spancontext, expected %+v.", toString(output.Tracestate), toString(tc.expected.Tracestate))
-			}
+			assert.Equal(t, tc.expected, output)
 		})
 	}
-}
-
-func equal(t1, t2 octrace.SpanContext) bool {
-	return t1.IsSampled() == t2.IsSampled() &&
-		t1.SpanID == t2.SpanID &&
-		t1.TraceID == t2.TraceID &&
-		t1.TraceOptions == t2.TraceOptions &&
-		toString(t1.Tracestate) == toString(t2.Tracestate)
-}
-
-func toString(t *tracestate.Tracestate) string {
-	result := new(strings.Builder)
-	for _, e := range t.Entries() {
-		_, _ = result.WriteString(e.Key)
-		_, _ = result.WriteString("=")
-		_, _ = result.WriteString(e.Value)
-		_, _ = result.WriteString(",")
-	}
-	return result.String()
 }

@@ -413,6 +413,7 @@ func TestTraceStateWalk(t *testing.T) {
 	testCases := []struct {
 		name       string
 		tracestate TraceState
+		num        int
 		expected   [][]string
 	}{
 		{
@@ -421,11 +422,23 @@ func TestTraceStateWalk(t *testing.T) {
 				{Key: "key1", Value: "val1"},
 				{Key: "key2", Value: "val2"},
 			}},
+			num:      3,
 			expected: [][]string{{"key1", "val1"}, {"key2", "val2"}},
 		},
 		{
+			name: "With keys walk partially",
+			tracestate: TraceState{list: []member{
+				{Key: "key1", Value: "val1"},
+				{Key: "key2", Value: "val2"},
+			}},
+			num:      1,
+			expected: [][]string{{"key1", "val1"}},
+		},
+
+		{
 			name:       "Without keys",
 			tracestate: TraceState{list: []member{}},
+			num:        2,
 			expected:   [][]string{},
 		},
 	}
@@ -435,7 +448,7 @@ func TestTraceStateWalk(t *testing.T) {
 			got := [][]string{}
 			tc.tracestate.Walk(func(key, value string) bool {
 				got = append(got, []string{key, value})
-				return true
+				return len(got) < tc.num
 			})
 			assert.Equal(t, tc.expected, got)
 		})
