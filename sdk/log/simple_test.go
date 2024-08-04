@@ -51,7 +51,8 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 }
 
 func TestSimpleProcessorEnabled(t *testing.T) {
-	s := log.NewSimpleProcessor(nil)
+	e := new(exporter)
+	s := log.NewSimpleProcessor(e)
 	assert.True(t, s.Enabled(context.Background(), log.Record{}))
 }
 
@@ -67,6 +68,18 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	s := log.NewSimpleProcessor(e)
 	_ = s.ForceFlush(context.Background())
 	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
+}
+
+func TestSimpleProcessorEmpty(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var s log.SimpleProcessor
+		ctx := context.Background()
+		record := new(log.Record)
+		assert.NoError(t, s.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, s.Enabled(ctx, *record), "Enabled")
+		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
+		assert.NoError(t, s.Shutdown(ctx), "Shutdown")
+	})
 }
 
 func TestSimpleProcessorConcurrentSafe(t *testing.T) {
