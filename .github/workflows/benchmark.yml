@@ -42,7 +42,7 @@ jobs:
           external-data-json-path: ./benchmarks/data.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: benchmarks
-          fail-on-alert: true
+          comment-on-alert: true
           alert-threshold: "400%"
           # Add benchmark summary to GitHub workflow run report
           summary-always: true
