@@ -34,6 +34,7 @@ type Processor interface {
 	// processing may cause race conditions. Use [Record.Clone]
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
+
 	// Enabled returns whether the Processor will process for the given context
 	// and record.
 	//
@@ -54,6 +55,7 @@ type Processor interface {
 	//
 	// Implementations should not modify the record.
 	Enabled(ctx context.Context, record Record) bool
+
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
@@ -63,6 +65,7 @@ type Processor interface {
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
 	Shutdown(ctx context.Context) error
+
 	// ForceFlush exports log records to the configured Exporter that have not yet
 	// been exported.
 	//
