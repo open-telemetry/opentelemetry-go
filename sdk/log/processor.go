@@ -35,27 +35,6 @@ type Processor interface {
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
 
-	// Enabled returns whether the Processor will process for the given context
-	// and record.
-	//
-	// The passed record is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a record with only the
-	// Severity set). If a Logger needs more information than is provided, it
-	// is said to be in an indeterminate state (see below).
-	//
-	// The returned value will be true when the Processor will process for the
-	// provided context and record, and will be false if the Processor will not
-	// process. The returned value may be true or false in an indeterminate
-	// state. An implementation should default to returning true for an
-	// indeterminate state, but may return false if valid reasons in particular
-	// circumstances exist (e.g. performance, correctness).
-	//
-	// The SDK invokes the processors sequentially in the same order as
-	// they were registered using [WithProcessor] until any processor returns true.
-	//
-	// Implementations should not modify the record.
-	Enabled(ctx context.Context, record Record) bool
-
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
@@ -72,4 +51,39 @@ type Processor interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	ForceFlush(ctx context.Context) error
+}
+
+// FilterProcessor is a Processor that knows, and can identify, what Record it
+// will process or drop when it passed to OnEmit.
+//
+// This is useful for users of logging APIs that want to know if they should
+// perform complex operations to emit a Record if it will be processed, or if
+// not if it will be dropped.
+//
+// This is an optional interface, and Processor implementations are not
+// required to support it. Implementations that choose to support this are
+// expected to re-evaluate the Records passed to OnEmit, it is not expected
+// that the caller to OnEmit will check if that Record will be processed or
+// dropped.
+//
+// This should only be implemented for Processors that can make reliable enough
+// determination of this prior to processing a Record.
+type FilterProcessor interface {
+	// Enabled returns whether the Processor will process for the given context
+	// and record.
+	//
+	// The passed record is likely to be a partial record with only the
+	// bridge-relevant information being provided (e.g a record with only the
+	// Severity set). If a Logger needs more information than is provided, it
+	// is said to be in an indeterminate state (see below).
+	//
+	// The returned value will be true when the Processor will process for the
+	// provided context and record, and will be false if the Processor will not
+	// process. The returned value may be true or false in an indeterminate
+	// state. An implementation should default to returning true for an
+	// indeterminate state, but may return false if valid reasons in particular
+	// circumstances exist (e.g. performance, correctness).
+	//
+	// Implementations should not modify the record.
+	Enabled(ctx context.Context, record Record) bool
 }
