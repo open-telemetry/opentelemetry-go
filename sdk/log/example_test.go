@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	logapi "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -58,7 +59,7 @@ func ExampleProcessor_filtering() {
 	// Wrap the processor so that it ignores processing log records
 	// when a context deriving from WithIgnoreLogs is passed
 	// to the logging methods.
-	processor = &ContextFilterProcessor{processor}
+	processor = &ContextFilterProcessor{Processor: processor}
 
 	// The created processor can then be registered with
 	// the OpenTelemetry Logs SDK using the WithProcessor option.
@@ -81,6 +82,9 @@ func WithIgnoreLogs(ctx context.Context) context.Context {
 // [WithIgnoreLogs] is passed to its methods.
 type ContextFilterProcessor struct {
 	log.Processor
+
+	lazyFilter sync.Once
+	filter     log.FilterProcessor
 }
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
@@ -91,7 +95,12 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 }
 
 func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
-	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, record)
+	p.lazyFilter.Do(func() {
+		if f, ok := p.Processor.(log.FilterProcessor); ok {
+			p.filter = f
+		}
+	})
+	return !ignoreLogs(ctx) && (p.filter == nil || p.filter.Enabled(ctx, record))
 }
 
 func ignoreLogs(ctx context.Context) bool {
