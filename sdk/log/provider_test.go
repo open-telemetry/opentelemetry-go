@@ -31,11 +31,10 @@ type processor struct {
 	forceFlushCalls int
 
 	records []Record
-	enabled bool
 }
 
 func newProcessor(name string) *processor {
-	return &processor{Name: name, enabled: true}
+	return &processor{Name: name}
 }
 
 func (p *processor) OnEmit(ctx context.Context, r *Record) error {
@@ -47,10 +46,6 @@ func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p *processor) Enabled(context.Context, Record) bool {
-	return p.enabled
-}
-
 func (p *processor) Shutdown(context.Context) error {
 	p.shutdownCalls++
 	return p.Err
@@ -59,6 +54,23 @@ func (p *processor) Shutdown(context.Context) error {
 func (p *processor) ForceFlush(context.Context) error {
 	p.forceFlushCalls++
 	return p.Err
+}
+
+type filterProcessor struct {
+	*processor
+
+	enabled bool
+}
+
+func newFilterProcessor(name string, enabled bool) *filterProcessor {
+	return &filterProcessor{
+		processor: newProcessor(name),
+		enabled:   enabled,
+	}
+}
+
+func (p *filterProcessor) Enabled(context.Context, Record) bool {
+	return p.enabled
 }
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {

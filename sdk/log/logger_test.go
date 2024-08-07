@@ -215,8 +215,9 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
-	p2WithDisabled.enabled = false
+	p0 := newFilterProcessor("0", true)
+	p1 := newFilterProcessor("1", true)
+	p2WithDisabled := newFilterProcessor("2", false)
 
 	testCases := []struct {
 		name     string
