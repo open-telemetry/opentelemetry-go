@@ -65,6 +65,9 @@ type LoggerProvider struct {
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 
+	fltrProcessorsOnce sync.Once
+	fltrProcessors     []FilterProcessor
+
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
@@ -88,6 +91,17 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 	}
+}
+
+func (p *LoggerProvider) filterProcessors() []FilterProcessor {
+	p.fltrProcessorsOnce.Do(func() {
+		for _, proc := range p.processors {
+			if f, ok := proc.(FilterProcessor); ok {
+				p.fltrProcessors = append(p.fltrProcessors, f)
+			}
+		}
+	})
+	return p.fltrProcessors
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
