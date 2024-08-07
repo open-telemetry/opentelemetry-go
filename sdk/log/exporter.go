@@ -34,6 +34,7 @@ type Exporter interface {
 	// Export should never be called concurrently with other Export calls.
 	// However, it may be called concurrently with other methods.
 	Export(ctx context.Context, records []Record) error
+
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
@@ -45,6 +46,7 @@ type Exporter interface {
 	//
 	// Shutdown may be called concurrently with itself or with other methods.
 	Shutdown(ctx context.Context) error
+
 	// ForceFlush exports log records to the configured Exporter that have not yet
 	// been exported.
 	//

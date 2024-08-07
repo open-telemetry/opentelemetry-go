@@ -17,7 +17,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
