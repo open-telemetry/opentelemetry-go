@@ -16,6 +16,8 @@ var _ Processor = (*SimpleProcessor)(nil)
 // Use [NewSimpleProcessor] to create a SimpleProcessor.
 type SimpleProcessor struct {
 	exporter Exporter
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 // NewSimpleProcessor is a simple Processor adapter.
