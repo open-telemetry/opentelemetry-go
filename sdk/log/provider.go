@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -66,7 +67,7 @@ type LoggerProvider struct {
 	attributeValueLengthLimit int
 
 	fltrProcessorsOnce sync.Once
-	fltrProcessors     []FilterProcessor
+	fltrProcessors     []x.FilterProcessor
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -93,10 +94,10 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	}
 }
 
-func (p *LoggerProvider) filterProcessors() []FilterProcessor {
+func (p *LoggerProvider) filterProcessors() []x.FilterProcessor {
 	p.fltrProcessorsOnce.Do(func() {
 		for _, proc := range p.processors {
-			if f, ok := proc.(FilterProcessor); ok {
+			if f, ok := proc.(x.FilterProcessor); ok {
 				p.fltrProcessors = append(p.fltrProcessors, f)
 			}
 		}

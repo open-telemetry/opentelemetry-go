@@ -215,9 +215,9 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0 := newFilterProcessor("0", true)
-	p1 := newFilterProcessor("1", true)
-	p2WithDisabled := newFilterProcessor("2", false)
+	p0 := newFltrProcessor("0", true)
+	p1 := newFltrProcessor("1", true)
+	p2WithDisabled := newFltrProcessor("2", false)
 
 	testCases := []struct {
 		name     string
@@ -277,8 +277,8 @@ func TestLoggerEnabled(t *testing.T) {
 
 func BenchmarkLoggerEnabled(b *testing.B) {
 	provider := NewLoggerProvider(
-		WithProcessor(newFilterProcessor("0", false)),
-		WithProcessor(newFilterProcessor("1", true)),
+		WithProcessor(newFltrProcessor("0", false)),
+		WithProcessor(newFltrProcessor("1", true)),
 	)
 	logger := provider.Logger("BenchmarkLoggerEnabled")
 	ctx, r := context.Background(), log.Record{}

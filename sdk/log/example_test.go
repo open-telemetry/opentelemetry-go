@@ -84,7 +84,13 @@ type ContextFilterProcessor struct {
 	log.Processor
 
 	lazyFilter sync.Once
-	filter     log.FilterProcessor
+	// Use the experimental FilterProcessor interface
+	// (go.opentelemetry.io/otel/sdk/log/internal/x).
+	filter filter
+}
+
+type filter interface {
+	Enabled(ctx context.Context, record log.Record) bool
 }
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
@@ -96,7 +102,7 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 
 func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
 	p.lazyFilter.Do(func() {
-		if f, ok := p.Processor.(log.FilterProcessor); ok {
+		if f, ok := p.Processor.(filter); ok {
 			p.filter = f
 		}
 	})

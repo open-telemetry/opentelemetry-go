@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -55,11 +56,10 @@ func (l *logger) Enabled(ctx context.Context, record log.Record) bool {
 	// that all Processors will drop the record. Therefore, return true.
 	//
 	// If all Processors are FilterProcessors, check if any is enabled.
-	return len(l.provider.processors) > len(fltrs) ||
-		anyEnabled(ctx, l.newRecord(ctx, record), fltrs)
+	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, record, fltrs)
 }
 
-func anyEnabled(ctx context.Context, r Record, fltrs []FilterProcessor) bool {
+func anyEnabled(ctx context.Context, r log.Record, fltrs []x.FilterProcessor) bool {
 	for _, f := range fltrs {
 		if f.Enabled(ctx, r) {
 			// At least one Processor will process the Record.
