@@ -19,8 +19,12 @@ A [`Processor`] that knows, and can identify, what `Record` it will process or d
 
 The SDK `Logger` will check all of the registered [`Processor`]s that implement the `FilterProcessor` interface by calling `Enabled` when the `Logger.Enabled` method is called.
 
+See the [`minsev`] [`Processor`] for an example use-case.
+It is used to filter `Record`s out that a have a `Severity` below a threshold.
+
 [`Logger`]: https://pkg.go.dev/go.opentelemetry.io/otel/log#Logger
 [`Processor`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/log#Processor
+[`minsev`]: https://pkg.go.dev/go.opentelemetry.io/contrib/processors/minsev
 
 ## Compatibility and Stability
 
