@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package x contains support for OTel log SDK experimental features.
-package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
+package x // import "go.opentelemetry.io/otel/sdk/log/internal/x"
 
 import (
 	"context"
