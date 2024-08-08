@@ -12,6 +12,10 @@ import (
 // Any of the Processor's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
+//
+// A Processor can be extended to implement the [FilterProcessor] interface if
+// it will drop certain Records within a context and can identify them prior to
+// them being emitted. See the interface for details about adding this.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
