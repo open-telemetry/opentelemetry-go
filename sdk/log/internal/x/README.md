@@ -17,7 +17,8 @@ The [`Logger`] in the Logs Bridge API provides the `Enabled` method for just thi
 In order for the Logs Bridge SDK to effectively implement this API, it needs to be known if the registered [`Processor`]s are enabled for the `Record` within a context.
 A [`Processor`] that knows, and can identify, what `Record` it will process or drop when it is passed to `OnEmit` can communicate this to the SDK `Logger` by implementing the `FilterProcessor`.
 
-The SDK `Logger` will check all of the registered [`Processor`]s that implement the `FilterProcessor` interface by calling `Enabled` when the `Logger.Enabled` method is called.
+By default, the SDK `Logger.Enabled` will return true when called.
+Only if all the registered [`Processor`]s implement `FilterProcessor` and they all return `false` will `Logger.Enabled` return `false`.
 
 See the [`minsev`] [`Processor`] for an example use-case.
 It is used to filter `Record`s out that a have a `Severity` below a threshold.
