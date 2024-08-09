@@ -15,8 +15,11 @@ func SpanContext(sc octrace.SpanContext) trace.SpanContext {
 		traceFlags = trace.FlagsSampled
 	}
 
+	entries := slices.Clone(sc.Tracestate.Entries())
+	slices.Reverse(entries)
+
 	tsOtel := trace.TraceState{}
-	for _, entry := range sc.Tracestate.Entries() {
+	for _, entry := range entries {
 		tsOtel, _ = tsOtel.Insert(entry.Key, entry.Value)
 	}
 
