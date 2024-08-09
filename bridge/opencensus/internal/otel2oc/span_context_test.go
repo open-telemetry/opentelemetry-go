@@ -73,6 +73,7 @@ func TestSpanContextConversion(t *testing.T) {
 				TraceOptions: octrace.TraceOptions(0),
 				Tracestate:   tsOc,
 			},
+			expectedTracestate: "key1=value1,key2=value2",
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
