@@ -69,6 +69,8 @@ type LoggerProvider struct {
 	loggers   map[instrumentation.Scope]*logger
 
 	stopped atomic.Bool
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 // Compile-time check LoggerProvider implements log.LoggerProvider.
