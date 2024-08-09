@@ -15,6 +15,7 @@ var _ Processor = (*SimpleProcessor)(nil)
 //
 // Use [NewSimpleProcessor] to create a SimpleProcessor.
 type SimpleProcessor struct {
+	mu       sync.Mutex
 	exporter Exporter
 }
 
@@ -42,6 +43,9 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
 		return nil
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	records := simpleProcRecordsPool.Get().(*[]Record)
 	(*records)[0] = *r
