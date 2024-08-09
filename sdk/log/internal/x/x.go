@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains support for OTel log SDK experimental features.
+// Package x contains support for Logs SDK experimental features.
 package x // import "go.opentelemetry.io/otel/sdk/log/internal/x"
 
 import (
@@ -13,7 +13,7 @@ import (
 // FilterProcessor is a [Processor] that knows, and can identify, what
 // [log.Record] it will process or drop when it is passed to OnEmit.
 //
-// This is useful for users of logging APIs that want to know if a [log.Record]
+// This is useful for users of logging libraries that want to know if a [log.Record]
 // will be processed or dropped before they perform complex operations to
 // construct the [log.Record].
 //
