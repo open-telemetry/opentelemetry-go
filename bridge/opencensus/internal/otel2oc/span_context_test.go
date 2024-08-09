@@ -4,9 +4,11 @@
 package otel2oc
 
 import (
-	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
-	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"testing"
+
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 
 	"github.com/stretchr/testify/assert"
 

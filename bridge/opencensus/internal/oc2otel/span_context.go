@@ -4,8 +4,9 @@
 package oc2otel // import "go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 
 import (
-	octrace "go.opencensus.io/trace"
 	"slices"
+
+	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/trace"
 )
