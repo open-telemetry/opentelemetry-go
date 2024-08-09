@@ -4,6 +4,8 @@
 package otel2oc
 
 import (
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,9 +30,10 @@ func TestSpanContextConversion(t *testing.T) {
 	httpFormatOc := &tracecontext.HTTPFormat{}
 
 	for _, tc := range []struct {
-		description string
-		input       trace.SpanContext
-		expected    octrace.SpanContext
+		description        string
+		input              trace.SpanContext
+		expected           octrace.SpanContext
+		expectedTracestate string
 	}{
 		{
 			description: "empty",

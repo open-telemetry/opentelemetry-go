@@ -18,8 +18,8 @@ func TestSpanContextConversion(t *testing.T) {
 		tracestate.Entry{Key: "key2", Value: "value2"},
 	)
 	tsOtel := trace.TraceState{}
-	tsOtel, _ = tsOtel.Insert("key1", "value1")
 	tsOtel, _ = tsOtel.Insert("key2", "value2")
+	tsOtel, _ = tsOtel.Insert("key1", "value1")
 
 	for _, tc := range []struct {
 		description string
