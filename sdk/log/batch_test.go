@@ -47,7 +47,6 @@ func TestEmptyBatchConfig(t *testing.T) {
 		ctx := context.Background()
 		record := new(Record)
 		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
-		assert.False(t, bp.Enabled(ctx, *record), "Enabled")
 		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
 		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
 	})
@@ -268,14 +267,6 @@ func TestBatchProcessor(t *testing.T) {
 		close(e.ExportTrigger)
 		assert.NoError(t, b.Shutdown(ctx))
 		assert.Equal(t, 3, e.ExportN())
-	})
-
-	t.Run("Enabled", func(t *testing.T) {
-		b := NewBatchProcessor(defaultNoopExporter)
-		assert.True(t, b.Enabled(ctx, Record{}))
-
-		_ = b.Shutdown(ctx)
-		assert.False(t, b.Enabled(ctx, Record{}))
 	})
 
 	t.Run("Shutdown", func(t *testing.T) {
