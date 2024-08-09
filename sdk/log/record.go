@@ -86,6 +86,8 @@ type Record struct {
 
 	attributeValueLengthLimit int
 	attributeCountLimit       int
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 func (r *Record) addDropped(n int) {
