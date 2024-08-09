@@ -17,6 +17,8 @@ var _ Processor = (*SimpleProcessor)(nil)
 type SimpleProcessor struct {
 	mu       sync.Mutex
 	exporter Exporter
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 // NewSimpleProcessor is a simple Processor adapter.
