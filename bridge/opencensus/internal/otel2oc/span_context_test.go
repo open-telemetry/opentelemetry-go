@@ -79,6 +79,15 @@ func TestSpanContextConversion(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			output := SpanContext(tc.input)
 			assert.Equal(t, tc.expected, output)
+
+			// Ensure the otel tracestate and oc tracestate has the same header output
+			_, ts := httpFormatOc.SpanContextToHeaders(tc.expected)
+			assert.Equal(t, tc.expectedTracestate, ts)
+			assert.Equal(t, tc.expectedTracestate, tc.input.TraceState().String())
+
+			// The reverse conversion should yield the original input
+			input := oc2otel.SpanContext(output)
+			assert.Equal(t, tc.input, input)
 		})
 	}
 }
