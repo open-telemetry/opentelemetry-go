@@ -1,215 +1,142 @@
 // Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/otlp/envconfig/envconfig.go.tmpl
+// source: internal/shared/otlp/otlptrace/otlpconfig/envconfig.go.tmpl
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
+package otlpconfig
 
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
-	"fmt"
 	"net/url"
-	"strconv"
+	"os"
+	"path"
 	"strings"
 	"time"
-	"unicode"
 
-	"go.opentelemetry.io/otel/internal/global"
+	"{{ .envconfigImportPath }}"
 )
 
-// ConfigFn is the generic function used to set a config.
-type ConfigFn func(*EnvOptionsReader)
-
-// EnvOptionsReader reads the required environment variables.
-type EnvOptionsReader struct {
-	GetEnv    func(string) string
-	ReadFile  func(string) ([]byte, error)
-	Namespace string
+// DefaultEnvOptionsReader is the default environments reader.
+var DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
+	GetEnv:    os.Getenv,
+	ReadFile:  os.ReadFile,
+	Namespace: "OTEL_EXPORTER_OTLP",
 }
 
-// Apply runs every ConfigFn.
-func (e *EnvOptionsReader) Apply(opts ...ConfigFn) {
-	for _, o := range opts {
-		o(e)
+// ApplyGRPCEnvConfigs applies the env configurations for gRPC.
+func ApplyGRPCEnvConfigs(cfg Config) Config {
+	opts := getOptionsFromEnv()
+	for _, opt := range opts {
+		cfg = opt.ApplyGRPCOption(cfg)
+	}
+	return cfg
+}
+
+// ApplyHTTPEnvConfigs applies the env configurations for HTTP.
+func ApplyHTTPEnvConfigs(cfg Config) Config {
+	opts := getOptionsFromEnv()
+	for _, opt := range opts {
+		cfg = opt.ApplyHTTPOption(cfg)
+	}
+	return cfg
+}
+
+func getOptionsFromEnv() []GenericOption {
+	opts := []GenericOption{}
+
+	tlsConf := &tls.Config{}
+	DefaultEnvOptionsReader.Apply(
+		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Traces.Endpoint = u.Host
+				// For OTLP/HTTP endpoint URLs without a per-signal
+				// configuration, the passed endpoint is used as a base URL
+				// and the signals are sent to these paths relative to that.
+				cfg.Traces.URLPath = path.Join(u.Path, DefaultTracesPath)
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		envconfig.WithURL("TRACES_ENDPOINT", func(u *url.URL) {
+			opts = append(opts, withEndpointScheme(u))
+			opts = append(opts, newSplitOption(func(cfg Config) Config {
+				cfg.Traces.Endpoint = u.Host
+				// For endpoint URLs for OTLP/HTTP per-signal variables, the
+				// URL MUST be used as-is without any modification. The only
+				// exception is that if an URL contains no path part, the root
+				// path / MUST be used.
+				path := u.Path
+				if path == "" {
+					path = "/"
+				}
+				cfg.Traces.URLPath = path
+				return cfg
+			}, withEndpointForGRPC(u)))
+		}),
+		envconfig.WithCertPool("CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
+		envconfig.WithCertPool("TRACES_CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
+		envconfig.WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} }),
+		envconfig.WithClientCert("TRACES_CLIENT_CERTIFICATE", "TRACES_CLIENT_KEY", func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} }),
+		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
+		envconfig.WithBool("INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithBool("TRACES_INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
+		envconfig.WithHeaders("TRACES_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
+		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		WithEnvCompression("TRACES_COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
+		envconfig.WithDuration("TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+		envconfig.WithDuration("TRACES_TIMEOUT", func(d time.Duration) { opts = append(opts, WithTimeout(d)) }),
+	)
+
+	return opts
+}
+
+func withEndpointScheme(u *url.URL) GenericOption {
+	switch strings.ToLower(u.Scheme) {
+	case "http", "unix":
+		return WithInsecure()
+	default:
+		return WithSecure()
 	}
 }
 
-// GetEnvValue gets an OTLP environment variable value of the specified key
-// using the GetEnv function.
-// This function prepends the OTLP specified namespace to all key lookups.
-func (e *EnvOptionsReader) GetEnvValue(key string) (string, bool) {
-	v := strings.TrimSpace(e.GetEnv(keyWithNamespace(e.Namespace, key)))
-	return v, v != ""
-}
-
-// WithString retrieves the specified config and passes it to ConfigFn as a string.
-func WithString(n string, fn func(string)) func(e *EnvOptionsReader) {
-	return func(e *EnvOptionsReader) {
-		if v, ok := e.GetEnvValue(n); ok {
-			fn(v)
-		}
+func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
+	return func(cfg Config) Config {
+		// For OTLP/gRPC endpoints, this is the target to which the
+		// exporter is going to send telemetry.
+		cfg.Traces.Endpoint = path.Join(u.Host, u.Path)
+		return cfg
 	}
 }
 
-// WithBool returns a ConfigFn that reads the environment variable n and if it exists passes its parsed bool value to fn.
-func WithBool(n string, fn func(bool)) ConfigFn {
-	return func(e *EnvOptionsReader) {
+// WithEnvCompression retrieves the specified config and passes it to ConfigFn as a Compression.
+func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			b := strings.ToLower(v) == "true"
-			fn(b)
-		}
-	}
-}
-
-// WithDuration retrieves the specified config and passes it to ConfigFn as a duration.
-func WithDuration(n string, fn func(time.Duration)) func(e *EnvOptionsReader) {
-	return func(e *EnvOptionsReader) {
-		if v, ok := e.GetEnvValue(n); ok {
-			d, err := strconv.Atoi(v)
-			if err != nil {
-				global.Error(err, "parse duration", "input", v)
-				return
+			cp := NoCompression
+			if v == "gzip" {
+				cp = GzipCompression
 			}
-			fn(time.Duration(d) * time.Millisecond)
+
+			fn(cp)
 		}
 	}
 }
 
-// WithHeaders retrieves the specified config and passes it to ConfigFn as a map of HTTP headers.
-func WithHeaders(n string, fn func(map[string]string)) func(e *EnvOptionsReader) {
-	return func(e *EnvOptionsReader) {
-		if v, ok := e.GetEnvValue(n); ok {
-			fn(stringToHeader(v))
-		}
+// revive:disable-next-line:flag-parameter
+func withInsecure(b bool) GenericOption {
+	if b {
+		return WithInsecure()
 	}
+	return WithSecure()
 }
 
-// WithURL retrieves the specified config and passes it to ConfigFn as a net/url.URL.
-func WithURL(n string, fn func(*url.URL)) func(e *EnvOptionsReader) {
-	return func(e *EnvOptionsReader) {
-		if v, ok := e.GetEnvValue(n); ok {
-			u, err := url.Parse(v)
-			if err != nil {
-				global.Error(err, "parse url", "input", v)
-				return
-			}
-			fn(u)
-		}
-	}
-}
-
-// WithCertPool returns a ConfigFn that reads the environment variable n as a filepath to a TLS certificate pool. If it exists, it is parsed as a crypto/x509.CertPool and it is passed to fn.
-func WithCertPool(n string, fn func(*x509.CertPool)) ConfigFn {
-	return func(e *EnvOptionsReader) {
-		if v, ok := e.GetEnvValue(n); ok {
-			b, err := e.ReadFile(v)
-			if err != nil {
-				global.Error(err, "read tls ca cert file", "file", v)
-				return
-			}
-			c, err := createCertPool(b)
-			if err != nil {
-				global.Error(err, "create tls cert pool")
-				return
-			}
+func withTLSConfig(c *tls.Config, fn func(*tls.Config)) func(e *envconfig.EnvOptionsReader) {
+	return func(e *envconfig.EnvOptionsReader) {
+		if c.RootCAs != nil || len(c.Certificates) > 0 {
 			fn(c)
 		}
 	}
-}
-
-// WithClientCert returns a ConfigFn that reads the environment variable nc and nk as filepaths to a client certificate and key pair. If they exists, they are parsed as a crypto/tls.Certificate and it is passed to fn.
-func WithClientCert(nc, nk string, fn func(tls.Certificate)) ConfigFn {
-	return func(e *EnvOptionsReader) {
-		vc, okc := e.GetEnvValue(nc)
-		vk, okk := e.GetEnvValue(nk)
-		if !okc || !okk {
-			return
-		}
-		cert, err := e.ReadFile(vc)
-		if err != nil {
-			global.Error(err, "read tls client cert", "file", vc)
-			return
-		}
-		key, err := e.ReadFile(vk)
-		if err != nil {
-			global.Error(err, "read tls client key", "file", vk)
-			return
-		}
-		crt, err := tls.X509KeyPair(cert, key)
-		if err != nil {
-			global.Error(err, "create tls client key pair")
-			return
-		}
-		fn(crt)
-	}
-}
-
-func keyWithNamespace(ns, key string) string {
-	if ns == "" {
-		return key
-	}
-	return fmt.Sprintf("%s_%s", ns, key)
-}
-
-func stringToHeader(value string) map[string]string {
-	headersPairs := strings.Split(value, ",")
-	headers := make(map[string]string)
-
-	for _, header := range headersPairs {
-		n, v, found := strings.Cut(header, "=")
-		if !found {
-			global.Error(errors.New("missing '="), "parse headers", "input", header)
-			continue
-		}
-
-		trimmedName := strings.TrimSpace(n)
-
-		// Validate the key
-		if !isValidHeaderKey(trimmedName) {
-			global.Error(errors.New("invalid header key"), "parse headers", "key", trimmedName)
-			continue
-		}
-
-		// Only decode the value
-		value, err := url.QueryUnescape(v)
-		if err != nil {
-			global.Error(err, "unescape header value", "value", v)
-			continue
-		}
-		trimmedValue := strings.TrimSpace(value)
-
-		headers[trimmedName] = trimmedValue
-	}
-
-	return headers
-}
-
-func createCertPool(certBytes []byte) (*x509.CertPool, error) {
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(certBytes); !ok {
-		return nil, errors.New("failed to append certificate to the cert pool")
-	}
-	return cp, nil
-}
-
-func isValidHeaderKey(key string) bool {
-	if key == "" {
-		return false
-	}
-	for _, c := range key {
-		if !isTokenChar(c) {
-			return false
-		}
-	}
-	return true
-}
-
-func isTokenChar(c rune) bool {
-	return c <= unicode.MaxASCII && (unicode.IsLetter(c) ||
-		unicode.IsDigit(c) ||
-		c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' ||
-		c == '+' || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~')
 }
