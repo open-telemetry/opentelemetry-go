@@ -186,6 +186,11 @@ func expectedJSON(now time.Time) string {
 			}
 		}
 	],
+	"InstrumentationScope": {
+		"Name": "",
+		"Version": "",
+		"SchemaURL": ""
+	},
 	"InstrumentationLibrary": {
 		"Name": "",
 		"Version": "",

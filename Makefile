@@ -14,8 +14,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes test-default
-ci: generate license-check lint vanity-import-check verify-readmes build test-default check-clean-work-tree test-coverage
+precommit: generate license-check misspell go-mod-tidy golangci-lint-fix verify-readmes verify-mods test-default
+ci: generate license-check lint vanity-import-check verify-readmes verify-mods build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -178,17 +178,14 @@ test-coverage: $(GOCOVMERGE)
 	done; \
 	$(GOCOVMERGE) $$(find . -name coverage.out) > coverage.txt
 
-# Adding a directory will include all benchmarks in that directory if a filter is not specified.
-BENCHMARK_TARGETS := sdk/trace
 .PHONY: benchmark
-benchmark: $(BENCHMARK_TARGETS:%=benchmark/%)
-BENCHMARK_FILTER = .
-# You can override the filter for a particular directory by adding a rule here.
-benchmark/sdk/trace: BENCHMARK_FILTER = SpanWithAttributes_8/AlwaysSample
+benchmark: $(OTEL_GO_MOD_DIRS:%=benchmark/%)
 benchmark/%:
-	@echo "$(GO) test -timeout $(TIMEOUT)s -run=xxxxxMatchNothingxxxxx -bench=$(BENCHMARK_FILTER) $*..." \
+	@echo "$(GO) test -run=xxxxxMatchNothingxxxxx -bench=. $*..." \
 		&& cd $* \
-		$(foreach filter, $(BENCHMARK_FILTER), && $(GO) test -timeout $(TIMEOUT)s -run=xxxxxMatchNothingxxxxx -bench=$(filter))
+		&& $(GO) list ./... \
+		| grep -v third_party \
+		| xargs $(GO) test -run=xxxxxMatchNothingxxxxx -bench=.
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
@@ -277,16 +274,20 @@ gorelease/%:| $(GORELEASE)
 		&& $(GORELEASE) \
 		|| echo ""
 
+.PHONY: verify-mods
+verify-mods: $(MULTIMOD)
+	$(MULTIMOD) verify
+
 .PHONY: prerelease
-prerelease: $(MULTIMOD)
+prerelease: verify-mods
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
-	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
+	$(MULTIMOD) prerelease -m ${MODSET}
 
 COMMIT ?= "HEAD"
 .PHONY: add-tags
-add-tags: $(MULTIMOD)
+add-tags: verify-mods
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
-	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
+	$(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
 .PHONY: lint-markdown
 lint-markdown:

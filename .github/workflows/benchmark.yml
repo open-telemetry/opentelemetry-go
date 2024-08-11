@@ -1,17 +1,16 @@
 name: Benchmark
 on:
   push:
-    tags:
-      - v1.* 
+    branches:
+      - main
   workflow_dispatch: 
 
 env:
-  DEFAULT_GO_VERSION: "~1.22.4"
+  DEFAULT_GO_VERSION: "~1.22.5"
 jobs:
   benchmark:
     name: Benchmarks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -22,10 +21,12 @@ jobs:
       - name: Run benchmarks
         run: make benchmark | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ./benchmarks
-          key: ${{ runner.os }}-benchmark
+          # `github.event.before` means the commit before the push (i.e. the previous commit).
+          # So we can fetch the exact benchmark data from the previous commit.
+          key: ${{ runner.os }}-benchmark-${{ github.event.before }}
       - name: Store benchmarks result
         uses: benchmark-action/github-action-benchmark@v1.20.3
         with:
@@ -37,3 +38,13 @@ jobs:
           gh-pages-branch: benchmarks
           fail-on-alert: true
           alert-threshold: "400%"
+          # Add benchmark summary to GitHub workflow run report
+          summary-always: true
+      - name: Save benchmark data
+        uses: actions/cache/save@v4
+        # The cache will be saved even if a step fails.
+        if: always()
+        with:
+          path: ./benchmarks
+          # Use the current commit SHA as the cache key.
+          key: ${{ runner.os }}-benchmark-${{ github.sha }}

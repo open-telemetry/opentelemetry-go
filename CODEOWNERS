@@ -5,7 +5,7 @@
 #####################################################
 #
 # Learn about membership in OpenTelemetry community:
-#  https://github.com/open-telemetry/community/blob/main/community-membership.md
+#  https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md
 #
 #
 # Learn about CODEOWNERS file format:
@@ -14,4 +14,4 @@
 
 * @MrAlias @XSAM @dashpole @MadVikingGod @pellared @hanyuancheung @dmathieu
 
-CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
+CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole @XSAM @dmathieu

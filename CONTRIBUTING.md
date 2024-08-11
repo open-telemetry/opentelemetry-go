@@ -628,15 +628,15 @@ should be canceled.
 
 ### Approvers
 
-- [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
-- [Damien Mathieu](https://github.com/dmathieu), Elastic
 
 ### Maintainers
 
-- [David Ashpole](https://github.com/dashpole), Google
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
+- [Damien Mathieu](https://github.com/dmathieu), Elastic
+- [David Ashpole](https://github.com/dashpole), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
+- [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus
@@ -650,7 +650,7 @@ should be canceled.
 ### Become an Approver or a Maintainer
 
 See the [community membership document in OpenTelemetry community
-repo](https://github.com/open-telemetry/community/blob/main/community-membership.md).
+repo](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md).
 
 [Approver]: #approvers
 [Maintainer]: #maintainers

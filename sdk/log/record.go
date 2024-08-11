@@ -86,6 +86,8 @@ type Record struct {
 
 	attributeValueLengthLimit int
 	attributeCountLimit       int
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 func (r *Record) addDropped(n int) {
@@ -166,6 +168,7 @@ func (r *Record) WalkAttributes(f func(log.KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
+// Attributes in attrs will overwrite any attribute already added to r with the same key.
 func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	n := r.AttributesLen()
 	if n == 0 {

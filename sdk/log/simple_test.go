@@ -5,6 +5,8 @@ package log_test
 
 import (
 	"context"
+	"io"
+	"strings"
 	"sync"
 	"testing"
 
@@ -42,16 +44,17 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
 
-	var r log.Record
+	r := new(log.Record)
 	r.SetSeverityText("test")
 	_ = s.OnEmit(context.Background(), r)
 
 	require.True(t, e.exportCalled, "exporter Export not called")
-	assert.Equal(t, []log.Record{r}, e.records)
+	assert.Equal(t, []log.Record{*r}, e.records)
 }
 
 func TestSimpleProcessorEnabled(t *testing.T) {
-	s := log.NewSimpleProcessor(nil)
+	e := new(exporter)
+	s := log.NewSimpleProcessor(e)
 	assert.True(t, s.Enabled(context.Background(), log.Record{}))
 }
 
@@ -69,22 +72,54 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
 }
 
+type writerExporter struct {
+	io.Writer
+}
+
+func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
+	for _, r := range records {
+		_, _ = io.WriteString(e.Writer, r.Body().String())
+	}
+	return nil
+}
+
+func (e *writerExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (e *writerExporter) ForceFlush(context.Context) error {
+	return nil
+}
+
+func TestSimpleProcessorEmpty(t *testing.T) {
+	assert.NotPanics(t, func() {
+		var s log.SimpleProcessor
+		ctx := context.Background()
+		record := new(log.Record)
+		assert.NoError(t, s.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, s.Enabled(ctx, *record), "Enabled")
+		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
+		assert.NoError(t, s.Shutdown(ctx), "Shutdown")
+	})
+}
+
 func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup
 	wg.Add(goRoutineN)
 
-	var r log.Record
+	r := new(log.Record)
 	r.SetSeverityText("test")
 	ctx := context.Background()
-	s := log.NewSimpleProcessor(nil)
+	e := &writerExporter{new(strings.Builder)}
+	s := log.NewSimpleProcessor(e)
 	for i := 0; i < goRoutineN; i++ {
 		go func() {
 			defer wg.Done()
 
 			_ = s.OnEmit(ctx, r)
-			_ = s.Enabled(ctx, r)
+			_ = s.Enabled(ctx, *r)
 			_ = s.Shutdown(ctx)
 			_ = s.ForceFlush(ctx)
 		}()
@@ -94,7 +129,7 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
-	var r log.Record
+	r := new(log.Record)
 	r.SetSeverityText("test")
 	ctx := context.Background()
 	s := log.NewSimpleProcessor(nil)
