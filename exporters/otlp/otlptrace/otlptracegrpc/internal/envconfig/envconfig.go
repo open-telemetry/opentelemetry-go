@@ -176,7 +176,7 @@ func stringToHeader(value string) map[string]string {
 		// Only decode the value
 		value, err := url.PathUnescape(v)
 		if err != nil {
-			global.Error(err, "unescape header value", "value", v)
+			global.Error(err, "escape header value", "value", v)
 			continue
 		}
 		trimmedValue := strings.TrimSpace(value)
