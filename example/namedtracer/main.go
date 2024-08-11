@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Create a named tracer with package path as its name.
-	tracer := tp.Tracer("example/namedtracer/main")
+	tracer := tp.Tracer("go.opentelemetry.io/otel/example/namedtracer")
 	ctx := context.Background()
 	defer func() { _ = tp.Shutdown(ctx) }()
 

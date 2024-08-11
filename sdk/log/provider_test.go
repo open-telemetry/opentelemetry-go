@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -36,12 +38,12 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name, enabled: true}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r Record) error {
+func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
 	}
 
-	p.records = append(p.records, r)
+	p.records = append(p.records, *r)
 	return nil
 }
 
@@ -189,7 +191,7 @@ func (l *logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
-	l.LogSink.Info(level, msg, keysAndValues)
+	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func TestLoggerProviderLogger(t *testing.T) {
@@ -286,4 +288,23 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		ctx := context.Background()
 		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
 	})
+}
+
+func BenchmarkLoggerProviderLogger(b *testing.B) {
+	p := NewLoggerProvider()
+	names := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		names[i] = fmt.Sprintf("%d logger", i)
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	loggers := make([]log.Logger, b.N)
+	for i := 0; i < b.N; i++ {
+		loggers[i] = p.Logger(names[i])
+	}
+
+	b.StopTimer()
+	loggers[0].Enabled(context.Background(), log.Record{})
 }

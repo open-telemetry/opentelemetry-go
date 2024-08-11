@@ -130,6 +130,26 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Endpoint last used",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/somepath"),
+				WithEndpoint("someendpoint2"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint2", c.Metrics.Endpoint)
+			},
+		},
+		{
+			name: "Test With WithEndpointURL last used",
+			opts: []GenericOption{
+				WithEndpoint("someendpoint2"),
+				WithEndpointURL("https://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
@@ -161,13 +181,29 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Mixed Environment and With Endpoint",
 			opts: []GenericOption{
+				WithEndpointURL("https://metrics_endpoint2/somepath"),
 				WithEndpoint("metrics_endpoint"),
 			},
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "env_endpoint",
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_endpoint2",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "metrics_endpoint", c.Metrics.Endpoint)
+			},
+		},
+		{
+			name: "Test Mixed Environment and With Endpoint",
+			opts: []GenericOption{
+				WithEndpoint("metrics_endpoint"),
+				WithEndpointURL("https://metrics_endpoint2/somepath"),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "env_endpoint",
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "env_endpoint2",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "metrics_endpoint2", c.Metrics.Endpoint)
 			},
 		},
 		{
@@ -376,7 +412,7 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test With Timeout",
 			opts: []GenericOption{
-				WithTimeout(time.Duration(5 * time.Second)),
+				WithTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, 5*time.Second, c.Metrics.Timeout)

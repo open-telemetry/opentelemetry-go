@@ -9,8 +9,11 @@ linters:
   disable-all: true
   # Specifically enable linters we want to use.
   enable:
+    - asasalint
+    - bodyclose
     - depguard
     - errcheck
+    - errorlint
     - godot
     - gofumpt
     - goimports
@@ -21,8 +24,11 @@ linters:
     - misspell
     - revive
     - staticcheck
+    - tenv
     - typecheck
+    - unconvert
     - unused
+    - unparam
 
 issues:
   # Maximum issues count per one linter.

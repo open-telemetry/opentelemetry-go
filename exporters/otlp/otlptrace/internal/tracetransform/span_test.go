@@ -280,7 +280,7 @@ func TestSpanData(t *testing.T) {
 			attribute.Int64("rk2", 5),
 			attribute.StringSlice("rk3", []string{"sv1", "sv2"}),
 		),
-		InstrumentationLibrary: instrumentation.Scope{
+		InstrumentationScope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/test/otel",
 			Version:   "v0.0.1",
 			SchemaURL: semconv.SchemaURL,
@@ -316,8 +316,8 @@ func TestSpanData(t *testing.T) {
 	assert.Equal(t, got[0].SchemaUrl, spanData.Resource.SchemaURL())
 	scopeSpans := got[0].GetScopeSpans()
 	require.Len(t, scopeSpans, 1)
-	assert.Equal(t, scopeSpans[0].SchemaUrl, spanData.InstrumentationLibrary.SchemaURL)
-	assert.Equal(t, scopeSpans[0].GetScope(), InstrumentationScope(spanData.InstrumentationLibrary))
+	assert.Equal(t, scopeSpans[0].SchemaUrl, spanData.InstrumentationScope.SchemaURL)
+	assert.Equal(t, scopeSpans[0].GetScope(), InstrumentationScope(spanData.InstrumentationScope))
 	require.Len(t, scopeSpans[0].Spans, 1)
 	actualSpan := scopeSpans[0].Spans[0]
 
@@ -346,5 +346,35 @@ func TestSpanDataNilResource(t *testing.T) {
 		Spans(tracetest.SpanStubs{
 			{},
 		}.Snapshots())
+	})
+}
+
+func BenchmarkSpans(b *testing.B) {
+	records := []tracesdk.ReadOnlySpan{
+		tracetest.SpanStub{
+			Attributes: []attribute.KeyValue{
+				attribute.String("a", "b"),
+				attribute.String("b", "b"),
+				attribute.String("c", "b"),
+				attribute.String("d", "b"),
+			},
+			Links: []tracesdk.Link{
+				{},
+				{},
+				{},
+				{},
+				{},
+			},
+		}.Snapshot(),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		var out []*tracepb.ResourceSpans
+		for pb.Next() {
+			out = Spans(records)
+		}
+		_ = out
 	})
 }

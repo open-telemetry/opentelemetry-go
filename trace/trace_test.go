@@ -5,13 +5,10 @@ package trace
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestSpanContextIsValid(t *testing.T) {
@@ -460,80 +457,6 @@ func TestStringSpanID(t *testing.T) {
 	}
 }
 
-func TestValidateSpanKind(t *testing.T) {
-	tests := []struct {
-		in   SpanKind
-		want SpanKind
-	}{
-		{
-			SpanKindUnspecified,
-			SpanKindInternal,
-		},
-		{
-			SpanKindInternal,
-			SpanKindInternal,
-		},
-		{
-			SpanKindServer,
-			SpanKindServer,
-		},
-		{
-			SpanKindClient,
-			SpanKindClient,
-		},
-		{
-			SpanKindProducer,
-			SpanKindProducer,
-		},
-		{
-			SpanKindConsumer,
-			SpanKindConsumer,
-		},
-	}
-	for _, test := range tests {
-		if got := ValidateSpanKind(test.in); got != test.want {
-			t.Errorf("ValidateSpanKind(%#v) = %#v, want %#v", test.in, got, test.want)
-		}
-	}
-}
-
-func TestSpanKindString(t *testing.T) {
-	tests := []struct {
-		in   SpanKind
-		want string
-	}{
-		{
-			SpanKindUnspecified,
-			"unspecified",
-		},
-		{
-			SpanKindInternal,
-			"internal",
-		},
-		{
-			SpanKindServer,
-			"server",
-		},
-		{
-			SpanKindClient,
-			"client",
-		},
-		{
-			SpanKindProducer,
-			"producer",
-		},
-		{
-			SpanKindConsumer,
-			"consumer",
-		},
-	}
-	for _, test := range tests {
-		if got := test.in.String(); got != test.want {
-			t.Errorf("%#v.String() = %#v, want %#v", test.in, got, test.want)
-		}
-	}
-}
-
 func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
 	return got.spanID == want.spanID &&
 		got.traceID == want.traceID &&
@@ -631,15 +554,20 @@ func TestSpanContextDerivation(t *testing.T) {
 	}
 }
 
-func TestLinkFromContext(t *testing.T) {
-	k1v1 := attribute.String("key1", "value1")
-	spanCtx := SpanContext{traceID: TraceID([16]byte{1}), remote: true}
+func TestConfigLinkMutability(t *testing.T) {
+	sc0 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{1}})
+	sc1 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{2}})
+	sc2 := NewSpanContext(SpanContextConfig{TraceID: [16]byte{3}})
+	l0 := Link{SpanContext: sc0}
+	l1 := Link{SpanContext: sc1}
+	l2 := Link{SpanContext: sc2}
 
-	receiverCtx := ContextWithRemoteSpanContext(context.Background(), spanCtx)
-	link := LinkFromContext(receiverCtx, k1v1)
+	links := []Link{l0, l1}
+	conf := NewSpanStartConfig(WithLinks(links...))
 
-	if !assertSpanContextEqual(link.SpanContext, spanCtx) {
-		t.Fatalf("LinkFromContext: Unexpected context created: %s", cmp.Diff(link.SpanContext, spanCtx))
-	}
-	assert.Equal(t, link.Attributes[0], k1v1)
+	// Mutating passed arg should not change configured links.
+	links[0] = l2
+
+	want := SpanConfig{links: []Link{l0, l1}}
+	assert.Equal(t, want, conf)
 }

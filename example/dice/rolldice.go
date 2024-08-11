@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-const name = "rolldice"
+const name = "go.opentelemetry.io/otel/example/dice"
 
 var (
 	tracer  = otel.Tracer(name)
