@@ -6,6 +6,11 @@ package oc2otel
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
+
 	octrace "go.opencensus.io/trace"
 	"go.opencensus.io/trace/tracestate"
 
@@ -21,10 +26,13 @@ func TestSpanContextConversion(t *testing.T) {
 	tsOtel, _ = tsOtel.Insert("key2", "value2")
 	tsOtel, _ = tsOtel.Insert("key1", "value1")
 
+	httpFormatOc := &tracecontext.HTTPFormat{}
+
 	for _, tc := range []struct {
-		description string
-		input       octrace.SpanContext
-		expected    trace.SpanContext
+		description        string
+		input              octrace.SpanContext
+		expected           trace.SpanContext
+		expectedTracestate string
 	}{
 		{
 			description: "empty",
@@ -66,13 +74,21 @@ func TestSpanContextConversion(t *testing.T) {
 				SpanID:     trace.SpanID([8]byte{2}),
 				TraceState: tsOtel,
 			}),
+			expectedTracestate: "key1=value1,key2=value2",
 		},
 	} {
 		t.Run(tc.description, func(t *testing.T) {
 			output := SpanContext(tc.input)
-			if !output.Equal(tc.expected) {
-				t.Fatalf("Got %+v spancontext, expected %+v.", output, tc.expected)
-			}
+			assert.Equal(t, tc.expected, output)
+
+			// Ensure the otel tracestate and oc tracestate has the same header output
+			_, ts := httpFormatOc.SpanContextToHeaders(tc.input)
+			assert.Equal(t, tc.expectedTracestate, ts)
+			assert.Equal(t, tc.expectedTracestate, tc.expected.TraceState().String())
+
+			// The reverse conversion should yield the original input
+			input := otel2oc.SpanContext(output)
+			assert.Equal(t, tc.input, input)
 		})
 	}
 }
