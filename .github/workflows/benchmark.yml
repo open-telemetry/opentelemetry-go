@@ -10,7 +10,7 @@ env:
 jobs:
   benchmark:
     name: Benchmarks
-    runs-on: actuated-arm64-4cpu-16gb
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -21,18 +21,12 @@ jobs:
       - name: Run benchmarks
         run: make benchmark | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ./benchmarks
-          # Use the current commit SHA as the cache key.
-          # This key won't exist on the first run, so the cache match falls back to restore-keys.
-          # Though, it won't be matched, the cache created will use this key as the cache key.
-          # So the next commit will be able to restore this cache (from the restore-keys).
-          # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#matching-a-cache-key
-          key: ${{ runner.os }}-benchmark-${{ github.sha }}
           # `github.event.before` means the commit before the push (i.e. the previous commit).
           # So we can fetch the exact benchmark data from the previous commit.
-          restore-keys: ${{ runner.os }}-benchmark-${{ github.event.before }}
+          key: ${{ runner.os }}-benchmark-${{ github.event.before }}
       - name: Store benchmarks result
         uses: benchmark-action/github-action-benchmark@v1.20.3
         with:
@@ -46,3 +40,11 @@ jobs:
           alert-threshold: "400%"
           # Add benchmark summary to GitHub workflow run report
           summary-always: true
+      - name: Save benchmark data
+        uses: actions/cache/save@v4
+        # The cache will be saved even if a step fails.
+        if: always()
+        with:
+          path: ./benchmarks
+          # Use the current commit SHA as the cache key.
+          key: ${{ runner.os }}-benchmark-${{ github.sha }}
