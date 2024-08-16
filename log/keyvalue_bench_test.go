@@ -225,7 +225,9 @@ func BenchmarkValueEqual(b *testing.B) {
 		for _, v2 := range vals {
 			b.Run(v1.String()+" with "+v2.String(), func(b *testing.B) {
 				b.ReportAllocs()
-				_ = v1.Equal(v2)
+				for i := 0; i < b.N; i++ {
+					_ = v1.Equal(v2)
+				}
 			})
 		}
 	}
