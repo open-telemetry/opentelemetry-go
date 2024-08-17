@@ -124,12 +124,22 @@ func TestParsePropertyError(t *testing.T) {
 
 func TestNewKeyProperty(t *testing.T) {
 	p, err := NewKeyProperty(" ")
-	assert.ErrorIs(t, err, errInvalidKey)
-	assert.Equal(t, Property{}, p)
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: " "}, p)
 
 	p, err = NewKeyProperty("key")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key"}, p)
+
+	// UTF-8 key
+	p, err = NewKeyProperty("B% 💼")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "B% 💼"}, p)
+
+	// Invalid UTF-8 key
+	p, err = NewKeyProperty(string([]byte{255}))
+	assert.ErrorIs(t, err, errInvalidKey)
+	assert.Equal(t, Property{}, p)
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
@@ -141,19 +151,46 @@ func TestNewKeyValueProperty(t *testing.T) {
 	assert.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
+	// it won't use percent decoding for key
+	p, err = NewKeyValueProperty("%zzzzz", "value")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "%zzzzz", value: "value", hasValue: true}, p)
+
+	// wrong value with wrong decoding
+	p, err = NewKeyValueProperty("key", "%zzzzz")
+	assert.ErrorIs(t, err, errInvalidValue)
+	assert.Equal(t, Property{}, p)
+
 	p, err = NewKeyValueProperty("key", "value")
 	assert.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
+
+	// Percent-encoded value
+	p, err = NewKeyValueProperty("key", "%C4%85%C5%9B%C4%87")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "key", value: "ąść", hasValue: true}, p)
 }
 
 func TestNewKeyValuePropertyRaw(t *testing.T) {
-	p, err := NewKeyValuePropertyRaw(" ", "")
+	// Empty key
+	p, err := NewKeyValuePropertyRaw("", " ")
 	assert.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
-	p, err = NewKeyValuePropertyRaw("key", "Witaj Świecie!")
+	// Empty value
+	// Empty string is also a valid UTF-8 string.
+	p, err = NewKeyValuePropertyRaw(" ", "")
 	assert.NoError(t, err)
-	assert.Equal(t, Property{key: "key", value: "Witaj Świecie!", hasValue: true}, p)
+	assert.Equal(t, Property{key: " ", hasValue: true}, p)
+
+	// Space value
+	p, err = NewKeyValuePropertyRaw(" ", " ")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: " ", value: " ", hasValue: true}, p)
+
+	p, err = NewKeyValuePropertyRaw("B% 💼", "Witaj Świecie!")
+	assert.NoError(t, err)
+	assert.Equal(t, Property{key: "B% 💼", value: "Witaj Świecie!", hasValue: true}, p)
 }
 
 func TestPropertyValidate(t *testing.T) {
@@ -168,6 +205,10 @@ func TestPropertyValidate(t *testing.T) {
 
 	p.hasValue = true
 	assert.NoError(t, p.validate())
+
+	// Invalid value
+	p.value = string([]byte{255})
+	assert.ErrorIs(t, p.validate(), errInvalidValue)
 }
 
 func TestNewEmptyBaggage(t *testing.T) {
@@ -411,6 +452,24 @@ func TestBaggageParse(t *testing.T) {
 			},
 		},
 		{
+			name: "encoded UTF-8 string in key",
+			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"a":                  {Value: "b"},
+				"%C4%85%C5%9B%C4%87": {Value: "ąść"},
+			},
+		},
+		{
+			name: "encoded UTF-8 string in property",
+			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87;%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
+			want: baggage.List{
+				"a": {Value: "b"},
+				"%C4%85%C5%9B%C4%87": {Value: "ąść", Properties: []baggage.Property{
+					{Key: "%C4%85%C5%9B%C4%87", HasValue: true, Value: "ąść"},
+				}},
+			},
+		},
+		{
 			name: "invalid member: empty",
 			in:   "foo=,,bar=",
 			err:  errInvalidMember,
@@ -453,6 +512,11 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid property: invalid value",
 			in:   "foo=1;key=\\",
+			err:  errInvalidProperty,
+		},
+		{
+			name: "invalid property: improper url encoded value",
+			in:   "foo=1;key=val%",
 			err:  errInvalidProperty,
 		},
 		{
@@ -661,6 +725,29 @@ func TestBaggageString(t *testing.T) {
 				"bar": {
 					Value:      "2",
 					Properties: []baggage.Property{{Key: "yellow"}},
+				},
+			},
+		},
+		{
+			// W3C does not allow percent-encoded keys.
+			// The baggage that has percent-encoded keys should be ignored.
+			name: "utf-8 key and value",
+			out:  "foo=B%25%20%F0%9F%92%BC-2;foo-1=B%25%20%F0%9F%92%BC-4;foo-2",
+			baggage: baggage.List{
+				"ąść": {
+					Value: "B% 💼",
+					Properties: []baggage.Property{
+						{Key: "ąść-1", Value: "B% 💼-1", HasValue: true},
+						{Key: "ąść-2"},
+					},
+				},
+				"foo": {
+					Value: "B% 💼-2",
+					Properties: []baggage.Property{
+						{Key: "ąść", Value: "B% 💼-3", HasValue: true},
+						{Key: "foo-1", Value: "B% 💼-4", HasValue: true},
+						{Key: "foo-2"},
+					},
 				},
 			},
 		},
@@ -921,6 +1008,10 @@ func TestMemberValidation(t *testing.T) {
 	m.hasData = true
 	assert.ErrorIs(t, m.validate(), errInvalidKey)
 
+	// Invalid UTF-8 in value
+	m.key, m.value = "k", string([]byte{255})
+	assert.ErrorIs(t, m.validate(), errInvalidValue)
+
 	m.key, m.value = "k", "\\"
 	assert.NoError(t, m.validate())
 }
@@ -941,6 +1032,24 @@ func TestNewMember(t *testing.T) {
 		hasData:    true,
 	}
 	assert.Equal(t, expected, m)
+
+	// it won't use percent decoding for key
+	key = "%3B"
+	m, err = NewMember(key, val, p)
+	assert.NoError(t, err)
+	expected = Member{
+		key:        key,
+		value:      val,
+		properties: properties{{key: "foo"}},
+		hasData:    true,
+	}
+	assert.Equal(t, expected, m)
+
+	// wrong value with invalid token
+	key = "k"
+	val = ";"
+	_, err = NewMember(key, val, p)
+	assert.ErrorIs(t, err, errInvalidValue)
 
 	// wrong value with wrong decoding
 	val = "%zzzzz"
@@ -984,6 +1093,31 @@ func TestNewMemberRaw(t *testing.T) {
 	// Ensure new member is immutable.
 	p.key = "bar"
 	assert.Equal(t, expected, m)
+}
+
+func TestBaggageUTF8(t *testing.T) {
+	testCases := map[string]string{
+		"ąść": "B% 💼",
+
+		// Case sensitive
+		"a": "a",
+		"A": "A",
+	}
+
+	var members []Member
+	for k, v := range testCases {
+		m, err := NewMemberRaw(k, v)
+		require.NoError(t, err)
+
+		members = append(members, m)
+	}
+
+	b, err := New(members...)
+	require.NoError(t, err)
+
+	for k, v := range testCases {
+		assert.Equal(t, v, b.Member(k).Value())
+	}
 }
 
 func TestPropertiesValidate(t *testing.T) {
@@ -1053,7 +1187,7 @@ func BenchmarkString(b *testing.B) {
 
 	addMember("key1", "val1")
 	addMember("key2", " ;,%")
-	addMember("key3", "Witaj świecie!")
+	addMember("B% 💼", "Witaj świecie!")
 	addMember("key4", strings.Repeat("Hello world!", 10))
 
 	bg, err := New(members...)
