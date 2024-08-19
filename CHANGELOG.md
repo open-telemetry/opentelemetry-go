@@ -20,7 +20,7 @@ The next release will require at least [Go 1.22].
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#5629)
 - Add `InstrumentationScope` field to `SpanStub` in `go.opentelemetry.io/otel/sdk/trace/tracetest`, as a replacement for the deprecated `InstrumentationLibrary`. (#5627)
 - Zero value of `SimpleProcessor` in `go.opentelemetry.io/otel/sdk/log` no longer panics. (#5665)
-- Support [Go 1.23]. (TBD)
+- Support [Go 1.23]. (#5720)
 
 ### Changed
 
