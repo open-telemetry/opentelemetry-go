@@ -3,10 +3,10 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: 
+  workflow_dispatch:
 
 env:
-  DEFAULT_GO_VERSION: "~1.22.5"
+  DEFAULT_GO_VERSION: "~1.23.0"
 jobs:
   benchmark:
     name: Benchmarks
