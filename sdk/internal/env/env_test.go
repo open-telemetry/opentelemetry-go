@@ -4,7 +4,6 @@
 package env
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,13 +97,13 @@ func TestEnvParse(t *testing.T) {
 
 					assert.Equal(t, defVal, tc.f(defVal), "environment variable unset")
 
-					require.NoError(t, os.Setenv(key, envValStr))
+					t.Setenv(key, envValStr)
 					assert.Equal(t, envVal, tc.f(defVal), "environment variable set/valid")
 
-					require.NoError(t, os.Setenv(key, invalid))
+					t.Setenv(key, invalid)
 					assert.Equal(t, defVal, tc.f(defVal), "invalid value")
 
-					require.NoError(t, os.Setenv(key, empty))
+					t.Setenv(key, empty)
 					assert.Equal(t, defVal, tc.f(defVal), "empty value")
 				})
 			}
