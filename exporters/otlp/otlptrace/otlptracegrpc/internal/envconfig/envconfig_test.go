@@ -271,6 +271,53 @@ func TestEnvConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "with percent-encoded headers",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "user%2Did=42,user%20name=alice%20smith"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithHeaders("HELLO", func(v map[string]string) {
+					options = append(options, testOption{TestHeaders: v})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestHeaders: map[string]string{
+						"user%2Did":   "42",
+						"user%20name": "alice smith",
+					},
+				},
+			},
+		},
+		{
+			name: "with invalid header key",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "valid-key=value,invalid key=value"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithHeaders("HELLO", func(v map[string]string) {
+					options = append(options, testOption{TestHeaders: v})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestHeaders: map[string]string{
+						"valid-key": "value",
+					},
+				},
+			},
+		},
+		{
 			name: "with URL",
 			reader: EnvOptionsReader{
 				GetEnv: func(n string) string {
@@ -448,6 +495,7 @@ func TestStringToHeader(t *testing.T) {
 			name:  "invalid key",
 			value: "%XX=missing,userId=alice",
 			want: map[string]string{
+				"%XX":    "missing",
 				"userId": "alice",
 			},
 		},
