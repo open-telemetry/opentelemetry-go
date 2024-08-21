@@ -167,13 +167,13 @@ func stringToHeader(value string) map[string]string {
 
 		trimmedName := strings.TrimSpace(n)
 
-		// Validate the key
+		// Validate the key.
 		if !isValidHeaderKey(trimmedName) {
 			global.Error(errors.New("invalid header key"), "parse headers", "key", trimmedName)
 			continue
 		}
 
-		// Only decode the value
+		// Only decode the value.
 		value, err := url.PathUnescape(v)
 		if err != nil {
 			global.Error(err, "escape header value", "value", v)
