@@ -4,7 +4,6 @@
 package zipkin
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +40,7 @@ func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
 	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, os.Setenv(envEndpoint, tc.envEndpoint))
+			t.Setenv(envEndpoint, tc.envEndpoint)
 
 			endpoint := envOr(envEndpoint, tc.defaultCollectorEndpoint)
 
