@@ -173,7 +173,7 @@ func stringToHeader(value string) map[string]string {
 			continue
 		}
 
-		// Only decode the value
+		// Only decode the value.
 		value, err := url.PathUnescape(v)
 		if err != nil {
 			global.Error(err, "escape header value", "value", v)
