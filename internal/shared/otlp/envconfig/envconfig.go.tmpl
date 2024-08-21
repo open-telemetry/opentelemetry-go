@@ -167,7 +167,7 @@ func stringToHeader(value string) map[string]string {
 
 		trimmedName := strings.TrimSpace(n)
 
-		// Validate the key
+		// Validate the key.
 		if !isValidHeaderKey(trimmedName) {
 			global.Error(errors.New("invalid header key"), "parse headers", "key", trimmedName)
 			continue
