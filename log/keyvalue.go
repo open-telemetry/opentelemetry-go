@@ -146,7 +146,10 @@ func (v Value) AsInt64() int64 {
 
 // asInt64 returns the value held by v as an int64. If v is not of KindInt64,
 // this will return garbage.
-func (v Value) asInt64() int64 { return int64(v.num) }
+func (v Value) asInt64() int64 {
+	// Assumes v.num was a valid int64 (overflow not checked).
+	return int64(v.num) // nolint: gosec
+}
 
 // AsBool returns the value held by v as a bool.
 func (v Value) AsBool() bool {
@@ -289,7 +292,8 @@ func (v Value) String() string {
 	case KindString:
 		return v.asString()
 	case KindInt64:
-		return strconv.FormatInt(int64(v.num), 10)
+		// Assumes v.num was a valid int64 (overflow not checked).
+		return strconv.FormatInt(int64(v.num), 10) // nolint: gosec
 	case KindFloat64:
 		return strconv.FormatFloat(v.asFloat64(), 'g', -1, 64)
 	case KindBool:
