@@ -118,11 +118,11 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 }
 
 func clampUint32(v int) uint32 {
-	if v > math.MaxUint32 {
-		return math.MaxUint32
-	}
 	if v < 0 {
 		return 0
+	}
+	if int64(v) > math.MaxUint32 {
+		return math.MaxUint32
 	}
 	return uint32(v) // nolint: gosec  // Overflow/Underflow checked.
 }
