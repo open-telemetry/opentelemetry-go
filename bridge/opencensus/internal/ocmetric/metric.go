@@ -301,7 +301,7 @@ func uintKV(key string, val uint) attribute.KeyValue {
 	if val > uint(math.MaxInt) {
 		return attribute.String(key, strconv.FormatUint(uint64(val), 10))
 	}
-	return attribute.Int(key, int(val))
+	return attribute.Int(key, int(val)) // nolint: gosec  // Overflow checked above.
 }
 
 func uintSliceKV[N uint | uint8 | uint16 | uint32 | uint64 | uintptr](key string, val []N) attribute.KeyValue {
@@ -317,7 +317,7 @@ func uint64KV(key string, val uint64) attribute.KeyValue {
 	if val > maxInt64 {
 		return attribute.String(key, strconv.FormatUint(val, 10))
 	}
-	return attribute.Int64(key, int64(val))
+	return attribute.Int64(key, int64(val)) // nolint: gosec  // Overflow checked above.
 }
 
 func complexSliceKV[N complex64 | complex128](key string, val []N) attribute.KeyValue {
