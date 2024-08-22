@@ -12,6 +12,9 @@ import (
 // Any of the Processor's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
+//
+// See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about how
+// a Processor can be extended to support experimental features.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
@@ -34,27 +37,6 @@ type Processor interface {
 	// processing may cause race conditions. Use [Record.Clone]
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
-
-	// Enabled returns whether the Processor will process for the given context
-	// and record.
-	//
-	// The passed record is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a record with only the
-	// Severity set). If a Logger needs more information than is provided, it
-	// is said to be in an indeterminate state (see below).
-	//
-	// The returned value will be true when the Processor will process for the
-	// provided context and record, and will be false if the Processor will not
-	// process. The returned value may be true or false in an indeterminate
-	// state. An implementation should default to returning true for an
-	// indeterminate state, but may return false if valid reasons in particular
-	// circumstances exist (e.g. performance, correctness).
-	//
-	// The SDK invokes the processors sequentially in the same order as
-	// they were registered using [WithProcessor] until any processor returns true.
-	//
-	// Implementations should not modify the record.
-	Enabled(ctx context.Context, record Record) bool
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.

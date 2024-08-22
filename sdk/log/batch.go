@@ -196,11 +196,6 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-// Enabled returns if b is enabled.
-func (b *BatchProcessor) Enabled(context.Context, Record) bool {
-	return !b.stopped.Load() && b.q != nil
-}
-
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) || b.q == nil {
