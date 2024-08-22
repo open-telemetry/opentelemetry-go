@@ -299,7 +299,7 @@ func remoteEndpointPeerIPWithPort(peerIP string, portKey attribute.Key, attrs []
 	for _, kv := range attrs {
 		if kv.Key == portKey {
 			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
-			endpoint.Port = uint16(port)
+			endpoint.Port = uint16(port) // nolint: gosec  // Bit size of 16 checked above.
 			return endpoint
 		}
 	}
