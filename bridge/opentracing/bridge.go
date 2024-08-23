@@ -538,7 +538,7 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 	case int8:
 		return key.Int64(int64(val))
 	case uint8:
-		return key.Int64(int64(val)) // nolint: gosec  // https://github.com/securego/gosec/issues/1185
+		return key.Int64(int64(val))
 	case int16:
 		return key.Int64(int64(val))
 	case uint16:
