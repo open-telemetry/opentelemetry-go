@@ -7,8 +7,8 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-cmp v0.6.0
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/otel/metric v1.28.0
-	go.opentelemetry.io/otel/trace v1.28.0
+	go.opentelemetry.io/otel/metric v1.29.0
+	go.opentelemetry.io/otel/trace v1.29.0
 )
 
 require (
