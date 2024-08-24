@@ -18,6 +18,7 @@ The next release will require at least [Go 1.22].
 
 ### Added
 
+- Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE exporter env options. (#5719)
 - Add MacOS ARM64 platform to the compatibility testing suite. (#5577)
 - Add `InstrumentationScope` field to `SpanStub` in `go.opentelemetry.io/otel/sdk/trace/tracetest`, as a replacement for the deprecated `InstrumentationLibrary`. (#5627)
 - Make the initial release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
