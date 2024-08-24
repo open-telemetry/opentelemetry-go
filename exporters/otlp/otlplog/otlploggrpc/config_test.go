@@ -334,7 +334,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "DefaultEndpointWithEndInsecure",
+			name: "DefaultEndpointWithEnvInsecure",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
@@ -346,7 +346,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "EnvEndpointWithoutSchemeWithInsecure",
+			name: "EnvEndpointWithoutSchemeWithEnvInsecure",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
@@ -359,7 +359,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "OptionEndpointURLWithoutSchemeWithInsecure",
+			name: "OptionEndpointURLWithoutSchemeWithEnvInsecure",
 			options: []Option{
 				WithEndpointURL("//env.endpoint:8080/prefix"),
 			},
