@@ -387,21 +387,12 @@ func convCompression(s string) (Compression, error) {
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
-// convEndpoint converts s from a URL string to an endpoint if s is a valid
-// URL. Otherwise, "" and an error are returned.
-func convEndpoint(s string) (string, error) {
-	u, err := url.Parse(s)
-	if err != nil {
-		return "", err
-	}
-	return u.Host, nil
-}
-
-// convInsecure parses
+// convInsecure converts s from string to bool without case sensitivity.
+// If s is not valid returns error.
 func convInsecure(s string) (bool, error) {
 	s = strings.ToLower(s)
 	if s != "true" && s != "false" {
-		return false, fmt.Errorf("can't convert %s to bool", s)
+		return false, fmt.Errorf("can't convert %q to bool", s)
 	}
 
 	return s == "true", nil
