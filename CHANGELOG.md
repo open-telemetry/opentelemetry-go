@@ -11,6 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+### Added
+
+- Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE grpc exporter env options. (#5719)
+
 ## [1.29.0/0.51.0/0.5.0] 2024-08-23
 
 This release is the last to support [Go 1.21].
@@ -18,7 +22,6 @@ The next release will require at least [Go 1.22].
 
 ### Added
 
-- Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE exporter env options. (#5719)
 - Add MacOS ARM64 platform to the compatibility testing suite. (#5577)
 - Add `InstrumentationScope` field to `SpanStub` in `go.opentelemetry.io/otel/sdk/trace/tracetest`, as a replacement for the deprecated `InstrumentationLibrary`. (#5627)
 - Make the initial release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
