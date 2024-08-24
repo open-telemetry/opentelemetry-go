@@ -35,7 +35,10 @@ var (
 		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 		"OTEL_EXPORTER_OTLP_ENDPOINT",
 	}
-	envInsecure = envEndpoint
+	envInsecure = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_INSECURE",
+		"OTEL_EXPORTER_OTLP_INSECURE",
+	}
 
 	envHeaders = []string{
 		"OTEL_EXPORTER_OTLP_LOGS_HEADERS",
@@ -104,10 +107,14 @@ func newConfig(options []Option) config {
 	}
 
 	// Apply environment value and default value
+	var scheme string
 	c.endpoint = c.endpoint.Resolve(
-		getEnv[string](envEndpoint, convEndpoint),
+		loadEnvEndpoint(func(u *url.URL) {
+			scheme = u.Scheme
+		}),
 		fallback[string](defaultEndpoint),
 	)
+	c.insecure = insecureFromScheme(c.insecure, scheme)
 	c.insecure = c.insecure.Resolve(
 		getEnv[bool](envInsecure, convInsecure),
 	)
@@ -204,11 +211,7 @@ func WithEndpointURL(rawURL string) Option {
 	}
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
-		if u.Scheme != "https" {
-			c.insecure = newSetting(true)
-		} else {
-			c.insecure = newSetting(false)
-		}
+		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
 }
@@ -394,15 +397,14 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convInsecure parses s as a URL string and returns if the connection should
-// use client transport security or not. If s is an invalid URL, false and an
-// error are returned.
+// convInsecure parses
 func convInsecure(s string) (bool, error) {
-	u, err := url.Parse(s)
-	if err != nil {
-		return false, err
+	s = strings.ToLower(s)
+	if s != "true" && s != "false" {
+		return false, fmt.Errorf("can't convert %s to bool", s)
 	}
-	return u.Scheme != "https", nil
+
+	return s == "true", nil
 }
 
 // convHeaders converts the OTel environment variable header value s into a
@@ -527,6 +529,46 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 		return nil, err
 	}
 	return []tls.Certificate{crt}, nil
+}
+
+// loadEnvEndpoint loads and returns endpoint from envEndpoint variables.
+// It parses env value with url.Parse.
+func loadEnvEndpoint(fn func(*url.URL)) resolver[string] {
+	return func(s setting[string]) setting[string] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		for _, key := range envEndpoint {
+			if vStr := os.Getenv(key); vStr != "" {
+				u, err := url.Parse(vStr)
+				if err != nil {
+					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+					continue
+				}
+
+				s.Value = u.Host
+				s.Set = true
+				fn(u)
+				return s
+			}
+		}
+		return s
+	}
+}
+
+// insecureFromScheme return setting if the connection should
+// use client transport security or not.
+// Empty scheme doesn't force insecure setting.
+func insecureFromScheme(prev setting[bool], scheme string) setting[bool] {
+	if scheme == "https" {
+		return newSetting(false)
+	} else if len(scheme) > 0 {
+		return newSetting(true)
+	}
+
+	return prev
 }
 
 func compressorToCompression(compressor string) Compression {
