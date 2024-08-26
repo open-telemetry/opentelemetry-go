@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel/example/dice
 go 1.21
 
 require (
-	go.opentelemetry.io/contrib/bridges/otelslog v0.3.0
+	go.opentelemetry.io/contrib/bridges/otelslog v0.4.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0
 	go.opentelemetry.io/otel v1.29.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.5.0
