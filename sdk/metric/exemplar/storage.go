@@ -35,7 +35,7 @@ func (r *storage) Collect(dest *[]Exemplar) {
 			continue
 		}
 
-		m.Exemplar(&(*dest)[n])
+		m.exemplar(&(*dest)[n])
 		n++
 	}
 	*dest = (*dest)[:n]
@@ -66,8 +66,8 @@ func newMeasurement(ctx context.Context, ts time.Time, v Value, droppedAttr []at
 	}
 }
 
-// Exemplar returns m as an [Exemplar].
-func (m measurement) Exemplar(dest *Exemplar) {
+// exemplar returns m as an [Exemplar].
+func (m measurement) exemplar(dest *Exemplar) {
 	dest.FilteredAttributes = m.FilteredAttributes
 	dest.Time = m.Time
 	dest.Value = m.Value
