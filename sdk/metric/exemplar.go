@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
 // reservoirFunc returns the appropriately configured exemplar reservoir
@@ -18,7 +19,7 @@ import (
 // Note: This will only return non-nil values when the experimental exemplar
 // feature is enabled and the OTEL_METRICS_EXEMPLAR_FILTER environment variable
 // is not set to always_off.
-func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.FilteredReservoir[N] {
+func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.FilteredExemplarReservoir[N] {
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
 	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
 
@@ -28,7 +29,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.FilteredR
 	case "always_on":
 		filter = exemplar.AlwaysOnFilter
 	case "always_off":
-		return exemplar.Drop
+		return aggregate.DropReservoir
 	case "trace_based":
 		fallthrough
 	default:
@@ -41,9 +42,9 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.FilteredR
 	a, ok := agg.(AggregationExplicitBucketHistogram)
 	if ok && len(a.Boundaries) > 0 {
 		cp := slices.Clone(a.Boundaries)
-		return func() exemplar.FilteredReservoir[N] {
+		return func() aggregate.FilteredExemplarReservoir[N] {
 			bounds := cp
-			return exemplar.NewFilteredReservoir[N](filter, exemplar.Histogram(bounds))
+			return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.Histogram(bounds))
 		}
 	}
 
@@ -71,7 +72,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() exemplar.FilteredR
 		}
 	}
 
-	return func() exemplar.FilteredReservoir[N] {
-		return exemplar.NewFilteredReservoir[N](filter, exemplar.FixedSize(n))
+	return func() aggregate.FilteredExemplarReservoir[N] {
+		return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.FixedSize(n))
 	}
 }
