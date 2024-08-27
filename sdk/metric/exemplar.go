@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"slices"
 
-	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 )
 
 // reservoirFunc returns the appropriately configured exemplar reservoir
