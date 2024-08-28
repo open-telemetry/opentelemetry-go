@@ -16,6 +16,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/model"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -298,28 +299,38 @@ func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metric
 }
 
 // getAttrs parses the attribute.Set to two lists of matching Prometheus-style
-// keys and values. It sanitizes invalid characters and handles duplicate keys
-// (due to sanitization) by sorting and concatenating the values following the spec.
+// keys and values.
 func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceKV keyVals) ([]string, []string) {
-	keysMap := make(map[string][]string)
-	itr := attrs.Iter()
-	for itr.Next() {
-		kv := itr.Attribute()
-		key := strings.Map(sanitizeRune, string(kv.Key))
-		if _, ok := keysMap[key]; !ok {
-			keysMap[key] = []string{kv.Value.Emit()}
-		} else {
-			// if the sanitized key is a duplicate, append to the list of keys
-			keysMap[key] = append(keysMap[key], kv.Value.Emit())
-		}
-	}
-
 	keys := make([]string, 0, attrs.Len())
 	values := make([]string, 0, attrs.Len())
-	for key, vals := range keysMap {
-		keys = append(keys, key)
-		slices.Sort(vals)
-		values = append(values, strings.Join(vals, ";"))
+	itr := attrs.Iter()
+
+	if model.NameValidationScheme == model.UTF8Validation {
+		// Do not perform sanitization if prometheus supports UTF-8.
+		for itr.Next() {
+			kv := itr.Attribute()
+			keys = append(keys, string(kv.Key))
+			values = append(values, kv.Value.Emit())
+		}
+	} else {
+		// It sanitizes invalid characters and handles duplicate keys
+		// (due to sanitization) by sorting and concatenating the values following the spec.
+		keysMap := make(map[string][]string)
+		for itr.Next() {
+			kv := itr.Attribute()
+			key := strings.Map(sanitizeRune, string(kv.Key))
+			if _, ok := keysMap[key]; !ok {
+				keysMap[key] = []string{kv.Value.Emit()}
+			} else {
+				// if the sanitized key is a duplicate, append to the list of keys
+				keysMap[key] = append(keysMap[key], kv.Value.Emit())
+			}
+		}
+		for key, vals := range keysMap {
+			keys = append(keys, key)
+			slices.Sort(vals)
+			values = append(values, strings.Join(vals, ";"))
+		}
 	}
 
 	if ks[0] != "" {
@@ -392,7 +403,11 @@ var unitSuffixes = map[string]string{
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
-	name := sanitizeName(m.Name)
+	name := m.Name
+	if model.NameValidationScheme != model.UTF8Validation {
+		// Only sanitize if prometheus does not support UTF-8.
+		name = sanitizeName(m.Name)
+	}
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
 	if addCounterSuffix {
 		// Remove the _total suffix here, as we will re-add the total suffix
