@@ -176,6 +176,18 @@ func testCollect(t *testing.T, m metric.Meter) {
 	tMeter.collect()
 }
 
+func TestInstrumentIdentity(t *testing.T) {
+	globalMeterProvider := &meterProvider{}
+	m := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	tMeter := m.(*meter)
+	testSetupAllInstrumentTypes(t, m)
+	assert.Len(t, tMeter.instruments, 14)
+	// Creating the same instruments multiple times should not increase the
+	// number of instruments.
+	testSetupAllInstrumentTypes(t, m)
+	assert.Len(t, tMeter.instruments, 14)
+}
+
 func TestMeterProviderDelegatesCalls(t *testing.T) {
 	// The global MeterProvider should directly call the underlying MeterProvider
 	// if it is set prior to Meter() being called.
