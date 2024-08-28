@@ -8,16 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE grpc exporter env options. (#5719)
+
 ### Removed
 
 - Drop support for [Go 1.21]. (#5736, #5740)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
-
-### Added
-
-- Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE grpc exporter env options. (#5719)
 
 ## [1.29.0/0.51.0/0.5.0] 2024-08-23
 
