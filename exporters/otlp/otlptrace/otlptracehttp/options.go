@@ -153,3 +153,11 @@ func WithRetry(rc RetryConfig) Option {
 func WithProxy(pf HTTPTransportProxyFunc) Option {
 	return wrappedOption{otlpconfig.WithProxy(otlpconfig.HTTPTransportProxyFunc(pf))}
 }
+
+// WithHTTPClient sets the HTTP client the exporter will use to send
+// traces to the collector. If this option is not used, the exporter will
+// create a new HTTP client. If the client is configured, WithProxy and WithTLSClientConfig
+// will have no effect.
+func WithHTTPClient(client *http.Client) Option {
+	return wrappedOption{otlpconfig.WithHTTPClient(client)}
+}
