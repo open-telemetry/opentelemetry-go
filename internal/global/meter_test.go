@@ -42,7 +42,7 @@ var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer)
 }
 
 func TestMeterConcurrentSafe(t *testing.T) {
-	mtr := &meter{}
+	mtr := &meter{instruments: make(map[instID]delegatedInstrument)}
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -86,7 +86,7 @@ func TestMeterConcurrentSafe(t *testing.T) {
 }
 
 func TestUnregisterConcurrentSafe(t *testing.T) {
-	mtr := &meter{}
+	mtr := &meter{instruments: make(map[instID]delegatedInstrument)}
 	reg, err := mtr.RegisterCallback(zeroCallback)
 	require.NoError(t, err)
 
