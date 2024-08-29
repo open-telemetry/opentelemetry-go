@@ -120,6 +120,9 @@ type recordingSpan struct {
 	// value of time.Time until the span is ended.
 	endTime time.Time
 
+	// hasEnded records whether the span is fully ended.
+	hasEnded bool
+
 	// status is the status of this span.
 	status Status
 
@@ -171,10 +174,8 @@ func (s *recordingSpan) IsRecording() bool {
 	if s == nil {
 		return false
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
-	return s.endTime.IsZero()
+	return !s.hasEnded
 }
 
 // SetStatus sets the status of the Span in the form of a code and a
@@ -417,7 +418,6 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 
 	s.mu.Lock()
-	// Setting endTime to non-zero marks the span as ended and not recording.
 	if config.Timestamp().IsZero() {
 		s.endTime = et
 	} else {
@@ -426,6 +426,15 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	s.mu.Unlock()
 
 	sps := s.tracer.provider.getSpanProcessors()
+	for _, sp := range sps {
+		if oesp, ok := sp.sp.(OnEndingSpanProcessor); ok {
+			oesp.OnEnding(s)
+		}
+	}
+	s.mu.Lock()
+	s.hasEnded = true
+	s.mu.Unlock()
+
 	if len(sps) == 0 {
 		return
 	}

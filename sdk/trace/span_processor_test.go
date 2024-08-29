@@ -46,6 +46,13 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWrite
 	t.spansStarted = append(t.spansStarted, s)
 }
 
+func (t *testSpanProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
+	if t == nil {
+		return
+	}
+	s.SetAttributes(attribute.Bool("OnEnding", true))
+}
+
 func (t *testSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	if t == nil {
 		return
@@ -130,6 +137,17 @@ func TestRegisterSpanProcessor(t *testing.T) {
 				}
 			}
 		}
+
+		onEndingOK := false
+		for _, kv := range sp.spansEnded[0].Attributes() {
+			switch kv.Key {
+			case "OnEnding":
+				onEndingOK = true
+			default:
+				continue
+			}
+		}
+
 		if c != len(spNames) {
 			t.Errorf("%s: expected attributes(SpanProcessorName): got %d, want %d\n", name, c, len(spNames))
 		}
@@ -138,6 +156,9 @@ func TestRegisterSpanProcessor(t *testing.T) {
 		}
 		if !sidOK {
 			t.Errorf("%s: expected attributes(ParentSpanID)\n", name)
+		}
+		if !onEndingOK {
+			t.Errorf("%s: expected attributes(OnEnding)\n", name)
 		}
 	}
 }
