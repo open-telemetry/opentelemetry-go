@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Support for the `OnEnding` callback in span processors. (#5756)
+
 ### Fixed
 
 - Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
