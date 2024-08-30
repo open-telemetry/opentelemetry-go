@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add OTEL_EXPORTER_OTLP_LOGS_INSECURE and OTEL_EXPORTER_OTLP_INSECURE grpc exporter env options. (#5719)
 
+### Fixed
+
+- Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
+
 ### Removed
 
 - Drop support for [Go 1.21]. (#5736, #5740)

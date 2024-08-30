@@ -42,7 +42,7 @@ var zeroCallback metric.Callback = func(ctx context.Context, or metric.Observer)
 }
 
 func TestMeterConcurrentSafe(t *testing.T) {
-	mtr := &meter{}
+	mtr := &meter{instruments: make(map[instID]delegatedInstrument)}
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -86,7 +86,7 @@ func TestMeterConcurrentSafe(t *testing.T) {
 }
 
 func TestUnregisterConcurrentSafe(t *testing.T) {
-	mtr := &meter{}
+	mtr := &meter{instruments: make(map[instID]delegatedInstrument)}
 	reg, err := mtr.RegisterCallback(zeroCallback)
 	require.NoError(t, err)
 
@@ -174,6 +174,18 @@ func testCollect(t *testing.T, m metric.Meter) {
 		return
 	}
 	tMeter.collect()
+}
+
+func TestInstrumentIdentity(t *testing.T) {
+	globalMeterProvider := &meterProvider{}
+	m := globalMeterProvider.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	tMeter := m.(*meter)
+	testSetupAllInstrumentTypes(t, m)
+	assert.Len(t, tMeter.instruments, 14)
+	// Creating the same instruments multiple times should not increase the
+	// number of instruments.
+	testSetupAllInstrumentTypes(t, m)
+	assert.Len(t, tMeter.instruments, 14)
 }
 
 func TestMeterProviderDelegatesCalls(t *testing.T) {
