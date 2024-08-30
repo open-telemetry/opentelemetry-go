@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -427,7 +428,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 
 	sps := s.tracer.provider.getSpanProcessors()
 	for _, sp := range sps {
-		if oesp, ok := sp.sp.(OnEndingSpanProcessor); ok {
+		if oesp, ok := sp.sp.(x.OnEndingSpanProcessor); ok {
 			oesp.OnEnding(s)
 		}
 	}

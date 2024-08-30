@@ -46,7 +46,7 @@ func (t *testSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWrite
 	t.spansStarted = append(t.spansStarted, s)
 }
 
-func (t *testSpanProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
+func (t *testSpanProcessor) OnEnding(s trace.Span) {
 	if t == nil {
 		return
 	}

@@ -49,17 +49,6 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
-// OnEndingSpanProcessor represents span processors that allow mutating spans
-// just before they are ended and made immutable.
-//
-// NOT STABLE: This interface still has a status of "development", and may have
-// breaking changes.
-type OnEndingSpanProcessor interface {
-	// OnEnding is called while the span is finished, and while spans are still
-	// mutable. It is called synchronously and cannot block.
-	OnEnding(ReadWriteSpan)
-}
-
 type spanProcessorState struct {
 	sp    SpanProcessor
 	state sync.Once
