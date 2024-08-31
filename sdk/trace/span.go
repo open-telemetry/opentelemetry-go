@@ -469,7 +469,14 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	s.addEvent(semconv.ExceptionEventName, opts...)
 }
 
+type exceptionTyper interface {
+	ExceptionType() string
+}
+
 func typeStr(i interface{}) string {
+	if i, ok := i.(exceptionTyper); ok {
+		return i.ExceptionType()
+	}
 	t := reflect.TypeOf(i)
 	if t.PkgPath() == "" && t.Name() == "" {
 		// Likely a builtin type.
