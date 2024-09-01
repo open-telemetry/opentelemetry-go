@@ -141,7 +141,7 @@ func (m *meter) setDelegate(provider metric.MeterProvider) {
 		m.registry.Remove(e)
 	}
 
-	m.instruments = nil
+	clear(m.instruments)
 	m.registry.Init()
 }
 
