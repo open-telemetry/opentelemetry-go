@@ -295,7 +295,7 @@ func (o errorStatusOption) applySpanEnd(c SpanConfig) SpanConfig {
 
 var _ SpanEndEventOption = errorStatusOption(true)
 
-// WithErrorStatus sets the flag to set spans' status if error or panic is occurred.
+// WithErrorStatus sets the flag to set span's status to error if error or panic is occurred.
 func WithErrorStatus(b bool) SpanEndEventOption {
 	return errorStatusOption(b)
 }

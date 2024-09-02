@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#1677)
+
 ### Fixed
 
 - Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
