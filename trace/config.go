@@ -55,12 +55,13 @@ func (fn tracerOptionFunc) apply(cfg TracerConfig) TracerConfig {
 
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	links      []Link
-	newRoot    bool
-	spanKind   SpanKind
-	stackTrace bool
+	attributes  []attribute.KeyValue
+	timestamp   time.Time
+	links       []Link
+	newRoot     bool
+	spanKind    SpanKind
+	stackTrace  bool
+	errorStatus bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -93,6 +94,11 @@ func (cfg *SpanConfig) NewRoot() bool {
 // SpanKind is the role a Span has in a trace.
 func (cfg *SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
+}
+
+// ErrorStatus checks whether setting error status is enabled.
+func (cfg *SpanConfig) ErrorStatus() bool {
+	return cfg.errorStatus
 }
 
 // NewSpanStartConfig applies all the options to a returned SpanConfig.
@@ -139,9 +145,10 @@ type SpanEndOption interface {
 
 // EventConfig is a group of options for an Event.
 type EventConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	stackTrace bool
+	attributes  []attribute.KeyValue
+	timestamp   time.Time
+	stackTrace  bool
+	errorStatus bool
 }
 
 // Attributes describe the associated qualities of an Event.
@@ -157,6 +164,11 @@ func (cfg *EventConfig) Timestamp() time.Time {
 // StackTrace checks whether stack trace capturing is enabled.
 func (cfg *EventConfig) StackTrace() bool {
 	return cfg.stackTrace
+}
+
+// ErrorStatus checks whether setting error status is enabled.
+func (cfg *EventConfig) ErrorStatus() bool {
+	return cfg.errorStatus
 }
 
 // NewEventConfig applies all the EventOptions to a returned EventConfig. If no
@@ -267,6 +279,25 @@ func (o stackTraceOption) applySpanEnd(c SpanConfig) SpanConfig { return o.apply
 // WithStackTrace sets the flag to capture the error with stack trace (e.g. true, false).
 func WithStackTrace(b bool) SpanEndEventOption {
 	return stackTraceOption(b)
+}
+
+type errorStatusOption bool
+
+func (o errorStatusOption) applyEvent(c EventConfig) EventConfig {
+	c.errorStatus = bool(o)
+	return c
+}
+
+func (o errorStatusOption) applySpanEnd(c SpanConfig) SpanConfig {
+	c.errorStatus = bool(o)
+	return c
+}
+
+var _ SpanEndEventOption = errorStatusOption(true)
+
+// WithErrorStatus sets the flag to set spans' status if error or panic is occurred.
+func WithErrorStatus(b bool) SpanEndEventOption {
+	return errorStatusOption(b)
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
