@@ -339,7 +339,7 @@ const (
 	// Take care not to use the "invoked ARN" directly but replace any
 	// [alias suffix](https://docs.aws.amazon.com/lambda/latest/dg/configuration-
 	// aliases.html) with the resolved function version, as the same runtime instance
-	// may be invocable with multiple
+	// may be invokable with multiple
 	// different aliases.
 	// * **GCP:** The [URI of the resource](https://cloud.google.com/iam/docs/full-
 	// resource-names)
