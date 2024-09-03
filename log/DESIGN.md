@@ -105,16 +105,16 @@ is defined as `Record` struct  in [record.go](record.go).
 is accessed using following methods:
 
 ```go
-func (r *Record) Timestamp() time.Time 
-func (r *Record) SetTimestamp(t time.Time) 
+func (r *Record) Timestamp() time.Time
+func (r *Record) SetTimestamp(t time.Time)
 ```
 
 [`ObservedTimestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-observedtimestamp)
 is accessed using following methods:
 
 ```go
-func (r *Record) ObservedTimestamp() time.Time 
-func (r *Record) SetObservedTimestamp(t time.Time) 
+func (r *Record) ObservedTimestamp() time.Time
+func (r *Record) SetObservedTimestamp(t time.Time)
 ```
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)

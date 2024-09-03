@@ -191,7 +191,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "LogEnpointEnvironmentVariablesDefaultPath",
+			name: "LogEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint",
 			},
@@ -224,7 +224,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "OTLPEnpointEnvironmentVariablesDefaultPath",
+			name: "OTLPEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
 			},

@@ -30,7 +30,7 @@ func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
 		name               string
 		emptyResource      bool
-		customResouceAttrs []attribute.KeyValue
+		customResourceAttrs []attribute.KeyValue
 		recordMetrics      func(ctx context.Context, meter otelmetric.Meter)
 		options            []Option
 		expectedFile       string
@@ -264,7 +264,7 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name: "custom resource",
-			customResouceAttrs: []attribute.KeyValue{
+			customResourceAttrs: []attribute.KeyValue{
 				attribute.Key("A").String("B"),
 				attribute.Key("C").String("D"),
 			},
@@ -417,7 +417,7 @@ func TestPrometheusExporter(t *testing.T) {
 					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
 					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
-					resource.WithAttributes(tc.customResouceAttrs...),
+					resource.WithAttributes(tc.customResourceAttrs...),
 				)
 				require.NoError(t, err)
 
@@ -536,7 +536,7 @@ func TestDuplicateMetrics(t *testing.T) {
 	withTypeFoo := otelmetric.WithAttributeSet(typeFoo)
 	testCases := []struct {
 		name                  string
-		customResouceAttrs    []attribute.KeyValue
+		customResourceAttrs    []attribute.KeyValue
 		recordMetrics         func(ctx context.Context, meterA, meterB otelmetric.Meter)
 		options               []Option
 		possibleExpectedFiles []string

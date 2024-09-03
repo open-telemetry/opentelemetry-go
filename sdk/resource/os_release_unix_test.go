@@ -96,7 +96,7 @@ ESCAPED4="\\var"
 =line with missing key should be skipped
 
 PROP1=name=john
-	PROP2  =  Value  
+	PROP2  =  Value
 PROP3='This value will be overwritten by the next one'
 PROP3='Final value'`)
 

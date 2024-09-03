@@ -35,7 +35,7 @@ var (
 	}
 
 	customUserAgentHeader = map[string]string{
-		"user-agent": "custome-user-agent",
+		"user-agent": "custom-user-agent",
 	}
 
 	customProxyHeader = map[string]string{

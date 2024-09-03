@@ -902,7 +902,7 @@ const (
 	// Stability: experimental
 	// Examples: 'arn:aws:lambda:REGION:ACCOUNT_ID:function:my-function',
 	// '//run.googleapis.com/projects/PROJECT_ID/locations/LOCATION_ID/services/SERVICE_ID',
-	// '/subscriptions/<SUBSCIPTION_GUID>/resourceGroups/<RG>/providers/Microsoft.Web/sites/<FUNCAPP>/functions/<FUNC>'
+	// '/subscriptions/<SUBSCRIPTION_GUID>/resourceGroups/<RG>/providers/Microsoft.Web/sites/<FUNCAPP>/functions/<FUNC>'
 	// Note: On some cloud providers, it may not be possible to determine the
 	// full ID at startup,
 	// so it may be necessary to set `cloud.resource_id` as a span attribute
@@ -919,7 +919,7 @@ const (
 	//   [alias
 	// suffix](https://docs.aws.amazon.com/lambda/latest/dg/configuration-aliases.html)
 	//   with the resolved function version, as the same runtime instance may
-	// be invokable with
+	// be invocable with
 	//   multiple different aliases.
 	// * **GCP:** The [URI of the
 	// resource](https://cloud.google.com/iam/docs/full-resource-names)
@@ -927,7 +927,7 @@ const (
 	// ID](https://docs.microsoft.com/rest/api/resources/resources/get-by-id)
 	// of the invoked function,
 	//   *not* the function app, having the form
-	// `/subscriptions/<SUBSCIPTION_GUID>/resourceGroups/<RG>/providers/Microsoft.Web/sites/<FUNCAPP>/functions/<FUNC>`.
+	// `/subscriptions/<SUBSCRIPTION_GUID>/resourceGroups/<RG>/providers/Microsoft.Web/sites/<FUNCAPP>/functions/<FUNC>`.
 	//   This means that a span attribute MUST be used, as an Azure function
 	// app can host multiple functions that would usually share
 	//   a TracerProvider.
@@ -1108,7 +1108,7 @@ const (
 	// K8S defines a link to the container registry repository with digest
 	// `"imageID": "registry.azurecr.io
 	// /namespace/service/dockerfile@sha256:bdeabd40c3a8a492eaf9e8e44d0ebbb84bac7ee25ac0cf8a7159d25f62555625"`.
-	// The ID is assinged by the container runtime and can vary in different
+	// The ID is assigned by the container runtime and can vary in different
 	// environments. Consider using `oci.manifest.digest` if it is important to
 	// identify the same image in different environments/runtimes.
 	ContainerImageIDKey = attribute.Key("container.image.id")

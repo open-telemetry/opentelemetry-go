@@ -448,7 +448,7 @@ func convDuration(s string) (time.Duration, error) {
 	return time.Duration(d) * time.Millisecond, nil
 }
 
-// loadEnvTLS returns a resolver that loads a *tls.Config from files defeind by
+// loadEnvTLS returns a resolver that loads a *tls.Config from files defined by
 // the OTLP TLS environment variables. This will load both the rootCAs and
 // certificates used for mTLS.
 //

@@ -37,7 +37,7 @@ func (o *Tracer) StartSpan(ctx context.Context, name string, s ...octrace.StartO
 // StartSpanWithRemoteParent starts a new child span of the span from the
 // given parent.
 func (o *Tracer) StartSpanWithRemoteParent(ctx context.Context, name string, parent octrace.SpanContext, s ...octrace.StartOption) (context.Context, *octrace.Span) {
-	// make sure span context is zero'd out so we use the remote parent
+	// make sure span context is zeroed out so we use the remote parent
 	ctx = trace.ContextWithSpan(ctx, nil)
 	ctx = trace.ContextWithRemoteSpanContext(ctx, oc2otel.SpanContext(parent))
 	return o.StartSpan(ctx, name, s...)
