@@ -366,3 +366,9 @@ func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
 	copy(cp, attributes)
 	return attrOpt{set: attribute.NewSet(cp...)}
 }
+
+// EnabledOption applies options to IsEnabled func.
+type EnabledOption interface {
+	// Extend this to support EnabledOptionConfig when needed.
+	applyEnabledOption()
+}

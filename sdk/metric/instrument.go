@@ -196,6 +196,10 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 	i.aggregate(ctx, val, c.Attributes())
 }
 
+func (i *int64Inst) IsEnabled(context.Context, ...metric.EnabledOption) bool {
+	return len(i.measures) != 0
+}
+
 func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
 		in(ctx, val, s)
@@ -226,6 +230,10 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
+}
+
+func (i *float64Inst) IsEnabled(context.Context, ...metric.EnabledOption) bool {
+	return len(i.measures) != 0
 }
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {

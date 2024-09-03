@@ -25,6 +25,13 @@ type Float64Counter interface {
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	Add(ctx context.Context, incr float64, options ...AddOption)
+
+	// IsEnabled returns true if this instrument is enabled.
+	//
+	// This helps users avoid performing computationally expensive operations when
+	// recording measurements. The returned value cannot be cached since it
+	// may change over time.
+	IsEnabled(ctx context.Context, options ...EnabledOption) bool
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -78,6 +85,13 @@ type Float64UpDownCounter interface {
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	Add(ctx context.Context, incr float64, options ...AddOption)
+
+	// IsEnabled returns true if this instrument is enabled.
+	//
+	// This helps users avoid performing computationally expensive operations when
+	// recording measurements. The returned value cannot be cached since it
+	// may change over time.
+	IsEnabled(ctx context.Context, options ...EnabledOption) bool
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -131,6 +145,13 @@ type Float64Histogram interface {
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	Record(ctx context.Context, incr float64, options ...RecordOption)
+
+	// IsEnabled returns true if this instrument is enabled.
+	//
+	// This helps users avoid performing computationally expensive operations when
+	// recording measurements. The returned value cannot be cached since it
+	// may change over time.
+	IsEnabled(ctx context.Context, options ...EnabledOption) bool
 }
 
 // Float64HistogramConfig contains options for synchronous histogram
@@ -189,6 +210,13 @@ type Float64Gauge interface {
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	Record(ctx context.Context, value float64, options ...RecordOption)
+
+	// IsEnabled returns true if this instrument is enabled.
+	//
+	// This helps users avoid performing computationally expensive operations when
+	// recording measurements. The returned value cannot be cached since it
+	// may change over time.
+	IsEnabled(ctx context.Context, options ...EnabledOption) bool
 }
 
 // Float64GaugeConfig contains options for synchronous gauge instruments that
