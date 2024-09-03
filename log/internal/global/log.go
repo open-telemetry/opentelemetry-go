@@ -87,12 +87,11 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 }
 
-func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
-	var enabled bool
+func (l *logger) IsEnabled(ctx context.Context, opts ...log.LoggerEnabledOption) bool {
 	if del, ok := l.delegate.Load().(log.Logger); ok {
-		enabled = del.Enabled(ctx, r)
+		return del.IsEnabled(ctx, opts...)
 	}
-	return enabled
+	return false
 }
 
 func (l *logger) setDelegate(provider log.LoggerProvider) {

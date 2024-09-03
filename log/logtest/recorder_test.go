@@ -65,39 +65,32 @@ func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 
 func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
-		name        string
-		options     []Option
-		ctx         context.Context
-		buildRecord func() log.Record
+		name    string
+		options []Option
+		ctx     context.Context
 
 		isEnabled bool
 	}{
 		{
 			name: "the default option enables every log entry",
 			ctx:  context.Background(),
-			buildRecord: func() log.Record {
-				return log.Record{}
-			},
 
 			isEnabled: true,
 		},
 		{
 			name: "with everything disabled",
 			options: []Option{
-				WithEnabledFunc(func(context.Context, log.Record) bool {
+				WithEnabledFunc(func(context.Context, []log.LoggerEnabledOption) bool {
 					return false
 				}),
 			},
 			ctx: context.Background(),
-			buildRecord: func() log.Record {
-				return log.Record{}
-			},
 
 			isEnabled: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildRecord())
+			e := NewRecorder(tt.options...).Logger("test").IsEnabled(tt.ctx)
 			assert.Equal(t, tt.isEnabled, e)
 		})
 	}
@@ -105,7 +98,7 @@ func TestLoggerEnabled(t *testing.T) {
 
 func TestLoggerEnabledFnUnset(t *testing.T) {
 	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.Record{}))
+	assert.True(t, r.IsEnabled(context.Background()))
 }
 
 func TestRecorderEmitAndReset(t *testing.T) {
@@ -158,7 +151,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			nr := r.Logger("test")
-			nr.Enabled(context.Background(), log.Record{})
+			nr.IsEnabled(context.Background())
 			nr.Emit(context.Background(), log.Record{})
 
 			r.Result()

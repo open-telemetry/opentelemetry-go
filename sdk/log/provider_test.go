@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -55,25 +54,6 @@ func (p *processor) Shutdown(context.Context) error {
 func (p *processor) ForceFlush(context.Context) error {
 	p.forceFlushCalls++
 	return p.Err
-}
-
-type fltrProcessor struct {
-	*processor
-
-	enabled bool
-}
-
-var _ x.FilterProcessor = (*fltrProcessor)(nil)
-
-func newFltrProcessor(name string, enabled bool) *fltrProcessor {
-	return &fltrProcessor{
-		processor: newProcessor(name),
-		enabled:   enabled,
-	}
-}
-
-func (p *fltrProcessor) Enabled(context.Context, log.Record) bool {
-	return p.enabled
 }
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {
@@ -321,5 +301,5 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	}
 
 	b.StopTimer()
-	loggers[0].Enabled(context.Background(), log.Record{})
+	loggers[0].IsEnabled(context.Background())
 }
