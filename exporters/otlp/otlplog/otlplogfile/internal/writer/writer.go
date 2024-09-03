@@ -55,7 +55,7 @@ func (w *FileWriter) Export(data []byte) error {
 	}
 
 	// As stated in the specification, line separator is \n.
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/file-exporter.md#json-lines-file
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.36.0/specification/protocol/file-exporter.md#json-lines-file
 	if _, err := io.WriteString(w.file, "\n"); err != nil {
 		return err
 	}
