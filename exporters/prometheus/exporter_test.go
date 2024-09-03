@@ -28,12 +28,12 @@ import (
 
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
-		name               string
-		emptyResource      bool
+		name                string
+		emptyResource       bool
 		customResourceAttrs []attribute.KeyValue
-		recordMetrics      func(ctx context.Context, meter otelmetric.Meter)
-		options            []Option
-		expectedFile       string
+		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
+		options             []Option
+		expectedFile        string
 	}{
 		{
 			name:         "counter",
@@ -536,7 +536,7 @@ func TestDuplicateMetrics(t *testing.T) {
 	withTypeFoo := otelmetric.WithAttributeSet(typeFoo)
 	testCases := []struct {
 		name                  string
-		customResourceAttrs    []attribute.KeyValue
+		customResourceAttrs   []attribute.KeyValue
 		recordMetrics         func(ctx context.Context, meterA, meterB otelmetric.Meter)
 		options               []Option
 		possibleExpectedFiles []string
