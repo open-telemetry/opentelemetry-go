@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlplogfile ` experimental logs exporter. (#5408, #5743)
+- Add `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlplogfile ` experimental logs exporter. (#5743)
 
 ### Removed
 

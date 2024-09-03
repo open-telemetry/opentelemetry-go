@@ -16,8 +16,8 @@ import (
 )
 
 // Exporter is an OpenTelemetry log exporter that outputs log records
-// into JSON files. The implementation is based on the specification
-// defined here: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/file-exporter.md
+// into files, as JSON. The implementation is based on the specification
+// defined here: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.36.0/specification/protocol/file-exporter.md
 type Exporter struct {
 	mu      sync.Mutex
 	fw      *writer.FileWriter
