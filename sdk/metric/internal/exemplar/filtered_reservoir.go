@@ -41,7 +41,7 @@ func NewFilteredReservoir[N int64 | float64](f Filter, r Reservoir) FilteredRese
 
 func (f *filteredReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
 	if f.filter(ctx) {
-		// only record the current time if we are sampling this measurment.
+		// only record the current time if we are sampling this measurement.
 		f.reservoir.Offer(ctx, time.Now(), NewValue(val), attr)
 	}
 }
