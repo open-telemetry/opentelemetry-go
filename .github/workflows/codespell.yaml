@@ -12,3 +12,4 @@ jobs:
         uses: actions/checkout@v4
       - name: Codespell
         run: make codespell
+      - run: make check-clean-work-tree
