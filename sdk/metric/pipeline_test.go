@@ -448,59 +448,46 @@ func TestExemplars(t *testing.T) {
 	})
 	sampled := trace.ContextWithSpanContext(context.Background(), sc)
 
-	t.Run("OTEL_GO_X_EXEMPLAR=true", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+	t.Run("Default", func(t *testing.T) {
+		m, r := setup("default")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
 
-		t.Run("Default", func(t *testing.T) {
-			m, r := setup("default")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("Invalid", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
-			m, r := setup("default")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("always_on", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
-			m, r := setup("always_on")
-			measure(ctx, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("always_off", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-			m, r := setup("always_off")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-		})
-
-		t.Run("trace_based", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
-			m, r := setup("trace_based")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
 	})
 
-	t.Run("OTEL_GO_X_EXEMPLAR=false", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_EXEMPLAR", "false")
+	t.Run("Invalid", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
+		m, r := setup("default")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
 
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
+	})
+
+	t.Run("always_on", func(t *testing.T) {
 		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
 		m, r := setup("always_on")
 		measure(ctx, m)
+		check(t, r, nCPU, 1, 20)
+	})
+
+	t.Run("always_off", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+		m, r := setup("always_off")
+		measure(ctx, m)
 		check(t, r, 0, 0, 0)
+	})
+
+	t.Run("trace_based", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
+		m, r := setup("trace_based")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
 	})
 }
