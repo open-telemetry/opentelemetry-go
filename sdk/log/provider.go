@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -41,6 +42,12 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 
 	if c.resource == nil {
 		c.resource = resource.Default()
+	} else {
+		var err error
+		c.resource, err = resource.Merge(resource.Environment(), c.resource)
+		if err != nil {
+			otel.Handle(err)
+		}
 	}
 
 	c.attrCntLim = c.attrCntLim.Resolve(
