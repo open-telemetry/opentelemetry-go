@@ -83,6 +83,12 @@ func TestMeterConcurrentSafe(t *testing.T) {
 	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 	<-done
+
+	// No instruments should be left after the meter is replaced.
+	assert.Empty(t, mtr.instruments)
+
+	// No callbacks should be left after the meter is replaced.
+	assert.Zero(t, mtr.registry.Len())
 }
 
 func TestUnregisterConcurrentSafe(t *testing.T) {
