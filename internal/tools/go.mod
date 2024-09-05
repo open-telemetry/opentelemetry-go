@@ -2,8 +2,6 @@ module go.opentelemetry.io/otel/internal/tools
 
 go 1.22.1
 
-toolchain go1.23.0
-
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
