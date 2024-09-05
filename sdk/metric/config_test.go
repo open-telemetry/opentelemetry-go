@@ -11,9 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const envVar = "OTEL_RESOURCE_ATTRIBUTES"
 
 type reader struct {
 	producer          sdkProducer
@@ -109,9 +113,14 @@ func TestUnifyMultiError(t *testing.T) {
 }
 
 func TestWithResource(t *testing.T) {
-	res := resource.NewSchemaless()
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVar: "key=value,rk5=7",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+	res := resource.NewSchemaless(attribute.String("key", "value"), attribute.String("rk5", "7"))
 	c := newConfig([]Option{WithResource(res)})
-	assert.Same(t, res, c.res)
+	assert.Equal(t, res, c.res)
 }
 
 func TestWithReader(t *testing.T) {
