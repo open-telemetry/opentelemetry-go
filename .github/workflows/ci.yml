@@ -81,6 +81,20 @@ jobs:
       - name: Run tests with race detector
         run: make test-race
 
+  test-concurrent-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Run ConcurrentSafe tests multiple times with race detector
+        run: make test-concurrent-safe
+
   test-coverage:
     runs-on: ubuntu-latest
     steps:
