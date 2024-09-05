@@ -579,7 +579,7 @@ The tests should never leak goroutines.
 
 Use the term `ConcurrentSafe` in the test name when it aims to verify the
 absence of race conditions. The top-level tests with this term will be run
-100 times in the `test-concurrent-safe` CI job to increase the chance of
+many times in the `test-concurrent-safe` CI job to increase the chance of
 catching concurrency issues. (this does not apply to subtests)
 
 ### Internal packages
