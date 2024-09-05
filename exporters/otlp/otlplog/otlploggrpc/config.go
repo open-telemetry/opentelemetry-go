@@ -107,15 +107,12 @@ func newConfig(options []Option) config {
 	}
 
 	// Apply environment value and default value
-	var scheme string
 	c.endpoint = c.endpoint.Resolve(
-		loadEnvEndpoint(func(u *url.URL) {
-			scheme = u.Scheme
-		}),
+		getEnv[string](envEndpoint, convEndpoint),
 		fallback[string](defaultEndpoint),
 	)
-	c.insecure = insecureFromScheme(c.insecure, scheme)
 	c.insecure = c.insecure.Resolve(
+		loadInsecureFromEnvEndpoint(envEndpoint),
 		getEnv[bool](envInsecure, convInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
@@ -387,6 +384,16 @@ func convCompression(s string) (Compression, error) {
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
+// convEndpoint converts s from a URL string to an endpoint if s is a valid
+// URL. Otherwise, "" and an error are returned.
+func convEndpoint(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	return u.Host, nil
+}
+
 // convInsecure converts s from string to bool without case sensitivity.
 // If s is not valid returns error.
 func convInsecure(s string) (bool, error) {
@@ -396,6 +403,30 @@ func convInsecure(s string) (bool, error) {
 	}
 
 	return s == "true", nil
+}
+
+// loadInsecureFromEnvEndpoint returns a resolver that fetches
+// insecure setting from envEndpoint is it possible.
+func loadInsecureFromEnvEndpoint(envEndpoint []string) resolver[bool] {
+	return func(s setting[bool]) setting[bool] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		for _, key := range envEndpoint {
+			if vStr := os.Getenv(key); vStr != "" {
+				u, err := url.Parse(vStr)
+				if err != nil {
+					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+					continue
+				}
+
+				return insecureFromScheme(s, u.Scheme)
+			}
+		}
+		return s
+	}
 }
 
 // convHeaders converts the OTel environment variable header value s into a
@@ -520,33 +551,6 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 		return nil, err
 	}
 	return []tls.Certificate{crt}, nil
-}
-
-// loadEnvEndpoint loads and returns endpoint from envEndpoint variables.
-// It parses env value with url.Parse.
-func loadEnvEndpoint(fn func(*url.URL)) resolver[string] {
-	return func(s setting[string]) setting[string] {
-		if s.Set {
-			// Passed, valid, options have precedence.
-			return s
-		}
-
-		for _, key := range envEndpoint {
-			if vStr := os.Getenv(key); vStr != "" {
-				u, err := url.Parse(vStr)
-				if err != nil {
-					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
-					continue
-				}
-
-				s.Value = u.Host
-				s.Set = true
-				fn(u)
-				return s
-			}
-		}
-		return s
-	}
 }
 
 // insecureFromScheme return setting if the connection should
