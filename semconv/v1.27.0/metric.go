@@ -720,15 +720,6 @@ const (
   HttpClientActiveRequestsUnit = "{request}"
   HttpClientActiveRequestsDescription = "Number of active HTTP requests."
 
-  // JvmBufferMemoryUsage is the metric conforming to the "jvm.buffer.memory.usage" semantic conventions. It represents the deprecated, use `jvm.buffer.memory.used` instead
-  // Instrument: updowncounter
-  // Unit: By
-  // Stability: experimental
-  // Deprecated: Replaced by `jvm.buffer.memory.used`.
-  JvmBufferMemoryUsageName = "jvm.buffer.memory.usage"
-  JvmBufferMemoryUsageUnit = "By"
-  JvmBufferMemoryUsageDescription = "Deprecated, use `jvm.buffer.memory.used` instead."
-
   // JvmMemoryInit is the metric conforming to the "jvm.memory.init" semantic conventions. It represents the measure of initial memory requested
   // Instrument: updowncounter
   // Unit: By
@@ -872,6 +863,15 @@ const (
   JvmCpuRecentUtilizationName = "jvm.cpu.recent_utilization"
   JvmCpuRecentUtilizationUnit = "1"
   JvmCpuRecentUtilizationDescription = "Recent CPU utilization for the process as reported by the JVM."
+
+  // JvmBufferMemoryUsage is the metric conforming to the "jvm.buffer.memory.usage" semantic conventions. It represents the deprecated, use `jvm.buffer.memory.used` instead
+  // Instrument: updowncounter
+  // Unit: By
+  // Stability: experimental
+  // Deprecated: Replaced by `jvm.buffer.memory.used`.
+  JvmBufferMemoryUsageName = "jvm.buffer.memory.usage"
+  JvmBufferMemoryUsageUnit = "By"
+  JvmBufferMemoryUsageDescription = "Deprecated, use `jvm.buffer.memory.used` instead."
 
   // K8sPodCpuTime is the metric conforming to the "k8s.pod.cpu.time" semantic conventions. It represents the total CPU time consumed
   // Instrument: counter
