@@ -10,8 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Metric config WithResource function merges provided resource with resource information from the environment. (#5773)
-- LoggerProvider#newProviderConfig merges provided resource with resource information from the environment. (#5773)
+- The `WithResource` option for `NewMeterProvider` now merges the provided resources with the ones from environment variables. (#5773)
+- The `WithResource` option for `NewLoggerProvider` now merges the provided resources with the ones from environment variables. (#5773)
 
 ### Fixed
 
