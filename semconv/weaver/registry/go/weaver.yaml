@@ -1,11 +1,16 @@
 params:
   excluded_namespaces: []
+  excluded_attributes: ["messaging.client_id"]
 templates:
   - pattern: attribute_group.go.j2
     filter: >
       semconv_grouped_attributes({
         "exclude_deprecated": false,
         "exclude_root_namespace": $excluded_namespaces,
+      })
+      | map({
+        root_namespace: .root_namespace,
+        attributes: .attributes | map(select(.name as $st | $excluded_attributes[] | index($st) | not)),
       })
     application_mode: single
     file_name: attribute_group.go
@@ -35,6 +40,16 @@ text_maps:
     double[]: FloatSlice
     boolean: Bool
     boolean[]: BoolSlice
+  attribute_type_value:
+    string: string
+    string[]: "[]string"
+    int: int
+    int[]: "[]int"
+    double: float64
+    double[]: "[]float64"
+    boolean: bool
+    boolean[]: "[]bool"
+
 acronyms:
   - ACL
   - AIX
