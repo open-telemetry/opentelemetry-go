@@ -50,18 +50,18 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 // processed, true will be returned by default. A value of false will only be
 // returned if it can be positively verified that no Processor will process the
 // record.
-func (l *logger) Enabled(ctx context.Context, record log.Record) bool {
+func (l *logger) Enabled(ctx context.Context, param log.EnabledParam) bool {
 	fltrs := l.provider.filterProcessors()
 	// If there are more Processors than FilterProcessors we cannot be sure
 	// that all Processors will drop the record. Therefore, return true.
 	//
 	// If all Processors are FilterProcessors, check if any is enabled.
-	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, record, fltrs)
+	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, param, fltrs)
 }
 
-func anyEnabled(ctx context.Context, r log.Record, fltrs []x.FilterProcessor) bool {
+func anyEnabled(ctx context.Context, param log.EnabledParam, fltrs []x.FilterProcessor) bool {
 	for _, f := range fltrs {
-		if f.Enabled(ctx, r) {
+		if f.Enabled(ctx, param) {
 			// At least one Processor will process the Record.
 			return true
 		}

@@ -29,18 +29,18 @@ import (
 // [Processor]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/log#Processor
 type FilterProcessor interface {
 	// Enabled returns whether the Processor will process for the given context
-	// and record.
+	// and param.
 	//
-	// The passed record is likely to be a partial record with only the
+	// The passed param is likely to be a partial record with only the
 	// bridge-relevant information being provided (e.g a record with only the
 	// Severity set). If a Logger needs more information than is provided, it
 	// is said to be in an indeterminate state (see below).
 	//
 	// The returned value will be true when the Processor will process for the
-	// provided context and record, and will be false if the Processor will not
+	// provided context and param, and will be false if the Processor will not
 	// process. An implementation should default to returning true for an
 	// indeterminate state.
 	//
-	// Implementations should not modify the record.
-	Enabled(ctx context.Context, record log.Record) bool
+	// Implementations should not modify the param.
+	Enabled(ctx context.Context, param log.EnabledParam) bool
 }

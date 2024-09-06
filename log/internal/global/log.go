@@ -87,10 +87,10 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 }
 
-func (l *logger) Enabled(ctx context.Context, r log.Record) bool {
+func (l *logger) Enabled(ctx context.Context, param log.EnabledParam) bool {
 	var enabled bool
 	if del, ok := l.delegate.Load().(log.Logger); ok {
-		enabled = del.Enabled(ctx, r)
+		enabled = del.Enabled(ctx, param)
 	}
 	return enabled
 }

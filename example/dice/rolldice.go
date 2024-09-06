@@ -4,7 +4,10 @@
 package main
 
 import (
-	"go.opentelemetry.io/contrib/bridges/otelslog"
+	// TODO: "go.opentelemetry.io/contrib/bridges/otelslog".
+	"log/slog"
+	"os"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -14,7 +17,7 @@ const name = "go.opentelemetry.io/otel/example/dice"
 var (
 	tracer  = otel.Tracer(name)
 	meter   = otel.Meter(name)
-	logger  = otelslog.NewLogger(name)
+	logger  = slog.New(slog.NewJSONHandler(os.Stdout, nil)) // TODO: logger  = otelslog.NewLogger(name).
 	rollCnt metric.Int64Counter
 )
 
