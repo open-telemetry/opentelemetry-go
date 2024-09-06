@@ -373,6 +373,83 @@ func TestNewConfig(t *testing.T) {
             },
             errs: []string{`invalid header key: inva lid`},
         },
+		{
+			name: "OptionEndpointURLWithoutScheme",
+			options: []Option{
+				WithEndpointURL("//env.endpoint:8080/prefix"),
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointWithoutScheme",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "DefaultEndpointWithEnvInsecure",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointWithoutSchemeWithEnvInsecure",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointURLWithoutSchemeWithEnvInsecure",
+			options: []Option{
+				WithEndpointURL("//env.endpoint:8080/prefix"),
+			},
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointWithEnvInsecure",
+			options: []Option{
+				WithEndpoint("env.endpoint:8080"),
+			},
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
 	}
 
 	for _, tc := range testcases {
