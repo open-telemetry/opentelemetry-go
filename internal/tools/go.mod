@@ -2,8 +2,6 @@ module go.opentelemetry.io/otel/internal/tools
 
 go 1.22.1
 
-toolchain go1.23.0
-
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
@@ -15,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/gotmpl v0.14.0
 	go.opentelemetry.io/build-tools/multimod v0.14.0
 	go.opentelemetry.io/build-tools/semconvgen v0.14.0
-	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
+	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
 	golang.org/x/tools v0.24.0
 	golang.org/x/vuln v1.1.3
 )

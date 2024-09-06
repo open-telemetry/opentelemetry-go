@@ -11,6 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlplogfile ` experimental logs exporter. (#5743)
+### Fixed
+
+- Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
+- Fix panic instruments creation when setting meter provider. (#5758)
 
 ### Removed
 
