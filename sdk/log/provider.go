@@ -42,12 +42,6 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 
 	if c.resource == nil {
 		c.resource = resource.Default()
-	} else {
-		var err error
-		c.resource, err = resource.Merge(resource.Environment(), c.resource)
-		if err != nil {
-			otel.Handle(err)
-		}
 	}
 
 	c.attrCntLim = c.attrCntLim.Resolve(
@@ -203,7 +197,11 @@ func (fn loggerProviderOptionFunc) apply(c providerConfig) providerConfig {
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.resource = res
+		var err error
+		cfg.resource, err = resource.Merge(resource.Environment(), res)
+		if err != nil {
+			otel.Handle(err)
+		}
 		return cfg
 	})
 }
