@@ -8,11 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Metric config WithResource function merges provided resource with resource information from the environment. (#5773)
+- LoggerProvider#newProviderConfig merges provided resource with resource information from the environment. (#5773)
+
 ### Fixed
 
 - Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
 - Fix panic instruments creation when setting meter provider. (#5758)
-- Fix metric config WithResource function and LoggerProvider#newProviderConfig to merge provided resource with resource information from the environment. (#5773)
 
 ### Removed
 
