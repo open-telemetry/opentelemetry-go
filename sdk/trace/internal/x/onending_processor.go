@@ -17,7 +17,7 @@ type OnEndingSpanProcessor interface {
 	//
 	// This method is called synchronously during the span's End operation,
 	// therefore it should not block or throw an exception.
-	// If multiple [SpanProcessor] are registered, their `OnEnding` callbacks are
+	// If multiple [SpanProcessor] are registered, their OnEnding callbacks are
 	// invoked in the order they have been registered.
 	//
 	// [SpanProcessor]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#SpanProcessor
