@@ -1,7 +1,4 @@
-{# TODO - move to built in support for language constants in weaver #}
-{%- macro to_go_name(fqn) -%}
-{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
-{%- endmacro -%}
+{% import 'helpers.j2' as h %}
 {# TODO - REQUIREMNET LEVEL SHOULD NOT BE USED IN ATTRIBUTE REGISTRY #}
 {%- macro requirement_level_doc(attr) -%}
 {%- if attr.requirement_level == "required" -%}
@@ -31,7 +28,6 @@ Examples: {{ attr.examples | pprint | trim("[]")  }}
 {{ attr.brief }}
 Stability: {{ attr.stability | title }}
 {% if attr is enum %}Type: Enum{% else %}Type: {{ attr.type }}{% endif %}
-{{ requirement_level_doc(attr) }}
 {{ deprecated_doc(attr) }}
 {{ examples_doc(attr) }}
 {{ notes_doc(attr) }}
@@ -53,7 +49,7 @@ const (
 {% for attribute in group.attributes %}
 {%- if not attribute.type is template_type %}{# TODO - Go does not handle template attributes yet!!! #}
     {{ keydoc(attribute) | comment(indent=4) }}
-    {{to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+    {{h.to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
 {%- endif %}
 {%- endfor %}
 )
@@ -61,10 +57,10 @@ const (
 {% for attribute in group.attributes %}
 {# TODO - Go does not handle template attributes yet!!! #}
 {%- if not attribute.type is template_type %}
-{{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment }}
+{{ [h.to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment }}
 {{ ["It represents the " ~ attribute.brief] | comment }}
-func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
-    return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+func {{h.to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+    return {{h.to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
 {%- endif %}
 {% endfor %}
@@ -76,7 +72,7 @@ var (
 {% for value in attribute.type.members %}
     {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(indent=4) }}
     {%- if value.deprecated %}{{ value.deprecated | comment(indent=4) }}{%  endif %}
-    {{to_go_name(attribute.name ~ "." ~ value.id)}} = {{ to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+    {{h.to_go_name(attribute.name ~ "." ~ value.id)}} = {{ h.to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )
 {%- endif %}
