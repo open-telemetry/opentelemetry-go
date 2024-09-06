@@ -49,7 +49,6 @@ text_maps:
     double[]: "[]float64"
     boolean: bool
     boolean[]: "[]bool"
-
 acronyms:
   - ACL
   - AIX
