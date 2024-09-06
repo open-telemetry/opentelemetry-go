@@ -2,6 +2,7 @@
 {%- macro to_go_name(fqn) -%}
 {{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
 {%- endmacro -%}
+{# TODO - REQUIREMNET LEVEL SHOULD NOT BE USED IN ATTRIBUTE REGISTRY #}
 {%- macro requirement_level_doc(attr) -%}
 {%- if attr.requirement_level == "required" -%}
 Requirement Level: Required
