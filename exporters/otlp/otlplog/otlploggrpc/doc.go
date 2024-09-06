@@ -18,6 +18,12 @@ The value should not contain a query string or fragment.
 OTEL_EXPORTER_OTLP_LOGS_ENDPOINT takes precedence over OTEL_EXPORTER_OTLP_ENDPOINT.
 The configuration can be overridden by [WithEndpoint], [WithEndpointURL], [WithInsecure], and [WithGRPCConn] options.
 
+OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_LOGS_INSECURE (default: "false") -
+setting "true" disables client transport security for the exporter's gRPC connection.
+You can use this only when an endpoint is provided without scheme.
+OTEL_EXPORTER_OTLP_LOGS_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
+The configuration can be overridden by [WithInsecure], [WithGRPCConn] options.
+
 OTEL_EXPORTER_OTLP_HEADERS, OTEL_EXPORTER_OTLP_LOGS_HEADERS (default: none) -
 key-value pairs used as gRPC metadata associated with gRPC requests.
 The value is expected to be represented in a format matching the [W3C Baggage HTTP Header Content Format],
