@@ -1,0 +1,4 @@
+{# TODO - move to built in support for language constants in weaver #}
+{%- macro to_go_name(fqn) -%}
+{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
+{%- endmacro -%}

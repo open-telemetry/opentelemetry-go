@@ -1,6 +1,4 @@
-{%- macro to_go_name(fqn) -%}
-{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
-{%- endmacro -%}
+{% import 'helpers.j2' as h %}
 {%- macro it_reps(brief) -%}
 It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
   {{ brief[0]|lower }}{{ brief[1:] }}
@@ -10,9 +8,9 @@ It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The
 {%- endmacro -%}
 {%- macro keydoc(metric) -%}
 {%- if not metric.brief -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
+{{ h.to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{{ h.to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
 // Copyright The OpenTelemetry Authors
@@ -34,10 +32,10 @@ const (
 {%- if not metric.brief %}
   // NOTE: The description (brief) for this metric is not defined in the semantic-conventions repository.
 {%- endif %}
-  {{ to_go_name(metric.metric_name) }}Name = "{{ metric.metric_name }}"
-  {{ to_go_name(metric.metric_name) }}Unit = "{{ metric.unit }}"
+  {{ h.to_go_name(metric.metric_name) }}Name = "{{ metric.metric_name }}"
+  {{ h.to_go_name(metric.metric_name) }}Unit = "{{ metric.unit }}"
 {%- if metric.brief %}
-  {{ to_go_name(metric.metric_name) }}Description = "{{ metric.brief | trim }}"
+  {{ h.to_go_name(metric.metric_name) }}Description = "{{ metric.brief | trim }}"
 {%- endif %}
 {% endfor %}
 )
