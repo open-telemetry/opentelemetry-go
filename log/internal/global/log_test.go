@@ -55,7 +55,7 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 		var enabled bool
 		for {
 			l.Emit(ctx, r)
-			enabled = l.Enabled(ctx, r)
+			enabled = l.IsEnabled(ctx)
 
 			select {
 			case <-stop:
@@ -103,16 +103,16 @@ type testLogger struct {
 }
 
 func (l *testLogger) Emit(context.Context, log.Record) { l.emitN++ }
-func (l *testLogger) Enabled(context.Context, log.Record) bool {
+func (l *testLogger) IsEnabled(context.Context, ...log.LoggerEnabledOption) bool {
 	l.enabledN++
 	return true
 }
 
-func emitRecord(l log.Logger) {
+func emitRecord(t testing.TB, l log.Logger) {
 	ctx := context.Background()
 	var r log.Record
 
-	_ = l.Enabled(ctx, r)
+	assert.True(t, l.IsEnabled(ctx))
 	l.Emit(ctx, r)
 }
 
@@ -143,15 +143,15 @@ func TestDelegation(t *testing.T) {
 	want++
 	assert.Equal(t, want, delegate.loggerN, "new Logger not delegated")
 
-	emitRecord(pre0)
-	emitRecord(pre2)
+	emitRecord(t, pre0)
+	emitRecord(t, pre2)
 
 	if assert.IsType(t, &testLogger{}, pre2, "wrong pre-delegation Logger type") {
 		assert.Equal(t, 2, pre2.(*testLogger).emitN, "Emit not delegated")
 		assert.Equal(t, 2, pre2.(*testLogger).enabledN, "Enabled not delegated")
 	}
 
-	emitRecord(post)
+	emitRecord(t, post)
 
 	if assert.IsType(t, &testLogger{}, post, "wrong post-delegation Logger type") {
 		assert.Equal(t, 1, post.(*testLogger).emitN, "Emit not delegated")

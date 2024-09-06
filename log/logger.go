@@ -30,7 +30,7 @@ type Logger interface {
 	// concurrently.
 	Emit(ctx context.Context, record Record)
 
-	// Enabled returns whether the Logger emits for the given context and
+	// IsEnabled returns whether the Logger emits for the given context and
 	// record.
 	//
 	// The passed record is likely to be a partial record with only the
@@ -50,7 +50,7 @@ type Logger interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Enabled(ctx context.Context, record Record) bool
+	IsEnabled(ctx context.Context, opts ...LoggerEnabledOption) bool
 }
 
 // LoggerOption applies configuration options to a [Logger].
@@ -128,4 +128,10 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 		config.schemaURL = schemaURL
 		return config
 	})
+}
+
+// LoggerEnabledOption applies configuration options to a [Logger.IsEnabled].
+type LoggerEnabledOption interface {
+	// Define EnabledConfig when needed.
+	applyLogger()
 }

@@ -215,9 +215,7 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0 := newFltrProcessor("0", true)
-	p1 := newFltrProcessor("1", true)
-	p2WithDisabled := newFltrProcessor("2", false)
+	p0 := newProcessor("0")
 
 	testCases := []struct {
 		name     string
@@ -235,24 +233,6 @@ func TestLoggerEnabled(t *testing.T) {
 			name: "WithProcessors",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
-				WithProcessor(p1),
-			), instrumentation.Scope{}),
-			ctx:      context.Background(),
-			expected: true,
-		},
-		{
-			name: "WithDisabledProcessors",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
-			), instrumentation.Scope{}),
-			ctx:      context.Background(),
-			expected: false,
-		},
-		{
-			name: "ContainsDisabledProcessor",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
-				WithProcessor(p0),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
 			expected: true,
@@ -261,7 +241,6 @@ func TestLoggerEnabled(t *testing.T) {
 			name: "WithNilContext",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
-				WithProcessor(p1),
 			), instrumentation.Scope{}),
 			ctx:      nil,
 			expected: true,
@@ -270,19 +249,17 @@ func TestLoggerEnabled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.Record{}))
+			assert.Equal(t, tc.expected, tc.logger.IsEnabled(tc.ctx))
 		})
 	}
 }
 
 func BenchmarkLoggerEnabled(b *testing.B) {
 	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
+		WithProcessor(newProcessor("0")),
 	)
 	logger := provider.Logger("BenchmarkLoggerEnabled")
-	ctx, r := context.Background(), log.Record{}
-	r.SetSeverityText("test")
+	ctx := context.Background()
 
 	var enabled bool
 
@@ -290,7 +267,7 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		enabled = logger.Enabled(ctx, r)
+		enabled = logger.IsEnabled(ctx)
 	}
 
 	_ = enabled
