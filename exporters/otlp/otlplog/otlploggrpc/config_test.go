@@ -327,12 +327,52 @@ func TestNewConfig(t *testing.T) {
 				`tls: failed to find any PEM data in certificate input`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value a,%ZZ=valid,key=%ZZ:`,
 				`invalid header: a`,
-				`invalid header key: %ZZ`,
 				`invalid header value: %ZZ`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
 			},
 		},
+        {
+            name: "HeadersWithSpaces",
+            envars: map[string]string{
+                "OTEL_EXPORTER_OTLP_HEADERS": " keyWithSpaces =value1",
+            },
+            want: config{
+                headers: newSetting(map[string]string{
+                    "keyWithSpaces": "value1",
+                }),
+                endpoint: newSetting(defaultEndpoint),
+                timeout:  newSetting(defaultTimeout),
+                retryCfg: newSetting(defaultRetryCfg),
+            },
+        },
+		{
+            name: "HeadersWithPercentEncoding",
+            envars: map[string]string{
+                "OTEL_EXPORTER_OTLP_HEADERS": "percent%20encoded=value,normal=ok",
+            },
+            want: config{
+                headers: newSetting(map[string]string{
+                    "percent%20encoded": "value",
+                    "normal":            "ok",
+                }),
+                endpoint: newSetting(defaultEndpoint),
+                timeout:  newSetting(defaultTimeout),
+                retryCfg: newSetting(defaultRetryCfg),
+            },
+        },
+		{
+            name: "HeadersWithInvalidKey",
+            envars: map[string]string{
+                "OTEL_EXPORTER_OTLP_HEADERS": "valid=ok,inva lid=not_ok,also_valid=fine",
+            },
+            want: config{
+                endpoint: newSetting(defaultEndpoint),
+                timeout:  newSetting(defaultTimeout),
+                retryCfg: newSetting(defaultRetryCfg),
+            },
+            errs: []string{`invalid header key: inva lid`},
+        },
 	}
 
 	for _, tc := range testcases {
