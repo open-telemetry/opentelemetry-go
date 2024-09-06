@@ -62,7 +62,7 @@ const (
 {%- if not attribute.type is template_type %}
 {{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment }}
 {{ ["It represents the " ~ attribute.brief] | comment }}
-func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type}}) attribute.KeyValue {
+func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
     return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
 {%- endif %}
