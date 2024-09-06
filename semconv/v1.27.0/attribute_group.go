@@ -1,3 +1,4 @@
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,7 +18,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "33",
@@ -29,8 +29,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `device.app.lifecycle`.
     // 
     // Examples: undefined
@@ -86,7 +84,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "golang-binary-amd64-v0.1.0.attestation",
@@ -100,7 +97,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1b31dfcd5b7f9267bf2ff47651df1cfb9147b9e4df1f335accf65b4cda498408",
@@ -112,7 +108,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "123",
@@ -123,7 +118,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "golang-binary-amd64-v0.1.0",
@@ -143,7 +137,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "9ff4c52759e2c4ac70b7d517bc7fcdc1cda631ca0045271ddd1b192544f8a3e9",
@@ -163,7 +156,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "pkg:github/package-url/purl-spec@1209109710924",
@@ -176,7 +168,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "v0.1.0",
@@ -264,7 +255,6 @@ const (
     // ASP.NET Core exception middleware handling result
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "handled",
@@ -274,8 +264,6 @@ const (
     // Stability: Stable
     // Type: string
     // 
-    // Requirement Level: Conditionally Required - if and only if the exception was handled by this handler.
-    // 
     // Examples:
     // "Contoso.MyHandler",
     // 
@@ -284,7 +272,6 @@ const (
     // Rate limiting policy name.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "fixed",
@@ -294,7 +281,6 @@ const (
     // Rate-limiting result, shows whether the lease was acquired or contains a rejection reason
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Required
     // 
     // Examples:
     // "acquired",
@@ -303,7 +289,6 @@ const (
     // Flag indicating if request was handled by the application pipeline.
     // Stability: Stable
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples:
     // true,
@@ -311,7 +296,6 @@ const (
     // A value that indicates whether the matched route is a fallback route.
     // Stability: Stable
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples:
     // true,
@@ -319,7 +303,6 @@ const (
     // Match result - success or failure
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "success",
@@ -438,7 +421,6 @@ const (
     // The JSON-serialized value of each item in the `AttributeDefinitions` request field.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -448,7 +430,6 @@ const (
     // The value of the `AttributesToGet` request parameter.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -459,14 +440,12 @@ const (
     // The value of the `ConsistentRead` request parameter.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     AwsDynamodbConsistentReadKey = attribute.Key("aws.dynamodb.consistent_read")
     // The JSON-serialized value of each item in the `ConsumedCapacity` response field.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -476,7 +455,6 @@ const (
     // The value of the `Count` response parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 10,
@@ -484,7 +462,6 @@ const (
     // The value of the `ExclusiveStartTableName` request parameter.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Users",
@@ -493,7 +470,6 @@ const (
     // The JSON-serialized value of each item in the `GlobalSecondaryIndexUpdates` request field.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -503,7 +479,6 @@ const (
     // The JSON-serialized value of each item of the `GlobalSecondaryIndexes` request field
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -513,7 +488,6 @@ const (
     // The value of the `IndexName` request parameter.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "name_to_group",
@@ -521,7 +495,6 @@ const (
     // The JSON-serialized value of the `ItemCollectionMetrics` response field.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "{ "string" : [ { "ItemCollectionKey": { "string" : { "B": blob, "BOOL": boolean, "BS": [ blob ], "L": [ "AttributeValue" ], "M": { "string" : "AttributeValue" }, "N": "string", "NS": [ "string" ], "NULL": boolean, "S": "string", "SS": [ "string" ] } }, "SizeEstimateRangeGB": [ number ] } ] }",
@@ -529,7 +502,6 @@ const (
     // The value of the `Limit` request parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 10,
@@ -537,7 +509,6 @@ const (
     // The JSON-serialized value of each item of the `LocalSecondaryIndexes` request field.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -547,7 +518,6 @@ const (
     // The value of the `ProjectionExpression` request parameter.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Title",
@@ -557,7 +527,6 @@ const (
     // The value of the `ProvisionedThroughput.ReadCapacityUnits` request parameter.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1.0,
@@ -566,7 +535,6 @@ const (
     // The value of the `ProvisionedThroughput.WriteCapacityUnits` request parameter.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1.0,
@@ -575,14 +543,12 @@ const (
     // The value of the `ScanIndexForward` request parameter.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     AwsDynamodbScanForwardKey = attribute.Key("aws.dynamodb.scan_forward")
     // The value of the `ScannedCount` response parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 50,
@@ -590,7 +556,6 @@ const (
     // The value of the `Segment` request parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 10,
@@ -598,7 +563,6 @@ const (
     // The value of the `Select` request parameter.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "ALL_ATTRIBUTES",
@@ -607,7 +571,6 @@ const (
     // The number of items in the `TableNames` response parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 20,
@@ -615,7 +578,6 @@ const (
     // The keys in the `RequestItems` object field.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -626,7 +588,6 @@ const (
     // The value of the `TotalSegments` request parameter.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 100,
@@ -635,7 +596,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster",
@@ -646,7 +606,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:ecs:us-west-1:123456789123:container/32624152-9086-4f0e-acae-1a75b14fe4d9",
@@ -657,7 +616,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -667,7 +625,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:ecs:us-west-1:123456789123:task/10838bed-421f-43ef-870a-f43feacbbb5b",
@@ -679,7 +636,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry-family",
@@ -691,8 +647,6 @@ const (
     // Stability: Experimental
     // Type: string
     // 
-    // Requirement Level: Conditionally Required - If and only if `task.arn` is populated.
-    // 
     // Examples:
     // "10838bed-421f-43ef-870a-f43feacbbb5b",
     // "23ebb8ac-c18f-46c6-8bbe-d55d0e37cfbd",
@@ -701,7 +655,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "8",
@@ -711,7 +664,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster",
@@ -720,7 +672,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:lambda:us-east-1:123456:function:myfunction:myalias",
@@ -731,7 +682,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -746,7 +696,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -760,7 +709,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -775,7 +723,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -785,7 +732,6 @@ const (
     // The AWS request ID as returned in the response headers `x-amz-request-id` or `x-amz-requestid`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "79b9da39-b7ae-508a-a6bc-864b2829c622",
@@ -794,7 +740,6 @@ const (
     // The S3 bucket name the request refers to. Corresponds to the `--bucket` parameter of the [S3 API] operations.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "some-bucket-name",
@@ -807,7 +752,6 @@ const (
     // The source object (in the form `bucket`/`key`) for the copy operation.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "someFile.yml",
@@ -825,7 +769,6 @@ const (
     // The delete request container that specifies the objects to be deleted.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Objects=[{Key=string,VersionId=string},{Key=string,VersionId=string}],Quiet=boolean",
@@ -840,7 +783,6 @@ const (
     // The S3 object key the request refers to. Corresponds to the `--key` parameter of the [S3 API] operations.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "someFile.yml",
@@ -879,7 +821,6 @@ const (
     // The part number of the part being uploaded in a multipart-upload operation. This is a positive integer between 1 and 10,000.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 3456,
@@ -896,7 +837,6 @@ const (
     // Upload ID that identifies the multipart upload.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "dfRtDYWFbkRONycy.Yxwh66Yjlx.cph0gtNBtJ",
@@ -1291,7 +1231,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Microsoft.Storage",
@@ -1303,7 +1242,6 @@ const (
     // The unique identifier of the service request. It's generated by the Azure service and returned with the response.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "00000000-0000-0000-0000-000000000000",
@@ -1339,7 +1277,6 @@ const (
     // Array of brand name and version separated by a space
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -1355,7 +1292,6 @@ const (
     // Preferred language of the user using the browser
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "en",
@@ -1368,7 +1304,6 @@ const (
     // A boolean that is true if the browser is running on a mobile device
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: This value is intended to be taken from the [UA client hints API] (`navigator.userAgentData.mobile`). If unavailable, this attribute SHOULD be left unset
@@ -1378,7 +1313,6 @@ const (
     // The platform on which the browser is running
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Windows",
@@ -1438,7 +1372,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Build and Test",
@@ -1450,7 +1383,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "120912",
@@ -1459,7 +1391,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Run GoLang Linter",
@@ -1473,7 +1404,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "12097",
@@ -1482,7 +1412,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https://github.com/open-telemetry/semantic-conventions/actions/runs/9753949763/job/26920038674?pr=1075",
@@ -1493,7 +1422,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "build",
@@ -1578,7 +1506,6 @@ const (
     // Client address - domain name if available without reverse DNS lookup; otherwise, IP address or Unix domain socket name.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "client.example.com",
@@ -1590,7 +1517,6 @@ const (
     // Client port number.
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 65123,
@@ -1627,7 +1553,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "111111111111",
@@ -1637,7 +1562,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "us-east-1c",
@@ -1648,7 +1572,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: The prefix of the service SHOULD match the one specified in `cloud.provider`
@@ -1657,7 +1580,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     CloudProviderKey = attribute.Key("cloud.provider")
@@ -1665,7 +1587,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "us-central1",
@@ -1683,7 +1604,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "arn:aws:lambda:REGION:ACCOUNT_ID:function:my-function",
@@ -1894,7 +1814,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "123e4567-e89b-12d3-a456-426614174000",
@@ -1906,7 +1825,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https://github.com/cloudevents",
@@ -1919,7 +1837,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "1.0"
     // 
@@ -1929,7 +1846,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "mynewfile.jpg"
     // 
@@ -1939,7 +1855,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "com.github.pull_request.opened",
@@ -2011,13 +1926,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     CodeColumnKey = attribute.Key("code.column")
     // The source code file name that identifies the code unit as uniquely as possible (preferably an absolute file path).
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "/usr/local/MyApplication/content_root/app/index.php"
     CodeFilepathKey = attribute.Key("code.filepath")
@@ -2025,7 +1938,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "serveRequest"
     CodeFunctionKey = attribute.Key("code.function")
@@ -2033,13 +1945,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     CodeLinenoKey = attribute.Key("code.lineno")
     // The "namespace" within which `code.function` is defined. Usually the qualified class or module name, such that `code.namespace` + some separator + `code.function` form a unique identifier for the code unit.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "com.example.MyHttpService"
     CodeNamespaceKey = attribute.Key("code.namespace")
@@ -2047,7 +1957,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "at com.example.GenerateTrace.methodB(GenerateTrace.java:13)\n at com.example.GenerateTrace.methodA(GenerateTrace.java:9)\n at com.example.GenerateTrace.main(GenerateTrace.java:5)\n"
     CodeStacktraceKey = attribute.Key("code.stacktrace")
@@ -2113,7 +2022,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "otelcontribcol",
@@ -2124,7 +2032,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -2137,7 +2044,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "otelcontribcol --config config.yaml",
@@ -2145,8 +2051,6 @@ const (
     // Deprecated, use `cpu.mode` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `cpu.mode`
     // 
     // Examples:
@@ -2157,7 +2061,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "a3bf90e006b2",
@@ -2168,7 +2071,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "sha256:19c92d0a00d1b66d897bceaa7319bee0dd38a10a851c60bcec9474aa3f01e50f",
@@ -2183,7 +2085,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "gcr.io/opentelemetry/operator",
@@ -2192,7 +2093,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -2209,7 +2109,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -2223,7 +2122,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry-autoconf",
@@ -2232,7 +2130,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "docker",
@@ -2363,7 +2260,6 @@ const (
     // The mode of the CPU
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "user",
@@ -2419,7 +2315,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -2429,7 +2324,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "us-west-2"
     DbCassandraCoordinatorDcKey = attribute.Key("db.cassandra.coordinator.dc")
@@ -2437,7 +2331,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "be13faa2-8574-4d71-926d-27f16cf8a7af"
     DbCassandraCoordinatorIdKey = attribute.Key("db.cassandra.coordinator.id")
@@ -2445,7 +2338,6 @@ const (
     // 
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     DbCassandraIdempotenceKey = attribute.Key("db.cassandra.idempotence")
@@ -2453,7 +2345,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 5000,
@@ -2462,7 +2353,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0,
@@ -2471,8 +2361,6 @@ const (
     // Deprecated, use `db.collection.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.collection.name`.
     // 
     // Examples: "mytable"
@@ -2481,7 +2369,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "myDataSource",
@@ -2489,7 +2376,6 @@ const (
     // The state of a connection in the pool
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "idle",
@@ -2497,8 +2383,6 @@ const (
     // Deprecated, use `db.client.connection.pool.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.client.connection.pool.name`.
     // 
     // Examples:
@@ -2507,8 +2391,6 @@ const (
     // Deprecated, use `db.client.connection.state` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.client.connection.state`.
     // 
     // Examples:
@@ -2517,7 +2399,6 @@ const (
     // The name of a collection (table, container) within the database.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "public.users",
@@ -2530,8 +2411,6 @@ const (
     // Deprecated, use `server.address`, `server.port` attributes instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.address` and `server.port`.
     // 
     // Examples: "Server=(localdb)\v11.0;Integrated Security=true;"
@@ -2539,22 +2418,18 @@ const (
     // Unique Cosmos client instance id.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "3ba4827d-4422-483f-b59f-85b74211c11d"
     DbCosmosdbClientIdKey = attribute.Key("db.cosmosdb.client_id")
     // Cosmos client connection mode.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     DbCosmosdbConnectionModeKey = attribute.Key("db.cosmosdb.connection_mode")
     // Deprecated, use `db.collection.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.collection.name`.
     // 
     // Examples: "mytable"
@@ -2562,14 +2437,12 @@ const (
     // Cosmos DB Operation Type.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     DbCosmosdbOperationTypeKey = attribute.Key("db.cosmosdb.operation_type")
     // RU consumed for that operation
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 46.18,
@@ -2578,14 +2451,12 @@ const (
     // Request payload size in bytes
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     DbCosmosdbRequestContentLengthKey = attribute.Key("db.cosmosdb.request_content_length")
     // Cosmos DB status code.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 200,
@@ -2594,7 +2465,6 @@ const (
     // Cosmos DB sub status code.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1000,
@@ -2604,8 +2474,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.namespace`.
     // 
     // Examples:
@@ -2615,7 +2483,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "instance-0000000001",
@@ -2623,8 +2490,6 @@ const (
     // Deprecated, no general replacement at this time. For Elasticsearch, use `db.elasticsearch.node.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Deprecated, no general replacement at this time. For Elasticsearch, use `db.elasticsearch.node.name` instead.
     // 
     // Examples: "mysql-e26b99z.example.com"
@@ -2632,8 +2497,6 @@ const (
     // Removed, no replacement at this time.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Removed as not used.
     // 
     // Examples:
@@ -2643,8 +2506,6 @@ const (
     // Deprecated, use `db.collection.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.collection.name`.
     // 
     // Examples: "mytable"
@@ -2652,8 +2513,6 @@ const (
     // Deprecated, SQL Server instance is now populated as a part of `db.namespace` attribute.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Deprecated, no replacement at this time.
     // 
     // Examples: "MSSQLSERVER"
@@ -2661,8 +2520,6 @@ const (
     // Deprecated, use `db.namespace` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.namespace`.
     // 
     // Examples:
@@ -2673,7 +2530,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "customers",
@@ -2686,8 +2542,6 @@ const (
     // Deprecated, use `db.operation.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.operation.name`.
     // 
     // Examples:
@@ -2698,7 +2552,6 @@ const (
     // The number of queries included in a batch operation.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 2,
@@ -2711,7 +2564,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "findAndModify",
@@ -2726,7 +2578,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "SELECT * FROM wuser_table where username = ?",
@@ -2741,8 +2592,6 @@ const (
     // Deprecated, use `db.namespace` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.namespace`.
     // 
     // Examples:
@@ -2753,8 +2602,6 @@ const (
     // Deprecated, use `db.collection.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.collection.name`.
     // 
     // Examples: "mytable"
@@ -2762,8 +2609,6 @@ const (
     // The database statement being executed.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.query.text`.
     // 
     // Examples:
@@ -2773,7 +2618,6 @@ const (
     // The database management system (DBMS) product as identified by the client instrumentation.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: The actual DBMS may differ from the one identified by the client. For example, when using PostgreSQL client libraries to connect to a CockroachDB, the `db.system` is set to `postgresql` based on the instrumentation's best knowledge
@@ -2781,8 +2625,6 @@ const (
     // Deprecated, no replacement at this time.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: No replacement at this time.
     // 
     // Examples:
@@ -3397,8 +3239,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Deprecated, use `deployment.environment.name` instead.
     // 
     // Examples:
@@ -3409,7 +3249,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "staging",
@@ -3428,7 +3267,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1208",
@@ -3437,7 +3275,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "deploy my app",
@@ -3447,7 +3284,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     DeploymentStatusKey = attribute.Key("deployment.status")
@@ -3516,7 +3352,6 @@ const (
     // Destination address - domain name if available without reverse DNS lookup; otherwise, IP address or Unix domain socket name.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "destination.example.com",
@@ -3528,7 +3363,6 @@ const (
     // Destination port number
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 3389,
@@ -3564,7 +3398,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2ab2916d-a51f-4ac8-80ee-45ac31a28092",
@@ -3578,7 +3411,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Apple",
@@ -3592,7 +3424,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "iPhone3,4",
@@ -3604,7 +3435,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "iPhone 6s Plus",
@@ -3657,7 +3487,6 @@ const (
     // The disk IO operation direction.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "read",
@@ -3693,7 +3522,6 @@ const (
     // The name being queried.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "www.example.com",
@@ -3722,7 +3550,6 @@ const (
     // Name of the garbage collector managed heap generation.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "gen0",
@@ -3769,8 +3596,6 @@ const (
     // Deprecated, use `user.id` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `user.id` attribute.
     // 
     // Examples: "username"
@@ -3778,8 +3603,6 @@ const (
     // Deprecated, use `user.roles` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `user.roles` attribute.
     // 
     // Examples: "admin"
@@ -3787,8 +3610,6 @@ const (
     // Deprecated, no replacement at this time.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Removed.
     // 
     // Examples: "read:message, write:files"
@@ -3831,7 +3652,6 @@ const (
     // 
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "timeout",
@@ -3889,7 +3709,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "browser.mouse.click",
@@ -3921,7 +3740,6 @@ const (
     // 
     // Stability: Stable
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: An exception is considered to have escaped (or left) the scope of a span,
@@ -3946,7 +3764,6 @@ const (
     // The exception message.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Division by zero",
@@ -3956,7 +3773,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "Exception in thread "main" java.lang.RuntimeException: Test exception\n at com.example.GenerateTrace.methodB(GenerateTrace.java:13)\n at com.example.GenerateTrace.methodA(GenerateTrace.java:9)\n at com.example.GenerateTrace.main(GenerateTrace.java:5)\n"
     ExceptionStacktraceKey = attribute.Key("exception.stacktrace")
@@ -3964,7 +3780,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "java.net.ConnectException",
@@ -4016,7 +3831,6 @@ const (
     // 
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     FaasColdstartKey = attribute.Key("faas.coldstart")
@@ -4024,7 +3838,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "0/5 * * * ? *"
     // 
@@ -4034,7 +3847,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "myBucketName",
@@ -4044,7 +3856,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "myFile.txt",
@@ -4053,7 +3864,6 @@ const (
     // Describes the type of the operation that was performed on the data.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     FaasDocumentOperationKey = attribute.Key("faas.document.operation")
@@ -4061,7 +3871,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "2020-01-23T13:47:06Z"
     // 
@@ -4072,7 +3881,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de",
@@ -4083,7 +3891,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "af9d5aa4-a685-4c5f-a22b-444f80b3cc28"
     FaasInvocationIdKey = attribute.Key("faas.invocation_id")
@@ -4091,7 +3898,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "my-function"
     // Note: SHOULD be equal to the `faas.name` resource attribute of the invoked function
@@ -4100,7 +3906,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: SHOULD be equal to the `cloud.provider` resource attribute of the invoked function
@@ -4109,7 +3914,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "eu-central-1"
     // Note: SHOULD be equal to the `cloud.region` resource attribute of the invoked function
@@ -4118,7 +3922,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Note: It's recommended to set this attribute since e.g. too little memory can easily stop a Java AWS Lambda function from working correctly. On AWS Lambda, the environment variable `AWS_LAMBDA_FUNCTION_MEMORY_SIZE` provides this information (which must be multiplied by 1,048,576)
     FaasMaxMemoryKey = attribute.Key("faas.max_memory")
@@ -4126,7 +3929,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "my-function",
@@ -4154,7 +3956,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "2020-01-23T13:47:06Z"
     // 
@@ -4165,14 +3966,12 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     FaasTriggerKey = attribute.Key("faas.trigger")
     // The immutable version of the function being executed.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "26",
@@ -4391,7 +4190,6 @@ const (
     // The unique identifier of the feature flag.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "logo-color",
@@ -4399,7 +4197,6 @@ const (
     // The name of the service provider that performs the flag evaluation.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Flag Manager",
@@ -4408,7 +4205,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "red",
@@ -4462,7 +4258,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/home/user",
@@ -4472,7 +4267,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "png",
@@ -4484,7 +4278,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "example.png",
@@ -4493,7 +4286,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/home/alice/example.png",
@@ -4503,7 +4295,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     FileSizeKey = attribute.Key("file.size")
@@ -4560,7 +4351,6 @@ const (
     // Identifies the Google Cloud service for which the official client library is intended.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "appengine",
@@ -4575,7 +4365,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "job-name-xxxx",
@@ -4588,7 +4377,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0,
@@ -4600,7 +4388,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "my-host1234.example.com",
@@ -4612,7 +4399,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "instance-1",
@@ -4682,7 +4468,6 @@ const (
     // The full response received from the GenAI model.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "[{'role': 'assistant', 'content': 'The capital of France is Paris.'}]",
@@ -4694,7 +4479,6 @@ const (
     // The name of the operation being performed.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: If one of the predefined values applies, but specific system uses a different name it's RECOMMENDED to document it in the semantic conventions for specific GenAI system and use system-specific name in the instrumentation. If a different name is not documented, instrumentation libraries SHOULD use applicable predefined value
@@ -4702,7 +4486,6 @@ const (
     // The full prompt sent to the GenAI model.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "[{'role': 'user', 'content': 'What is the capital of France?'}]",
@@ -4714,7 +4497,6 @@ const (
     // The frequency penalty setting for the GenAI request.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0.1,
@@ -4722,7 +4504,6 @@ const (
     // The maximum number of tokens the model generates for a request.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 100,
@@ -4730,14 +4511,12 @@ const (
     // The name of the GenAI model a request is being made to.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "gpt-4"
     GenAiRequestModelKey = attribute.Key("gen_ai.request.model")
     // The presence penalty setting for the GenAI request.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0.1,
@@ -4745,7 +4524,6 @@ const (
     // List of sequences that the model will use to stop generating further tokens.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -4756,7 +4534,6 @@ const (
     // The temperature setting for the GenAI request.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0.0,
@@ -4764,7 +4541,6 @@ const (
     // The top_k sampling setting for the GenAI request.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1.0,
@@ -4772,7 +4548,6 @@ const (
     // The top_p sampling setting for the GenAI request.
     // Stability: Experimental
     // Type: double
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1.0,
@@ -4780,7 +4555,6 @@ const (
     // Array of reasons the model stopped generating tokens, corresponding to each generation received.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -4794,7 +4568,6 @@ const (
     // The unique identifier for the completion.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "chatcmpl-123",
@@ -4802,7 +4575,6 @@ const (
     // The name of the model that generated the response.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "gpt-4-0613",
@@ -4810,7 +4582,6 @@ const (
     // The Generative AI product as identified by the client or server instrumentation.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: "openai"
     // Note: The `gen_ai.system` describes a family of GenAI models with specific model identified
@@ -4826,7 +4597,6 @@ const (
     // The type of token being counted.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "input",
@@ -4835,8 +4605,6 @@ const (
     // Deprecated, use `gen_ai.usage.output_tokens` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `gen_ai.usage.output_tokens` attribute.
     // 
     // Examples:
@@ -4845,7 +4613,6 @@ const (
     // The number of tokens used in the GenAI input (prompt).
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 100,
@@ -4853,7 +4620,6 @@ const (
     // The number of tokens used in the GenAI response (completion).
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 180,
@@ -4861,8 +4627,6 @@ const (
     // Deprecated, use `gen_ai.usage.input_tokens` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `gen_ai.usage.input_tokens` attribute.
     // 
     // Examples:
@@ -5081,7 +4845,6 @@ const (
     // The type of memory.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "other",
@@ -5118,7 +4881,6 @@ const (
     // The GraphQL document being executed.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "query findBookById { bookById(id: ?) { name } }"
     // Note: The value may be sanitized to exclude sensitive information
@@ -5126,14 +4888,12 @@ const (
     // The name of the operation being executed.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "findBookById"
     GraphqlOperationNameKey = attribute.Key("graphql.operation.name")
     // The type of the operation being executed.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "query",
@@ -5191,7 +4951,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2daa2797-e42b-4624-9322-ec3f968df4da",
@@ -5200,7 +4959,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "e6134959463efd8966b20e75b913cafe3f5ec",
@@ -5209,7 +4967,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2022-10-23T18:00:42Z",
@@ -5252,7 +5009,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     HostArchKey = attribute.Key("host.arch")
@@ -5260,7 +5016,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 12288000,
@@ -5269,7 +5024,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "6",
@@ -5279,7 +5033,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "6",
@@ -5289,7 +5042,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz",
@@ -5298,7 +5050,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1",
@@ -5308,7 +5059,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "GenuineIntel",
@@ -5321,7 +5071,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "fdbf79e8af94cb7f9e8df36789187052",
@@ -5330,7 +5079,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "ami-07b06b442921831e5",
@@ -5339,7 +5087,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "infra-ami-eks-worker-node-7d4ec78312",
@@ -5349,7 +5096,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "0.1",
@@ -5360,7 +5106,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -5376,7 +5121,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -5392,7 +5136,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry-test",
@@ -5401,7 +5144,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "n1-standard-1",
@@ -5569,8 +5311,6 @@ const (
     // Deprecated, use `client.address` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `client.address`.
     // 
     // Examples: "83.164.160.102"
@@ -5578,7 +5318,6 @@ const (
     // State of the HTTP connection in the HTTP connection pool.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "active",
@@ -5587,8 +5326,6 @@ const (
     // Deprecated, use `network.protocol.name` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.protocol.name`.
     // 
     // Examples: undefined
@@ -5596,8 +5333,6 @@ const (
     // Deprecated, use one of `server.address`, `client.address` or `http.request.header.host` instead, depending on the usage.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by one of `server.address`, `client.address` or `http.request.header.host`, depending on the usage.
     // 
     // Examples:
@@ -5606,8 +5341,6 @@ const (
     // Deprecated, use `http.request.method` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `http.request.method`.
     // 
     // Examples:
@@ -5619,14 +5352,12 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
     HttpRequestBodySizeKey = attribute.Key("http.request.body.size")
     // HTTP request method.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "GET",
@@ -5654,7 +5385,6 @@ const (
     // Original HTTP method sent by the client in the request line.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "GeT",
@@ -5665,7 +5395,6 @@ const (
     // 
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Note: The resend count SHOULD be updated each time an HTTP request gets resent by the client, regardless of what was the cause of the resending (e.g. redirection, authorization failure, 503 Server Unavailable, network issues, or any other)
     HttpRequestResendCountKey = attribute.Key("http.request.resend_count")
@@ -5673,27 +5402,21 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     HttpRequestSizeKey = attribute.Key("http.request.size")
     // Deprecated, use `http.request.header.content-length` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `http.request.header.content-length`
     HttpRequestContentLengthKey = attribute.Key("http.request_content_length")
     // Deprecated, use `http.request.body.size` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `http.request.body.size`
     HttpRequestContentLengthUncompressedKey = attribute.Key("http.request_content_length_uncompressed")
     // The size of the response payload body in bytes. This is the number of bytes transferred excluding headers and is often, but not always, present as the [Content-Length] header. For requests using transport encoding, this should be the compressed size.
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
     HttpResponseBodySizeKey = attribute.Key("http.response.body.size")
@@ -5701,12 +5424,10 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     HttpResponseSizeKey = attribute.Key("http.response.size")
     // [HTTP response status code].
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 200,
@@ -5716,22 +5437,17 @@ const (
     // Deprecated, use `http.response.header.content-length` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `http.response.header.content-length`
     HttpResponseContentLengthKey = attribute.Key("http.response_content_length")
     // Deprecated, use `http.response.body.size` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replace by `http.response.body.size`
     HttpResponseContentLengthUncompressedKey = attribute.Key("http.response_content_length_uncompressed")
     // The matched route, that is, the path template in the format used by the respective server framework.
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/users/:userID?",
@@ -5745,8 +5461,6 @@ const (
     // Deprecated, use `url.scheme` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `url.scheme` instead.
     // 
     // Examples:
@@ -5756,8 +5470,6 @@ const (
     // Deprecated, use `server.address` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.address`.
     // 
     // Examples:
@@ -5766,8 +5478,6 @@ const (
     // Deprecated, use `http.response.status_code` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `http.response.status_code`.
     // 
     // Examples:
@@ -5776,8 +5486,6 @@ const (
     // Deprecated, use `url.path` and `url.query` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Split to `url.path` and `url.query.
     // 
     // Examples:
@@ -5786,8 +5494,6 @@ const (
     // Deprecated, use `url.full` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `url.full`.
     // 
     // Examples:
@@ -5796,8 +5502,6 @@ const (
     // Deprecated, use `user_agent.original` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `user_agent.original`.
     // 
     // Examples:
@@ -6088,7 +5792,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "win32battery_battery_testsysa33_1",
@@ -6097,7 +5800,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "eth0",
@@ -6106,7 +5808,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "dellStorage_perc_0",
@@ -6115,7 +5816,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     HwStateKey = attribute.Key("hw.state")
@@ -6123,7 +5823,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: Describes the category of the hardware component for which `hw.state` is being reported. For example, `hw.type=temperature` along with `hw.state=degraded` would indicate that the temperature of the hardware component has been reported as `degraded`
@@ -6241,8 +5940,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Moved to a payload field of `device.app.lifecycle`.
     // 
     // Examples: undefined
@@ -6295,7 +5992,6 @@ const (
     // Name of the buffer pool.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "mapped",
@@ -6308,7 +6004,6 @@ const (
     // Name of the garbage collector action.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "end of minor GC",
@@ -6321,7 +6016,6 @@ const (
     // Name of the garbage collector.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "G1 Young Generation",
@@ -6334,7 +6028,6 @@ const (
     // Name of the memory pool.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "G1 Old Gen",
@@ -6348,7 +6041,6 @@ const (
     // The type of memory.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "heap",
@@ -6357,14 +6049,12 @@ const (
     // Whether the thread is daemon or not.
     // Stability: Stable
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     JvmThreadDaemonKey = attribute.Key("jvm.thread.daemon")
     // State of the thread.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "runnable",
@@ -6472,7 +6162,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry-cluster",
@@ -6481,7 +6170,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "218fc5a9-a5f1-4b54-aa05-46717d0ab26d",
@@ -6515,7 +6203,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "redis",
@@ -6524,7 +6211,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     K8sContainerRestartCountKey = attribute.Key("k8s.container.restart_count")
@@ -6532,7 +6218,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Evicted",
@@ -6542,7 +6227,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6551,7 +6235,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6560,7 +6243,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6569,7 +6251,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6578,7 +6259,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6587,7 +6267,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6596,7 +6275,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6605,7 +6283,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6614,7 +6291,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "default",
@@ -6623,7 +6299,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "node-1",
@@ -6632,7 +6307,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1eb3a0c6-0477-4080-a9cb-0cb7db65c6a2",
@@ -6641,7 +6315,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry-pod-autoconf",
@@ -6650,7 +6323,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6659,7 +6331,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6668,7 +6339,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6677,7 +6347,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "opentelemetry",
@@ -6686,7 +6355,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff",
@@ -6695,7 +6363,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "volume0",
@@ -6704,7 +6371,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "emptyDir",
@@ -6958,7 +6624,6 @@ const (
     // The Linux Slab memory state
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "reclaimable",
@@ -6996,7 +6661,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "audit.log",
@@ -7005,7 +6669,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "uuid.log",
@@ -7014,7 +6677,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/var/log/mysql/audit.log",
@@ -7023,7 +6685,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/var/lib/docker/uuid.log",
@@ -7032,7 +6693,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     LogIostreamKey = attribute.Key("log.iostream")
@@ -7040,7 +6700,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "77 <86>1 2015-08-06T21:58:59.694Z 192.168.2.133 inactive - - - Something happened",
@@ -7052,7 +6711,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "01ARZ3NDEKTSV4RRFFQ69G5FAV",
@@ -7141,8 +6799,6 @@ const (
     // Deprecated, use `rpc.message.compressed_size` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `rpc.message.compressed_size`.
     // 
     // Examples: undefined
@@ -7150,8 +6806,6 @@ const (
     // Deprecated, use `rpc.message.id` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `rpc.message.id`.
     // 
     // Examples: undefined
@@ -7159,8 +6813,6 @@ const (
     // Deprecated, use `rpc.message.type` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `rpc.message.type`.
     // 
     // Examples: undefined
@@ -7168,8 +6820,6 @@ const (
     // Deprecated, use `rpc.message.uncompressed_size` instead.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `rpc.message.uncompressed_size`.
     // 
     // Examples: undefined
@@ -7229,7 +6879,6 @@ const (
     // The number of messages sent, received, or processed in the scope of the batching operation.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 0,
@@ -7242,7 +6891,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "client-5",
@@ -7252,7 +6900,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "my-group",
@@ -7263,14 +6910,12 @@ const (
     // A boolean that is true if the message destination is anonymous (could be unnamed or have auto-generated name).
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     MessagingDestinationAnonymousKey = attribute.Key("messaging.destination.anonymous")
     // The message destination name
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "MyQueue",
@@ -7283,14 +6928,12 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "1"
     MessagingDestinationPartitionIdKey = attribute.Key("messaging.destination.partition.id")
     // The name of the destination subscription from which a message is consumed.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "subscription-a",
@@ -7300,7 +6943,6 @@ const (
     // Low cardinality representation of the messaging destination name
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/customers/{customerId}",
@@ -7310,15 +6952,12 @@ const (
     // A boolean that is true if the message destination is temporary and might not exist anymore after messages are processed.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     MessagingDestinationTemporaryKey = attribute.Key("messaging.destination.temporary")
     // Deprecated, no replacement at this time.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
-    // 
     // Deprecated: No replacement at this time.
     // 
     // Examples: undefined
@@ -7326,8 +6965,6 @@ const (
     // Deprecated, no replacement at this time.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: No replacement at this time.
     // 
     // Examples:
@@ -7338,8 +6975,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.consumer.group.name`.
     // 
     // Examples: "$Default"
@@ -7348,19 +6983,16 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingEventhubsMessageEnqueuedTimeKey = attribute.Key("messaging.eventhubs.message.enqueued_time")
     // The ack deadline in seconds set for the modify ack deadline request.
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingGcpPubsubMessageAckDeadlineKey = attribute.Key("messaging.gcp_pubsub.message.ack_deadline")
     // The ack id for a given message.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "ack_id"
     MessagingGcpPubsubMessageAckIdKey = attribute.Key("messaging.gcp_pubsub.message.ack_id")
@@ -7368,13 +7000,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingGcpPubsubMessageDeliveryAttemptKey = attribute.Key("messaging.gcp_pubsub.message.delivery_attempt")
     // The ordering key for a given message. If the attribute is not present, the message does not have an ordering key.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "ordering_key"
     MessagingGcpPubsubMessageOrderingKeyKey = attribute.Key("messaging.gcp_pubsub.message.ordering_key")
@@ -7382,8 +7012,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.consumer.group.name`.
     // 
     // Examples: "my-group"
@@ -7392,15 +7020,12 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.destination.partition.id`
     MessagingKafkaDestinationPartitionKey = attribute.Key("messaging.kafka.destination.partition")
     // Message keys in Kafka are used for grouping alike messages to ensure they're processed on the same partition. They differ from `messaging.message.id` in that they're not unique. If the key is `null`, the attribute MUST NOT be set.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "myKey"
     // Note: If the key type is not string, it's string representation has to be supplied for the attribute. If the key has no unambiguous, canonical string form, don't include its value
@@ -7409,14 +7034,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.kafka.offset`
     MessagingKafkaMessageOffsetKey = attribute.Key("messaging.kafka.message.offset")
     // A boolean that is true if the message is a tombstone.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     MessagingKafkaMessageTombstoneKey = attribute.Key("messaging.kafka.message.tombstone")
@@ -7424,13 +7046,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingKafkaOffsetKey = attribute.Key("messaging.kafka.offset")
     // The size of the message body in bytes.
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Note: This can refer to both the compressed or uncompressed body size. If both sizes are known, the uncompressed
     // body size should be used
@@ -7439,7 +7059,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "MyConversationId"
     MessagingMessageConversationIdKey = attribute.Key("messaging.message.conversation_id")
@@ -7447,7 +7066,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Note: This can refer to both the compressed or uncompressed size. If both sizes are known, the uncompressed
     // size should be used
@@ -7455,7 +7073,6 @@ const (
     // A value used by the messaging system as an identifier for the message, represented as a string.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "452a7c7c7c7048c2f887f61572b18fc2"
     MessagingMessageIdKey = attribute.Key("messaging.message.id")
@@ -7463,8 +7080,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.operation.type`.
     // 
     // Examples:
@@ -7476,7 +7091,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "ack",
@@ -7487,7 +7101,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: If a custom value is used, it MUST be of low cardinality
@@ -7496,7 +7109,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "myKey"
     MessagingRabbitmqDestinationRoutingKeyKey = attribute.Key("messaging.rabbitmq.destination.routing_key")
@@ -7504,14 +7116,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingRabbitmqMessageDeliveryTagKey = attribute.Key("messaging.rabbitmq.message.delivery_tag")
     // Deprecated, use `messaging.consumer.group.name` instead.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.consumer.group.name` on the consumer spans. No replacement for producer spans.
     // 
     // Examples: "myConsumerGroup"
@@ -7520,7 +7129,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     MessagingRocketmqConsumptionModelKey = attribute.Key("messaging.rocketmq.consumption_model")
@@ -7528,19 +7136,16 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingRocketmqMessageDelayTimeLevelKey = attribute.Key("messaging.rocketmq.message.delay_time_level")
     // The timestamp in milliseconds that the delay message is expected to be delivered to consumer.
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingRocketmqMessageDeliveryTimestampKey = attribute.Key("messaging.rocketmq.message.delivery_timestamp")
     // It is essential for FIFO message. Messages that belong to the same message group are always processed one by one within the same consumer group.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "myMessageGroup"
     MessagingRocketmqMessageGroupKey = attribute.Key("messaging.rocketmq.message.group")
@@ -7548,7 +7153,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -7560,7 +7164,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "tagA"
     MessagingRocketmqMessageTagKey = attribute.Key("messaging.rocketmq.message.tag")
@@ -7568,7 +7171,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     MessagingRocketmqMessageTypeKey = attribute.Key("messaging.rocketmq.message.type")
@@ -7576,7 +7178,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "myNamespace"
     MessagingRocketmqNamespaceKey = attribute.Key("messaging.rocketmq.namespace")
@@ -7584,8 +7185,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `messaging.servicebus.destination.subscription_name`.
     // 
     // Examples: "subscription-a"
@@ -7594,7 +7193,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -7604,18 +7202,15 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingServicebusMessageDeliveryCountKey = attribute.Key("messaging.servicebus.message.delivery_count")
     // The UTC epoch seconds at which the message has been accepted and stored in the entity.
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     MessagingServicebusMessageEnqueuedTimeKey = attribute.Key("messaging.servicebus.message.enqueued_time")
     // The messaging system as identified by the client instrumentation.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: The actual messaging system may differ from the one known by the client. For example, when using Kafka client libraries to communicate with Azure Event Hubs, the `messaging.system` is set to `kafka` based on the instrumentation's best knowledge
@@ -8109,8 +7704,6 @@ const (
     // Deprecated, use `network.local.address`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.local.address`.
     // 
     // Examples: "192.168.0.1"
@@ -8118,8 +7711,6 @@ const (
     // Deprecated, use `server.address`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.address`.
     // 
     // Examples:
@@ -8128,8 +7719,6 @@ const (
     // Deprecated, use `server.port`.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.port`.
     // 
     // Examples:
@@ -8138,8 +7727,6 @@ const (
     // Deprecated, use `network.peer.address`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.peer.address`.
     // 
     // Examples: "127.0.0.1"
@@ -8147,8 +7734,6 @@ const (
     // Deprecated, use `server.address` on client spans and `client.address` on server spans.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.address` on client spans and `client.address` on server spans.
     // 
     // Examples:
@@ -8157,8 +7742,6 @@ const (
     // Deprecated, use `server.port` on client spans and `client.port` on server spans.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.port` on client spans and `client.port` on server spans.
     // 
     // Examples:
@@ -8167,8 +7750,6 @@ const (
     // Deprecated, use `network.protocol.name`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.protocol.name`.
     // 
     // Examples:
@@ -8179,8 +7760,6 @@ const (
     // Deprecated, use `network.protocol.version`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.protocol.version`.
     // 
     // Examples: "3.1.1"
@@ -8188,8 +7767,6 @@ const (
     // Deprecated, use `network.transport` and `network.type`.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Split to `network.transport` and `network.type`.
     // 
     // Examples: undefined
@@ -8197,8 +7774,6 @@ const (
     // Deprecated, use `network.local.address`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.local.address`.
     // 
     // Examples:
@@ -8207,8 +7782,6 @@ const (
     // Deprecated, use `network.local.port`.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.local.port`.
     // 
     // Examples:
@@ -8217,8 +7790,6 @@ const (
     // Deprecated, use `network.peer.address`.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.peer.address`.
     // 
     // Examples:
@@ -8227,8 +7798,6 @@ const (
     // Deprecated, no replacement at this time.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Removed.
     // 
     // Examples:
@@ -8237,8 +7806,6 @@ const (
     // Deprecated, use `network.peer.port`.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.peer.port`.
     // 
     // Examples:
@@ -8247,8 +7814,6 @@ const (
     // Deprecated, use `network.transport`.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `network.transport`.
     // 
     // Examples: undefined
@@ -8418,49 +7983,42 @@ const (
     // The ISO 3166-1 alpha-2 2-character country code associated with the mobile carrier network.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "DE"
     NetworkCarrierIccKey = attribute.Key("network.carrier.icc")
     // The mobile carrier country code.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "310"
     NetworkCarrierMccKey = attribute.Key("network.carrier.mcc")
     // The mobile carrier network code.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "001"
     NetworkCarrierMncKey = attribute.Key("network.carrier.mnc")
     // The name of the mobile carrier.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "sprint"
     NetworkCarrierNameKey = attribute.Key("network.carrier.name")
     // This describes more details regarding the connection.type. It may be the type of cell technology connection, but it could be used for describing details about a wifi connection.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: "LTE"
     NetworkConnectionSubtypeKey = attribute.Key("network.connection.subtype")
     // The internet connection type.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: "wifi"
     NetworkConnectionTypeKey = attribute.Key("network.connection.type")
     // The network IO operation direction.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "transmit",
@@ -8468,7 +8026,6 @@ const (
     // Local address of the network connection - IP address or Unix domain socket name.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "10.1.2.80",
@@ -8477,7 +8034,6 @@ const (
     // Local port number of the network connection.
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 65123,
@@ -8485,7 +8041,6 @@ const (
     // Peer address of the network connection - IP address or Unix domain socket name.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "10.1.2.80",
@@ -8494,7 +8049,6 @@ const (
     // Peer port number of the network connection.
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 65123,
@@ -8502,7 +8056,6 @@ const (
     // [OSI application layer] or non-OSI equivalent.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "amqp",
@@ -8516,7 +8069,6 @@ const (
     // The actual version of the protocol used for network communication.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1.1",
@@ -8530,7 +8082,6 @@ const (
     // 
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "tcp",
@@ -8548,7 +8099,6 @@ const (
     // [OSI network layer] or non-OSI equivalent.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "ipv4",
@@ -8823,7 +8373,6 @@ const (
     // The state of event loop time.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     NodejsEventloopStateKey = attribute.Key("nodejs.eventloop.state")
@@ -8859,7 +8408,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "sha256:e4ca62c0d62f3e886e684806dfe9d4e0cda60d54986898173c1083856cfda0f4",
@@ -8892,7 +8440,6 @@ const (
     // Parent-child Reference type
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: The causal relationship between a child Span and a parent Span
@@ -8928,7 +8475,6 @@ const (
     // Unique identifier for a particular build or compilation of the operating system.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "TQ3C.230805.001.B2",
@@ -8939,7 +8485,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Microsoft Windows [Version 10.0.18363.778]",
@@ -8948,7 +8493,6 @@ const (
     // Human readable operating system name.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "iOS",
@@ -8959,7 +8503,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     OsTypeKey = attribute.Key("os.type")
@@ -8967,7 +8510,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "14.2.1",
@@ -9067,8 +8609,6 @@ const (
     // Deprecated. Use the `otel.scope.name` attribute
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Use the `otel.scope.name` attribute.
     // 
     // Examples:
@@ -9077,8 +8617,6 @@ const (
     // Deprecated. Use the `otel.scope.version` attribute.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Use the `otel.scope.version` attribute.
     // 
     // Examples:
@@ -9087,7 +8625,6 @@ const (
     // The name of the instrumentation scope - (`InstrumentationScope.Name` in OTLP).
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "io.opentelemetry.contrib.mongodb",
@@ -9095,7 +8632,6 @@ const (
     // The version of the instrumentation scope - (`InstrumentationScope.Version` in OTLP).
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1.0.0",
@@ -9103,14 +8639,12 @@ const (
     // Name of the code, either "OK" or "ERROR". MUST NOT be set if the status code is UNSET.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     OtelStatusCodeKey = attribute.Key("otel.status_code")
     // Description of the Status if it has a value, otherwise not set.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "resource not found",
@@ -9186,8 +8720,6 @@ const (
     // Deprecated, use `db.client.connection.state` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.client.connection.state`.
     // 
     // Examples:
@@ -9225,7 +8757,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "AuthTokenCache"
     // 
@@ -9254,8 +8785,6 @@ const (
     // Deprecated, use `db.client.connection.pool.name` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `db.client.connection.pool.name`.
     // 
     // Examples:
@@ -9284,8 +8813,6 @@ const (
     // Stability: Experimental
     // Type: int
     // 
-    // Requirement Level: Recommended - if `process.command_args` is populated.
-    // 
     // Examples:
     // 4,
     // 
@@ -9295,7 +8822,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "cmd/otelcol",
@@ -9304,7 +8830,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -9316,7 +8841,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "C:\cmd\otecol --config="my directory\config.yaml"",
@@ -9324,15 +8848,12 @@ const (
     // Specifies whether the context switches for this data point were voluntary or involuntary.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     ProcessContextSwitchTypeKey = attribute.Key("process.context_switch_type")
     // Deprecated, use `cpu.mode` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `cpu.mode`
     // 
     // Examples: undefined
@@ -9341,7 +8862,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2023-11-21T09:25:34.853Z",
@@ -9350,7 +8870,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "otelcol",
@@ -9359,7 +8878,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/usr/bin/cmd/otelcol",
@@ -9368,7 +8886,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 127,
@@ -9377,7 +8894,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2023-11-21T09:26:12.315Z",
@@ -9386,7 +8902,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 23,
@@ -9395,7 +8910,6 @@ const (
     // 
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     ProcessInteractiveKey = attribute.Key("process.interactive")
@@ -9403,7 +8917,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "root",
@@ -9412,7 +8925,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     ProcessPagingFaultTypeKey = attribute.Key("process.paging.fault_type")
@@ -9420,7 +8932,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 111,
@@ -9429,7 +8940,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1234,
@@ -9438,7 +8948,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1000,
@@ -9447,7 +8956,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "operator",
@@ -9456,7 +8964,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "Eclipse OpenJ9 Eclipse OpenJ9 VM openj9-0.21.0"
     ProcessRuntimeDescriptionKey = attribute.Key("process.runtime.description")
@@ -9464,7 +8971,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "OpenJDK Runtime Environment",
@@ -9473,7 +8979,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "14.0.2"
     ProcessRuntimeVersionKey = attribute.Key("process.runtime.version")
@@ -9481,7 +8986,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1002,
@@ -9490,7 +8994,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "operator",
@@ -9499,7 +9002,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 14,
@@ -9508,7 +9010,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "cat /etc/hostname",
@@ -9521,7 +9022,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1001,
@@ -9530,7 +9030,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "root",
@@ -9539,7 +9038,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 12,
@@ -9550,7 +9048,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/root",
@@ -9842,7 +9339,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "cpython",
@@ -9929,7 +9425,6 @@ const (
     // The [error codes] of the Connect request. Error codes are always string values.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -9938,7 +9433,6 @@ const (
     // The [numeric status code] of the gRPC request.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -9947,7 +9441,6 @@ const (
     // `error.code` property of response if it is an error response.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // -32700,
@@ -9956,7 +9449,6 @@ const (
     // `error.message` property of response if it is an error response.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Parse error",
@@ -9966,7 +9458,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "10",
@@ -9976,7 +9467,6 @@ const (
     // Protocol version as in `jsonrpc` property of request/response. Since JSON-RPC 1.0 doesn't specify this, the value can be omitted.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2.0",
@@ -9985,14 +9475,12 @@ const (
     // Compressed size of the message in bytes.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     RpcMessageCompressedSizeKey = attribute.Key("rpc.message.compressed_size")
     // MUST be calculated as two different counters starting from `1` one for sent messages and one for received message.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: This way we guarantee that the values will be consistent between different implementations
@@ -10000,21 +9488,18 @@ const (
     // Whether this is a received or sent message.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     RpcMessageTypeKey = attribute.Key("rpc.message.type")
     // Uncompressed size of the message in bytes.
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     RpcMessageUncompressedSizeKey = attribute.Key("rpc.message.uncompressed_size")
     // The name of the (logical) method being called, must be equal to the $method part in the span name.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "exampleMethod"
     // Note: This is the logical name of the method from the RPC interface perspective, which can be different from the name of any implementing method/function. The `code.function` attribute may be used to store the latter (e.g., method actually executing the call on the server side, RPC client stub method on the client side)
@@ -10022,7 +9507,6 @@ const (
     // The full (logical) name of the service being called, including its package name, if applicable.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "myservice.EchoService"
     // Note: This is the logical name of the service from the RPC interface perspective, which can be different from the name of any implementing class. The `code.namespace` attribute may be used to store the latter (despite the attribute name, it may include a class name; e.g., class with method actually executing the call on the server side, RPC client stub class on the client side)
@@ -10030,7 +9514,6 @@ const (
     // A string identifying the remoting system. See below for a list of well-known identifiers.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     RpcSystemKey = attribute.Key("rpc.system")
@@ -10303,7 +9786,6 @@ const (
     // Server domain name if available without reverse DNS lookup; otherwise, IP address or Unix domain socket name.
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "example.com",
@@ -10315,7 +9797,6 @@ const (
     // Server port number.
     // Stability: Stable
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 80,
@@ -10354,7 +9835,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "627cc493-f310-47de-96bd-71410b7dec09",
@@ -10394,7 +9874,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "shoppingcart",
@@ -10407,7 +9886,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Shop",
@@ -10418,7 +9896,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2.0.0",
@@ -10469,14 +9946,12 @@ const (
     // A unique id to identify a session.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "00112233-4455-6677-8899-aabbccddeeff"
     SessionIdKey = attribute.Key("session.id")
     // The previous `session.id` for this user, when known.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "00112233-4455-6677-8899-aabbccddeeff"
     SessionPreviousIdKey = attribute.Key("session.previous_id")
@@ -10509,7 +9984,6 @@ const (
     // SignalR HTTP connection closure status.
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "app_shutdown",
@@ -10518,7 +9992,6 @@ const (
     // [SignalR transport type]
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "web_sockets",
@@ -10583,7 +10056,6 @@ const (
     // Source address - domain name if available without reverse DNS lookup; otherwise, IP address or Unix domain socket name.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "source.example.com",
@@ -10595,7 +10067,6 @@ const (
     // Source port number
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 3389,
@@ -10630,7 +10101,6 @@ const (
     // The logical CPU number [0..n-1]
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 1,
@@ -10638,8 +10108,6 @@ const (
     // Deprecated, use `cpu.mode` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `cpu.mode`
     // 
     // Examples:
@@ -10649,7 +10117,6 @@ const (
     // The device identifier
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "(identifier)",
@@ -10657,7 +10124,6 @@ const (
     // The filesystem mode
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "rw, ro",
@@ -10665,7 +10131,6 @@ const (
     // The filesystem mount path
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/mnt/data",
@@ -10673,7 +10138,6 @@ const (
     // The filesystem state
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "used",
@@ -10681,7 +10145,6 @@ const (
     // The filesystem type
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "ext4",
@@ -10689,7 +10152,6 @@ const (
     // The memory state
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "free",
@@ -10698,7 +10160,6 @@ const (
     // A stateless protocol MUST NOT set this attribute
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "close_wait",
@@ -10706,7 +10167,6 @@ const (
     // The paging access direction
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "in",
@@ -10714,7 +10174,6 @@ const (
     // The memory paging state
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "free",
@@ -10722,7 +10181,6 @@ const (
     // The memory paging type
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "minor",
@@ -10731,7 +10189,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "running",
@@ -10741,8 +10198,6 @@ const (
     // Deprecated, use `system.process.status` instead.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `system.process.status`.
     // 
     // Examples:
@@ -11057,7 +10512,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "parts-unlimited-java",
@@ -11069,7 +10523,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1.2.3",
@@ -11078,7 +10531,6 @@ const (
     // 
     // Stability: Stable
     // Type: Enum
-    // Requirement Level: Required
     // 
     // Examples: undefined
     TelemetrySdkLanguageKey = attribute.Key("telemetry.sdk.language")
@@ -11086,7 +10538,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Required
     // 
     // Examples:
     // "opentelemetry",
@@ -11102,7 +10553,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Required
     // 
     // Examples:
     // "1.2.3",
@@ -11201,7 +10651,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "org.example.TestCase1.test1",
@@ -11214,7 +10663,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "pass",
@@ -11224,7 +10672,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "TestSuite1",
@@ -11235,7 +10682,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "success",
@@ -11327,13 +10773,11 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     ThreadIdKey = attribute.Key("thread.id")
     // Current thread name.
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples: "main"
     ThreadNameKey = attribute.Key("thread.name")
@@ -11367,7 +10811,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
@@ -11382,7 +10825,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "MII...",
@@ -11391,7 +10833,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -11403,7 +10844,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "0F76C7F2C55BFD7D8E8B8F4BFBF0C9EC",
@@ -11412,7 +10852,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "9E393D93138888D288266C2D915214D1D1CCEB2A",
@@ -11421,7 +10860,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "0687F666A054EF17A08E2F2162EAB4CBC0D265E1D7875BE74BF3C712CA92DAF0",
@@ -11429,7 +10867,6 @@ const (
     // Distinguished name of [subject] of the issuer of the x.509 certificate presented by the client.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "CN=Example Root CA, OU=Infrastructure Team, DC=example, DC=com",
@@ -11439,7 +10876,6 @@ const (
     // A hash that identifies clients based on how they perform an SSL/TLS handshake.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "d4e5b18d6b55c71272893221c96ba240",
@@ -11447,7 +10883,6 @@ const (
     // Date/Time indicating when client certificate is no longer considered valid.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2021-01-01T00:00:00.000Z",
@@ -11455,7 +10890,6 @@ const (
     // Date/Time indicating when client certificate is first considered valid.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1970-01-01T00:00:00.000Z",
@@ -11463,8 +10897,6 @@ const (
     // Deprecated, use `server.address` instead.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
-    // 
     // Deprecated: Replaced by `server.address`.
     // 
     // Examples:
@@ -11473,7 +10905,6 @@ const (
     // Distinguished name of subject of the x.509 certificate presented by the client.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "CN=myclient, OU=Documentation Team, DC=example, DC=com",
@@ -11481,7 +10912,6 @@ const (
     // Array of ciphers offered by the client during the client hello.
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -11492,7 +10922,6 @@ const (
     // String indicating the curve used for the given cipher, when applicable
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "secp256r1",
@@ -11500,7 +10929,6 @@ const (
     // Boolean flag indicating if the TLS negotiation was successful and transitioned to an encrypted tunnel.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples:
     // true,
@@ -11509,7 +10937,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "http/1.1",
@@ -11520,7 +10947,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // 
@@ -11530,7 +10956,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1.2",
@@ -11541,7 +10966,6 @@ const (
     // Boolean flag indicating if this TLS connection was resumed from an existing TLS negotiation.
     // Stability: Experimental
     // Type: boolean
-    // Requirement Level: Recommended
     // 
     // Examples:
     // true,
@@ -11550,7 +10974,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "MII...",
@@ -11559,7 +10982,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -11571,7 +10993,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "0F76C7F2C55BFD7D8E8B8F4BFBF0C9EC",
@@ -11580,7 +11001,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "9E393D93138888D288266C2D915214D1D1CCEB2A",
@@ -11589,7 +11009,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "0687F666A054EF17A08E2F2162EAB4CBC0D265E1D7875BE74BF3C712CA92DAF0",
@@ -11597,7 +11016,6 @@ const (
     // Distinguished name of [subject] of the issuer of the x.509 certificate presented by the client.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "CN=Example Root CA, OU=Infrastructure Team, DC=example, DC=com",
@@ -11607,7 +11025,6 @@ const (
     // A hash that identifies servers based on how they perform an SSL/TLS handshake.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "d4e5b18d6b55c71272893221c96ba240",
@@ -11615,7 +11032,6 @@ const (
     // Date/Time indicating when server certificate is no longer considered valid.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "2021-01-01T00:00:00.000Z",
@@ -11623,7 +11039,6 @@ const (
     // Date/Time indicating when server certificate is first considered valid.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "1970-01-01T00:00:00.000Z",
@@ -11631,7 +11046,6 @@ const (
     // Distinguished name of subject of the x.509 certificate presented by the server.
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "CN=myserver, OU=Documentation Team, DC=example, DC=com",
@@ -11904,7 +11318,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "www.foo.bar",
@@ -11920,7 +11333,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "png",
@@ -11932,7 +11344,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "SemConv",
@@ -11942,7 +11353,6 @@ const (
     // Absolute URL describing a network resource according to [RFC3986]
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https://www.foo.bar/search?q=OpenTelemetry#SemConv",
@@ -11958,7 +11368,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https://www.foo.bar/search?q=OpenTelemetry#SemConv",
@@ -11971,7 +11380,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/search",
@@ -11984,7 +11392,6 @@ const (
     // 
     // Stability: Experimental
     // Type: int
-    // Requirement Level: Recommended
     // 
     // Examples:
     // 443,
@@ -11993,7 +11400,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "q=OpenTelemetry",
@@ -12006,7 +11412,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "example.com",
@@ -12020,7 +11425,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https",
@@ -12033,7 +11437,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "east",
@@ -12045,7 +11448,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "/users/{id}",
@@ -12058,7 +11460,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "com",
@@ -12198,7 +11599,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "a.einstein@example.com",
@@ -12207,7 +11607,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Albert Einstein",
@@ -12216,7 +11615,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "364fc68eaf4c8acec74a4e52d7d1feaa",
@@ -12227,7 +11625,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "S-1-5-21-202424912787-2692429404-2351956786-1000",
@@ -12236,7 +11633,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "a.einstein",
@@ -12245,7 +11641,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string[]
-    // Requirement Level: Recommended
     // 
     // Examples:
     // [
@@ -12315,7 +11710,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Safari",
@@ -12329,7 +11723,6 @@ const (
     // 
     // Stability: Stable
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "CERN-LineMode/2.15 libwww/2.17b3",
@@ -12342,7 +11735,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "14.1.2",
@@ -12391,14 +11783,12 @@ const (
     // The type of garbage collection.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     V8jsGcTypeKey = attribute.Key("v8js.gc.type")
     // The name of the space type of heap memory.
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples: undefined
     // Note: Value can be retrieved from value `space_name` of [`v8.getHeapSpaceStatistics()`]
@@ -12470,7 +11860,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "123",
@@ -12479,7 +11868,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "Fixes broken thing",
@@ -12490,7 +11878,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "my-feature-branch",
@@ -12502,7 +11889,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "9d59409acf479dfa0df1aa568182e43e43df8bbe28d60fcf2bc52e30068802cc",
@@ -12529,7 +11915,6 @@ const (
     // 
     // Stability: Experimental
     // Type: Enum
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "branch",
@@ -12541,7 +11926,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "https://github.com/opentelemetry/open-telemetry-collector-contrib",
@@ -12633,7 +12017,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "WildFly Full 21.0.0.Final (WildFly Core 13.0.1.Final) - 2.2.2.Final",
@@ -12642,7 +12025,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "WildFly",
@@ -12651,7 +12033,6 @@ const (
     // 
     // Stability: Experimental
     // Type: string
-    // Requirement Level: Recommended
     // 
     // Examples:
     // "21.0.0",
