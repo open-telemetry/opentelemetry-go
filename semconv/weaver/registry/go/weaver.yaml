@@ -1,0 +1,132 @@
+params:
+  excluded_namespaces: []
+templates:
+  - pattern: attribute_group.go.j2
+    filter: >
+      semconv_grouped_attributes({
+        "exclude_deprecated": false,
+        "exclude_root_namespace": $excluded_namespaces,
+      })
+    application_mode: single
+    file_name: attribute_group.go
+  - pattern: metric.go.j2
+    filter: >
+      semconv_metrics({
+        "exclude_root_namespace": $excluded_namespaces,
+      })
+    application_mode: single
+    file_name: metric.go
+comment_formats:
+  go:
+    format: markdown
+    prefix: "// "
+    indent_first_level_list_items: true
+    shortcut_reference_link: true
+    trim: true
+    remove_trailing_dots: true
+default_comment_format: go
+text_maps:
+  attribute_type_method:
+    string: String
+    string[]: StringSlice
+    int: Int
+    int[]: IntSlice
+    double: Float64
+    double[]: FloatSlice
+    boolean: Bool
+    boolean[]: BoolSlice
+acronyms:
+  - ACL
+  - AIX
+  - AKS
+  - AMD64
+  - API
+  - ARM32
+  - ARM64
+  - ARN
+  - ARNs
+  - ASCII
+  - AWS
+  - CPP
+  - CPU
+  - CSS
+  - DB
+  - DC
+  - DNS
+  - EC2
+  - ECS
+  - EDB
+  - EKS
+  - EOF
+  - GCP
+  - GRPC
+  - GUID
+  - HPUX
+  - HSQLDB
+  - HTML
+  - HTTP
+  - HTTPS
+  - IA64
+  - ID
+  - IP
+  - JDBC
+  - JSON
+  - K8S
+  - LHS
+  - MSSQL
+  - OS
+  - PHP
+  - PID
+  - PPC32
+  - PPC64
+  - QPS
+  - QUIC
+  - RAM
+  - RHS
+  - RPC
+  - SDK
+  - SLA
+  - SMTP
+  - SPDY
+  - SQL
+  - SSH
+  - TCP
+  - TLS
+  - TTL
+  - UDP
+  - UID
+  - UI
+  - UUID
+  - URI
+  - URL
+  - UTF8
+  - VM
+  - XML
+  - XMPP
+  - XSRF
+  - XSS
+  - ZOS
+  - CronJob
+  - DaemonSet
+  - StatefulSet
+  - ReplicaSet
+  - WebEngine
+  - MySQL
+  - PostgreSQL
+  - MariaDB
+  - MaxDB
+  - FirstSQL
+  - InstantDB
+  - HBase
+  - MongoDB
+  - CouchDB
+  - CosmosDB
+  - DynamoDB
+  - HanaDB
+  - FreeBSD
+  - NetBSD
+  - OpenBSD
+  - DragonflyBSD
+  - InProc
+  - FaaS
+  - OTel

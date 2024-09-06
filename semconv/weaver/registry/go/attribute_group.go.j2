@@ -1,0 +1,84 @@
+{# TODO - move to built in support for language constants in weaver #}
+{%- macro to_go_name(fqn) -%}
+{{fqn | replace(".", " ") | replace("_", " ") | title | replace(" ", "")}}
+{%- endmacro -%}
+{%- macro requirement_level_doc(attr) -%}
+{%- if attr.requirement_level == "required" -%}
+Requirement Level: Required
+{% elif attr.requirement_level.conditionally_required %}
+Requirement Level: Conditionally Required - {{ attr.requirement_level.conditionally_required }}
+{%- elif attr.requirement_level == "recommended" -%}
+Requirement Level: Recommended
+{% elif attr.requirement_level.recommended %}
+Requirement Level: Recommended - {{ attr.requirement_level.recommended }}
+{%- else -%}
+Requirement Level: Optional
+{%- endif %}
+{%- endmacro -%}
+{%- macro deprecated_doc(attr) -%}
+{% if attr is deprecated %}Deprecated: {{ attr.deprecated }}{% endif %}
+{%- endmacro -%}
+{%- macro notes_doc(attr) -%}
+{% if attr.note %}Note: {{ attr.note }}{% endif %}
+{%- endmacro -%}
+{%- macro examples_doc(attr) -%}
+{%- if attr.examples is iterable %}
+Examples: {{ attr.examples | pprint | trim("[]")  }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro keydoc(attr) -%}
+{{ attr.brief }}
+Stability: {{ attr.stability | title }}
+{% if attr is enum %}Type: Enum{% else %}Type: {{ attr.type }}{% endif %}
+{{ requirement_level_doc(attr) }}
+{{ deprecated_doc(attr) }}
+{{ examples_doc(attr) }}
+{{ notes_doc(attr) }}
+{%- endmacro -%}
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv  // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
+
+import "go.opentelemetry.io/otel/attribute"
+
+{% for group in ctx %}
+{% if group.attributes | length > 0 %}
+{# TODO - we're grouping by registry namespace, not attribute group, so we lose group docs #}
+{{ ["Namespace: " ~ group.root_namespace] | comment }}
+const (
+{% for attribute in group.attributes %}
+{%- if not attribute.type is template_type %}{# TODO - Go does not handle template attributes yet!!! #}
+    {{ keydoc(attribute) | comment(indent=4) }}
+    {{to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+{%- endif %}
+{%- endfor %}
+)
+{# Render a construction function #}
+{% for attribute in group.attributes %}
+{# TODO - Go does not handle template attributes yet!!! #}
+{%- if not attribute.type is template_type %}
+{{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment }}
+{{ ["It represents the " ~ attribute.brief] | comment }}
+func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type}}) attribute.KeyValue {
+    return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+}
+{%- endif %}
+{% endfor %}
+{# Render values for enums #}
+{%- for attribute in group.attributes %}
+{%- if attribute is enum %}
+{{ ["Enum values for " ~ attribute.name] | comment }}
+var (
+{% for value in attribute.type.members %}
+    {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(indent=4) }}
+    {%- if value.deprecated %}{{ value.deprecated | comment(indent=4) }}{%  endif %}
+    {{to_go_name(attribute.name ~ "." ~ value.id)}} = {{ to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+{%- endfor %}
+)
+{%- endif %}
+{% endfor %}
+{%- endif %}
+{% endfor %}
