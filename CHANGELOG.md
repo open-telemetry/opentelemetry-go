@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#1677)
+- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#5762)
+- Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#5739)
 
 ### Fixed
 
