@@ -34,7 +34,7 @@ type Logger interface {
 	// param.
 	//
 	// The passed param is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a record with only the
+	// bridge-relevant information being provided (e.g a param with only the
 	// Severity set). If a Logger needs more information than is provided, it
 	// is said to be in an indeterminate state (see below).
 	//
