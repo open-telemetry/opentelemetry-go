@@ -3,52 +3,71 @@
 
 package otlplogfile // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlplogfile"
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"time"
+)
 
-type fnOpt func(config) config
-
-func (f fnOpt) applyOption(c config) config { return f(c) }
-
-// Option sets the configuration value for an Exporter.
-type Option interface {
-	applyOption(config) config
-}
+// Option configures a field of the configuration or return an error if needed.
+type Option func(*config) (*config, error)
 
 // config contains options for the OTLP Log file exporter.
 type config struct {
-	// Path to a file on disk where records must be appended.
-	// This file is preferably a json line file as stated in the specification.
-	// See: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/file-exporter.md#json-lines-file
-	// See: https://jsonlines.org
-	path string
+	// Out is the output where the records should be written.
+	out io.WriteCloser
 	// Duration represents the interval when the buffer should be flushed.
 	flushInterval time.Duration
 }
 
-func newConfig(options []Option) config {
-	c := config{
-		path:          "/var/log/opentelemetry/logs.jsonl",
+func newConfig(options []Option) (*config, error) {
+	c := &config{
+		out:           os.Stdout,
 		flushInterval: 5 * time.Second,
 	}
+
+	var configErr error
 	for _, opt := range options {
-		c = opt.applyOption(c)
+		if _, err := opt(c); err != nil {
+			configErr = errors.Join(configErr, err)
+		}
 	}
-	return c
+
+	if configErr != nil {
+		return nil, configErr
+	}
+
+	return c, nil
 }
 
-// WithFlushInterval configures the duration after which the buffer is periodically flushed to the disk.
+// WithFile configures a file where the records will be exported.
+// An error is returned if the file could not be created or opened.
+func WithFile(path string) Option {
+	return func(c *config) (*config, error) {
+		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file: %w", err)
+		}
+
+		return WithWriter(file)(c)
+	}
+}
+
+// WithWriter configures the destination where the exporter should output
+// the records. By default, if not specified, stdout is used.
+func WithWriter(w io.WriteCloser) Option {
+	return func(c *config) (*config, error) {
+		c.out = w
+		return c, nil
+	}
+}
+
+// WithFlushInterval configures the duration after which the buffer is periodically flushed to the output.
 func WithFlushInterval(flushInterval time.Duration) Option {
-	return fnOpt(func(c config) config {
+	return func(c *config) (*config, error) {
 		c.flushInterval = flushInterval
-		return c
-	})
-}
-
-// WithPath defines a path to a file where the log records will be written.
-// If not set, will default to /var/log/opentelemetry/logs.jsonl.
-func WithPath(path string) Option {
-	return fnOpt(func(c config) config {
-		c.path = path
-		return c
-	})
+		return c, nil
+	}
 }

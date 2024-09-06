@@ -20,7 +20,7 @@ import (
 // defined here: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.36.0/specification/protocol/file-exporter.md
 type Exporter struct {
 	mu      sync.Mutex
-	fw      *writer.FileWriter
+	w       *writer.Writer
 	stopped bool
 }
 
@@ -29,15 +29,18 @@ var _ log.Exporter = &Exporter{}
 
 // New returns a new [Exporter].
 func New(options ...Option) (*Exporter, error) {
-	cfg := newConfig(options)
+	cfg, err := newConfig(options)
+	if err != nil {
+		return nil, err
+	}
 
-	fw, err := writer.NewFileWriter(cfg.path, cfg.flushInterval)
+	w, err := writer.New(cfg.out, cfg.flushInterval)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Exporter{
-		fw:      fw,
+		w:       w,
 		stopped: false,
 	}, nil
 }
@@ -65,7 +68,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return err
 	}
 
-	return e.fw.Export(by)
+	return e.w.Export(by)
 }
 
 // ForceFlush flushes data to the file.
@@ -77,7 +80,7 @@ func (e *Exporter) ForceFlush(_ context.Context) error {
 		return nil
 	}
 
-	return e.fw.Flush()
+	return e.w.Flush()
 }
 
 // Shutdown shuts down the exporter. Buffered data is written to disk,
@@ -91,5 +94,5 @@ func (e *Exporter) Shutdown(_ context.Context) error {
 	}
 
 	e.stopped = true
-	return e.fw.Shutdown()
+	return e.w.Shutdown()
 }

@@ -15,7 +15,7 @@ import (
 func Example() {
 	ctx := context.Background()
 	exp, err := otlplogfile.New(
-		otlplogfile.WithPath("/tmp/otlp-logs.jsonl"),
+		otlplogfile.WithFile("/tmp/otlp-logs.jsonl"),
 		otlplogfile.WithFlushInterval(time.Second),
 	)
 	if err != nil {

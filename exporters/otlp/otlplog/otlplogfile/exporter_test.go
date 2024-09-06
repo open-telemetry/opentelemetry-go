@@ -23,13 +23,13 @@ import (
 
 // tempFile creates a temporary file for the given test case and returns its path on disk.
 // The file is automatically cleaned up when the test ends.
-func tempFile(tb testing.TB) string {
+func tempFile(tb testing.TB) *os.File {
 	f, err := os.CreateTemp(tb.TempDir(), tb.Name())
 	assert.NoError(tb, err, "must not error when creating temporary file")
 	tb.Cleanup(func() {
 		assert.NoError(tb, os.RemoveAll(path.Dir(f.Name())), "must clean up files after being written")
 	})
-	return f.Name()
+	return f
 }
 
 // makeRecords is a helper function to generate an array of log record with the desired size.
@@ -48,10 +48,10 @@ func makeRecords(count int, message string) []sdklog.Record {
 }
 
 func TestExporter(t *testing.T) {
-	filepath := tempFile(t)
+	file := tempFile(t)
 	records := makeRecords(1, "hello, world!")
 
-	exporter, err := New(WithPath(filepath))
+	exporter, err := New(WithWriter(file))
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, exporter.Shutdown(context.TODO()))
@@ -64,8 +64,8 @@ func TestExporter(t *testing.T) {
 }
 
 func TestExporterConcurrentSafe(t *testing.T) {
-	filepath := tempFile(t)
-	exporter, err := New(WithPath(filepath))
+	file := tempFile(t)
+	exporter, err := New(WithWriter(file))
 	require.NoError(t, err, "New()")
 
 	const goroutines = 10

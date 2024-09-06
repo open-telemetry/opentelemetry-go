@@ -31,12 +31,11 @@ func tempFile(tb testing.TB) *os.File {
 func TestNewFileWriter(t *testing.T) {
 	f := tempFile(t)
 
-	writer, err := NewFileWriter(f.Name(), 0)
+	writer, err := New(f, 0)
 	// nolint: errcheck
 	defer writer.Shutdown()
 
 	assert.NoError(t, err, "must not error when creating the file writer")
-	assert.Equal(t, f.Name(), writer.path, "writer file path must be the same than the file path")
 
 	// Ensure file was created
 	_, err = os.Stat(f.Name())
@@ -46,7 +45,7 @@ func TestNewFileWriter(t *testing.T) {
 func TestFileWriterExport(t *testing.T) {
 	f := tempFile(t)
 
-	writer, err := NewFileWriter(f.Name(), 0)
+	writer, err := New(f, 0)
 	// nolint: errcheck
 	defer writer.Shutdown()
 	require.NoError(t, err, "must not error when creating the file writer")
@@ -66,7 +65,7 @@ func TestFileWriterExport(t *testing.T) {
 func TestFileWriterShutdown(t *testing.T) {
 	f := tempFile(t)
 
-	writer, err := NewFileWriter(f.Name(), 0)
+	writer, err := New(f, 0)
 	require.NoError(t, err, "must not error when creating the file writer")
 	assert.NoError(t, writer.Shutdown(), "must not error when calling Shutdown()")
 }
@@ -74,7 +73,7 @@ func TestFileWriterShutdown(t *testing.T) {
 func TestFileWriterConcurrentSafe(t *testing.T) {
 	f := tempFile(t)
 
-	writer, err := NewFileWriter(f.Name(), 0)
+	writer, err := New(f, 0)
 	require.NoError(t, err, "must not error when creating the file writer")
 
 	const goroutines = 10
