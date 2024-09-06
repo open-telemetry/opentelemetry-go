@@ -102,6 +102,12 @@ $(PYTOOLS)/%: $(PYTOOLS)
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
 
+# Definitions for semconvgen
+DOCKER_USER=$(shell id -u):$(shell id -g)
+# TODO - Pull docker image versions from rennovate-friendly source, e.g.
+# $(shell cat dependencies.Dockerfile | awk '$$4=="weaver" {print $$2}')
+WEAVER_CONTAINER=otel/weaver:v0.9.1
+
 # Generate
 
 .PHONY: generate
@@ -260,11 +266,24 @@ check-clean-work-tree:
 
 SEMCONVPKG ?= "semconv/"
 .PHONY: semconv-generate
-semconv-generate: $(SEMCONVGEN) $(SEMCONVKIT)
+semconv-generate: $(SEMCONVKIT)
 	[ "$(TAG)" ] || ( echo "TAG unset: missing opentelemetry semantic-conventions tag"; exit 1 )
 	[ "$(OTEL_SEMCONV_REPO)" ] || ( echo "OTEL_SEMCONV_REPO unset: missing path to opentelemetry semantic-conventions repo"; exit 1 )
-	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=attribute_group -p conventionType=trace -f attribute_group.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
-	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=metric  -f metric.go -t "$(SEMCONVPKG)/metric_template.j2" -s "$(TAG)"
+# $(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=attribute_group -p conventionType=trace -f attribute_group.go -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
+# $(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=metric  -f metric.go -t "$(SEMCONVPKG)/metric_template.j2" -s "$(TAG)"
+# TODO - use SEMCONVPKG in defining output directory
+	mkdir -p $(PWD)/$(SEMCONVPKG)/${TAG}
+	docker run --rm \
+		-u $(DOCKER_USER) \
+		--mount 'type=bind,source=$(PWD)/semconv/weaver,target=/home/weaver/templates,readonly' \
+		--mount 'type=bind,source=$(OTEL_SEMCONV_REPO)/model,target=/home/weaver/source,readonly' \
+		--mount 'type=bind,source=$(PWD)/semconv/${TAG},target=/home/weaver/target' \
+		$(WEAVER_CONTAINER) registry generate \
+		--registry=/home/weaver/source \
+		--templates=/home/weaver/templates \
+		--param tag=$(TAG) \
+		go \
+		/home/weaver/target
 	$(SEMCONVKIT) -output "$(SEMCONVPKG)/$(TAG)" -tag "$(TAG)"
 
 .PHONY: gorelease
