@@ -103,86 +103,6 @@ const (
 	ContainerNetworkIoUnit        = "By"
 	ContainerNetworkIoDescription = "Network bytes for the container."
 
-	// DbClientOperationDuration is the metric conforming to the "db.client.operation.duration" semantic conventions. It represents the duration of database client operations
-	// Instrument: histogram
-	// Unit: s
-	// Stability: experimental
-	DbClientOperationDurationName        = "db.client.operation.duration"
-	DbClientOperationDurationUnit        = "s"
-	DbClientOperationDurationDescription = "Duration of database client operations."
-
-	// DbClientConnectionCount is the metric conforming to the "db.client.connection.count" semantic conventions. It represents the number of connections that are currently in state described by the `state` attribute
-	// Instrument: updowncounter
-	// Unit: {connection}
-	// Stability: experimental
-	DbClientConnectionCountName        = "db.client.connection.count"
-	DbClientConnectionCountUnit        = "{connection}"
-	DbClientConnectionCountDescription = "The number of connections that are currently in state described by the `state` attribute"
-
-	// DbClientConnectionIdleMax is the metric conforming to the "db.client.connection.idle.max" semantic conventions. It represents the maximum number of idle open connections allowed
-	// Instrument: updowncounter
-	// Unit: {connection}
-	// Stability: experimental
-	DbClientConnectionIdleMaxName        = "db.client.connection.idle.max"
-	DbClientConnectionIdleMaxUnit        = "{connection}"
-	DbClientConnectionIdleMaxDescription = "The maximum number of idle open connections allowed"
-
-	// DbClientConnectionIdleMin is the metric conforming to the "db.client.connection.idle.min" semantic conventions. It represents the minimum number of idle open connections allowed
-	// Instrument: updowncounter
-	// Unit: {connection}
-	// Stability: experimental
-	DbClientConnectionIdleMinName        = "db.client.connection.idle.min"
-	DbClientConnectionIdleMinUnit        = "{connection}"
-	DbClientConnectionIdleMinDescription = "The minimum number of idle open connections allowed"
-
-	// DbClientConnectionMax is the metric conforming to the "db.client.connection.max" semantic conventions. It represents the maximum number of open connections allowed
-	// Instrument: updowncounter
-	// Unit: {connection}
-	// Stability: experimental
-	DbClientConnectionMaxName        = "db.client.connection.max"
-	DbClientConnectionMaxUnit        = "{connection}"
-	DbClientConnectionMaxDescription = "The maximum number of open connections allowed"
-
-	// DbClientConnectionPendingRequests is the metric conforming to the "db.client.connection.pending_requests" semantic conventions. It represents the number of current pending requests for an open connection
-	// Instrument: updowncounter
-	// Unit: {request}
-	// Stability: experimental
-	DbClientConnectionPendingRequestsName        = "db.client.connection.pending_requests"
-	DbClientConnectionPendingRequestsUnit        = "{request}"
-	DbClientConnectionPendingRequestsDescription = "The number of current pending requests for an open connection"
-
-	// DbClientConnectionTimeouts is the metric conforming to the "db.client.connection.timeouts" semantic conventions. It represents the number of connection timeouts that have occurred trying to obtain a connection from the pool
-	// Instrument: counter
-	// Unit: {timeout}
-	// Stability: experimental
-	DbClientConnectionTimeoutsName        = "db.client.connection.timeouts"
-	DbClientConnectionTimeoutsUnit        = "{timeout}"
-	DbClientConnectionTimeoutsDescription = "The number of connection timeouts that have occurred trying to obtain a connection from the pool"
-
-	// DbClientConnectionCreateTime is the metric conforming to the "db.client.connection.create_time" semantic conventions. It represents the time it took to create a new connection
-	// Instrument: histogram
-	// Unit: s
-	// Stability: experimental
-	DbClientConnectionCreateTimeName        = "db.client.connection.create_time"
-	DbClientConnectionCreateTimeUnit        = "s"
-	DbClientConnectionCreateTimeDescription = "The time it took to create a new connection"
-
-	// DbClientConnectionWaitTime is the metric conforming to the "db.client.connection.wait_time" semantic conventions. It represents the time it took to obtain an open connection from the pool
-	// Instrument: histogram
-	// Unit: s
-	// Stability: experimental
-	DbClientConnectionWaitTimeName        = "db.client.connection.wait_time"
-	DbClientConnectionWaitTimeUnit        = "s"
-	DbClientConnectionWaitTimeDescription = "The time it took to obtain an open connection from the pool"
-
-	// DbClientConnectionUseTime is the metric conforming to the "db.client.connection.use_time" semantic conventions. It represents the time between borrowing a connection and returning it to the pool
-	// Instrument: histogram
-	// Unit: s
-	// Stability: experimental
-	DbClientConnectionUseTimeName        = "db.client.connection.use_time"
-	DbClientConnectionUseTimeUnit        = "s"
-	DbClientConnectionUseTimeDescription = "The time between borrowing a connection and returning it to the pool"
-
 	// DbClientConnectionsUsage is the metric conforming to the "db.client.connections.usage" semantic conventions. It represents the deprecated, use `db.client.connection.count` instead
 	// Instrument: updowncounter
 	// Unit: {connection}
@@ -263,6 +183,86 @@ const (
 	DbClientConnectionsUseTimeName        = "db.client.connections.use_time"
 	DbClientConnectionsUseTimeUnit        = "ms"
 	DbClientConnectionsUseTimeDescription = "Deprecated, use `db.client.connection.use_time` instead. Note: the unit also changed from `ms` to `s`."
+
+	// DbClientOperationDuration is the metric conforming to the "db.client.operation.duration" semantic conventions. It represents the duration of database client operations
+	// Instrument: histogram
+	// Unit: s
+	// Stability: experimental
+	DbClientOperationDurationName        = "db.client.operation.duration"
+	DbClientOperationDurationUnit        = "s"
+	DbClientOperationDurationDescription = "Duration of database client operations."
+
+	// DbClientConnectionCount is the metric conforming to the "db.client.connection.count" semantic conventions. It represents the number of connections that are currently in state described by the `state` attribute
+	// Instrument: updowncounter
+	// Unit: {connection}
+	// Stability: experimental
+	DbClientConnectionCountName        = "db.client.connection.count"
+	DbClientConnectionCountUnit        = "{connection}"
+	DbClientConnectionCountDescription = "The number of connections that are currently in state described by the `state` attribute"
+
+	// DbClientConnectionIdleMax is the metric conforming to the "db.client.connection.idle.max" semantic conventions. It represents the maximum number of idle open connections allowed
+	// Instrument: updowncounter
+	// Unit: {connection}
+	// Stability: experimental
+	DbClientConnectionIdleMaxName        = "db.client.connection.idle.max"
+	DbClientConnectionIdleMaxUnit        = "{connection}"
+	DbClientConnectionIdleMaxDescription = "The maximum number of idle open connections allowed"
+
+	// DbClientConnectionIdleMin is the metric conforming to the "db.client.connection.idle.min" semantic conventions. It represents the minimum number of idle open connections allowed
+	// Instrument: updowncounter
+	// Unit: {connection}
+	// Stability: experimental
+	DbClientConnectionIdleMinName        = "db.client.connection.idle.min"
+	DbClientConnectionIdleMinUnit        = "{connection}"
+	DbClientConnectionIdleMinDescription = "The minimum number of idle open connections allowed"
+
+	// DbClientConnectionMax is the metric conforming to the "db.client.connection.max" semantic conventions. It represents the maximum number of open connections allowed
+	// Instrument: updowncounter
+	// Unit: {connection}
+	// Stability: experimental
+	DbClientConnectionMaxName        = "db.client.connection.max"
+	DbClientConnectionMaxUnit        = "{connection}"
+	DbClientConnectionMaxDescription = "The maximum number of open connections allowed"
+
+	// DbClientConnectionPendingRequests is the metric conforming to the "db.client.connection.pending_requests" semantic conventions. It represents the number of current pending requests for an open connection
+	// Instrument: updowncounter
+	// Unit: {request}
+	// Stability: experimental
+	DbClientConnectionPendingRequestsName        = "db.client.connection.pending_requests"
+	DbClientConnectionPendingRequestsUnit        = "{request}"
+	DbClientConnectionPendingRequestsDescription = "The number of current pending requests for an open connection"
+
+	// DbClientConnectionTimeouts is the metric conforming to the "db.client.connection.timeouts" semantic conventions. It represents the number of connection timeouts that have occurred trying to obtain a connection from the pool
+	// Instrument: counter
+	// Unit: {timeout}
+	// Stability: experimental
+	DbClientConnectionTimeoutsName        = "db.client.connection.timeouts"
+	DbClientConnectionTimeoutsUnit        = "{timeout}"
+	DbClientConnectionTimeoutsDescription = "The number of connection timeouts that have occurred trying to obtain a connection from the pool"
+
+	// DbClientConnectionCreateTime is the metric conforming to the "db.client.connection.create_time" semantic conventions. It represents the time it took to create a new connection
+	// Instrument: histogram
+	// Unit: s
+	// Stability: experimental
+	DbClientConnectionCreateTimeName        = "db.client.connection.create_time"
+	DbClientConnectionCreateTimeUnit        = "s"
+	DbClientConnectionCreateTimeDescription = "The time it took to create a new connection"
+
+	// DbClientConnectionWaitTime is the metric conforming to the "db.client.connection.wait_time" semantic conventions. It represents the time it took to obtain an open connection from the pool
+	// Instrument: histogram
+	// Unit: s
+	// Stability: experimental
+	DbClientConnectionWaitTimeName        = "db.client.connection.wait_time"
+	DbClientConnectionWaitTimeUnit        = "s"
+	DbClientConnectionWaitTimeDescription = "The time it took to obtain an open connection from the pool"
+
+	// DbClientConnectionUseTime is the metric conforming to the "db.client.connection.use_time" semantic conventions. It represents the time between borrowing a connection and returning it to the pool
+	// Instrument: histogram
+	// Unit: s
+	// Stability: experimental
+	DbClientConnectionUseTimeName        = "db.client.connection.use_time"
+	DbClientConnectionUseTimeUnit        = "s"
+	DbClientConnectionUseTimeDescription = "The time between borrowing a connection and returning it to the pool"
 
 	// DnsLookupDuration is the metric conforming to the "dns.lookup.duration" semantic conventions. It represents the measures the time taken to perform a DNS lookup
 	// Instrument: histogram
@@ -720,6 +720,15 @@ const (
 	HttpClientActiveRequestsUnit        = "{request}"
 	HttpClientActiveRequestsDescription = "Number of active HTTP requests."
 
+	// JvmBufferMemoryUsage is the metric conforming to the "jvm.buffer.memory.usage" semantic conventions. It represents the deprecated, use `jvm.buffer.memory.used` instead
+	// Instrument: updowncounter
+	// Unit: By
+	// Stability: experimental
+	// Deprecated: Replaced by `jvm.buffer.memory.used`.
+	JvmBufferMemoryUsageName        = "jvm.buffer.memory.usage"
+	JvmBufferMemoryUsageUnit        = "By"
+	JvmBufferMemoryUsageDescription = "Deprecated, use `jvm.buffer.memory.used` instead."
+
 	// JvmMemoryInit is the metric conforming to the "jvm.memory.init" semantic conventions. It represents the measure of initial memory requested
 	// Instrument: updowncounter
 	// Unit: By
@@ -863,15 +872,6 @@ const (
 	JvmCpuRecentUtilizationName        = "jvm.cpu.recent_utilization"
 	JvmCpuRecentUtilizationUnit        = "1"
 	JvmCpuRecentUtilizationDescription = "Recent CPU utilization for the process as reported by the JVM."
-
-	// JvmBufferMemoryUsage is the metric conforming to the "jvm.buffer.memory.usage" semantic conventions. It represents the deprecated, use `jvm.buffer.memory.used` instead
-	// Instrument: updowncounter
-	// Unit: By
-	// Stability: experimental
-	// Deprecated: Replaced by `jvm.buffer.memory.used`.
-	JvmBufferMemoryUsageName        = "jvm.buffer.memory.usage"
-	JvmBufferMemoryUsageUnit        = "By"
-	JvmBufferMemoryUsageDescription = "Deprecated, use `jvm.buffer.memory.used` instead."
 
 	// K8sPodCpuTime is the metric conforming to the "k8s.pod.cpu.time" semantic conventions. It represents the total CPU time consumed
 	// Instrument: counter
