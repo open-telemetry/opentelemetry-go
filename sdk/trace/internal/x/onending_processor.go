@@ -15,7 +15,7 @@ type OnEndingSpanProcessor interface {
 	// OnEnding is called while the span is finished, and spans are still
 	// mutable.
 	//
-	// This method is called synchronously during the span's `End()` operation,
+	// This method is called synchronously during the span's End operation,
 	// therefore it should not block or throw an exception.
 	// If multiple [SpanProcessor] are registered, their `OnEnding` callbacks are
 	// invoked in the order they have been registered.
