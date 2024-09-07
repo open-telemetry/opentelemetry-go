@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#5739)
+- The `WithResource` option for `NewMeterProvider` now merges the provided resources with the ones from environment variables. (#5773)
+- The `WithResource` option for `NewLoggerProvider` now merges the provided resources with the ones from environment variables. (#5773)
 
 ### Fixed
 
@@ -18,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix panic instruments creation when setting meter provider. (#5758)
 - Stop percent encoding header environment variables in `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploggrpc` and `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploghttp` (#5792)
 - Remove invalid environment variable header keys in `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploggrpc` and `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploghttp` (#5792)
+- Fix an issue where `SetMeterProvider` in `go.opentelemetry.io/otel` might miss the delegation for instruments and registries. (#5780)
 
 ### Removed
 
