@@ -19,7 +19,7 @@ var (
 	// Do not use crypto/rand. There is no reason for the decrease in performance
 	// given this is not a security sensitive decision.
 	rng = rand.New(rand.NewSource(time.Now().UnixNano()))
-	// Ensure concurrent safe accecess to rng and its underlying source.
+	// Ensure concurrent safe access to rng and its underlying source.
 	rngMu sync.Mutex
 )
 

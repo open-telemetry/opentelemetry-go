@@ -70,12 +70,12 @@ func ExampleProcessor_filtering() {
 
 type key struct{}
 
-var igoreLogsKey key
+var ignoreLogsKey key
 
 // WithIgnoreLogs returns a context which is used by [ContextFilterProcessor]
 // to filter out log records.
 func WithIgnoreLogs(ctx context.Context) context.Context {
-	return context.WithValue(ctx, igoreLogsKey, true)
+	return context.WithValue(ctx, ignoreLogsKey, true)
 }
 
 // ContextFilterProcessor filters out logs when a context deriving from
@@ -110,7 +110,7 @@ func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record)
 }
 
 func ignoreLogs(ctx context.Context) bool {
-	_, ok := ctx.Value(igoreLogsKey).(bool)
+	_, ok := ctx.Value(ignoreLogsKey).(bool)
 	return ok
 }
 

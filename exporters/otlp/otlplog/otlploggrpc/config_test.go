@@ -191,7 +191,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "LogEnpointEnvironmentVariablesDefaultPath",
+			name: "LogEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint",
 			},
@@ -224,7 +224,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "OTLPEnpointEnvironmentVariablesDefaultPath",
+			name: "OTLPEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
 			},
@@ -331,6 +331,83 @@ func TestNewConfig(t *testing.T) {
 				`invalid header value: %ZZ`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
+			},
+		},
+		{
+			name: "OptionEndpointURLWithoutScheme",
+			options: []Option{
+				WithEndpointURL("//env.endpoint:8080/prefix"),
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointWithoutScheme",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "DefaultEndpointWithEnvInsecure",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointWithoutSchemeWithEnvInsecure",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointURLWithoutSchemeWithEnvInsecure",
+			options: []Option{
+				WithEndpointURL("//env.endpoint:8080/prefix"),
+			},
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointWithEnvInsecure",
+			options: []Option{
+				WithEndpoint("env.endpoint:8080"),
+			},
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
 			},
 		},
 	}

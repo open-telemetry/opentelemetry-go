@@ -224,7 +224,7 @@ type httpCollector struct {
 // default OTLP log endpoint path ("/v1/logs"). If the endpoint contains a
 // prefix of "https" the server will generate weak self-signed TLS certificates
 // and use them to server data. If the endpoint contains a path, that path will
-// be used instead of the default OTLP metri endpoint path.
+// be used instead of the default OTLP metric endpoint path.
 //
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will

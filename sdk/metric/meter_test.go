@@ -1171,13 +1171,13 @@ func TestUnregisterUnregisters(t *testing.T) {
 	int64Gauge, err := m.Int64ObservableGauge("int64.gauge")
 	require.NoError(t, err)
 
-	floag64Counter, err := m.Float64ObservableCounter("floag64.counter")
+	float64Counter, err := m.Float64ObservableCounter("float64.counter")
 	require.NoError(t, err)
 
-	floag64UpDownCounter, err := m.Float64ObservableUpDownCounter("floag64.up_down_counter")
+	float64UpDownCounter, err := m.Float64ObservableUpDownCounter("float64.up_down_counter")
 	require.NoError(t, err)
 
-	floag64Gauge, err := m.Float64ObservableGauge("floag64.gauge")
+	float64Gauge, err := m.Float64ObservableGauge("float64.gauge")
 	require.NoError(t, err)
 
 	var called bool
@@ -1189,9 +1189,9 @@ func TestUnregisterUnregisters(t *testing.T) {
 		int64Counter,
 		int64UpDownCounter,
 		int64Gauge,
-		floag64Counter,
-		floag64UpDownCounter,
-		floag64Gauge,
+		float64Counter,
+		float64UpDownCounter,
+		float64Gauge,
 	)
 	require.NoError(t, err)
 
@@ -1225,13 +1225,13 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	int64Gauge, err := m.Int64ObservableGauge("int64.gauge")
 	require.NoError(t, err)
 
-	floag64Counter, err := m.Float64ObservableCounter("floag64.counter")
+	float64Counter, err := m.Float64ObservableCounter("float64.counter")
 	require.NoError(t, err)
 
-	floag64UpDownCounter, err := m.Float64ObservableUpDownCounter("floag64.up_down_counter")
+	float64UpDownCounter, err := m.Float64ObservableUpDownCounter("float64.up_down_counter")
 	require.NoError(t, err)
 
-	floag64Gauge, err := m.Float64ObservableGauge("floag64.gauge")
+	float64Gauge, err := m.Float64ObservableGauge("float64.gauge")
 	require.NoError(t, err)
 
 	var called bool
@@ -1243,9 +1243,9 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 		int64Counter,
 		int64UpDownCounter,
 		int64Gauge,
-		floag64Counter,
-		floag64UpDownCounter,
-		floag64Gauge,
+		float64Counter,
+		float64UpDownCounter,
+		float64Gauge,
 	)
 	require.NoError(t, err)
 

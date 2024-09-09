@@ -108,7 +108,7 @@ func TestTracerFromContext(t *testing.T) {
 	ctx, _ = tracer.Start(ctx, "test")
 
 	got := internal.NewTracer(tracer).FromContext(ctx).SpanContext()
-	// Do not test the convedsion, only that the propagtion.
+	// Do not test the conversion, only the propagation.
 	want := otel2oc.SpanContext(sc)
 	if got != want {
 		t.Errorf("tracer.FromContext returned wrong context: %#v", got)
