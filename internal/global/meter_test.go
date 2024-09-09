@@ -234,7 +234,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	assert.Equal(t, 1, tMeter.siHist)
 	assert.Equal(t, 1, len(tMeter.callbacks))
 
-	// Because the Meter was provided by testmeterProvider it should also return our test instrument
+	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
@@ -283,11 +283,11 @@ func TestMeterDelegatesCalls(t *testing.T) {
 	assert.Equal(t, 1, tMeter.siUDCount)
 	assert.Equal(t, 1, tMeter.siHist)
 
-	// Because the Meter was provided by testmeterProvider it should also return our test instrument
+	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
 
-	// Because the Meter was provided by testmeterProvider it should also return our test instrument
+	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
 

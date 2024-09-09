@@ -297,7 +297,7 @@ func TestRequestHeader(t *testing.T) {
 	}, got)
 }
 
-func TestReponseHeader(t *testing.T) {
+func TestResponseHeader(t *testing.T) {
 	ips := []string{"127.0.0.5", "127.0.0.9"}
 	user := []string{"alice"}
 	h := http.Header{"ips": ips, "user": user}

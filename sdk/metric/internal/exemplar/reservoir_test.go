@@ -18,7 +18,7 @@ import (
 // Sat Jan 01 2000 00:00:00 GMT+0000.
 var staticTime = time.Unix(946684800, 0)
 
-type factory func(requstedCap int) (r Reservoir, actualCap int)
+type factory func(requestedCap int) (r Reservoir, actualCap int)
 
 func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 	return func(t *testing.T) {

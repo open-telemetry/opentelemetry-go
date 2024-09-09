@@ -377,7 +377,7 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 	return s
 }
 
-// loadEnvTLS returns a resolver that loads a *tls.Config from files defeind by
+// loadEnvTLS returns a resolver that loads a *tls.Config from files defined by
 // the OTLP TLS environment variables. This will load both the rootCAs and
 // certificates used for mTLS.
 //
