@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#5739)
 - The `WithResource` option for `NewMeterProvider` now merges the provided resources with the ones from environment variables. (#5773)
 - The `WithResource` option for `NewLoggerProvider` now merges the provided resources with the ones from environment variables. (#5773)
+- Add UTF-8 support to `go.opentelemetry.io/otel/exporters/prometheus`. (#5755)
 
 ### Changed
 
