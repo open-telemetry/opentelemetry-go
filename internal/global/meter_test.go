@@ -83,6 +83,12 @@ func TestMeterConcurrentSafe(t *testing.T) {
 	mtr.setDelegate(noop.NewMeterProvider())
 	close(finish)
 	<-done
+
+	// No instruments should be left after the meter is replaced.
+	assert.Empty(t, mtr.instruments)
+
+	// No callbacks should be left after the meter is replaced.
+	assert.Zero(t, mtr.registry.Len())
 }
 
 func TestUnregisterConcurrentSafe(t *testing.T) {
@@ -162,8 +168,9 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Co
 // This is to emulate a read from an exporter.
 func testCollect(t *testing.T, m metric.Meter) {
 	if tMeter, ok := m.(*meter); ok {
-		m, ok = tMeter.delegate.Load().(metric.Meter)
-		if !ok {
+		// This changes the input m to the delegate.
+		m = tMeter.delegate
+		if m == nil {
 			t.Error("meter was not delegated")
 			return
 		}
@@ -261,7 +268,7 @@ func TestMeterDelegatesCalls(t *testing.T) {
 
 	// Calls to Meter methods after setDelegate() should be executed by the delegate
 	require.IsType(t, &meter{}, m)
-	tMeter := m.(*meter).delegate.Load().(*testMeter)
+	tMeter := m.(*meter).delegate.(*testMeter)
 	require.NotNil(t, tMeter)
 	assert.Equal(t, 1, tMeter.afCount)
 	assert.Equal(t, 1, tMeter.afUDCount)
@@ -309,7 +316,7 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	// Calls to Meter() before setDelegate() should be the delegated type
 	require.IsType(t, &meter{}, m)
-	tMeter := m.(*meter).delegate.Load().(*testMeter)
+	tMeter := m.(*meter).delegate.(*testMeter)
 	require.NotNil(t, tMeter)
 	assert.Equal(t, 1, tMeter.afCount)
 	assert.Equal(t, 1, tMeter.afUDCount)
