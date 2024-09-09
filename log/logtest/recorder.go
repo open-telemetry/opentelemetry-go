@@ -11,9 +11,9 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 )
 
-type enabledFn func(context.Context, log.EnabledParam) bool
+type enabledFn func(context.Context, log.EnabledOpts) bool
 
-var defaultEnabledFunc = func(context.Context, log.EnabledParam) bool {
+var defaultEnabledFunc = func(context.Context, log.EnabledOpts) bool {
 	return true
 }
 
@@ -42,7 +42,7 @@ func (f optFunc) apply(c config) config { return f(c) }
 // WithEnabledFunc allows configuring whether the [Recorder] is enabled for specific log entries or not.
 //
 // By default, the Recorder is enabled for every log entry.
-func WithEnabledFunc(fn func(context.Context, log.EnabledParam) bool) Option {
+func WithEnabledFunc(fn func(context.Context, log.EnabledOpts) bool) Option {
 	return optFunc(func(c config) config {
 		c.enabledFn = fn
 		return c
@@ -155,12 +155,12 @@ type logger struct {
 }
 
 // Enabled indicates whether a specific record should be stored.
-func (l *logger) Enabled(ctx context.Context, param log.EnabledParam) bool {
+func (l *logger) Enabled(ctx context.Context, opts log.EnabledOpts) bool {
 	if l.enabledFn == nil {
-		return defaultEnabledFunc(ctx, param)
+		return defaultEnabledFunc(ctx, opts)
 	}
 
-	return l.enabledFn(ctx, param)
+	return l.enabledFn(ctx, opts)
 }
 
 // Emit stores the log record.

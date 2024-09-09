@@ -3,17 +3,17 @@
 
 package log // import "go.opentelemetry.io/otel/log"
 
-// EnabledParam represents payload for [Logger]'s Enabled method.
-type EnabledParam struct {
+// EnabledOpts represents payload for [Logger]'s Enabled method.
+type EnabledOpts struct {
 	severity Severity
 }
 
 // Severity returns the [Severity] level.
-func (r *EnabledParam) Severity() Severity {
+func (r *EnabledOpts) Severity() Severity {
 	return r.severity
 }
 
 // SetSeverity sets the [Severity] level.
-func (r *EnabledParam) SetSeverity(level Severity) {
+func (r *EnabledOpts) SetSeverity(level Severity) {
 	r.severity = level
 }
