@@ -452,7 +452,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewWrapedError(t *testing.T) {
+func TestNewWrappedError(t *testing.T) {
 	localErr := errors.New("local error")
 	_, err := resource.New(
 		context.Background(),

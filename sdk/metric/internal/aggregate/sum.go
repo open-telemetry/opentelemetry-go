@@ -142,7 +142,7 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 }
 
 // newPrecomputedSum returns an aggregator that summarizes a set of
-// observatrions as their arithmetic sum. Each sum is scoped by attributes and
+// observations as their arithmetic sum. Each sum is scoped by attributes and
 // the aggregation cycle the measurements were made in.
 func newPrecomputedSum[N int64 | float64](monotonic bool, limit int, r func() exemplar.FilteredReservoir[N]) *precomputedSum[N] {
 	return &precomputedSum[N]{
@@ -152,7 +152,7 @@ func newPrecomputedSum[N int64 | float64](monotonic bool, limit int, r func() ex
 	}
 }
 
-// precomputedSum summarizes a set of observatrions as their arithmetic sum.
+// precomputedSum summarizes a set of observations as their arithmetic sum.
 type precomputedSum[N int64 | float64] struct {
 	*valueMap[N]
 

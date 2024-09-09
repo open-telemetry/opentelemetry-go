@@ -425,7 +425,7 @@ func BenchmarkPeriodicReader(b *testing.B) {
 	require.NoError(b, r.Shutdown(context.Background()))
 }
 
-func TestPeriodiclReaderTemporality(t *testing.T) {
+func TestPeriodicReaderTemporality(t *testing.T) {
 	tests := []struct {
 		name     string
 		exporter *fnExporter

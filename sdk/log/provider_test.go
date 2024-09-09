@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -20,9 +21,12 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
 
 type processor struct {
 	Name string
@@ -168,6 +172,65 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				t.Setenv(key, value)
 			}
 			assert.Equal(t, tc.want, NewLoggerProvider(tc.options...))
+		})
+	}
+}
+
+func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
+	r, err := resource.Merge(r1, r2)
+	assert.NoError(t, err)
+	return r
+}
+
+func TestWithResource(t *testing.T) {
+	store, err := ottest.SetEnvVariables(map[string]string{
+		envVarResourceAttributes: "key=value,rk5=7",
+	})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, store.Restore()) }()
+
+	cases := []struct {
+		name    string
+		options []LoggerProviderOption
+		want    *resource.Resource
+		msg     string
+	}{
+		{
+			name:    "explicitly empty resource",
+			options: []LoggerProviderOption{WithResource(resource.Empty())},
+			want:    resource.Environment(),
+		},
+		{
+			name:    "uses default if no resource option",
+			options: []LoggerProviderOption{},
+			want:    resource.Default(),
+		},
+		{
+			name:    "explicit resource",
+			options: []LoggerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
+			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+		},
+		{
+			name: "last resource wins",
+			options: []LoggerProviderOption{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
+				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			},
+			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+		},
+		{
+			name:    "overlapping attributes with environment resource",
+			options: []LoggerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
+			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := newProviderConfig(tc.options).resource
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("WithResource:\n  -got +want %s", diff)
+			}
 		})
 	}
 }
