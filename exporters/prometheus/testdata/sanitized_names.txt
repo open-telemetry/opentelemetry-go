@@ -1,9 +1,9 @@
 # HELP bar a fun little gauge
 # TYPE bar gauge
 bar{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 75
-# HELP _0invalid_counter_name_total a counter with an invalid name
-# TYPE _0invalid_counter_name_total counter
-_0invalid_counter_name_total{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 100
+# HELP _invalid_counter_name_total a counter with an invalid name
+# TYPE _invalid_counter_name_total counter
+_invalid_counter_name_total{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 100
 # HELP invalid_gauge_name a gauge with an invalid name
 # TYPE invalid_gauge_name gauge
 invalid_gauge_name{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 100
