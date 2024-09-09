@@ -437,11 +437,9 @@ func TestPrometheusExporter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.enableUTF8 {
 				model.NameValidationScheme = model.UTF8Validation
-				model.NameEscapingScheme = model.NoEscaping
 				defer func() {
 					// Reset to defaults
 					model.NameValidationScheme = model.LegacyValidation
-					model.NameEscapingScheme = model.ValueEncodingEscaping
 				}()
 			}
 			ctx := context.Background()
@@ -490,36 +488,6 @@ func TestPrometheusExporter(t *testing.T) {
 			err = testutil.GatherAndCompare(registry, file)
 			require.NoError(t, err)
 		})
-	}
-}
-
-func TestSantitizeName(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"name€_with_4_width_rune", "name__with_4_width_rune"},
-		{"`", "_"},
-		{
-			`! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWKYZ[]\^_abcdefghijklmnopqrstuvwkyz{|}~`,
-			`________________0123456789:______ABCDEFGHIJKLMNOPQRSTUVWKYZ_____abcdefghijklmnopqrstuvwkyz____`,
-		},
-
-		// Test cases taken from
-		// https://github.com/prometheus/common/blob/dfbc25bd00225c70aca0d94c3c4bb7744f28ace0/model/metric_test.go#L85-L136
-		{"Avalid_23name", "Avalid_23name"},
-		{"_Avalid_23name", "_Avalid_23name"},
-		{"1valid_23name", "_1valid_23name"},
-		{"avalid_23name", "avalid_23name"},
-		{"Ava:lid_23name", "Ava:lid_23name"},
-		{"a lid_23name", "a_lid_23name"},
-		{":leading_colon", ":leading_colon"},
-		{"colon:in:the:middle", "colon:in:the:middle"},
-		{"", ""},
-	}
-
-	for _, test := range tests {
-		require.Equalf(t, test.want, sanitizeName(test.input), "input: %q", test.input)
 	}
 }
 

@@ -11,8 +11,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -318,7 +316,7 @@ func getAttrs(attrs attribute.Set, ks, vs [2]string, resourceKV keyVals) ([]stri
 		keysMap := make(map[string][]string)
 		for itr.Next() {
 			kv := itr.Attribute()
-			key := strings.Map(sanitizeRune, string(kv.Key))
+			key := model.EscapeName(string(kv.Key), model.NameEscapingScheme)
 			if _, ok := keysMap[key]; !ok {
 				keysMap[key] = []string{kv.Value.Emit()}
 			} else {
@@ -356,13 +354,6 @@ func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, erro
 	keys := scopeInfoKeys[:]
 	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), scope.Name, scope.Version)
-}
-
-func sanitizeRune(r rune) rune {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ':' || r == '_' {
-		return r
-	}
-	return '_'
 }
 
 var unitSuffixes = map[string]string{
@@ -406,7 +397,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
 	if model.NameValidationScheme != model.UTF8Validation {
 		// Only sanitize if prometheus does not support UTF-8.
-		name = sanitizeName(m.Name)
+		name = model.EscapeName(name, model.NameEscapingScheme)
 	}
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
 	if addCounterSuffix {
@@ -424,59 +415,6 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 		name += counterSuffix
 	}
 	return name
-}
-
-func sanitizeName(n string) string {
-	// This algorithm is based on strings.Map from Go 1.19.
-	const replacement = '_'
-
-	valid := func(i int, r rune) bool {
-		// Taken from
-		// https://github.com/prometheus/common/blob/dfbc25bd00225c70aca0d94c3c4bb7744f28ace0/model/metric.go#L92-L102
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || r == ':' || (r >= '0' && r <= '9' && i > 0) {
-			return true
-		}
-		return false
-	}
-
-	// This output buffer b is initialized on demand, the first time a
-	// character needs to be replaced.
-	var b strings.Builder
-	for i, c := range n {
-		if valid(i, c) {
-			continue
-		}
-
-		if i == 0 && c >= '0' && c <= '9' {
-			// Prefix leading number with replacement character.
-			b.Grow(len(n) + 1)
-			_ = b.WriteByte(byte(replacement))
-			break
-		}
-		b.Grow(len(n))
-		_, _ = b.WriteString(n[:i])
-		_ = b.WriteByte(byte(replacement))
-		width := utf8.RuneLen(c)
-		n = n[i+width:]
-		break
-	}
-
-	// Fast path for unchanged input.
-	if b.Cap() == 0 { // b.Grow was not called above.
-		return n
-	}
-
-	for _, c := range n {
-		// Due to inlining, it is more performant to invoke WriteByte rather then
-		// WriteRune.
-		if valid(1, c) { // We are guaranteed to not be at the start.
-			_ = b.WriteByte(byte(c))
-		} else {
-			_ = b.WriteByte(byte(replacement))
-		}
-	}
-
-	return b.String()
 }
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
