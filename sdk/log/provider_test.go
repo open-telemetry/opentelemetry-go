@@ -76,7 +76,7 @@ func newFltrProcessor(name string, enabled bool) *fltrProcessor {
 	}
 }
 
-func (p *fltrProcessor) Enabled(context.Context, log.EnabledOpts) bool {
+func (p *fltrProcessor) Enabled(context.Context, log.EnabledParameters) bool {
 	return p.enabled
 }
 
@@ -384,5 +384,5 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	}
 
 	b.StopTimer()
-	loggers[0].Enabled(context.Background(), log.EnabledOpts{})
+	loggers[0].Enabled(context.Background(), log.EnabledParameters{})
 }

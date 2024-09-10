@@ -270,7 +270,7 @@ func TestLoggerEnabled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledOpts{}))
+			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
 		})
 	}
 }
@@ -281,7 +281,7 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 		WithProcessor(newFltrProcessor("1", true)),
 	)
 	logger := provider.Logger("BenchmarkLoggerEnabled")
-	ctx, param := context.Background(), log.EnabledOpts{}
+	ctx, param := context.Background(), log.EnabledParameters{}
 	param.SetSeverity(log.SeverityDebug)
 
 	var enabled bool

@@ -44,21 +44,21 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 }
 
 // Enabled returns true if at least one Processor held by the LoggerProvider
-// that created the logger will process opts for the provided context and opts.
+// that created the logger will process param for the provided context and param.
 //
-// If it is not possible to definitively determine the opts will be
+// If it is not possible to definitively determine the param will be
 // processed, true will be returned by default. A value of false will only be
 // returned if it can be positively verified that no Processor will process.
-func (l *logger) Enabled(ctx context.Context, opts log.EnabledOpts) bool {
+func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	fltrs := l.provider.filterProcessors()
 	// If there are more Processors than FilterProcessors we cannot be sure
 	// that all Processors will drop the record. Therefore, return true.
 	//
 	// If all Processors are FilterProcessors, check if any is enabled.
-	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, opts, fltrs)
+	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, param, fltrs)
 }
 
-func anyEnabled(ctx context.Context, param log.EnabledOpts, fltrs []x.FilterProcessor) bool {
+func anyEnabled(ctx context.Context, param log.EnabledParameters, fltrs []x.FilterProcessor) bool {
 	for _, f := range fltrs {
 		if f.Enabled(ctx, param) {
 			// At least one Processor will process the Record.

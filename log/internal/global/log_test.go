@@ -51,12 +51,12 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 
 		ctx := context.Background()
 		var r log.Record
-		var opts log.EnabledOpts
+		var param log.EnabledParameters
 
 		var enabled bool
 		for {
 			l.Emit(ctx, r)
-			enabled = l.Enabled(ctx, opts)
+			enabled = l.Enabled(ctx, param)
 
 			select {
 			case <-stop:
@@ -104,17 +104,17 @@ type testLogger struct {
 }
 
 func (l *testLogger) Emit(context.Context, log.Record) { l.emitN++ }
-func (l *testLogger) Enabled(context.Context, log.EnabledOpts) bool {
+func (l *testLogger) Enabled(context.Context, log.EnabledParameters) bool {
 	l.enabledN++
 	return true
 }
 
 func emitRecord(l log.Logger) {
 	ctx := context.Background()
-	var p log.EnabledOpts
+	var param log.EnabledParameters
 	var r log.Record
 
-	_ = l.Enabled(ctx, p)
+	_ = l.Enabled(ctx, param)
 	l.Emit(ctx, r)
 }
 

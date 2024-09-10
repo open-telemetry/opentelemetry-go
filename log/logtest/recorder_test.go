@@ -65,18 +65,18 @@ func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 
 func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
-		name             string
-		options          []Option
-		ctx              context.Context
-		buildEnabledOpts func() log.EnabledOpts
+		name                   string
+		options                []Option
+		ctx                    context.Context
+		buildEnabledParameters func() log.EnabledParameters
 
 		isEnabled bool
 	}{
 		{
 			name: "the default option enables every log entry",
 			ctx:  context.Background(),
-			buildEnabledOpts: func() log.EnabledOpts {
-				return log.EnabledOpts{}
+			buildEnabledParameters: func() log.EnabledParameters {
+				return log.EnabledParameters{}
 			},
 
 			isEnabled: true,
@@ -84,20 +84,20 @@ func TestLoggerEnabled(t *testing.T) {
 		{
 			name: "with everything disabled",
 			options: []Option{
-				WithEnabledFunc(func(context.Context, log.EnabledOpts) bool {
+				WithEnabledFunc(func(context.Context, log.EnabledParameters) bool {
 					return false
 				}),
 			},
 			ctx: context.Background(),
-			buildEnabledOpts: func() log.EnabledOpts {
-				return log.EnabledOpts{}
+			buildEnabledParameters: func() log.EnabledParameters {
+				return log.EnabledParameters{}
 			},
 
 			isEnabled: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildEnabledOpts())
+			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildEnabledParameters())
 			assert.Equal(t, tt.isEnabled, e)
 		})
 	}
@@ -105,7 +105,7 @@ func TestLoggerEnabled(t *testing.T) {
 
 func TestLoggerEnabledFnUnset(t *testing.T) {
 	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.EnabledOpts{}))
+	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
 }
 
 func TestRecorderEmitAndReset(t *testing.T) {
@@ -158,7 +158,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			nr := r.Logger("test")
-			nr.Enabled(context.Background(), log.EnabledOpts{})
+			nr.Enabled(context.Background(), log.EnabledParameters{})
 			nr.Emit(context.Background(), log.Record{})
 
 			r.Result()
