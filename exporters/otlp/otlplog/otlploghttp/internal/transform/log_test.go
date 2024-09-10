@@ -248,8 +248,10 @@ func TestResourceLogsPerResource(t *testing.T) {
 		Version:   "v0.2.0",
 		SchemaURL: semconv.SchemaURL,
 	}
-	records := func() []log.Record {
+
+	records = func() []log.Record {
 		var out []log.Record
+
 		out = append(out, logtest.RecordFactory{
 			Timestamp:         ts,
 			ObservedTimestamp: obs,
