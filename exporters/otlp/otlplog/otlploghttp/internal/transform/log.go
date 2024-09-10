@@ -59,7 +59,6 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 		}
 
 		sl.LogRecords = append(sl.LogRecords, LogRecord(r))
-
 		rl, rOk := resMap[rKey]
 		if !rOk {
 			resources++

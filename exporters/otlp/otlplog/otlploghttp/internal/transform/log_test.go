@@ -248,7 +248,6 @@ func TestResourceLogsPerResource(t *testing.T) {
 		Version:   "v0.2.0",
 		SchemaURL: semconv.SchemaURL,
 	}
-
 	records := func() []log.Record {
 		var out []log.Record
 		out = append(out, logtest.RecordFactory{
@@ -280,8 +279,8 @@ func TestResourceLogsPerResource(t *testing.T) {
 			ObservedTimestamp:    obs,
 			Body:                 bodyB,
 			Attributes:           []api.KeyValue{alice},
-			InstrumentationScope: &scope,
 			Resource:             res2,
+			InstrumentationScope: &scope,
 		}.NewRecord())
 
 		return out
