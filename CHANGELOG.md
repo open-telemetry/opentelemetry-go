@@ -19,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
 - Fix panic instruments creation when setting meter provider. (#5758)
+- Stop percent encoding header environment variables in `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploggrpc` and `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploghttp` (#5792)
+- Remove invalid environment variable header keys in `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploggrpc` and `open-telemetry/opentelemetry-go/exporters/otlp/otlplog/otlploghttp` (#5792)
 - Fix an issue where `SetMeterProvider` in `go.opentelemetry.io/otel` might miss the delegation for instruments and registries. (#5780)
 
 ### Removed
