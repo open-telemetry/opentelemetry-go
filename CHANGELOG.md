@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 - Fix logrecords duplication in case of hetrogeneous resource attributes by correctly mapping each logrecord to it's resource and scope. (#5782)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.30.0/0.52.0/0.6.0/0.0.9] 2024-09-09
 
 ### Added
