@@ -42,7 +42,7 @@ func TestValue(t *testing.T) {
 			name:      "Key.Int64() correctly returns negative keys's internal int64 value",
 			value:     k.Int64(-42).Value,
 			wantType:  attribute.INT64,
-			wantValue: int64(0),
+			wantValue: int64(-42),
 		},
 		{
 			name:      "Key.Int64Slice() correctly returns keys's internal []int64 value",
