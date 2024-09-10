@@ -8,8 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Fixed
+- Fix logrecords duplication in case of hetrogeneous resource attributes by correctly mapping each logrecord to it's resource and scope. (#5782)
 
 ## [1.30.0/0.52.0/0.6.0/0.0.9] 2024-09-09
 
@@ -25,7 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix memory leak in the global `MeterProvider` when identical instruments are repeatedly created. (#5754)
 - Fix panic on instruments creation when setting meter provider. (#5758)
 - Fix an issue where `SetMeterProvider` in `go.opentelemetry.io/otel` might miss the delegation for instruments and registries. (#5780)
-- Fix logrecords duplication in case of hetrogeneous resource attributes by correctly mapping each logrecord to it's resource and scope. (#5782)
 
 ### Removed
 
