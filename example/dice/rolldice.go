@@ -4,7 +4,8 @@
 package main
 
 import (
-	// TODO: "go.opentelemetry.io/contrib/bridges/otelslog".
+	// TODO: https://github.com/open-telemetry/opentelemetry-go/issues/5801
+	// "go.opentelemetry.io/contrib/bridges/otelslog".
 	"log/slog"
 	"os"
 
