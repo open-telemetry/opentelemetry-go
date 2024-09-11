@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `Logger.Enabled` in `go.opentelemetry.io/otel/log` now accepts a newly introduced `EnabledParameters` type instead of `Record`. (#5791)
+- `FilterProcessor.Enabled` in `go.opentelemetry.io/otel/sdk/log/internal/x` now accepts `EnabledParameters` instead of `Record`. (#5791)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -19,11 +24,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithResource` option for `NewMeterProvider` now merges the provided resources with the ones from environment variables. (#5773)
 - The `WithResource` option for `NewLoggerProvider` now merges the provided resources with the ones from environment variables. (#5773)
 - Add UTF-8 support to `go.opentelemetry.io/otel/exporters/prometheus`. (#5755)
-
-### Changed
-
-- `Logger.Enabled` in `go.opentelemetry.io/otel/log` now accepts a newly introduced `EnabledParameters` type instead of `Record`. (#5791)
-- `FilterProcessor.Enabled` in `go.opentelemetry.io/otel/sdk/log/internal/x` now accepts `EnabledParameters` instead of `Record`. (#5791)
 
 ### Fixed
 
