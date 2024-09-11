@@ -142,7 +142,7 @@ func timeUnixNano(t time.Time) uint64 {
 	if t.IsZero() {
 		return 0
 	}
-	return uint64(t.UnixNano())
+	return uint64(t.UnixNano()) // nolint:gosec // Overflow checked.
 }
 
 // AttrIter transforms an [attribute.Iterator] into OTLP key-values.
