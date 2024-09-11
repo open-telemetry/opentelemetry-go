@@ -266,6 +266,10 @@ allocations and make it possible to handle new arguments, `Enabled` accepts
 a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
 method argument.
 
+The `EnabledParameters` getters are returning values using the `(value, ok)`
+idiom in order to indicate if the values were actually set by the caller or if
+there are unspecified.
+
 ### noop package
 
 The `go.opentelemetry.io/otel/log/noop` package provides
