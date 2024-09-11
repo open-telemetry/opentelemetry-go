@@ -14,6 +14,6 @@ type Scope struct {
 	Version string
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
-	// Attributes of the teelemtry emitted by the scope
+	// Attributes of the telemetry emitted by the scope
 	Attributes attribute.Set
 }
