@@ -263,7 +263,7 @@ is accepted as a `context.Context` method argument.
 Calls to `Enabled` are supposed to be on the hot path and the list of arguments
 can be extendend in future. Therefore, in order to reduce the number of heap
 allocations and make it possible to handle new arguments, `Enabled` accepts
-a `EnabledParameters` struct, defined in [enabled.go](enabled.go), as the second
+a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
 method argument.
 
 ### noop package
