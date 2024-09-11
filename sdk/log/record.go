@@ -234,7 +234,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		//
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
 		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
-		last := max(0, (r.attributeCountLimit - n))
+		last := max(0, r.attributeCountLimit-n)
 		r.addDropped(len(attrs) - last)
 		attrs = attrs[:last]
 	}
