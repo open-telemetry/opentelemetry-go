@@ -16,13 +16,13 @@ import (
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
+	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-        "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -248,32 +248,31 @@ func TestResourceLogsPerResource(t *testing.T) {
 		Version:   "v0.2.0",
 		SchemaURL: semconv.SchemaURL,
 	}
-
 	records = func() []log.Record {
 		var out []log.Record
 
 		out = append(out, logtest.RecordFactory{
-		        Timestamp:            ts,
-			ObservedTimestamp:    obs,
-			Body:                 bodyA,
-			Attributes:           []api.KeyValue{alice},
-			Resource:             res1,
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Body:              bodyA,
+			Attributes:        []api.KeyValue{alice},
+			Resource:          res1,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:            ts,
-			ObservedTimestamp:    obs,
-			Body:                 bodyB,
-			Attributes:           []api.KeyValue{bob},
-			Resource:             res1,
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Body:              bodyB,
+			Attributes:        []api.KeyValue{bob},
+			Resource:          res1,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
-			Timestamp:            ts,
-			ObservedTimestamp:    obs,
-			Body:                 bodyB,
-			Attributes:           []api.KeyValue{bob},
-			Resource:             res2,
+			Timestamp:         ts,
+			ObservedTimestamp: obs,
+			Body:              bodyB,
+			Attributes:        []api.KeyValue{bob},
+			Resource:          res2,
 		}.NewRecord())
 
 		out = append(out, logtest.RecordFactory{
@@ -292,15 +291,15 @@ func TestResourceLogsPerResource(t *testing.T) {
 	assert.Equal(t, 2, len(rLogs))
 
 	for _, r := range rLogs {
-	      if r.Resource.Attributes[0].Value.GetStringValue() == "service1" {
-	          assert.Equal(t, 1, len(r.ScopeLogs))
-		  assert.Equal(t, 2, len(r.ScopeLogs[0].LogRecords))
-	      } else {
-	          assert.Equal(t, 2, len(r.ScopeLogs))
-		  assert.Equal(t, 1, len(r.ScopeLogs[0].LogRecords))
-		  assert.Equal(t, 1, len(r.ScopeLogs[1].LogRecords))
-	      }
-	 }
+		if r.Resource.Attributes[0].Value.GetStringValue() == "service1" {
+			assert.Equal(t, 1, len(r.ScopeLogs))
+			assert.Equal(t, 2, len(r.ScopeLogs[0].LogRecords))
+		} else {
+			assert.Equal(t, 2, len(r.ScopeLogs))
+			assert.Equal(t, 1, len(r.ScopeLogs[0].LogRecords))
+			assert.Equal(t, 1, len(r.ScopeLogs[1].LogRecords))
+		}
+	}
 }
 
 func TestSeverityNumber(t *testing.T) {
