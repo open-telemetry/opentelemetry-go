@@ -61,7 +61,8 @@ func (s *Span) SetName(name string) {
 
 // SetStatus sets the status of this span, if it is recording events.
 func (s *Span) SetStatus(status octrace.Status) {
-	s.otelSpan.SetStatus(codes.Code(status.Code), status.Message)
+	// Assumes original was a valid uint32 (overflow not checked).
+	s.otelSpan.SetStatus(codes.Code(status.Code), status.Message) // nolint: gosec
 }
 
 // AddAttributes sets attributes in this span.

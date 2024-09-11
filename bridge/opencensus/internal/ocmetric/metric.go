@@ -144,7 +144,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				Attributes:   attrs,
 				StartTime:    t.StartTime,
 				Time:         p.Time,
-				Count:        uint64(dist.Count),
+				Count:        uint64(dist.Count), // nolint:gosec // A count should never be negative.
 				Sum:          dist.Sum,
 				Bounds:       dist.BucketOptions.Bounds,
 				BucketCounts: bucketCounts,
@@ -166,7 +166,7 @@ func convertBuckets(buckets []ocmetricdata.Bucket) ([]uint64, []metricdata.Exemp
 			err = errors.Join(err, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count))
 			continue
 		}
-		bucketCounts[i] = uint64(bucket.Count)
+		bucketCounts[i] = uint64(bucket.Count) // nolint:gosec // A count should never be negative.
 
 		if bucket.Exemplar != nil {
 			exemplar, exemplarErr := convertExemplar(bucket.Exemplar)
@@ -357,7 +357,7 @@ func convertSummary(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSe
 				Attributes:     attrs,
 				StartTime:      t.StartTime,
 				Time:           p.Time,
-				Count:          uint64(summary.Count),
+				Count:          uint64(summary.Count), // nolint:gosec // A count should never be negative.
 				QuantileValues: convertQuantiles(summary.Snapshot),
 				Sum:            summary.Sum,
 			}
