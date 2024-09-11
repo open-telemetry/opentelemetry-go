@@ -302,10 +302,12 @@ func TestLoggerProviderLogger(t *testing.T) {
 
 		l0, l1 := p.Logger("l0"), p.Logger("l1")
 		l2, l3 := p.Logger("l0"), p.Logger("l1")
-		l4 := p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		l4, l5 := p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar"))), p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
 
 		assert.Same(t, l0, l2)
 		assert.Same(t, l1, l3)
+		assert.Same(t, l4, l5)
+		assert.NotSame(t, l0, l1)
 		assert.NotSame(t, l0, l4)
 	})
 }
