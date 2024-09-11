@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -209,7 +210,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 	gtp := TracerProvider()
 	tracer := gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"))
 	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
-	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+	assert.NotSame(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz"), trace.WithInstrumentationAttributes(attribute.String("k", "v"))))
 
 	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {

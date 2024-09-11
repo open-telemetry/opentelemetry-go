@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 )
@@ -66,6 +67,8 @@ type ScopeRecords struct {
 	Version string
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
+	// Attributes of the telemetry emitted by the scope.
+	Attributes attribute.Set
 
 	// Records are the log records, and their associated context this
 	// instrumentation scope recorded.
@@ -104,9 +107,10 @@ func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 
 	nl := &logger{
 		scopeRecord: &ScopeRecords{
-			Name:      name,
-			Version:   cfg.InstrumentationVersion(),
-			SchemaURL: cfg.SchemaURL(),
+			Name:       name,
+			Version:    cfg.InstrumentationVersion(),
+			SchemaURL:  cfg.SchemaURL(),
+			Attributes: cfg.InstrumentationAttributes(),
 		},
 		enabledFn: r.enabledFn,
 	}
