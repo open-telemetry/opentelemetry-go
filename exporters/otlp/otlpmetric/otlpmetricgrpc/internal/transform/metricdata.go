@@ -282,7 +282,7 @@ func timeUnixNano(t time.Time) uint64 {
 	if t.IsZero() {
 		return 0
 	}
-	return uint64(t.UnixNano())
+	return uint64(t.UnixNano()) // nolint:gosec // Overflow checked.
 }
 
 // Exemplars returns a slice of OTLP Exemplars generated from exemplars.
