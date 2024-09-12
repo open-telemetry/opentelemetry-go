@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#5762)
+
 ### Changed
 
 - Enable exemplars by default in `go.opentelemetry.io/otel/sdk/metric`. Exemplars can be disabled by setting `OTEL_METRICS_EXEMPLAR_FILTER=always_off` (#5778)
@@ -19,7 +23,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#5762)
 - Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#5739)
 - The `WithResource` option for `NewMeterProvider` now merges the provided resources with the ones from environment variables. (#5773)
 - The `WithResource` option for `NewLoggerProvider` now merges the provided resources with the ones from environment variables. (#5773)
