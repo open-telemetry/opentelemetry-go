@@ -166,7 +166,7 @@ func convertBuckets(buckets []ocmetricdata.Bucket) ([]uint64, []metricdata.Exemp
 			err = errors.Join(err, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count))
 			continue
 		}
-		bucketCounts[i] = uint64(bucket.Count) // nolint:gosec // A count should never be negative.
+		bucketCounts[i] = uint64(max(0, bucket.Count)) // nolint:gosec // A count should never be negative.
 
 		if bucket.Exemplar != nil {
 			exemplar, exemplarErr := convertExemplar(bucket.Exemplar)
