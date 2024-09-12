@@ -66,7 +66,7 @@ func resourceLogsMap(dst *map[attribute.Distinct]*lpb.ResourceLogs, records []lo
 	}
 }
 
-// ScopeLogs returns a slice of OTLP ScopeLogs generated from recoreds.
+// ScopeLogs returns a slice of OTLP ScopeLogs generated from records.
 func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
 	scopeMap := scopeLogsMapPool.Get().(map[instrumentation.Scope]*lpb.ScopeLogs)
 	defer func() {

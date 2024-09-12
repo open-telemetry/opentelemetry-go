@@ -326,7 +326,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	assert.Equal(t, cpB, h.bounds, "modifying the Aggregation bounds should not change the bounds")
 }
 
-func TestCumulativeHistogramImutableCounts(t *testing.T) {
+func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
 	h.measure(context.Background(), 5, alice, nil)
 

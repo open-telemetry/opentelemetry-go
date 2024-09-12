@@ -27,7 +27,7 @@ type Handler struct {
 // to next.
 func New(next func(r *http.Request)) *Handler {
 	// Like most instrumentation packages, this handler defaults to using the
-	// global progatators and tracer providers.
+	// global propagators and tracer providers.
 	return &Handler{
 		propagators: otel.GetTextMapPropagator(),
 		tracer:      otel.Tracer("go.opentelemetry.io/otel/example/passthrough/handler"),

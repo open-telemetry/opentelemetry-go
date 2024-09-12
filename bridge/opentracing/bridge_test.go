@@ -396,7 +396,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 			expectWarnings: []string(nil),
 		},
 		{
-			name: "with a non-defered wrapper tracer",
+			name: "with a non-deferred wrapper tracer",
 			before: func(t *testing.T, bridge *BridgeTracer) {
 				wTracer := &nonDeferWrapperTracer{
 					NewWrapperTracer(bridge, otel.Tracer("test")),
