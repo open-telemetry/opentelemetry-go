@@ -97,8 +97,8 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		SpanId:                 sid[:],
 		TraceState:             sd.SpanContext().TraceState().String(),
 		Status:                 status(sd.Status().Code, sd.Status().Description),
-		StartTimeUnixNano:      uint64(sd.StartTime().UnixNano()), // nolint:gosec // Unix timestamp can't be negative.
-		EndTimeUnixNano:        uint64(sd.EndTime().UnixNano()),   // nolint:gosec // Unix timestamp can't be negative.
+		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
+		EndTimeUnixNano:        uint64(max(0, sd.EndTime().UnixNano())),   // nolint:gosec // Overflow checked.
 		Links:                  links(sd.Links()),
 		Kind:                   spanKind(sd.SpanKind()),
 		Name:                   sd.Name(),
@@ -192,7 +192,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 	for i := 0; i < len(es); i++ {
 		events[i] = &tracepb.Span_Event{
 			Name:                   es[i].Name,
-			TimeUnixNano:           uint64(es[i].Time.UnixNano()), // nolint:gosec // Unix timestamp can't be negative.
+			TimeUnixNano:           uint64(max(0, es[i].Time.UnixNano())), // nolint:gosec // Overflow checked.
 			Attributes:             KeyValues(es[i].Attributes),
 			DroppedAttributesCount: clampUint32(es[i].DroppedAttributeCount),
 		}

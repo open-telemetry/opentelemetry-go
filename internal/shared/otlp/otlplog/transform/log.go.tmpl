@@ -139,10 +139,11 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 // year 1678 or after 2262). timeUnixNano on the zero Time returns 0. The
 // result does not depend on the location associated with t.
 func timeUnixNano(t time.Time) uint64 {
-	if t.IsZero() {
+	nano := t.UnixNano()
+	if nano < 0 {
 		return 0
 	}
-	return uint64(t.UnixNano()) // nolint:gosec // Overflow checked.
+	return uint64(nano) // nolint:gosec // Overflow checked.
 }
 
 // AttrIter transforms an [attribute.Iterator] into OTLP key-values.
