@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Avoid panic in metric histograms. (#5815) 
+- Avoid panic in metric histograms under load. (#5815)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
