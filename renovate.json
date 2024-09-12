@@ -24,9 +24,9 @@
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
       "groupName": "googleapis"
     },
-		{
-			"matchPackageNames": ["go.opentelemetry.io/contrib/**"],
-			"groupName": "otel-contrib"
-		}
+    {
+      "matchPackageNames": ["go.opentelemetry.io/contrib/**"],
+      "groupName": "otel-contrib"
+    }
   ]
 }
