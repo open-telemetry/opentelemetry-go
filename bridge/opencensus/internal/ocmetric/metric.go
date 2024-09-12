@@ -357,7 +357,7 @@ func convertSummary(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSe
 				Attributes:     attrs,
 				StartTime:      t.StartTime,
 				Time:           p.Time,
-				Count:          uint64(summary.Count), // nolint:gosec // A count should never be negative.
+				Count:          uint64(max(0, summary.Count)), // nolint:gosec // A count should never be negative.
 				QuantileValues: convertQuantiles(summary.Snapshot),
 				Sum:            summary.Sum,
 			}
