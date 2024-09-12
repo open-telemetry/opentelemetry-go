@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExemplars(t *testing.T) {
+func TestResource(t *testing.T) {
 	const key = "OTEL_GO_X_RESOURCE"
 	require.Equal(t, key, Resource.Key())
 

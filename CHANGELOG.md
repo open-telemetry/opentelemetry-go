@@ -8,9 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Enable exemplars by default in `go.opentelemetry.io/otel/sdk/metric`. Exemplars can be disabled by setting `OTEL_METRICS_EXEMPLAR_FILTER=always_off` (#5778)
+
 ### Fixed
 
-- Fix logrecords duplication in case of heterogeneous resource attributes by correctly mapping each logrecord to it's resource and scope. (#5782)
+- Fix log records duplication in case of heterogeneous resource attributes by correctly mapping each log record to it's resource and scope. (#5782)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
