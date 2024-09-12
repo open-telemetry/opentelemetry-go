@@ -144,7 +144,7 @@ func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.Time
 				Attributes:   attrs,
 				StartTime:    t.StartTime,
 				Time:         p.Time,
-				Count:        uint64(dist.Count), // nolint:gosec // A count should never be negative.
+				Count:        uint64(max(0, dist.Count)), // nolint:gosec // A count should never be negative.
 				Sum:          dist.Sum,
 				Bounds:       dist.BucketOptions.Bounds,
 				BucketCounts: bucketCounts,
