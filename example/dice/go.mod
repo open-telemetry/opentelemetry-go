@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.4.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.6.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.30.0
