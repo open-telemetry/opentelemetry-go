@@ -24,9 +24,9 @@
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
       "groupName": "googleapis"
     },
-		{
-			"matchPackageNames": ["golang.org/x/**"],
-			"groupName": "googlex"
-		}
+    {
+      "matchPackageNames": ["golang.org/x/**"],
+      "groupName": "googlex"
+    }
   ]
 }
