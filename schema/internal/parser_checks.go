@@ -25,6 +25,13 @@ func CheckFileFormatField(fileFormat string, supportedFormatMajor, supportedForm
 		)
 	}
 
+	if supportedFormatMajor < 0 {
+		return errors.New("major version should be positive")
+	}
+	if supportedFormatMinor < 0 {
+		return errors.New("major version should be positive")
+	}
+
 	// Check that the major version number in the file is the same as what we expect.
 	if fileFormatParsed.Major() != uint64(supportedFormatMajor) { // nolint:gosec // Version can't be negative (overflow checked).
 		return fmt.Errorf(
