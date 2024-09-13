@@ -75,8 +75,8 @@ func (p *TextMapPropagator) Inject(ctx context.Context, carrier propagation.Text
 }
 
 // InjectedN tests if p has made n injections to carrier.
-func (p *TextMapPropagator) InjectedN(t *testing.T, carrier *TextMapCarrier, n int) bool {
-	if actual := p.stateFromCarrier(carrier).Injections; actual != uint64(n) {
+func (p *TextMapPropagator) InjectedN(t *testing.T, carrier *TextMapCarrier, n uint64) bool {
+	if actual := p.stateFromCarrier(carrier).Injections; actual != n {
 		t.Errorf("TextMapPropagator{%q} injected %d times, not %d", p.name, actual, n)
 		return false
 	}
