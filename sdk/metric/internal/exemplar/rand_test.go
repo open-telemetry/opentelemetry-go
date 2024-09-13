@@ -65,3 +65,25 @@ func TestRandomConcurrentSafe(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestOfferConcurrentSafe(t *testing.T) {
+	const goRoutines = 10
+
+	ctx := context.Background()
+
+	var startWg, doneWg sync.WaitGroup
+	startWg.Add(1)
+	for n := 0; n < goRoutines; n++ {
+		doneWg.Add(1)
+		go func() {
+			defer doneWg.Done()
+			startWg.Wait()
+			r := FixedSize(10)
+			for i := 0; i < 100; i++ {
+				assert.NotPanics(t, func() { r.Offer(ctx, staticTime, NewValue(random()), nil) })
+			}
+		}()
+	}
+	startWg.Done()
+	doneWg.Wait()
+}
