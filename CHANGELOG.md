@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Remove `go.opentelemetry.io/otel/sdk/log/internal/x` package. (#5816)
+- Remove `go.opentelemetry.io/otel/sdk/log/internal/x` package. Filtering is now part of `Processor` interface in `go.opentelemetry.io/otel/sdk/log`. (#5816)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
