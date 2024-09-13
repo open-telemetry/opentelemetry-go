@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `Enabled` method to `Processor` interface that accepts a newly introduced `EnabledParameters` type in `go.opentelemetry.io/otel/sdk/log`. (#5816)
+- Add `Enabled` method to `Processor` interface in `go.opentelemetry.io/otel/sdk/log` that accepts a newly introduced `EnabledParameters` type. (#5816)
 
 ### Changed
 
