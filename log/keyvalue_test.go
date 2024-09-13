@@ -47,6 +47,7 @@ func TestValueEqual(t *testing.T) {
 		{},
 		log.Int64Value(1),
 		log.Int64Value(2),
+		log.Int64Value(-2),
 		log.Float64Value(3.5),
 		log.Float64Value(3.7),
 		log.BoolValue(true),
