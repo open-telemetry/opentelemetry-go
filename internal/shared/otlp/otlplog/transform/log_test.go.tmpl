@@ -30,6 +30,9 @@ var (
 	ts  = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 	obs = ts.Add(30 * time.Second)
 
+	// A time before unix 0.
+	negativeTs = time.Date(1969, 7, 20, 20, 17, 0, 0, time.UTC)
+
 	alice = api.String("user", "alice")
 	bob   = api.String("user", "bob")
 
@@ -158,6 +161,20 @@ var (
 			Resource:             res,
 		}.NewRecord())
 
+		out = append(out, logtest.RecordFactory{
+			Timestamp:            negativeTs,
+			ObservedTimestamp:    obs,
+			Severity:             sevB,
+			SeverityText:         "B",
+			Body:                 bodyB,
+			Attributes:           []api.KeyValue{bob},
+			TraceID:              trace.TraceID(traceIDB),
+			SpanID:               trace.SpanID(spanIDB),
+			TraceFlags:           trace.TraceFlags(flagsB),
+			InstrumentationScope: &scope,
+			Resource:             res,
+		}.NewRecord())
+
 		return out
 	}()
 
@@ -197,6 +214,17 @@ var (
 		},
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevB,
+			SeverityText:         "B",
+			Body:                 pbBodyB,
+			Attributes:           []*cpb.KeyValue{pbBob},
+			Flags:                uint32(flagsB),
+			TraceId:              traceIDB,
+			SpanId:               spanIDB,
+		},
+		{
+			TimeUnixNano:         0,
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
 			SeverityNumber:       pbSevB,
 			SeverityText:         "B",
