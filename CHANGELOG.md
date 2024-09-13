@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `trace.WithErrorStatus` option as `trace.SpanEndOption` and `trace.EventOption`, which sets span's status to error. (#5762)
+- Add `trace.WithStatus` option for `span.RecordError` and `trace.WithStatusOnPanic` option for `span.End`. (#5762)
 
 ### Changed
 
