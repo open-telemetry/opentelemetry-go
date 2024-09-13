@@ -50,8 +50,6 @@ type Processor interface {
 	//
 	// The SDK invokes the processors sequentially in the same order as
 	// they were registered using [WithProcessor] until any processor returns true.
-	//
-	// Implementations should not modify the param.
 	Enabled(ctx context.Context, param EnabledParameters) bool
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
