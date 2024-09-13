@@ -35,6 +35,7 @@ type processor struct {
 	forceFlushCalls int
 
 	records []Record
+	params  []EnabledParameters
 	enabled bool
 }
 
@@ -51,7 +52,8 @@ func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p *processor) Enabled(context.Context, EnabledParameters) bool {
+func (p *processor) Enabled(_ context.Context, param EnabledParameters) bool {
+	p.params = append(p.params, param)
 	return p.enabled
 }
 

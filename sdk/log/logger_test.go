@@ -219,10 +219,11 @@ func TestLoggerEnabled(t *testing.T) {
 	p2WithDisabled.enabled = false
 
 	testCases := []struct {
-		name     string
-		logger   *logger
-		ctx      context.Context
-		expected bool
+		name           string
+		logger         *logger
+		ctx            context.Context
+		expected       bool
+		expectedParams []EnabledParameters
 	}{
 		{
 			name:     "NoProcessors",
@@ -235,9 +236,16 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
-			), instrumentation.Scope{}),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+			), instrumentation.Scope{Name: "name"}),
 			ctx:      context.Background(),
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{Name: "name"},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 		{
 			name: "WithDisabledProcessors",
@@ -252,24 +260,42 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p2WithDisabled),
 				WithProcessor(p0),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 		{
 			name: "WithNilContext",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{}),
 			ctx:      nil,
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Clean up the EnabledParameters before the test.
+			p0.params = nil
+
 			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
+			assert.Equal(t, tc.expectedParams, p0.params)
 		})
 	}
 }
