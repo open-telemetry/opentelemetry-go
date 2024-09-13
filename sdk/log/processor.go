@@ -54,7 +54,7 @@ type Processor interface {
 	// they were registered using [WithProcessor] until any processor returns true.
 	//
 	// Implementations should not modify the record.
-	Enabled(ctx context.Context, record Record) bool
+	Enabled(ctx context.Context, param EnabledParameters) bool
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.

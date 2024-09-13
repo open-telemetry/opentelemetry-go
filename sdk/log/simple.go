@@ -59,7 +59,7 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 }
 
 // Enabled returns true if the exporter is not nil.
-func (s *SimpleProcessor) Enabled(context.Context, Record) bool {
+func (s *SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return s.exporter != nil
 }
 

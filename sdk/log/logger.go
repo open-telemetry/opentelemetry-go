@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -43,13 +44,12 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 }
 
 func (l *logger) Enabled(ctx context.Context, r log.EnabledParameters) bool {
-	// TODO
-	// newRecord := l.newRecord(ctx, r)
-	// for _, p := range l.provider.processors {
-	// 	if enabled := p.Enabled(ctx, newRecord); enabled {
-	// 		return true
-	// 	}
-	// }
+	newParam := l.newEnabledParameters(ctx, r)
+	for _, p := range l.provider.processors {
+		if enabled := p.Enabled(ctx, newParam); enabled {
+			return true
+		}
+	}
 	return false
 }
 
@@ -84,4 +84,82 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	})
 
 	return newRecord
+}
+
+func (l *logger) newEnabledParameters(ctx context.Context, param log.EnabledParameters) EnabledParameters {
+	sc := trace.SpanContextFromContext(ctx)
+
+	newParam := EnabledParameters{
+		traceID:    sc.TraceID(),
+		spanID:     sc.SpanID(),
+		traceFlags: sc.TraceFlags(),
+
+		resource: l.provider.resource,
+		scope:    &l.instrumentationScope,
+	}
+
+	if v, ok := param.Severity(); ok {
+		newParam.setSeverity(v)
+	}
+
+	return newParam
+}
+
+// EnabledParameters represents payload for [Logger]'s Enabled method.
+type EnabledParameters struct {
+	severity    log.Severity
+	severitySet bool
+
+	traceID    trace.TraceID
+	spanID     trace.SpanID
+	traceFlags trace.TraceFlags
+
+	// resource represents the entity that collected the log.
+	resource *resource.Resource
+
+	// scope is the Scope that the Logger was created with.
+	scope *instrumentation.Scope
+}
+
+// Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
+// The ok result indicates whether the value was set.
+func (r *EnabledParameters) Severity() (value log.Severity, ok bool) {
+	return r.severity, r.severitySet
+}
+
+// setSeverity sets the [Severity] level.
+func (r *EnabledParameters) setSeverity(level log.Severity) {
+	r.severity = level
+	r.severitySet = true
+}
+
+// TraceID returns the trace ID or empty array.
+func (r *EnabledParameters) TraceID() trace.TraceID {
+	return r.traceID
+}
+
+// SpanID returns the span ID or empty array.
+func (r *EnabledParameters) SpanID() trace.SpanID {
+	return r.spanID
+}
+
+// TraceFlags returns the trace flags.
+func (r *EnabledParameters) TraceFlags() trace.TraceFlags {
+	return r.traceFlags
+}
+
+// Resource returns the entity that collected the log.
+func (r *EnabledParameters) Resource() resource.Resource {
+	if r.resource == nil {
+		return *resource.Empty()
+	}
+	return *r.resource
+}
+
+// InstrumentationScope returns the scope that the Logger was created with.
+func (r *EnabledParameters) InstrumentationScope() instrumentation.Scope {
+	if r.scope == nil {
+		return instrumentation.Scope{}
+	}
+	return *r.scope
 }

@@ -197,7 +197,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 }
 
 // Enabled returns if b is enabled.
-func (b *BatchProcessor) Enabled(context.Context, Record) bool {
+func (b *BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return !b.stopped.Load() && b.q != nil
 }
 

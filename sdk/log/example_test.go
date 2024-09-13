@@ -90,8 +90,8 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
-	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, record)
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
+	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, param)
 }
 
 func ignoreLogs(ctx context.Context) bool {
@@ -120,7 +120,7 @@ func ExampleProcessor_redact() {
 // from attributes containing "token" in the key.
 type RedactTokensProcessor struct{}
 
-func (p *RedactTokensProcessor) Enabled(ctx context.Context, record log.Record) bool {
+func (p *RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bool {
 	return true
 }
 
