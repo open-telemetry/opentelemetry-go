@@ -273,3 +273,28 @@ func TestLoggerEnabled(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkLoggerEnabled(b *testing.B) {
+	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
+	p2WithDisabled.enabled = false
+
+	provider := NewLoggerProvider(
+		WithProcessor(p0),
+		WithProcessor(p1),
+		WithProcessor(p2WithDisabled),
+	)
+	logger := provider.Logger("BenchmarkLoggerEnabled")
+	ctx, param := context.Background(), log.EnabledParameters{}
+	param.SetSeverity(log.SeverityDebug)
+
+	var enabled bool
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		enabled = logger.Enabled(ctx, param)
+	}
+
+	_ = enabled
+}
