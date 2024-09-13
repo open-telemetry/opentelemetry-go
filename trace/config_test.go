@@ -266,7 +266,7 @@ func TestEventConfig(t *testing.T) {
 		{
 			[]EventOption{
 				WithTimestamp(timestamp),
-				WithErrorStatus(true),
+				WithStatus(),
 			},
 			EventConfig{
 				timestamp:   timestamp,
