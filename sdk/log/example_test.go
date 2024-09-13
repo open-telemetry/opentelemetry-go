@@ -90,7 +90,7 @@ type ContextFilterProcessor struct {
 }
 
 type filter interface {
-	Enabled(ctx context.Context, record log.Record) bool
+	Enabled(ctx context.Context, param logapi.EnabledParameters) bool
 }
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
@@ -100,13 +100,13 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, record log.Record) bool {
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, param logapi.EnabledParameters) bool {
 	p.lazyFilter.Do(func() {
 		if f, ok := p.Processor.(filter); ok {
 			p.filter = f
 		}
 	})
-	return !ignoreLogs(ctx) && (p.filter == nil || p.filter.Enabled(ctx, record))
+	return !ignoreLogs(ctx) && (p.filter == nil || p.filter.Enabled(ctx, param))
 }
 
 func ignoreLogs(ctx context.Context) bool {
@@ -145,11 +145,6 @@ func (p *RedactTokensProcessor) OnEmit(ctx context.Context, record *log.Record) 
 		return true
 	})
 	return nil
-}
-
-// Enabled returns true.
-func (p *RedactTokensProcessor) Enabled(context.Context, log.Record) bool {
-	return true
 }
 
 // Shutdown returns nil.
