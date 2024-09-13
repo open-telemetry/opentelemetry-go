@@ -130,6 +130,22 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 	})
 }
 
+// EnabledParametersBuilder is used to construct [EnabledParameters].
+type EnabledParametersBuilder struct {
+	EnabledParameters
+}
+
+// Build returns the immutable [EnabledParameters].
+func (e *EnabledParametersBuilder) Build() EnabledParameters {
+	return e.EnabledParameters
+}
+
+// SetSeverity sets the [Severity] level.
+func (e *EnabledParametersBuilder) SetSeverity(level Severity) {
+	e.severity = level
+	e.severitySet = true
+}
+
 // EnabledParameters represents payload for [Logger]'s Enabled method.
 type EnabledParameters struct {
 	severity    Severity
@@ -138,12 +154,6 @@ type EnabledParameters struct {
 
 // Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
 // The ok result indicates whether the value was set.
-func (r *EnabledParameters) Severity() (value Severity, ok bool) {
+func (r EnabledParameters) Severity() (value Severity, ok bool) {
 	return r.severity, r.severitySet
-}
-
-// SetSeverity sets the [Severity] level.
-func (r *EnabledParameters) SetSeverity(level Severity) {
-	r.severity = level
-	r.severitySet = true
 }
