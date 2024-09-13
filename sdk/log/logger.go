@@ -105,7 +105,7 @@ func (l *logger) newEnabledParameters(ctx context.Context, param log.EnabledPara
 	return newParam
 }
 
-// EnabledParameters represents payload for [Logger]'s Enabled method.
+// EnabledParameters represent Enabled parameters.
 type EnabledParameters struct {
 	severity    log.Severity
 	severitySet bool
@@ -119,6 +119,8 @@ type EnabledParameters struct {
 
 	// scope is the Scope that the Logger was created with.
 	scope *instrumentation.Scope
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
 // Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
