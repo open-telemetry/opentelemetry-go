@@ -215,9 +215,8 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0 := newFltrProcessor("0", true)
-	p1 := newFltrProcessor("1", true)
-	p2WithDisabled := newFltrProcessor("2", false)
+	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
+	p2WithDisabled.enabled = false
 
 	testCases := []struct {
 		name     string
@@ -273,25 +272,4 @@ func TestLoggerEnabled(t *testing.T) {
 			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
 		})
 	}
-}
-
-func BenchmarkLoggerEnabled(b *testing.B) {
-	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
-	)
-	logger := provider.Logger("BenchmarkLoggerEnabled")
-	ctx, param := context.Background(), log.EnabledParameters{}
-	param.SetSeverity(log.SeverityDebug)
-
-	var enabled bool
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for n := 0; n < b.N; n++ {
-		enabled = logger.Enabled(ctx, param)
-	}
-
-	_ = enabled
 }

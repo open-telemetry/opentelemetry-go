@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -36,10 +35,11 @@ type processor struct {
 	forceFlushCalls int
 
 	records []Record
+	enabled bool
 }
 
 func newProcessor(name string) *processor {
-	return &processor{Name: name}
+	return &processor{Name: name, enabled: true}
 }
 
 func (p *processor) OnEmit(ctx context.Context, r *Record) error {
@@ -51,6 +51,10 @@ func (p *processor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
+func (p *processor) Enabled(context.Context, Record) bool {
+	return p.enabled
+}
+
 func (p *processor) Shutdown(context.Context) error {
 	p.shutdownCalls++
 	return p.Err
@@ -59,25 +63,6 @@ func (p *processor) Shutdown(context.Context) error {
 func (p *processor) ForceFlush(context.Context) error {
 	p.forceFlushCalls++
 	return p.Err
-}
-
-type fltrProcessor struct {
-	*processor
-
-	enabled bool
-}
-
-var _ x.FilterProcessor = (*fltrProcessor)(nil)
-
-func newFltrProcessor(name string, enabled bool) *fltrProcessor {
-	return &fltrProcessor{
-		processor: newProcessor(name),
-		enabled:   enabled,
-	}
-}
-
-func (p *fltrProcessor) Enabled(context.Context, log.EnabledParameters) bool {
-	return p.enabled
 }
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {

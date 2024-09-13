@@ -52,6 +52,12 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 	assert.Equal(t, []log.Record{*r}, e.records)
 }
 
+func TestSimpleProcessorEnabled(t *testing.T) {
+	e := new(exporter)
+	s := log.NewSimpleProcessor(e)
+	assert.True(t, s.Enabled(context.Background(), log.Record{}))
+}
+
 func TestSimpleProcessorShutdown(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
@@ -91,6 +97,7 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 		ctx := context.Background()
 		record := new(log.Record)
 		assert.NoError(t, s.OnEmit(ctx, record), "OnEmit")
+		assert.False(t, s.Enabled(ctx, *record), "Enabled")
 		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
 		assert.NoError(t, s.Shutdown(ctx), "Shutdown")
 	})
@@ -112,6 +119,7 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			_ = s.OnEmit(ctx, r)
+			_ = s.Enabled(ctx, *r)
 			_ = s.Shutdown(ctx)
 			_ = s.ForceFlush(ctx)
 		}()
