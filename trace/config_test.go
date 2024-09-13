@@ -205,10 +205,10 @@ func TestEndSpanConfig(t *testing.T) {
 		},
 		{
 			[]SpanEndOption{
-				WithErrorStatus(true),
+				WithStatusOnPanic(),
 			},
 			SpanConfig{
-				errorStatus: true,
+				errorStatusOnPanic: true,
 			},
 		},
 	}

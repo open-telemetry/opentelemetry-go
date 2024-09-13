@@ -411,7 +411,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 			))
 		}
 
-		if config.ErrorStatus() {
+		if config.ErrorStatusOnPanic() {
 			s.SetStatus(codes.Error, recoveredStr)
 		}
 

@@ -1309,7 +1309,7 @@ func TestRecordErrorWithErrorStatus(t *testing.T) {
 	span := startSpan(tp, "RecordError")
 
 	errTime := time.Now()
-	span.RecordError(err, trace.WithTimestamp(errTime), trace.WithErrorStatus(true))
+	span.RecordError(err, trace.WithTimestamp(errTime), trace.WithStatus())
 
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1593,7 +1593,7 @@ func TestSpanCapturesPanicWithErrorStatus(t *testing.T) {
 	)
 
 	f := func() {
-		defer span.End(trace.WithErrorStatus(true))
+		defer span.End(trace.WithStatusOnPanic())
 		panic(err)
 	}
 	require.PanicsWithError(t, msg, f)
