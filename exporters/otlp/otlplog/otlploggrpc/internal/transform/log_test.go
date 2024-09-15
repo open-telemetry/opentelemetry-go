@@ -68,35 +68,35 @@ var (
 	flagsB   = byte(0)
 
 	scope = instrumentation.Scope{
-		Name:      "test/code/path",
-		Version:   "v0.1.0",
+		Name:      "otel/test/code/path1",
+		Version:   "v0.1.1",
 		SchemaURL: semconv.SchemaURL,
 	}
 	scope2 = instrumentation.Scope{
-		Name:      "test/code/path",
-		Version:   "v0.2.0",
+		Name:      "otel/test/code/path2",
+		Version:   "v0.2.2",
 		SchemaURL: semconv.SchemaURL,
 	}
 	scopeList = []instrumentation.Scope{scope, scope2}
 
 	pbScope = &cpb.InstrumentationScope{
-		Name:    "test/code/path",
-		Version: "v0.1.0",
+		Name:    "otel/test/code/path1",
+		Version: "v0.1.1",
 	}
 	pbScope2 = &cpb.InstrumentationScope{
-		Name:    "test/code/path",
-		Version: "v0.2.0",
+		Name:    "otel/test/code/path2",
+		Version: "v0.2.2",
 	}
 
 	res = resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceName("test server"),
-		semconv.ServiceVersion("v0.1.0"),
+		semconv.ServiceName("service1"),
+		semconv.ServiceVersion("v0.1.1"),
 	)
 	res2 = resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceName("test server"),
-		semconv.ServiceVersion("v0.2.0"),
+		semconv.ServiceName("service2"),
+		semconv.ServiceVersion("v0.2.2"),
 	)
 	resList = []*resource.Resource{res, res2}
 
@@ -105,13 +105,13 @@ var (
 			{
 				Key: "service.name",
 				Value: &cpb.AnyValue{
-					Value: &cpb.AnyValue_StringValue{StringValue: "test server"},
+					Value: &cpb.AnyValue_StringValue{StringValue: "service1"},
 				},
 			},
 			{
 				Key: "service.version",
 				Value: &cpb.AnyValue{
-					Value: &cpb.AnyValue_StringValue{StringValue: "v0.1.0"},
+					Value: &cpb.AnyValue_StringValue{StringValue: "v0.1.1"},
 				},
 			},
 		},
@@ -121,13 +121,13 @@ var (
 			{
 				Key: "service.name",
 				Value: &cpb.AnyValue{
-					Value: &cpb.AnyValue_StringValue{StringValue: "test server"},
+					Value: &cpb.AnyValue_StringValue{StringValue: "service2"},
 				},
 			},
 			{
 				Key: "service.version",
 				Value: &cpb.AnyValue{
-					Value: &cpb.AnyValue_StringValue{StringValue: "v0.2.0"},
+					Value: &cpb.AnyValue_StringValue{StringValue: "v0.2.2"},
 				},
 			},
 		},
@@ -278,7 +278,7 @@ func TestResourceLogs(t *testing.T) {
 	rLogs := ResourceLogs(records)
 	for _, got := range rLogs {
 		expected := want[1]
-		if got.Resource.Attributes[1].GetValue().GetStringValue() == "v0.1.0" {
+		if got.Resource.Attributes[1].GetValue().GetStringValue() == "v0.1.1" {
 			expected = want[0]
 		}
 		assert.Equal(t, expected, got)
