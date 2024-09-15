@@ -30,8 +30,8 @@ var (
 	ts  = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 	obs = ts.Add(30 * time.Second)
 
-	tom = api.String("user", "tom")
-	jerry   = api.String("user", "jerry")
+	tom   = api.String("user", "tom")
+	jerry = api.String("user", "jerry")
 
 	pbTom = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{StringValue: "tom"},
