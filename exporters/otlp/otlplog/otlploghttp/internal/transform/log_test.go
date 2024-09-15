@@ -30,42 +30,42 @@ var (
 	ts  = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 	obs = ts.Add(30 * time.Second)
 
-	alice = api.String("user", "alice")
-	bob   = api.String("user", "bob")
+	tom = api.String("user", "tom")
+	jerry   = api.String("user", "jerry")
 
-	pbAlice = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
-		Value: &cpb.AnyValue_StringValue{StringValue: "alice"},
+	pbTom = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "tom"},
 	}}
-	pbBob = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
-		Value: &cpb.AnyValue_StringValue{StringValue: "bob"},
+	pbJerry = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
+		Value: &cpb.AnyValue_StringValue{StringValue: "jerry"},
 	}}
 
-	sevA = api.SeverityInfo
-	sevB = api.SeverityError
+	sevC = api.SeverityInfo
+	sevD = api.SeverityError
 
-	pbSevA = lpb.SeverityNumber_SEVERITY_NUMBER_INFO
-	pbSevB = lpb.SeverityNumber_SEVERITY_NUMBER_ERROR
+	pbSevC = lpb.SeverityNumber_SEVERITY_NUMBER_INFO
+	pbSevD = lpb.SeverityNumber_SEVERITY_NUMBER_ERROR
 
-	bodyA = api.StringValue("a")
-	bodyB = api.StringValue("b")
+	bodyC = api.StringValue("c")
+	bodyD = api.StringValue("d")
 
-	pbBodyA = &cpb.AnyValue{
+	pbBodyC = &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{
-			StringValue: "a",
+			StringValue: "c",
 		},
 	}
-	pbBodyB = &cpb.AnyValue{
+	pbBodyD = &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{
-			StringValue: "b",
+			StringValue: "d",
 		},
 	}
 
-	spanIDA  = []byte{0, 0, 0, 0, 0, 0, 0, 1}
-	spanIDB  = []byte{0, 0, 0, 0, 0, 0, 0, 2}
-	traceIDA = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	traceIDB = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-	flagsA   = byte(1)
-	flagsB   = byte(0)
+	spanIDC  = []byte{0, 0, 0, 0, 0, 0, 0, 1}
+	spanIDD  = []byte{0, 0, 0, 0, 0, 0, 0, 2}
+	traceIDC = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	traceIDD = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+	flagsC   = byte(1)
+	flagsD   = byte(0)
 
 	scope = instrumentation.Scope{
 		Name:      "otel/test/code/path1",
@@ -141,13 +141,13 @@ var (
 				out = append(out, logtest.RecordFactory{
 					Timestamp:            ts,
 					ObservedTimestamp:    obs,
-					Severity:             sevA,
-					SeverityText:         "A",
-					Body:                 bodyA,
-					Attributes:           []api.KeyValue{alice},
-					TraceID:              trace.TraceID(traceIDA),
-					SpanID:               trace.SpanID(spanIDA),
-					TraceFlags:           trace.TraceFlags(flagsA),
+					Severity:             sevC,
+					SeverityText:         "C",
+					Body:                 bodyC,
+					Attributes:           []api.KeyValue{tom},
+					TraceID:              trace.TraceID(traceIDC),
+					SpanID:               trace.SpanID(spanIDC),
+					TraceFlags:           trace.TraceFlags(flagsC),
 					InstrumentationScope: &s,
 					Resource:             r,
 				}.NewRecord())
@@ -155,13 +155,13 @@ var (
 				out = append(out, logtest.RecordFactory{
 					Timestamp:            ts,
 					ObservedTimestamp:    obs,
-					Severity:             sevA,
-					SeverityText:         "A",
-					Body:                 bodyA,
-					Attributes:           []api.KeyValue{bob},
-					TraceID:              trace.TraceID(traceIDA),
-					SpanID:               trace.SpanID(spanIDA),
-					TraceFlags:           trace.TraceFlags(flagsA),
+					Severity:             sevC,
+					SeverityText:         "C",
+					Body:                 bodyC,
+					Attributes:           []api.KeyValue{jerry},
+					TraceID:              trace.TraceID(traceIDC),
+					SpanID:               trace.SpanID(spanIDC),
+					TraceFlags:           trace.TraceFlags(flagsC),
 					InstrumentationScope: &s,
 					Resource:             r,
 				}.NewRecord())
@@ -169,13 +169,13 @@ var (
 				out = append(out, logtest.RecordFactory{
 					Timestamp:            ts,
 					ObservedTimestamp:    obs,
-					Severity:             sevB,
-					SeverityText:         "B",
-					Body:                 bodyB,
-					Attributes:           []api.KeyValue{alice},
-					TraceID:              trace.TraceID(traceIDB),
-					SpanID:               trace.SpanID(spanIDB),
-					TraceFlags:           trace.TraceFlags(flagsB),
+					Severity:             sevD,
+					SeverityText:         "D",
+					Body:                 bodyD,
+					Attributes:           []api.KeyValue{tom},
+					TraceID:              trace.TraceID(traceIDD),
+					SpanID:               trace.SpanID(spanIDD),
+					TraceFlags:           trace.TraceFlags(flagsD),
 					InstrumentationScope: &s,
 					Resource:             r,
 				}.NewRecord())
@@ -183,13 +183,13 @@ var (
 				out = append(out, logtest.RecordFactory{
 					Timestamp:            ts,
 					ObservedTimestamp:    obs,
-					Severity:             sevB,
-					SeverityText:         "B",
-					Body:                 bodyB,
-					Attributes:           []api.KeyValue{bob},
-					TraceID:              trace.TraceID(traceIDB),
-					SpanID:               trace.SpanID(spanIDB),
-					TraceFlags:           trace.TraceFlags(flagsB),
+					Severity:             sevD,
+					SeverityText:         "D",
+					Body:                 bodyD,
+					Attributes:           []api.KeyValue{jerry},
+					TraceID:              trace.TraceID(traceIDD),
+					SpanID:               trace.SpanID(spanIDD),
+					TraceFlags:           trace.TraceFlags(flagsD),
 					InstrumentationScope: &s,
 					Resource:             r,
 				}.NewRecord())
@@ -203,46 +203,46 @@ var (
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
-			SeverityNumber:       pbSevA,
-			SeverityText:         "A",
-			Body:                 pbBodyA,
-			Attributes:           []*cpb.KeyValue{pbAlice},
-			Flags:                uint32(flagsA),
-			TraceId:              traceIDA,
-			SpanId:               spanIDA,
+			SeverityNumber:       pbSevC,
+			SeverityText:         "C",
+			Body:                 pbBodyC,
+			Attributes:           []*cpb.KeyValue{pbTom},
+			Flags:                uint32(flagsC),
+			TraceId:              traceIDC,
+			SpanId:               spanIDC,
 		},
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
-			SeverityNumber:       pbSevA,
-			SeverityText:         "A",
-			Body:                 pbBodyA,
-			Attributes:           []*cpb.KeyValue{pbBob},
-			Flags:                uint32(flagsA),
-			TraceId:              traceIDA,
-			SpanId:               spanIDA,
+			SeverityNumber:       pbSevC,
+			SeverityText:         "C",
+			Body:                 pbBodyC,
+			Attributes:           []*cpb.KeyValue{pbJerry},
+			Flags:                uint32(flagsC),
+			TraceId:              traceIDC,
+			SpanId:               spanIDC,
 		},
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
-			SeverityNumber:       pbSevB,
-			SeverityText:         "B",
-			Body:                 pbBodyB,
-			Attributes:           []*cpb.KeyValue{pbAlice},
-			Flags:                uint32(flagsB),
-			TraceId:              traceIDB,
-			SpanId:               spanIDB,
+			SeverityNumber:       pbSevD,
+			SeverityText:         "D",
+			Body:                 pbBodyD,
+			Attributes:           []*cpb.KeyValue{pbTom},
+			Flags:                uint32(flagsD),
+			TraceId:              traceIDD,
+			SpanId:               spanIDD,
 		},
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
-			SeverityNumber:       pbSevB,
-			SeverityText:         "B",
-			Body:                 pbBodyB,
-			Attributes:           []*cpb.KeyValue{pbBob},
-			Flags:                uint32(flagsB),
-			TraceId:              traceIDB,
-			SpanId:               spanIDB,
+			SeverityNumber:       pbSevD,
+			SeverityText:         "D",
+			Body:                 pbBodyD,
+			Attributes:           []*cpb.KeyValue{pbJerry},
+			Flags:                uint32(flagsD),
+			TraceId:              traceIDD,
+			SpanId:               spanIDD,
 		},
 	}
 
