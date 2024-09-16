@@ -68,6 +68,7 @@ func TestEmptySpanEvent(t *testing.T) {
 func TestSpanEvent(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 	eventTime := time.Date(2020, 5, 20, 0, 0, 0, 0, time.UTC)
+	negativeEventTime := time.Date(1969, 7, 20, 20, 17, 0, 0, time.UTC)
 	got := spanEvents([]tracesdk.Event{
 		{
 			Name:       "test 1",
@@ -80,14 +81,21 @@ func TestSpanEvent(t *testing.T) {
 			Time:                  eventTime,
 			DroppedAttributeCount: 2,
 		},
+		{
+			Name:                  "test 3",
+			Attributes:            attrs,
+			Time:                  negativeEventTime,
+			DroppedAttributeCount: 2,
+		},
 	})
-	if !assert.Len(t, got, 2) {
+	if !assert.Len(t, got, 3) {
 		return
 	}
 	eventTimestamp := uint64(1589932800 * 1e9)
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 1", Attributes: nil, TimeUnixNano: eventTimestamp}, got[0])
 	// Do not test Attributes directly, just that the return value goes to the correct field.
 	assert.Equal(t, &tracepb.Span_Event{Name: "test 2", Attributes: KeyValues(attrs), TimeUnixNano: eventTimestamp, DroppedAttributesCount: 2}, got[1])
+	assert.Equal(t, &tracepb.Span_Event{Name: "test 3", Attributes: KeyValues(attrs), TimeUnixNano: 0, DroppedAttributesCount: 2}, got[2])
 }
 
 func TestNilLinks(t *testing.T) {

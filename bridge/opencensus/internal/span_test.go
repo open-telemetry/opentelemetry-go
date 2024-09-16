@@ -96,15 +96,40 @@ func TestSpanSetStatus(t *testing.T) {
 	s := &span{recording: true}
 	ocS := internal.NewSpan(s)
 
-	c, d := codes.Error, "error"
-	status := octrace.Status{Code: int32(c), Message: d}
-	ocS.SetStatus(status)
+	for _, tt := range []struct {
+		name string
 
-	if s.sCode != c {
-		t.Error("span.SetStatus failed to set OpenTelemetry status code")
-	}
-	if s.sMsg != d {
-		t.Error("span.SetStatus failed to set OpenTelemetry status description")
+		code    int32
+		message string
+
+		wantCode codes.Code
+	}{
+		{
+			name:    "with an error code",
+			code:    int32(codes.Error),
+			message: "error",
+
+			wantCode: codes.Error,
+		},
+		{
+			name:    "with a negative/invalid code",
+			code:    -42,
+			message: "error",
+
+			wantCode: codes.Unset,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			status := octrace.Status{Code: tt.code, Message: tt.message}
+			ocS.SetStatus(status)
+
+			if s.sCode != tt.wantCode {
+				t.Errorf("span.SetStatus failed to set OpenTelemetry status code. Expected %d, got %d", tt.wantCode, s.sCode)
+			}
+			if s.sMsg != tt.message {
+				t.Errorf("span.SetStatus failed to set OpenTelemetry status description. Expected %s, got %s", tt.message, s.sMsg)
+			}
+		})
 	}
 }
 

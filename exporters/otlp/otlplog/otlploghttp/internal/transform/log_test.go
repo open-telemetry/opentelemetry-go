@@ -32,6 +32,8 @@ var (
 
 	tom   = api.String("user", "tom")
 	jerry = api.String("user", "jerry")
+	// A time before unix 0.
+	negativeTs = time.Date(1969, 7, 20, 20, 17, 0, 0, time.UTC)
 
 	pbTom = &cpb.KeyValue{Key: "user", Value: &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{StringValue: "tom"},
@@ -193,6 +195,20 @@ var (
 					InstrumentationScope: &s,
 					Resource:             r,
 				}.NewRecord())
+
+				out = append(out, logtest.RecordFactory{
+					Timestamp:            negativeTs,
+					ObservedTimestamp:    obs,
+					Severity:             sevD,
+					SeverityText:         "D",
+					Body:                 bodyD,
+					Attributes:           []api.KeyValue{jerry},
+					TraceID:              trace.TraceID(traceIDD),
+					SpanID:               trace.SpanID(spanIDD),
+					TraceFlags:           trace.TraceFlags(flagsD),
+					InstrumentationScope: &s,
+					Resource:             r,
+				}.NewRecord())
 			}
 		}
 
@@ -235,6 +251,17 @@ var (
 		},
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
+			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			SeverityNumber:       pbSevD,
+			SeverityText:         "D",
+			Body:                 pbBodyD,
+			Attributes:           []*cpb.KeyValue{pbJerry},
+			Flags:                uint32(flagsD),
+			TraceId:              traceIDD,
+			SpanId:               spanIDD,
+		},
+		{
+			TimeUnixNano:         0,
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
 			SeverityNumber:       pbSevD,
 			SeverityText:         "D",
