@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `trace.WithStatus` option for `span.RecordError` and `trace.WithStatusOnPanic` option for `span.End`. (#5762)
+- Add the `trace.WithStatus` option for `span.RecordError`. (#5762)
+- Add the`trace.WithStatusOnPanic` option for `span.End`. (#5762)
 
 ### Changed
 
