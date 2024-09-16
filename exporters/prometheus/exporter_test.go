@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,6 +35,7 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
+		enableUTF8          bool
 	}{
 		{
 			name:         "counter",
@@ -399,10 +401,47 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5.3, opt)
 			},
 		},
+		{
+			name:         "counter utf-8",
+			expectedFile: "testdata/counter_utf8.txt",
+			enableUTF8:   true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A.G").String("B"),
+					attribute.Key("C.H").String("D"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.things",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A.G").String("D"),
+					attribute.Key("C.H").String("B"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.enableUTF8 {
+				model.NameValidationScheme = model.UTF8Validation
+				defer func() {
+					// Reset to defaults
+					model.NameValidationScheme = model.LegacyValidation
+				}()
+			}
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
 			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
@@ -449,36 +488,6 @@ func TestPrometheusExporter(t *testing.T) {
 			err = testutil.GatherAndCompare(registry, file)
 			require.NoError(t, err)
 		})
-	}
-}
-
-func TestSantitizeName(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"name€_with_4_width_rune", "name__with_4_width_rune"},
-		{"`", "_"},
-		{
-			`! "#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWKYZ[]\^_abcdefghijklmnopqrstuvwkyz{|}~`,
-			`________________0123456789:______ABCDEFGHIJKLMNOPQRSTUVWKYZ_____abcdefghijklmnopqrstuvwkyz____`,
-		},
-
-		// Test cases taken from
-		// https://github.com/prometheus/common/blob/dfbc25bd00225c70aca0d94c3c4bb7744f28ace0/model/metric_test.go#L85-L136
-		{"Avalid_23name", "Avalid_23name"},
-		{"_Avalid_23name", "_Avalid_23name"},
-		{"1valid_23name", "_1valid_23name"},
-		{"avalid_23name", "avalid_23name"},
-		{"Ava:lid_23name", "Ava:lid_23name"},
-		{"a lid_23name", "a_lid_23name"},
-		{":leading_colon", ":leading_colon"},
-		{"colon:in:the:middle", "colon:in:the:middle"},
-		{"", ""},
-	}
-
-	for _, test := range tests {
-		require.Equalf(t, test.want, sanitizeName(test.input), "input: %q", test.input)
 	}
 }
 

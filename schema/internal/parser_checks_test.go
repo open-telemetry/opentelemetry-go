@@ -14,6 +14,8 @@ func TestCheckFileFormatField(t *testing.T) {
 	assert.Error(t, CheckFileFormatField("not a semver", 1, 0))
 	assert.Error(t, CheckFileFormatField("2.0.0", 1, 0))
 	assert.Error(t, CheckFileFormatField("1.1.0", 1, 0))
+	assert.Error(t, CheckFileFormatField("1.1.0", -1, 0))
+	assert.Error(t, CheckFileFormatField("1.1.0", 1, -2))
 
 	assert.Error(t, CheckFileFormatField("1.2.0", 1, 1))
 

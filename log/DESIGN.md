@@ -253,6 +253,23 @@ Rejected alternatives:
 - [Add XYZ method to Logger](#add-xyz-method-to-logger)
 - [Rename KeyValue to Attr](#rename-keyvalue-to-attr)
 
+### Logger.Enabled
+
+The `Enabled` method implements the [`Enabled` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#enabled).
+
+[`Context` associated with the `LogRecord`](https://opentelemetry.io/docs/specs/otel/context/)
+is accepted as a `context.Context` method argument.
+
+Calls to `Enabled` are supposed to be on the hot path and the list of arguments
+can be extendend in future. Therefore, in order to reduce the number of heap
+allocations and make it possible to handle new arguments, `Enabled` accepts
+a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
+method argument.
+
+The `EnabledParameters` getters are returning values using the `(value, ok)`
+idiom in order to indicate if the values were actually set by the caller or if
+there are unspecified.
+
 ### noop package
 
 The `go.opentelemetry.io/otel/log/noop` package provides

@@ -10,18 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExemplars(t *testing.T) {
-	const key = "OTEL_GO_X_EXEMPLAR"
-	require.Equal(t, key, Exemplars.Key())
-
-	t.Run("true", run(setenv(key, "true"), assertEnabled(Exemplars, "true")))
-	t.Run("True", run(setenv(key, "True"), assertEnabled(Exemplars, "True")))
-	t.Run("TRUE", run(setenv(key, "TRUE"), assertEnabled(Exemplars, "TRUE")))
-	t.Run("false", run(setenv(key, "false"), assertDisabled(Exemplars)))
-	t.Run("1", run(setenv(key, "1"), assertDisabled(Exemplars)))
-	t.Run("empty", run(assertDisabled(Exemplars)))
-}
-
 func TestCardinalityLimit(t *testing.T) {
 	const key = "OTEL_GO_X_CARDINALITY_LIMIT"
 	require.Equal(t, key, CardinalityLimit.Key())
