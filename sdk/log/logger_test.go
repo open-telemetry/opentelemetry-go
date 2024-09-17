@@ -198,6 +198,17 @@ func TestLoggerEmit(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Filtered",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithFilterer(newFltr(false)),
+			), instrumentation.Scope{}),
+			ctx:             context.Background(),
+			record:          r,
+			expectedRecords: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -215,9 +226,9 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0 := newFltrProcessor("0", true)
-	p1 := newFltrProcessor("1", true)
-	p2WithDisabled := newFltrProcessor("2", false)
+	p0 := newFltr(true)
+	p1 := newFltr(true)
+	p2WithDisabled := newFltr(false)
 
 	testCases := []struct {
 		name     string
@@ -229,13 +240,13 @@ func TestLoggerEnabled(t *testing.T) {
 			name:     "NoProcessors",
 			logger:   newLogger(NewLoggerProvider(), instrumentation.Scope{}),
 			ctx:      context.Background(),
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "WithProcessors",
 			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
+				WithFilterer(p0),
+				WithFilterer(p1),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
 			expected: true,
@@ -243,7 +254,7 @@ func TestLoggerEnabled(t *testing.T) {
 		{
 			name: "WithDisabledProcessors",
 			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
+				WithFilterer(p2WithDisabled),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
 			expected: false,
@@ -251,17 +262,17 @@ func TestLoggerEnabled(t *testing.T) {
 		{
 			name: "ContainsDisabledProcessor",
 			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
-				WithProcessor(p0),
+				WithFilterer(p2WithDisabled),
+				WithFilterer(p0),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "WithNilContext",
 			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
+				WithFilterer(p0),
+				WithFilterer(p1),
 			), instrumentation.Scope{}),
 			ctx:      nil,
 			expected: true,
@@ -277,8 +288,8 @@ func TestLoggerEnabled(t *testing.T) {
 
 func BenchmarkLoggerEnabled(b *testing.B) {
 	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
+		WithFilterer(newFltr(false)),
+		WithFilterer(newFltr(true)),
 	)
 	logger := provider.Logger("BenchmarkLoggerEnabled")
 	ctx, param := context.Background(), log.EnabledParameters{}

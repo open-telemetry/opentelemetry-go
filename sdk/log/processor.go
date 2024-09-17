@@ -12,14 +12,8 @@ import (
 // Any of the Processor's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
-//
-// See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about how
-// a Processor can be extended to support experimental features.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
-	//
-	// OnEmit will be called independent of Enabled. Implementations need to
-	// validate the arguments themselves before processing.
 	//
 	// Implementation should not interrupt the record processing
 	// if the context is canceled.
@@ -29,8 +23,11 @@ type Processor interface {
 	// considered unrecoverable and will be reported to a configured error
 	// Handler.
 	//
-	// The SDK invokes the processors sequentially in the same order as
-	// they were registered using [WithProcessor].
+	// The SDK invokes the filters and processors sequentially in the same order as
+	// they were registered using [WithFilterer], [WithProcessor].
+	// Processors' OnEmit will be called in none of the registered [Filterer]s
+	// returned false.
+	//
 	// Implementations may synchronously modify the record so that the changes
 	// are visible in the next registered processor.
 	// Notice that [Record] is not concurrent safe. Therefore, asynchronous

@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -61,22 +60,19 @@ func (p *processor) ForceFlush(context.Context) error {
 	return p.Err
 }
 
-type fltrProcessor struct {
-	*processor
-
+type fltr struct {
 	enabled bool
 }
 
-var _ x.FilterProcessor = (*fltrProcessor)(nil)
+var _ Filterer = (*fltr)(nil)
 
-func newFltrProcessor(name string, enabled bool) *fltrProcessor {
-	return &fltrProcessor{
-		processor: newProcessor(name),
-		enabled:   enabled,
+func newFltr(enabled bool) *fltr {
+	return &fltr{
+		enabled: enabled,
 	}
 }
 
-func (p *fltrProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+func (p *fltr) Filter(context.Context, log.EnabledParameters) bool {
 	return p.enabled
 }
 
