@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Fixed broken delegation for global meter providers. Changed the reflect.TypeOf() to use an empty stack allocation so we aren't allocating on the heap unless we need to (#5827)
 
 ### Changed
 
