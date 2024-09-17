@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithFilterer` provider option and `Filterer` interface in `go.opentelemetry.io/otel/sdk/log` that accepts a newly introduced `FilterParameters` type. (#5825)
+
 ### Changed
 
 - Enable exemplars by default in `go.opentelemetry.io/otel/sdk/metric`. Exemplars can be disabled by setting `OTEL_METRICS_EXEMPLAR_FILTER=always_off` (#5778)
@@ -17,6 +21,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The race condition for multiple `FixedSize` exemplar reservoirs identified in #5814 is resolved. (#5819)
+
+### Removed
+
+- Remove `go.opentelemetry.io/otel/sdk/log/internal/x` package. Filtering is now done via `Filterer` interface in `go.opentelemetry.io/otel/sdk/log`. (#5825)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
