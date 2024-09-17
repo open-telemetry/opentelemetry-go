@@ -19,14 +19,13 @@ type Filterer interface {
 	// Filter returns whether the SDK will process for the given context
 	// and param.
 	//
-	// The passed param is may be a partial record with only the
-	// bridge-relevant information being provided (e.g a record with only the
-	// Severity set). If a Logger needs more information than is provided, it
-	// is said to be in an indeterminate state (see below).
+	// The passed param may be a partial record (e.g a record with only the
+	// Severity set). If a Filterer needs more information than is provided, it
+	// is said to be in an indeterminate state. An implementation should
+	// return true for an indeterminate state.
 	//
-	// The returned value will be true when the Processor will process for the
-	// provided context and param, and will be false if the Processor will not
-	// process. An implementation should default to returning true for an
-	// indeterminate state.
+	// The returned value will be true when the SDK should process for the
+	// provided context and param, and will be false if the SDK should not
+	// process.
 	Filter(ctx context.Context, param log.EnabledParameters) bool
 }
