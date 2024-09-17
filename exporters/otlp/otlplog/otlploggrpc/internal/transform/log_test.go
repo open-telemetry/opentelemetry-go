@@ -302,14 +302,7 @@ var (
 
 func TestResourceLogs(t *testing.T) {
 	want := pbResourceLogsList
-	rLogs := ResourceLogs(records)
-	for _, got := range rLogs {
-		expected := want[1]
-		if got.Resource.Attributes[1].GetValue().GetStringValue() == "v0.1.1" {
-			expected = want[0]
-		}
-		assert.Equal(t, expected, got)
-	}
+	assert.ElementsMatch(t, want, ResourceLogs(records))
 }
 
 func TestSeverityNumber(t *testing.T) {
