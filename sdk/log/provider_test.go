@@ -72,7 +72,7 @@ func newFltr(enabled bool) *fltr {
 	}
 }
 
-func (p *fltr) Filter(context.Context, log.EnabledParameters) bool {
+func (p *fltr) Filter(context.Context, FilterParameters) bool {
 	return p.enabled
 }
 

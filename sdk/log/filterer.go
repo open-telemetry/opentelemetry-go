@@ -1,7 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains support for Logs SDK experimental features.
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
@@ -27,5 +26,25 @@ type Filterer interface {
 	// The returned value will be true when the SDK should process for the
 	// provided context and param, and will be false if the SDK should not
 	// process.
-	Filter(ctx context.Context, param log.EnabledParameters) bool
+	Filter(ctx context.Context, param FilterParameters) bool
+}
+
+// FilterParameters represent Filter parameters.
+type FilterParameters struct {
+	severity    log.Severity
+	severitySet bool
+
+	noCmp [0]func() //nolint: unused  // This is indeed used.
+}
+
+// Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
+// The ok result indicates whether the value was set.
+func (r *FilterParameters) Severity() (value log.Severity, ok bool) {
+	return r.severity, r.severitySet
+}
+
+// setSeverity sets the [Severity] level.
+func (r *FilterParameters) setSeverity(level log.Severity) {
+	r.severity = level
+	r.severitySet = true
 }

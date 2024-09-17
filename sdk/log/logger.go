@@ -51,8 +51,13 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 // Enabled returns false if at least one Filterer held by the LoggerProvider
 // that created the logger will return false for the provided context and param.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
+	newParam := FilterParameters{}
+	if v, ok := param.Severity(); ok {
+		newParam.setSeverity(v)
+	}
+
 	for _, flt := range l.provider.filterers {
-		if !flt.Filter(ctx, param) {
+		if !flt.Filter(ctx, newParam) {
 			return false
 		}
 	}
