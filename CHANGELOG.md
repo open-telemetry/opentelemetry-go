@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix log records duplication in case of heterogeneous resource attributes by correctly mapping each log record to it's resource and scope. (#5782)
+- The race condition for multiple `FixedSize` exemplar reservoirs identified in #5814 is resolved. (#5819)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
