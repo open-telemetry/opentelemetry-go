@@ -51,7 +51,7 @@ func Example() {
 }
 
 // Use a filterer that filters out records based on the provided context.
-func ExampleProcessor_filtering() {
+func ExampleFilterer() {
 	// Existing processor that emits telemetry.
 	processor := log.NewBatchProcessor(nil)
 
@@ -88,7 +88,7 @@ func (p *ContextFilterer) Filter(ctx context.Context, param log.FilterParameters
 }
 
 // Use a processor which redacts sensitive data from some attributes.
-func ExampleProcessor_redact() {
+func ExampleProcessor() {
 	// Existing processor that emits telemetry.
 	processor := log.NewBatchProcessor(nil)
 
