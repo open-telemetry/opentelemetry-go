@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	logapi "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -51,19 +50,20 @@ func Example() {
 	// slog.SetDefault(otelslog.NewLogger("my/pkg/name", otelslog.WithLoggerProvider(provider)))
 }
 
-// Use a processor that filters out records based on the provided context.
+// Use a filterer that filters out records based on the provided context.
 func ExampleProcessor_filtering() {
 	// Existing processor that emits telemetry.
-	var processor log.Processor = log.NewBatchProcessor(nil)
+	processor := log.NewBatchProcessor(nil)
 
-	// Wrap the processor so that it ignores processing log records
+	// Add a filterer so that the SDK ignores processing of log records
 	// when a context deriving from WithIgnoreLogs is passed
 	// to the logging methods.
-	processor = &ContextFilterProcessor{Processor: processor}
+	filterer := &ContextFilterer{}
 
 	// The created processor can then be registered with
 	// the OpenTelemetry Logs SDK using the WithProcessor option.
 	_ = log.NewLoggerProvider(
+		log.WithFilterer(filterer),
 		log.WithProcessor(processor),
 	)
 }
@@ -72,44 +72,17 @@ type key struct{}
 
 var ignoreLogsKey key
 
-// WithIgnoreLogs returns a context which is used by [ContextFilterProcessor]
+// WithIgnoreLogs returns a context which is used by [ContextFilterer]
 // to filter out log records.
 func WithIgnoreLogs(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ignoreLogsKey, true)
 }
 
-// ContextFilterProcessor filters out logs when a context deriving from
-// [WithIgnoreLogs] is passed to its methods.
-type ContextFilterProcessor struct {
-	log.Processor
+// ContextFilterer filters out logs when a context deriving from
+// [WithIgnoreLogs] is passed to Logger's methods.
+type ContextFilterer struct{}
 
-	lazyFilter sync.Once
-	// Use the experimental FilterProcessor interface
-	// (go.opentelemetry.io/otel/sdk/log/internal/x).
-	filter filter
-}
-
-type filter interface {
-	Enabled(ctx context.Context, param logapi.EnabledParameters) bool
-}
-
-func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
-	if ignoreLogs(ctx) {
-		return nil
-	}
-	return p.Processor.OnEmit(ctx, record)
-}
-
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, param logapi.EnabledParameters) bool {
-	p.lazyFilter.Do(func() {
-		if f, ok := p.Processor.(filter); ok {
-			p.filter = f
-		}
-	})
-	return !ignoreLogs(ctx) && (p.filter == nil || p.filter.Enabled(ctx, param))
-}
-
-func ignoreLogs(ctx context.Context) bool {
+func (p *ContextFilterer) Filter(ctx context.Context, param log.FilterParameters) bool {
 	_, ok := ctx.Value(ignoreLogsKey).(bool)
 	return ok
 }
@@ -117,9 +90,9 @@ func ignoreLogs(ctx context.Context) bool {
 // Use a processor which redacts sensitive data from some attributes.
 func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
-	var processor log.Processor = log.NewBatchProcessor(nil)
+	processor := log.NewBatchProcessor(nil)
 
-	// Add a processor so that it redacts values from token attributes.
+	// Add a processor so that the SDK redacts values from token attributes.
 	redactProcessor := &RedactTokensProcessor{}
 
 	// The created processor can then be registered with
