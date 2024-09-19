@@ -19,7 +19,7 @@ type multiLoggerProvider struct {
 }
 
 // MultiLoggerProvider returns a composite (fan-out) provider.
-// It duplicates its calls to all the provided providers.
+// It duplicates its calls to all the passed providers.
 // It can be used to set up multiple processing pipelines.
 // For instance, you can have separate providers for OTel events
 // and application logs.
