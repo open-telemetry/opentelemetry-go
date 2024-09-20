@@ -12,11 +12,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// FixedSize returns a [Reservoir] that samples at most k exemplars. If there
+// FixedSizeReservoir returns a [Reservoir] that samples at most k exemplars. If there
 // are k or less measurements made, the Reservoir will sample each one. If
 // there are more than k, the Reservoir will then randomly sample all
 // additional measurement with a decreasing probability.
-func FixedSize(k int) Reservoir {
+func FixedSizeReservoir(k int) Reservoir {
 	return newRandRes(newStorage(k))
 }
 
