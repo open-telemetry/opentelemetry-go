@@ -430,7 +430,7 @@ func TestBufferExporter(t *testing.T) {
 			// Nothing to flush.
 			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush empty")
 			assert.Equal(t, 1, exp.ExportN(), "Export number changed")
-			assert.Len(t, exp.Records(), 0, "exported non-zero Records")
+			assert.Empty(t, exp.Records(), "exported non-zero Records")
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {

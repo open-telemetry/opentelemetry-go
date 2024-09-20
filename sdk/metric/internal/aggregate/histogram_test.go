@@ -351,7 +351,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	require.Equal(t, 0, h.delta(&data))
-	require.Len(t, data.(metricdata.Histogram[int64]).DataPoints, 0)
+	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	h.measure(context.Background(), 1, alice, nil)
 
@@ -363,7 +363,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
 	assert.Equal(t, 0, h.delta(&data))
-	assert.Len(t, data.(metricdata.Histogram[int64]).DataPoints, 0)
+	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
 	h.measure(context.Background(), 1, bob, nil)

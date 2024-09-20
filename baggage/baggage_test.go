@@ -815,16 +815,16 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, 0, len(b0.list))
-	assert.Equal(t, 1, len(b1.list))
+	assert.Empty(t, b0.list)
+	assert.Len(t, b1.list, 1)
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
-	assert.Equal(t, 1, len(b1.list))
-	assert.Equal(t, 1, len(b2.list))
+	assert.Len(t, b1.list, 1)
+	assert.Len(t, b2.list, 1)
 
 	p := properties{{key: "p"}}
 	m.properties = p
@@ -832,8 +832,8 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
-	assert.Equal(t, 1, len(b2.list))
-	assert.Equal(t, 1, len(b3.list))
+	assert.Len(t, b2.list, 1)
+	assert.Len(t, b3.list, 1)
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
@@ -849,8 +849,8 @@ func TestBaggageSetMember(t *testing.T) {
 	assert.NotContains(t, b3.list, m.key)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
-	assert.Equal(t, 1, len(b3.list))
-	assert.Equal(t, 2, len(b4.list))
+	assert.Len(t, b3.list, 1)
+	assert.Len(t, b4.list, 2)
 }
 
 func TestBaggageSetFalseMember(t *testing.T) {
@@ -862,16 +862,16 @@ func TestBaggageSetFalseMember(t *testing.T) {
 	assert.Error(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, 0, len(b0.list))
-	assert.Equal(t, 0, len(b1.list))
+	assert.Empty(t, b0.list)
+	assert.Empty(t, b1.list)
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
 	assert.Error(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: ""}, b2.list[key])
-	assert.Equal(t, 0, len(b1.list))
-	assert.Equal(t, 0, len(b2.list))
+	assert.Empty(t, b1.list)
+	assert.Empty(t, b2.list)
 }
 
 func TestBaggageSetFalseMembers(t *testing.T) {
@@ -883,16 +883,16 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, 0, len(b0.list))
-	assert.Equal(t, 1, len(b1.list))
+	assert.Empty(t, b0.list)
+	assert.Len(t, b1.list, 1)
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
-	assert.Equal(t, 1, len(b1.list))
-	assert.Equal(t, 1, len(b2.list))
+	assert.Len(t, b1.list, 1)
+	assert.Len(t, b2.list, 1)
 
 	p := properties{{key: "p"}}
 	m.properties = p
@@ -900,8 +900,8 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
-	assert.Equal(t, 1, len(b2.list))
-	assert.Equal(t, 1, len(b3.list))
+	assert.Len(t, b2.list, 1)
+	assert.Len(t, b3.list, 1)
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
@@ -917,8 +917,8 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	assert.NotContains(t, b3.list, m.key)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
-	assert.Equal(t, 1, len(b3.list))
-	assert.Equal(t, 1, len(b4.list))
+	assert.Len(t, b3.list, 1)
+	assert.Len(t, b4.list, 1)
 }
 
 func TestNilBaggageMembers(t *testing.T) {

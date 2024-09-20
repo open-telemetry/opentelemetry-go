@@ -867,14 +867,14 @@ func TestIncompatibleMeterName(t *testing.T) {
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, len(errs))
+	assert.Len(t, errs, 1)
 
 	// A second collect shouldn't trigger new errors
 	_, err = file.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(errs))
+	assert.Len(t, errs, 1)
 }
 
 func TestShutdownExporter(t *testing.T) {

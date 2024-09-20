@@ -57,7 +57,7 @@ func TestMultiErr(t *testing.T) {
 		// language so this doesn't become a change-indicator.
 		msg := me.Error()
 		lines := strings.Split(msg, "\n")
-		assert.Equalf(t, 4, len(lines), "expected a 4 line error message, got:\n\n%s", msg)
+		assert.Lenf(t, lines, 4, "expected a 4 line error message, got:\n\n%s", msg)
 		assert.Contains(t, msg, name)
 		assert.Contains(t, msg, e0.Error())
 		assert.Contains(t, msg, testErr.Error())

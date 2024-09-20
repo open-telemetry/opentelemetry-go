@@ -22,7 +22,7 @@ func TestSpanRecorderOnStartAppends(t *testing.T) {
 	ctx := context.Background()
 	sr := new(SpanRecorder)
 
-	assert.Len(t, sr.started, 0)
+	assert.Empty(t, sr.started)
 	sr.OnStart(ctx, s0)
 	assert.Len(t, sr.started, 1)
 	sr.OnStart(ctx, s1)
@@ -42,7 +42,7 @@ func TestSpanRecorderOnEndAppends(t *testing.T) {
 	s0, s1 := new(roSpan), new(roSpan)
 	sr := new(SpanRecorder)
 
-	assert.Len(t, sr.ended, 0)
+	assert.Empty(t, sr.ended)
 	sr.OnEnd(s0)
 	assert.Len(t, sr.ended, 1)
 	sr.OnEnd(s1)

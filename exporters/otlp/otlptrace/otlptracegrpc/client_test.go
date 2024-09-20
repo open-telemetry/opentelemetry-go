@@ -401,7 +401,7 @@ func TestPartialSuccess(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
-	require.Equal(t, 1, len(errs))
+	require.Len(t, errs, 1)
 	require.Contains(t, errs[0].Error(), "partially successful")
 	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }

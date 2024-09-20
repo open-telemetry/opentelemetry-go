@@ -629,7 +629,7 @@ func testDatatype[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T) {
 		AssertEqual(t, b, b)
 
 		r := f(a, b, newConfig(nil))
-		assert.Greaterf(t, len(r), 0, "%v == %v", a, b)
+		assert.NotEmptyf(t, r, "%v == %v", a, b)
 	}
 }
 
@@ -640,7 +640,7 @@ func testDatatypeIgnoreTime[T Datatypes](a, b T, f equalFunc[T]) func(*testing.T
 
 		c := newConfig([]Option{IgnoreTimestamp()})
 		r := f(a, b, c)
-		assert.Len(t, r, 0, "unexpected inequality")
+		assert.Empty(t, r, "unexpected inequality")
 	}
 }
 
@@ -651,7 +651,7 @@ func testDatatypeIgnoreExemplars[T Datatypes](a, b T, f equalFunc[T]) func(*test
 
 		c := newConfig([]Option{IgnoreExemplars()})
 		r := f(a, b, c)
-		assert.Len(t, r, 0, "unexpected inequality")
+		assert.Empty(t, r, "unexpected inequality")
 	}
 }
 
@@ -662,7 +662,7 @@ func testDatatypeIgnoreValue[T Datatypes](a, b T, f equalFunc[T]) func(*testing.
 
 		c := newConfig([]Option{IgnoreValue()})
 		r := f(a, b, c)
-		assert.Len(t, r, 0, "unexpected inequality")
+		assert.Empty(t, r, "unexpected inequality")
 	}
 }
 
@@ -800,85 +800,85 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	assert.Len(t, r, 1, "should return with unknown aggregation only")
 
 	r = equalAggregations(sumInt64A, sumInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "sums should not be equal: %v == %v", sumInt64A, sumInt64B)
+	assert.NotEmptyf(t, r, "sums should not be equal: %v == %v", sumInt64A, sumInt64B)
 
 	r = equalAggregations(sumInt64A, sumInt64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "sums should be equal: %v", r)
+	assert.Empty(t, r, "sums should be equal: %v", r)
 
 	r = equalAggregations(sumInt64A, sumInt64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", sumInt64A, sumInt64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", sumInt64A, sumInt64D)
 
 	r = equalAggregations(sumFloat64A, sumFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "sums should not be equal: %v == %v", sumFloat64A, sumFloat64B)
+	assert.NotEmptyf(t, r, "sums should not be equal: %v == %v", sumFloat64A, sumFloat64B)
 
 	r = equalAggregations(sumFloat64A, sumFloat64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "sums should be equal: %v", r)
+	assert.Empty(t, r, "sums should be equal: %v", r)
 
 	r = equalAggregations(sumFloat64A, sumFloat64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", sumFloat64A, sumFloat64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", sumFloat64A, sumFloat64D)
 
 	r = equalAggregations(gaugeInt64A, gaugeInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "gauges should not be equal: %v == %v", gaugeInt64A, gaugeInt64B)
+	assert.NotEmptyf(t, r, "gauges should not be equal: %v == %v", gaugeInt64A, gaugeInt64B)
 
 	r = equalAggregations(gaugeInt64A, gaugeInt64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "gauges should be equal: %v", r)
+	assert.Empty(t, r, "gauges should be equal: %v", r)
 
 	r = equalAggregations(gaugeInt64A, gaugeInt64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", gaugeInt64A, gaugeInt64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", gaugeInt64A, gaugeInt64D)
 
 	r = equalAggregations(gaugeFloat64A, gaugeFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "gauges should not be equal: %v == %v", gaugeFloat64A, gaugeFloat64B)
+	assert.NotEmptyf(t, r, "gauges should not be equal: %v == %v", gaugeFloat64A, gaugeFloat64B)
 
 	r = equalAggregations(gaugeFloat64A, gaugeFloat64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "gauges should be equal: %v", r)
+	assert.Empty(t, r, "gauges should be equal: %v", r)
 
 	r = equalAggregations(gaugeFloat64A, gaugeFloat64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", gaugeFloat64A, gaugeFloat64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", gaugeFloat64A, gaugeFloat64D)
 
 	r = equalAggregations(histogramInt64A, histogramInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "histograms should not be equal: %v == %v", histogramInt64A, histogramInt64B)
+	assert.NotEmptyf(t, r, "histograms should not be equal: %v == %v", histogramInt64A, histogramInt64B)
 
 	r = equalAggregations(histogramInt64A, histogramInt64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "histograms should be equal: %v", r)
+	assert.Empty(t, r, "histograms should be equal: %v", r)
 
 	r = equalAggregations(histogramInt64A, histogramInt64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", histogramInt64A, histogramInt64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", histogramInt64A, histogramInt64D)
 
 	r = equalAggregations(histogramFloat64A, histogramFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "histograms should not be equal: %v == %v", histogramFloat64A, histogramFloat64B)
+	assert.NotEmptyf(t, r, "histograms should not be equal: %v == %v", histogramFloat64A, histogramFloat64B)
 
 	r = equalAggregations(histogramFloat64A, histogramFloat64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "histograms should be equal: %v", r)
+	assert.Empty(t, r, "histograms should be equal: %v", r)
 
 	r = equalAggregations(histogramFloat64A, histogramFloat64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", histogramFloat64A, histogramFloat64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", histogramFloat64A, histogramFloat64D)
 
 	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64B, config{})
-	assert.Greaterf(t, len(r), 0, "exponential histograms should not be equal: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64B)
+	assert.NotEmptyf(t, r, "exponential histograms should not be equal: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64B)
 
 	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "exponential histograms should be equal: %v", r)
+	assert.Empty(t, r, "exponential histograms should be equal: %v", r)
 
 	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64D)
 
 	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64B, config{})
-	assert.Greaterf(t, len(r), 0, "exponential histograms should not be equal: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64B)
+	assert.NotEmptyf(t, r, "exponential histograms should not be equal: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64B)
 
 	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64C, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "exponential histograms should be equal: %v", r)
+	assert.Empty(t, r, "exponential histograms should be equal: %v", r)
 
 	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64D, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64D)
+	assert.Empty(t, r, "value should be ignored: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64D)
 
 	r = equalAggregations(summaryA, summaryB, config{})
-	assert.Greaterf(t, len(r), 0, "summaries should not be equal: %v == %v", summaryA, summaryB)
+	assert.NotEmptyf(t, r, "summaries should not be equal: %v == %v", summaryA, summaryB)
 
 	r = equalAggregations(summaryA, summaryC, config{ignoreTimestamp: true})
-	assert.Len(t, r, 0, "summaries should be equal: %v", r)
+	assert.Empty(t, r, "summaries should be equal: %v", r)
 
 	r = equalAggregations(summaryA, summaryD, config{ignoreValue: true})
-	assert.Len(t, r, 0, "value should be ignored: %v == %v", summaryA, summaryD)
+	assert.Empty(t, r, "value should be ignored: %v == %v", summaryA, summaryD)
 }
 
 func TestAssertAttributes(t *testing.T) {
@@ -908,61 +908,61 @@ func TestAssertAttributes(t *testing.T) {
 	AssertHasAttributes(t, quantileValueA, attribute.Bool("A", true)) // No-op, always pass.
 
 	r := hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "gaugeInt64A has A=True")
+	assert.Empty(t, r, "gaugeInt64A has A=True")
 	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "gaugeFloat64A has A=True")
+	assert.Empty(t, r, "gaugeFloat64A has A=True")
 	r = hasAttributesAggregation(sumInt64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "sumInt64A has A=True")
+	assert.Empty(t, r, "sumInt64A has A=True")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "sumFloat64A has A=True")
+	assert.Empty(t, r, "sumFloat64A has A=True")
 	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "histogramInt64A has A=True")
+	assert.Empty(t, r, "histogramInt64A has A=True")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "histogramFloat64A has A=True")
+	assert.Empty(t, r, "histogramFloat64A has A=True")
 	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "exponentialHistogramInt64A has A=True")
+	assert.Empty(t, r, "exponentialHistogramInt64A has A=True")
 	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "exponentialHistogramFloat64A has A=True")
+	assert.Empty(t, r, "exponentialHistogramFloat64A has A=True")
 	r = hasAttributesAggregation(summaryA, attribute.Bool("A", true))
-	assert.Equal(t, len(r), 0, "summaryA has A=True")
+	assert.Empty(t, r, "summaryA has A=True")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "gaugeInt64A does not have A=False")
+	assert.NotEmpty(t, r, "gaugeInt64A does not have A=False")
 	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "gaugeFloat64A does not have A=False")
+	assert.NotEmpty(t, r, "gaugeFloat64A does not have A=False")
 	r = hasAttributesAggregation(sumInt64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "sumInt64A does not have A=False")
+	assert.NotEmpty(t, r, "sumInt64A does not have A=False")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "sumFloat64A does not have A=False")
+	assert.NotEmpty(t, r, "sumFloat64A does not have A=False")
 	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "histogramInt64A does not have A=False")
+	assert.NotEmpty(t, r, "histogramInt64A does not have A=False")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "histogramFloat64A does not have A=False")
+	assert.NotEmpty(t, r, "histogramFloat64A does not have A=False")
 	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "exponentialHistogramInt64A does not have A=False")
+	assert.NotEmpty(t, r, "exponentialHistogramInt64A does not have A=False")
 	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "exponentialHistogramFloat64A does not have A=False")
+	assert.NotEmpty(t, r, "exponentialHistogramFloat64A does not have A=False")
 	r = hasAttributesAggregation(summaryA, attribute.Bool("A", false))
-	assert.Greater(t, len(r), 0, "summaryA does not have A=False")
+	assert.NotEmpty(t, r, "summaryA does not have A=False")
 
 	r = hasAttributesAggregation(gaugeInt64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "gaugeInt64A does not have Attribute B")
+	assert.NotEmpty(t, r, "gaugeInt64A does not have Attribute B")
 	r = hasAttributesAggregation(gaugeFloat64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "gaugeFloat64A does not have Attribute B")
+	assert.NotEmpty(t, r, "gaugeFloat64A does not have Attribute B")
 	r = hasAttributesAggregation(sumInt64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "sumInt64A does not have Attribute B")
+	assert.NotEmpty(t, r, "sumInt64A does not have Attribute B")
 	r = hasAttributesAggregation(sumFloat64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "sumFloat64A does not have Attribute B")
+	assert.NotEmpty(t, r, "sumFloat64A does not have Attribute B")
 	r = hasAttributesAggregation(histogramInt64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "histogramIntA does not have Attribute B")
+	assert.NotEmpty(t, r, "histogramIntA does not have Attribute B")
 	r = hasAttributesAggregation(histogramFloat64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "histogramFloatA does not have Attribute B")
+	assert.NotEmpty(t, r, "histogramFloatA does not have Attribute B")
 	r = hasAttributesAggregation(exponentialHistogramInt64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "exponentialHistogramIntA does not have Attribute B")
+	assert.NotEmpty(t, r, "exponentialHistogramIntA does not have Attribute B")
 	r = hasAttributesAggregation(exponentialHistogramFloat64A, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "exponentialHistogramFloatA does not have Attribute B")
+	assert.NotEmpty(t, r, "exponentialHistogramFloatA does not have Attribute B")
 	r = hasAttributesAggregation(summaryA, attribute.Bool("B", true))
-	assert.Greater(t, len(r), 0, "summaryA does not have Attribute B")
+	assert.NotEmpty(t, r, "summaryA does not have Attribute B")
 }
 
 func TestAssertAttributesFail(t *testing.T) {

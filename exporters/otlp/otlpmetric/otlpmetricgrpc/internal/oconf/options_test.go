@@ -324,7 +324,7 @@ func TestConfigs(t *testing.T) {
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, 1, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
+					assert.Len(t, c.Metrics.TLSCfg.RootCAs.Subjects(), 1)
 				}
 			},
 		},
