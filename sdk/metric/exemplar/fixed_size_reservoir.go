@@ -22,6 +22,10 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 
 var _ Reservoir = &FixedSizeReservoir{}
 
+// FixedSizeReservoir is a [Reservoir] that samples at most k exemplars. If
+// there are k or less measurements made, the Reservoir will sample each one.
+// If there are more than k, the Reservoir will then randomly sample all
+// additional measurement with a decreasing probability.
 type FixedSizeReservoir struct {
 	*storage
 
@@ -77,6 +81,17 @@ func (r *FixedSizeReservoir) randomFloat64() float64 {
 	return f
 }
 
+// Offer accepts the parameters associated with a measurement. The
+// parameters will be stored as an exemplar if the Reservoir decides to
+// sample the measurement.
+//
+// The passed ctx needs to contain any baggage or span that were active
+// when the measurement was made. This information may be used by the
+// Reservoir in making a sampling decision.
+//
+// The time t is the time when the measurement was made. The v and a
+// parameters are the value and dropped (filtered) attributes of the
+// measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
@@ -182,6 +197,9 @@ func (r *FixedSizeReservoir) advance() {
 	r.next += int64(math.Log(r.randomFloat64())/math.Log(1-r.w)) + 1
 }
 
+// Collect returns all the held exemplars.
+//
+// The Reservoir state is preserved after this call.
 func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	r.storage.Collect(dest)
 	// Call reset here even though it will reset r.count and restart the random

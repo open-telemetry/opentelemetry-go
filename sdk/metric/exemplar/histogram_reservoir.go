@@ -27,6 +27,9 @@ func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 
 var _ Reservoir = &HistogramReservoir{}
 
+// HistogramReservoir is a [Reservoir] that samples the last measurement that
+// falls within a histogram bucket. The histogram bucket upper-boundaries are
+// define by bounds.
 type HistogramReservoir struct {
 	*storage
 
@@ -34,6 +37,17 @@ type HistogramReservoir struct {
 	bounds []float64
 }
 
+// Offer accepts the parameters associated with a measurement. The
+// parameters will be stored as an exemplar if the Reservoir decides to
+// sample the measurement.
+//
+// The passed ctx needs to contain any baggage or span that were active
+// when the measurement was made. This information may be used by the
+// Reservoir in making a sampling decision.
+//
+// The time t is the time when the measurement was made. The v and a
+// parameters are the value and dropped (filtered) attributes of the
+// measurement respectively.
 func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a []attribute.KeyValue) {
 	var x float64
 	switch v.Type() {
