@@ -73,6 +73,6 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.Filtered
 	}
 
 	return func() aggregate.FilteredExemplarReservoir[N] {
-		return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.FixedSizeReservoir(n))
+		return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.NewFixedSizeReservoir(n))
 	}
 }
