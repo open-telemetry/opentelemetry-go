@@ -44,7 +44,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.Filtered
 		cp := slices.Clone(a.Boundaries)
 		return func() aggregate.FilteredExemplarReservoir[N] {
 			bounds := cp
-			return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.HistogramReservoir(bounds))
+			return aggregate.NewFilteredExemplarReservoir[N](filter, exemplar.NewHistogramReservoir(bounds))
 		}
 	}
 

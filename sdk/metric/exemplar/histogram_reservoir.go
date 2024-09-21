@@ -12,12 +12,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// HistogramReservoir returns a [Reservoir] that samples the last measurement that falls
+// NewHistogramReservoir returns a [Reservoir] that samples the last measurement that falls
 // within a histogram bucket. The histogram bucket upper-boundaries are define
 // by bounds.
 //
 // The passed bounds will be sorted by this function.
-func HistogramReservoir(bounds []float64) Reservoir {
+func NewHistogramReservoir(bounds []float64) Reservoir {
 	slices.Sort(bounds)
 	return &histRes{
 		bounds:  bounds,
