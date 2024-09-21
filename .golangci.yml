@@ -306,13 +306,11 @@ linters-settings:
   testifylint:
     enable-all: true
     disable:
-      - empty
       - error-is-as
       - error-nil
       - expected-actual
       - float-compare
       - go-require
-      - len
       - negative-positive
       - require-error
       - suite-extra-assert-call

@@ -1041,7 +1041,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	got := metricdata.ResourceMetrics{}
 	err = rdr.Collect(context.Background(), &got)
 	assert.NoError(t, err)
-	assert.Lenf(t, l.messages, 0, "Warnings and errors logged:\n%s", l)
+	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
@@ -1254,7 +1254,7 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.False(t, called, "callback called for all drop instruments")
-	assert.Len(t, data.ScopeMetrics, 0, "metrics exported for drop instruments")
+	assert.Empty(t, data.ScopeMetrics, "metrics exported for drop instruments")
 }
 
 func TestAttributeFilter(t *testing.T) {
@@ -2304,7 +2304,7 @@ func TestObservableDropAggregation(t *testing.T) {
 			require.NoError(t, err)
 
 			if len(tt.wantObservables) == 0 {
-				require.Len(t, rm.ScopeMetrics, 0)
+				require.Empty(t, rm.ScopeMetrics)
 				return
 			}
 

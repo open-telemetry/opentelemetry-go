@@ -558,7 +558,7 @@ func TestClient(t *testing.T) {
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 
-		require.Equal(t, 1, len(errs))
+		require.Len(t, errs, 1)
 		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
 		assert.ErrorContains(t, errs[0], want)
 	})
@@ -697,7 +697,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)), "failed retry")
-		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
+		assert.Empty(t, rCh, "failed HTTP responses did not occur")
 	})
 
 	t.Run("WithRetryAndExporterErr", func(t *testing.T) {

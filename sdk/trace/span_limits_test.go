@@ -203,7 +203,7 @@ func TestSpanLimits(t *testing.T) {
 
 		// Ensure this can be disabled.
 		limits.AttributeCountLimit = 0
-		assert.Len(t, testSpanLimits(t, limits).Attributes(), 0)
+		assert.Empty(t, testSpanLimits(t, limits).Attributes())
 	})
 
 	t.Run("EventCountLimit", func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestSpanLimits(t *testing.T) {
 
 		// Ensure this can be disabled.
 		limits.EventCountLimit = 0
-		assert.Len(t, testSpanLimits(t, limits).Events(), 0)
+		assert.Empty(t, testSpanLimits(t, limits).Events())
 	})
 
 	t.Run("AttributePerEventCountLimit", func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestSpanLimits(t *testing.T) {
 		// Ensure this can be disabled.
 		limits.AttributePerEventCountLimit = 0
 		for _, e := range testSpanLimits(t, limits).Events() {
-			assert.Len(t, e.Attributes, 0)
+			assert.Empty(t, e.Attributes)
 		}
 	})
 
@@ -251,7 +251,7 @@ func TestSpanLimits(t *testing.T) {
 
 		// Ensure this can be disabled.
 		limits.LinkCountLimit = 0
-		assert.Len(t, testSpanLimits(t, limits).Links(), 0)
+		assert.Empty(t, testSpanLimits(t, limits).Links())
 	})
 
 	t.Run("AttributePerLinkCountLimit", func(t *testing.T) {
@@ -270,7 +270,7 @@ func TestSpanLimits(t *testing.T) {
 		// Ensure this can be disabled.
 		limits.AttributePerLinkCountLimit = 0
 		for _, l := range testSpanLimits(t, limits).Links() {
-			assert.Len(t, l.Attributes, 0)
+			assert.Empty(t, l.Attributes)
 		}
 	})
 }

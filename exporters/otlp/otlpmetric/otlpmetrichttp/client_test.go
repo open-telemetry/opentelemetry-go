@@ -189,7 +189,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
-		assert.Len(t, rCh, 0, "failed HTTP responses did not occur")
+		assert.Empty(t, rCh, "failed HTTP responses did not occur")
 	})
 
 	t.Run("WithRetryAndExporterErr", func(t *testing.T) {

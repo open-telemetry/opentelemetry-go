@@ -228,7 +228,7 @@ func TestExporter(t *testing.T) {
 		require.NoError(t, e.Export(ctx, records))
 		require.NoError(t, e.Export(ctx, records))
 
-		require.Equal(t, 1, len(errs))
+		require.Len(t, errs, 1)
 		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
 		assert.ErrorContains(t, errs[0], want)
 	})
