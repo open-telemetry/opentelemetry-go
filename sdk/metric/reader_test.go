@@ -198,7 +198,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 func (ts *readerTestSuite) TestCollectNilResourceMetricError() {
 	ts.Reader = ts.Factory()
 	ctx := context.Background()
-	ts.Assert().Error(ts.Reader.Collect(ctx, nil))
+	ts.Error(ts.Reader.Collect(ctx, nil))
 }
 
 var testScopeMetricsA = metricdata.ScopeMetrics{
