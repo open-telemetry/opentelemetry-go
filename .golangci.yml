@@ -313,4 +313,3 @@ linters-settings:
       - go-require
       - negative-positive
       - require-error
-      - suite-extra-assert-call
