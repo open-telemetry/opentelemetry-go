@@ -20,5 +20,5 @@ func testDropFiltered[N int64 | float64](t *testing.T) {
 	var dest []Exemplar
 	r.Collect(&dest)
 
-	assert.Len(t, dest, 0, "non-sampled context should not be offered")
+	assert.Empty(t, dest, "non-sampled context should not be offered")
 }

@@ -101,7 +101,7 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
 				assert.Equal(t, "/somepath", c.Metrics.URLPath)
-				assert.Equal(t, true, c.Metrics.Insecure)
+				assert.True(t, c.Metrics.Insecure)
 			},
 		},
 		{
@@ -112,7 +112,7 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
 				assert.Equal(t, "/somepath", c.Metrics.URLPath)
-				assert.Equal(t, false, c.Metrics.Insecure)
+				assert.False(t, c.Metrics.Insecure)
 			},
 		},
 		{
@@ -213,7 +213,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Metrics.Insecure)
+				assert.True(t, c.Metrics.Insecure)
 			},
 		},
 		{
@@ -223,7 +223,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Metrics.Insecure)
+				assert.True(t, c.Metrics.Insecure)
 			},
 		},
 		{
@@ -233,7 +233,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, false, c.Metrics.Insecure)
+				assert.False(t, c.Metrics.Insecure)
 			},
 		},
 		{
@@ -244,7 +244,7 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
-				assert.Equal(t, true, c.Metrics.Insecure)
+				assert.True(t, c.Metrics.Insecure)
 			},
 		},
 
@@ -324,7 +324,7 @@ func TestConfigs(t *testing.T) {
 					assert.NotNil(t, c.Metrics.GRPCCredentials)
 				} else {
 					// nolint:staticcheck // ignoring tlsCert.RootCAs.Subjects is deprecated ERR because cert does not come from SystemCertPool.
-					assert.Equal(t, 1, len(c.Metrics.TLSCfg.RootCAs.Subjects()))
+					assert.Len(t, c.Metrics.TLSCfg.RootCAs.Subjects(), 1)
 				}
 			},
 		},

@@ -6,9 +6,10 @@ package exemplar
 import (
 	"context"
 	"math"
+	"math/rand"
 	"slices"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,10 +28,12 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
 
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
 		// Generate exponentially distributed data.
-		data[i] = (-1.0 / intensity) * math.Log(random())
+		data[i] = (-1.0 / intensity) * math.Log(rng.Float64())
 	}
 	// Sort to test position bias.
 	slices.Sort(data)
@@ -49,19 +52,4 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
-}
-
-func TestRandomConcurrentSafe(t *testing.T) {
-	const goRoutines = 10
-
-	var wg sync.WaitGroup
-	for n := 0; n < goRoutines; n++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = random()
-		}()
-	}
-
-	wg.Wait()
 }
