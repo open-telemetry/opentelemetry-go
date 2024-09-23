@@ -4,8 +4,11 @@
 /*
 Package log provides the OpenTelemetry Logs Bridge API.
 
-This package is intended to be a bridge between existing logging libraries and
-OpenTelemetry. It is not designed to be a logging API itself.
+This package is intended to be used by bridges between existing logging
+libraries and OpenTelemetry. Users should not directly use this package as a
+logging library. Instead, install one of the bridges listed in the
+[registry](https://opentelemetry.io/ecosystem/registry/?language=go&component=log-bridge),
+and use the associated logging library.
 
 # API Implementations
 
