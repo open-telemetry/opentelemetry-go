@@ -5,7 +5,6 @@ package resource_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -20,7 +19,7 @@ func TestBuiltinStringDetector(t *testing.T) {
 	res, err := resource.StringDetector("", attribute.Key("K"), func() (string, error) {
 		return "", E
 	}).Detect(context.Background())
-	require.True(t, errors.Is(err, E))
+	require.ErrorIs(t, err, E)
 	require.NotEqual(t, E, err)
 	require.Nil(t, res)
 }

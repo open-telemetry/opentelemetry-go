@@ -5,7 +5,6 @@ package otlptrace_test
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestExporterClientError(t *testing.T) {
 	err = exp.ExportSpans(ctx, spans)
 
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, context.Canceled))
+	assert.ErrorIs(t, err, context.Canceled)
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
 
 	assert.NoError(t, exp.Shutdown(ctx))
