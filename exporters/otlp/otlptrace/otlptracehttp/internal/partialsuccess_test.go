@@ -15,7 +15,6 @@ import (
 
 func requireErrorString(t *testing.T, expect string, err error) {
 	t.Helper()
-	require.NotNil(t, err)
 	require.Error(t, err)
 	require.ErrorIs(t, err, PartialSuccess{})
 

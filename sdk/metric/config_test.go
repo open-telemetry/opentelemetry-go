@@ -55,8 +55,8 @@ func TestConfigReaderSignalsEmpty(t *testing.T) {
 	require.NotNil(t, s)
 
 	ctx := context.Background()
-	assert.Nil(t, f(ctx))
-	assert.Nil(t, s(ctx))
+	assert.NoError(t, f(ctx))
+	assert.NoError(t, s(ctx))
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
 }
 

@@ -306,7 +306,6 @@ linters-settings:
   testifylint:
     enable-all: true
     disable:
-      - error-nil
       - expected-actual
       - float-compare
       - go-require
