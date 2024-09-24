@@ -9,8 +9,6 @@ libraries and OpenTelemetry. Users should not directly use this package as a
 logging library. Instead, install one of the bridges listed in the
 [registry], and use the associated logging library.
 
-[registry]: https://opentelemetry.io/ecosystem/registry/?language=go&component=log-bridge
-
 # API Implementations
 
 This package does not conform to the standard Go versioning policy, all of its
@@ -72,5 +70,7 @@ It is strongly recommended that authors only embed
 go.opentelemetry.io/otel/log/noop if they choose this default behavior. That
 implementation is the only one OpenTelemetry authors can guarantee will fully
 implement all the API interfaces when a user updates their API.
+
+[registry]: https://opentelemetry.io/ecosystem/registry/?language=go&component=log-bridge
 */
 package log // import "go.opentelemetry.io/otel/log"
