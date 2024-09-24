@@ -2427,3 +2427,16 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 		})
 	}
 }
+
+func TestMeterProviderDelegation(t *testing.T) {
+	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	for i := 0; i < 5; i++ {
+		m, _ := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+			o.ObserveInt64(m, int64(10))
+			return nil
+		}, m)
+	}
+	provider := NewMeterProvider()
+	otel.SetMeterProvider(provider)
+}
