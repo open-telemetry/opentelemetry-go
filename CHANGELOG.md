@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `trace.WithStatus` option for `span.RecordError`. (#5762)
+- Add the`trace.WithStatusOnPanic` option for `span.End`. (#5762)
+
 ### Changed
 
 - Enable exemplars by default in `go.opentelemetry.io/otel/sdk/metric`. Exemplars can be disabled by setting `OTEL_METRICS_EXEMPLAR_FILTER=always_off` (#5778)

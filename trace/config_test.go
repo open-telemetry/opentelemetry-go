@@ -203,9 +203,79 @@ func TestEndSpanConfig(t *testing.T) {
 				timestamp: timestamp,
 			},
 		},
+		{
+			[]SpanEndOption{
+				WithStatusOnPanic(),
+			},
+			SpanConfig{
+				errorStatusOnPanic: true,
+			},
+		},
 	}
 	for _, test := range tests {
 		assert.Equal(t, test.expected, NewSpanEndConfig(test.options...))
+	}
+}
+
+func TestEventConfig(t *testing.T) {
+	kv := attribute.String("key", "value")
+	timestamp := time.Unix(0, 0)
+
+	tests := []struct {
+		options  []EventOption
+		expected EventConfig
+	}{
+		{
+			[]EventOption{
+				WithTimestamp(timestamp),
+			},
+			EventConfig{
+				timestamp: timestamp,
+			},
+		},
+		{
+			[]EventOption{
+				WithTimestamp(timestamp),
+				WithStackTrace(true),
+			},
+			EventConfig{
+				timestamp:  timestamp,
+				stackTrace: true,
+			},
+		},
+		{
+			[]EventOption{
+				WithTimestamp(timestamp),
+				WithStackTrace(true),
+			},
+			EventConfig{
+				timestamp:  timestamp,
+				stackTrace: true,
+			},
+		},
+		{
+			[]EventOption{
+				WithTimestamp(timestamp),
+				WithAttributes(kv),
+			},
+			EventConfig{
+				timestamp:  timestamp,
+				attributes: []attribute.KeyValue{kv},
+			},
+		},
+		{
+			[]EventOption{
+				WithTimestamp(timestamp),
+				WithStatus(),
+			},
+			EventConfig{
+				timestamp:   timestamp,
+				errorStatus: true,
+			},
+		},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.expected, NewEventConfig(test.options...))
 	}
 }
 
