@@ -116,7 +116,7 @@ func (p timestampProcessor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p timestampProcessor) Enabled(context.Context, Record) bool {
+func (p timestampProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
@@ -135,7 +135,7 @@ func (p attrAddProcessor) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p attrAddProcessor) Enabled(context.Context, Record) bool {
+func (p attrAddProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
@@ -154,7 +154,7 @@ func (p attrSetDecorator) OnEmit(ctx context.Context, r *Record) error {
 	return nil
 }
 
-func (p attrSetDecorator) Enabled(context.Context, Record) bool {
+func (p attrSetDecorator) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 

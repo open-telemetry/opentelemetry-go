@@ -215,15 +215,15 @@ func TestLoggerEmit(t *testing.T) {
 }
 
 func TestLoggerEnabled(t *testing.T) {
-	p0 := newFltrProcessor("0", true)
-	p1 := newFltrProcessor("1", true)
-	p2WithDisabled := newFltrProcessor("2", false)
+	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
+	p2WithDisabled.enabled = false
 
 	testCases := []struct {
-		name     string
-		logger   *logger
-		ctx      context.Context
-		expected bool
+		name           string
+		logger         *logger
+		ctx            context.Context
+		expected       bool
+		expectedParams []EnabledParameters
 	}{
 		{
 			name:     "NoProcessors",
@@ -236,9 +236,16 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
-			), instrumentation.Scope{}),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+			), instrumentation.Scope{Name: "name"}),
 			ctx:      context.Background(),
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{Name: "name"},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 		{
 			name: "WithDisabledProcessors",
@@ -253,32 +260,54 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p2WithDisabled),
 				WithProcessor(p0),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{}),
 			ctx:      context.Background(),
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 		{
 			name: "WithNilContext",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{}),
 			ctx:      nil,
 			expected: true,
+			expectedParams: []EnabledParameters{
+				{
+					scope:    &instrumentation.Scope{},
+					resource: resource.NewSchemaless(attribute.String("key", "value")),
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Clean up the EnabledParameters before the test.
+			p0.params = nil
+
 			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
+			assert.Equal(t, tc.expectedParams, p0.params)
 		})
 	}
 }
 
 func BenchmarkLoggerEnabled(b *testing.B) {
+	p0, p1, p2WithDisabled := newProcessor("0"), newProcessor("1"), newProcessor("2")
+	p2WithDisabled.enabled = false
+
 	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
+		WithProcessor(p0),
+		WithProcessor(p1),
+		WithProcessor(p2WithDisabled),
 	)
 	logger := provider.Logger("BenchmarkLoggerEnabled")
 	ctx, param := context.Background(), log.EnabledParameters{}
