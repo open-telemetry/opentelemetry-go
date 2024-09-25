@@ -1006,7 +1006,7 @@ func TestExemplars(t *testing.T) {
 				}
 			}
 			require.NotNil(t, exemplar)
-			require.Equal(t, exemplar.GetValue(), tc.expectedExemplarValue)
+			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
 			expectedLabels := map[string]string{
 				traceIDExemplarKey: "01000000000000000000000000000000",
 				spanIDExemplarKey:  "0100000000000000",

@@ -518,7 +518,7 @@ func TestQueue(t *testing.T) {
 	t.Run("newQueue", func(t *testing.T) {
 		const size = 1
 		q := newQueue(size)
-		assert.Equal(t, q.len, 0)
+		assert.Equal(t, 0, q.len)
 		assert.Equal(t, size, q.cap, "capacity")
 		assert.Equal(t, size, q.read.Len(), "read ring")
 		assert.Same(t, q.read, q.write, "different rings")

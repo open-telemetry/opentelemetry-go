@@ -597,7 +597,7 @@ func TestBaggageParseValue(t *testing.T) {
 
 			val := b.Members()[0].Value()
 
-			assert.EqualValues(t, val, tc.valueWant)
+			assert.EqualValues(t, tc.valueWant, val)
 			assert.Equal(t, len(val), tc.valueWantSize)
 			assert.True(t, utf8.ValidString(val))
 		})
@@ -1135,12 +1135,12 @@ func TestMemberString(t *testing.T) {
 	// normal key value pair
 	member, _ := NewMemberRaw("key", "value")
 	memberStr := member.String()
-	assert.Equal(t, memberStr, "key=value")
+	assert.Equal(t, "key=value", memberStr)
 
 	// encoded value
 	member, _ = NewMemberRaw("key", "; ")
 	memberStr = member.String()
-	assert.Equal(t, memberStr, "key=%3B%20")
+	assert.Equal(t, "key=%3B%20", memberStr)
 }
 
 var benchBaggage Baggage

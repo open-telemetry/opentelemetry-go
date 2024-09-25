@@ -118,9 +118,9 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	ctx := context.Background()
 
 	l.Emit(ctx, r1)
-	assert.Equal(t, r.Result()[0].Records, []EmittedRecord{
+	assert.Equal(t, []EmittedRecord{
 		{r1, ctx},
-	})
+	}, r.Result()[0].Records)
 
 	nl := r.Logger("test")
 	assert.Empty(t, r.Result()[1].Records)

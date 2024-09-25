@@ -86,8 +86,8 @@ func TestTextMapWrapper_action(t *testing.T) {
 		assert.Len(t, str, 2)
 		assert.Contains(t, str, "key1", "key2")
 
-		assert.Equal(t, carrier.Get("key1"), "val1")
-		assert.Equal(t, carrier.Get("key2"), "val2")
+		assert.Equal(t, "val1", carrier.Get("key1"))
+		assert.Equal(t, "val2", carrier.Get("key2"))
 	}
 
 	testInjectFunc := func(carrier propagation.TextMapCarrier) {
@@ -496,7 +496,7 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			b, _ := NewTracerPair(tracer)
 
 			s := b.StartSpan(tc.name, tc.opt...)
-			assert.Equal(t, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind, tc.expected)
+			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind)
 		})
 	}
 }
