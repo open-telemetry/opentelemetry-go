@@ -5,7 +5,6 @@ package opentracing
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -66,7 +65,7 @@ func TestTextMapWrapper_New(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = newTextMapWrapperForExtract(newTestOnlyTextMapWriter())
-	assert.True(t, errors.Is(err, ot.ErrInvalidCarrier))
+	assert.ErrorIs(t, err, ot.ErrInvalidCarrier)
 
 	_, err = newTextMapWrapperForExtract(newTestTextMapReaderAndWriter())
 	assert.NoError(t, err)
@@ -75,7 +74,7 @@ func TestTextMapWrapper_New(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = newTextMapWrapperForInject(newTestOnlyTextMapReader())
-	assert.True(t, errors.Is(err, ot.ErrInvalidCarrier))
+	assert.ErrorIs(t, err, ot.ErrInvalidCarrier)
 
 	_, err = newTextMapWrapperForInject(newTestTextMapReaderAndWriter())
 	assert.NoError(t, err)

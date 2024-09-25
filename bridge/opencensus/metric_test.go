@@ -131,7 +131,7 @@ func TestMetricProducer(t *testing.T) {
 			if tc.expectErr {
 				require.Error(t, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 			require.Equal(t, len(output), len(tc.expected))
 			for i := range output {
