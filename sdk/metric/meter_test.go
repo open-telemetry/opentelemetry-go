@@ -2430,6 +2430,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 
 func TestMeterProviderDelegation(t *testing.T) {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { require.NoError(t, err) }))
 	for i := 0; i < 5; i++ {
 		m, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
 		require.NoError(t, err)
