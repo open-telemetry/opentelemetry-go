@@ -15,7 +15,6 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -30,6 +29,7 @@ const (
 type providerConfig struct {
 	resource      *resource.Resource
 	processors    []Processor
+	filterers     []Filterer
 	attrCntLim    setting[int]
 	attrValLenLim setting[int]
 }
@@ -64,11 +64,9 @@ type LoggerProvider struct {
 
 	resource                  *resource.Resource
 	processors                []Processor
+	filterers                 []Filterer
 	attributeCountLimit       int
 	attributeValueLengthLimit int
-
-	fltrProcessorsOnce sync.Once
-	fltrProcessors     []x.FilterProcessor
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -92,20 +90,10 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	return &LoggerProvider{
 		resource:                  cfg.resource,
 		processors:                cfg.processors,
+		filterers:                 cfg.filterers,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 	}
-}
-
-func (p *LoggerProvider) filterProcessors() []x.FilterProcessor {
-	p.fltrProcessorsOnce.Do(func() {
-		for _, proc := range p.processors {
-			if f, ok := proc.(x.FilterProcessor); ok {
-				p.fltrProcessors = append(p.fltrProcessors, f)
-			}
-		}
-	})
-	return p.fltrProcessors
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -219,6 +207,19 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
+		return cfg
+	})
+}
+
+// WithFilterer associates Filterer with a LoggerProvider.
+//
+// By default, if this option is not used, the LoggerProvider will process all data.
+//
+// The SDK invokes the filterers sequentially in the same order as they were
+// registered. The SDK will not process data if any of the filterers returns false.
+func WithFilterer(filterer Filterer) LoggerProviderOption {
+	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		cfg.filterers = append(cfg.filterers, filterer)
 		return cfg
 	})
 }
