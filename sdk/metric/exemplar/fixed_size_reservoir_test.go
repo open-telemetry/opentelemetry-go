@@ -14,17 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFixedSize(t *testing.T) {
+func TestNewFixedSizeReservoir(t *testing.T) {
 	t.Run("Int64", ReservoirTest[int64](func(n int) (Reservoir, int) {
-		return FixedSize(n), n
+		return NewFixedSizeReservoir(n), n
 	}))
 
 	t.Run("Float64", ReservoirTest[float64](func(n int) (Reservoir, int) {
-		return FixedSize(n), n
+		return NewFixedSizeReservoir(n), n
 	}))
 }
 
-func TestFixedSizeSamplingCorrectness(t *testing.T) {
+func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
 
@@ -38,13 +38,13 @@ func TestFixedSizeSamplingCorrectness(t *testing.T) {
 	// Sort to test position bias.
 	slices.Sort(data)
 
-	r := FixedSize(sampleSize)
+	r := NewFixedSizeReservoir(sampleSize)
 	for _, value := range data {
 		r.Offer(context.Background(), staticTime, NewValue(value), nil)
 	}
 
 	var sum float64
-	for _, m := range r.(*randRes).store {
+	for _, m := range r.store {
 		sum += m.Value.Float64()
 	}
 	mean := sum / float64(sampleSize)
