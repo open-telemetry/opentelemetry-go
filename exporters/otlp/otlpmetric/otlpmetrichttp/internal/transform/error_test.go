@@ -35,7 +35,7 @@ func TestMultiErr(t *testing.T) {
 	me := &multiErr{datatype: name}
 
 	t.Run("ErrOrNil", func(t *testing.T) {
-		require.Nil(t, me.errOrNil())
+		require.NoError(t, me.errOrNil())
 		me.errs = []error{e0}
 		assert.Error(t, me.errOrNil())
 	})
