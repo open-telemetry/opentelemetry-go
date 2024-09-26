@@ -99,8 +99,8 @@ func TestMapCarrierGet(t *testing.T) {
 		"baz": "qux",
 	}
 
-	assert.Equal(t, carrier.Get("foo"), "bar")
-	assert.Equal(t, carrier.Get("baz"), "qux")
+	assert.Equal(t, "bar", carrier.Get("foo"))
+	assert.Equal(t, "qux", carrier.Get("baz"))
 }
 
 func TestMapCarrierSet(t *testing.T) {
@@ -108,8 +108,8 @@ func TestMapCarrierSet(t *testing.T) {
 	carrier.Set("foo", "bar")
 	carrier.Set("baz", "qux")
 
-	assert.Equal(t, carrier["foo"], "bar")
-	assert.Equal(t, carrier["baz"], "qux")
+	assert.Equal(t, "bar", carrier["foo"])
+	assert.Equal(t, "qux", carrier["baz"])
 }
 
 func TestMapCarrierKeys(t *testing.T) {

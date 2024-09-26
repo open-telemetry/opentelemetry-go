@@ -64,7 +64,7 @@ func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func
 
 func TestNewTracerProvider(t *testing.T) {
 	provider := NewLoggerProvider()
-	assert.Equal(t, provider, LoggerProvider{})
+	assert.Equal(t, LoggerProvider{}, provider)
 	logger := provider.Logger("")
-	assert.Equal(t, logger, Logger{})
+	assert.Equal(t, Logger{}, logger)
 }
