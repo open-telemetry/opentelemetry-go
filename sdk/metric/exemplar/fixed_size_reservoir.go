@@ -17,7 +17,7 @@ import (
 // sample each one. If there are more than k, the Reservoir will then randomly
 // sample all additional measurement with a decreasing probability.
 func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
-	return newRandRes(newStorage(k))
+	return newFixedSizeReservoir(newStorage(k))
 }
 
 var _ Reservoir = &FixedSizeReservoir{}
@@ -45,7 +45,7 @@ type FixedSizeReservoir struct {
 	rng *rand.Rand
 }
 
-func newRandRes(s *storage) *FixedSizeReservoir {
+func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 	r := &FixedSizeReservoir{
 		storage: s,
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
