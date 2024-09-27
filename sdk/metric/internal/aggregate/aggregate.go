@@ -37,7 +37,7 @@ type Builder[N int64 | float64] struct {
 	// create new exemplar reservoirs for a new seen attribute set.
 	//
 	// If this is not provided a default factory function that returns an
-	// DropReservoir reservoir will be used.
+	// dropReservoir reservoir will be used.
 	ReservoirFunc func() FilteredExemplarReservoir[N]
 	// AggregationLimit is the cardinality limit of measurement attributes. Any
 	// measurement for new attributes once the limit has been reached will be
@@ -54,7 +54,7 @@ func (b Builder[N]) resFunc() func() FilteredExemplarReservoir[N] {
 		return b.ReservoirFunc
 	}
 
-	return DropReservoir
+	return dropReservoir
 }
 
 type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
