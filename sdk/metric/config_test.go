@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -191,4 +192,12 @@ func TestWithView(t *testing.T) {
 		),
 	)})
 	assert.Len(t, c.views, 2)
+}
+
+func TestWithExemplarFilter(t *testing.T) {
+	c := newConfig([]Option{WithExemplarFilter(
+		exemplar.AlwaysOffFilter,
+	)})
+	assert.NotNil(t, c.exemplarFilter)
+	assert.False(t, c.exemplarFilter(context.Background()))
 }

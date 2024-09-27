@@ -9,14 +9,16 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res     *resource.Resource
-	readers []Reader
-	views   []View
+	res            *resource.Resource
+	readers        []Reader
+	views          []View
+	exemplarFilter exemplar.Filter
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -137,6 +139,22 @@ func WithReader(r Reader) Option {
 func WithView(views ...View) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.views = append(cfg.views, views...)
+		return cfg
+	})
+}
+
+// WithExemplarFilter configures the exemplar filter.
+//
+// The exemplar filter determines which measurements are be offered to the
+// exemplar reservoir, but the exemplar reservoir makes the final decision of
+// whether to store an exemplar.
+//
+// By default, the [go.opentelemetry.io/otel/sdk/metric/exemplar.SampledFilter]
+// is used. Exemplars can be disabled by providing the
+// [go.opentelemetry.io/otel/sdk/metric/exemplar.AlwaysOffFilter]
+func WithExemplarFilter(filter exemplar.Filter) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.exemplarFilter = filter
 		return cfg
 	})
 }
