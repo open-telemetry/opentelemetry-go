@@ -36,7 +36,7 @@ func TestUname(t *testing.T) {
 
 	uname, err := resource.Uname()
 
-	require.Equal(t, uname, "Mock OS DESKTOP-PC 5.0.0 #1 SMP Thu May 6 12:34:56 UTC 2021 x86_64")
+	require.Equal(t, "Mock OS DESKTOP-PC 5.0.0 #1 SMP Thu May 6 12:34:56 UTC 2021 x86_64", uname)
 	require.NoError(t, err)
 
 	resource.SetDefaultUnameProvider()

@@ -806,7 +806,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMeterProvider().Meter("testInstruments")
 			err := tt.fn(t, m)
-			assert.Equal(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantErr, err)
 		})
 	}
 }

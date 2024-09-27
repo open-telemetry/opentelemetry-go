@@ -420,7 +420,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_TIMEOUT": "15000",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, c.Traces.Timeout, 15*time.Second)
+				assert.Equal(t, 15*time.Second, c.Traces.Timeout)
 			},
 		},
 		{
@@ -430,7 +430,7 @@ func TestConfigs(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT": "27000",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, c.Traces.Timeout, 27*time.Second)
+				assert.Equal(t, 27*time.Second, c.Traces.Timeout)
 			},
 		},
 		{
@@ -443,7 +443,7 @@ func TestConfigs(t *testing.T) {
 				WithTimeout(5 * time.Second),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, c.Traces.Timeout, 5*time.Second)
+				assert.Equal(t, 5*time.Second, c.Traces.Timeout)
 			},
 		},
 

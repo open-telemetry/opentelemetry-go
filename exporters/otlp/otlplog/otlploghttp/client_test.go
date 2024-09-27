@@ -632,7 +632,7 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Regexp(t, "OTel Go OTLP over HTTP/protobuf logs exporter/[01]\\..*", got)
 		require.Contains(t, got, key)
-		assert.Equal(t, got[key], []string{headers[key]})
+		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
 	t.Run("WithTimeout", func(t *testing.T) {
@@ -758,7 +758,7 @@ func TestConfig(t *testing.T) {
 
 		got := coll.Headers()
 		require.Contains(t, got, key)
-		assert.Equal(t, got[key], []string{headers[key]})
+		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
 	t.Run("WithProxy", func(t *testing.T) {
@@ -776,6 +776,6 @@ func TestConfig(t *testing.T) {
 
 		got := coll.Headers()
 		require.Contains(t, got, headerKeySetInProxy)
-		assert.Equal(t, got[headerKeySetInProxy], []string{headerValueSetInProxy})
+		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
 }

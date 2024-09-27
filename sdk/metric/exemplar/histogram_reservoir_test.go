@@ -8,10 +8,10 @@ import "testing"
 func TestHist(t *testing.T) {
 	bounds := []float64{0, 100}
 	t.Run("Int64", ReservoirTest[int64](func(int) (Reservoir, int) {
-		return Histogram(bounds), len(bounds)
+		return NewHistogramReservoir(bounds), len(bounds)
 	}))
 
 	t.Run("Float64", ReservoirTest[float64](func(int) (Reservoir, int) {
-		return Histogram(bounds), len(bounds)
+		return NewHistogramReservoir(bounds), len(bounds)
 	}))
 }
