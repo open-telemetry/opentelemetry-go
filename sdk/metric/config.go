@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -78,8 +79,14 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
-	conf := config{res: resource.Default()}
+	conf := config{
+		res:            resource.Default(),
+		exemplarFilter: exemplar.SampledFilter,
+	}
 	for _, o := range options {
+		conf = o.apply(conf)
+	}
+	for _, o := range optionsFromEnv() {
 		conf = o.apply(conf)
 	}
 	return conf
@@ -150,11 +157,27 @@ func WithView(views ...View) Option {
 // whether to store an exemplar.
 //
 // By default, the [go.opentelemetry.io/otel/sdk/metric/exemplar.SampledFilter]
-// is used. Exemplars can be disabled by providing the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.AlwaysOffFilter]
+// is used. Exemplars can be entirely disabled by providing the
+// [go.opentelemetry.io/otel/sdk/metric/exemplar.AlwaysOffFilter].
 func WithExemplarFilter(filter exemplar.Filter) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.exemplarFilter = filter
 		return cfg
 	})
+}
+
+func optionsFromEnv() []Option {
+	var opts []Option
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
+	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
+
+	switch os.Getenv(filterEnvKey) {
+	case "always_on":
+		opts = append(opts, WithExemplarFilter(exemplar.AlwaysOnFilter))
+	case "always_off":
+		opts = append(opts, WithExemplarFilter(exemplar.AlwaysOffFilter))
+	case "trace_based":
+		opts = append(opts, WithExemplarFilter(exemplar.SampledFilter))
+	}
+	return opts
 }
