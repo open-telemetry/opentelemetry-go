@@ -370,7 +370,7 @@ func testStoredError(t *testing.T, target interface{}) {
 		err := handler.errs[0]
 
 		require.Implements(t, (*error)(nil), target)
-		require.NotNil(t, target.(error))
+		require.Error(t, target.(error))
 
 		defer handler.Reset()
 		if errors.Is(err, target.(error)) {

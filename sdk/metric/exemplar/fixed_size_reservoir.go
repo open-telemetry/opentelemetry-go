@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package exemplar // import "go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
+package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
 
 import (
 	"context"
@@ -12,15 +12,21 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// FixedSize returns a [Reservoir] that samples at most k exemplars. If there
-// are k or less measurements made, the Reservoir will sample each one. If
-// there are more than k, the Reservoir will then randomly sample all
-// additional measurement with a decreasing probability.
-func FixedSize(k int) Reservoir {
-	return newRandRes(newStorage(k))
+// NewFixedSizeReservoir returns a [FixedSizeReservoir] that samples at most
+// k exemplars. If there are k or less measurements made, the Reservoir will
+// sample each one. If there are more than k, the Reservoir will then randomly
+// sample all additional measurement with a decreasing probability.
+func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
+	return newFixedSizeReservoir(newStorage(k))
 }
 
-type randRes struct {
+var _ Reservoir = &FixedSizeReservoir{}
+
+// FixedSizeReservoir is a [Reservoir] that samples at most k exemplars. If
+// there are k or less measurements made, the Reservoir will sample each one.
+// If there are more than k, the Reservoir will then randomly sample all
+// additional measurement with a decreasing probability.
+type FixedSizeReservoir struct {
 	*storage
 
 	// count is the number of measurement seen.
@@ -39,8 +45,8 @@ type randRes struct {
 	rng *rand.Rand
 }
 
-func newRandRes(s *storage) *randRes {
-	r := &randRes{
+func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
+	r := &FixedSizeReservoir{
 		storage: s,
 		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
@@ -50,7 +56,7 @@ func newRandRes(s *storage) *randRes {
 
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
 // open interval (0.0,1.0).
-func (r *randRes) randomFloat64() float64 {
+func (r *FixedSizeReservoir) randomFloat64() float64 {
 	// TODO: This does not return a uniform number. rng.Float64 returns a
 	// uniformly random int in [0,2^53) that is divided by 2^53. Meaning it
 	// returns multiples of 2^-53, and not all floating point numbers between 0
@@ -75,7 +81,18 @@ func (r *randRes) randomFloat64() float64 {
 	return f
 }
 
-func (r *randRes) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
+// Offer accepts the parameters associated with a measurement. The
+// parameters will be stored as an exemplar if the Reservoir decides to
+// sample the measurement.
+//
+// The passed ctx needs to contain any baggage or span that were active
+// when the measurement was made. This information may be used by the
+// Reservoir in making a sampling decision.
+//
+// The time t is the time when the measurement was made. The v and a
+// parameters are the value and dropped (filtered) attributes of the
+// measurement respectively.
+func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
@@ -131,7 +148,7 @@ func (r *randRes) Offer(ctx context.Context, t time.Time, n Value, a []attribute
 }
 
 // reset resets r to the initial state.
-func (r *randRes) reset() {
+func (r *FixedSizeReservoir) reset() {
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
@@ -153,7 +170,7 @@ func (r *randRes) reset() {
 
 // advance updates the count at which the offered measurement will overwrite an
 // existing exemplar.
-func (r *randRes) advance() {
+func (r *FixedSizeReservoir) advance() {
 	// Calculate the next value in the random number series.
 	//
 	// The current value of r.w is based on the max of a distribution of random
@@ -180,7 +197,10 @@ func (r *randRes) advance() {
 	r.next += int64(math.Log(r.randomFloat64())/math.Log(1-r.w)) + 1
 }
 
-func (r *randRes) Collect(dest *[]Exemplar) {
+// Collect returns all the held exemplars.
+//
+// The Reservoir state is preserved after this call.
+func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	r.storage.Collect(dest)
 	// Call reset here even though it will reset r.count and restart the random
 	// number series. This will persist any old exemplars as long as no new

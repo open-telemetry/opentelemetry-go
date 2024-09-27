@@ -232,7 +232,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	assert.Equal(t, 1, tMeter.siCount)
 	assert.Equal(t, 1, tMeter.siUDCount)
 	assert.Equal(t, 1, tMeter.siHist)
-	assert.Equal(t, 1, len(tMeter.callbacks))
+	assert.Len(t, tMeter.callbacks, 1)
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")

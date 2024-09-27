@@ -7,7 +7,6 @@
 package internal
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -16,9 +15,8 @@ import (
 
 func requireErrorString(t *testing.T, expect string, err error) {
 	t.Helper()
-	require.NotNil(t, err)
 	require.Error(t, err)
-	require.True(t, errors.Is(err, PartialSuccess{}))
+	require.ErrorIs(t, err, PartialSuccess{})
 
 	const pfx = "OTLP partial success: "
 

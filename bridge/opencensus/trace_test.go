@@ -23,6 +23,6 @@ func TestNewTraceBridge(t *testing.T) {
 	gotSpans := exporter.GetSpans()
 	require.Len(t, gotSpans, 1)
 	gotSpan := gotSpans[0]
-	assert.Equal(t, gotSpan.InstrumentationScope.Name, scopeName)
+	assert.Equal(t, scopeName, gotSpan.InstrumentationScope.Name)
 	assert.Equal(t, gotSpan.InstrumentationScope.Version, Version())
 }

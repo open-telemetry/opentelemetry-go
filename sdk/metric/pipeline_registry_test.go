@@ -169,8 +169,8 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
 				assert.NoError(t, err)
-				assert.Len(t, meas, 0)
-				assert.Len(t, comps, 0)
+				assert.Empty(t, meas)
+				assert.Empty(t, comps)
 			},
 		},
 		{
@@ -539,20 +539,20 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
 	assert.Error(t, err)
-	assert.Len(t, intAggs, 0)
+	assert.Empty(t, intAggs)
 
 	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(inst)
 	assert.Error(t, err)
-	assert.Len(t, floatAggs, 0)
+	assert.Empty(t, floatAggs)
 
 	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.Error(t, err)
-	assert.Len(t, intAggs, 0)
+	assert.Empty(t, intAggs)
 
 	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3})
 	assert.Error(t, err)
-	assert.Len(t, floatAggs, 0)
+	assert.Empty(t, floatAggs)
 }
 
 type logCounter struct {

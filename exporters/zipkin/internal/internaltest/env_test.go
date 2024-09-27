@@ -30,7 +30,7 @@ func (s *EnvStoreTestSuite) Test_add() {
 	envStore.add(e)
 	envStore.add(e)
 
-	s.Assert().Len(envStore.store, 1)
+	s.Len(envStore.store, 1)
 }
 
 func (s *EnvStoreTestSuite) TestRecord() {
@@ -87,16 +87,16 @@ func (s *EnvStoreTestSuite) TestRecord() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			if tc.env.Exists {
-				s.Assert().NoError(os.Setenv(tc.env.Name, tc.env.Value))
+				s.NoError(os.Setenv(tc.env.Name, tc.env.Value))
 			}
 
 			envStore := newEnvStore()
 			envStore.Record(tc.env.Name)
 
-			s.Assert().Equal(tc.expectedEnvStore, envStore)
+			s.Equal(tc.expectedEnvStore, envStore)
 
 			if tc.env.Exists {
-				s.Assert().NoError(os.Unsetenv(tc.env.Name))
+				s.NoError(os.Unsetenv(tc.env.Name))
 			}
 		})
 	}
@@ -140,10 +140,10 @@ func (s *EnvStoreTestSuite) TestRestore() {
 
 			s.Require().NoError(os.Unsetenv(tc.env.Name))
 
-			s.Assert().NoError(envStore.Restore())
+			s.NoError(envStore.Restore())
 			v, exists := os.LookupEnv(tc.env.Name)
-			s.Assert().Equal(tc.expectedEnvValue, v)
-			s.Assert().Equal(tc.expectedEnvExists, exists)
+			s.Equal(tc.expectedEnvValue, v)
+			s.Equal(tc.expectedEnvExists, exists)
 
 			// Restore
 			s.Require().NoError(backup.Restore())
@@ -186,11 +186,11 @@ func (s *EnvStoreTestSuite) Test_setEnv() {
 
 			s.Require().NoError(os.Setenv(tc.key, "other value"))
 
-			s.Assert().NoError(envStore.setEnv(tc.key, tc.value))
-			s.Assert().Equal(tc.expectedEnvStore, envStore)
+			s.NoError(envStore.setEnv(tc.key, tc.value))
+			s.Equal(tc.expectedEnvStore, envStore)
 			v, exists := os.LookupEnv(tc.key)
-			s.Assert().Equal(tc.expectedEnvValue, v)
-			s.Assert().Equal(tc.expectedEnvExists, exists)
+			s.Equal(tc.expectedEnvValue, v)
+			s.Equal(tc.expectedEnvExists, exists)
 
 			// Restore
 			s.Require().NoError(backup.Restore())

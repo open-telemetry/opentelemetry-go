@@ -136,7 +136,7 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 
 			dest := []Exemplar{{}} // Should be reset to empty.
 			r.Collect(&dest)
-			assert.Len(t, dest, 0, "no exemplars should be collected")
+			assert.Empty(t, dest, "no exemplars should be collected")
 		})
 	}
 }

@@ -111,16 +111,16 @@ func TestLoggerEnabledFnUnset(t *testing.T) {
 func TestRecorderEmitAndReset(t *testing.T) {
 	r := NewRecorder()
 	l := r.Logger("test")
-	assert.Len(t, r.Result()[0].Records, 0)
+	assert.Empty(t, r.Result()[0].Records)
 
 	r1 := log.Record{}
 	r1.SetSeverity(log.SeverityInfo)
 	ctx := context.Background()
 
 	l.Emit(ctx, r1)
-	assert.Equal(t, r.Result()[0].Records, []EmittedRecord{
+	assert.Equal(t, []EmittedRecord{
 		{r1, ctx},
-	})
+	}, r.Result()[0].Records)
 
 	nl := r.Logger("test")
 	assert.Empty(t, r.Result()[1].Records)

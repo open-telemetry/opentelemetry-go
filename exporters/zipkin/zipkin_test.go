@@ -309,7 +309,7 @@ func TestExportSpans(t *testing.T) {
 	exporter, err := New(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := context.Background()
-	require.Len(t, ls.Messages, 0)
+	require.Empty(t, ls.Messages)
 	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
 	require.Len(t, ls.Messages, 1)
 	require.Contains(t, ls.Messages[0], "send a POST request")

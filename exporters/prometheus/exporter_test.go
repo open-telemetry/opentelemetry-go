@@ -867,14 +867,14 @@ func TestIncompatibleMeterName(t *testing.T) {
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, len(errs))
+	assert.Len(t, errs, 1)
 
 	// A second collect shouldn't trigger new errors
 	_, err = file.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(errs))
+	assert.Len(t, errs, 1)
 }
 
 func TestShutdownExporter(t *testing.T) {
@@ -1006,7 +1006,7 @@ func TestExemplars(t *testing.T) {
 				}
 			}
 			require.NotNil(t, exemplar)
-			require.Equal(t, exemplar.GetValue(), tc.expectedExemplarValue)
+			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
 			expectedLabels := map[string]string{
 				traceIDExemplarKey: "01000000000000000000000000000000",
 				spanIDExemplarKey:  "0100000000000000",

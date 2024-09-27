@@ -1,12 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package exemplar
+package aggregate
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 )
 
 func TestDrop(t *testing.T) {
@@ -15,10 +17,10 @@ func TestDrop(t *testing.T) {
 }
 
 func testDropFiltered[N int64 | float64](t *testing.T) {
-	r := Drop[N]()
+	r := DropReservoir[N]()
 
-	var dest []Exemplar
+	var dest []exemplar.Exemplar
 	r.Collect(&dest)
 
-	assert.Len(t, dest, 0, "non-sampled context should not be offered")
+	assert.Empty(t, dest, "non-sampled context should not be offered")
 }

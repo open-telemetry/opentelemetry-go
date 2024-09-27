@@ -412,7 +412,7 @@ func TestPartialSuccess(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 
-	require.Equal(t, 1, len(errs))
+	require.Len(t, errs, 1)
 	require.Contains(t, errs[0].Error(), "partially successful")
 	require.Contains(t, errs[0].Error(), "2 spans rejected")
 }
@@ -443,7 +443,7 @@ func TestOtherHTTPSuccess(t *testing.T) {
 			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 			assert.NoError(t, err)
 
-			assert.Equal(t, 0, len(errs))
+			assert.Empty(t, errs)
 		})
 	}
 }

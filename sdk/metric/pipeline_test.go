@@ -45,7 +45,7 @@ func TestNewPipeline(t *testing.T) {
 	err := pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
-	assert.Len(t, output.ScopeMetrics, 0)
+	assert.Empty(t, output.ScopeMetrics)
 
 	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
 	assert.NotPanics(t, func() {
@@ -226,7 +226,7 @@ func TestLogConflictName(t *testing.T) {
 			)
 		} else {
 			assert.Equalf(
-				t, msg, "",
+				t, "", msg,
 				"warning logged for non-conflicting names: %s, %s",
 				tc.existing, tc.name,
 			)

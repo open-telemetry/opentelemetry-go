@@ -91,7 +91,7 @@ func TestSortedValueEqual(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.value.String(), func(t *testing.T) {
-			assert.Equal(t, true, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
+			assert.True(t, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
 		})
 	}
 }
