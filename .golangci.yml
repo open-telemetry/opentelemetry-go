@@ -308,5 +308,4 @@ linters-settings:
     disable:
       - float-compare
       - go-require
-      - negative-positive
       - require-error
