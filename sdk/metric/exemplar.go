@@ -29,7 +29,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.Filtered
 	case "always_on":
 		filter = exemplar.AlwaysOnFilter
 	case "always_off":
-		return aggregate.DropReservoir
+		filter = exemplar.AlwaysOffFilter
 	case "trace_based":
 		fallthrough
 	default:
