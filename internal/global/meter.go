@@ -487,6 +487,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 	reg, err := m.RegisterCallback(c.function, insts...)
 	if err != nil {
 		GetErrorHandler().Handle(err)
+		return
 	}
 
 	c.unreg = reg.Unregister
