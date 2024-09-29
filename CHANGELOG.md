@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 - Fixed broken delegation for global meter providers. (#5827)
-- Changed the reflect.TypeOf() to use a nil pointer so we aren't allocating on the heap unless we need to.
+  Changed the reflect.TypeOf() to use a nil pointer so we aren't allocating on the heap unless we need to.
 
 ### Added
 
