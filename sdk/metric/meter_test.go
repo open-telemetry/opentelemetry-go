@@ -2432,14 +2432,33 @@ func TestMeterProviderDelegation(t *testing.T) {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { require.NoError(t, err) }))
 	for i := 0; i < 5; i++ {
-		m, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		int64Counter, err := meter.Int64ObservableCounter("observable.int64.counter")
+		require.NoError(t, err)
+		int64UpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		require.NoError(t, err)
+		int64Gauge, err := meter.Int64ObservableGauge("observable.int64.gauge")
+		require.NoError(t, err)
+		floatCounter, err := meter.Float64ObservableCounter("observable.float.counter")
+		require.NoError(t, err)
+		floatUpDownCounter, err := meter.Float64ObservableUpDownCounter("observable.float.up.down.counter")
+		require.NoError(t, err)
+		floatGauge, err := meter.Float64ObservableGauge("observable.float.gauge")
 		require.NoError(t, err)
 		_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
-			o.ObserveInt64(m, int64(10))
+			o.ObserveInt64(int64Counter, int64(10))
+			o.ObserveInt64(int64UpDownCounter, int64(10))
+			o.ObserveInt64(int64Gauge, int64(10))
+
+			o.ObserveFloat64(floatCounter, float64(10))
+			o.ObserveFloat64(floatUpDownCounter, float64(10))
+			o.ObserveFloat64(floatGauge, float64(10))
 			return nil
-		}, m)
+		}, int64Counter, int64UpDownCounter, int64Gauge, floatCounter, floatUpDownCounter, floatGauge)
 		require.NoError(t, err)
 	}
 	provider := NewMeterProvider()
-	otel.SetMeterProvider(provider)
+
+	assert.NotPanics(t, func() {
+		otel.SetMeterProvider(provider)
+	})
 }

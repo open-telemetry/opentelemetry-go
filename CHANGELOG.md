@@ -8,7 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- Fixed broken delegation for global meter providers. Changed the reflect.TypeOf() to use an empty stack allocation so we aren't allocating on the heap unless we need to (#5827)
+- Fixed broken delegation for global meter providers. (#5827)
+- Changed the reflect.TypeOf() to use an empty stack allocation so we aren't allocating on the heap unless we need to.
 
 ### Added
 
