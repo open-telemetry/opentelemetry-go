@@ -155,7 +155,7 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 	cfg := metric.NewInt64CounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(siCounter{}),
+		kind:        reflect.TypeOf((*siCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -178,7 +178,7 @@ func (m *meter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCou
 	cfg := metric.NewInt64UpDownCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(siUpDownCounter{}),
+		kind:        reflect.TypeOf((*siUpDownCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -201,7 +201,7 @@ func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOpti
 	cfg := metric.NewInt64HistogramConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(siHistogram{}),
+		kind:        reflect.TypeOf((*siHistogram)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -224,7 +224,7 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 	cfg := metric.NewInt64GaugeConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(siGauge{}),
+		kind:        reflect.TypeOf((*siGauge)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -247,7 +247,7 @@ func (m *meter) Int64ObservableCounter(name string, options ...metric.Int64Obser
 	cfg := metric.NewInt64ObservableCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(aiCounter{}),
+		kind:        reflect.TypeOf((*aiCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -270,7 +270,7 @@ func (m *meter) Int64ObservableUpDownCounter(name string, options ...metric.Int6
 	cfg := metric.NewInt64ObservableUpDownCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(aiUpDownCounter{}),
+		kind:        reflect.TypeOf((*aiUpDownCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -293,7 +293,7 @@ func (m *meter) Int64ObservableGauge(name string, options ...metric.Int64Observa
 	cfg := metric.NewInt64ObservableGaugeConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(aiGauge{}),
+		kind:        reflect.TypeOf((*aiGauge)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -316,7 +316,7 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 	cfg := metric.NewFloat64CounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(sfCounter{}),
+		kind:        reflect.TypeOf((*sfCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -339,7 +339,7 @@ func (m *meter) Float64UpDownCounter(name string, options ...metric.Float64UpDow
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(sfUpDownCounter{}),
+		kind:        reflect.TypeOf((*sfUpDownCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -362,7 +362,7 @@ func (m *meter) Float64Histogram(name string, options ...metric.Float64Histogram
 	cfg := metric.NewFloat64HistogramConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(sfHistogram{}),
+		kind:        reflect.TypeOf((*sfHistogram)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -385,7 +385,7 @@ func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) 
 	cfg := metric.NewFloat64GaugeConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(sfGauge{}),
+		kind:        reflect.TypeOf((*sfGauge)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -408,7 +408,7 @@ func (m *meter) Float64ObservableCounter(name string, options ...metric.Float64O
 	cfg := metric.NewFloat64ObservableCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(afCounter{}),
+		kind:        reflect.TypeOf((*afCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -431,7 +431,7 @@ func (m *meter) Float64ObservableUpDownCounter(name string, options ...metric.Fl
 	cfg := metric.NewFloat64ObservableUpDownCounterConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(afUpDownCounter{}),
+		kind:        reflect.TypeOf((*afUpDownCounter)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
@@ -454,7 +454,7 @@ func (m *meter) Float64ObservableGauge(name string, options ...metric.Float64Obs
 	cfg := metric.NewFloat64ObservableGaugeConfig(options...)
 	id := instID{
 		name:        name,
-		kind:        reflect.TypeOf(afGauge{}),
+		kind:        reflect.TypeOf((*afGauge)(nil)),
 		description: cfg.Description(),
 		unit:        cfg.Unit(),
 	}
