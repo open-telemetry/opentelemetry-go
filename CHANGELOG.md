@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate and redirect all examples under `go.opentelemetry.io/otel/example` as they are moved to `go.opentelemetry.io/contrib/examples`. (#TODO)
+- Deprecate and redirect all examples under `go.opentelemetry.io/otel/example` as they are moved to `go.opentelemetry.io/contrib/examples`. (#5854)
 
 ### Fixed
 
