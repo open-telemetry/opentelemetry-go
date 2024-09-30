@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `FilterProcessor.Enabled` in `go.opentelemetry.io/otel/sdk/log/internal/x` now accepts `EnabledParameters` instead of `Record`. (#5791)
 - The `Record` type in `go.opentelemetry.io/otel/log` is no longer comparable. (#5847)
 
+### Deprecated
+
+- Deprecate and redirect all examples under `go.opentelemetry.io/otel/example` as they are moved to `go.opentelemetry.io/contrib/examples`. (#TODO)
+
 ### Fixed
 
 - The race condition for multiple `FixedSize` exemplar reservoirs identified in #5814 is resolved. (#5819)
