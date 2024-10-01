@@ -152,7 +152,7 @@ func WithView(views ...View) Option {
 
 // WithExemplarFilter configures the exemplar filter.
 //
-// The exemplar filter determines which measurements are be offered to the
+// The exemplar filter determines which measurements are offered to the
 // exemplar reservoir, but the exemplar reservoir makes the final decision of
 // whether to store an exemplar.
 //
