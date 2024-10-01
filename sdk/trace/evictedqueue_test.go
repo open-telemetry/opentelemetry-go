@@ -37,7 +37,7 @@ func TestCopy(t *testing.T) {
 func TestDropCount(t *testing.T) {
 	q := newEvictedQueueEvent(3)
 	var called bool
-	q.logDropped = func() { called = true }
+	q.logDroppedFunc = func() { called = true }
 
 	q.add(Event{Name: "value1"})
 	assert.False(t, called, `"value1" logged as dropped`)
