@@ -10,7 +10,6 @@ import (
 	_ "github.com/client9/misspell/cmd/misspell"
 	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/itchyny/gojq"
 	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
 	_ "go.opentelemetry.io/build-tools/crosslink"
