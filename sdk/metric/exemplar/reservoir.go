@@ -30,3 +30,6 @@ type Reservoir interface {
 	// The Reservoir state is preserved after this call.
 	Collect(dest *[]Exemplar)
 }
+
+// ReservoirProvider creates new [Reservoir]s.
+type ReservoirProvider func() Reservoir
