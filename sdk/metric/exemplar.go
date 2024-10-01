@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
@@ -23,7 +24,7 @@ type ExemplarReservoirProviderSelector func(Aggregation) exemplar.ReservoirProvi
 // Note: This will only return non-nil values when the experimental exemplar
 // feature is enabled and the OTEL_METRICS_EXEMPLAR_FILTER environment variable
 // is not set to always_off.
-func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.FilteredExemplarReservoir[N] {
+func reservoirFunc[N int64 | float64](agg Aggregation) func(attribute.Set) aggregate.FilteredExemplarReservoir[N] {
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
 	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
 
@@ -41,8 +42,8 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.Filtered
 	}
 
 	provider := DefaultExemplarReservoirProviderSelector(agg)
-	return func() aggregate.FilteredExemplarReservoir[N] {
-		return aggregate.NewFilteredExemplarReservoir[N](filter, provider())
+	return func(attrs attribute.Set) aggregate.FilteredExemplarReservoir[N] {
+		return aggregate.NewFilteredExemplarReservoir[N](filter, provider(attrs))
 	}
 }
 

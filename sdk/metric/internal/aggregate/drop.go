@@ -11,7 +11,9 @@ import (
 )
 
 // DropReservoir returns a [FilteredReservoir] that drops all measurements it is offered.
-func DropReservoir[N int64 | float64]() FilteredExemplarReservoir[N] { return &dropRes[N]{} }
+func DropReservoir[N int64 | float64](attribute.Set) FilteredExemplarReservoir[N] {
+	return &dropRes[N]{}
+}
 
 type dropRes[N int64 | float64] struct{}
 
