@@ -10,7 +10,8 @@ module-sets:
       - go.opentelemetry.io/otel/bridge/opencensus/test
       - go.opentelemetry.io/otel/bridge/opentracing
       - go.opentelemetry.io/otel/bridge/opentracing/test
-      - go.opentelemetry.io/otel/example/dice
+      - go.opentelemetry.io/otel/example/dice/instrumented
+      - go.opentelemetry.io/otel/example/dice/uninstrumented
       - go.opentelemetry.io/otel/example/namedtracer
       - go.opentelemetry.io/otel/example/opencensus
       - go.opentelemetry.io/otel/example/otel-collector
