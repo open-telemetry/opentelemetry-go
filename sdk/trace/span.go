@@ -281,7 +281,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	// Do not set a capacity when creating this map. Benchmark testing has
 	// showed this to only add unused memory allocations in general use.
 	exists := make(map[attribute.Key]int, len(s.attributes))
-	s.dedupeAttrsFromRecord(&exists)
+	s.dedupeAttrsFromRecord(exists)
 
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
@@ -584,23 +584,23 @@ func (s *recordingSpan) Attributes() []attribute.KeyValue {
 func (s *recordingSpan) dedupeAttrs() {
 	// Do not set a capacity when creating this map. Benchmark testing has
 	// showed this to only add unused memory allocations in general use.
-	exists := make(map[attribute.Key]int)
-	s.dedupeAttrsFromRecord(&exists)
+	exists := make(map[attribute.Key]int, len(s.attributes))
+	s.dedupeAttrsFromRecord(exists)
 }
 
 // dedupeAttrsFromRecord deduplicates the attributes of s to fit capacity
 // using record as the record of unique attribute keys to their index.
 //
 // This method assumes s.mu.Lock is held by the caller.
-func (s *recordingSpan) dedupeAttrsFromRecord(record *map[attribute.Key]int) {
+func (s *recordingSpan) dedupeAttrsFromRecord(record map[attribute.Key]int) {
 	// Use the fact that slices share the same backing array.
 	unique := s.attributes[:0]
 	for _, a := range s.attributes {
-		if idx, ok := (*record)[a.Key]; ok {
+		if idx, ok := record[a.Key]; ok {
 			unique[idx] = a
 		} else {
 			unique = append(unique, a)
-			(*record)[a.Key] = len(unique) - 1
+			record[a.Key] = len(unique) - 1
 		}
 	}
 	// s.attributes have element types of attribute.KeyValue. These types are
