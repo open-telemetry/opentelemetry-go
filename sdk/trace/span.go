@@ -175,6 +175,8 @@ func (s *recordingSpan) IsRecording() bool {
 	if s == nil {
 		return false
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	return !s.hasEnded
 }
