@@ -233,7 +233,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 
 	// Otherwise, add without deduplication. When attributes are read they
 	// will be deduplicated, optimizing the operation.
-	s.attributes = slices.Grow(s.attributes, len(s.attributes)+len(attributes))
+	s.attributes = slices.Grow(s.attributes, len(attributes))
 	for _, a := range attributes {
 		if !a.Valid() {
 			// Drop all invalid attributes.
@@ -280,13 +280,17 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 	// Do not set a capacity when creating this map. Benchmark testing has
 	// showed this to only add unused memory allocations in general use.
-	exists := make(map[attribute.Key]int)
+	exists := make(map[attribute.Key]int, len(s.attributes))
 	s.dedupeAttrsFromRecord(&exists)
 
 	// Now that s.attributes is deduplicated, adding unique attributes up to
 	// the capacity of s will not over allocate s.attributes.
-	sum := len(attrs) + len(s.attributes)
-	s.attributes = slices.Grow(s.attributes, min(sum, limit))
+
+	// max size = limit
+	maxCap := min(len(attrs)+len(s.attributes), limit)
+	if cap(s.attributes) < maxCap {
+		s.attributes = slices.Grow(s.attributes, maxCap-cap(s.attributes))
+	}
 	for _, a := range attrs {
 		if !a.Valid() {
 			// Drop all invalid attributes.
