@@ -300,6 +300,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
+			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
 		}
