@@ -210,7 +210,7 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 // attributes the span is configured to have, the last added attributes will
 // be dropped.
 func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
-	if !s.IsRecording() {
+	if !s.IsRecording() || len(attributes) == 0 {
 		return
 	}
 
