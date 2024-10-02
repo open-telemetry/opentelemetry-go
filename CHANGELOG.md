@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `Logger.Enabled` in `go.opentelemetry.io/otel/log` now accepts a newly introduced `EnabledParameters` type instead of `Record`. (#5791)
 - `FilterProcessor.Enabled` in `go.opentelemetry.io/otel/sdk/log/internal/x` now accepts `EnabledParameters` instead of `Record`. (#5791)
 - The `Record` type in `go.opentelemetry.io/otel/log` is no longer comparable. (#5847)
-- Reduce `newEvictedQueueLink` and `newEvictedQueueEvent` memory allocations. (#5858)
+- Reduce memory allocations for  the `Event` and `Link` lists in `Span`. (#5858)
 
 ### Deprecated
 
