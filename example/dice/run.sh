@@ -21,7 +21,6 @@ case "$1" in
     cd uninstrumented || exit
     go mod tidy
     go mod download
-    export OTEL_RESOURCE_ATTRIBUTES="service.name=dice,service.version=0.1.0"
     go run .
     ;;
   *)
