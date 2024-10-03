@@ -420,23 +420,31 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.executionTracerTaskEnd()
 	}
 
+	sps := s.tracer.provider.getSpanProcessors()
+	var oesps []x.OnEndingSpanProcessor
+	for _, sp := range sps {
+		if oesp, ok := sp.sp.(x.OnEndingSpanProcessor); ok {
+			oesps = append(oesps, oesp)
+		}
+	}
+
 	s.mu.Lock()
 	if config.Timestamp().IsZero() {
 		s.endTime = et
 	} else {
 		s.endTime = config.Timestamp()
 	}
+	s.hasEnded = len(oesps) == 0
 	s.mu.Unlock()
 
-	sps := s.tracer.provider.getSpanProcessors()
-	for _, sp := range sps {
-		if oesp, ok := sp.sp.(x.OnEndingSpanProcessor); ok {
-			oesp.OnEnding(s)
+	if len(oesps) > 0 {
+		for _, sp := range oesps {
+			sp.OnEnding(s)
 		}
+		s.mu.Lock()
+		s.hasEnded = true
+		s.mu.Unlock()
 	}
-	s.mu.Lock()
-	s.hasEnded = true
-	s.mu.Unlock()
 
 	if len(sps) == 0 {
 		return
