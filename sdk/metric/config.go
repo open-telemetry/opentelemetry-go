@@ -177,7 +177,7 @@ func optionsFromEnv() []Option {
 	case "always_off":
 		opts = append(opts, WithExemplarFilter(exemplar.AlwaysOffFilter))
 	case "trace_based":
-		opts = append(opts, WithExemplarFilter(exemplar.SampledFilter))
+		opts = append(opts, WithExemplarFilter(exemplar.TraceBasedFilter))
 	}
 	return opts
 }
