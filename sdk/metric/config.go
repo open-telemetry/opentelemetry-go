@@ -156,9 +156,9 @@ func WithView(views ...View) Option {
 // exemplar reservoir, but the exemplar reservoir makes the final decision of
 // whether to store an exemplar.
 //
-// By default, the [go.opentelemetry.io/otel/sdk/metric/exemplar.SampledFilter]
+// By default, the [exemplar.SampledFilter]
 // is used. Exemplars can be entirely disabled by providing the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.AlwaysOffFilter].
+// [exemplar.AlwaysOffFilter].
 func WithExemplarFilter(filter exemplar.Filter) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.exemplarFilter = filter
