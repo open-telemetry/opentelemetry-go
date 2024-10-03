@@ -81,7 +81,7 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 func newConfig(options []Option) config {
 	conf := config{
 		res:            resource.Default(),
-		exemplarFilter: exemplar.SampledFilter,
+		exemplarFilter: exemplar.TraceBasedFilter,
 	}
 	for _, o := range options {
 		conf = o.apply(conf)
