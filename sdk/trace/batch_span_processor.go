@@ -316,7 +316,10 @@ func (bsp *batchSpanProcessor) processQueue() {
 			bsp.batchMutex.Unlock()
 			if shouldExport {
 				if !bsp.timer.Stop() {
-					<-bsp.timer.C
+					select {
+					case <-bsp.timer.C:
+					default:
+					}
 				}
 				if err := bsp.exportSpans(ctx); err != nil {
 					otel.Handle(err)
