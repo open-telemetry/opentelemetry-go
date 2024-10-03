@@ -635,7 +635,6 @@ should be canceled.
 
 ### Maintainers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [David Ashpole](https://github.com/dashpole), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
@@ -644,11 +643,12 @@ should be canceled.
 
 ### Emeritus
 
-- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
-- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
 - [Evan Torrie](https://github.com/evantorrie), Yahoo
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 
 ### Become an Approver or a Maintainer
 
