@@ -10,6 +10,8 @@ on:
 jobs:
   check-links:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -25,6 +27,8 @@ jobs:
     - name: Link Checker
       id: lychee
       uses: lycheeverse/lychee-action@v1.10.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           args: --max-concurrency 1 --cache --max-cache-age 1d .
 
