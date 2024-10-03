@@ -27,7 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The race condition for multiple `FixedSize` exemplar reservoirs identified in #5814 is resolved. (#5819)
 - Fix log records duplication in case of heterogeneous resource attributes by correctly mapping each log record to it's resource and scope. (#5803)
-- Fix timer channel drain to avoid hanging on go 1.23 with asynctimerchan=0 (#5868)
+- Fix timer channel drain to avoid hanging on Go 1.23. (#5868)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

@@ -316,6 +316,7 @@ func (bsp *batchSpanProcessor) processQueue() {
 			bsp.batchMutex.Unlock()
 			if shouldExport {
 				if !bsp.timer.Stop() {
+					// Handle both GODEBUG=asynctimerchan=[0|1] properly
 					select {
 					case <-bsp.timer.C:
 					default:
