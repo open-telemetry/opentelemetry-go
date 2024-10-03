@@ -12,16 +12,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestSampledFilter(t *testing.T) {
-	t.Run("Int64", testSampledFiltered[int64])
-	t.Run("Float64", testSampledFiltered[float64])
+func TestTraceBasedFilter(t *testing.T) {
+	t.Run("Int64", testTraceBasedFilter[int64])
+	t.Run("Float64", testTraceBasedFilter[float64])
 }
 
-func testSampledFiltered[N int64 | float64](t *testing.T) {
+func testTraceBasedFilter[N int64 | float64](t *testing.T) {
 	ctx := context.Background()
 
-	assert.False(t, SampledFilter(ctx), "non-sampled context should not be offered")
-	assert.True(t, SampledFilter(sample(ctx)), "sampled context should be offered")
+	assert.False(t, TraceBasedFilter(ctx), "non-sampled context should not be offered")
+	assert.True(t, TraceBasedFilter(sample(ctx)), "sampled context should be offered")
 }
 
 func sample(parent context.Context) context.Context {
