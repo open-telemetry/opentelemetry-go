@@ -33,7 +33,7 @@ func reservoirFunc[N int64 | float64](agg Aggregation) func() aggregate.Filtered
 	case "trace_based":
 		fallthrough
 	default:
-		filter = exemplar.SampledFilter
+		filter = exemplar.TraceBasedFilter
 	}
 
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/metrics/sdk.md#exemplar-defaults
