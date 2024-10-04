@@ -698,11 +698,17 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) AddLink(link trace.Link) {
-	if !s.IsRecording() {
+	if s == nil {
 		return
 	}
 	if !link.SpanContext.IsValid() && len(link.Attributes) == 0 &&
 		link.SpanContext.TraceState().Len() == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.isRecording() {
 		return
 	}
 
@@ -719,9 +725,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		l.Attributes = l.Attributes[:limit]
 	}
 
-	s.mu.Lock()
 	s.links.add(l)
-	s.mu.Unlock()
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
