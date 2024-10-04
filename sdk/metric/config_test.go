@@ -248,6 +248,12 @@ func TestWithExemplarFilterOff(t *testing.T) {
 			expectFilterNotSampled: true,
 		},
 		{
+			desc:                   "always_on case insensitiveenv",
+			env:                    "ALWAYS_ON",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+		{
 			desc:                   "trace_based env",
 			env:                    "trace_based",
 			expectFilterSampled:    true,

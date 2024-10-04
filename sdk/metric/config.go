@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -171,7 +172,7 @@ func meterProviderOptionsFromEnv() []Option {
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
 	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
 
-	switch os.Getenv(filterEnvKey) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(filterEnvKey))) {
 	case "always_on":
 		opts = append(opts, WithExemplarFilter(exemplar.AlwaysOnFilter))
 	case "always_off":
