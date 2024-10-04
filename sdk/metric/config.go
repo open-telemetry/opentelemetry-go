@@ -83,10 +83,10 @@ func newConfig(options []Option) config {
 		res:            resource.Default(),
 		exemplarFilter: exemplar.TraceBasedFilter,
 	}
-	for _, o := range options {
+	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
 	}
-	for _, o := range optionsFromEnv() {
+	for _, o := range options {
 		conf = o.apply(conf)
 	}
 	return conf
@@ -166,7 +166,7 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 	})
 }
 
-func optionsFromEnv() []Option {
+func meterProviderOptionsFromEnv() []Option {
 	var opts []Option
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/d4b241f451674e8f611bb589477680341006ad2b/specification/configuration/sdk-environment-variables.md#exemplar
 	const filterEnvKey = "OTEL_METRICS_EXEMPLAR_FILTER"
