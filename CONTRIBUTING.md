@@ -631,8 +631,6 @@ should be canceled.
 
 ### Approvers
 
-- [Chester Cheung](https://github.com/hanyuancheung), Tencent
-
 ### Maintainers
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
@@ -645,6 +643,7 @@ should be canceled.
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Evan Torrie](https://github.com/evantorrie), Yahoo
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Josh MacDonald](https://github.com/jmacd), LightStep
