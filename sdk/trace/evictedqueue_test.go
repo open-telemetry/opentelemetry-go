@@ -7,7 +7,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 func init() {
@@ -36,18 +40,25 @@ func TestCopy(t *testing.T) {
 
 func TestDropCount(t *testing.T) {
 	q := newEvictedQueueEvent(3)
-	var called bool
-	q.logDroppedFunc = func() { called = true }
+
+	var called int
+	t.Cleanup(func(l logr.Logger) func() {
+		return func() { global.SetLogger(l) }
+	}(global.GetLogger()))
+	global.SetLogger(funcr.New(func(prefix, args string) {
+		called++
+	}, funcr.Options{Verbosity: 1}))
 
 	q.add(Event{Name: "value1"})
-	assert.False(t, called, `"value1" logged as dropped`)
+	assert.Equal(t, 0, called, `"value1" logged as dropped`)
 	q.add(Event{Name: "value2"})
-	assert.False(t, called, `"value2" logged as dropped`)
+	assert.Equal(t, 0, called, `"value2" logged as dropped`)
 	q.add(Event{Name: "value3"})
-	assert.False(t, called, `"value3" logged as dropped`)
+	assert.Equal(t, 0, called, `"value3" logged as dropped`)
 	q.add(Event{Name: "value1"})
-	assert.True(t, called, `"value2" not logged as dropped`)
+	assert.Equal(t, 1, called, `"value2" not logged as dropped`)
 	q.add(Event{Name: "value4"})
+	assert.Equal(t, 1, called, `"value4" logged as dropped`)
 	if wantLen, gotLen := 3, len(q.queue); wantLen != gotLen {
 		t.Errorf("got queue length %d want %d", gotLen, wantLen)
 	}

@@ -15,23 +15,23 @@ type evictedQueue[T any] struct {
 	queue          []T
 	capacity       int
 	droppedCount   int
-	logDroppedFunc func()
+	logDroppedMsg  string
 	logDroppedOnce sync.Once
 }
 
 func newEvictedQueueEvent(capacity int) evictedQueue[Event] {
 	// Do not pre-allocate queue, do this lazily.
 	return evictedQueue[Event]{
-		capacity:       capacity,
-		logDroppedFunc: func() { global.Warn("limit reached: dropping trace trace.Event") },
+		capacity:      capacity,
+		logDroppedMsg: "limit reached: dropping trace trace.Event",
 	}
 }
 
 func newEvictedQueueLink(capacity int) evictedQueue[Link] {
 	// Do not pre-allocate queue, do this lazily.
 	return evictedQueue[Link]{
-		capacity:       capacity,
-		logDroppedFunc: func() { global.Warn("limit reached: dropping trace trace.Link") },
+		capacity:      capacity,
+		logDroppedMsg: "limit reached: dropping trace trace.Link",
 	}
 }
 
@@ -55,7 +55,7 @@ func (eq *evictedQueue[T]) add(value T) {
 }
 
 func (eq *evictedQueue[T]) logDropped() {
-	eq.logDroppedOnce.Do(eq.logDroppedFunc)
+	eq.logDroppedOnce.Do(func() { global.Warn(eq.logDroppedMsg) })
 }
 
 // copy returns a copy of the evictedQueue.
