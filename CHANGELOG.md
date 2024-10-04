@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Modify the `example/dice` structure to `instrumented` and `uninstrumented` to showcase code example of both with and withou OTel. (#5812)
-- Add a bash script to help ease the user on running the code example. (#5812)
+- Add a bash script to help ease the user on running the code example. (#5873)
 
 ### Changed
 
