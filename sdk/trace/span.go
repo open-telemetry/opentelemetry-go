@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace/internal/x"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -120,6 +121,9 @@ type recordingSpan struct {
 	// value of time.Time until the span is ended.
 	endTime time.Time
 
+	// hasEnded records whether the span is fully ended.
+	hasEnded bool
+
 	// status is the status of this span.
 	status Status
 
@@ -174,7 +178,7 @@ func (s *recordingSpan) IsRecording() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.endTime.IsZero()
+	return !s.hasEnded
 }
 
 // SetStatus sets the status of the Span in the form of a code and a
@@ -416,16 +420,32 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.executionTracerTaskEnd()
 	}
 
+	sps := s.tracer.provider.getSpanProcessors()
+	var oesps []x.OnEndingSpanProcessor
+	for _, sp := range sps {
+		if oesp, ok := sp.sp.(x.OnEndingSpanProcessor); ok {
+			oesps = append(oesps, oesp)
+		}
+	}
+
 	s.mu.Lock()
-	// Setting endTime to non-zero marks the span as ended and not recording.
 	if config.Timestamp().IsZero() {
 		s.endTime = et
 	} else {
 		s.endTime = config.Timestamp()
 	}
+	s.hasEnded = len(oesps) == 0
 	s.mu.Unlock()
 
-	sps := s.tracer.provider.getSpanProcessors()
+	if len(oesps) > 0 {
+		for _, sp := range oesps {
+			sp.OnEnding(s)
+		}
+		s.mu.Lock()
+		s.hasEnded = true
+		s.mu.Unlock()
+	}
+
 	if len(sps) == 0 {
 		return
 	}
