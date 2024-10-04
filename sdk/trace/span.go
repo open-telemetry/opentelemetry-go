@@ -174,6 +174,16 @@ func (s *recordingSpan) IsRecording() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	return s.isRecording()
+}
+
+// isRecording returns if this span is being recorded. If this span has ended
+// this will return false.
+// This is done without acquiring a lock.
+func (s *recordingSpan) isRecording() bool {
+	if s == nil {
+		return false
+	}
 	return s.endTime.IsZero()
 }
 
@@ -182,11 +192,15 @@ func (s *recordingSpan) IsRecording() bool {
 // included in the set status when the code is for an error. If this span is
 // not being recorded than this method does nothing.
 func (s *recordingSpan) SetStatus(code codes.Code, description string) {
-	if !s.IsRecording() {
+	if s == nil {
 		return
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if !s.isRecording() {
+		return
+	}
 	if s.status.Code > code {
 		return
 	}
@@ -210,12 +224,15 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 // attributes the span is configured to have, the last added attributes will
 // be dropped.
 func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
-	if !s.IsRecording() || len(attributes) == 0 {
+	if s == nil {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if !s.isRecording() || len(attributes) == 0 {
+		return
+	}
 
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
@@ -523,12 +540,15 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 // SetName sets the name of this span. If this span is not being recorded than
 // this method does nothing.
 func (s *recordingSpan) SetName(name string) {
-	if !s.IsRecording() {
+	if s == nil {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if !s.isRecording() {
+		return
+	}
 	s.name = name
 }
 
@@ -760,12 +780,16 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 }
 
 func (s *recordingSpan) addChild() {
-	if !s.IsRecording() {
+	if s == nil {
 		return
 	}
+
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.isRecording() {
+		return
+	}
 	s.childSpanCount++
-	s.mu.Unlock()
 }
 
 func (*recordingSpan) private() {}
