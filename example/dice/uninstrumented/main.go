@@ -34,6 +34,7 @@ func run() (err error) {
 	}
 	srvErr := make(chan error, 1)
 	go func() {
+		log.Println("Running HTTP server...")
 		srvErr <- srv.ListenAndServe()
 	}()
 
