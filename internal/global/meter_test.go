@@ -5,6 +5,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -429,4 +430,23 @@ func TestMeterIdentity(t *testing.T) {
 			}
 		}
 	}
+}
+
+type failingRegisterCallbackMeter struct {
+	noop.Meter
+}
+
+func (m *failingRegisterCallbackMeter) RegisterCallback(metric.Callback, ...metric.Observable) (metric.Registration, error) {
+	return nil, errors.New("an error occurred")
+}
+
+func TestRegistrationDelegateFailingCallback(t *testing.T) {
+	r := &registration{
+		unreg: func() error { return nil },
+	}
+	m := &failingRegisterCallbackMeter{}
+
+	assert.NotPanics(t, func() {
+		r.setDelegate(m)
+	})
 }
