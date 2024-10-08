@@ -531,7 +531,7 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 	s.addEvent(name, o...)
 }
 
-// addEvent  adds an event with the provided name and options.
+// addEvent adds an event with the provided name and options.
 //
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
