@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `go.opentelemetry.io/otel/sdk/metric/exemplar` package which includes `Exemplar`, `Filter`, `TraceBasedFilter`, `AlwaysOnFilter`, `HistogramReservoir`, `FixedSizeReservoir`, `Reservoir`, `Value` and `ValueType` types. These will be used for configuring the exemplar reservoir for the metrics sdk. (#5747, #5862)
+- Add `WithExportBufferSize` option to log batch processor.(#5877)
 
 ### Changed
 
@@ -76,7 +77,6 @@ The next release will require at least [Go 1.22].
   It replaces the existing `Enabled` method that is removed from the `Processor` interface itself.
   It does not fall within the scope of the OpenTelemetry Go versioning and stability [policy](./VERSIONING.md) and it may be changed in backwards incompatible ways or removed in feature releases. (#5692)
 - Support [Go 1.23]. (#5720)
-- Add `WithExportBufferSize` option to log batch processor.(#5877)
 
 ### Changed
 
