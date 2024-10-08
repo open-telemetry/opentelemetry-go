@@ -76,6 +76,7 @@ The next release will require at least [Go 1.22].
   It replaces the existing `Enabled` method that is removed from the `Processor` interface itself.
   It does not fall within the scope of the OpenTelemetry Go versioning and stability [policy](./VERSIONING.md) and it may be changed in backwards incompatible ways or removed in feature releases. (#5692)
 - Support [Go 1.23]. (#5720)
+- Add `WithExportBufferSize` option to log batch processor.(#5877)
 
 ### Changed
 

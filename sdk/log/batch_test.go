@@ -97,14 +97,13 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     strconv.Itoa(100),
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(1),
-				envarExpBufferSize:   strconv.Itoa(2),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
 				expMaxBatchSize: newSetting(1),
-				expBufferSize:   newSetting(2),
+				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -131,7 +130,6 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     "-1",
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
-				envarExpBufferSize:   "-1",
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
@@ -148,7 +146,6 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     strconv.Itoa(100),
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(10),
-				envarExpBufferSize:   strconv.Itoa(4),
 			},
 			options: []BatchProcessorOption{
 				// These override the environment variables.

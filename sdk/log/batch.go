@@ -25,7 +25,6 @@ const (
 	envarExpInterval     = "OTEL_BLRP_SCHEDULE_DELAY"
 	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
-	envarExpBufferSize   = "OTEL_BLRP_EXPORT_BUFFER_SIZE"
 )
 
 // Compile-time check BatchProcessor implements Processor.
@@ -385,8 +384,6 @@ func newBatchConfig(options []BatchProcessorOption) batchConfig {
 		fallback[int](dfltExpMaxBatchSize),
 	)
 	c.expBufferSize = c.expBufferSize.Resolve(
-		clearLessThanOne[int](),
-		getenv[int](envarExpBufferSize),
 		clearLessThanOne[int](),
 		fallback[int](dfltExpBufferSize),
 	)
