@@ -29,12 +29,22 @@ type IDGenerator interface {
 	// must never be done outside of a new major release.
 }
 
+// IDGeneratorRandom allows custom generators for TraceID and SpanID that comply
+// with W3C Trace Context Level 2 randomness requirements.
+type W3CTraceContextIDGenerator interface {
+	// W3CTraceContextLevel2Random, when implemented by a
+	// generator, indicates that this generator meets the
+	// requirements
+	W3CTraceContextLevel2Random()
+}
+
 type randomIDGenerator struct {
 	sync.Mutex
 	randSource *rand.Rand
 }
 
 var _ IDGenerator = &randomIDGenerator{}
+var _ W3CTraceContextIDGenerator = &randomIDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
@@ -71,6 +81,10 @@ func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.
 	}
 	return tid, sid
 }
+
+// W3CTraceContextLevel2Random declares meeting the W3C trace context
+// level 2 randomness requirement.
+func (gen *randomIDGenerator) W3CTraceContextLevel2Random() {}
 
 func defaultIDGenerator() IDGenerator {
 	gen := &randomIDGenerator{}
