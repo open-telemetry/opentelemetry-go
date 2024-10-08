@@ -70,6 +70,7 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -79,12 +80,14 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportInterval(time.Microsecond),
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
+				WithExportBufferSize(3),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
+				expBufferSize:   newSetting(3),
 			},
 		},
 		{
@@ -94,12 +97,14 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     strconv.Itoa(100),
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(1),
+				envarExpBufferSize:   strconv.Itoa(2),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(10),
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
 				expMaxBatchSize: newSetting(1),
+				expBufferSize:   newSetting(2),
 			},
 		},
 		{
@@ -109,12 +114,14 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportInterval(-1 * time.Microsecond),
 				WithExportTimeout(-1 * time.Hour),
 				WithExportMaxBatchSize(-2),
+				WithExportBufferSize(-2),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -124,12 +131,14 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     "-1",
 				envarExpTimeout:      "-1",
 				envarExpMaxBatchSize: "-1",
+				envarExpBufferSize:   "-1",
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(dfltMaxQSize),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
+				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -139,6 +148,7 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpInterval:     strconv.Itoa(100),
 				envarExpTimeout:      strconv.Itoa(1000),
 				envarExpMaxBatchSize: strconv.Itoa(10),
+				envarExpBufferSize:   strconv.Itoa(4),
 			},
 			options: []BatchProcessorOption{
 				// These override the environment variables.
@@ -146,12 +156,14 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportInterval(time.Microsecond),
 				WithExportTimeout(time.Hour),
 				WithExportMaxBatchSize(2),
+				WithExportBufferSize(2),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(3),
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
+				expBufferSize:   newSetting(2),
 			},
 		},
 		{
@@ -159,12 +171,14 @@ func TestNewBatchConfig(t *testing.T) {
 			options: []BatchProcessorOption{
 				WithMaxQueueSize(1),
 				WithExportMaxBatchSize(10),
+				WithExportBufferSize(3),
 			},
 			want: batchConfig{
 				maxQSize:        newSetting(1),
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(1),
+				expBufferSize:   newSetting(3),
 			},
 		},
 	}

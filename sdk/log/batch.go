@@ -19,11 +19,13 @@ const (
 	dfltExpInterval     = time.Second
 	dfltExpTimeout      = 30 * time.Second
 	dfltExpMaxBatchSize = 512
+	dfltExpBufferSize   = 1
 
 	envarMaxQSize        = "OTEL_BLRP_MAX_QUEUE_SIZE"
 	envarExpInterval     = "OTEL_BLRP_SCHEDULE_DELAY"
 	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
+	envarExpBufferSize   = "OTEL_BLRP_EXPORT_BUFFER_SIZE"
 )
 
 // Compile-time check BatchProcessor implements Processor.
@@ -119,8 +121,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
 	b := &BatchProcessor{
-		// TODO: explore making the size of this configurable.
-		exporter: newBufferExporter(exporter, 1),
+		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
 
 		q:           newQueue(cfg.maxQSize.Value),
 		batchSize:   cfg.expMaxBatchSize.Value,
@@ -349,6 +350,7 @@ type batchConfig struct {
 	expInterval     setting[time.Duration]
 	expTimeout      setting[time.Duration]
 	expMaxBatchSize setting[int]
+	expBufferSize   setting[int]
 }
 
 func newBatchConfig(options []BatchProcessorOption) batchConfig {
@@ -381,6 +383,12 @@ func newBatchConfig(options []BatchProcessorOption) batchConfig {
 		clearLessThanOne[int](),
 		clampMax[int](c.maxQSize.Value),
 		fallback[int](dfltExpMaxBatchSize),
+	)
+	c.expBufferSize = c.expBufferSize.Resolve(
+		clearLessThanOne[int](),
+		getenv[int](envarExpBufferSize),
+		clearLessThanOne[int](),
+		fallback[int](dfltExpBufferSize),
 	)
 
 	return c
@@ -455,6 +463,22 @@ func WithExportTimeout(d time.Duration) BatchProcessorOption {
 func WithExportMaxBatchSize(size int) BatchProcessorOption {
 	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expMaxBatchSize = newSetting(size)
+		return cfg
+	})
+}
+
+// WithExportBufferSize sets the buffer size of batch in every export.
+// Batches will be temporarily kept in a memory buffer until it exported successfully.
+//
+// If the OTEL_BLRP_EXPORT_BUFFER_SIZE environment variable is set,
+// and this option is not passed, that variable value will be used.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, 1 will be used.
+// The default value is also used when the provided value is less than one.
+func WithExportBufferSize(size int) BatchProcessorOption {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
+		cfg.expBufferSize = newSetting(size)
 		return cfg
 	})
 }
