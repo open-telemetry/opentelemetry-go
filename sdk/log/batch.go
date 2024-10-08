@@ -464,14 +464,10 @@ func WithExportMaxBatchSize(size int) BatchProcessorOption {
 	})
 }
 
-// WithExportBufferSize sets the buffer size of batch in every export.
+// WithExportBufferSize sets the batch buffer size.
 // Batches will be temporarily kept in a memory buffer until it exported successfully.
 //
-// If the OTEL_BLRP_EXPORT_BUFFER_SIZE environment variable is set,
-// and this option is not passed, that variable value will be used.
-//
-// By default, if an environment variable is not set, and this option is not
-// passed, 1 will be used.
+// By default a size of 1 will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportBufferSize(size int) BatchProcessorOption {
 	return batchOptionFunc(func(cfg batchConfig) batchConfig {
