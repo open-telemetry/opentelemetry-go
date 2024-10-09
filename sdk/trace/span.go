@@ -179,7 +179,8 @@ func (s *recordingSpan) IsRecording() bool {
 
 // isRecording returns if this span is being recorded. If this span has ended
 // this will return false.
-// This is done without acquiring a lock.
+//
+// This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) isRecording() bool {
 	if s == nil {
 		return false
@@ -408,9 +409,10 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	// the span's duration in case some operation below takes a while.
 	et := monotonicEndTime(s.startTime)
 
-	// Do relative expensive check now that we have an end time and see if we
-	// need to do any more processing.
-	if !s.IsRecording() {
+	// Lock the span now that we have an end time and see if we need to do any more processing.
+	s.mu.Lock()
+	if !s.isRecording() {
+		s.mu.Unlock()
 		return
 	}
 
@@ -435,10 +437,11 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 
 	if s.executionTracerTaskEnd != nil {
+		s.mu.Unlock()
 		s.executionTracerTaskEnd()
+		s.mu.Lock()
 	}
 
-	s.mu.Lock()
 	// Setting endTime to non-zero marks the span as ended and not recording.
 	if config.Timestamp().IsZero() {
 		s.endTime = et
@@ -472,7 +475,13 @@ func monotonicEndTime(start time.Time) time.Time {
 // does not change the Span status. If this span is not being recorded or err is nil
 // than this method does nothing.
 func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
-	if s == nil || err == nil || !s.IsRecording() {
+	if s == nil || err == nil {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.isRecording() {
 		return
 	}
 
@@ -508,14 +517,23 @@ func recordStackTrace() string {
 }
 
 // AddEvent adds an event with the provided name and options. If this span is
-// not being recorded than this method does nothing.
+// not being recorded then this method does nothing.
 func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
-	if !s.IsRecording() {
+	if s == nil {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.isRecording() {
 		return
 	}
 	s.addEvent(name, o...)
 }
 
+// addEvent adds an event with the provided name and options.
+//
+// This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
 	e := Event{Name: name, Attributes: c.Attributes(), Time: c.Timestamp()}
@@ -532,9 +550,7 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 		e.Attributes = e.Attributes[:limit]
 	}
 
-	s.mu.Lock()
 	s.events.add(e)
-	s.mu.Unlock()
 }
 
 // SetName sets the name of this span. If this span is not being recorded than
@@ -682,11 +698,17 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) AddLink(link trace.Link) {
-	if !s.IsRecording() {
+	if s == nil {
 		return
 	}
 	if !link.SpanContext.IsValid() && len(link.Attributes) == 0 &&
 		link.SpanContext.TraceState().Len() == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.isRecording() {
 		return
 	}
 
@@ -703,9 +725,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		l.Attributes = l.Attributes[:limit]
 	}
 
-	s.mu.Lock()
 	s.links.add(l)
-	s.mu.Unlock()
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span
