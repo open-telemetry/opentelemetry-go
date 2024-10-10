@@ -176,12 +176,22 @@ type Int64Counter struct{ embedded.Int64Counter }
 // Add performs no operation.
 func (Int64Counter) Add(context.Context, int64, ...metric.AddOption) {}
 
+// IsEnabled returns false always.
+func (Int64Counter) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
+
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
 type Float64Counter struct{ embedded.Float64Counter }
 
 // Add performs no operation.
 func (Float64Counter) Add(context.Context, float64, ...metric.AddOption) {}
+
+// IsEnabled returns false always.
+func (Float64Counter) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
@@ -190,12 +200,22 @@ type Int64UpDownCounter struct{ embedded.Int64UpDownCounter }
 // Add performs no operation.
 func (Int64UpDownCounter) Add(context.Context, int64, ...metric.AddOption) {}
 
+// IsEnabled returns false always.
+func (Int64UpDownCounter) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
+
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64UpDownCounter struct{ embedded.Float64UpDownCounter }
 
 // Add performs no operation.
 func (Float64UpDownCounter) Add(context.Context, float64, ...metric.AddOption) {}
+
+// IsEnabled returns false always.
+func (Float64UpDownCounter) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
@@ -204,12 +224,22 @@ type Int64Histogram struct{ embedded.Int64Histogram }
 // Record performs no operation.
 func (Int64Histogram) Record(context.Context, int64, ...metric.RecordOption) {}
 
+// IsEnabled returns false always.
+func (Int64Histogram) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
+
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
 type Float64Histogram struct{ embedded.Float64Histogram }
 
 // Record performs no operation.
 func (Float64Histogram) Record(context.Context, float64, ...metric.RecordOption) {}
+
+// IsEnabled returns false always.
+func (Float64Histogram) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
 
 // Int64Gauge is an OpenTelemetry Gauge used to record instantaneous int64
 // measurements. It produces no telemetry.
@@ -218,12 +248,22 @@ type Int64Gauge struct{ embedded.Int64Gauge }
 // Record performs no operation.
 func (Int64Gauge) Record(context.Context, int64, ...metric.RecordOption) {}
 
+// IsEnabled returns false always.
+func (Int64Gauge) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
+
 // Float64Gauge is an OpenTelemetry Gauge used to record instantaneous float64
 // measurements. It produces no telemetry.
 type Float64Gauge struct{ embedded.Float64Gauge }
 
 // Record performs no operation.
 func (Float64Gauge) Record(context.Context, float64, ...metric.RecordOption) {}
+
+// IsEnabled returns false always.
+func (Float64Gauge) IsEnabled(ctx context.Context, opts ...metric.EnabledOption) bool {
+	return false
+}
 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.
