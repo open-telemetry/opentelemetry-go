@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Record` type in `go.opentelemetry.io/otel/log` is no longer comparable. (#5847)
 - Performance improvements for the trace SDK `SetAttributes` method in `Span`. (#5864)
 - Reduce memory allocations for the `Event` and `Link` lists in `Span`. (#5858)
+- Performance improvements for the trace SDK `AddEvent`, `AddLink`, `RecordError` and `End` methods in `Span`. (#5874)
 
 ### Deprecated
 
