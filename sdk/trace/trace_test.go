@@ -1189,6 +1189,14 @@ func TestCustomStartEndTime(t *testing.T) {
 	}
 }
 
+type errWithExceptionType struct {
+	error
+}
+
+func (errWithExceptionType) ExceptionType() string {
+	return "CustomExceptionType"
+}
+
 func TestRecordError(t *testing.T) {
 	scenarios := []struct {
 		err error
@@ -1204,6 +1212,11 @@ func TestRecordError(t *testing.T) {
 			err: errors.New("test error 2"),
 			typ: "*errors.errorString",
 			msg: "test error 2",
+		},
+		{
+			err: errWithExceptionType{errors.New("test error 3")},
+			typ: "CustomExceptionType",
+			msg: "test error 3",
 		},
 	}
 
