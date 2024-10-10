@@ -487,16 +487,12 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	return reg, nil
 }
 
-type wrapped interface {
-	unwrap() metric.Observable
-}
-
 func unwrapInstruments(instruments []metric.Observable) []metric.Observable {
 	out := make([]metric.Observable, 0, len(instruments))
 
 	for _, inst := range instruments {
-		if in, ok := inst.(wrapped); ok {
-			out = append(out, in.unwrap())
+		if in, ok := inst.(unwrapper); ok {
+			out = append(out, in.Unwrap())
 		} else {
 			out = append(out, inst)
 		}
