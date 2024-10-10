@@ -160,7 +160,7 @@ func TestMeterDelegation(t *testing.T) {
 	ao := &altObserver{t: t}
 	for _, meter := range amp.meters {
 		for _, cb := range meter.cbs {
-			cb(ctx, ao)
+			require.NoError(t, cb(ctx, ao))
 		}
 	}
 }
