@@ -473,8 +473,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	defer m.mtx.Unlock()
 
 	if m.delegate != nil {
-		insts = unwrapInstruments(insts)
-		return m.delegate.RegisterCallback(f, insts...)
+		return m.delegate.RegisterCallback(unwrapCallback(f), unwrapInstruments(insts)...)
 	}
 
 	reg := &registration{instruments: insts, function: f}
@@ -493,7 +492,7 @@ func unwrapInstruments(instruments []metric.Observable) []metric.Observable {
 
 	for _, inst := range instruments {
 		if in, ok := inst.(unwrapper); ok {
-			out = append(out, in.Unwrap())
+			out = append(out, in.unwrap())
 		} else {
 			out = append(out, inst)
 		}
@@ -518,20 +517,27 @@ type unwrapObs struct {
 }
 
 func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64, opts ...metric.ObserveOption) {
-	uo.obs.ObserveFloat64(inst.(unwrapper).Unwrap().(metric.Float64Observable), value, opts...)
+	if un, ok := inst.(unwrapper); ok {
+		inst = un.unwrap().(metric.Float64Observable)
+	}
+
+	uo.obs.ObserveFloat64(inst, value, opts...)
 }
 
 func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts ...metric.ObserveOption) {
-	uo.obs.ObserveInt64(inst.(unwrapper).Unwrap().(metric.Int64Observable), value, opts...)
+	if un, ok := inst.(unwrapper); ok {
+		inst = un.unwrap().(metric.Int64Observable)
+	}
+	uo.obs.ObserveInt64(inst, value, opts...)
 }
 
-func (c *registration) unwrappedCallback(ctx context.Context, obs metric.Observer) error {
-	return c.function(ctx, &unwrapObs{obs: obs})
+func unwrapCallback(f metric.Callback) metric.Callback {
+	return func(ctx context.Context, obs metric.Observer) error {
+		return f(ctx, &unwrapObs{obs: obs})
+	}
 }
 
 func (c *registration) setDelegate(m metric.Meter) {
-	insts := unwrapInstruments(c.instruments)
-
 	c.unregMu.Lock()
 	defer c.unregMu.Unlock()
 
@@ -540,7 +546,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 		return
 	}
 
-	reg, err := m.RegisterCallback(c.unwrappedCallback, insts...)
+	reg, err := m.RegisterCallback(unwrapCallback(c.function), unwrapInstruments(c.instruments)...)
 	if err != nil {
 		GetErrorHandler().Handle(err)
 		return
