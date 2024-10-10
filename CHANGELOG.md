@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix timer channel drain to avoid hanging on Go 1.23. (#5868)
 - Fix delegation for global meter providers. (#5827)
   Change the `reflect.TypeOf` to use a nil pointer to not allocate on the heap unless necessary.
+- Global MeterProvider registration correctly unwraps global instrument stubs. (#5881)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
