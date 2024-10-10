@@ -5,6 +5,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"container/list"
+	"context"
 	"reflect"
 	"sync"
 
@@ -511,6 +512,23 @@ type registration struct {
 	unregMu sync.Mutex
 }
 
+type unwrapObs struct {
+	embedded.Observer
+	obs metric.Observer
+}
+
+func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64, opts ...metric.ObserveOption) {
+	uo.obs.ObserveFloat64(inst.(unwrapper).Unwrap().(metric.Float64Observable), value, opts...)
+}
+
+func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts ...metric.ObserveOption) {
+	uo.obs.ObserveInt64(inst.(unwrapper).Unwrap().(metric.Int64Observable), value, opts...)
+}
+
+func (c *registration) unwrappedCallback(ctx context.Context, obs metric.Observer) error {
+	return c.function(ctx, &unwrapObs{obs: obs})
+}
+
 func (c *registration) setDelegate(m metric.Meter) {
 	insts := unwrapInstruments(c.instruments)
 
@@ -522,7 +540,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 		return
 	}
 
-	reg, err := m.RegisterCallback(c.function, insts...)
+	reg, err := m.RegisterCallback(c.unwrappedCallback, insts...)
 	if err != nil {
 		GetErrorHandler().Handle(err)
 		return
