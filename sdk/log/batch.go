@@ -465,9 +465,9 @@ func WithExportMaxBatchSize(size int) BatchProcessorOption {
 }
 
 // WithExportBufferSize sets the batch buffer size.
-// Batches will be temporarily kept in a memory buffer until it exported successfully.
+// Batches will be temporarily kept in a memory buffer until they are exported.
 //
-// By default a size of 1 will be used.
+// By default, a value of 1 will be used.
 // The default value is also used when the provided value is less than one.
 func WithExportBufferSize(size int) BatchProcessorOption {
 	return batchOptionFunc(func(cfg batchConfig) batchConfig {
