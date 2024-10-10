@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -2461,4 +2462,54 @@ func TestMeterProviderDelegation(t *testing.T) {
 	assert.NotPanics(t, func() {
 		otel.SetMeterProvider(provider)
 	})
+}
+
+func TestExemplarFilter(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(
+		WithReader(rdr),
+		// Passing AlwaysOnFilter causes collection of the exemplar for the
+		// counter increment below.
+		WithExemplarFilter(exemplar.AlwaysOnFilter),
+	)
+
+	m1 := mp.Meter("scope")
+	ctr1, err := m1.Float64Counter("ctr")
+	assert.NoError(t, err)
+	ctr1.Add(context.Background(), 1.0)
+
+	want := metricdata.ResourceMetrics{
+		Resource: resource.Default(),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{
+					Name: "scope",
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "ctr",
+						Data: metricdata.Sum[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Value: 1.0,
+									Exemplars: []metricdata.Exemplar[float64]{
+										{
+											Value: 1.0,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := metricdata.ResourceMetrics{}
+	err = rdr.Collect(context.Background(), &got)
+	assert.NoError(t, err)
+	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
