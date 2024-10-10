@@ -62,9 +62,11 @@ func (*altRegistration) Unregister() error {
 func (am *altMeter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	return nil, nil
 }
@@ -86,24 +88,31 @@ func (am *altMeter) Int64ObservableUpDownCounter(name string, options ...metric.
 func (am *altMeter) Int64ObservableGauge(name string, options ...metric.Int64ObservableGaugeOption) (metric.Int64ObservableGauge, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64ObservableCounter(name string, options ...metric.Float64ObservableCounterOption) (metric.Float64ObservableCounter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64ObservableUpDownCounter(name string, options ...metric.Float64ObservableUpDownCounterOption) (metric.Float64ObservableUpDownCounter, error) {
 	return nil, nil
 }
+
 func (am *altMeter) Float64ObservableGauge(name string, options ...metric.Float64ObservableGaugeOption) (metric.Float64ObservableGauge, error) {
 	// Note: The global delegation also breaks when we return nil in one of these!
 	return nil, nil
