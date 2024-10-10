@@ -124,9 +124,10 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 
 	cfg := log.NewLoggerConfig(opts...)
 	scope := instrumentation.Scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
+		Name:       name,
+		Version:    cfg.InstrumentationVersion(),
+		SchemaURL:  cfg.SchemaURL(),
+		Attributes: cfg.InstrumentationAttributes(),
 	}
 
 	p.loggersMu.Lock()

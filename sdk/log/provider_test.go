@@ -300,11 +300,15 @@ func TestLoggerProviderLogger(t *testing.T) {
 	t.Run("SameLoggers", func(t *testing.T) {
 		p := NewLoggerProvider()
 
-		l0, l1 := p.Logger("l0"), p.Logger("l1")
-		l2, l3 := p.Logger("l0"), p.Logger("l1")
+		l0, l1, l2 := p.Logger("l0"), p.Logger("l1"), p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		assert.NotSame(t, l0, l1)
+		assert.NotSame(t, l0, l2)
+		assert.NotSame(t, l1, l2)
 
-		assert.Same(t, l0, l2)
-		assert.Same(t, l1, l3)
+		l3, l4, l5 := p.Logger("l0"), p.Logger("l1"), p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		assert.Same(t, l0, l3)
+		assert.Same(t, l1, l4)
+		assert.Same(t, l2, l5)
 	})
 }
 
