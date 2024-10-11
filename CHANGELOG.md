@@ -44,9 +44,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix delegation for global meter providers, and panic when calling otel.SetMeterProvider. (#5827)
 - Change the `reflect.TypeOf` to use a nil pointer to not allocate on the heap unless necessary. (#5827)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
-
 ## [1.30.0/0.52.0/0.6.0/0.0.9] 2024-09-09
 
 ### Added
