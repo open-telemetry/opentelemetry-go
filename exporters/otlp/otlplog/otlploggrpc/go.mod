@@ -7,9 +7,9 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.31.0
-	go.opentelemetry.io/otel/log v0.6.0
+	go.opentelemetry.io/otel/log v0.7.0
 	go.opentelemetry.io/otel/sdk v1.31.0
-	go.opentelemetry.io/otel/sdk/log v0.6.0
+	go.opentelemetry.io/otel/sdk/log v0.7.0
 	go.opentelemetry.io/otel/trace v1.31.0
 	go.opentelemetry.io/proto/otlp v1.3.1
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9
