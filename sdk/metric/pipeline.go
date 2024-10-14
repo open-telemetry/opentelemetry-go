@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/x"
@@ -38,14 +39,15 @@ type instrumentSync struct {
 	compAgg     aggregate.ComputeAggregation
 }
 
-func newPipeline(res *resource.Resource, reader Reader, views []View) *pipeline {
+func newPipeline(res *resource.Resource, reader Reader, views []View, exemplarFilter exemplar.Filter) *pipeline {
 	if res == nil {
 		res = resource.Empty()
 	}
 	return &pipeline{
-		resource: res,
-		reader:   reader,
-		views:    views,
+		resource:       res,
+		reader:         reader,
+		views:          views,
+		exemplarFilter: exemplarFilter,
 		// aggregations is lazy allocated when needed.
 	}
 }
@@ -66,6 +68,7 @@ type pipeline struct {
 	aggregations   map[instrumentation.Scope][]instrumentSync
 	callbacks      []func(context.Context) error
 	multiCallbacks list.List
+	exemplarFilter exemplar.Filter
 }
 
 // addSync adds the instrumentSync to pipeline p with scope. This method is not
@@ -349,7 +352,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	cv := i.aggregators.Lookup(normID, func() aggVal[N] {
 		b := aggregate.Builder[N]{
 			Temporality:   i.pipeline.reader.temporality(kind),
-			ReservoirFunc: reservoirFunc[N](stream.Aggregation),
+			ReservoirFunc: reservoirFunc[N](stream.Aggregation, i.pipeline.exemplarFilter),
 		}
 		b.Filter = stream.AttributeFilter
 		// A value less than or equal to zero will disable the aggregation
@@ -552,10 +555,10 @@ func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
 // measurement.
 type pipelines []*pipeline
 
-func newPipelines(res *resource.Resource, readers []Reader, views []View) pipelines {
+func newPipelines(res *resource.Resource, readers []Reader, views []View, exemplarFilter exemplar.Filter) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
-		p := newPipeline(res, r, views)
+		p := newPipeline(res, r, views, exemplarFilter)
 		r.register(p)
 		pipes = append(pipes, p)
 	}

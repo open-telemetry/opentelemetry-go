@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -39,7 +40,7 @@ func testSumAggregateOutput(dest *metricdata.Aggregation) int {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -65,7 +66,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -74,7 +75,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
 
@@ -124,13 +125,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}),
+				}, exemplar.AlwaysOffFilter),
 			},
 		}
 
@@ -215,7 +216,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -257,7 +258,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -362,7 +363,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
