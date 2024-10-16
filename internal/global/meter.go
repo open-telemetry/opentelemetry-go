@@ -5,6 +5,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"container/list"
+	"context"
 	"reflect"
 	"sync"
 
@@ -472,8 +473,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	defer m.mtx.Unlock()
 
 	if m.delegate != nil {
-		insts = unwrapInstruments(insts)
-		return m.delegate.RegisterCallback(f, insts...)
+		return m.delegate.RegisterCallback(unwrapCallback(f), unwrapInstruments(insts)...)
 	}
 
 	reg := &registration{instruments: insts, function: f}
@@ -487,15 +487,11 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	return reg, nil
 }
 
-type wrapped interface {
-	unwrap() metric.Observable
-}
-
 func unwrapInstruments(instruments []metric.Observable) []metric.Observable {
 	out := make([]metric.Observable, 0, len(instruments))
 
 	for _, inst := range instruments {
-		if in, ok := inst.(wrapped); ok {
+		if in, ok := inst.(unwrapper); ok {
 			out = append(out, in.unwrap())
 		} else {
 			out = append(out, inst)
@@ -515,9 +511,33 @@ type registration struct {
 	unregMu sync.Mutex
 }
 
-func (c *registration) setDelegate(m metric.Meter) {
-	insts := unwrapInstruments(c.instruments)
+type unwrapObs struct {
+	embedded.Observer
+	obs metric.Observer
+}
 
+func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64, opts ...metric.ObserveOption) {
+	if un, ok := inst.(unwrapper); ok {
+		inst = un.unwrap().(metric.Float64Observable)
+	}
+
+	uo.obs.ObserveFloat64(inst, value, opts...)
+}
+
+func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts ...metric.ObserveOption) {
+	if un, ok := inst.(unwrapper); ok {
+		inst = un.unwrap().(metric.Int64Observable)
+	}
+	uo.obs.ObserveInt64(inst, value, opts...)
+}
+
+func unwrapCallback(f metric.Callback) metric.Callback {
+	return func(ctx context.Context, obs metric.Observer) error {
+		return f(ctx, &unwrapObs{obs: obs})
+	}
+}
+
+func (c *registration) setDelegate(m metric.Meter) {
 	c.unregMu.Lock()
 	defer c.unregMu.Unlock()
 
@@ -526,7 +546,7 @@ func (c *registration) setDelegate(m metric.Meter) {
 		return
 	}
 
-	reg, err := m.RegisterCallback(c.function, insts...)
+	reg, err := m.RegisterCallback(unwrapCallback(c.function), unwrapInstruments(c.instruments)...)
 	if err != nil {
 		GetErrorHandler().Handle(err)
 		return

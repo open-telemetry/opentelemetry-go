@@ -57,19 +57,19 @@ func TestAsyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &afCounter{}
-			f := func(float64) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.unwrap() }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &afUpDownCounter{}
-			f := func(float64) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.unwrap() }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &afGauge{}
-			f := func(float64) { _ = delegate.Unwrap() }
+			f := func(float64) { _ = delegate.unwrap() }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})
@@ -79,19 +79,19 @@ func TestAsyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) {
 		t.Run("Counter", func(t *testing.T) {
 			delegate := &aiCounter{}
-			f := func(int64) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.unwrap() }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(t *testing.T) {
 			delegate := &aiUpDownCounter{}
-			f := func(int64) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.unwrap() }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(t *testing.T) {
 			delegate := &aiGauge{}
-			f := func(int64) { _ = delegate.Unwrap() }
+			f := func(int64) { _ = delegate.unwrap() }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})
