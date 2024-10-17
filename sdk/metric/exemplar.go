@@ -12,7 +12,7 @@ import (
 )
 
 // ExemplarReservoirProviderSelector selects the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.ReservoirProvider] to use
+// [exemplar.ReservoirProvider] to use
 // based on the [Aggregation] of the metric.
 type ExemplarReservoirProviderSelector func(Aggregation) exemplar.ReservoirProvider
 
