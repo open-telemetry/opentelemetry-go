@@ -46,8 +46,8 @@ func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 		carrier.Set(tracestateHeader, ts)
 	}
 
-	// Clear all flags other than the trace-context supported sampling bit.
-	flags := sc.TraceFlags() & trace.FlagsSampled
+	// Clear all flags other than the trace-context supported bits.
+	flags := sc.TraceFlags() & (trace.FlagsSampled | trace.FlagsRandom)
 
 	var sb strings.Builder
 	sb.Grow(2 + 32 + 16 + 2 + 3)
@@ -111,7 +111,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	}
 
 	// Clear all flags other than the trace-context supported sampling bit.
-	scc.TraceFlags = trace.TraceFlags(opts[0]) & trace.FlagsSampled
+	scc.TraceFlags = trace.TraceFlags(opts[0]) & (trace.FlagsSampled | trace.FlagsRandom)
 
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
 	// affect the parsing of traceparent according to the W3C tracecontext

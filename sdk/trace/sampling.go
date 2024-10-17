@@ -7,7 +7,11 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -64,28 +68,179 @@ type SamplingResult struct {
 }
 
 type traceIDRatioSampler struct {
-	traceIDUpperBound uint64
-	description       string
+	// threshold is a rejection threshold.
+	// Select when (T <= R)
+	// Drop when (T > R)
+	// Range is [0, 1<<56).
+	threshold uint64
+
+	// otts is the encoded OTel trace state field, containing "th:<tvalue>"
+	otts string
+
+	description string
+}
+
+// tracestateHasRandomness determines whether there is a "rv" sub-key
+// in `otts` which is the OTel tracestate value (i.e., the top-level "ot" value).
+func tracestateHasRandomness(otts string) (randomness uint64, hasRandom bool) {
+	var low int
+	if has := strings.HasPrefix(otts, "rv:"); has {
+		low = 3
+	} else if pos := strings.Index(otts, ";rv:"); pos > 0 {
+		low = pos + 4
+	} else {
+		return 0, false
+	}
+	if len(otts) < low+14 {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", otts, strconv.ErrSyntax))
+	} else if len(otts) > low+14 && otts[low+14] != ';' {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", otts, strconv.ErrSyntax))
+	} else {
+		randomIn := otts[low : low+14]
+		if rv, err := strconv.ParseUint(randomIn, 16, 64); err == nil {
+			randomness = rv
+			hasRandom = true
+		} else {
+			otel.Handle(fmt.Errorf("could not parse tracestate randomness: %q: %w", randomIn, err))
+		}
+	}
+	return
 }
 
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
-	x := binary.BigEndian.Uint64(p.TraceID[8:16]) >> 1
-	if x < ts.traceIDUpperBound {
+	state := psc.TraceState()
+
+	existOtts := state.Get("ot")
+
+	var randomness uint64
+	var hasRandom bool
+	if existOtts != "" {
+		// When the OTel trace state field exists, we will
+		// inspect for a "rv", otherwise assume that the
+		// TraceID is random.
+		randomness, hasRandom = tracestateHasRandomness(existOtts)
+	}
+	if !hasRandom {
+		// Interpret the least-significant 8-bytes as an
+		// unsigned number, then zero the top 8 bits using
+		// randomnessMask, yielding the least-significant 56
+		// bits of randomness, as specified in W3C Trace
+		// Context Level 2.
+		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
+	}
+	if ts.threshold > randomness {
 		return SamplingResult{
-			Decision:   RecordAndSample,
-			Tracestate: psc.TraceState(),
+			Decision:   Drop,
+			Tracestate: state,
 		}
 	}
-	return SamplingResult{
-		Decision:   Drop,
-		Tracestate: psc.TraceState(),
+
+	if mod, err := state.Insert("ot", combineTracestate(existOtts, ts.otts)); err == nil {
+		state = mod
+	} else {
+		otel.Handle(fmt.Errorf("could not update tracestate: %q", err))
 	}
+	return SamplingResult{
+		Decision:   RecordAndSample,
+		Tracestate: state,
+	}
+}
+
+// combineTracestate combines an existing OTel tracestate fragment,
+// which is the value of a top-level "ot" tracestate vendor tag.
+func combineTracestate(incoming, updated string) string {
+	// `incoming` is formatted according to the OTel tracestate
+	// spec, with colon separating two-byte key and value, with
+	// semi-colon separating key-value pairs.
+	//
+	// `updated` should be a single two-byte key:value to modify
+	// or insert therefore colonOffset is 2 bytes, valueOffset is
+	// 3 bytes into `incoming`.
+	const colonOffset = 2
+	const valueOffset = colonOffset + 1
+
+	if incoming == "" {
+		return updated
+	}
+	var out strings.Builder
+
+	// The update is expected to be a single key-value of the form
+	// `XX:value` for with two-character key.
+	upkey := updated[:colonOffset]
+
+	// In this case, there is an existing field under "ot" and we
+	// need to combine.  We will pass the parts of "incoming"
+	// through except the field we are updating, which we will
+	// modify if it is found.
+	foundUp := false
+
+	for count := 0; len(incoming) != 0; count++ {
+		key, rest, hasCol := strings.Cut(incoming, ":")
+		if !hasCol {
+			// return the updated value, ignore invalid inputs
+			return updated
+		}
+		value, next, _ := strings.Cut(rest, ";")
+
+		if key == upkey {
+			value = updated[valueOffset:]
+			foundUp = true
+		}
+		if count != 0 {
+			out.WriteString(";")
+		}
+		out.WriteString(key)
+		out.WriteString(":")
+		out.WriteString(value)
+
+		incoming = next
+	}
+	if !foundUp {
+		out.WriteString(";")
+		out.WriteString(updated)
+	}
+	return out.String()
 }
 
 func (ts traceIDRatioSampler) Description() string {
 	return ts.description
 }
+
+const (
+	// DefaultSamplingPrecision is the number of hexadecimal
+	// digits of precision used to expressed the samplling probability.
+	DefaultSamplingPrecision = 4
+
+	// MinSupportedProbability is the smallest probability that
+	// can be encoded by this implementation, and it defines the
+	// smallest interval between probabilities across the range.
+	// The largest supported probability is (1-MinSupportedProbability).
+	//
+	// This value corresponds with the size of a float64
+	// significand, because it simplifies this implementation to
+	// restrict the probability to use 52 bits (vs 56 bits).
+	minSupportedProbability float64 = 1 / float64(maxAdjustedCount)
+
+	// maxSupportedProbability is the number closest to 1.0 (i.e.,
+	// near 99.999999%) that is not equal to 1.0 in terms of the
+	// float64 representation, having 52 bits of significand.
+	// Other ways to express this number:
+	//
+	//   0x1.ffffffffffffe0p-01
+	//   0x0.fffffffffffff0p+00
+	//   math.Nextafter(1.0, 0.0)
+	maxSupportedProbability float64 = 1 - 0x1p-52
+
+	// maxAdjustedCount is the inverse of the smallest
+	// representable sampling probability, it is the number of
+	// distinct 56 bit values.
+	maxAdjustedCount uint64 = 1 << 56
+
+	// randomnessMask is a mask that selects the least-significant
+	// 56 bits of a uint64.
+	randomnessMask uint64 = maxAdjustedCount - 1
+)
 
 // TraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
 // always sample. Fractions < 0 are treated as zero. To respect the
@@ -94,26 +249,77 @@ func (ts traceIDRatioSampler) Description() string {
 //
 //nolint:revive // revive complains about stutter of `trace.TraceIDRatioBased`
 func TraceIDRatioBased(fraction float64) Sampler {
-	if fraction >= 1 {
+	const (
+		maxp  = 14                       // maximum precision is 56 bits
+		defp  = DefaultSamplingPrecision // default precision
+		hbits = 4                        // bits per hex digit
+	)
+
+	if fraction > 1-0x1p-52 {
 		return AlwaysSample()
 	}
 
-	if fraction <= 0 {
-		fraction = 0
+	if fraction < minSupportedProbability {
+		return NeverSample()
 	}
 
+	// Calculate the amount of precision needed to encode the
+	// threshold with reasonable precision.
+	//
+	// 13 hex digits is the maximum reasonable precision, since
+	// that equals 52 bits, the number of bits in the float64
+	// significand.
+	//
+	// Frexp() normalizes both the fraction and one-minus the
+	// fraction, because more digits of precision are needed in
+	// both cases -- in these cases the threshold has all leading
+	// '0' or 'f' characters.
+	//
+	// We know that `exp <= 0`.  If `exp <= -4`, there will be a
+	// leading hex `0` or `f`.  For every multiple of -4, another
+	// leading `0` or `f` appears, so this raises precision
+	// accordingly.
+	_, expF := math.Frexp(fraction)
+	_, expR := math.Frexp(1 - fraction)
+	precision := min(maxp, max(defp+expF/-hbits, defp+expR/-hbits))
+
+	// Compute the threshold
+	scaled := uint64(math.Round(fraction * float64(maxAdjustedCount)))
+	threshold := maxAdjustedCount - scaled
+
+	// Round to the specified precision, if less than the maximum.
+	if shift := hbits * (maxp - precision); shift != 0 {
+		half := uint64(1) << (shift - 1)
+		threshold += half
+		threshold >>= shift
+		threshold <<= shift
+	}
+
+	// Add maxAdjustedCount so that leading-zeros are formatted by
+	// the strconv library after an artificial leading "1".  Then,
+	// strip the leadingt "1", then remove trailing zeros.
+	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
+
 	return &traceIDRatioSampler{
-		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
+		threshold:   threshold,
+		otts:        fmt.Sprint("th:", tvalue),
+		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
 
 type alwaysOnSampler struct{}
 
 func (as alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	ts := trace.SpanContextFromContext(p.ParentContext).TraceState()
+	// 100% sampling equals zero rejection threshold.
+	if mod, err := ts.Insert("ot", combineTracestate(ts.Get("ot"), "th:0")); err == nil {
+		ts = mod
+	} else {
+		otel.Handle(fmt.Errorf("could not update tracestate: %w", err))
+	}
 	return SamplingResult{
 		Decision:   RecordAndSample,
-		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
+		Tracestate: ts,
 	}
 }
 
