@@ -242,6 +242,31 @@ func ExampleNewView_exponentialHistogram() {
 	)
 }
 
+func ExampleNewView_exemplarreservoirproviderselector() {
+	// Create a view that makes all metrics use a different exemplar reservoir.
+	view := metric.NewView(
+		metric.Instrument{Name: "*"},
+		metric.Stream{
+			ExemplarReservoirProviderSelector: func(agg metric.Aggregation) exemplar.ReservoirProvider {
+				// This example uses a fixed-size reservoir with a size of 10
+				// for explicit bucket histograms instead of the default
+				// bucket-aligned reservoir.
+				if _, ok := agg.(metric.AggregationExplicitBucketHistogram); ok {
+					return exemplar.FixedSizeReservoirProvider(10)
+				}
+				// Fall back to the default reservoir otherwise.
+				return metric.DefaultExemplarReservoirProviderSelector(agg)
+			},
+		},
+	)
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+}
+
 func ExampleWithExemplarFilter_disabled() {
 	// Use exemplar.AlwaysOffFilter to disable exemplar collection.
 	_ = metric.NewMeterProvider(

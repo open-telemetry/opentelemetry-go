@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 )
 
@@ -17,7 +18,7 @@ func TestDrop(t *testing.T) {
 }
 
 func testDropFiltered[N int64 | float64](t *testing.T) {
-	r := dropReservoir[N]()
+	r := dropReservoir[N](*attribute.EmptySet())
 
 	var dest []exemplar.Exemplar
 	r.Collect(&dest)

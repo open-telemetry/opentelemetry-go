@@ -15,12 +15,12 @@ import (
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
-	t.Run("Int64", ReservoirTest[int64](func(n int) (Reservoir, int) {
-		return NewFixedSizeReservoir(n), n
+	t.Run("Int64", ReservoirTest[int64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
 	}))
 
-	t.Run("Float64", ReservoirTest[float64](func(n int) (Reservoir, int) {
-		return NewFixedSizeReservoir(n), n
+	t.Run("Float64", ReservoirTest[float64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
 	}))
 }
 

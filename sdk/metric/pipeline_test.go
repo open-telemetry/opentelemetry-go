@@ -491,4 +491,30 @@ func TestExemplars(t *testing.T) {
 		measure(sampled, m)
 		check(t, r, nCPU, 1, 20)
 	})
+
+	t.Run("Custom reservoir", func(t *testing.T) {
+		r := NewManualReader()
+		reservoirProviderSelector := func(agg Aggregation) exemplar.ReservoirProvider {
+			return exemplar.FixedSizeReservoirProvider(2)
+		}
+		v1 := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
+			Aggregation: AggregationBase2ExponentialHistogram{
+				MaxSize:  160, // > 20, reservoir size should default to 20.
+				MaxScale: 20,
+			},
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		v2 := NewView(Instrument{Name: "int64-counter"}, Stream{
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		v3 := NewView(Instrument{Name: "int64-histogram"}, Stream{
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		m := NewMeterProvider(WithReader(r), WithView(v1, v2, v3)).Meter("custom-reservoir")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+
+		measure(sampled, m)
+		check(t, r, 2, 2, 2)
+	})
 }

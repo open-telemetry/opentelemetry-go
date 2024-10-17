@@ -18,7 +18,7 @@ import (
 // Sat Jan 01 2000 00:00:00 GMT+0000.
 var staticTime = time.Unix(946684800, 0)
 
-type factory func(requestedCap int) (r Reservoir, actualCap int)
+type factory func(requestedCap int) (r ReservoirProvider, actualCap int)
 
 func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 	return func(t *testing.T) {
@@ -29,10 +29,11 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("CaptureSpanContext", func(t *testing.T) {
 			t.Helper()
 
-			r, n := f(1)
+			rp, n := f(1)
 			if n < 1 {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
+			r := rp(*attribute.EmptySet())
 
 			tID, sID := trace.TraceID{0x01}, trace.SpanID{0x01}
 			sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -60,10 +61,11 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("FilterAttributes", func(t *testing.T) {
 			t.Helper()
 
-			r, n := f(1)
+			rp, n := f(1)
 			if n < 1 {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
+			r := rp(*attribute.EmptySet())
 
 			adminTrue := attribute.Bool("admin", true)
 			r.Offer(ctx, staticTime, NewValue(N(10)), []attribute.KeyValue{adminTrue})
@@ -83,10 +85,11 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("CollectLessThanN", func(t *testing.T) {
 			t.Helper()
 
-			r, n := f(2)
+			rp, n := f(2)
 			if n < 2 {
 				t.Skip("skipping, reservoir capacity less than 2:", n)
 			}
+			r := rp(*attribute.EmptySet())
 
 			r.Offer(ctx, staticTime, NewValue(N(10)), nil)
 
@@ -99,10 +102,11 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("MultipleOffers", func(t *testing.T) {
 			t.Helper()
 
-			r, n := f(3)
+			rp, n := f(3)
 			if n < 1 {
 				t.Skip("skipping, reservoir capacity less than 1:", n)
 			}
+			r := rp(*attribute.EmptySet())
 
 			for i := 0; i < n+1; i++ {
 				v := NewValue(N(i))
@@ -127,10 +131,11 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("DropAll", func(t *testing.T) {
 			t.Helper()
 
-			r, n := f(0)
+			rp, n := f(0)
 			if n > 0 {
 				t.Skip("skipping, reservoir capacity greater than 0:", n)
 			}
+			r := rp(*attribute.EmptySet())
 
 			r.Offer(context.Background(), staticTime, NewValue(N(10)), nil)
 
