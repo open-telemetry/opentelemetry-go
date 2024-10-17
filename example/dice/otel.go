@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
@@ -86,13 +87,26 @@ func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (
 }
 
 func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
+	res, err := resource.New(
+		context.Background(),
+		resource.WithHostEntity(),
+		resource.WithProcess(),
+		resource.WithEntity(
+			semconv.SchemaURL,
+			"service",
+			[]attribute.KeyValue{
+				semconv.ServiceName(serviceName),
+				semconv.ServiceVersion(serviceVersion),
+			},
+			nil,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return resource.Merge(
 		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
-			semconv.ServiceVersion(serviceVersion),
-		),
+		res,
 	)
 }
 

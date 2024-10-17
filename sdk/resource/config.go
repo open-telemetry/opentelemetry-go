@@ -27,8 +27,8 @@ type config struct {
 	// SchemaURL to associate with the Resource.
 	schemaURL string
 
-	entityType string
-	entityId   []attribute.KeyValue
+	//entityType string
+	//entityId   []attribute.KeyValue
 }
 
 // Option is the interface that applies a configuration option.
@@ -79,6 +79,17 @@ func WithHostID() Option {
 	return WithDetectors(hostIDDetector{})
 }
 
+func WithHostEntity() Option {
+	return WithDetectors(
+		compositeEntityDetector{
+			detectors: []Detector{
+				host{},
+				hostIDDetector{},
+			},
+		},
+	)
+}
+
 // WithTelemetrySDK adds TelemetrySDK version info to the configured resource.
 func WithTelemetrySDK() Option {
 	return WithDetectors(telemetrySDK{})
@@ -96,20 +107,36 @@ func (o schemaURLOption) apply(cfg config) config {
 	return cfg
 }
 
+type entityDetector struct {
+	SchemaURL string
+	Type      string
+	Id        []attribute.KeyValue
+	Attrs     []attribute.KeyValue
+}
+
+func (e entityDetector) Detect(ctx context.Context) (*Resource, error) {
+	return NewWithEntities(
+		[]Entity{
+			{
+				Type:      e.Type,
+				Id:        attribute.NewSet(e.Id...),
+				Attrs:     attribute.NewSet(e.Attrs...),
+				SchemaURL: e.SchemaURL,
+			},
+		},
+	)
+}
+
 // WithEntity sets the schema URL for the configured resource.
-func WithEntity(entityType string, entityId ...attribute.KeyValue) Option {
-	return entityOption{entityType, entityId}
-}
-
-type entityOption struct {
-	entityType string
-	entityId   []attribute.KeyValue
-}
-
-func (o entityOption) apply(cfg config) config {
-	cfg.entityType = o.entityType
-	cfg.entityId = o.entityId
-	return cfg
+func WithEntity(schemaURL string, entityType string, id, attrs []attribute.KeyValue) Option {
+	return WithDetectors(
+		entityDetector{
+			SchemaURL: schemaURL,
+			Type:      entityType,
+			Id:        id,
+			Attrs:     attrs,
+		},
+	)
 }
 
 // WithOS adds all the OS attributes to the configured Resource.
@@ -137,23 +164,20 @@ func WithOSDescription() Option {
 //
 // Warning! This option will include process command line arguments. If these
 // contain sensitive information it will be included in the exported resource.
-//
-// This option is equivalent to calling WithProcessPID,
-// WithProcessExecutableName, WithProcessExecutablePath,
-// WithProcessCommandArgs, WithProcessOwner, WithProcessRuntimeName,
-// WithProcessRuntimeVersion, and WithProcessRuntimeDescription. See each
-// option function for information about what resource attributes each
-// includes.
 func WithProcess() Option {
 	return WithDetectors(
-		processPIDDetector{},
-		processExecutableNameDetector{},
-		processExecutablePathDetector{},
-		processCommandArgsDetector{},
-		processOwnerDetector{},
-		processRuntimeNameDetector{},
-		processRuntimeVersionDetector{},
-		processRuntimeDescriptionDetector{},
+		compositeEntityDetector{
+			detectors: []Detector{
+				processPIDDetector{},
+				processExecutableNameDetector{},
+				processExecutablePathDetector{},
+				processCommandArgsDetector{},
+				processOwnerDetector{},
+				processRuntimeNameDetector{},
+				processRuntimeVersionDetector{},
+				processRuntimeDescriptionDetector{},
+			},
+		},
 	)
 }
 

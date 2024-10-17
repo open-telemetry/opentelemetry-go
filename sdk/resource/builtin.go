@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/resource/internal"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
@@ -42,10 +41,9 @@ type (
 	host struct{}
 
 	stringDetector struct {
-		schemaURL  string
-		K          attribute.Key
-		F          func() (string, error)
-		entityType string
+		schemaURL string
+		K         attribute.Key
+		F         func() (string, error)
 	}
 
 	defaultServiceNameDetector struct{}
@@ -70,7 +68,19 @@ func (telemetrySDK) Detect(context.Context) (*Resource, error) {
 
 // Detect returns a *Resource that describes the host being run on.
 func (host) Detect(ctx context.Context) (*Resource, error) {
-	return StringDetector(semconv.SchemaURL, semconv.HostNameKey, os.Hostname).Detect(ctx)
+	name, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	return NewWithEntities(
+		[]Entity{
+			{
+				Type:      "host",
+				Attrs:     attribute.NewSet(semconv.HostName(name)),
+				SchemaURL: semconv.SchemaURL,
+			},
+		},
+	)
 }
 
 // StringDetector returns a Detector that will produce a *Resource
@@ -78,14 +88,6 @@ func (host) Detect(ctx context.Context) (*Resource, error) {
 // will have the specified schemaURL.
 func StringDetector(schemaURL string, k attribute.Key, f func() (string, error)) Detector {
 	return stringDetector{schemaURL: schemaURL, K: k, F: f}
-}
-
-// StringDetectorWithEntity returns a Detector that will produce a *Resource
-// containing the string as a value corresponding to k. The Id of entity of the
-// resource will also be set to the same key/value pair.
-// The resulting Resource will have the specified schemaURL.
-func StringDetectorWithEntity(schemaURL string, entityType string, k attribute.Key, f func() (string, error)) Detector {
-	return stringDetector{schemaURL: schemaURL, K: k, F: f, entityType: entityType}
 }
 
 // Detect returns a *Resource that describes the string as a value
@@ -99,27 +101,26 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	if !a.Valid() {
 		return nil, fmt.Errorf("invalid attribute: %q -> %q", a.Key, a.Value.Emit())
 	}
-	id := attribute.NewSet(sd.K.String(value))
-	entity := internal.EntityData{
-		Type:  sd.entityType,
-		Id:    id,
-		Attrs: id,
-	}
-	return NewWithEntity(sd.schemaURL, &entity), nil
+	return NewWithAttributes(sd.schemaURL, sd.K.String(value)), nil
 }
 
 // Detect implements Detector.
 func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error) {
-	return StringDetectorWithEntity(
-		semconv.SchemaURL,
-		"service",
-		semconv.ServiceNameKey,
-		func() (string, error) {
-			executable, err := os.Executable()
-			if err != nil {
-				return "unknown_service:go", nil
-			}
-			return "unknown_service:" + filepath.Base(executable), nil
+	serviceName := ""
+	executable, err := os.Executable()
+	if err != nil {
+		serviceName = "unknown_service:go"
+	} else {
+		serviceName = "unknown_service:" + filepath.Base(executable)
+	}
+
+	return NewWithEntities(
+		[]Entity{
+			{
+				Type:      "service",
+				Id:        attribute.NewSet(semconv.ServiceName(serviceName)),
+				SchemaURL: semconv.SchemaURL,
+			},
 		},
-	).Detect(ctx)
+	)
 }

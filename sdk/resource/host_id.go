@@ -19,6 +19,7 @@ import (
 	"errors"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
@@ -113,8 +114,13 @@ func (hostIDDetector) Detect(ctx context.Context) (*Resource, error) {
 		return nil, err
 	}
 
-	return NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.HostID(hostID),
-	), nil
+	return NewWithEntities(
+		[]Entity{
+			{
+				Type:      "host",
+				Id:        attribute.NewSet(semconv.HostID(hostID)),
+				SchemaURL: semconv.SchemaURL,
+			},
+		},
+	)
 }

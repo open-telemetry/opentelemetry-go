@@ -27,11 +27,21 @@ func Resource(r *resource.Resource) *resourcepb.Resource {
 	}
 
 	attrs := Iterator(r.Iter())
-	entityId := Iterator(r.EntityId().Iter())
 
-	return &resourcepb.Resource{
+	out := &resourcepb.Resource{
 		Attributes: attrs,
-		EntityType: r.EntityType(),
-		EntityId:   entityId,
 	}
+
+	for _, entity := range r.EntityRefs() {
+		out.Entities = append(
+			out.Entities, &resourcepb.ResourceEntityRef{
+				SchemaUrl:     entity.SchemaUrl(),
+				Type:          entity.Type(),
+				IdAttrKeys:    entity.Id(),
+				DescrAttrKeys: entity.Attrs(),
+			},
+		)
+	}
+
+	return out
 }

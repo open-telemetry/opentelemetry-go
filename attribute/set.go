@@ -307,6 +307,15 @@ func filteredToFront(slice []KeyValue, keep Filter) int {
 	return j
 }
 
+func (l *Set) Clone() Set {
+	s, _ := l.Filter(
+		func(KeyValue) bool {
+			return true
+		},
+	)
+	return s
+}
+
 // Filter returns a filtered copy of this Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 func (l *Set) Filter(re Filter) (Set, []KeyValue) {

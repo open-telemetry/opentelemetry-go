@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource/internal"
 )
 
 // Resource describes an entity about which identifying information
@@ -33,10 +33,13 @@ import (
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
 type Resource struct {
-	schemaURL string
+	attrs map[attribute.Key]attribute.Value
 
-	// Producing entity.
-	entity internal.EntityData
+	// attrSet is cached attribute.Set representation of attrs.
+	attrSet attribute.Set
+
+	schemaURL  string
+	entityRefs []resourceEntityRef
 }
 
 var (
@@ -53,16 +56,7 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 		cfg = opt.apply(cfg)
 	}
 
-	entityId, _ := attribute.NewSetWithFiltered(
-		cfg.entityId, func(kv attribute.KeyValue) bool {
-			return kv.Valid()
-		},
-	)
-
-	r := &Resource{
-		schemaURL: cfg.schemaURL,
-		entity:    internal.EntityData{Type: cfg.entityType, Id: entityId},
-	}
+	r := &Resource{schemaURL: cfg.schemaURL}
 	return r, detect(ctx, r, cfg.detectors)
 }
 
@@ -76,28 +70,59 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 	return resource
 }
 
-// NewWithEntity creates a resource from entity and attrs and associates the resource with a
+// NewWithEntities creates a resource from entity and attrs and associates the resource with a
 // schema URL. If attrs or entityId contains duplicate keys, the last value will be used. If attrs or entityId
 // contains any invalid items those items will be dropped. The attrs and entityId are assumed to be
 // in a schema identified by schemaURL.
-func NewWithEntity(
-	schemaURL string, entity *internal.EntityData,
-) *Resource {
-	resource := NewSchemaless(entity.Attrs.ToSlice()...)
-	resource.schemaURL = schemaURL
-	resource.entity = *entity
-	//resource.entity.Type = entityType
+func NewWithEntities(
+	entities []Entity,
+) (*Resource, error) {
+	resource := &Resource{}
 
-	// Ensure attributes comply with the specification:
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
-	//id, _ := attribute.NewSetWithFiltered(
-	//	entityId, func(kv attribute.KeyValue) bool {
-	//		return kv.Valid()
-	//	},
-	//)
-	//
-	//resource.entity.Id = id
-	return resource
+	for _, entity := range entities {
+		b := &Resource{
+			schemaURL:  entity.SchemaURL,
+			attrs:      map[attribute.Key]attribute.Value{},
+			entityRefs: []resourceEntityRef{{}},
+		}
+
+		entityRef := &b.entityRefs[0]
+		entityRef.typ = entity.Type
+		entityRef.id = map[attribute.Key]bool{}
+		entityRef.attrs = map[attribute.Key]bool{}
+		entityRef.schemaUrl = entity.SchemaURL
+
+		ids := entity.Id.Iter()
+		for ids.Next() {
+			attr := ids.Attribute()
+			if !attr.Valid() {
+				continue
+			}
+			entityRef.id[attr.Key] = true
+			b.attrs[attr.Key] = attr.Value
+		}
+		attrs := entity.Attrs.Iter()
+		for attrs.Next() {
+			attr := attrs.Attribute()
+			if !attr.Valid() {
+				continue
+			}
+			if _, exists := b.attrs[attr.Key]; exists {
+				return nil, fmt.Errorf("invalid Entity, key %q is both an id and Attr", attr.Key)
+			}
+			entityRef.attrs[attr.Key] = true
+			b.attrs[attr.Key] = attr.Value
+		}
+		entityRef.updateCache()
+
+		var err error
+		resource, err = Merge(resource, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return resource, nil
 }
 
 // NewSchemaless creates a resource from attrs. If attrs contains duplicate keys,
@@ -109,20 +134,40 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	// Ensure attributes comply with the specification:
-	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
-	s, _ := attribute.NewSetWithFiltered(
-		attrs, func(kv attribute.KeyValue) bool {
-			return kv.Valid()
-		},
-	)
+	m := map[attribute.Key]attribute.Value{}
+	for _, attr := range attrs {
+		// Ensure attributes comply with the specification:
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
+		if attr.Valid() {
+			m[attr.Key] = attr.Value
+		}
+	}
 
 	// If attrs only contains invalid entries do not allocate a new resource.
-	if s.Len() == 0 {
+	if len(m) == 0 {
 		return &Resource{}
 	}
 
-	return &Resource{entity: internal.EntityData{Id: attribute.NewSet(), Attrs: s}} //nolint
+	r := &Resource{attrs: m}
+	r.updateCache()
+	return r
+}
+
+func mapAttrsToSlice(m map[attribute.Key]attribute.Value) []attribute.KeyValue {
+	var kv []attribute.KeyValue
+	for k, v := range m {
+		kv = append(
+			kv, attribute.KeyValue{
+				Key:   k,
+				Value: v,
+			},
+		)
+	}
+	return kv
+}
+
+func mapAttrsToSet(m map[attribute.Key]attribute.Value) attribute.Set {
+	return attribute.NewSet(mapAttrsToSlice(m)...)
 }
 
 // String implements the Stringer interface and provides a
@@ -134,7 +179,8 @@ func (r *Resource) String() string {
 	if r == nil {
 		return ""
 	}
-	return r.entity.Attrs.Encoded(attribute.DefaultEncoder())
+	s := mapAttrsToSet(r.attrs)
+	return s.Encoded(attribute.DefaultEncoder())
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Resource.
@@ -143,7 +189,7 @@ func (r *Resource) MarshalLog() interface{} {
 		Attributes attribute.Set
 		SchemaURL  string
 	}{
-		Attributes: r.entity.Attrs,
+		Attributes: mapAttrsToSet(r.attrs),
 		SchemaURL:  r.schemaURL,
 	}
 }
@@ -154,7 +200,7 @@ func (r *Resource) Attributes() []attribute.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
-	return r.entity.Attrs.ToSlice()
+	return mapAttrsToSlice(r.attrs)
 }
 
 // SchemaURL returns the schema URL associated with Resource r.
@@ -165,27 +211,13 @@ func (r *Resource) SchemaURL() string {
 	return r.schemaURL
 }
 
-func (r *Resource) EntityId() *attribute.Set {
-	if r == nil {
-		return attribute.EmptySet()
-	}
-	return &r.entity.Id
-}
-
-func (r *Resource) EntityType() string {
-	if r == nil {
-		return ""
-	}
-	return r.entity.Type
-}
-
 // Iter returns an iterator of the Resource attributes.
 // This is ideal to use if you do not want a copy of the attributes.
 func (r *Resource) Iter() attribute.Iterator {
 	if r == nil {
 		r = Empty()
 	}
-	return r.entity.Attrs.Iter()
+	return r.attrSet.Iter()
 }
 
 // Equal returns true when a Resource is equivalent to this Resource.
@@ -210,6 +242,14 @@ func (r *Resource) Equal(eq *Resource) bool {
 // If the resources have different non-empty schemaURL an empty resource and an error
 // will be returned.
 func Merge(a, b *Resource) (*Resource, error) {
+	return merge(a, b, mergeOptions{})
+}
+
+type mergeOptions struct {
+	allowMultipleOfSameType bool
+}
+
+func merge(a, b *Resource, options mergeOptions) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
 	}
@@ -233,10 +273,100 @@ func Merge(a, b *Resource) (*Resource, error) {
 		return Empty(), errMergeConflictSchemaURL
 	}
 
-	mergedEntity := internal.MergeEntities(&a.entity, &b.entity)
-	merged := NewWithEntity(schemaURL, mergedEntity)
+	merged := &Resource{
+		attrs:      cloneAttrs(a.attrs),
+		schemaURL:  schemaURL,
+		entityRefs: make([]resourceEntityRef, len(a.entityRefs)),
+	}
+	for k, v := range b.attrs {
+		merged.attrs[k] = v
+	}
+
+	copy(merged.entityRefs, a.entityRefs)
+
+	entityTypes := map[string]resourceEntityRef{}
+	for _, er := range a.entityRefs {
+		entityTypes[er.typ] = er
+	}
+
+	for _, er := range b.entityRefs {
+		if existingEr, exists := entityTypes[er.typ]; !exists {
+			merged.entityRefs = append(merged.entityRefs, er)
+			entityTypes[er.typ] = er
+
+			for k := range er.id {
+				merged.attrs[k] = b.attrs[k]
+			}
+			for k := range er.attrs {
+				merged.attrs[k] = b.attrs[k]
+			}
+
+		} else {
+			err := mergeEntity(merged, existingEr, b, er, options)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	merged.updateCache()
 
 	return merged, nil
+}
+
+func cloneAttrs(attrs map[attribute.Key]attribute.Value) map[attribute.Key]attribute.Value {
+	m := map[attribute.Key]attribute.Value{}
+	for k, v := range attrs {
+		m[k] = v
+	}
+	return m
+}
+
+func mergeEntity(
+	intoRes *Resource, intoEnt resourceEntityRef, fromRes *Resource, fromEnt resourceEntityRef,
+	options mergeOptions,
+) error {
+	intoId, err := intoRes.getEntityId(intoEnt)
+	if err != nil {
+		return err
+	}
+
+	fromId, err := fromRes.getEntityId(fromEnt)
+	if err != nil {
+		return err
+	}
+
+	if options.allowMultipleOfSameType || intoId == fromId {
+		// id is the same or allowMultipleOfSameType is set.
+		if intoEnt.schemaUrl == fromEnt.schemaUrl {
+			// SchemaURL is the same too.
+			// Merge descriptive attributes.
+			attrs, err := fromRes.getEntityDescr(fromEnt)
+			if err != nil {
+				return err
+			}
+
+			err = intoRes.mergeEntity(intoEnt, fromId, attrs)
+			if err != nil {
+				return err
+			}
+		} else {
+			// SchemaURL is different.
+			// Overwrite entity
+			err = intoRes.overwriteEntity(intoEnt, fromRes, fromEnt)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// id is different
+		// Overwrite entity
+		err = intoRes.overwriteEntity(intoEnt, fromRes, fromEnt)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Empty returns an instance of Resource with no attributes. It is
@@ -292,7 +422,7 @@ func (r *Resource) Set() *attribute.Set {
 	if r == nil {
 		r = Empty()
 	}
-	return &r.entity.Attrs
+	return &r.attrSet
 }
 
 // MarshalJSON encodes the resource attributes as a JSON list of { "Key":
@@ -302,23 +432,30 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		r = Empty()
 	}
 
+	type entityRef struct {
+		Type      string
+		Id        any
+		Attrs     any
+		SchemaURL string
+	}
+
 	rjson := struct {
 		Attributes any
 		SchemaURL  string
-		Entity     struct {
-			Type string
-			Id   any
-		}
+		EntityRefs []entityRef
 	}{
-		Attributes: r.entity.Attrs.MarshalableToJSON(),
+		Attributes: r.attrSet.MarshalableToJSON(),
 		SchemaURL:  r.schemaURL,
-		Entity: struct {
-			Type string
-			Id   any
-		}{
-			Type: r.entity.Type,
-			Id:   r.entity.Id.MarshalableToJSON(),
-		},
+	}
+	for _, er := range r.entityRefs {
+		rjson.EntityRefs = append(
+			rjson.EntityRefs, entityRef{
+				Type:      er.typ,
+				Id:        er.idAsSlice,
+				Attrs:     er.attrsAsSlice,
+				SchemaURL: er.schemaUrl,
+			},
+		)
 	}
 
 	return json.Marshal(rjson)
@@ -329,7 +466,7 @@ func (r *Resource) Len() int {
 	if r == nil {
 		return 0
 	}
-	return r.entity.Attrs.Len()
+	return len(r.attrs)
 }
 
 // Encoded returns an encoded representation of the resource.
@@ -337,5 +474,146 @@ func (r *Resource) Encoded(enc attribute.Encoder) string {
 	if r == nil {
 		return ""
 	}
-	return r.entity.Attrs.Encoded(enc)
+	return r.attrSet.Encoded(enc)
+}
+
+func (r *Resource) getEntityId(entity resourceEntityRef) (attribute.Set, error) {
+	return r.getAttrsByKeys(entity.id)
+}
+
+func (r *Resource) getEntityDescr(entity resourceEntityRef) (attribute.Set, error) {
+	return r.getAttrsByKeys(entity.attrs)
+}
+
+func (r *Resource) getAttrsByKeys(keys map[attribute.Key]bool) (attribute.Set, error) {
+	var id []attribute.KeyValue
+	for key := range keys {
+		val, exists := r.attrs[key]
+		if !exists {
+			return attribute.NewSet(), fmt.Errorf(
+				"invalid resourceEntityRef, key %s not found in Resource attrs", key,
+			)
+		}
+		id = append(id, attribute.KeyValue{Key: attribute.Key(key), Value: val})
+	}
+	return attribute.NewSet(id...), nil
+}
+
+func (r *Resource) mergeEntity(entity resourceEntityRef, id, attrs attribute.Set) error {
+	idx := r.findEntity(entity)
+	if idx < 0 {
+		return errors.New("invalid resourceEntityRef")
+	}
+	updateEnt := &r.entityRefs[idx]
+
+	iter := id.Iter()
+	for iter.Next() {
+		attr := iter.Attribute()
+		r.attrs[attr.Key] = attr.Value
+		updateEnt.id[attr.Key] = true
+	}
+
+	iter = attrs.Iter()
+	for iter.Next() {
+		attr := iter.Attribute()
+		r.attrs[attr.Key] = attr.Value
+		updateEnt.attrs[attr.Key] = true
+	}
+	return nil
+}
+
+func (r *Resource) mergeEntityDescr(entity resourceEntityRef, attrs attribute.Set) error {
+	idx := r.findEntity(entity)
+	if idx < 0 {
+		return errors.New("invalid resourceEntityRef")
+	}
+	updateEnt := &r.entityRefs[idx]
+
+	iter := attrs.Iter()
+	for iter.Next() {
+		idAttr := iter.Attribute()
+		r.attrs[idAttr.Key] = idAttr.Value
+		updateEnt.attrs[idAttr.Key] = true
+	}
+	return nil
+}
+
+func (r *Resource) findEntity(entity resourceEntityRef) int {
+	for i, e := range r.entityRefs {
+		if e.typ == entity.typ && equalEntityIdKeys(e.id, entity.id) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (r *Resource) overwriteEntity(
+	intoEnt resourceEntityRef, fromRes *Resource, fromEnt resourceEntityRef,
+) error {
+	idx := r.findEntity(intoEnt)
+	if idx < 0 {
+		return errors.New("invalid resourceEntityRef")
+	}
+	updateEnt := &r.entityRefs[idx]
+
+	updateEnt.typ = fromEnt.typ
+	updateEnt.schemaUrl = fromEnt.schemaUrl
+
+	id, err := fromRes.getEntityId(fromEnt)
+	if err != nil {
+		return err
+	}
+
+	r.setEntityId(updateEnt, id)
+	attrs, err := fromRes.getEntityDescr(fromEnt)
+	if err != nil {
+		return err
+	}
+	r.setEntityDescr(updateEnt, attrs)
+
+	return nil
+}
+
+func (r *Resource) setEntityId(ent *resourceEntityRef, id attribute.Set) {
+	iter := id.Iter()
+	ent.id = map[attribute.Key]bool{}
+	for iter.Next() {
+		attr := iter.Attribute()
+		ent.id[attr.Key] = true
+		r.attrs[attr.Key] = attr.Value
+	}
+}
+
+func (r *Resource) setEntityDescr(ent *resourceEntityRef, attrs attribute.Set) {
+	iter := attrs.Iter()
+	ent.attrs = map[attribute.Key]bool{}
+	for iter.Next() {
+		attr := iter.Attribute()
+		ent.attrs[attr.Key] = true
+		r.attrs[attr.Key] = attr.Value
+	}
+
+}
+
+func (r *Resource) updateCache() {
+	r.attrSet = mapAttrsToSet(r.attrs)
+	for i := range r.entityRefs {
+		r.entityRefs[i].updateCache()
+	}
+}
+
+func (r *Resource) EntityRefs() []resourceEntityRef {
+	return r.entityRefs
+}
+
+func equalEntityIdKeys(id1 map[attribute.Key]bool, id2 map[attribute.Key]bool) bool {
+	if len(id1) != len(id2) {
+		return false
+	}
+	for k := range id1 {
+		if !id2[k] {
+			return false
+		}
+	}
+	return true
 }
