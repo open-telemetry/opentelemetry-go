@@ -25,16 +25,16 @@ func reservoirFunc[N int64 | float64](provider exemplar.ReservoirProvider, filte
 }
 
 // DefaultExemplarReservoirProviderSelector returns the default
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.ReservoirProvider] for the
+// [exemplar.ReservoirProvider] for the
 // provided [Aggregation].
 //
 // For explicit bucket histograms with more than 1 bucket, it uses the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.HistogramReservoirProvider].
+// [exemplar.HistogramReservoirProvider].
 // For exponential histograms, it uses the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.FixedSizeReservoirProvider]
+// [exemplar.FixedSizeReservoirProvider]
 // with a size of min(20, max_buckets).
 // For all other aggregations, it uses the
-// [go.opentelemetry.io/otel/sdk/metric/exemplar.FixedSizeReservoirProvider]
+// [exemplar.FixedSizeReservoirProvider]
 // with a size equal to the number of CPUs.
 //
 // Exemplar default reservoirs MAY change in a minor version bump. No
