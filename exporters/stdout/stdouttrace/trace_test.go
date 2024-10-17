@@ -189,12 +189,14 @@ func expectedJSON(now time.Time) string {
 	"InstrumentationScope": {
 		"Name": "",
 		"Version": "",
-		"SchemaURL": ""
+		"SchemaURL": "",
+		"Attributes": null
 	},
 	"InstrumentationLibrary": {
 		"Name": "",
 		"Version": "",
-		"SchemaURL": ""
+		"SchemaURL": "",
+		"Attributes": null
 	}
 }
 `
