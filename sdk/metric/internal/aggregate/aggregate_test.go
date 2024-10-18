@@ -73,8 +73,12 @@ func (c *clock) Register() (unregister func()) {
 	return func() { now = orig }
 }
 
+func newNoopReservoir(attribute.Set) exemplar.Reservoir {
+	return exemplar.NewFixedSizeReservoir(0)
+}
+
 func dropExemplars[N int64 | float64](attr attribute.Set) *filteredExemplarReservoir[N] {
-	return newFilteredExemplarReservoir[N](exemplar.AlwaysOffFilter, exemplar.NewFixedSizeReservoir(0))
+	return newFilteredExemplarReservoir[N](exemplar.AlwaysOffFilter, newNoopReservoir(attr))
 }
 
 func TestBuilderFilter(t *testing.T) {
@@ -100,8 +104,8 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter}, attr, nil))
-		t.Run("Filter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
+		t.Run("NoFilter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: newNoopReservoir}, attr, nil))
+		t.Run("Filter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: newNoopReservoir, Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
 	}
 }
 

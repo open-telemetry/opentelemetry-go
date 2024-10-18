@@ -52,9 +52,6 @@ type Builder[N int64 | float64] struct {
 
 func (b Builder[N]) resFunc() func(attribute.Set) *filteredExemplarReservoir[N] {
 	return func(attrs attribute.Set) *filteredExemplarReservoir[N] {
-		if b.ExemplarReservoirProvider == nil {
-			return newFilteredExemplarReservoir[N](b.ExemplarFilter, exemplar.NewFixedSizeReservoir(0))
-		}
 		return newFilteredExemplarReservoir[N](b.ExemplarFilter, b.ExemplarReservoirProvider(attrs))
 	}
 }

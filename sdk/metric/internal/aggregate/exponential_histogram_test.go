@@ -683,26 +683,30 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:    metricdata.CumulativeTemporality,
-			ExemplarFilter: exemplar.AlwaysOffFilter,
+			Temporality:               metricdata.CumulativeTemporality,
+			ExemplarFilter:            exemplar.AlwaysOffFilter,
+			ExemplarReservoirProvider: newNoopReservoir,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:    metricdata.DeltaTemporality,
-			ExemplarFilter: exemplar.AlwaysOffFilter,
+			Temporality:               metricdata.DeltaTemporality,
+			ExemplarFilter:            exemplar.AlwaysOffFilter,
+			ExemplarReservoirProvider: newNoopReservoir,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:    metricdata.CumulativeTemporality,
-			ExemplarFilter: exemplar.AlwaysOffFilter,
+			Temporality:               metricdata.CumulativeTemporality,
+			ExemplarFilter:            exemplar.AlwaysOffFilter,
+			ExemplarReservoirProvider: newNoopReservoir,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:    metricdata.DeltaTemporality,
-			ExemplarFilter: exemplar.AlwaysOffFilter,
+			Temporality:               metricdata.DeltaTemporality,
+			ExemplarFilter:            exemplar.AlwaysOffFilter,
+			ExemplarReservoirProvider: newNoopReservoir,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
 }
@@ -749,10 +753,11 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 
 func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality:      metricdata.DeltaTemporality,
-		Filter:           attrFltr,
-		AggregationLimit: 2,
-		ExemplarFilter:   exemplar.AlwaysOffFilter,
+		Temporality:               metricdata.DeltaTemporality,
+		Filter:                    attrFltr,
+		AggregationLimit:          2,
+		ExemplarFilter:            exemplar.AlwaysOffFilter,
+		ExemplarReservoirProvider: newNoopReservoir,
 	}.ExponentialBucketHistogram(4, 20, false, false)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -877,10 +882,11 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 
 func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality:      metricdata.CumulativeTemporality,
-		Filter:           attrFltr,
-		AggregationLimit: 2,
-		ExemplarFilter:   exemplar.AlwaysOffFilter,
+		Temporality:               metricdata.CumulativeTemporality,
+		Filter:                    attrFltr,
+		AggregationLimit:          2,
+		ExemplarFilter:            exemplar.AlwaysOffFilter,
+		ExemplarReservoirProvider: newNoopReservoir,
 	}.ExponentialBucketHistogram(4, 20, false, false)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
