@@ -516,19 +516,47 @@ type unwrapObs struct {
 	obs metric.Observer
 }
 
-func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64, opts ...metric.ObserveOption) {
-	if un, ok := inst.(unwrapper); ok {
-		inst = un.unwrap().(metric.Float64Observable)
+// unwrapFloat64Observable returns an expected metric.Float64Observable after
+// unwrapping the global object.
+func unwrapFloat64Observable(inst metric.Float64Observable) metric.Float64Observable {
+	if unwrapped, ok := inst.(unwrapper); ok {
+		if floatObs, ok := unwrapped.unwrap().(metric.Float64Observable); ok {
+			// Note: if the unwrapped object does not
+			// unwrap as an observable for either of the
+			// branches here, it means an internal bug in
+			// this package.  We avoid logging an error in
+			// this case, because the SDK has to try its
+			// own type conversion on the object.  The SDK
+			// will see this and be forced to respond with
+			// its own error.
+			//
+			// This code uses a double-nested if statement
+			// to avoid creating a branch that is
+			// impossible to cover.
+			inst = floatObs
+		}
 	}
+	return inst
+}
 
-	uo.obs.ObserveFloat64(inst, value, opts...)
+// unwrapInt64Observable returns an expected metric.Int64Observable after
+// unwrapping the global object.
+func unwrapInt64Observable(inst metric.Int64Observable) metric.Int64Observable {
+	if unwrapped, ok := inst.(unwrapper); ok {
+		if unint, ok := unwrapped.unwrap().(metric.Int64Observable); ok {
+			// See the comment in unwrapFloat64Observable().
+			inst = unint
+		}
+	}
+	return inst
+}
+
+func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64, opts ...metric.ObserveOption) {
+	uo.obs.ObserveFloat64(unwrapFloat64Observable(inst), value, opts...)
 }
 
 func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts ...metric.ObserveOption) {
-	if un, ok := inst.(unwrapper); ok {
-		inst = un.unwrap().(metric.Int64Observable)
-	}
-	uo.obs.ObserveInt64(inst, value, opts...)
+	uo.obs.ObserveInt64(unwrapInt64Observable(inst), value, opts...)
 }
 
 func unwrapCallback(f metric.Callback) metric.Callback {

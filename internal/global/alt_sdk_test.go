@@ -11,7 +11,14 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 )
+
+// Below, an alternate meter provider is constructed specifically to
+// test the asynchronous instrument path.  The alternative SDK uses
+// no-op implementations for its synchronous instruments, and the six
+// asynchronous instrument types are created here to test that
+// instruments and callbacks are unwrapped inside this library.
 
 type altMeterProvider struct {
 	t      *testing.T
@@ -37,13 +44,53 @@ type altMeter struct {
 
 var _ metric.Meter = &altMeter{}
 
-type testAsyncCounter struct {
+type testAiCounter struct {
 	meter *altMeter
 	embedded.Int64ObservableCounter
 	metric.Int64Observable
 }
 
-var _ metric.Int64ObservableCounter = &testAsyncCounter{}
+var _ metric.Int64ObservableCounter = &testAiCounter{}
+
+type testAfCounter struct {
+	meter *altMeter
+	embedded.Float64ObservableCounter
+	metric.Float64Observable
+}
+
+var _ metric.Float64ObservableCounter = &testAfCounter{}
+
+type testAiUpDownCounter struct {
+	meter *altMeter
+	embedded.Int64ObservableUpDownCounter
+	metric.Int64Observable
+}
+
+var _ metric.Int64ObservableUpDownCounter = &testAiUpDownCounter{}
+
+type testAfUpDownCounter struct {
+	meter *altMeter
+	embedded.Float64ObservableUpDownCounter
+	metric.Float64Observable
+}
+
+var _ metric.Float64ObservableUpDownCounter = &testAfUpDownCounter{}
+
+type testAiGauge struct {
+	meter *altMeter
+	embedded.Int64ObservableGauge
+	metric.Int64Observable
+}
+
+var _ metric.Int64ObservableGauge = &testAiGauge{}
+
+type testAfGauge struct {
+	meter *altMeter
+	embedded.Float64ObservableGauge
+	metric.Float64Observable
+}
+
+var _ metric.Float64ObservableGauge = &testAfGauge{}
 
 type altRegistration struct {
 	cb metric.Callback
@@ -59,70 +106,81 @@ func (*altRegistration) Unregister() error {
 	return nil
 }
 
-func (am *altMeter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
-	return nil, nil
+func (am *altMeter) Int64Counter(name string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return noop.NewMeterProvider().Meter("noop").Int64Counter(name)
 }
 
-func (am *altMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
-	return nil, nil
+func (am *altMeter) Int64UpDownCounter(name string, _ ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	return noop.NewMeterProvider().Meter("noop").Int64UpDownCounter(name)
 }
 
-func (am *altMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
-	return nil, nil
+func (am *altMeter) Int64Histogram(name string, _ ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
+	return noop.NewMeterProvider().Meter("noop").Int64Histogram(name)
 }
 
-func (am *altMeter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
-	return nil, nil
+func (am *altMeter) Int64Gauge(name string, _ ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	return noop.NewMeterProvider().Meter("noop").Int64Gauge(name)
 }
 
 func (am *altMeter) Int64ObservableCounter(name string, options ...metric.Int64ObservableCounterOption) (metric.Int64ObservableCounter, error) {
-	return &testAsyncCounter{
+	return &testAiCounter{
 		meter: am,
 	}, nil
 }
 
 func (am *altMeter) Int64ObservableUpDownCounter(name string, options ...metric.Int64ObservableUpDownCounterOption) (metric.Int64ObservableUpDownCounter, error) {
-	return nil, nil
+	return &testAiUpDownCounter{
+		meter: am,
+	}, nil
 }
 
 func (am *altMeter) Int64ObservableGauge(name string, options ...metric.Int64ObservableGaugeOption) (metric.Int64ObservableGauge, error) {
-	return nil, nil
+	return &testAiGauge{
+		meter: am,
+	}, nil
 }
 
-func (am *altMeter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
-	return nil, nil
+func (am *altMeter) Float64Counter(name string, _ ...metric.Float64CounterOption) (metric.Float64Counter, error) {
+	return noop.NewMeterProvider().Meter("noop").Float64Counter(name)
 }
 
-func (am *altMeter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
-	return nil, nil
+func (am *altMeter) Float64UpDownCounter(name string, _ ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
+	return noop.NewMeterProvider().Meter("noop").Float64UpDownCounter(name)
 }
 
 func (am *altMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
-	return nil, nil
+	return noop.NewMeterProvider().Meter("noop").Float64Histogram(name)
 }
 
 func (am *altMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
-	return nil, nil
+	return noop.NewMeterProvider().Meter("noop").Float64Gauge(name)
 }
 
 func (am *altMeter) Float64ObservableCounter(name string, options ...metric.Float64ObservableCounterOption) (metric.Float64ObservableCounter, error) {
-	return nil, nil
+	return &testAfCounter{
+		meter: am,
+	}, nil
 }
 
 func (am *altMeter) Float64ObservableUpDownCounter(name string, options ...metric.Float64ObservableUpDownCounterOption) (metric.Float64ObservableUpDownCounter, error) {
-	return nil, nil
+	return &testAfUpDownCounter{
+		meter: am,
+	}, nil
 }
 
 func (am *altMeter) Float64ObservableGauge(name string, options ...metric.Float64ObservableGaugeOption) (metric.Float64ObservableGauge, error) {
-	// Note: The global delegation also breaks when we return nil in one of these!
-	return nil, nil
+	return &testAfGauge{
+		meter: am,
+	}, nil
 }
 
 func (am *altMeter) RegisterCallback(f metric.Callback, instruments ...metric.Observable) (metric.Registration, error) {
 	for _, inst := range instruments {
 		switch inst.(type) {
-		case *testAsyncCounter:
-			// OK!
+		case *testAiCounter, *testAfCounter,
+			*testAiUpDownCounter, *testAfUpDownCounter,
+			*testAiGauge, *testAfGauge:
+		// OK!
 		default:
 			am.provider.t.Errorf("unexpected type %T", inst)
 		}
@@ -141,7 +199,9 @@ func (ao *altObserver) ObserveInt64(inst metric.Int64Observable, _ int64, _ ...m
 
 func (ao *altObserver) observe(inst any) {
 	switch inst.(type) {
-	case *testAsyncCounter:
+	case *testAiCounter, *testAfCounter,
+		*testAiUpDownCounter, *testAfUpDownCounter,
+		*testAiGauge, *testAfGauge:
 		// OK!
 	default:
 		ao.t.Errorf("unexpected type %T", inst)
@@ -154,13 +214,28 @@ func TestMeterDelegation(t *testing.T) {
 	amp := &altMeterProvider{t: t}
 
 	gm := MeterProvider().Meter("test")
-	ai, err := gm.Int64ObservableCounter("test_counter")
+	aic, err := gm.Int64ObservableCounter("test_counter_i")
+	require.NoError(t, err)
+	afc, err := gm.Float64ObservableCounter("test_counter_f")
+	require.NoError(t, err)
+	aiu, err := gm.Int64ObservableUpDownCounter("test_updowncounter_i")
+	require.NoError(t, err)
+	afu, err := gm.Float64ObservableUpDownCounter("test_updowncounter_f")
+	require.NoError(t, err)
+	aig, err := gm.Int64ObservableGauge("test_gauge_i")
+	require.NoError(t, err)
+	afg, err := gm.Float64ObservableGauge("test_gauge_f")
 	require.NoError(t, err)
 
 	_, err = gm.RegisterCallback(func(_ context.Context, obs metric.Observer) error {
-		obs.ObserveInt64(ai, 10)
+		obs.ObserveInt64(aic, 10)
+		obs.ObserveFloat64(afc, 10)
+		obs.ObserveInt64(aiu, 10)
+		obs.ObserveFloat64(afu, 10)
+		obs.ObserveInt64(aig, 10)
+		obs.ObserveFloat64(afg, 10)
 		return nil
-	}, ai)
+	}, aic, afc, aiu, afu, aig, afg)
 	require.NoError(t, err)
 
 	SetMeterProvider(amp)
