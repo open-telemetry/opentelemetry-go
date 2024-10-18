@@ -73,7 +73,7 @@ func (c *clock) Register() (unregister func()) {
 }
 
 func dropExemplars[N int64 | float64]() FilteredExemplarReservoir[N] {
-	return DropReservoir[N]()
+	return dropReservoir[N]()
 }
 
 func TestBuilderFilter(t *testing.T) {

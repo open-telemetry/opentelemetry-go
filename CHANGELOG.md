@@ -10,6 +10,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `go.opentelemetry.io/otel/sdk/metric/exemplar.AlwaysOffFilter`, which can be used to disable exemplar recording. (#5850)
+- Add `go.opentelemetry.io/otel/sdk/metric.WithExemplarFilter`, which can be used to configure the exemplar filter used by the metrics SDK. (#5850)
+
+### Fixed
+
+- Global MeterProvider registration correctly unwraps global instrument stubs. (#5881)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.31.0/0.53.0/0.7.0/0.0.10] 2024-10-11
+
+### Added
+
 - Add `go.opentelemetry.io/otel/sdk/metric/exemplar` package which includes `Exemplar`, `Filter`, `TraceBasedFilter`, `AlwaysOnFilter`, `HistogramReservoir`, `FixedSizeReservoir`, `Reservoir`, `Value` and `ValueType` types. These will be used for configuring the exemplar reservoir for the metrics sdk. (#5747, #5862)
 - Add `WithExportBufferSize` option to log batch processor.(#5877)
 
@@ -32,12 +46,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The race condition for multiple `FixedSize` exemplar reservoirs identified in #5814 is resolved. (#5819)
 - Fix log records duplication in case of heterogeneous resource attributes by correctly mapping each log record to it's resource and scope. (#5803)
 - Fix timer channel drain to avoid hanging on Go 1.23. (#5868)
-- Fix delegation for global meter providers. (#5827)
-  Change the `reflect.TypeOf` to use a nil pointer to not allocate on the heap unless necessary.
-- Global MeterProvider registration correctly unwraps global instrument stubs. (#5881)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+- Fix delegation for global meter providers, and panic when calling otel.SetMeterProvider. (#5827)
+- Change the `reflect.TypeOf` to use a nil pointer to not allocate on the heap unless necessary. (#5827)
 
 ## [1.30.0/0.52.0/0.6.0/0.0.9] 2024-09-09
 
@@ -3109,7 +3119,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.30.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.31.0...HEAD
+[1.31.0/0.53.0/0.7.0/0.0.10]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.31.0
 [1.30.0/0.52.0/0.6.0/0.0.9]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.30.0
 [1.29.0/0.51.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.29.0
 [1.28.0/0.50.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.28.0

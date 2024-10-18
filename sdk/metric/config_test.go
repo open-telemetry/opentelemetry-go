@@ -14,8 +14,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type reader struct {
@@ -191,4 +193,103 @@ func TestWithView(t *testing.T) {
 		),
 	)})
 	assert.Len(t, c.views, 2)
+}
+
+func TestWithExemplarFilterOff(t *testing.T) {
+	for _, tc := range []struct {
+		desc                   string
+		opts                   []Option
+		env                    string
+		expectFilterSampled    bool
+		expectFilterNotSampled bool
+	}{
+		{
+			desc:                   "default",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc:                   "always on option",
+			opts:                   []Option{WithExemplarFilter(exemplar.AlwaysOnFilter)},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+		{
+			desc:                   "always off option",
+			opts:                   []Option{WithExemplarFilter(exemplar.AlwaysOffFilter)},
+			expectFilterSampled:    false,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc:                   "trace based option",
+			opts:                   []Option{WithExemplarFilter(exemplar.TraceBasedFilter)},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc: "last option takes precedence",
+			opts: []Option{
+				WithExemplarFilter(exemplar.AlwaysOffFilter),
+				WithExemplarFilter(exemplar.AlwaysOnFilter),
+			},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+		{
+			desc:                   "always_off env",
+			env:                    "always_off",
+			expectFilterSampled:    false,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc:                   "always_on env",
+			env:                    "always_on",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+		{
+			desc:                   "always_on case insensitiveenv",
+			env:                    "ALWAYS_ON",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+		{
+			desc:                   "trace_based env",
+			env:                    "trace_based",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc:                   "wrong env",
+			env:                    "foo_bar",
+			expectFilterSampled:    true,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc:                   "option takes precedence over env var",
+			env:                    "always_off",
+			opts:                   []Option{WithExemplarFilter(exemplar.AlwaysOnFilter)},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			if tc.env != "" {
+				t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", tc.env)
+			}
+			c := newConfig(tc.opts)
+			assert.NotNil(t, c.exemplarFilter)
+			assert.Equal(t, tc.expectFilterNotSampled, c.exemplarFilter(context.Background()))
+			assert.Equal(t, tc.expectFilterSampled, c.exemplarFilter(sample(context.Background())))
+		})
+	}
+}
+
+func sample(parent context.Context) context.Context {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x01},
+		SpanID:     trace.SpanID{0x01},
+		TraceFlags: trace.FlagsSampled,
+	})
+	return trace.ContextWithSpanContext(parent, sc)
 }
