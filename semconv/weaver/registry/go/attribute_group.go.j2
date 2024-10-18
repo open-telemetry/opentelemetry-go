@@ -44,12 +44,12 @@ import "go.opentelemetry.io/otel/attribute"
 {% for group in ctx %}
 {% if group.attributes | length > 0 %}
 {# TODO - we're grouping by registry namespace, not attribute group, so we lose group docs #}
-{{ ["Namespace: " ~ group.root_namespace] | comment }}
+{{ ["Namespace: " ~ group.root_namespace] | comment(format="go") }}
 const (
 {% for attribute in group.attributes %}
 {%- if not attribute.type is template_type %}{# TODO - Go does not handle template attributes yet!!! #}
-    {{ keydoc(attribute) | comment(indent=4) }}
-    {{h.to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+{{ keydoc(attribute) | comment(format="go_1tab") }}
+	{{h.to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
 {%- endif %}
 {%- endfor %}
 )
@@ -57,22 +57,22 @@ const (
 {% for attribute in group.attributes %}
 {# TODO - Go does not handle template attributes yet!!! #}
 {%- if not attribute.type is template_type %}
-{{ [h.to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment }}
-{{ ["It represents the " ~ attribute.brief] | comment }}
+{{ [h.to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~"\"semantic conventions."] | comment(format="go") }}
+{{ ["It represents the " ~ attribute.brief] | comment(format="go") }}
 func {{h.to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
-    return {{h.to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+	return {{h.to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
 {%- endif %}
 {% endfor %}
 {# Render values for enums #}
 {%- for attribute in group.attributes %}
 {%- if attribute is enum %}
-{{ ["Enum values for " ~ attribute.name] | comment }}
+{{ ["Enum values for " ~ attribute.name] | comment(format="go") }}
 var (
 {% for value in attribute.type.members %}
-    {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(indent=4) }}
-    {%- if value.deprecated %}{{ value.deprecated | comment(indent=4) }}{%  endif %}
-    {{h.to_go_name(attribute.name ~ "." ~ value.id)}} = {{ h.to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+{{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
+{%- if value.deprecated %}{{ value.deprecated | comment(format="go_1tab") }}{%  endif %}
+	{{h.to_go_name(attribute.name ~ "." ~ value.id)}} = {{ h.to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )
 {%- endif %}
