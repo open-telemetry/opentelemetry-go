@@ -332,6 +332,9 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 		// The view explicitly requested the default aggregation.
 		stream.Aggregation = DefaultAggregationSelector(kind)
 	}
+	if stream.ExemplarReservoirProviderSelector == nil {
+		stream.ExemplarReservoirProviderSelector = DefaultExemplarReservoirProviderSelector
+	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
 		return nil, 0, fmt.Errorf(
@@ -352,7 +355,7 @@ func (i *inserter[N]) cachedAggregator(scope instrumentation.Scope, kind Instrum
 	cv := i.aggregators.Lookup(normID, func() aggVal[N] {
 		b := aggregate.Builder[N]{
 			Temporality:   i.pipeline.reader.temporality(kind),
-			ReservoirFunc: reservoirFunc[N](stream.Aggregation, i.pipeline.exemplarFilter),
+			ReservoirFunc: reservoirFunc[N](stream.ExemplarReservoirProviderSelector(stream.Aggregation), i.pipeline.exemplarFilter),
 		}
 		b.Filter = stream.AttributeFilter
 		// A value less than or equal to zero will disable the aggregation
