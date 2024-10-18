@@ -29,6 +29,13 @@ comment_formats:
     shortcut_reference_link: true
     trim: true
     remove_trailing_dots: true
+  go_1tab:
+    format: markdown
+    prefix: "	// "
+    indent_first_level_list_items: true
+    shortcut_reference_link: true
+    trim: true
+    remove_trailing_dots: true
 default_comment_format: go
 text_maps:
   attribute_type_method:
@@ -42,15 +49,16 @@ text_maps:
     boolean[]: BoolSlice
   attribute_type_value:
     string: string
-    string[]: "[]string"
+    string[]: "...string"
     int: int
-    int[]: "[]int"
+    int[]: "...int"
     double: float64
-    double[]: "[]float64"
+    double[]: "...float64"
     boolean: bool
-    boolean[]: "[]bool"
+    boolean[]: "...bool"
 acronyms:
   - ACL
+  - AI
   - AIX
   - AKS
   - AMD64
@@ -60,87 +68,94 @@ acronyms:
   - ARN
   - ARNs
   - ASCII
+  - ASPNETCore
   - AWS
+  - CICD
   - CPP
   - CPU
   - CSS
+  - CosmosDB
+  - CouchDB
+  - CronJob
   - DB
   - DC
   - DNS
+  - DaemonSet
+  - DragonflyBSD
+  - DynamoDB
   - EC2
   - ECS
   - EDB
   - EKS
   - EOF
+  - FaaS
+  - FirstSQL
+  - FreeBSD
+  - GC
   - GCP
   - GRPC
   - GUID
+  - HBase
   - HPUX
   - HSQLDB
   - HTML
   - HTTP
   - HTTPS
+  - HanaDB
   - IA64
   - ID
   - IP
+  - InProc
+  - InstantDB
   - JDBC
   - JSON
+  - JVM
   - K8S
   - LHS
   - MSSQL
+  - MariaDB
+  - MaxDB
+  - MongoDB
+  - MySQL
+  - NetBSD
   - OS
+  - OTel
+  - OpenBSD
   - PHP
   - PID
   - PPC32
   - PPC64
+  - PostgreSQL
   - QPS
   - QUIC
   - RAM
   - RHS
   - RPC
+  - ReplicaSet
   - SDK
   - SLA
   - SMTP
   - SPDY
   - SQL
   - SSH
+  - StatefulSet
   - TCP
   - TLS
   - TTL
   - UDP
-  - UID
   - UI
-  - UUID
+  - UID
   - URI
   - URL
   - UTF8
+  - UUID
+  - V8JS
+  - VCS
   - VM
+  - WebEngine
   - XML
   - XMPP
   - XSRF
   - XSS
   - ZOS
-  - CronJob
-  - DaemonSet
-  - StatefulSet
-  - ReplicaSet
-  - WebEngine
-  - MySQL
-  - PostgreSQL
-  - MariaDB
-  - MaxDB
-  - FirstSQL
-  - InstantDB
-  - HBase
-  - MongoDB
-  - CouchDB
-  - CosmosDB
-  - DynamoDB
-  - HanaDB
-  - FreeBSD
-  - NetBSD
-  - OpenBSD
-  - DragonflyBSD
-  - InProc
-  - FaaS
-  - OTel
+  
