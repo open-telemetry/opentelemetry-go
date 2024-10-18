@@ -100,8 +100,8 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{}, attr, nil))
-		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
+		t.Run("NoFilter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter}, attr, nil))
+		t.Run("Filter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
 	}
 }
 

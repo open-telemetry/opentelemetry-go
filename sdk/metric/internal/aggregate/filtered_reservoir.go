@@ -28,7 +28,7 @@ func newFilteredExemplarReservoir[N int64 | float64](f exemplar.Filter, r exempl
 }
 
 func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
-	if f.filter != nil && f.filter(ctx) {
+	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
 		f.reservoir.Offer(ctx, time.Now(), exemplar.NewValue(val), attr)
 	}

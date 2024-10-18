@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -39,6 +40,7 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
+		ExemplarFilter:   exemplar.AlwaysOffFilter,
 	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -143,6 +145,7 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
+		ExemplarFilter:   exemplar.AlwaysOffFilter,
 	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -265,6 +268,7 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
+		ExemplarFilter:   exemplar.AlwaysOffFilter,
 	}.PrecomputedLastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -369,6 +373,7 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
+		ExemplarFilter:   exemplar.AlwaysOffFilter,
 	}.PrecomputedLastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -469,6 +474,8 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
-	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
+	b.Run("Int64", benchmarkAggregate(Builder[int64]{
+		ExemplarFilter: exemplar.AlwaysOffFilter}.PrecomputedLastValue))
+	b.Run("Float64", benchmarkAggregate(Builder[float64]{
+		ExemplarFilter: exemplar.AlwaysOffFilter}.PrecomputedLastValue))
 }
