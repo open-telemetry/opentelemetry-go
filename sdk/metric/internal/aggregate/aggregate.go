@@ -50,14 +50,13 @@ type Builder[N int64 | float64] struct {
 	AggregationLimit int
 }
 
-func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
-	if b.ExemplarFilter != nil {
-		return func(attrs attribute.Set) FilteredExemplarReservoir[N] {
-			return newFilteredExemplarReservoir[N](b.ExemplarFilter, b.ExemplarReservoirProvider(attrs))
+func (b Builder[N]) resFunc() func(attribute.Set) *filteredExemplarReservoir[N] {
+	return func(attrs attribute.Set) *filteredExemplarReservoir[N] {
+		if b.ExemplarReservoirProvider == nil {
+			return newFilteredExemplarReservoir[N](b.ExemplarFilter, exemplar.NewFixedSizeReservoir(0))
 		}
+		return newFilteredExemplarReservoir[N](b.ExemplarFilter, b.ExemplarReservoirProvider(attrs))
 	}
-
-	return dropReservoir
 }
 
 type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
