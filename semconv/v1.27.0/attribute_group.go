@@ -207,7 +207,7 @@ func ArtifactVersion(val string) attribute.KeyValue {
 
 // ASP.NET Core attributes
 const (
-	// AspnetcoreRateLimitingResultKey is the attribute Key conforming to the
+	// ASPNETCoreRateLimitingResultKey is the attribute Key conforming to the
 	// "aspnetcore.rate_limiting.result" semantic conventions. It represents
 	// the rate-limiting result, shows whether the lease was acquired or
 	// contains a rejection reason
@@ -216,9 +216,9 @@ const (
 	// RequirementLevel: Required
 	// Stability: stable
 	// Examples: 'acquired', 'request_canceled'
-	AspnetcoreRateLimitingResultKey = attribute.Key("aspnetcore.rate_limiting.result")
+	ASPNETCoreRateLimitingResultKey = attribute.Key("aspnetcore.rate_limiting.result")
 
-	// AspnetcoreDiagnosticsHandlerTypeKey is the attribute Key conforming to
+	// ASPNETCoreDiagnosticsHandlerTypeKey is the attribute Key conforming to
 	// the "aspnetcore.diagnostics.handler.type" semantic conventions. It
 	// represents the full type name of the
 	// [`IExceptionHandler`](https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.diagnostics.iexceptionhandler)
@@ -229,9 +229,9 @@ const (
 	// was handled by this handler.)
 	// Stability: stable
 	// Examples: 'Contoso.MyHandler'
-	AspnetcoreDiagnosticsHandlerTypeKey = attribute.Key("aspnetcore.diagnostics.handler.type")
+	ASPNETCoreDiagnosticsHandlerTypeKey = attribute.Key("aspnetcore.diagnostics.handler.type")
 
-	// AspnetcoreDiagnosticsExceptionResultKey is the attribute Key conforming
+	// ASPNETCoreDiagnosticsExceptionResultKey is the attribute Key conforming
 	// to the "aspnetcore.diagnostics.exception.result" semantic conventions.
 	// It represents the aSP.NET Core exception middleware handling result
 	//
@@ -239,9 +239,9 @@ const (
 	// RequirementLevel: Optional
 	// Stability: stable
 	// Examples: 'handled', 'unhandled'
-	AspnetcoreDiagnosticsExceptionResultKey = attribute.Key("aspnetcore.diagnostics.exception.result")
+	ASPNETCoreDiagnosticsExceptionResultKey = attribute.Key("aspnetcore.diagnostics.exception.result")
 
-	// AspnetcoreRateLimitingPolicyKey is the attribute Key conforming to the
+	// ASPNETCoreRateLimitingPolicyKey is the attribute Key conforming to the
 	// "aspnetcore.rate_limiting.policy" semantic conventions. It represents
 	// the rate limiting policy name.
 	//
@@ -249,9 +249,9 @@ const (
 	// RequirementLevel: Optional
 	// Stability: stable
 	// Examples: 'fixed', 'sliding', 'token'
-	AspnetcoreRateLimitingPolicyKey = attribute.Key("aspnetcore.rate_limiting.policy")
+	ASPNETCoreRateLimitingPolicyKey = attribute.Key("aspnetcore.rate_limiting.policy")
 
-	// AspnetcoreRequestIsUnhandledKey is the attribute Key conforming to the
+	// ASPNETCoreRequestIsUnhandledKey is the attribute Key conforming to the
 	// "aspnetcore.request.is_unhandled" semantic conventions. It represents
 	// the flag indicating if request was handled by the application pipeline.
 	//
@@ -259,9 +259,9 @@ const (
 	// RequirementLevel: Optional
 	// Stability: stable
 	// Examples: True
-	AspnetcoreRequestIsUnhandledKey = attribute.Key("aspnetcore.request.is_unhandled")
+	ASPNETCoreRequestIsUnhandledKey = attribute.Key("aspnetcore.request.is_unhandled")
 
-	// AspnetcoreRoutingIsFallbackKey is the attribute Key conforming to the
+	// ASPNETCoreRoutingIsFallbackKey is the attribute Key conforming to the
 	// "aspnetcore.routing.is_fallback" semantic conventions. It represents a
 	// value that indicates whether the matched route is a fallback route.
 	//
@@ -269,9 +269,9 @@ const (
 	// RequirementLevel: Optional
 	// Stability: stable
 	// Examples: True
-	AspnetcoreRoutingIsFallbackKey = attribute.Key("aspnetcore.routing.is_fallback")
+	ASPNETCoreRoutingIsFallbackKey = attribute.Key("aspnetcore.routing.is_fallback")
 
-	// AspnetcoreRoutingMatchStatusKey is the attribute Key conforming to the
+	// ASPNETCoreRoutingMatchStatusKey is the attribute Key conforming to the
 	// "aspnetcore.routing.match_status" semantic conventions. It represents
 	// the match result - success or failure
 	//
@@ -279,66 +279,66 @@ const (
 	// RequirementLevel: Optional
 	// Stability: stable
 	// Examples: 'success', 'failure'
-	AspnetcoreRoutingMatchStatusKey = attribute.Key("aspnetcore.routing.match_status")
+	ASPNETCoreRoutingMatchStatusKey = attribute.Key("aspnetcore.routing.match_status")
 )
 
 var (
 	// Lease was acquired
-	AspnetcoreRateLimitingResultAcquired = AspnetcoreRateLimitingResultKey.String("acquired")
+	ASPNETCoreRateLimitingResultAcquired = ASPNETCoreRateLimitingResultKey.String("acquired")
 	// Lease request was rejected by the endpoint limiter
-	AspnetcoreRateLimitingResultEndpointLimiter = AspnetcoreRateLimitingResultKey.String("endpoint_limiter")
+	ASPNETCoreRateLimitingResultEndpointLimiter = ASPNETCoreRateLimitingResultKey.String("endpoint_limiter")
 	// Lease request was rejected by the global limiter
-	AspnetcoreRateLimitingResultGlobalLimiter = AspnetcoreRateLimitingResultKey.String("global_limiter")
+	ASPNETCoreRateLimitingResultGlobalLimiter = ASPNETCoreRateLimitingResultKey.String("global_limiter")
 	// Lease request was canceled
-	AspnetcoreRateLimitingResultRequestCanceled = AspnetcoreRateLimitingResultKey.String("request_canceled")
+	ASPNETCoreRateLimitingResultRequestCanceled = ASPNETCoreRateLimitingResultKey.String("request_canceled")
 )
 
 var (
 	// Exception was handled by the exception handling middleware
-	AspnetcoreDiagnosticsExceptionResultHandled = AspnetcoreDiagnosticsExceptionResultKey.String("handled")
+	ASPNETCoreDiagnosticsExceptionResultHandled = ASPNETCoreDiagnosticsExceptionResultKey.String("handled")
 	// Exception was not handled by the exception handling middleware
-	AspnetcoreDiagnosticsExceptionResultUnhandled = AspnetcoreDiagnosticsExceptionResultKey.String("unhandled")
+	ASPNETCoreDiagnosticsExceptionResultUnhandled = ASPNETCoreDiagnosticsExceptionResultKey.String("unhandled")
 	// Exception handling was skipped because the response had started
-	AspnetcoreDiagnosticsExceptionResultSkipped = AspnetcoreDiagnosticsExceptionResultKey.String("skipped")
+	ASPNETCoreDiagnosticsExceptionResultSkipped = ASPNETCoreDiagnosticsExceptionResultKey.String("skipped")
 	// Exception handling didn't run because the request was aborted
-	AspnetcoreDiagnosticsExceptionResultAborted = AspnetcoreDiagnosticsExceptionResultKey.String("aborted")
+	ASPNETCoreDiagnosticsExceptionResultAborted = ASPNETCoreDiagnosticsExceptionResultKey.String("aborted")
 )
 
 var (
 	// Match succeeded
-	AspnetcoreRoutingMatchStatusSuccess = AspnetcoreRoutingMatchStatusKey.String("success")
+	ASPNETCoreRoutingMatchStatusSuccess = ASPNETCoreRoutingMatchStatusKey.String("success")
 	// Match failed
-	AspnetcoreRoutingMatchStatusFailure = AspnetcoreRoutingMatchStatusKey.String("failure")
+	ASPNETCoreRoutingMatchStatusFailure = ASPNETCoreRoutingMatchStatusKey.String("failure")
 )
 
-// AspnetcoreDiagnosticsHandlerType returns an attribute KeyValue conforming
+// ASPNETCoreDiagnosticsHandlerType returns an attribute KeyValue conforming
 // to the "aspnetcore.diagnostics.handler.type" semantic conventions. It
 // represents the full type name of the
 // [`IExceptionHandler`](https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.diagnostics.iexceptionhandler)
 // implementation that handled the exception.
-func AspnetcoreDiagnosticsHandlerType(val string) attribute.KeyValue {
-	return AspnetcoreDiagnosticsHandlerTypeKey.String(val)
+func ASPNETCoreDiagnosticsHandlerType(val string) attribute.KeyValue {
+	return ASPNETCoreDiagnosticsHandlerTypeKey.String(val)
 }
 
-// AspnetcoreRateLimitingPolicy returns an attribute KeyValue conforming to
+// ASPNETCoreRateLimitingPolicy returns an attribute KeyValue conforming to
 // the "aspnetcore.rate_limiting.policy" semantic conventions. It represents
 // the rate limiting policy name.
-func AspnetcoreRateLimitingPolicy(val string) attribute.KeyValue {
-	return AspnetcoreRateLimitingPolicyKey.String(val)
+func ASPNETCoreRateLimitingPolicy(val string) attribute.KeyValue {
+	return ASPNETCoreRateLimitingPolicyKey.String(val)
 }
 
-// AspnetcoreRequestIsUnhandled returns an attribute KeyValue conforming to
+// ASPNETCoreRequestIsUnhandled returns an attribute KeyValue conforming to
 // the "aspnetcore.request.is_unhandled" semantic conventions. It represents
 // the flag indicating if request was handled by the application pipeline.
-func AspnetcoreRequestIsUnhandled(val bool) attribute.KeyValue {
-	return AspnetcoreRequestIsUnhandledKey.Bool(val)
+func ASPNETCoreRequestIsUnhandled(val bool) attribute.KeyValue {
+	return ASPNETCoreRequestIsUnhandledKey.Bool(val)
 }
 
-// AspnetcoreRoutingIsFallback returns an attribute KeyValue conforming to
+// ASPNETCoreRoutingIsFallback returns an attribute KeyValue conforming to
 // the "aspnetcore.routing.is_fallback" semantic conventions. It represents a
 // value that indicates whether the matched route is a fallback route.
-func AspnetcoreRoutingIsFallback(val bool) attribute.KeyValue {
-	return AspnetcoreRoutingIsFallbackKey.Bool(val)
+func ASPNETCoreRoutingIsFallback(val bool) attribute.KeyValue {
+	return ASPNETCoreRoutingIsFallbackKey.Bool(val)
 }
 
 // Generic attributes for AWS services.
