@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -72,8 +73,12 @@ func (c *clock) Register() (unregister func()) {
 	return func() { now = orig }
 }
 
-func dropExemplars[N int64 | float64](attr attribute.Set) FilteredExemplarReservoir[N] {
-	return dropReservoir[N](attr)
+func newNoopReservoir(attribute.Set) exemplar.Reservoir {
+	return exemplar.NewFixedSizeReservoir(0)
+}
+
+func dropExemplars[N int64 | float64](attr attribute.Set) *filteredExemplarReservoir[N] {
+	return newFilteredExemplarReservoir[N](exemplar.AlwaysOffFilter, newNoopReservoir(attr))
 }
 
 func TestBuilderFilter(t *testing.T) {
@@ -99,8 +104,8 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			}
 		}
 
-		t.Run("NoFilter", run(Builder[N]{}, attr, nil))
-		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
+		t.Run("NoFilter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: newNoopReservoir}, attr, nil))
+		t.Run("Filter", run(Builder[N]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: newNoopReservoir, Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
 	}
 }
 
