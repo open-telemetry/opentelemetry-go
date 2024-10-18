@@ -103,7 +103,7 @@ $(CODESPELL): PACKAGE=codespell
 DOCKER_USER=$(shell id -u):$(shell id -g)
 # TODO - Pull docker image versions from rennovate-friendly source, e.g.
 # $(shell cat dependencies.Dockerfile | awk '$$4=="weaver" {print $$2}')
-WEAVER_CONTAINER=otel/weaver:v0.9.1
+WEAVER_CONTAINER=otel/weaver:v0.10.0
 
 # Generate
 
