@@ -35,7 +35,7 @@ type Builder[N int64 | float64] struct {
 	// input of measurements.
 	Filter attribute.Filter
 	// ExemplarFilter is the filter applied to measurements before offering
-	// them to the exemplar Reservoir
+	// them to the exemplar Reservoir.
 	ExemplarFilter exemplar.Filter
 	// ExemplarReservoirProvider is the factory function used to create a new
 	// exemplar Reservoir for a given attribute set.
