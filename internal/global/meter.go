@@ -523,7 +523,7 @@ func unwrapFloat64Observable(inst metric.Float64Observable) metric.Float64Observ
 		if floatObs, ok := unwrapped.unwrap().(metric.Float64Observable); ok {
 			// Note: if the unwrapped object does not
 			// unwrap as an observable for either of the
-			// branches here, it means an internal bug in
+			// predicates here, it means an internal bug in
 			// this package.  We avoid logging an error in
 			// this case, because the SDK has to try its
 			// own type conversion on the object.  The SDK
