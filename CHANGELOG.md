@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Global MeterProvider registration correctly unwraps global instrument stubs. (#5881)
+- Global MeterProvider registration unwraps global instrument Observers, the undocumented Unwrap() methods are now private. (#5881)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
