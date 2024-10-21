@@ -13,6 +13,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -207,7 +208,10 @@ func TestConfig(t *testing.T) {
 		headers := map[string]string{key: "custom-value"}
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
 		t.Cleanup(coll.Shutdown)
+
 		ctx := context.Background()
+		additionalKey := "additional-custom-header"
+		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
@@ -215,6 +219,7 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Regexp(t, "OTel Go OTLP over gRPC metrics exporter/[01]\\..*", got)
 		require.Contains(t, got, key)
+		require.Contains(t, got, additionalKey)
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
