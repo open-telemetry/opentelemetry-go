@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -517,4 +518,46 @@ func TestExemplars(t *testing.T) {
 		measure(sampled, m)
 		check(t, r, 2, 2, 2)
 	})
+}
+
+func TestPipelineWithMultipleReaders(t *testing.T) {
+	exp := &fnExporter{}
+	r1 := NewPeriodicReader(exp, WithInterval(1*time.Second))
+	r2 := NewPeriodicReader(exp, WithInterval(600*time.Second))
+
+	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
+	m := mp.Meter("test")
+
+	var val int64 = 1
+	measure := func(_ context.Context, m metric.Meter) {
+		oc, err := m.Int64ObservableCounter("int64-observable-counter")
+		require.NoError(t, err)
+		_, err = m.RegisterCallback(
+			// SDK periodically calls this function to collect data.
+			func(_ context.Context, o metric.Observer) error {
+				o.ObserveInt64(oc, val)
+				return nil
+			}, oc)
+		require.NoError(t, err)
+	}
+	ctx := context.Background()
+	measure(ctx, m)
+	rm := new(metricdata.ResourceMetrics)
+	val++
+
+	// adding sleep deliberately so that the callback get triggered
+	time.Sleep(2 * time.Second)
+	err := r1.Collect(ctx, rm)
+	require.NoError(t, err)
+	assert.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+
+	val++
+	time.Sleep(1 * time.Second)
+	err = r2.Collect(ctx, rm)
+	require.NoError(t, err)
+	assert.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, int64(3), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
 }
