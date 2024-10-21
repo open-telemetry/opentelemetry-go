@@ -18,10 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.27.0` package.
   The package contains semantic conventions from the `v1.27.0` version of the OpenTelemetry Semantic Conventions. (#5894)
 - Add `Attributes attribute.Set` field to `Scope` in `go.opentelemetry.io/otel/sdk/instrumentation`.
-  The `Tracer`, `Meter`, `Logger` returned by the SDK providers now handle scope attributes that it is now one of the identifying fields. (#TODO)
-- `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` emits the instrumentation scope attributes. (#TODO)
-- `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` emits the instrumentation scope attributes. (#TODO)
-- `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` emits the instrumentation scope attributes. (#TODO)
+  The `Tracer`, `Meter`, `Logger` returned by the SDK providers now handle scope attributes that it is now one of the identifying fields. (#5903)
+- `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` emits the instrumentation scope attributes. (#5903)
+- `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric` emits the instrumentation scope attributes. (#5903)
+- `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` emits the instrumentation scope attributes. (#5903)
 
 ### Fixed
 
