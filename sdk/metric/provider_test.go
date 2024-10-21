@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -95,6 +96,7 @@ func TestMeterProviderReturnsSameMeter(t *testing.T) {
 
 	assert.Same(t, mtr, mp.Meter(""))
 	assert.NotSame(t, mtr, mp.Meter("diff"))
+	assert.Same(t, mtr, mp.Meter("", api.WithInstrumentationAttributes(attribute.String("k", "v")))) // TODO (#3368): Change to assert.NotSame.
 }
 
 func TestEmptyMeterName(t *testing.T) {
