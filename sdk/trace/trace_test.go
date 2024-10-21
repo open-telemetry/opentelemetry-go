@@ -900,7 +900,11 @@ func cmpDiff(x, y interface{}) string {
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(Event{}),
-		cmp.AllowUnexported(trace.TraceState{}))
+		cmp.AllowUnexported(trace.TraceState{}),
+		cmp.Comparer(func(x, y attribute.Set) bool {
+			return x.Equals(&y)
+		}),
+	)
 }
 
 // checkChild is test utility function that tests that c has fields set appropriately,
