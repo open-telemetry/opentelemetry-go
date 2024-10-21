@@ -16,10 +16,10 @@ import (
 type datapoint[N int64 | float64] struct {
 	attrs attribute.Set
 	value N
-	res   FilteredExemplarReservoir[N]
+	res   *filteredExemplarReservoir[N]
 }
 
-func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *lastValue[N] {
+func newLastValue[N int64 | float64](limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *lastValue[N] {
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
@@ -32,7 +32,7 @@ func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredEx
 type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
-	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	newRes func(attribute.Set) *filteredExemplarReservoir[N]
 	limit  limiter[datapoint[N]]
 	values map[attribute.Distinct]datapoint[N]
 	start  time.Time
@@ -114,7 +114,7 @@ func (s *lastValue[N]) copyDpts(dest *[]metricdata.DataPoint[N], t time.Time) in
 
 // newPrecomputedLastValue returns an aggregator that summarizes a set of
 // observations as the last one made.
-func newPrecomputedLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *precomputedLastValue[N] {
+func newPrecomputedLastValue[N int64 | float64](limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *precomputedLastValue[N] {
 	return &precomputedLastValue[N]{lastValue: newLastValue[N](limit, r)}
 }
 
