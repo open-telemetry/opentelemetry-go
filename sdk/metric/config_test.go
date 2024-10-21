@@ -5,7 +5,7 @@ package metric
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -108,11 +108,19 @@ func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 }
 
 func TestUnifyMultiError(t *testing.T) {
-	f := func(context.Context) error { return assert.AnError }
-	funcs := []func(context.Context) error{f, f, f}
-	errs := []error{assert.AnError, assert.AnError, assert.AnError}
-	target := fmt.Errorf("%v", errs)
-	assert.Equal(t, unify(funcs)(context.Background()), target)
+	var (
+		e0 = errors.New("0")
+		e1 = errors.New("1")
+		e2 = errors.New("2")
+	)
+	err := unify([]func(context.Context) error{
+		func(ctx context.Context) error { return e0 },
+		func(ctx context.Context) error { return e1 },
+		func(ctx context.Context) error { return e2 },
+	})(context.Background())
+	assert.ErrorIs(t, err, e0)
+	assert.ErrorIs(t, err, e1)
+	assert.ErrorIs(t, err, e2)
 }
 
 func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {

@@ -442,21 +442,21 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	}
 
 	reg := newObserver()
-	var errs multierror
+	var err error
 	for _, inst := range insts {
 		switch o := inst.(type) {
 		case int64Observable:
-			if err := o.registerable(m); err != nil {
-				if !errors.Is(err, errEmptyAgg) {
-					errs.append(err)
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
 				}
 				continue
 			}
 			reg.registerInt64(o.observableID)
 		case float64Observable:
-			if err := o.registerable(m); err != nil {
-				if !errors.Is(err, errEmptyAgg) {
-					errs.append(err)
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
 				}
 				continue
 			}
@@ -467,7 +467,6 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 	}
 
-	err := errs.errorOrNil()
 	if reg.len() == 0 {
 		// All insts use drop aggregation or are invalid.
 		return noopRegister{}, err
