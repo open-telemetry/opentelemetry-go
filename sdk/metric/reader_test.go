@@ -117,7 +117,7 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
-	ts.Equal(assert.AnError, err)
+	ts.ErrorIs(err, assert.AnError)
 	ts.Equal(testResourceMetricsAB, m)
 }
 
