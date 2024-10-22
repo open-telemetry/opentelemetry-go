@@ -451,23 +451,6 @@ func (c *grpcCollector) Collect() *storage {
 	return c.storage
 }
 
-// Addr returns the net.Addr c is listening at.
-func (c *grpcCollector) Addr() net.Addr {
-	return c.listener.Addr()
-}
-
-// Shutdown shuts down the gRPC server closing all open connections and
-// listeners immediately.
-func (c *grpcCollector) Shutdown() { c.srv.Stop() }
-
-// Headers returns the headers received for all requests.
-func (c *grpcCollector) Headers() map[string][]string {
-	// Makes a copy.
-	c.headersMu.Lock()
-	defer c.headersMu.Unlock()
-	return metadata.Join(c.headers)
-}
-
 func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
 	t.Helper()
 	coll, err := newGRPCCollector("", rCh)
@@ -587,7 +570,7 @@ func TestConfig(t *testing.T) {
 
 		ctx := context.Background()
 		opts := append([]Option{
-			WithEndpoint(coll.Addr().String()),
+			WithEndpoint(coll.listener.Addr().String()),
 			WithInsecure(),
 		}, o...)
 		exp, err := New(ctx, opts...)
@@ -599,7 +582,7 @@ func TestConfig(t *testing.T) {
 		key := "my-custom-header"
 		headers := map[string]string{key: "custom-value"}
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
-		t.Cleanup(coll.Shutdown)
+		t.Cleanup(coll.srv.Stop)
 
 		ctx := context.Background()
 		additionalKey := "additional-custom-header"
@@ -608,7 +591,7 @@ func TestConfig(t *testing.T) {
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
-		got := coll.Headers()
+		got := metadata.Join(coll.headers)
 		require.Regexp(t, "OTel Go OTLP over gRPC logs exporter/[01]\\..*", got)
 		require.Contains(t, got, key)
 		require.Contains(t, got, additionalKey)
