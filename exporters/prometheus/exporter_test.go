@@ -23,6 +23,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -427,6 +428,47 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("C.H").String("B"),
 					attribute.Key("E.I").Bool(true),
 					attribute.Key("F.J").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "monotonic sum with exemplars",
+			expectedFile: "testdata/monotonic_sum_with_exemplars.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				tp := sdktrace.NewTracerProvider(
+					sdktrace.WithSampler(sdktrace.AlwaysSample()),
+					sdktrace.WithResource(resource.NewWithAttributes(
+						semconv.SchemaURL,
+						semconv.ServiceNameKey.String("example"),
+					)),
+				)
+				tracer := tp.Tracer("example")
+				ctx, span := tracer.Start(ctx, "example")
+				defer span.End()
+
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64UpDownCounter(
+					"foo",
+					otelmetric.WithDescription("a simple up down counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+				counter.Add(ctx, -1, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
