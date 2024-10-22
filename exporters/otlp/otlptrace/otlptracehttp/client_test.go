@@ -43,6 +43,18 @@ var (
 	}
 )
 
+type rtWrapper struct {
+	base http.RoundTripper
+}
+
+func (rt rtWrapper) RoundTrip(req *http.Request) (*http.Response, error) {
+	for k, v := range customProxyHeader {
+		req.Header.Set(k, v)
+	}
+
+	return rt.base.RoundTrip(req)
+}
+
 func TestEndToEnd(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -163,6 +175,17 @@ func TestEndToEnd(t *testing.T) {
 						r.Header.Set(k, v)
 					}
 					return r.URL, nil
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: customProxyHeader,
+			},
+		},
+		{
+			name: "with custom http client",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHTTPClient(&http.Client{
+					Transport: &rtWrapper{base: http.DefaultTransport},
 				}),
 			},
 			mcCfg: mockCollectorConfig{

@@ -52,7 +52,8 @@ type (
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
 
-		Proxy HTTPTransportProxyFunc
+		Proxy  HTTPTransportProxyFunc
+		Client *http.Client
 	}
 
 	Config struct {
@@ -348,6 +349,13 @@ func WithTimeout(duration time.Duration) GenericOption {
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Proxy = pf
+		return cfg
+	})
+}
+
+func WithHTTPClient(c *http.Client) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.Client = c
 		return cfg
 	})
 }
