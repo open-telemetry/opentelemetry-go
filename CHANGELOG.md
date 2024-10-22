@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Global MeterProvider registration unwraps global instrument Observers, the undocumented Unwrap() methods are now private. (#5881)
-- `go.opentelmetry.io/otel/exporters/prometheus` now doesn't try to add exemplars to Gauge metrics, which is unsupported.
+- `go.opentelmetry.io/otel/exporters/prometheus` now doesn't try to add exemplars to Gauge metrics, which is unsupported. (#5912)
 
 ### Changed
 
