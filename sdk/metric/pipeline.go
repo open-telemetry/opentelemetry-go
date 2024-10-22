@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -108,11 +107,11 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	p.Lock()
 	defer p.Unlock()
 
-	var errs multierror
+	var err error
 	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if err := c(ctx); err != nil {
-			errs.append(err)
+		if e := c(ctx); e != nil {
+			err = errors.Join(err, e)
 		}
 		if err := ctx.Err(); err != nil {
 			rm.Resource = nil
@@ -123,8 +122,8 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
 		f := e.Value.(multiCallback)
-		if err := f(ctx); err != nil {
-			errs.append(err)
+		if e := f(ctx); e != nil {
+			err = errors.Join(err, e)
 		}
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
@@ -160,7 +159,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 
 	rm.ScopeMetrics = rm.ScopeMetrics[:i]
 
-	return errs.errorOrNil()
+	return err
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
@@ -222,7 +221,7 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 		measures []aggregate.Measure[N]
 	)
 
-	errs := &multierror{wrapped: errCreatingAggregators}
+	var err error
 	seen := make(map[uint64]struct{})
 	for _, v := range i.pipeline.views {
 		stream, match := v(inst)
@@ -230,9 +229,9 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 			continue
 		}
 		matched = true
-		in, id, err := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
-		if err != nil {
-			errs.append(err)
+		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
+		if e != nil {
+			err = errors.Join(err, e)
 		}
 		if in == nil { // Drop aggregation.
 			continue
@@ -245,8 +244,12 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 		measures = append(measures, in)
 	}
 
+	if err != nil {
+		err = errors.Join(errCreatingAggregators, err)
+	}
+
 	if matched {
-		return measures, errs.errorOrNil()
+		return measures, err
 	}
 
 	// Apply implicit default view if no explicit matched.
@@ -255,15 +258,18 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
-	in, _, err := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
-	if err != nil {
-		errs.append(err)
+	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
+	if e != nil {
+		if err == nil {
+			err = errCreatingAggregators
+		}
+		err = errors.Join(err, e)
 	}
 	if in != nil {
 		// Ensured to have not seen given matched was false.
 		measures = append(measures, in)
 	}
-	return measures, errs.errorOrNil()
+	return measures, err
 }
 
 // addCallback registers a single instrument callback to be run when
@@ -609,15 +615,15 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
-	errs := &multierror{}
+	var err error
 	for _, i := range r.inserters {
-		in, err := i.Instrument(id, i.readerDefaultAggregation(id.Kind))
-		if err != nil {
-			errs.append(err)
+		in, e := i.Instrument(id, i.readerDefaultAggregation(id.Kind))
+		if e != nil {
+			err = errors.Join(err, e)
 		}
 		measures = append(measures, in...)
 	}
-	return measures, errs.errorOrNil()
+	return measures, err
 }
 
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
@@ -626,37 +632,18 @@ func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) 
 func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
-	errs := &multierror{}
+	var err error
 	for _, i := range r.inserters {
 		agg := i.readerDefaultAggregation(id.Kind)
 		if histAgg, ok := agg.(AggregationExplicitBucketHistogram); ok && len(boundaries) > 0 {
 			histAgg.Boundaries = boundaries
 			agg = histAgg
 		}
-		in, err := i.Instrument(id, agg)
-		if err != nil {
-			errs.append(err)
+		in, e := i.Instrument(id, agg)
+		if e != nil {
+			err = errors.Join(err, e)
 		}
 		measures = append(measures, in...)
 	}
-	return measures, errs.errorOrNil()
-}
-
-type multierror struct {
-	wrapped error
-	errors  []string
-}
-
-func (m *multierror) errorOrNil() error {
-	if len(m.errors) == 0 {
-		return nil
-	}
-	if m.wrapped == nil {
-		return errors.New(strings.Join(m.errors, "; "))
-	}
-	return fmt.Errorf("%w: %s", m.wrapped, strings.Join(m.errors, "; "))
-}
-
-func (m *multierror) append(err error) {
-	m.errors = append(m.errors, err.Error())
+	return measures, err
 }
