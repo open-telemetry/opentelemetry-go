@@ -5,7 +5,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -44,25 +44,13 @@ func (c config) readerSignals() (forceFlush, shutdown func(context.Context) erro
 // value.
 func unify(funcs []func(context.Context) error) func(context.Context) error {
 	return func(ctx context.Context) error {
-		var errs []error
+		var err error
 		for _, f := range funcs {
-			if err := f(ctx); err != nil {
-				errs = append(errs, err)
+			if e := f(ctx); e != nil {
+				err = errors.Join(err, e)
 			}
 		}
-		return unifyErrors(errs)
-	}
-}
-
-// unifyErrors combines multiple errors into a single error.
-func unifyErrors(errs []error) error {
-	switch len(errs) {
-	case 0:
-		return nil
-	case 1:
-		return errs[0]
-	default:
-		return fmt.Errorf("%v", errs)
+		return err
 	}
 }
 

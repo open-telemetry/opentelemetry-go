@@ -83,13 +83,13 @@ func metric(m metricdata.Metrics) (*mpb.Metric, error) {
 	}
 	switch a := m.Data.(type) {
 	case metricdata.Gauge[int64]:
-		out.Data = Gauge[int64](a)
+		out.Data = Gauge(a)
 	case metricdata.Gauge[float64]:
-		out.Data = Gauge[float64](a)
+		out.Data = Gauge(a)
 	case metricdata.Sum[int64]:
-		out.Data, err = Sum[int64](a)
+		out.Data, err = Sum(a)
 	case metricdata.Sum[float64]:
-		out.Data, err = Sum[float64](a)
+		out.Data, err = Sum(a)
 	case metricdata.Histogram[int64]:
 		out.Data, err = Histogram(a)
 	case metricdata.Histogram[float64]:

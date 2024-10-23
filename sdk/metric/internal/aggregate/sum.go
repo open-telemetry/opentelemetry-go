@@ -14,19 +14,19 @@ import (
 
 type sumValue[N int64 | float64] struct {
 	n     N
-	res   FilteredExemplarReservoir[N]
+	res   *filteredExemplarReservoir[N]
 	attrs attribute.Set
 }
 
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
-	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	newRes func(attribute.Set) *filteredExemplarReservoir[N]
 	limit  limiter[sumValue[N]]
 	values map[attribute.Distinct]sumValue[N]
 }
 
-func newValueMap[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *valueMap[N] {
+func newValueMap[N int64 | float64](limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *valueMap[N] {
 	return &valueMap[N]{
 		newRes: r,
 		limit:  newLimiter[sumValue[N]](limit),
@@ -54,7 +54,7 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 // newSum returns an aggregator that summarizes a set of measurements as their
 // arithmetic sum. Each sum is scoped by attributes and the aggregation cycle
 // the measurements were made in.
-func newSum[N int64 | float64](monotonic bool, limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *sum[N] {
+func newSum[N int64 | float64](monotonic bool, limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *sum[N] {
 	return &sum[N]{
 		valueMap:  newValueMap[N](limit, r),
 		monotonic: monotonic,
@@ -143,7 +143,7 @@ func (s *sum[N]) cumulative(dest *metricdata.Aggregation) int {
 // newPrecomputedSum returns an aggregator that summarizes a set of
 // observations as their arithmetic sum. Each sum is scoped by attributes and
 // the aggregation cycle the measurements were made in.
-func newPrecomputedSum[N int64 | float64](monotonic bool, limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *precomputedSum[N] {
+func newPrecomputedSum[N int64 | float64](monotonic bool, limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *precomputedSum[N] {
 	return &precomputedSum[N]{
 		valueMap:  newValueMap[N](limit, r),
 		monotonic: monotonic,

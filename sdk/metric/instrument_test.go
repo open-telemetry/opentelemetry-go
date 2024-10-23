@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -22,7 +23,7 @@ func BenchmarkInstrument(b *testing.B) {
 	}
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
-		build := aggregate.Builder[int64]{}
+		build := aggregate.Builder[int64]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: exemplar.FixedSizeReservoirProvider(0)}
 		var meas []aggregate.Measure[int64]
 
 		build.Temporality = metricdata.CumulativeTemporality
@@ -52,7 +53,7 @@ func BenchmarkInstrument(b *testing.B) {
 	})
 
 	b.Run("observable/observe", func(b *testing.B) {
-		build := aggregate.Builder[int64]{}
+		build := aggregate.Builder[int64]{ExemplarFilter: exemplar.AlwaysOffFilter, ExemplarReservoirProvider: exemplar.FixedSizeReservoirProvider(0)}
 		var meas []aggregate.Measure[int64]
 
 		in, _ := build.PrecomputedLastValue()
