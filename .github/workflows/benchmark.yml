@@ -28,7 +28,7 @@ jobs:
           # So we can fetch the exact benchmark data from the previous commit.
           key: ${{ runner.os }}-benchmark-${{ github.event.before }}
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@v1.20.3
+        uses: benchmark-action/github-action-benchmark@v1.20.4
         with:
           name: Benchmarks
           tool: 'go'
