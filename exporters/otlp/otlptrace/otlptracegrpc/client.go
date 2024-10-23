@@ -15,13 +15,14 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type client struct {
@@ -229,7 +230,12 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	}
 
 	if c.metadata.Len() > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, c.metadata)
+		md := c.metadata
+		if outMD, ok := metadata.FromOutgoingContext(ctx); ok {
+			md = metadata.Join(md, outMD)
+		}
+
+		ctx = metadata.NewOutgoingContext(ctx, md)
 	}
 
 	// Unify the client stopCtx with the parent.
