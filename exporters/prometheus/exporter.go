@@ -279,7 +279,7 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 		}
 		// GaugeValues don't support Exemplars at this time
 		// https://github.com/prometheus/client_golang/blob/aef8aedb4b6e1fb8ac1c90790645169125594096/prometheus/metric.go#L199
-		if valueType == prometheus.CounterValue {
+		if valueType != prometheus.GaugeValue {
 			m = addExemplars(m, dp.Exemplars)
 		}
 		ch <- m
