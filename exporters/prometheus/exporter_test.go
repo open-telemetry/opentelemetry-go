@@ -433,7 +433,7 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "monotonic sum with exemplars",
+			name:         "non-monotonic sum does not add exemplars",
 			expectedFile: "testdata/monotonic_sum_with_exemplars.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
