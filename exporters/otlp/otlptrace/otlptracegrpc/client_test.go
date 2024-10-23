@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
@@ -216,6 +217,8 @@ func TestNewWithHeaders(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background()
+	additionalKey := "additional-custom-header"
+	ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlptracegrpc.WithHeaders(map[string]string{"header1": "value1"}))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
@@ -224,6 +227,7 @@ func TestNewWithHeaders(t *testing.T) {
 	headers := mc.getHeaders()
 	require.Regexp(t, "OTel OTLP Exporter Go/1\\..*", headers.Get("user-agent"))
 	require.Len(t, headers.Get("header1"), 1)
+	require.Len(t, headers.Get(additionalKey), 1)
 	assert.Equal(t, "value1", headers.Get("header1")[0])
 }
 
