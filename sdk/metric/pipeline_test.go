@@ -518,4 +518,3 @@ func TestExemplars(t *testing.T) {
 		check(t, r, 2, 2, 2)
 	})
 }
-
