@@ -436,17 +436,6 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "monotonic sum with exemplars",
 			expectedFile: "testdata/monotonic_sum_with_exemplars.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
-				tp := sdktrace.NewTracerProvider(
-					sdktrace.WithSampler(sdktrace.AlwaysSample()),
-					sdktrace.WithResource(resource.NewWithAttributes(
-						semconv.SchemaURL,
-						semconv.ServiceNameKey.String("example"),
-					)),
-				)
-				tracer := tp.Tracer("example")
-				ctx, span := tracer.Start(ctx, "example")
-				defer span.End()
-
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
