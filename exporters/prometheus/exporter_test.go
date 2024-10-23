@@ -23,7 +23,6 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -434,8 +433,14 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name:         "non-monotonic sum does not add exemplars",
-			expectedFile: "testdata/monotonic_sum_with_exemplars.txt",
+			expectedFile: "testdata/non_monotonic_sum_does_not_add_exemplars.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					SpanID:     trace.SpanID{0o1},
+					TraceID:    trace.TraceID{0o1},
+					TraceFlags: trace.FlagsSampled,
+				})
+				ctx = trace.ContextWithSpanContext(ctx, sc)
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
