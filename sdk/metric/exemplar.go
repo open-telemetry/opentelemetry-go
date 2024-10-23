@@ -6,13 +6,23 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"runtime"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 )
 
 // ExemplarReservoirProviderSelector selects the
 // [exemplar.ReservoirProvider] to use
 // based on the [Aggregation] of the metric.
 type ExemplarReservoirProviderSelector func(Aggregation) exemplar.ReservoirProvider
+
+// reservoirFunc returns the appropriately configured exemplar reservoir
+// creation func based on the passed InstrumentKind and filter configuration.
+func reservoirFunc[N int64 | float64](provider exemplar.ReservoirProvider, filter exemplar.Filter) func(attribute.Set) aggregate.FilteredExemplarReservoir[N] {
+	return func(attrs attribute.Set) aggregate.FilteredExemplarReservoir[N] {
+		return aggregate.NewFilteredExemplarReservoir[N](filter, provider(attrs))
+	}
+}
 
 // DefaultExemplarReservoirProviderSelector returns the default
 // [exemplar.ReservoirProvider] for the

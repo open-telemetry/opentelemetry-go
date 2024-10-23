@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -37,11 +36,9 @@ func TestLastValue(t *testing.T) {
 
 func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.DeltaTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -143,11 +140,9 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 
 func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.CumulativeTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.LastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -267,11 +262,9 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 
 func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.DeltaTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedLastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -373,11 +366,9 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 
 func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.CumulativeTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedLastValue()
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -478,12 +469,6 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 }
 
 func BenchmarkLastValue(b *testing.B) {
-	b.Run("Int64", benchmarkAggregate(Builder[int64]{
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
-	}.PrecomputedLastValue))
-	b.Run("Float64", benchmarkAggregate(Builder[float64]{
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
-	}.PrecomputedLastValue))
+	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
+	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
 }
