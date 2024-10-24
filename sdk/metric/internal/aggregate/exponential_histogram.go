@@ -30,7 +30,7 @@ const (
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs attribute.Set
-	res   *filteredExemplarReservoir[N]
+	res   FilteredExemplarReservoir[N]
 
 	count uint64
 	min   N
@@ -283,7 +283,7 @@ func (b *expoBuckets) downscale(delta int32) {
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
 // and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int, r func(attribute.Set) *filteredExemplarReservoir[N]) *expoHistogram[N] {
+func newExponentialHistogram[N int64 | float64](maxSize, maxScale int32, noMinMax, noSum bool, limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *expoHistogram[N] {
 	return &expoHistogram[N]{
 		noSum:    noSum,
 		noMinMax: noMinMax,
@@ -306,7 +306,7 @@ type expoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) *filteredExemplarReservoir[N]
+	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 	limit    limiter[*expoHistogramDataPoint[N]]
 	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex

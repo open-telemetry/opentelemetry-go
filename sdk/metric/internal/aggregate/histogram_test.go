@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -52,11 +51,9 @@ type conf[N int64 | float64] struct {
 
 func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.DeltaTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -141,11 +138,9 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 
 func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	in, out := Builder[N]{
-		Temporality:               metricdata.CumulativeTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -380,30 +375,22 @@ func TestDeltaHistogramReset(t *testing.T) {
 func BenchmarkHistogram(b *testing.B) {
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
 }

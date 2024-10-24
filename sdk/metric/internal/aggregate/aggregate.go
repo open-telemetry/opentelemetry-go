@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -34,12 +33,12 @@ type Builder[N int64 | float64] struct {
 	// Filter is the attribute filter the aggregate function will use on the
 	// input of measurements.
 	Filter attribute.Filter
-	// ExemplarFilter is the filter applied to measurements before offering
-	// them to the exemplar Reservoir.
-	ExemplarFilter exemplar.Filter
-	// ExemplarReservoirProvider is the factory function used to create a new
-	// exemplar Reservoir for a given attribute set.
-	ExemplarReservoirProvider exemplar.ReservoirProvider
+	// ReservoirFunc is the factory function used by aggregate functions to
+	// create new exemplar reservoirs for a new seen attribute set.
+	//
+	// If this is not provided a default factory function that returns an
+	// dropReservoir reservoir will be used.
+	ReservoirFunc func(attribute.Set) FilteredExemplarReservoir[N]
 	// AggregationLimit is the cardinality limit of measurement attributes. Any
 	// measurement for new attributes once the limit has been reached will be
 	// aggregated into a single aggregate for the "otel.metric.overflow"
@@ -50,10 +49,12 @@ type Builder[N int64 | float64] struct {
 	AggregationLimit int
 }
 
-func (b Builder[N]) resFunc() func(attribute.Set) *filteredExemplarReservoir[N] {
-	return func(attrs attribute.Set) *filteredExemplarReservoir[N] {
-		return newFilteredExemplarReservoir[N](b.ExemplarFilter, b.ExemplarReservoirProvider(attrs))
+func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
+	if b.ReservoirFunc != nil {
+		return b.ReservoirFunc
 	}
+
+	return dropReservoir
 }
 
 type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)

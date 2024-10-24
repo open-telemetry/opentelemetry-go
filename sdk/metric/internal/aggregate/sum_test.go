@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -42,11 +41,9 @@ func TestSum(t *testing.T) {
 func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality:               metricdata.DeltaTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.Sum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -172,11 +169,9 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality:               metricdata.CumulativeTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.Sum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -288,11 +283,9 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality:               metricdata.DeltaTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -419,11 +412,9 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
-		Temporality:               metricdata.CumulativeTemporality,
-		Filter:                    attrFltr,
-		AggregationLimit:          3,
-		ExemplarFilter:            exemplar.AlwaysOffFilter,
-		ExemplarReservoirProvider: newNoopReservoir,
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
@@ -553,59 +544,43 @@ func BenchmarkSum(b *testing.B) {
 	// performance, therefore, only monotonic=false is benchmarked here.
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.Sum(false)
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.Sum(false)
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.Sum(false)
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.Sum(false)
 	}))
 
 	b.Run("Precomputed/Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
 	}))
 	b.Run("Precomputed/Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
 	}))
 	b.Run("Precomputed/Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.CumulativeTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
 	}))
 	b.Run("Precomputed/Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
 		return Builder[float64]{
-			Temporality:               metricdata.DeltaTemporality,
-			ExemplarFilter:            exemplar.AlwaysOffFilter,
-			ExemplarReservoirProvider: newNoopReservoir,
+			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
 	}))
 }
