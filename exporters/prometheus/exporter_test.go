@@ -431,6 +431,42 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
 		},
+		{
+			name:         "non-monotonic sum does not add exemplars",
+			expectedFile: "testdata/non_monotonic_sum_does_not_add_exemplars.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					SpanID:     trace.SpanID{0o1},
+					TraceID:    trace.TraceID{0o1},
+					TraceFlags: trace.FlagsSampled,
+				})
+				ctx = trace.ContextWithSpanContext(ctx, sc)
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64UpDownCounter(
+					"foo",
+					otelmetric.WithDescription("a simple up down counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+				counter.Add(ctx, -1, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
