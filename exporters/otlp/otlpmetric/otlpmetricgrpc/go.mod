@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 
-go 1.22
+go 1.22.0
 
 retract v0.32.2 // Contains unresolvable dependencies.
 
@@ -23,9 +23,9 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	go.opentelemetry.io/auto/sdk v0.1.0-alpha // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
