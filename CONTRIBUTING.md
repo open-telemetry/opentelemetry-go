@@ -631,7 +631,7 @@ should be canceled.
 
 ### Triagers
 
-- [Cheng-Zhen Yang](https://github.com/scorpionknifes), mx51
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
 
 ### Approvers
 
