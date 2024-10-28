@@ -150,6 +150,11 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 				continue
 			}
 			inst.appendMeasures(in)
+
+			// Add the measures to the pipeline. It is required to maintain
+			// measures per pipeline to avoid calling the measure that
+			// is not part of the pipeline.
+			insert.pipeline.addInt64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
 				inst := int64Observer{measures: in}
 				fn := cback
@@ -309,6 +314,11 @@ func (m *meter) float64ObservableInstrument(id Instrument, callbacks []metric.Fl
 				continue
 			}
 			inst.appendMeasures(in)
+
+			// Add the measures to the pipeline. It is required to maintain
+			// measures per pipeline to avoid calling the measure that
+			// is not part of the pipeline.
+			insert.pipeline.addFloat64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
 				inst := float64Observer{measures: in}
 				fn := cback
@@ -440,52 +450,58 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		// Don't allocate a observer if not needed.
 		return noopRegister{}, nil
 	}
-
-	reg := newObserver()
+	unregs := make([]func(), len(m.pipes))
 	var err error
-	for _, inst := range insts {
-		switch o := inst.(type) {
-		case int64Observable:
-			if e := o.registerable(m); e != nil {
-				if !errors.Is(e, errEmptyAgg) {
-					err = errors.Join(err, e)
+	for ix, pipe := range m.pipes {
+		reg := newObserver(pipe)
+		for _, inst := range insts {
+			switch o := inst.(type) {
+			case int64Observable:
+				if e := o.registerable(m); e != nil {
+					if !errors.Is(e, errEmptyAgg) {
+						err = errors.Join(err, e)
+					}
+					continue
 				}
-				continue
-			}
-			reg.registerInt64(o.observableID)
-		case float64Observable:
-			if e := o.registerable(m); e != nil {
-				if !errors.Is(e, errEmptyAgg) {
-					err = errors.Join(err, e)
+				reg.registerInt64(o.observableID)
+			case float64Observable:
+				if e := o.registerable(m); e != nil {
+					if !errors.Is(e, errEmptyAgg) {
+						err = errors.Join(err, e)
+					}
+					continue
 				}
-				continue
+				reg.registerFloat64(o.observableID)
+			default:
+				// Instrument external to the SDK.
+				return nil, fmt.Errorf("invalid observable: from different implementation")
 			}
-			reg.registerFloat64(o.observableID)
-		default:
-			// Instrument external to the SDK.
-			return nil, fmt.Errorf("invalid observable: from different implementation")
 		}
+
+		if reg.len() == 0 {
+			// All insts use drop aggregation or are invalid.
+			return noopRegister{}, err
+		}
+
+		// Some or all instruments were valid.
+		cBack := func(ctx context.Context) error { return f(ctx, reg) }
+		unregs[ix] = pipe.addMultiCallback(cBack)
 	}
 
-	if reg.len() == 0 {
-		// All insts use drop aggregation or are invalid.
-		return noopRegister{}, err
-	}
-
-	// Some or all instruments were valid.
-	cback := func(ctx context.Context) error { return f(ctx, reg) }
-	return m.pipes.registerMultiCallback(cback), err
+	return m.pipes.registerMultiCallbacks(unregs), err
 }
 
 type observer struct {
 	embedded.Observer
 
+	pipe    *pipeline
 	float64 map[observableID[float64]]struct{}
 	int64   map[observableID[int64]]struct{}
 }
 
-func newObserver() observer {
+func newObserver(p *pipeline) observer {
 	return observer{
+		pipe:    p,
 		float64: make(map[observableID[float64]]struct{}),
 		int64:   make(map[observableID[int64]]struct{}),
 	}
@@ -530,7 +546,10 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		return
 	}
 	c := metric.NewObserveConfig(opts)
-	oImpl.observe(v, c.Attributes())
+	measures := r.pipe.float64Measures[oImpl.observableID]
+	for _, m := range measures {
+		m(context.Background(), v, c.Attributes())
+	}
 }
 
 func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric.ObserveOption) {
@@ -555,7 +574,10 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 		return
 	}
 	c := metric.NewObserveConfig(opts)
-	oImpl.observe(v, c.Attributes())
+	measures := r.pipe.int64Measures[oImpl.observableID]
+	for _, m := range measures {
+		m(context.Background(), v, c.Attributes())
+	}
 }
 
 type noopRegister struct{ embedded.Registration }

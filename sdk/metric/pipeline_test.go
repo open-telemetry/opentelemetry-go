@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -528,14 +529,15 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
 	m := mp.Meter("test")
 
-	var val int64 = 1
+	var val atomic.Int64
+	val.Add(1)
 	measure := func(_ context.Context, m metric.Meter) {
 		oc, err := m.Int64ObservableCounter("int64-observable-counter")
 		require.NoError(t, err)
 		_, err = m.RegisterCallback(
 			// SDK periodically calls this function to collect data.
 			func(_ context.Context, o metric.Observer) error {
-				o.ObserveInt64(oc, val)
+				o.ObserveInt64(oc, val.Load())
 				return nil
 			}, oc)
 		require.NoError(t, err)
@@ -543,7 +545,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	ctx := context.Background()
 	measure(ctx, m)
 	rm := new(metricdata.ResourceMetrics)
-	val++
+	val.Add(1)
 
 	// adding sleep deliberately so that the callback get triggered
 	time.Sleep(2 * time.Second)
@@ -553,7 +555,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 	assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
 
-	val++
+	val.Add(1)
 	time.Sleep(1 * time.Second)
 	err = r2.Collect(ctx, rm)
 	require.NoError(t, err)
