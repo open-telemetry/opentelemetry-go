@@ -477,6 +477,7 @@ func TestPrometheusExporter(t *testing.T) {
 			meter := provider.Meter(
 				"testmeter",
 				otelmetric.WithInstrumentationVersion("v0.1.0"),
+				otelmetric.WithInstrumentationAttributes(attribute.String("fizz", "buzz")),
 			)
 
 			tc.recordMetrics(ctx, meter)
