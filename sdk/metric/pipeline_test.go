@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -39,13 +40,13 @@ func testSumAggregateOutput(dest *metricdata.Aggregation) int {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
-	assert.Len(t, output.ScopeMetrics, 0)
+	assert.Empty(t, output.ScopeMetrics)
 
 	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
 	assert.NotPanics(t, func() {
@@ -65,7 +66,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -74,7 +75,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
 
@@ -124,13 +125,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}),
+				}, exemplar.AlwaysOffFilter),
 			},
 		}
 
@@ -215,7 +216,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -226,7 +227,7 @@ func TestLogConflictName(t *testing.T) {
 			)
 		} else {
 			assert.Equalf(
-				t, msg, "",
+				t, "", msg,
 				"warning logged for non-conflicting names: %s, %s",
 				tc.existing, tc.name,
 			)
@@ -257,7 +258,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -362,7 +363,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
@@ -448,59 +449,72 @@ func TestExemplars(t *testing.T) {
 	})
 	sampled := trace.ContextWithSpanContext(context.Background(), sc)
 
-	t.Run("OTEL_GO_X_EXEMPLAR=true", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+	t.Run("Default", func(t *testing.T) {
+		m, r := setup("default")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
 
-		t.Run("Default", func(t *testing.T) {
-			m, r := setup("default")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("Invalid", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
-			m, r := setup("default")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("always_on", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
-			m, r := setup("always_on")
-			measure(ctx, m)
-			check(t, r, nCPU, 1, 20)
-		})
-
-		t.Run("always_off", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-			m, r := setup("always_off")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-		})
-
-		t.Run("trace_based", func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
-			m, r := setup("trace_based")
-			measure(ctx, m)
-			check(t, r, 0, 0, 0)
-
-			measure(sampled, m)
-			check(t, r, nCPU, 1, 20)
-		})
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
 	})
 
-	t.Run("OTEL_GO_X_EXEMPLAR=false", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_EXEMPLAR", "false")
+	t.Run("Invalid", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "unrecognized")
+		m, r := setup("default")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
 
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
+	})
+
+	t.Run("always_on", func(t *testing.T) {
 		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_on")
 		m, r := setup("always_on")
 		measure(ctx, m)
+		check(t, r, nCPU, 1, 20)
+	})
+
+	t.Run("always_off", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+		m, r := setup("always_off")
+		measure(ctx, m)
 		check(t, r, 0, 0, 0)
+	})
+
+	t.Run("trace_based", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "trace_based")
+		m, r := setup("trace_based")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+
+		measure(sampled, m)
+		check(t, r, nCPU, 1, 20)
+	})
+
+	t.Run("Custom reservoir", func(t *testing.T) {
+		r := NewManualReader()
+		reservoirProviderSelector := func(agg Aggregation) exemplar.ReservoirProvider {
+			return exemplar.FixedSizeReservoirProvider(2)
+		}
+		v1 := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
+			Aggregation: AggregationBase2ExponentialHistogram{
+				MaxSize:  160, // > 20, reservoir size should default to 20.
+				MaxScale: 20,
+			},
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		v2 := NewView(Instrument{Name: "int64-counter"}, Stream{
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		v3 := NewView(Instrument{Name: "int64-histogram"}, Stream{
+			ExemplarReservoirProviderSelector: reservoirProviderSelector,
+		})
+		m := NewMeterProvider(WithReader(r), WithView(v1, v2, v3)).Meter("custom-reservoir")
+		measure(ctx, m)
+		check(t, r, 0, 0, 0)
+
+		measure(sampled, m)
+		check(t, r, 2, 2, 2)
 	})
 }

@@ -81,6 +81,6 @@ func TestEmptyRing(t *testing.T) {
 	verifyRing(t, rPrev.Prev(), 1, 0)
 
 	var rLen, rDo *ring
-	assert.Equal(t, rLen.Len(), 0, "Len()")
+	assert.Equal(t, 0, rLen.Len(), "Len()")
 	rDo.Do(func(Record) { assert.Fail(t, "Do func arg called") })
 }

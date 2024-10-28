@@ -129,7 +129,7 @@ func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func
 
 func TestNewMeterProvider(t *testing.T) {
 	mp := NewMeterProvider()
-	assert.Equal(t, mp, MeterProvider{})
+	assert.Equal(t, MeterProvider{}, mp)
 	meter := mp.Meter("")
-	assert.Equal(t, meter, Meter{})
+	assert.Equal(t, Meter{}, meter)
 }

@@ -25,7 +25,7 @@ func TestNewInMemoryExporter(t *testing.T) {
 	imsb := NewInMemoryExporter()
 
 	require.NoError(t, imsb.ExportSpans(context.Background(), nil))
-	assert.Len(t, imsb.GetSpans(), 0)
+	assert.Empty(t, imsb.GetSpans())
 
 	input := make(SpanStubs, 10)
 	for i := 0; i < 10; i++ {
@@ -40,7 +40,7 @@ func TestNewInMemoryExporter(t *testing.T) {
 	imsb.Reset()
 	// Ensure that operations on the internal storage does not change the previously returned value.
 	assert.Len(t, sds, 10)
-	assert.Len(t, imsb.GetSpans(), 0)
+	assert.Empty(t, imsb.GetSpans())
 
 	require.NoError(t, imsb.ExportSpans(context.Background(), input.Snapshots()[0:1]))
 	sds = imsb.GetSpans()

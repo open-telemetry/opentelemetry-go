@@ -180,7 +180,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
-			assert.Equal(t, tt.expected.sum, dp.sum)
+			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
 		})
 	}
 }
@@ -222,7 +222,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
-			assert.Equal(t, tt.expected.sum, dp.sum)
+			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
 		})
 	}
 }

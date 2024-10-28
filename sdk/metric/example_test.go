@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
@@ -238,5 +239,48 @@ func ExampleNewView_exponentialHistogram() {
 	// SDK using the WithView option.
 	_ = metric.NewMeterProvider(
 		metric.WithView(view),
+	)
+}
+
+func ExampleNewView_exemplarreservoirproviderselector() {
+	// Create a view that makes all metrics use a different exemplar reservoir.
+	view := metric.NewView(
+		metric.Instrument{Name: "*"},
+		metric.Stream{
+			ExemplarReservoirProviderSelector: func(agg metric.Aggregation) exemplar.ReservoirProvider {
+				// This example uses a fixed-size reservoir with a size of 10
+				// for explicit bucket histograms instead of the default
+				// bucket-aligned reservoir.
+				if _, ok := agg.(metric.AggregationExplicitBucketHistogram); ok {
+					return exemplar.FixedSizeReservoirProvider(10)
+				}
+				// Fall back to the default reservoir otherwise.
+				return metric.DefaultExemplarReservoirProviderSelector(agg)
+			},
+		},
+	)
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	_ = metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+}
+
+func ExampleWithExemplarFilter_disabled() {
+	// Use exemplar.AlwaysOffFilter to disable exemplar collection.
+	_ = metric.NewMeterProvider(
+		metric.WithExemplarFilter(exemplar.AlwaysOffFilter),
+	)
+}
+
+func ExampleWithExemplarFilter_custom() {
+	// Create a custom filter function that only offers measurements if the
+	// context has an error.
+	customFilter := func(ctx context.Context) bool {
+		return ctx.Err() != nil
+	}
+	_ = metric.NewMeterProvider(
+		metric.WithExemplarFilter(customFilter),
 	)
 }

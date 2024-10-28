@@ -169,8 +169,8 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 
 	err = rdr1.Collect(context.Background(), &data)
 	assert.NoError(t, err, "Errored when collect should be a noop")
-	assert.Len(
-		t, data.ScopeMetrics, 0,
+	assert.Empty(
+		t, data.ScopeMetrics,
 		"Metrics produced for instrument collected by different MeterProvider",
 	)
 }

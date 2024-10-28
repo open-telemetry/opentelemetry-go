@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/internal/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -73,8 +72,8 @@ func (c *clock) Register() (unregister func()) {
 	return func() { now = orig }
 }
 
-func dropExemplars[N int64 | float64]() exemplar.FilteredReservoir[N] {
-	return exemplar.Drop[N]()
+func dropExemplars[N int64 | float64](attr attribute.Set) FilteredExemplarReservoir[N] {
+	return dropReservoir[N](attr)
 }
 
 func TestBuilderFilter(t *testing.T) {

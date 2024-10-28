@@ -47,6 +47,7 @@ func TestValueEqual(t *testing.T) {
 		{},
 		log.Int64Value(1),
 		log.Int64Value(2),
+		log.Int64Value(-2),
 		log.Float64Value(3.5),
 		log.Float64Value(3.7),
 		log.BoolValue(true),
@@ -90,7 +91,7 @@ func TestSortedValueEqual(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.value.String(), func(t *testing.T) {
-			assert.Equal(t, true, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
+			assert.True(t, tc.value.Equal(tc.value2), "%v.Equal(%v)", tc.value, tc.value2)
 		})
 	}
 }

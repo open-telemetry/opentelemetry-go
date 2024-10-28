@@ -442,28 +442,21 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	}
 
 	reg := newObserver()
-	var errs multierror
+	var err error
 	for _, inst := range insts {
-		// Unwrap any global.
-		if u, ok := inst.(interface {
-			Unwrap() metric.Observable
-		}); ok {
-			inst = u.Unwrap()
-		}
-
 		switch o := inst.(type) {
 		case int64Observable:
-			if err := o.registerable(m); err != nil {
-				if !errors.Is(err, errEmptyAgg) {
-					errs.append(err)
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
 				}
 				continue
 			}
 			reg.registerInt64(o.observableID)
 		case float64Observable:
-			if err := o.registerable(m); err != nil {
-				if !errors.Is(err, errEmptyAgg) {
-					errs.append(err)
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
 				}
 				continue
 			}
@@ -474,7 +467,6 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 	}
 
-	err := errs.errorOrNil()
 	if reg.len() == 0 {
 		// All insts use drop aggregation or are invalid.
 		return noopRegister{}, err
@@ -521,16 +513,6 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	switch conv := o.(type) {
 	case float64Observable:
 		oImpl = conv
-	case interface {
-		Unwrap() metric.Observable
-	}:
-		// Unwrap any global.
-		async := conv.Unwrap()
-		var ok bool
-		if oImpl, ok = async.(float64Observable); !ok {
-			global.Error(errUnknownObserver, "failed to record asynchronous")
-			return
-		}
 	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return
@@ -556,16 +538,6 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	switch conv := o.(type) {
 	case int64Observable:
 		oImpl = conv
-	case interface {
-		Unwrap() metric.Observable
-	}:
-		// Unwrap any global.
-		async := conv.Unwrap()
-		var ok bool
-		if oImpl, ok = async.(int64Observable); !ok {
-			global.Error(errUnknownObserver, "failed to record asynchronous")
-			return
-		}
 	default:
 		global.Error(errUnknownObserver, "failed to record")
 		return

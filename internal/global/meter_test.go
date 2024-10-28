@@ -5,6 +5,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -232,7 +233,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	assert.Equal(t, 1, tMeter.siCount)
 	assert.Equal(t, 1, tMeter.siUDCount)
 	assert.Equal(t, 1, tMeter.siHist)
-	assert.Equal(t, 1, len(tMeter.callbacks))
+	assert.Len(t, tMeter.callbacks, 1)
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
@@ -429,4 +430,23 @@ func TestMeterIdentity(t *testing.T) {
 			}
 		}
 	}
+}
+
+type failingRegisterCallbackMeter struct {
+	noop.Meter
+}
+
+func (m *failingRegisterCallbackMeter) RegisterCallback(metric.Callback, ...metric.Observable) (metric.Registration, error) {
+	return nil, errors.New("an error occurred")
+}
+
+func TestRegistrationDelegateFailingCallback(t *testing.T) {
+	r := &registration{
+		unreg: func() error { return nil },
+	}
+	m := &failingRegisterCallbackMeter{}
+
+	assert.NotPanics(t, func() {
+		r.setDelegate(m)
+	})
 }

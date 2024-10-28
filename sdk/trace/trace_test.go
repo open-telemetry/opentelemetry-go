@@ -216,7 +216,7 @@ func TestSpanIsRecording(t *testing.T) {
 			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
 			got := span.IsRecording()
 			span.End()
-			assert.Equal(t, got, tc.want, name)
+			assert.Equal(t, tc.want, got, name)
 		}
 	})
 
@@ -1290,11 +1290,11 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 		instrumentationScope: instrumentation.Scope{Name: "RecordError"},
 	}
 
-	assert.Equal(t, got.spanContext, want.spanContext)
-	assert.Equal(t, got.parent, want.parent)
-	assert.Equal(t, got.name, want.name)
-	assert.Equal(t, got.status, want.status)
-	assert.Equal(t, got.spanKind, want.spanKind)
+	assert.Equal(t, want.spanContext, got.spanContext)
+	assert.Equal(t, want.parent, got.parent)
+	assert.Equal(t, want.name, got.name)
+	assert.Equal(t, want.status, got.status)
+	assert.Equal(t, want.spanKind, got.spanKind)
 	assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
 	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
 	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
@@ -1504,11 +1504,11 @@ func TestSpanCapturesPanic(t *testing.T) {
 	spans := te.Spans()
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].Events(), 1)
-	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
-	assert.Equal(t, spans[0].Events()[0].Attributes, []attribute.KeyValue{
+	assert.Equal(t, semconv.ExceptionEventName, spans[0].Events()[0].Name)
+	assert.Equal(t, []attribute.KeyValue{
 		semconv.ExceptionType("*errors.errorString"),
 		semconv.ExceptionMessage("error message"),
-	})
+	}, spans[0].Events()[0].Attributes)
 }
 
 func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
@@ -1527,9 +1527,9 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	spans := te.Spans()
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].Events(), 1)
-	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
-	assert.Equal(t, spans[0].Events()[0].Attributes[0].Value.AsString(), "*errors.errorString")
-	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), "error message")
+	assert.Equal(t, semconv.ExceptionEventName, spans[0].Events()[0].Name)
+	assert.Equal(t, "*errors.errorString", spans[0].Events()[0].Attributes[0].Value.AsString())
+	assert.Equal(t, "error message", spans[0].Events()[0].Attributes[1].Value.AsString())
 
 	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
 	assert.Truef(t, strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"), "%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace", gotStackTraceFunctionName[1])

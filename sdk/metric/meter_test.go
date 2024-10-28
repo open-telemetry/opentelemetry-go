@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -806,7 +807,7 @@ func TestMeterCreatesInstrumentsValidations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMeterProvider().Meter("testInstruments")
 			err := tt.fn(t, m)
-			assert.Equal(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantErr, err)
 		})
 	}
 }
@@ -1041,7 +1042,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	got := metricdata.ResourceMetrics{}
 	err = rdr.Collect(context.Background(), &got)
 	assert.NoError(t, err)
-	assert.Lenf(t, l.messages, 0, "Warnings and errors logged:\n%s", l)
+	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
@@ -1254,7 +1255,7 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.False(t, called, "callback called for all drop instruments")
-	assert.Len(t, data.ScopeMetrics, 0, "metrics exported for drop instruments")
+	assert.Empty(t, data.ScopeMetrics, "metrics exported for drop instruments")
 }
 
 func TestAttributeFilter(t *testing.T) {
@@ -2304,7 +2305,7 @@ func TestObservableDropAggregation(t *testing.T) {
 			require.NoError(t, err)
 
 			if len(tt.wantObservables) == 0 {
-				require.Len(t, rm.ScopeMetrics, 0)
+				require.Empty(t, rm.ScopeMetrics)
 				return
 			}
 
@@ -2426,4 +2427,89 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 			require.Equal(t, 1, numInstruments)
 		})
 	}
+}
+
+func TestMeterProviderDelegation(t *testing.T) {
+	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { require.NoError(t, err) }))
+	for i := 0; i < 5; i++ {
+		int64Counter, err := meter.Int64ObservableCounter("observable.int64.counter")
+		require.NoError(t, err)
+		int64UpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")
+		require.NoError(t, err)
+		int64Gauge, err := meter.Int64ObservableGauge("observable.int64.gauge")
+		require.NoError(t, err)
+		floatCounter, err := meter.Float64ObservableCounter("observable.float.counter")
+		require.NoError(t, err)
+		floatUpDownCounter, err := meter.Float64ObservableUpDownCounter("observable.float.up.down.counter")
+		require.NoError(t, err)
+		floatGauge, err := meter.Float64ObservableGauge("observable.float.gauge")
+		require.NoError(t, err)
+		_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+			o.ObserveInt64(int64Counter, int64(10))
+			o.ObserveInt64(int64UpDownCounter, int64(10))
+			o.ObserveInt64(int64Gauge, int64(10))
+
+			o.ObserveFloat64(floatCounter, float64(10))
+			o.ObserveFloat64(floatUpDownCounter, float64(10))
+			o.ObserveFloat64(floatGauge, float64(10))
+			return nil
+		}, int64Counter, int64UpDownCounter, int64Gauge, floatCounter, floatUpDownCounter, floatGauge)
+		require.NoError(t, err)
+	}
+	provider := NewMeterProvider()
+
+	assert.NotPanics(t, func() {
+		otel.SetMeterProvider(provider)
+	})
+}
+
+func TestExemplarFilter(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(
+		WithReader(rdr),
+		// Passing AlwaysOnFilter causes collection of the exemplar for the
+		// counter increment below.
+		WithExemplarFilter(exemplar.AlwaysOnFilter),
+	)
+
+	m1 := mp.Meter("scope")
+	ctr1, err := m1.Float64Counter("ctr")
+	assert.NoError(t, err)
+	ctr1.Add(context.Background(), 1.0)
+
+	want := metricdata.ResourceMetrics{
+		Resource: resource.Default(),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{
+					Name: "scope",
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "ctr",
+						Data: metricdata.Sum[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Value: 1.0,
+									Exemplars: []metricdata.Exemplar[float64]{
+										{
+											Value: 1.0,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := metricdata.ResourceMetrics{}
+	err = rdr.Collect(context.Background(), &got)
+	assert.NoError(t, err)
+	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }

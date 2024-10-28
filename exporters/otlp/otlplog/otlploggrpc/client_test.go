@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -556,8 +557,44 @@ func TestClient(t *testing.T) {
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 
-		require.Equal(t, 1, len(errs))
+		require.Len(t, errs, 1)
 		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
 		assert.ErrorContains(t, errs[0], want)
+	})
+}
+
+func TestConfig(t *testing.T) {
+	factoryFunc := func(rCh <-chan exportResult, o ...Option) (log.Exporter, *grpcCollector) {
+		coll, err := newGRPCCollector("", rCh)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		opts := append([]Option{
+			WithEndpoint(coll.listener.Addr().String()),
+			WithInsecure(),
+		}, o...)
+		exp, err := New(ctx, opts...)
+		require.NoError(t, err)
+		return exp, coll
+	}
+
+	t.Run("WithHeaders", func(t *testing.T) {
+		key := "my-custom-header"
+		headers := map[string]string{key: "custom-value"}
+		exp, coll := factoryFunc(nil, WithHeaders(headers))
+		t.Cleanup(coll.srv.Stop)
+
+		ctx := context.Background()
+		additionalKey := "additional-custom-header"
+		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := metadata.Join(coll.headers)
+		require.Regexp(t, "OTel Go OTLP over gRPC logs exporter/[01]\\..*", got)
+		require.Contains(t, got, key)
+		require.Contains(t, got, additionalKey)
+		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 }

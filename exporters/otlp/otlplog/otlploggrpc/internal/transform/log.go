@@ -9,7 +9,6 @@
 package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/transform"
 
 import (
-	"sync"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -28,71 +27,25 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 		return nil
 	}
 
-	resMap := resourceLogsMapPool.Get().(map[attribute.Distinct]*lpb.ResourceLogs)
-	defer func() {
-		clear(resMap)
-		resourceLogsMapPool.Put(resMap)
-	}()
-	resourceLogsMap(&resMap, records)
+	resMap := make(map[attribute.Distinct]*lpb.ResourceLogs)
 
-	out := make([]*lpb.ResourceLogs, 0, len(resMap))
-	for _, rl := range resMap {
-		out = append(out, rl)
+	type key struct {
+		r  attribute.Distinct
+		is instrumentation.Scope
 	}
-	return out
-}
+	scopeMap := make(map[key]*lpb.ScopeLogs)
 
-var resourceLogsMapPool = sync.Pool{
-	New: func() any {
-		return make(map[attribute.Distinct]*lpb.ResourceLogs)
-	},
-}
-
-func resourceLogsMap(dst *map[attribute.Distinct]*lpb.ResourceLogs, records []log.Record) {
+	var resources int
 	for _, r := range records {
 		res := r.Resource()
-		rl, ok := (*dst)[res.Equivalent()]
-		if !ok {
-			rl = new(lpb.ResourceLogs)
-			if res.Len() > 0 {
-				rl.Resource = &rpb.Resource{
-					Attributes: AttrIter(res.Iter()),
-				}
-			}
-			rl.SchemaUrl = res.SchemaURL()
-			(*dst)[res.Equivalent()] = rl
-		}
-		rl.ScopeLogs = ScopeLogs(records)
-	}
-}
-
-// ScopeLogs returns a slice of OTLP ScopeLogs generated from records.
-func ScopeLogs(records []log.Record) []*lpb.ScopeLogs {
-	scopeMap := scopeLogsMapPool.Get().(map[instrumentation.Scope]*lpb.ScopeLogs)
-	defer func() {
-		clear(scopeMap)
-		scopeLogsMapPool.Put(scopeMap)
-	}()
-	scopeLogsMap(&scopeMap, records)
-
-	out := make([]*lpb.ScopeLogs, 0, len(scopeMap))
-	for _, sl := range scopeMap {
-		out = append(out, sl)
-	}
-	return out
-}
-
-var scopeLogsMapPool = sync.Pool{
-	New: func() any {
-		return make(map[instrumentation.Scope]*lpb.ScopeLogs)
-	},
-}
-
-func scopeLogsMap(dst *map[instrumentation.Scope]*lpb.ScopeLogs, records []log.Record) {
-	for _, r := range records {
+		rKey := res.Equivalent()
 		scope := r.InstrumentationScope()
-		sl, ok := (*dst)[scope]
-		if !ok {
+		k := key{
+			r:  rKey,
+			is: scope,
+		}
+		sl, iOk := scopeMap[k]
+		if !iOk {
 			sl = new(lpb.ScopeLogs)
 			var emptyScope instrumentation.Scope
 			if scope != emptyScope {
@@ -103,10 +56,34 @@ func scopeLogsMap(dst *map[instrumentation.Scope]*lpb.ScopeLogs, records []log.R
 				}
 				sl.SchemaUrl = scope.SchemaURL
 			}
-			(*dst)[scope] = sl
+			scopeMap[k] = sl
 		}
+
 		sl.LogRecords = append(sl.LogRecords, LogRecord(r))
+		rl, rOk := resMap[rKey]
+		if !rOk {
+			resources++
+			rl = new(lpb.ResourceLogs)
+			if res.Len() > 0 {
+				rl.Resource = &rpb.Resource{
+					Attributes: AttrIter(res.Iter()),
+				}
+			}
+			rl.SchemaUrl = res.SchemaURL()
+			resMap[rKey] = rl
+		}
+		if !iOk {
+			rl.ScopeLogs = append(rl.ScopeLogs, sl)
+		}
 	}
+
+	// Transform the categorized map into a slice
+	resLogs := make([]*lpb.ResourceLogs, 0, resources)
+	for _, rl := range resMap {
+		resLogs = append(resLogs, rl)
+	}
+
+	return resLogs
 }
 
 // LogRecord returns an OTLP LogRecord generated from record.
@@ -140,10 +117,11 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 // year 1678 or after 2262). timeUnixNano on the zero Time returns 0. The
 // result does not depend on the location associated with t.
 func timeUnixNano(t time.Time) uint64 {
-	if t.IsZero() {
+	nano := t.UnixNano()
+	if nano < 0 {
 		return 0
 	}
-	return uint64(t.UnixNano())
+	return uint64(nano) // nolint:gosec // Overflow checked.
 }
 
 // AttrIter transforms an [attribute.Iterator] into OTLP key-values.
