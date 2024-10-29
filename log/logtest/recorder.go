@@ -107,9 +107,10 @@ func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 
 	nl := &logger{
 		scopeRecord: &ScopeRecords{
-			Name:      name,
-			Version:   cfg.InstrumentationVersion(),
-			SchemaURL: cfg.SchemaURL(),
+			Name:       name,
+			Version:    cfg.InstrumentationVersion(),
+			SchemaURL:  cfg.SchemaURL(),
+			Attributes: cfg.InstrumentationAttributes(),
 		},
 		enabledFn: r.enabledFn,
 	}
