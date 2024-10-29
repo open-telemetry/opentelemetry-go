@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 )
@@ -66,6 +67,8 @@ type ScopeRecords struct {
 	Version string
 	// SchemaURL of the telemetry emitted by the scope.
 	SchemaURL string
+	// Attributes of the telemetry emitted by the scope.
+	Attributes attribute.Set
 
 	// Records are the log records, and their associated context this
 	// instrumentation scope recorded.
