@@ -84,6 +84,14 @@ var (
 	pbScope = &cpb.InstrumentationScope{
 		Name:    "otel/test/code/path1",
 		Version: "v0.1.1",
+		Attributes: []*cpb.KeyValue{
+			{
+				Key: "foo",
+				Value: &cpb.AnyValue{
+					Value: &cpb.AnyValue_StringValue{StringValue: "bar"},
+				},
+			},
+		},
 	}
 	pbScope2 = &cpb.InstrumentationScope{
 		Name:    "otel/test/code/path2",
