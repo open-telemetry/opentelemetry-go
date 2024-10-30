@@ -87,6 +87,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		name:    name,
 		version: c.InstrumentationVersion(),
 		schema:  c.SchemaURL(),
+		attrs:   c.InstrumentationAttributes(),
 	}
 
 	if p.tracers == nil {
