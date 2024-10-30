@@ -387,7 +387,7 @@ func TestTracerProviderReturnsSameTracer(t *testing.T) {
 
 	t0, t1, t2 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
 	assert.NotSame(t, t0, t1)
-	assert.Same(t, t0, t2) // TODO (#3368): Change to assert.NotSame.
+	assert.NotSame(t, t0, t2)
 	assert.NotSame(t, t1, t2)
 
 	t3, t4, t5 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
@@ -127,6 +128,9 @@ func TestDelegation(t *testing.T) {
 
 	alt := provider.Logger("alt")
 	assert.NotSame(t, pre0, alt)
+
+	alt2 := provider.Logger(preName, log.WithInstrumentationAttributes(attribute.String("k", "v")))
+	assert.NotSame(t, pre0, alt2)
 
 	delegate := &testLoggerProvider{}
 	provider.setDelegate(delegate)
