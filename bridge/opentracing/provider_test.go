@@ -59,22 +59,37 @@ func TestTracerProvider(t *testing.T) {
 	})
 
 	t.Run("Repeated requests to create a tracer should provide the existing tracer", func(t *testing.T) {
-		tracer1 := provider.Tracer(foobar)
-		assertMockTracerName(t, tracer1, foobar)
-		tracer2 := provider.Tracer(foobar)
-		assertMockTracerName(t, tracer2, foobar)
-		tracer3 := provider.Tracer(bazbar)
-		assertMockTracerName(t, tracer3, bazbar)
-		tracer4 := provider.Tracer(bazbar, trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
-		assertMockTracerName(t, tracer4, bazbar)
-		tracer5 := provider.Tracer(bazbar, trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"))
-		assertMockTracerName(t, tracer5, bazbar)
-
-		if tracer1 != tracer2 {
-			t.Errorf("expected the same tracer, got different tracers")
+		tracerFns := []func() trace.Tracer{
+			func() trace.Tracer {
+				return provider.Tracer(foobar)
+			},
+			func() trace.Tracer {
+				return provider.Tracer(bazbar)
+			},
+			func() trace.Tracer {
+				return provider.Tracer(foobar, trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"))
+			},
+			func() trace.Tracer {
+				return provider.Tracer(foobar, trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+			},
+			func() trace.Tracer {
+				return provider.Tracer(foobar, trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"), trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+			},
 		}
-		if tracer1 == tracer3 || tracer2 == tracer3 || tracer3 == tracer4 || tracer3 == tracer5 || tracer4 == tracer5 {
-			t.Errorf("expected different tracers, got the same tracer")
+
+		for i, fn1 := range tracerFns {
+			for j, fn2 := range tracerFns {
+				tracer1, tracer2 := fn1(), fn2()
+				if i == j {
+					if tracer1 != tracer2 {
+						t.Errorf("expected the same tracer, got different tracers; i=%d j=%d", i, j)
+					}
+				} else {
+					if tracer1 == tracer2 {
+						t.Errorf("expected different tracers, got the same tracer; i=%d j=%d", i, j)
+					}
+				}
+			}
 		}
 	})
 }
