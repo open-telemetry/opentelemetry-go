@@ -6,6 +6,7 @@ package opentracing
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -64,11 +65,15 @@ func TestTracerProvider(t *testing.T) {
 		assertMockTracerName(t, tracer2, foobar)
 		tracer3 := provider.Tracer(bazbar)
 		assertMockTracerName(t, tracer3, bazbar)
+		tracer4 := provider.Tracer(bazbar, trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		assertMockTracerName(t, tracer4, bazbar)
+		tracer5 := provider.Tracer(bazbar, trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"))
+		assertMockTracerName(t, tracer5, bazbar)
 
 		if tracer1 != tracer2 {
 			t.Errorf("expected the same tracer, got different tracers")
 		}
-		if tracer1 == tracer3 || tracer2 == tracer3 {
+		if tracer1 == tracer3 || tracer2 == tracer3 || tracer3 == tracer4 || tracer3 == tracer5 || tracer4 == tracer5 {
 			t.Errorf("expected different tracers, got the same tracer")
 		}
 	})
