@@ -16,6 +16,7 @@ import (
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
+	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -70,9 +71,10 @@ var (
 	flagsD   = byte(0)
 
 	scope = instrumentation.Scope{
-		Name:      "otel/test/code/path1",
-		Version:   "v0.1.1",
-		SchemaURL: semconv.SchemaURL,
+		Name:       "otel/test/code/path1",
+		Version:    "v0.1.1",
+		SchemaURL:  semconv.SchemaURL,
+		Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 	}
 	scope2 = instrumentation.Scope{
 		Name:      "otel/test/code/path2",
