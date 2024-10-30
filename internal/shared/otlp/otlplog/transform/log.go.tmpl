@@ -50,7 +50,7 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 			var emptyScope instrumentation.Scope
 			if scope != emptyScope {
 				sl.Scope = &cpb.InstrumentationScope{
-					Name:    scope.Name,
+					Name:       scope.Name,
 					Version:    scope.Version,
 					Attributes: AttrIter(scope.Attributes.Iter()),
 				}
