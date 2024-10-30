@@ -19,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.27.0` version of the OpenTelemetry Semantic Conventions. (#5894)
 - Add `Attributes attribute.Set` field to `Scope` in `go.opentelemetry.io/otel/sdk/instrumentation`. (#5903)
 - Add `Attributes attribute.Set` field to `ScopeRecords` in `go.opentelemetry.io/otel/log/logtest`. (#5927)
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` adds instrumentation scope attributes. (#5935)
+- `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` adds instrumentation scope attributes. (#5935)
 
 ### Fixed
 
