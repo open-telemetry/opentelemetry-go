@@ -6,6 +6,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -38,6 +39,8 @@ func NewTracerProvider(bridge *BridgeTracer, provider trace.TracerProvider) *Tra
 type wrappedTracerKey struct {
 	name    string
 	version string
+	schema  string
+	attrs   attribute.Set
 }
 
 // Tracer creates a WrappedTracer that wraps the OpenTelemetry tracer for each call to
@@ -51,6 +54,8 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	key := wrappedTracerKey{
 		name:    name,
 		version: c.InstrumentationVersion(),
+		schema:  c.SchemaURL(),
+		attrs:   c.InstrumentationAttributes(),
 	}
 
 	if t, ok := p.tracers[key]; ok {
