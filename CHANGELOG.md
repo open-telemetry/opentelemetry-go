@@ -23,6 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` adds instrumentation scope attributes. (#5934)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` adds instrumentation scope attributes. (#5935)
 - `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` adds instrumentation scope attributes. (#5935)
+- `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` adds instrumentation scope attributes. (#5933)
+- `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` adds instrumentation scope attributes. (#5933)
 
 ### Fixed
 
