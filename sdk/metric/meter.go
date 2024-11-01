@@ -452,29 +452,41 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 	}
 	unregs := make([]func(), len(m.pipes))
 	var err error
+	validInstruments := make([]metric.Observable, 0, len(insts))
+	for _, inst := range insts {
+		switch o := inst.(type) {
+		case int64Observable:
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
+				}
+				continue
+			}
+
+			validInstruments = append(validInstruments, inst)
+		case float64Observable:
+			if e := o.registerable(m); e != nil {
+				if !errors.Is(e, errEmptyAgg) {
+					err = errors.Join(err, e)
+				}
+				continue
+			}
+
+			validInstruments = append(validInstruments, inst)
+		default:
+			// Instrument external to the SDK.
+			return nil, fmt.Errorf("invalid observable: from different implementation")
+		}
+	}
+
 	for ix, pipe := range m.pipes {
 		reg := newObserver(pipe)
-		for _, inst := range insts {
+		for _, inst := range validInstruments {
 			switch o := inst.(type) {
 			case int64Observable:
-				if e := o.registerable(m); e != nil {
-					if !errors.Is(e, errEmptyAgg) {
-						err = errors.Join(err, e)
-					}
-					continue
-				}
 				reg.registerInt64(o.observableID)
 			case float64Observable:
-				if e := o.registerable(m); e != nil {
-					if !errors.Is(e, errEmptyAgg) {
-						err = errors.Join(err, e)
-					}
-					continue
-				}
 				reg.registerFloat64(o.observableID)
-			default:
-				// Instrument external to the SDK.
-				return nil, fmt.Errorf("invalid observable: from different implementation")
 			}
 		}
 
@@ -488,7 +500,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		unregs[ix] = pipe.addMultiCallback(cBack)
 	}
 
-	return m.pipes.registerMultiCallbacks(unregs), err
+	return unregisterFuncs{f: unregs}, err
 }
 
 type observer struct {

@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -102,6 +103,21 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			pipe.addMultiCallback(func(context.Context) error { return nil })
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b := aggregate.Builder[int64]{
+				Temporality:      metricdata.CumulativeTemporality,
+				ReservoirFunc:    nil,
+				AggregationLimit: 0,
+			}
+			var oID observableID[int64]
+			m, _ := b.PrecomputedSum(false)
+			measures := []aggregate.Measure[int64]{}
+			measures = append(measures, m)
+			pipe.addInt64Measure(oID, measures)
 		}()
 	}
 	wg.Wait()

@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
@@ -596,10 +595,6 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View, exempl
 		pipes = append(pipes, p)
 	}
 	return pipes
-}
-
-func (p pipelines) registerMultiCallbacks(unregs []func()) metric.Registration {
-	return unregisterFuncs{f: unregs}
 }
 
 type unregisterFuncs struct {
