@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -379,4 +380,18 @@ func testStoredError(t *testing.T, target interface{}) {
 
 		assert.ErrorAs(t, err, target)
 	}
+}
+
+func TestTracerProviderReturnsSameTracer(t *testing.T) {
+	p := NewTracerProvider()
+
+	t0, t1, t2 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	assert.NotSame(t, t0, t1)
+	assert.NotSame(t, t0, t2)
+	assert.NotSame(t, t1, t2)
+
+	t3, t4, t5 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	assert.Same(t, t0, t3)
+	assert.Same(t, t1, t4)
+	assert.Same(t, t2, t5)
 }

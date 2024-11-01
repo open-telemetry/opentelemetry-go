@@ -184,7 +184,8 @@ func Example() {
 	//       "Scope": {
 	//         "Name": "example",
 	//         "Version": "0.0.1",
-	//         "SchemaURL": ""
+	//         "SchemaURL": "",
+	//         "Attributes": null
 	//       },
 	//       "Metrics": [
 	//         {
