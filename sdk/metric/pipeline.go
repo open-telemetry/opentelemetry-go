@@ -77,9 +77,6 @@ type pipeline struct {
 func (p *pipeline) addInt64Measure(id observableID[int64], m []aggregate.Measure[int64]) {
 	p.Lock()
 	defer p.Unlock()
-	if _, ok := p.int64Measures[id]; ok {
-		return
-	}
 	p.int64Measures[id] = m
 }
 
@@ -87,9 +84,6 @@ func (p *pipeline) addInt64Measure(id observableID[int64], m []aggregate.Measure
 func (p *pipeline) addFloat64Measure(id observableID[float64], m []aggregate.Measure[float64]) {
 	p.Lock()
 	defer p.Unlock()
-	if _, ok := p.float64Measures[id]; ok {
-		return
-	}
 	p.float64Measures[id] = m
 }
 

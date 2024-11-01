@@ -537,6 +537,51 @@ func TestExemplars(t *testing.T) {
 	})
 }
 
+func TestAddingAndObservingMeasureConcurrency(t *testing.T) {
+	exp := &fnExporter{}
+	r1 := NewPeriodicReader(exp, WithInterval(1*time.Second))
+	r2 := NewPeriodicReader(exp, WithInterval(600*time.Second))
+
+	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
+	m := mp.Meter("test")
+
+	oc1, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := m.Int64ObservableCounter("int64-observable-counter-2")
+		require.NoError(t, err)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := m.RegisterCallback(
+			func(_ context.Context, o metric.Observer) error {
+				o.ObserveInt64(oc1, 2)
+				return nil
+			}, oc1)
+		require.NoError(t, err)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = mp.pipes[0].produce(context.Background(), &metricdata.ResourceMetrics{})
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = mp.pipes[1].produce(context.Background(), &metricdata.ResourceMetrics{})
+	}()
+
+	wg.Wait()
+}
+
 func TestPipelineWithMultipleReaders(t *testing.T) {
 	exp := &fnExporter{}
 	r1 := NewPeriodicReader(exp, WithInterval(1*time.Second))

@@ -479,6 +479,11 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 	}
 
+	if len(validInstruments) == 0 {
+		// All insts use drop aggregation or are invalid.
+		return noopRegister{}, err
+	}
+
 	for ix, pipe := range m.pipes {
 		reg := newObserver(pipe)
 		for _, inst := range validInstruments {
@@ -488,11 +493,6 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 			case float64Observable:
 				reg.registerFloat64(o.observableID)
 			}
-		}
-
-		if reg.len() == 0 {
-			// All insts use drop aggregation or are invalid.
-			return noopRegister{}, err
 		}
 
 		// Some or all instruments were valid.
@@ -517,10 +517,6 @@ func newObserver(p *pipeline) observer {
 		float64: make(map[observableID[float64]]struct{}),
 		int64:   make(map[observableID[int64]]struct{}),
 	}
-}
-
-func (r observer) len() int {
-	return len(r.float64) + len(r.int64)
 }
 
 func (r observer) registerFloat64(id observableID[float64]) {
