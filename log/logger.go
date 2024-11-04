@@ -29,7 +29,7 @@ type Logger interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	//
-	// Notice: Emit is intended to be used be log bridges.
+	// Notice: Emit is intended to be used by log bridges.
 	// Is should not be used for writing instrumentation.
 	Emit(ctx context.Context, record Record)
 
