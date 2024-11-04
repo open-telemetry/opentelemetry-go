@@ -53,6 +53,9 @@ type Logger interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
+	//
+	// Notice: Enabled is intended to be used by log bridges.
+	// Is should not be used for writing instrumentation.
 	Enabled(ctx context.Context, param EnabledParameters) bool
 }
 
