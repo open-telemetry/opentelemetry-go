@@ -26,14 +26,12 @@ This proposed design aims to:
 
 The API is published as a single `go.opentelemetry.io/otel/log` Go module.
 
-The module name is compliant with
-[Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
-and the package structure is the same as for Trace API and Metrics API.
-
+The package structure is similar to Trace API and Metrics API.
 The Go module consists of the following packages:
 
 - `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/log/embedded`
+- `go.opentelemetry.io/otel/log/logtest`
 - `go.opentelemetry.io/otel/log/noop`
 
 Rejected alternative:
