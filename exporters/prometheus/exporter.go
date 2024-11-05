@@ -356,8 +356,14 @@ func createInfoMetric(name, description string, res *resource.Resource) (prometh
 }
 
 func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, error) {
-	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, []string{scopeNameLabel, scopeVersionLabel}, nil)
-	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), scope.Name, scope.Version)
+	attrs := make([]attribute.KeyValue, 0, scope.Attributes.Len()+2) // resource attrs + scope name + scope version
+	attrs = append(attrs, scope.Attributes.ToSlice()...)
+	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
+	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
+
+	keys, values := getAttrs(attribute.NewSet(attrs...))
+	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
+	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
 var unitSuffixes = map[string]string{
