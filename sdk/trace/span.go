@@ -639,7 +639,7 @@ func (s *recordingSpan) dedupeAttrsFromRecord(record map[attribute.Key]int) {
 			record[a.Key] = len(unique) - 1
 		}
 	}
-	clear(s.attributes[len(unique):]) // Erase unneeded elements to let GC collect objects
+	clear(s.attributes[len(unique):]) // Erase unneeded elements to let GC collect objects.
 	s.attributes = unique
 }
 
