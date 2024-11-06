@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package log provides the OpenTelemetry Logs Bridge API.
+Package log provides the OpenTelemetry Logs API.
 
 This package is intended to be used by bridges between existing logging
 libraries and OpenTelemetry. Users should not directly use this package as a
