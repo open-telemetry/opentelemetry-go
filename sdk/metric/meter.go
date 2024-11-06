@@ -450,7 +450,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		// Don't allocate a observer if not needed.
 		return noopRegister{}, nil
 	}
-	unregs := make([]func(), len(m.pipes))
+
 	var err error
 	validInstruments := make([]metric.Observable, 0, len(insts))
 	for _, inst := range insts {
@@ -484,6 +484,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		return noopRegister{}, err
 	}
 
+	unregs := make([]func(), len(m.pipes))
 	for ix, pipe := range m.pipes {
 		reg := newObserver(pipe)
 		for _, inst := range validInstruments {

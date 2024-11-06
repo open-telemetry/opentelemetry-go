@@ -537,10 +537,10 @@ func TestExemplars(t *testing.T) {
 	})
 }
 
-func TestAddingAndObservingMeasureConcurrency(t *testing.T) {
+func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 	exp := &fnExporter{}
-	r1 := NewPeriodicReader(exp, WithInterval(1*time.Second))
-	r2 := NewPeriodicReader(exp, WithInterval(600*time.Second))
+	r1 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
+	r2 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
 
 	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
 	m := mp.Meter("test")
@@ -584,8 +584,8 @@ func TestAddingAndObservingMeasureConcurrency(t *testing.T) {
 
 func TestPipelineWithMultipleReaders(t *testing.T) {
 	exp := &fnExporter{}
-	r1 := NewPeriodicReader(exp, WithInterval(1*time.Second))
-	r2 := NewPeriodicReader(exp, WithInterval(600*time.Second))
+	r1 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
+	r2 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
 
 	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
 	m := mp.Meter("test")
@@ -607,20 +607,20 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	measure(ctx, m)
 	rm := new(metricdata.ResourceMetrics)
 	val.Add(1)
-
-	// adding sleep deliberately so that the callback get triggered
-	time.Sleep(2 * time.Second)
 	err := r1.Collect(ctx, rm)
 	require.NoError(t, err)
-	assert.Len(t, rm.ScopeMetrics, 1)
-	assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Len(t, rm.ScopeMetrics, 1)
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		assert.Equal(c, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}, 3*time.Second, 20*time.Millisecond, "observed counter value mismatch for first reader")
 
 	val.Add(1)
-	time.Sleep(1 * time.Second)
 	err = r2.Collect(ctx, rm)
 	require.NoError(t, err)
-	assert.Len(t, rm.ScopeMetrics, 1)
-	assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	assert.Equal(t, int64(3), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Len(t, rm.ScopeMetrics, 1)
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		assert.Equal(c, int64(3), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}, 3*time.Second, 20*time.Millisecond, "observed counter value mismatch for second reader")
 }
