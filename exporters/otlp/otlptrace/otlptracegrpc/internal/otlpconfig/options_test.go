@@ -156,9 +156,9 @@ func TestConfigs(t *testing.T) {
 				WithEndpointURL("https://someendpoint/somepath"),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
-				assert.Equal(t, "/somepath", c.Metrics.URLPath)
-				assert.False(t, c.Metrics.Insecure)
+				assert.Equal(t, "someendpoint", c.Traces.Endpoint)
+				assert.Equal(t, "/somepath", c.Traces.URLPath)
+				assert.False(t, c.Traces.Insecure)
 			},
 		},
 		{
