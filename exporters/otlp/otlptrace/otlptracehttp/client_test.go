@@ -244,6 +244,9 @@ func TestTimeout(t *testing.T) {
 func TestNoRetry(t *testing.T) {
 	mc := runMockCollector(t, mockCollectorConfig{
 		InjectHTTPStatus: []int{http.StatusBadRequest},
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			ErrorMessage: "missing required attribute aaa",
+		},
 	})
 	defer mc.MustStop(t)
 	driver := otlptracehttp.NewClient(
@@ -265,9 +268,14 @@ func TestNoRetry(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.Error(t, err)
-	unwrapped := errors.Unwrap(err)
-	assert.Equal(t, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), unwrapped.Error())
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
+
+	unwrapped := errors.Unwrap(err)
+	assert.Contains(t, unwrapped.Error(), fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint))
+
+	unwrapped2 := errors.Unwrap(unwrapped)
+	assert.Contains(t, unwrapped2.Error(), "missing required attribute aaa")
+
 	assert.Empty(t, mc.GetSpans())
 }
 

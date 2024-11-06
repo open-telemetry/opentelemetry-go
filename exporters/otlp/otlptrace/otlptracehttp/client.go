@@ -166,8 +166,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}()
 		}
 
-		switch sc := resp.StatusCode; {
-		case sc >= 200 && sc <= 299:
+		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
@@ -194,32 +193,40 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				}
 			}
 			return nil
+		}
+		// Error cases.
 
-		case sc == http.StatusTooManyRequests,
-			sc == http.StatusBadGateway,
-			sc == http.StatusServiceUnavailable,
-			sc == http.StatusGatewayTimeout:
-			// Retry-able failures.
-			rErr := newResponseError(resp.Header, nil)
+		// server may return a message with the response
+		// body, so we read it to include in the error
+		// message to be returned. It will help in
+		// debugging the actual issue.
+		var respData bytes.Buffer
+		if _, err := io.Copy(&respData, resp.Body); err != nil {
+			return err
+		}
+		respStr := strings.TrimSpace(respData.String())
 
-			// server may return a message with the response
-			// body, so we read it to include in the error
-			// message to be returned. It will help in
-			// debugging the actual issue.
-			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, resp.Body); err != nil {
-				return err
+		switch resp.StatusCode {
+		case http.StatusTooManyRequests,
+			http.StatusBadGateway,
+			http.StatusServiceUnavailable,
+			http.StatusGatewayTimeout:
+			// Retryable failure.
+
+			var err error
+			if len(respStr) > 0 {
+				// include response body for context
+				err = errors.New(respStr)
 			}
-
-			// overwrite the error message with the response body
-			// if it is not empty
-			if respStr := strings.TrimSpace(respData.String()); respStr != "" {
-				// Include response for context.
-				e := errors.New(respStr)
-				rErr = newResponseError(resp.Header, e)
-			}
-			return rErr
+			return newResponseError(resp.Header, err)
 		default:
+			// Non-retryable failure.
+
+			if len(respStr) > 0 {
+				// include response body for context
+				e := errors.New(respStr)
+				return fmt.Errorf("failed to send to %s: %s (%w)", request.URL, resp.Status, e)
+			}
 			return fmt.Errorf("failed to send to %s: %s", request.URL, resp.Status)
 		}
 	})
