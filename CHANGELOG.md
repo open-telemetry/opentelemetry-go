@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support scope attributes and make them as identifying for `Meter` in `go.opentelemetry.io/otel` and `go.opentelemetry.io/otel/sdk/metric`. (#5926)
 - Support scope attributes and make them as identifying for `Logger` in `go.opentelemetry.io/otel` and `go.opentelemetry.io/otel/sdk/log`. (#5925)
 - Make schema URL and scope attributes as identifying for `Tracer` in `go.opentelemetry.io/otel/bridge/opentracing`. (#5931)
-- Clear unneeded slice elements to allow GC to collect the objects in `go.opentelemetry.io/otel/sdk/log`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/trace`. (#5804)
+- Clear unneeded slice elements to allow GC to collect the objects in `go.opentelemetry.io/otel/sdk/metric` and `go.opentelemetry.io/otel/sdk/trace`. (#5804)
 
 ### Removed
 
