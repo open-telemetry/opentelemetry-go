@@ -31,10 +31,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Global MeterProvider registration unwraps global instrument Observers, the undocumented Unwrap() methods are now private. (#5881)
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` trying to add exemplars to Gauge metrics, which is unsupported. (#5912)
-- Fix `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` using env variable endpoint scheme when `WithEndpointURL` is set. (#5944)
-- Fix `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` using env variable endpoint scheme when `WithEndpointURL` is set. (#5944)
-- Fix `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` using env variable endpoint scheme when `WithEndpointURL` is set. (#5944)
-- Fix `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` using env variable endpoint scheme when `WithEndpointURL` is set. (#5944)
+- Fix `WithEndpointURL` to always use a secure connection when an https URL is passed in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#5944)
+- Fix `WithEndpointURL` to always use a secure connection when an https URL is passed in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#5944)
+- Fix `WithEndpointURL` to always use a secure connection when an https URL is passed in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#5944)
+- Fix `WithEndpointURL` to always use a secure connection when an https URL is passed in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5944)
 
 ### Changed
 
