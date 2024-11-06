@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -37,13 +38,15 @@ func TestRecorderLogger(t *testing.T) {
 			loggerOptions: []log.LoggerOption{
 				log.WithInstrumentationVersion("logtest v42"),
 				log.WithSchemaURL("https://example.com"),
+				log.WithInstrumentationAttributes(attribute.String("foo", "bar")),
 			},
 
 			wantLogger: &logger{
 				scopeRecord: &ScopeRecords{
-					Name:      "test",
-					Version:   "logtest v42",
-					SchemaURL: "https://example.com",
+					Name:       "test",
+					Version:    "logtest v42",
+					SchemaURL:  "https://example.com",
+					Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 				},
 			},
 		},

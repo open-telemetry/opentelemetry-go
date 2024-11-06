@@ -805,9 +805,10 @@ var (
 	otelScopeMetrics = []metricdata.ScopeMetrics{
 		{
 			Scope: instrumentation.Scope{
-				Name:      "test/code/path",
-				Version:   "v0.1.0",
-				SchemaURL: semconv.SchemaURL,
+				Name:       "test/code/path",
+				Version:    "v0.1.0",
+				SchemaURL:  semconv.SchemaURL,
+				Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 			},
 			Metrics: otelMetrics,
 		},
@@ -818,6 +819,14 @@ var (
 			Scope: &cpb.InstrumentationScope{
 				Name:    "test/code/path",
 				Version: "v0.1.0",
+				Attributes: []*cpb.KeyValue{
+					{
+						Key: "foo",
+						Value: &cpb.AnyValue{
+							Value: &cpb.AnyValue_StringValue{StringValue: "bar"},
+						},
+					},
+				},
 			},
 			Metrics:   pbMetrics,
 			SchemaUrl: semconv.SchemaURL,
