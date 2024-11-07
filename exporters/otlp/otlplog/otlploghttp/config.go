@@ -183,11 +183,7 @@ func WithEndpointURL(rawURL string) Option {
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
 		c.path = newSetting(u.Path)
-		if u.Scheme != "https" {
-			c.insecure = newSetting(true)
-		} else {
-			c.insecure = newSetting(false)
-		}
+		c.insecure = newSetting(u.Scheme != "https")
 		return c
 	})
 }
