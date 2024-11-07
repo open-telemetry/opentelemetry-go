@@ -13,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -538,9 +537,8 @@ func TestExemplars(t *testing.T) {
 }
 
 func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
-	exp := &fnExporter{}
-	r1 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
-	r2 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
+	r1 := NewManualReader()
+	r2 := NewManualReader()
 
 	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
 	m := mp.Meter("test")
@@ -583,44 +581,35 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 }
 
 func TestPipelineWithMultipleReaders(t *testing.T) {
-	exp := &fnExporter{}
-	r1 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
-	r2 := NewPeriodicReader(exp, WithInterval(10*time.Millisecond))
-
+	r1 := NewManualReader()
+	r2 := NewManualReader()
 	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
 	m := mp.Meter("test")
-
 	var val atomic.Int64
-	val.Add(1)
-	measure := func(_ context.Context, m metric.Meter) {
-		oc, err := m.Int64ObservableCounter("int64-observable-counter")
-		require.NoError(t, err)
-		_, err = m.RegisterCallback(
-			// SDK periodically calls this function to collect data.
-			func(_ context.Context, o metric.Observer) error {
-				o.ObserveInt64(oc, val.Load())
-				return nil
-			}, oc)
-		require.NoError(t, err)
-	}
+	oc, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+	reg, err := m.RegisterCallback(
+		// SDK calls this function when collecting data.
+		func(_ context.Context, o metric.Observer) error {
+			o.ObserveInt64(oc, val.Load())
+			return nil
+		}, oc)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
 	ctx := context.Background()
-	measure(ctx, m)
 	rm := new(metricdata.ResourceMetrics)
 	val.Add(1)
-	err := r1.Collect(ctx, rm)
+	err = r1.Collect(ctx, rm)
 	require.NoError(t, err)
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Len(t, rm.ScopeMetrics, 1)
-		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-		assert.Equal(c, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
-	}, 3*time.Second, 20*time.Millisecond, "observed counter value mismatch for first reader")
-
+	if assert.Len(t, rm.ScopeMetrics, 1) &&
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
+		assert.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}
 	val.Add(1)
 	err = r2.Collect(ctx, rm)
 	require.NoError(t, err)
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Len(t, rm.ScopeMetrics, 1)
-		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-		assert.Equal(c, int64(3), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
-	}, 3*time.Second, 20*time.Millisecond, "observed counter value mismatch for second reader")
+	if assert.Len(t, rm.ScopeMetrics, 1) &&
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
+		assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}
 }
