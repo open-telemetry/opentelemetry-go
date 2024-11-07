@@ -484,8 +484,8 @@ go.opentelemetry.io/build-tools/gotmpl v0.15.0 h1:bf1oiQpPa1XG51E+zbIzvLlWQ7iTNf
 go.opentelemetry.io/build-tools/gotmpl v0.15.0/go.mod h1:4bZbMtWadnaFALXjBw3Cp2gX5KzY10mWVzaRQR6Aip8=
 go.opentelemetry.io/build-tools/multimod v0.14.0 h1:AaM06mlSga3IaCj6eM+Kg9tei062qsU6Z+x6ENmfBWI=
 go.opentelemetry.io/build-tools/multimod v0.14.0/go.mod h1:lY7ZccnZ6dg4uRcghXa4p9v4IDvI9Yf/XFdlpPO84AA=
-go.opentelemetry.io/build-tools/semconvgen v0.14.0 h1:lOHKG4Tc/mfc6yb0an4hdi9oLbIrf/mUUIF3U8HbM8Q=
-go.opentelemetry.io/build-tools/semconvgen v0.14.0/go.mod h1:JRu+X6WMMK1fvo9toZM5hb7p6Pug7NXLjbq5J0WcS18=
+go.opentelemetry.io/build-tools/semconvgen v0.15.0 h1:awFoVF505l9/GUMM5B88I7LvXzDT/lGseMPaBvwuG/4=
+go.opentelemetry.io/build-tools/semconvgen v0.15.0/go.mod h1:y3mUWiLxotg00GNzvROqviVVYaG7TcS9vohrLssqFqk=
 go.uber.org/automaxprocs v1.5.3 h1:kWazyxZUrS3Gs4qUpbwo5kEIMGe/DAvi5Z4tl2NW4j8=
 go.uber.org/automaxprocs v1.5.3/go.mod h1:eRbA25aqJrxAbsLO0xy5jVwPt7FQnRgjW+efnwa1WM0=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
