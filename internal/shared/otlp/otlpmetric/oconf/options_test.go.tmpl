@@ -150,6 +150,34 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With WithEndpointURL secure when Environment Endpoint is set insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint/prefix",
+			},
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "/somepath", c.Metrics.URLPath)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test With WithEndpointURL secure when Environment insecure is set true",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/somepath"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, "someendpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "/somepath", c.Metrics.URLPath)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
 			name: "Test Environment Endpoint",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env.endpoint/prefix",
