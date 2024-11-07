@@ -23,7 +23,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
-	go.opentelemetry.io/auto/sdk v0.1.0-alpha // indirect
+	go.opentelemetry.io/auto/sdk v0.2.0-alpha // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
