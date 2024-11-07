@@ -35,6 +35,7 @@ const (
 
 	scopeNameLabel    = "otel_scope_name"
 	scopeVersionLabel = "otel_scope_version"
+	scopeSchemaLabel  = "otel_scope_schema_url"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
@@ -205,8 +206,15 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			ch <- scopeInfo
 
-			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel)
-			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version)
+			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
+			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
+
+			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes)
+			for i := range attrKeys {
+				attrKeys[i] = "otel_scope_" + attrKeys[i]
+			}
+			kv.keys = append(kv.keys, attrKeys...)
+			kv.vals = append(kv.vals, attrVals...)
 		}
 
 		kv.keys = append(kv.keys, c.resourceKeyVals.keys...)
@@ -360,6 +368,7 @@ func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, erro
 	attrs = append(attrs, scope.Attributes.ToSlice()...)
 	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
 	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
+	attrs = append(attrs, attribute.String(scopeSchemaLabel, scope.SchemaURL))
 
 	keys, values := getAttrs(attribute.NewSet(attrs...))
 	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
