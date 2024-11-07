@@ -88,6 +88,7 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		name:    name,
 		version: c.InstrumentationVersion(),
 		schema:  c.SchemaURL(),
+		attrs:   c.InstrumentationAttributes(),
 	}
 
 	if p.tracers == nil {
@@ -103,7 +104,12 @@ func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	return t
 }
 
-type il struct{ name, version, schema string }
+type il struct {
+	name    string
+	version string
+	schema  string
+	attrs   attribute.Set
+}
 
 // tracer is a placeholder for a trace.Tracer.
 //

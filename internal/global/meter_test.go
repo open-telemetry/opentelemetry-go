@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 )
@@ -397,17 +398,18 @@ func TestRegistrationDelegation(t *testing.T) {
 }
 
 func TestMeterIdentity(t *testing.T) {
-	type id struct{ name, ver, url string }
+	type id struct{ name, ver, url, attr string }
 
 	ids := []id{
-		{"name-a", "version-a", "url-a"},
-		{"name-a", "version-a", "url-b"},
-		{"name-a", "version-b", "url-a"},
-		{"name-a", "version-b", "url-b"},
-		{"name-b", "version-a", "url-a"},
-		{"name-b", "version-a", "url-b"},
-		{"name-b", "version-b", "url-a"},
-		{"name-b", "version-b", "url-b"},
+		{"name-a", "version-a", "url-a", ""},
+		{"name-a", "version-a", "url-a", "attr"},
+		{"name-a", "version-a", "url-b", ""},
+		{"name-a", "version-b", "url-a", ""},
+		{"name-a", "version-b", "url-b", ""},
+		{"name-b", "version-a", "url-a", ""},
+		{"name-b", "version-a", "url-b", ""},
+		{"name-b", "version-b", "url-a", ""},
+		{"name-b", "version-b", "url-b", ""},
 	}
 
 	provider := &meterProvider{}
@@ -416,6 +418,7 @@ func TestMeterIdentity(t *testing.T) {
 			i.name,
 			metric.WithInstrumentationVersion(i.ver),
 			metric.WithSchemaURL(i.url),
+			metric.WithInstrumentationAttributes(attribute.String("key", i.attr)),
 		)
 	}
 
