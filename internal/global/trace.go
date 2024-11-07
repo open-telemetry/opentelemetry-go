@@ -166,7 +166,7 @@ func (t *tracer) newSpan(ctx context.Context, autoSpan *bool, name string, opts 
 	// should not be read from the global.
 
 	if *autoSpan {
-		tracer := sdk.GetTracerProvider().Tracer(t.name, t.opts...)
+		tracer := sdk.TracerProvider().Tracer(t.name, t.opts...)
 		return tracer.Start(ctx, name, opts...)
 	}
 

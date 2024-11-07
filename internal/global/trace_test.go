@@ -287,7 +287,7 @@ func TestNewSpanType(t *testing.T) {
 	t.Cleanup(func() { *autoInstEnabled = orig })
 
 	_, got = tracer.newSpan(ctx, autoInstEnabled, "", nil)
-	autoTracer := sdk.GetTracerProvider().Tracer("")
+	autoTracer := sdk.TracerProvider().Tracer("")
 	_, span := autoTracer.Start(ctx, "")
 	assert.IsType(t, span, got, "auto span type")
 }
