@@ -2,8 +2,6 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 
 go 1.22.7
 
-toolchain go1.23.3
-
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/stretchr/testify v1.9.0
