@@ -10,6 +10,7 @@ replace go.opentelemetry.io/otel/trace => ../../../trace
 
 require (
 	github.com/opentracing-contrib/go-grpc v0.1.0
+	github.com/opentracing-contrib/go-grpc/test v0.0.0-20241107173845-1fec0efe241b
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.31.0

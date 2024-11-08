@@ -10,8 +10,10 @@ github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/opentracing-contrib/go-grpc v0.0.0-20241107172107-e3cbcab5b6a5 h1:GQPLM1ycxWm9P+JosdyDP/jMP5BuJuOj8XkUYyv09lQ=
-github.com/opentracing-contrib/go-grpc v0.0.0-20241107172107-e3cbcab5b6a5/go.mod h1:qrKVX6K42O2HvkCHYCMw/1Ca1hndihEIFkwgAnKG6Nw=
+github.com/opentracing-contrib/go-grpc v0.1.0 h1:9JHDtQXv6UL0tFF8KJB/4ApJgeOcaHp1h07d0PJjESc=
+github.com/opentracing-contrib/go-grpc v0.1.0/go.mod h1:i3/jx/TvJZ/HKidtT4XGIi/NosUEpzS9xjVJctbKZzI=
+github.com/opentracing-contrib/go-grpc/test v0.0.0-20241107173845-1fec0efe241b h1:kGJTsT5KlCvo/UkD1/DD2Qxo768EMs2+Vnyye50gfz8=
+github.com/opentracing-contrib/go-grpc/test v0.0.0-20241107173845-1fec0efe241b/go.mod h1:7Wi+xyYMLB5JovMVv8bwomFvc8BJw8iH8pkz/GNxHIY=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
