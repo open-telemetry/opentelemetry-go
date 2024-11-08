@@ -132,6 +132,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		}
 		if err := ctx.Err(); err != nil {
 			rm.Resource = nil
+			clear(rm.ScopeMetrics) // Erase elements to let GC collect objects.
 			rm.ScopeMetrics = rm.ScopeMetrics[:0]
 			return err
 		}
@@ -145,6 +146,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		if err := ctx.Err(); err != nil {
 			// This means the context expired before we finished running callbacks.
 			rm.Resource = nil
+			clear(rm.ScopeMetrics) // Erase elements to let GC collect objects.
 			rm.ScopeMetrics = rm.ScopeMetrics[:0]
 			return err
 		}
