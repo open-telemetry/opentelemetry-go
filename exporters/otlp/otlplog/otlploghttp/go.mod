@@ -1,6 +1,8 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.3
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -30,7 +32,7 @@ require (
 	golang.org/x/text v0.20.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
-	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/grpc v1.68.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

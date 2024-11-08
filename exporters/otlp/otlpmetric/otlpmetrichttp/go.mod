@@ -1,6 +1,8 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.3
 
 retract v0.32.2 // Contains unresolvable dependencies.
 
@@ -12,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.31.0
 	go.opentelemetry.io/otel/sdk/metric v1.31.0
 	go.opentelemetry.io/proto/otlp v1.3.1
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.1
 )
 
