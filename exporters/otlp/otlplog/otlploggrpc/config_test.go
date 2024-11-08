@@ -170,6 +170,21 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "WithEndpointURL secure when Environment Endpoint is set insecure",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint:8080/prefix",
+			},
+			options: []Option{
+				WithEndpointURL("https://test:8080/path"),
+			},
+			want: config{
+				endpoint: newSetting("test:8080"),
+				insecure: newSetting(false),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
 			name: "LogEnvironmentVariables",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/prefix",
@@ -231,6 +246,21 @@ func TestNewConfig(t *testing.T) {
 			want: config{
 				endpoint: newSetting("env.endpoint"),
 				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "WithEndpointURL secure when Environment insecure is set false",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			options: []Option{
+				WithEndpointURL("https://test:8080/path"),
+			},
+			want: config{
+				endpoint: newSetting("test:8080"),
+				insecure: newSetting(false),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
 			},
