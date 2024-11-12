@@ -780,7 +780,7 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-// borrows from TestConfig
+// borrows from TestConfig.
 func TestNonRetryable(t *testing.T) {
 	factoryFunc := func(ePt string, rCh <-chan exportResult, o ...Option) (log.Exporter, *httpCollector) {
 		coll, err := newHTTPCollector(ePt, rCh)
