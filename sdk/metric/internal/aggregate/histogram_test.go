@@ -268,12 +268,12 @@ func TestBucketsBin(t *testing.T) {
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		b := newBuckets[N](alice, 3)
-		assertB := func(counts []uint64, count uint64, min, max N) {
+		assertB := func(counts []uint64, count uint64, mi, ma N) {
 			t.Helper()
 			assert.Equal(t, counts, b.counts)
 			assert.Equal(t, count, b.count)
-			assert.Equal(t, min, b.min)
-			assert.Equal(t, max, b.max)
+			assert.Equal(t, mi, b.min)
+			assert.Equal(t, ma, b.max)
 		}
 
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)

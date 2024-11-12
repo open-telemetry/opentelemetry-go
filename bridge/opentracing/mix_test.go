@@ -600,13 +600,6 @@ func simpleSpanIDs(count int) []trace.SpanID {
 	return base[:count]
 }
 
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
 func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
 	tr := otel.Tracer("")
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), trace.WithSpanKind(trace.SpanKindClient))
