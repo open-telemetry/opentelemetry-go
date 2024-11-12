@@ -152,6 +152,13 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		if err != nil {
 			return err
 		}
+		if resp != nil && resp.Body != nil {
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					otel.Handle(err)
+				}
+			}()
+		}
 
 		var rErr error
 		switch sc := resp.StatusCode; {
@@ -196,7 +203,6 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			// debugging the actual issue.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
-				_ = resp.Body.Close()
 				return err
 			}
 
@@ -211,9 +217,6 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			rErr = fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
 		}
 
-		if err := resp.Body.Close(); err != nil {
-			return err
-		}
 		return rErr
 	})
 }

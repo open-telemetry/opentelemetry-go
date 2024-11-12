@@ -208,7 +208,6 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// debugging the actual issue.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, resp.Body); err != nil {
-				_ = resp.Body.Close()
 				return err
 			}
 
