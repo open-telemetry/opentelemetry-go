@@ -593,7 +593,7 @@ func TestBaggageParseValue(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := Parse(tc.in)
-			assert.Empty(t, err)
+			assert.NoError(t, err)
 
 			val := b.Members()[0].Value()
 
