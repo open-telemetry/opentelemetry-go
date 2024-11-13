@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/schema/v1.0/ast"
 	"go.opentelemetry.io/otel/schema/v1.0/types"
@@ -15,7 +16,7 @@ import (
 
 func TestParseSchemaFile(t *testing.T) {
 	ts, err := ParseFile("testdata/valid-example.yaml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ts)
 	assert.EqualValues(
 		t, &ast.Schema{
@@ -151,24 +152,24 @@ func TestParseSchemaFile(t *testing.T) {
 
 func TestFailParseSchemaFile(t *testing.T) {
 	ts, err := ParseFile("testdata/unsupported-file-format.yaml")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 
 	ts, err = ParseFile("testdata/invalid-schema-url.yaml")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, ts)
 
 	ts, err = ParseFile("testdata/unknown-field.yaml")
-	assert.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
+	require.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
 	assert.Nil(t, ts)
 }
 
 func TestFailParseSchema(t *testing.T) {
 	_, err := Parse(bytes.NewReader([]byte("")))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = Parse(bytes.NewReader([]byte("invalid yaml")))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = Parse(bytes.NewReader([]byte("file_format: 1.0.0")))
 	assert.Error(t, err)

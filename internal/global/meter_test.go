@@ -129,16 +129,16 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Co
 	afcounter, err := m.Float64ObservableCounter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64ObservableUpDownCounter("test_Async_UpDownCounter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Float64ObservableGauge("test_Async_Gauge")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = m.Int64ObservableCounter("test_Async_Counter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Int64ObservableUpDownCounter("test_Async_UpDownCounter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Int64ObservableGauge("test_Async_Gauge")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = m.RegisterCallback(func(ctx context.Context, obs metric.Observer) error {
 		obs.ObserveFloat64(afcounter, 3)
@@ -149,18 +149,18 @@ func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Co
 	sfcounter, err := m.Float64Counter("test_Sync_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64UpDownCounter("test_Sync_UpDownCounter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Float64Histogram("test_Sync_Histogram")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Float64Gauge("test_Sync_Gauge")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = m.Int64Counter("test_Sync_Counter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Int64UpDownCounter("test_Sync_UpDownCounter")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Int64Histogram("test_Sync_Histogram")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = m.Int64Gauge("test_Sync_Gauge")
 	assert.NoError(t, err)
 
@@ -359,7 +359,7 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, mImpl.registry.Len(), "callback not registered")
 	// This means reg0 should not be delegated.
-	assert.NoError(t, reg0.Unregister())
+	require.NoError(t, reg0.Unregister())
 	assert.Equal(t, 0, mImpl.registry.Len(), "callback not unregistered")
 
 	var called1 bool
@@ -386,7 +386,7 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.True(t, called1, "second callback not called")
 	require.True(t, called2, "third callback not called")
 
-	assert.NoError(t, reg1.Unregister(), "unregister second callback")
+	require.NoError(t, reg1.Unregister(), "unregister second callback")
 	called1, called2 = false, false // reset called capture
 	testCollect(t, m)               // This is a hacky way to emulate a read from an exporter
 	assert.False(t, called1, "unregistered second callback called")

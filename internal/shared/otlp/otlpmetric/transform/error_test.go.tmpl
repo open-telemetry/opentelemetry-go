@@ -65,14 +65,14 @@ func TestMultiErr(t *testing.T) {
 	})
 
 	t.Run("ErrorIs", func(t *testing.T) {
-		assert.ErrorIs(t, me, errUnknownAggregation)
-		assert.ErrorIs(t, me, e0)
-		assert.ErrorIs(t, me, testErr)
-		assert.ErrorIs(t, me, errUnknownTemporality)
-		assert.ErrorIs(t, me, e1)
+		require.ErrorIs(t, me, errUnknownAggregation)
+		require.ErrorIs(t, me, e0)
+		require.ErrorIs(t, me, testErr)
+		require.ErrorIs(t, me, errUnknownTemporality)
+		require.ErrorIs(t, me, e1)
 
 		errUnknown := errFunc(func() string { return "unknown error" })
-		assert.NotErrorIs(t, me, errUnknown)
+		require.NotErrorIs(t, me, errUnknown)
 
 		var empty multiErr
 		assert.NotErrorIs(t, &empty, errUnknownTemporality)

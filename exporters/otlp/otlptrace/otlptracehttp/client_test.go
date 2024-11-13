@@ -237,8 +237,7 @@ func TestTimeout(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.ErrorContains(t, err, "Client.Timeout exceeded while awaiting headers")
+	assert.ErrorContains(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()), "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestNoRetry(t *testing.T) {
@@ -264,9 +263,9 @@ func TestNoRetry(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Error(t, err)
+	require.Error(t, err)
 	unwrapped := errors.Unwrap(err)
-	assert.Equal(t, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint), unwrapped.Error())
+	assert.EqualError(t, unwrapped, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint))
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 	assert.Empty(t, mc.GetSpans())
 }
@@ -285,9 +284,8 @@ func TestEmptyData(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
-	assert.NoError(t, err)
-	err = exporter.ExportSpans(ctx, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	require.NoError(t, exporter.ExportSpans(ctx, nil))
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -306,8 +304,7 @@ func TestCancelledContext(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
 	cancel()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Error(t, err)
+	require.Error(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -340,8 +337,7 @@ func TestDeadlineContext(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.Error(t, err)
+	require.Error(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
 	assert.Empty(t, mc.GetSpans())
 }
 
@@ -409,12 +405,11 @@ func TestPartialSuccess(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		errs = append(errs, err)
 	}))
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
+	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
 
 	require.Len(t, errs, 1)
-	require.Contains(t, errs[0].Error(), "partially successful")
-	require.Contains(t, errs[0].Error(), "2 spans rejected")
+	require.ErrorContains(t, errs[0], "partially successful")
+	require.ErrorContains(t, errs[0], "2 spans rejected")
 }
 
 func TestOtherHTTPSuccess(t *testing.T) {
@@ -440,8 +435,7 @@ func TestOtherHTTPSuccess(t *testing.T) {
 			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 				errs = append(errs, err)
 			}))
-			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-			assert.NoError(t, err)
+			require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
 
 			assert.Empty(t, errs)
 		})
@@ -464,7 +458,6 @@ func TestCollectorRespondingNonProtobufContent(t *testing.T) {
 	defer func() {
 		assert.NoError(t, exporter.Shutdown(context.Background()))
 	}()
-	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
+	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
 	assert.Len(t, mc.GetSpans(), 1)
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
@@ -16,7 +17,7 @@ import (
 
 func TestParseSchemaFile(t *testing.T) {
 	ts, err := ParseFile("testdata/valid-example.yaml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ts)
 	assert.EqualValues(
 		t, &ast11.Schema{
@@ -162,12 +163,12 @@ func TestParseSchemaFile(t *testing.T) {
 
 func TestFailParseFileUnsupportedFileFormat(t *testing.T) {
 	ts, err := ParseFile("testdata/unsupported-file-format.yaml")
-	assert.ErrorContains(t, err, "unsupported schema file format minor version number")
+	require.ErrorContains(t, err, "unsupported schema file format minor version number")
 	assert.Nil(t, ts)
 }
 
 func TestFailParseFileUnknownField(t *testing.T) {
 	ts, err := ParseFile("testdata/unknown-field.yaml")
-	assert.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
+	require.ErrorContains(t, err, "field Resources not found in type ast.VersionDef")
 	assert.Nil(t, ts)
 }

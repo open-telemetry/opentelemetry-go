@@ -72,7 +72,7 @@ func TestPipelineUsesResource(t *testing.T) {
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, res, output.Resource)
 }
 

@@ -208,7 +208,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for i := 0; i < size; i++ {
-			assert.NoError(t, b.OnEmit(ctx, new(Record)))
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		var got []Record
 		assert.Eventually(t, func() bool {
@@ -231,13 +231,13 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for i := 0; i < 10*batch; i++ {
-			assert.NoError(t, b.OnEmit(ctx, new(Record)))
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		assert.Eventually(t, func() bool {
 			return e.ExportN() > 1
 		}, 2*time.Second, time.Microsecond, "multi-batch flush")
 
-		assert.NoError(t, b.Shutdown(ctx))
+		require.NoError(t, b.Shutdown(ctx))
 		assert.GreaterOrEqual(t, e.ExportN(), 10)
 	})
 
@@ -254,7 +254,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportTimeout(time.Hour),
 		)
 		for i := 0; i < 2*batch; i++ {
-			assert.NoError(t, b.OnEmit(ctx, new(Record)))
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 
 		var n int
@@ -268,7 +268,7 @@ func TestBatchProcessor(t *testing.T) {
 			err = b.OnEmit(ctx, new(Record))
 			return true
 		}, time.Second, time.Microsecond, "OnEmit blocked")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		e.ExportTrigger <- struct{}{}
 		assert.Eventually(t, func() bool {
@@ -276,7 +276,7 @@ func TestBatchProcessor(t *testing.T) {
 		}, 2*time.Second, time.Microsecond, "flush not retriggered")
 
 		close(e.ExportTrigger)
-		assert.NoError(t, b.Shutdown(ctx))
+		require.NoError(t, b.Shutdown(ctx))
 		assert.Equal(t, 3, e.ExportN())
 	})
 
@@ -284,7 +284,7 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
 			b := NewBatchProcessor(e)
-			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
+			require.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 			assert.NoError(t, b.Shutdown(ctx))
 		})
 
@@ -294,7 +294,7 @@ func TestBatchProcessor(t *testing.T) {
 
 			const shutdowns = 3
 			for i := 0; i < shutdowns; i++ {
-				assert.NoError(t, b.Shutdown(ctx))
+				require.NoError(t, b.Shutdown(ctx))
 			}
 			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
@@ -302,10 +302,10 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("OnEmit", func(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
-			assert.NoError(t, b.Shutdown(ctx))
+			require.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
-			assert.NoError(t, b.OnEmit(ctx, new(Record)))
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.Equal(t, want, e.ExportN(), "Export called after shutdown")
 		})
 
@@ -350,7 +350,7 @@ func TestBatchProcessor(t *testing.T) {
 			r.SetBody(log.BoolValue(true))
 			require.NoError(t, b.OnEmit(ctx, r))
 
-			assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
+			require.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
 			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
 			if assert.Equal(t, 1, e.ExportN(), "exporter Export calls") {
 				got := e.Records()
@@ -415,7 +415,7 @@ func TestBatchProcessor(t *testing.T) {
 			close(e.ExportTrigger)
 
 			err := <-errCh
-			assert.ErrorIs(t, err, errPartialFlush, "partial flush error")
+			require.ErrorIs(t, err, errPartialFlush, "partial flush error")
 			assert.ErrorIs(t, err, context.Canceled, "ctx canceled error")
 		})
 
@@ -457,13 +457,13 @@ func TestBatchProcessor(t *testing.T) {
 		)
 		r := new(Record)
 		// First record will be blocked by testExporter.Export
-		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
+		require.NoError(t, b.OnEmit(ctx, r), "exported record")
 		require.Eventually(t, func() bool {
 			return e.ExportN() > 0
 		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
 
 		// Second record will be written to export queue
-		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
+		require.NoError(t, b.OnEmit(ctx, r), "export queue record")
 		require.Eventually(t, func() bool {
 			return len(b.exporter.input) == cap(b.exporter.input)
 		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")

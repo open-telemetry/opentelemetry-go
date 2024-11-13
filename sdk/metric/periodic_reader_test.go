@@ -333,7 +333,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return nil
 			},
 		})
-		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
+		require.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
 		// Ensure Reader is allowed clean up attempt.
@@ -355,7 +355,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			},
 		}))
 		r.register(testSDKProducer{})
-		assert.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
+		require.ErrorIs(t, r.ForceFlush(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 
 		// Ensure Reader is allowed clean up attempt.
@@ -386,7 +386,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return nil
 			},
 		})
-		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
+		require.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
 
@@ -405,7 +405,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			},
 		}))
 		r.register(testSDKProducer{})
-		assert.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
+		require.ErrorIs(t, r.Shutdown(context.Background()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
 	})
 }
@@ -488,11 +488,11 @@ func TestPeriodicReaderCollect(t *testing.T) {
 
 			// Ensure the pipeline has a callback setup
 			testM, err := meter.Int64ObservableCounter("test")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 				return nil
 			}, testM)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			rm := &metricdata.ResourceMetrics{}
 			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))

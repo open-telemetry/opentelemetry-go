@@ -333,7 +333,7 @@ func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
 
 		assert.Zero(t, f())
 
-		assert.ErrorContains(t, l.err, "invalid Kind")
+		require.ErrorContains(t, l.err, "invalid Kind")
 		assert.Equal(t, msg, l.msg)
 		require.Len(t, l.keysAndValues, 2, "logged attributes")
 		assert.Equal(t, l.keysAndValues[1], k)

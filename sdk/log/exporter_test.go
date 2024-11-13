@@ -181,12 +181,10 @@ func TestChunker(t *testing.T) {
 		c := newChunkExporter(exp, 0)
 		ctx := context.Background()
 		records := make([]Record, 25)
-		err := c.Export(ctx, records)
-		assert.ErrorIs(t, err, assert.AnError, "no chunking")
+		require.ErrorIs(t, c.Export(ctx, records), assert.AnError, "no chunking")
 
 		c = newChunkExporter(exp, 10)
-		err = c.Export(ctx, records)
-		assert.ErrorIs(t, err, assert.AnError, "with chunking")
+		assert.ErrorIs(t, c.Export(ctx, records), assert.AnError, "with chunking")
 	})
 }
 
@@ -320,7 +318,7 @@ func TestTimeoutExporter(t *testing.T) {
 			}
 		}, 2*time.Second, time.Microsecond)
 
-		assert.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
 		close(out)
 	})
 }
@@ -359,7 +357,7 @@ func TestBufferExporter(t *testing.T) {
 			return exp.ExportN() > 0
 		}, 2*time.Second, time.Microsecond)
 
-		assert.NoError(t, e.Shutdown(ctx))
+		require.NoError(t, e.Shutdown(ctx))
 		close(stop)
 		wg.Wait()
 	})
@@ -370,10 +368,10 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(exp.Stop)
 			e := newBufferExporter(exp, 1)
 
-			assert.NoError(t, e.Shutdown(context.Background()))
+			require.NoError(t, e.Shutdown(context.Background()))
 			assert.Equal(t, 1, exp.ShutdownN(), "first Shutdown")
 
-			assert.NoError(t, e.Shutdown(context.Background()))
+			require.NoError(t, e.Shutdown(context.Background()))
 			assert.Equal(t, 1, exp.ShutdownN(), "second Shutdown")
 		})
 
@@ -400,7 +398,7 @@ func TestBufferExporter(t *testing.T) {
 			cancel()
 
 			err := e.Shutdown(ctx)
-			assert.ErrorIs(t, err, context.Canceled)
+			require.ErrorIs(t, err, context.Canceled)
 			assert.ErrorIs(t, err, assert.AnError)
 		})
 
@@ -428,7 +426,7 @@ func TestBufferExporter(t *testing.T) {
 			assert.Len(t, exp.Records(), 1, "exported Record batches")
 
 			// Nothing to flush.
-			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush empty")
+			require.NoError(t, e.ForceFlush(ctx), "ForceFlush empty")
 			assert.Equal(t, 1, exp.ExportN(), "Export number changed")
 			assert.Empty(t, exp.Records(), "exported non-zero Records")
 		})
@@ -452,7 +450,7 @@ func TestBufferExporter(t *testing.T) {
 			}, 2*time.Second, time.Microsecond)
 			cancel() // Canceled before export response.
 			err := <-got
-			assert.ErrorIs(t, err, context.Canceled, "enqueued")
+			require.ErrorIs(t, err, context.Canceled, "enqueued")
 			_ = e.Shutdown(ctx)
 
 			// Zero length buffer
@@ -486,7 +484,7 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(exp.Stop)
 			e := newBufferExporter(exp, 1)
 
-			assert.NoError(t, e.Export(context.Background(), nil))
+			require.NoError(t, e.Export(context.Background(), nil))
 			assert.Equal(t, 0, exp.ExportN())
 		})
 
@@ -499,13 +497,13 @@ func TestBufferExporter(t *testing.T) {
 			records := make([]Record, 1)
 			records[0].SetBody(log.BoolValue(true))
 
-			assert.NoError(t, e.Export(ctx, records))
+			require.NoError(t, e.Export(ctx, records))
 
 			n := exp.ExportN()
 			assert.Equal(t, 1, n, "first Export number")
 			assert.Equal(t, [][]Record{records}, exp.Records())
 
-			assert.NoError(t, e.Export(ctx, records))
+			require.NoError(t, e.Export(ctx, records))
 			assert.Equal(t, n+1, exp.ExportN(), "second Export number")
 			assert.Equal(t, [][]Record{records}, exp.Records())
 		})
@@ -529,7 +527,7 @@ func TestBufferExporter(t *testing.T) {
 			}, 2*time.Second, time.Microsecond)
 			cancel() // Canceled before export response.
 			err := <-got
-			assert.ErrorIs(t, err, context.Canceled, "enqueued")
+			require.ErrorIs(t, err, context.Canceled, "enqueued")
 			_ = e.Shutdown(ctx)
 
 			// Zero length buffer
@@ -554,7 +552,7 @@ func TestBufferExporter(t *testing.T) {
 
 			ctx := context.Background()
 			_ = e.Shutdown(ctx)
-			assert.NoError(t, e.Export(ctx, make([]Record, 1)))
+			require.NoError(t, e.Export(ctx, make([]Record, 1)))
 			assert.Equal(t, 0, exp.ExportN(), "Export called")
 		})
 	})

@@ -180,9 +180,9 @@ func TestMerge(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			res, err := resource.Merge(c.a, c.b)
 			if c.isErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.EqualValues(t, c.schemaURL, res.SchemaURL())
 			if diff := cmp.Diff(
@@ -436,9 +436,9 @@ func TestNew(t *testing.T) {
 			res, err := resource.New(ctx, tt.options...)
 
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				require.ErrorIs(t, err, tt.wantErr)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			require.EqualValues(t, tt.resourceValues, toMap(res))
@@ -466,8 +466,8 @@ func TestNewWrappedError(t *testing.T) {
 		),
 	)
 
-	assert.ErrorIs(t, err, localErr)
-	assert.ErrorIs(t, err, assert.AnError)
+	require.ErrorIs(t, err, localErr)
+	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, errors.New("false positive error"))
 }
 
@@ -497,7 +497,7 @@ func TestWithHostIDError(t *testing.T) {
 		resource.WithHostID(),
 	)
 
-	assert.ErrorIs(t, err, assert.AnError)
+	require.ErrorIs(t, err, assert.AnError)
 	require.EqualValues(t, map[string]string{}, toMap(res))
 }
 
@@ -747,7 +747,7 @@ func TestWithContainerID(t *testing.T) {
 			)
 
 			if tc.expectedErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			}
 			assert.Equal(t, tc.expectedResource, toMap(res))
 		})
@@ -766,7 +766,7 @@ func TestWithContainer(t *testing.T) {
 		resource.WithContainer(),
 	)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, map[string]string{
 		string(semconv.ContainerIDKey): fakeContainerID,
 	}, toMap(res))

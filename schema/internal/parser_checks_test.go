@@ -7,17 +7,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckFileFormatField(t *testing.T) {
 	// Invalid file format version numbers.
-	assert.Error(t, CheckFileFormatField("not a semver", 1, 0))
-	assert.Error(t, CheckFileFormatField("2.0.0", 1, 0))
-	assert.Error(t, CheckFileFormatField("1.1.0", 1, 0))
-	assert.Error(t, CheckFileFormatField("1.1.0", -1, 0))
-	assert.Error(t, CheckFileFormatField("1.1.0", 1, -2))
+	require.Error(t, CheckFileFormatField("not a semver", 1, 0))
+	require.Error(t, CheckFileFormatField("2.0.0", 1, 0))
+	require.Error(t, CheckFileFormatField("1.1.0", 1, 0))
+	require.Error(t, CheckFileFormatField("1.1.0", -1, 0))
+	require.Error(t, CheckFileFormatField("1.1.0", 1, -2))
 
-	assert.Error(t, CheckFileFormatField("1.2.0", 1, 1))
+	require.Error(t, CheckFileFormatField("1.2.0", 1, 1))
 
 	// Valid cases.
 	assert.NoError(t, CheckFileFormatField("1.0.0", 1, 0))

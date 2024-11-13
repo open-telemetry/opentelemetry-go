@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -60,7 +61,7 @@ func (f *fileReader) readFile(filename string) ([]byte, error) {
 
 func TestConfigs(t *testing.T) {
 	tlsCert, err := CreateTLSConfig([]byte(WeakCertificate))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name       string
@@ -522,7 +523,7 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				assert.NotNil(t, c.Metrics.Proxy)
 				proxyURL, err := c.Metrics.Proxy(&http.Request{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "http://proxy.com", proxyURL.String())
 			},
 		},

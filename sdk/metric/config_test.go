@@ -84,7 +84,7 @@ func TestConfigReaderSignalsForwarded(t *testing.T) {
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, s(ctx))
-	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
+	require.ErrorIs(t, s(ctx), ErrReaderShutdown)
 
 	assert.Equal(t, 2, flush, "flush not called 2 times")
 	assert.Equal(t, 1, sdown, "shutdown not called 1 time")
@@ -102,8 +102,8 @@ func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 	require.NotNil(t, s)
 
 	ctx := context.Background()
-	assert.ErrorIs(t, f(ctx), assert.AnError)
-	assert.ErrorIs(t, s(ctx), assert.AnError)
+	require.ErrorIs(t, f(ctx), assert.AnError)
+	require.ErrorIs(t, s(ctx), assert.AnError)
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
 }
 
@@ -118,8 +118,8 @@ func TestUnifyMultiError(t *testing.T) {
 		func(ctx context.Context) error { return e1 },
 		func(ctx context.Context) error { return e2 },
 	})(context.Background())
-	assert.ErrorIs(t, err, e0)
-	assert.ErrorIs(t, err, e1)
+	require.ErrorIs(t, err, e0)
+	require.ErrorIs(t, err, e1)
 	assert.ErrorIs(t, err, e2)
 }
 

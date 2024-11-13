@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -52,7 +53,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 	meter := provider.Meter("benchSyncViews")
 	return func(b *testing.B) {
 		iCtr, err := meter.Int64Counter("int64-counter")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Int64Counter", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
@@ -61,7 +62,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		}()))
 
 		fCtr, err := meter.Float64Counter("float64-counter")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Float64Counter", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
@@ -70,7 +71,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		}()))
 
 		iUDCtr, err := meter.Int64UpDownCounter("int64-up-down-counter")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Int64UpDownCounter", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
@@ -79,7 +80,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		}()))
 
 		fUDCtr, err := meter.Float64UpDownCounter("float64-up-down-counter")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Float64UpDownCounter", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
@@ -88,7 +89,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		}()))
 
 		iHist, err := meter.Int64Histogram("int64-histogram")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
@@ -97,7 +98,7 @@ func benchSyncViews(views ...View) func(*testing.B) {
 		}()))
 
 		fHist, err := meter.Float64Histogram("float64-histogram")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 		b.Run("Float64Histogram", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
@@ -161,7 +162,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Int64Counter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Counter")
 			i, err := m.Int64Counter("int64-counter")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Add(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -178,7 +179,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Float64Counter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Counter")
 			i, err := m.Float64Counter("float64-counter")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Add(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -195,7 +196,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Int64UpDownCounter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64UpDownCounter")
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Add(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -212,7 +213,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Float64UpDownCounter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64UpDownCounter")
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Add(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -229,7 +230,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Int64Histogram/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Histogram")
 			i, err := m.Int64Histogram("int64-histogram")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Record(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -246,7 +247,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		b.Run("Float64Histogram/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Float64Histogram")
 			i, err := m.Float64Histogram("float64-histogram")
-			assert.NoError(b, err)
+			require.NoError(b, err)
 			i.Record(ctx, 1, metric.WithAttributeSet(s))
 			return r
 		}))
@@ -393,7 +394,7 @@ func BenchmarkExemplars(b *testing.B) {
 	b.Run(name, func(b *testing.B) {
 		m, r := setup("Int64Counter")
 		i, err := m.Int64Counter("int64-counter")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 
 		rm := newRM(metricdata.Sum[int64]{
 			DataPoints: []metricdata.DataPoint[int64]{
@@ -418,7 +419,7 @@ func BenchmarkExemplars(b *testing.B) {
 	b.Run(name, func(b *testing.B) {
 		m, r := setup("Int64Counter")
 		i, err := m.Int64Histogram("int64-histogram")
-		assert.NoError(b, err)
+		require.NoError(b, err)
 
 		rm := newRM(metricdata.Histogram[int64]{
 			DataPoints: []metricdata.HistogramDataPoint[int64]{

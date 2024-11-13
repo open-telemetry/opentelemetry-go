@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAggregationErr(t *testing.T) {
@@ -36,7 +37,7 @@ func TestAggregationErr(t *testing.T) {
 	})
 
 	t.Run("NonmonotonicHistogramBoundaries", func(t *testing.T) {
-		assert.ErrorIs(t, AggregationExplicitBucketHistogram{
+		require.ErrorIs(t, AggregationExplicitBucketHistogram{
 			Boundaries: []float64{2, 1},
 		}.err(), errAgg)
 
@@ -64,7 +65,7 @@ func TestAggregationErr(t *testing.T) {
 
 	t.Run("InvalidExponentialHistogramOperation", func(t *testing.T) {
 		// MazSize must be greater than 0
-		assert.ErrorIs(t, AggregationBase2ExponentialHistogram{}.err(), errAgg)
+		require.ErrorIs(t, AggregationBase2ExponentialHistogram{}.err(), errAgg)
 
 		// MaxScale Must be <=20
 		assert.ErrorIs(t, AggregationBase2ExponentialHistogram{

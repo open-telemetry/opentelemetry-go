@@ -115,7 +115,7 @@ func TestMissingKeyError(t *testing.T) {
 
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, err, fmt.Errorf("%w: %v", errMissingValue, "[key]"))
 	assert.Equal(t, res, NewSchemaless(
 		attribute.String("key", "value"),
@@ -131,7 +131,7 @@ func TestInvalidPercentDecoding(t *testing.T) {
 
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, NewSchemaless(
 		attribute.String("key", "%invalid"),
 	), res)

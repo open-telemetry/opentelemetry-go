@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -38,13 +39,12 @@ func TestExporterClientError(t *testing.T) {
 	exp, err := otlptrace.New(ctx, &client{
 		uploadErr: context.Canceled,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	spans := tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 	err = exp.ExportSpans(ctx, spans)
 
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, context.Canceled)
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
 
 	assert.NoError(t, exp.Shutdown(ctx))

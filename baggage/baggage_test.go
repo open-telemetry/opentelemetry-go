@@ -104,10 +104,7 @@ func TestParseProperty(t *testing.T) {
 	for _, tc := range testcases {
 		actual, err := parseProperty(tc.in)
 
-		if !assert.NoError(t, err) {
-			continue
-		}
-
+		require.NoError(t, err)
 		assert.Equal(t, tc.expected.Key(), actual.Key(), tc.in)
 
 		actualV, actualOk := actual.Value()
@@ -124,87 +121,87 @@ func TestParsePropertyError(t *testing.T) {
 
 func TestNewKeyProperty(t *testing.T) {
 	p, err := NewKeyProperty(" ")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: " "}, p)
 
 	p, err = NewKeyProperty("key")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "key"}, p)
 
 	// UTF-8 key
 	p, err = NewKeyProperty("B% 💼")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "B% 💼"}, p)
 
 	// Invalid UTF-8 key
 	p, err = NewKeyProperty(string([]byte{255}))
-	assert.ErrorIs(t, err, errInvalidKey)
+	require.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 }
 
 func TestNewKeyValueProperty(t *testing.T) {
 	p, err := NewKeyValueProperty(" ", "value")
-	assert.ErrorIs(t, err, errInvalidKey)
+	require.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
 	p, err = NewKeyValueProperty("key", ";")
-	assert.ErrorIs(t, err, errInvalidValue)
+	require.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
 	// it won't use percent decoding for key
 	p, err = NewKeyValueProperty("%zzzzz", "value")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "%zzzzz", value: "value", hasValue: true}, p)
 
 	// wrong value with wrong decoding
 	p, err = NewKeyValueProperty("key", "%zzzzz")
-	assert.ErrorIs(t, err, errInvalidValue)
+	require.ErrorIs(t, err, errInvalidValue)
 	assert.Equal(t, Property{}, p)
 
 	p, err = NewKeyValueProperty("key", "value")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "value", hasValue: true}, p)
 
 	// Percent-encoded value
 	p, err = NewKeyValueProperty("key", "%C4%85%C5%9B%C4%87")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "key", value: "ąść", hasValue: true}, p)
 }
 
 func TestNewKeyValuePropertyRaw(t *testing.T) {
 	// Empty key
 	p, err := NewKeyValuePropertyRaw("", " ")
-	assert.ErrorIs(t, err, errInvalidKey)
+	require.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Property{}, p)
 
 	// Empty value
 	// Empty string is also a valid UTF-8 string.
 	p, err = NewKeyValuePropertyRaw(" ", "")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: " ", hasValue: true}, p)
 
 	// Space value
 	p, err = NewKeyValuePropertyRaw(" ", " ")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: " ", value: " ", hasValue: true}, p)
 
 	p, err = NewKeyValuePropertyRaw("B% 💼", "Witaj Świecie!")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Property{key: "B% 💼", value: "Witaj Świecie!", hasValue: true}, p)
 }
 
 func TestPropertyValidate(t *testing.T) {
 	p := Property{}
-	assert.ErrorIs(t, p.validate(), errInvalidKey)
+	require.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p.key = "k"
-	assert.NoError(t, p.validate())
+	require.NoError(t, p.validate())
 
 	p.value = "v"
-	assert.EqualError(t, p.validate(), "invalid property: inconsistent value")
+	require.EqualError(t, p.validate(), "invalid property: inconsistent value")
 
 	p.hasValue = true
-	assert.NoError(t, p.validate())
+	require.NoError(t, p.validate())
 
 	// Invalid value
 	p.value = string([]byte{255})
@@ -213,13 +210,13 @@ func TestPropertyValidate(t *testing.T) {
 
 func TestNewEmptyBaggage(t *testing.T) {
 	b, err := New()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Baggage{}, b)
 }
 
 func TestNewBaggage(t *testing.T) {
 	b, err := New(Member{key: "k", hasData: true})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, Baggage{list: baggage.List{"k": {}}}, b)
 }
 
@@ -237,7 +234,7 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 		}
 	}
 	b, err := New(m...)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Ensure that the last-one-wins by verifying the value.
 	v := fmt.Sprintf("%d", maxMembers)
@@ -551,7 +548,7 @@ func TestBaggageParse(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := Parse(tc.in)
-			assert.ErrorIs(t, err, tc.err)
+			require.ErrorIs(t, err, tc.err)
 			assert.Equal(t, Baggage{list: tc.want}, actual)
 		})
 	}
@@ -593,7 +590,7 @@ func TestBaggageParseValue(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := Parse(tc.in)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			val := b.Members()[0].Value()
 
@@ -812,7 +809,7 @@ func TestBaggageSetMember(t *testing.T) {
 	key := "k"
 	m := Member{key: key, hasData: true}
 	b1, err := b0.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Empty(t, b0.list)
@@ -820,7 +817,7 @@ func TestBaggageSetMember(t *testing.T) {
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Len(t, b1.list, 1)
@@ -829,7 +826,7 @@ func TestBaggageSetMember(t *testing.T) {
 	p := properties{{key: "p"}}
 	m.properties = p
 	b3, err := b2.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.Len(t, b2.list, 1)
@@ -844,7 +841,7 @@ func TestBaggageSetMember(t *testing.T) {
 
 	m = Member{key: "another", hasData: true}
 	b4, err := b3.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
@@ -859,7 +856,7 @@ func TestBaggageSetFalseMember(t *testing.T) {
 	key := "k"
 	m := Member{key: key, hasData: false}
 	b1, err := b0.SetMember(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Empty(t, b0.list)
@@ -867,7 +864,7 @@ func TestBaggageSetFalseMember(t *testing.T) {
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: ""}, b2.list[key])
 	assert.Empty(t, b1.list)
@@ -880,7 +877,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	key := "k"
 	m := Member{key: key, hasData: true}
 	b1, err := b0.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotContains(t, b0.list, key)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Empty(t, b0.list)
@@ -888,7 +885,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 
 	m.value = "v"
 	b2, err := b1.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Len(t, b1.list, 1)
@@ -897,7 +894,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	p := properties{{key: "p"}}
 	m.properties = p
 	b3, err := b2.SetMember(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.Len(t, b2.list, 1)
@@ -912,7 +909,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 
 	m = Member{key: "another"}
 	b4, err := b3.SetMember(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
 	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
@@ -1003,14 +1000,14 @@ func TestMemberProperties(t *testing.T) {
 
 func TestMemberValidation(t *testing.T) {
 	m := Member{hasData: false}
-	assert.ErrorIs(t, m.validate(), errInvalidMember)
+	require.ErrorIs(t, m.validate(), errInvalidMember)
 
 	m.hasData = true
-	assert.ErrorIs(t, m.validate(), errInvalidKey)
+	require.ErrorIs(t, m.validate(), errInvalidKey)
 
 	// Invalid UTF-8 in value
 	m.key, m.value = "k", string([]byte{255})
-	assert.ErrorIs(t, m.validate(), errInvalidValue)
+	require.ErrorIs(t, m.validate(), errInvalidValue)
 
 	m.key, m.value = "k", "\\"
 	assert.NoError(t, m.validate())
@@ -1018,13 +1015,13 @@ func TestMemberValidation(t *testing.T) {
 
 func TestNewMember(t *testing.T) {
 	m, err := NewMember("", "")
-	assert.ErrorIs(t, err, errInvalidKey)
+	require.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Member{hasData: false}, m)
 
 	key, val := "k", "v"
 	p := Property{key: "foo"}
 	m, err = NewMember(key, val, p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expected := Member{
 		key:        key,
 		value:      val,
@@ -1036,7 +1033,7 @@ func TestNewMember(t *testing.T) {
 	// it won't use percent decoding for key
 	key = "%3B"
 	m, err = NewMember(key, val, p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expected = Member{
 		key:        key,
 		value:      val,
@@ -1049,12 +1046,12 @@ func TestNewMember(t *testing.T) {
 	key = "k"
 	val = ";"
 	_, err = NewMember(key, val, p)
-	assert.ErrorIs(t, err, errInvalidValue)
+	require.ErrorIs(t, err, errInvalidValue)
 
 	// wrong value with wrong decoding
 	val = "%zzzzz"
 	_, err = NewMember(key, val, p)
-	assert.ErrorIs(t, err, errInvalidValue)
+	require.ErrorIs(t, err, errInvalidValue)
 
 	// value should be decoded
 	val = "%3B"
@@ -1065,7 +1062,7 @@ func TestNewMember(t *testing.T) {
 		properties: properties{{key: "foo"}},
 		hasData:    true,
 	}
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, m)
 
 	// Ensure new member is immutable.
@@ -1075,13 +1072,13 @@ func TestNewMember(t *testing.T) {
 
 func TestNewMemberRaw(t *testing.T) {
 	m, err := NewMemberRaw("", "")
-	assert.ErrorIs(t, err, errInvalidKey)
+	require.ErrorIs(t, err, errInvalidKey)
 	assert.Equal(t, Member{hasData: false}, m)
 
 	key, val := "k", "v"
 	p := Property{key: "foo"}
 	m, err = NewMemberRaw(key, val, p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expected := Member{
 		key:        key,
 		value:      val,
@@ -1122,10 +1119,10 @@ func TestBaggageUTF8(t *testing.T) {
 
 func TestPropertiesValidate(t *testing.T) {
 	p := properties{{}}
-	assert.ErrorIs(t, p.validate(), errInvalidKey)
+	require.ErrorIs(t, p.validate(), errInvalidKey)
 
 	p[0].key = "foo"
-	assert.NoError(t, p.validate())
+	require.NoError(t, p.validate())
 
 	p = append(p, Property{key: "bar"})
 	assert.NoError(t, p.validate())

@@ -886,56 +886,56 @@ func TestTransformations(t *testing.T) {
 
 	// Aggregations.
 	h, err := Histogram(otelHistInt64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHistInt64}, h)
 	h, err = Histogram(otelHistFloat64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Histogram{Histogram: pbHistFloat64}, h)
 	h, err = Histogram(otelHistInvalid)
-	assert.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, h)
 
 	s, err := Sum[int64](otelSumInt64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumInt64}, s)
 	s, err = Sum[float64](otelSumFloat64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_Sum{Sum: pbSumFloat64}, s)
 	s, err = Sum[float64](otelSumInvalid)
-	assert.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, s)
 
 	assert.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeInt64}, Gauge[int64](otelGaugeInt64))
 	require.Equal(t, &mpb.Metric_Gauge{Gauge: pbGaugeFloat64}, Gauge[float64](otelGaugeFloat64))
 
 	e, err := ExponentialHistogram(otelExpoHistInt64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistInt64}, e)
 	e, err = ExponentialHistogram(otelExpoHistFloat64)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &mpb.Metric_ExponentialHistogram{ExponentialHistogram: pbExpoHistFloat64}, e)
 	e, err = ExponentialHistogram(otelExpoHistInvalid)
-	assert.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownTemporality)
 	assert.Nil(t, e)
 
 	require.Equal(t, &mpb.Metric_Summary{Summary: pbSummary}, Summary(otelSummary))
 
 	// Metrics.
 	m, err := Metrics(otelMetrics)
-	assert.ErrorIs(t, err, errUnknownTemporality)
-	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbMetrics, m)
 
 	// Scope Metrics.
 	sm, err := ScopeMetrics(otelScopeMetrics)
-	assert.ErrorIs(t, err, errUnknownTemporality)
-	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbScopeMetrics, sm)
 
 	// Resource Metrics.
 	rm, err := ResourceMetrics(otelResourceMetrics)
-	assert.ErrorIs(t, err, errUnknownTemporality)
-	assert.ErrorIs(t, err, errUnknownAggregation)
+	require.ErrorIs(t, err, errUnknownTemporality)
+	require.ErrorIs(t, err, errUnknownAggregation)
 	require.Equal(t, pbResourceMetrics, rm)
 }
 

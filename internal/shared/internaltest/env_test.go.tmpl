@@ -87,7 +87,7 @@ func (s *EnvStoreTestSuite) TestRecord() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			if tc.env.Exists {
-				s.NoError(os.Setenv(tc.env.Name, tc.env.Value))
+				s.Require().NoError(os.Setenv(tc.env.Name, tc.env.Value))
 			}
 
 			envStore := newEnvStore()
@@ -218,7 +218,7 @@ func TestSetEnvVariables(t *testing.T) {
 	}()
 
 	store, err := SetEnvVariables(envs)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.IsType(t, &envStore{}, store)
 	concreteStore := store.(*envStore)
 	assert.Len(t, concreteStore.store, 2)

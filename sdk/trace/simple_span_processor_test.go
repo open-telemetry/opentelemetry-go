@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -164,7 +165,7 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe2(t *testing.T) {
 
 	wg.Wait()
 
-	assert.NoError(t, ssp.Shutdown(context.Background()))
+	require.NoError(t, ssp.Shutdown(context.Background()))
 	assert.True(t, exporter.shutdown, "exporter shutdown")
 }
 

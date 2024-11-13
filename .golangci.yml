@@ -314,4 +314,3 @@ linters-settings:
     disable:
       - float-compare
       - go-require
-      - require-error

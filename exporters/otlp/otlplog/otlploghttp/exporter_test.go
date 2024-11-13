@@ -55,7 +55,7 @@ func TestExporterExport(t *testing.T) {
 
 	ctx := context.Background()
 	want := make([]log.Record, 1)
-	assert.NoError(t, e.Export(ctx, want))
+	require.NoError(t, e.Export(ctx, want))
 
 	assert.Equal(t, 1, uploads, "client UploadLogs calls")
 	assert.Equal(t, want, got, "transformed log records")

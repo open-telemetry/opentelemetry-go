@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testErrHandler struct {
@@ -24,7 +25,7 @@ func TestGlobalErrorHandler(t *testing.T) {
 	e1 := &testErrHandler{}
 	SetErrorHandler(e1)
 	Handle(assert.AnError)
-	assert.ErrorIs(t, e1.err, assert.AnError)
+	require.ErrorIs(t, e1.err, assert.AnError)
 	e1.err = nil
 
 	e2 := &testErrHandler{}

@@ -62,19 +62,19 @@ func newTestTextMapReaderAndWriter() *testTextMapReaderAndWriter {
 
 func TestTextMapWrapper_New(t *testing.T) {
 	_, err := newTextMapWrapperForExtract(newTestOnlyTextMapReader())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = newTextMapWrapperForExtract(newTestOnlyTextMapWriter())
-	assert.ErrorIs(t, err, ot.ErrInvalidCarrier)
+	require.ErrorIs(t, err, ot.ErrInvalidCarrier)
 
 	_, err = newTextMapWrapperForExtract(newTestTextMapReaderAndWriter())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = newTextMapWrapperForInject(newTestOnlyTextMapWriter())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = newTextMapWrapperForInject(newTestOnlyTextMapReader())
-	assert.ErrorIs(t, err, ot.ErrInvalidCarrier)
+	require.ErrorIs(t, err, ot.ErrInvalidCarrier)
 
 	_, err = newTextMapWrapperForInject(newTestTextMapReaderAndWriter())
 	assert.NoError(t, err)
@@ -109,19 +109,19 @@ func TestTextMapWrapper_action(t *testing.T) {
 	}
 
 	onlyWriter, err := newTextMapWrapperForExtract(newTestOnlyTextMapReader())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	testExtractFunc(onlyWriter)
 
 	onlyReader, err := newTextMapWrapperForInject(&testOnlyTextMapWriter{m: map[string]string{}})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	testInjectFunc(onlyReader)
 
 	both, err := newTextMapWrapperForExtract(newTestTextMapReaderAndWriter())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	testExtractFunc(both)
 
 	both, err = newTextMapWrapperForInject(newTestTextMapReaderAndWriter())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	testInjectFunc(both)
 }
 
@@ -550,10 +550,10 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 		TraceID: [16]byte{byte(1)},
 		SpanID:  [8]byte{byte(2)},
 	}), nil), ot.TextMap, tmc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	spanContext, err := bridge.Extract(ot.TextMap, tmc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotPanics(t, func() {
 		assert.Equal(t, spanID.String(), spanContext.(spanContextProvider).SpanID().String())
@@ -641,10 +641,10 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 
 				carrier := c.factory()
 				err := b.Inject(span.Context(), c.format, carrier)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				spanContext, err := b.Extract(c.format, carrier)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				// Check baggage items.
 				bsc, ok := spanContext.(*bridgeSpanContext)

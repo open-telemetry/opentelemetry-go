@@ -16,6 +16,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWait(t *testing.T) {
@@ -69,7 +70,7 @@ func TestNonRetryableError(t *testing.T) {
 		MaxElapsedTime: 0,
 	}.RequestFunc(ev)
 	ctx := context.Background()
-	assert.NoError(t, reqFunc(ctx, func(context.Context) error {
+	require.NoError(t, reqFunc(ctx, func(context.Context) error {
 		return nil
 	}))
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
@@ -165,8 +166,8 @@ func TestBackoffRetryCanceledContext(t *testing.T) {
 		return assert.AnError
 	})
 
-	assert.ErrorIs(t, err, context.Canceled)
-	assert.Contains(t, err.Error(), assert.AnError.Error())
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorContains(t, err, assert.AnError.Error())
 	assert.Equal(t, 1, count)
 }
 
@@ -211,7 +212,7 @@ func TestRetryNotEnabled(t *testing.T) {
 
 	reqFunc := Config{}.RequestFunc(ev)
 	ctx := context.Background()
-	assert.NoError(t, reqFunc(ctx, func(context.Context) error {
+	require.NoError(t, reqFunc(ctx, func(context.Context) error {
 		return nil
 	}))
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {

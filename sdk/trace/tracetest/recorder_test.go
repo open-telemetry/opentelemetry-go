@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -56,7 +57,7 @@ func TestSpanRecorderOnEndAppends(t *testing.T) {
 
 func TestSpanRecorderShutdownNoError(t *testing.T) {
 	ctx := context.Background()
-	assert.NoError(t, new(SpanRecorder).Shutdown(ctx))
+	require.NoError(t, new(SpanRecorder).Shutdown(ctx))
 
 	var c context.CancelFunc
 	ctx, c = context.WithCancel(ctx)
@@ -66,7 +67,7 @@ func TestSpanRecorderShutdownNoError(t *testing.T) {
 
 func TestSpanRecorderForceFlushNoError(t *testing.T) {
 	ctx := context.Background()
-	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
+	require.NoError(t, new(SpanRecorder).ForceFlush(ctx))
 
 	var c context.CancelFunc
 	ctx, c = context.WithCancel(ctx)

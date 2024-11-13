@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -79,12 +80,12 @@ func TestDetect(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
 			r, err := resource.Detect(context.Background(), c.detectors...)
 			if c.wantErr != nil {
-				assert.ErrorIs(t, err, c.wantErr)
+				require.ErrorIs(t, err, c.wantErr)
 				if errors.Is(c.wantErr, resource.ErrSchemaURLConflict) {
 					assert.Zero(t, r.SchemaURL())
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, c.want.SchemaURL(), r.SchemaURL())
 			assert.ElementsMatch(t, c.want.Attributes(), r.Attributes())

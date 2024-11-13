@@ -536,7 +536,7 @@ func TestTraceStateInsert(t *testing.T) {
 	for _, tc := range insertTestcase {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := tc.tracestate.Insert(tc.key, tc.value)
-			assert.ErrorIs(t, err, tc.err, tc.name)
+			require.ErrorIs(t, err, tc.err, tc.name)
 			if tc.err != nil {
 				assert.Equal(t, tc.tracestate, actual)
 			} else {

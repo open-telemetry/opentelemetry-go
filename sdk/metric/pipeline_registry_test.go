@@ -36,7 +36,7 @@ func (invalidAggregation) err() error {
 
 func requireN[N int64 | float64](t *testing.T, n int, m []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 	t.Helper()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Len(t, m, n)
 	require.Len(t, comps, n)
 }
@@ -169,7 +169,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			inst:   instruments[InstrumentKindCounter],
 			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Empty(t, meas)
 				assert.Empty(t, comps)
 			},
@@ -482,7 +482,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
 	aggs, err := r.Aggregators(inst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
@@ -492,7 +492,7 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.Aggregators(inst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
@@ -502,7 +502,7 @@ func testPipelineRegistryResolveIntHistogramAggregators(t *testing.T, p pipeline
 	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
 	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
@@ -512,7 +512,7 @@ func testPipelineRegistryResolveFloatHistogramAggregators(t *testing.T, p pipeli
 	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
 	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
 }
@@ -539,20 +539,20 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(inst)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, intAggs)
 
 	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(inst)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, floatAggs)
 
 	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, intAggs)
 
 	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3})
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, floatAggs)
 }
 
@@ -598,14 +598,14 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
 	intAggs, err := ri.Aggregators(fooInst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 1)
 
 	// The Rename view should produce the same instrument without an error, the
 	// default view should also cause a new aggregator to be returned.
 	intAggs, err = ri.Aggregators(barInst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 2)
 
@@ -613,19 +613,19 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	// int foo instrument.
 	rf := newResolver[float64](p, &vc)
 	floatAggs, err := rf.Aggregators(fooInst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = Instrument{Name: "foo-float", Kind: InstrumentKindCounter}
 
 	floatAggs, err = rf.Aggregators(fooInst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, floatAggs, 1)
 
 	floatAggs, err = rf.Aggregators(barInst)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Both the rename and default view aggregators created above should now
 	// conflict. Therefore, 2 warning messages should be logged.
 	assert.Equal(t, 2, l.InfoN(), "instrument conflicts not logged")

@@ -68,30 +68,24 @@ func TestExporter(t *testing.T) {
 
 			buf.Reset()
 
-			var err error
-
 			exporter := tc.exporter
 
 			record := getRecord(now)
 
 			// Export a record
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
-			assert.NoError(t, err)
+			require.NoError(t, exporter.Export(context.Background(), []sdklog.Record{record}))
 
 			// Check the writer
 			assert.Equal(t, tc.want, buf.String())
 
 			// Flush the exporter
-			err = exporter.ForceFlush(context.Background())
-			assert.NoError(t, err)
+			require.NoError(t, exporter.ForceFlush(context.Background()))
 
 			// Shutdown the exporter
-			err = exporter.Shutdown(context.Background())
-			assert.NoError(t, err)
+			require.NoError(t, exporter.Shutdown(context.Background()))
 
 			// Export a record after shutdown, this should not be written
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
-			assert.NoError(t, err)
+			require.NoError(t, exporter.Export(context.Background(), []sdklog.Record{record}))
 
 			// Check the writer
 			assert.Equal(t, tc.want, buf.String())
@@ -167,7 +161,7 @@ func TestExporterExport(t *testing.T) {
 			var buf bytes.Buffer
 
 			exporter, err := New(append(tc.options, WithWriter(&buf))...)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = exporter.Export(tc.ctx, tc.records)
 			assert.Equal(t, tc.wantError, err)

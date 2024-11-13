@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const WeakKey = `
@@ -50,7 +51,7 @@ type testOption struct {
 
 func TestEnvConfig(t *testing.T) {
 	parsedURL, err := url.Parse("https://example.com")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	options := []testOption{}
 	for _, testcase := range []struct {
@@ -366,7 +367,7 @@ func TestEnvConfig(t *testing.T) {
 
 func TestWithTLSConfig(t *testing.T) {
 	pool, err := createCertPool([]byte(WeakCertificate))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reader := EnvOptionsReader{
 		GetEnv: func(n string) string {
@@ -396,7 +397,7 @@ func TestWithTLSConfig(t *testing.T) {
 
 func TestWithClientCert(t *testing.T) {
 	cert, err := tls.X509KeyPair([]byte(WeakCertificate), []byte(WeakKey))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reader := EnvOptionsReader{
 		GetEnv: func(n string) string {

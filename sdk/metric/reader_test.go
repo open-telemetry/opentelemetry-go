@@ -47,7 +47,7 @@ func (ts *readerTestSuite) TestSDKProducer() {
 	ts.Reader.register(testSDKProducer{})
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
-	ts.NoError(err)
+	ts.Require().NoError(err)
 	ts.Equal(testResourceMetricsA, m)
 }
 
@@ -56,7 +56,7 @@ func (ts *readerTestSuite) TestExternalProducer() {
 	ts.Reader.register(testSDKProducer{})
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
-	ts.NoError(err)
+	ts.Require().NoError(err)
 	ts.Equal(testResourceMetricsAB, m)
 }
 
@@ -68,7 +68,7 @@ func (ts *readerTestSuite) TestCollectAfterShutdown() {
 
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(ctx, &m)
-	ts.ErrorIs(err, ErrReaderShutdown)
+	ts.Require().ErrorIs(err, ErrReaderShutdown)
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 
@@ -117,7 +117,7 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
-	ts.ErrorIs(err, assert.AnError)
+	ts.Require().ErrorIs(err, assert.AnError)
 	ts.Equal(testResourceMetricsAB, m)
 }
 
@@ -191,7 +191,7 @@ func (ts *readerTestSuite) TestShutdownBeforeRegister() {
 
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(ctx, &m)
-	ts.ErrorIs(err, ErrReaderShutdown)
+	ts.Require().ErrorIs(err, ErrReaderShutdown)
 	ts.Equal(metricdata.ResourceMetrics{}, m)
 }
 

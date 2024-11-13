@@ -76,7 +76,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 func TestNewWithInvalidEndpoint(t *testing.T) {
 	ctx := context.Background()
 	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, exp)
 }
 
@@ -107,7 +107,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -150,7 +150,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -188,7 +188,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}), "failed retry")
 		assert.Empty(t, rCh, "failed HTTP responses did not occur")
 	})
 
@@ -208,11 +208,11 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorContains(t, err, exporterErr.Error())
+		require.ErrorContains(t, err, exporterErr.Error())
 
 		// To test the `Unwrap` and `As` function of retryable error
 		var retryErr *retryableError
-		assert.ErrorAs(t, err, &retryErr)
+		require.ErrorAs(t, err, &retryErr)
 		assert.ErrorIs(t, err, *retryErr)
 	})
 
@@ -223,7 +223,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -234,7 +234,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 

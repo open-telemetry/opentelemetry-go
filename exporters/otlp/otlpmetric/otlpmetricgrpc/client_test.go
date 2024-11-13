@@ -199,7 +199,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -1007,7 +1008,7 @@ func AssertMarshal[N int64 | float64](t *testing.T, expected string, i *metricda
 	t.Helper()
 
 	b, err := json.Marshal(i)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, string(b))
 }
 

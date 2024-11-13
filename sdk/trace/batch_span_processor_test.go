@@ -420,7 +420,7 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 
 	_, span := tr.Start(context.Background(), "foo")
 	span.End()
-	assert.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
+	require.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
 
 	assert.Equal(t, lenJustAfterShutdown, be.len(), "OnEnd and ForceFlush should have no effect after Shutdown")
 }
@@ -491,9 +491,7 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 
 	// Force flush any held span batches
-	err := ssp.ForceFlush(context.Background())
-	assert.Error(t, err)
-	assert.EqualError(t, err, "fail to export")
+	require.EqualError(t, ssp.ForceFlush(context.Background()), "fail to export")
 
 	// First flush will fail, nothing should be exported.
 	assertMaxSpanDiff(t, te.droppedCount, option.wantNumSpans, 10)
@@ -508,8 +506,7 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 
 	// Force flush any held span batches
-	err = ssp.ForceFlush(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, ssp.ForceFlush(context.Background()))
 
 	assertMaxSpanDiff(t, te.len(), option.wantNumSpans, 10)
 	gotBatchCount := te.getBatchCount()
@@ -578,7 +575,7 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 		span.End()
 
 		err := tp.ForceFlush(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Len(t, exp.GetSpans(), i+1)
 	}

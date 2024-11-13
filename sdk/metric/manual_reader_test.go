@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel/metric"
@@ -101,11 +102,11 @@ func TestManualReaderCollect(t *testing.T) {
 
 			// Ensure the pipeline has a callback setup
 			testM, err := meter.Int64ObservableCounter("test")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 				return nil
 			}, testM)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			rm := &metricdata.ResourceMetrics{}
 			assert.Equal(t, tt.expectedErr, rdr.Collect(tt.ctx, rm))

@@ -53,7 +53,7 @@ func TestStringDetectorErrors(t *testing.T) {
 			resource.WithDetectors(test.s),
 		)
 		require.Error(t, err, test.desc)
-		require.Contains(t, err.Error(), test.errContains)
+		require.ErrorContains(t, err, test.errContains)
 		require.NotNil(t, res, "resource contains remaining valid entries")
 
 		m := map[string]string{}

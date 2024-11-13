@@ -554,7 +554,7 @@ func TestMultiScopes(t *testing.T) {
 			"foo",
 			otelmetric.WithUnit("s"),
 			otelmetric.WithDescription("meter foo counter"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
 
 	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
@@ -562,7 +562,7 @@ func TestMultiScopes(t *testing.T) {
 			"bar",
 			otelmetric.WithUnit("s"),
 			otelmetric.WithDescription("meter bar counter"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	barCounter.Add(ctx, 200, otelmetric.WithAttributes(attribute.String("type", "bar")))
 
 	file, err := os.Open("testdata/multi_scopes.txt")
@@ -593,13 +593,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				fooA, err := meterA.Int64Counter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter counter foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooA.Add(ctx, 100, withAB)
 
 				fooB, err := meterB.Int64Counter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter counter foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooB.Add(ctx, 100, withAB)
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_counters.txt"},
@@ -610,13 +610,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				fooA, err := meterA.Int64UpDownCounter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooA.Add(ctx, 100, withAB)
 
 				fooB, err := meterB.Int64UpDownCounter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooB.Add(ctx, 100, withAB)
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_updowncounters.txt"},
@@ -627,13 +627,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				fooA, err := meterA.Int64Histogram("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooA.Record(ctx, 100, withAB)
 
 				fooB, err := meterB.Int64Histogram("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooB.Record(ctx, 100, withAB)
 			},
 			possibleExpectedFiles: []string{"testdata/no_conflict_two_histograms.txt"},
@@ -644,13 +644,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA, err := meterA.Int64Counter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barA.Add(ctx, 100, withTypeBar)
 
 				barB, err := meterB.Int64Counter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
 			possibleExpectedFiles: []string{
@@ -664,13 +664,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA, err := meterA.Int64UpDownCounter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barA.Add(ctx, 100, withTypeBar)
 
 				barB, err := meterB.Int64UpDownCounter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
 			possibleExpectedFiles: []string{
@@ -684,13 +684,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA, err := meterA.Int64Histogram("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter a bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barA.Record(ctx, 100, withAB)
 
 				barB, err := meterB.Int64Histogram("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter b bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barB.Record(ctx, 100, withAB)
 			},
 			possibleExpectedFiles: []string{
@@ -704,13 +704,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				bazA, err := meterA.Int64Counter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				bazA.Add(ctx, 100, withTypeBar)
 
 				bazB, err := meterB.Int64Counter("bar",
 					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				bazB.Add(ctx, 100, withTypeBar)
 			},
 			options:               []Option{WithoutUnits()},
@@ -722,13 +722,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA, err := meterA.Int64UpDownCounter("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter gauge bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barA.Add(ctx, 100, withTypeBar)
 
 				barB, err := meterB.Int64UpDownCounter("bar",
 					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter gauge bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
 			options:               []Option{WithoutUnits()},
@@ -740,13 +740,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				barA, err := meterA.Int64Histogram("bar",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter histogram bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barA.Record(ctx, 100, withAB)
 
 				barB, err := meterB.Int64Histogram("bar",
 					otelmetric.WithUnit("s"),
 					otelmetric.WithDescription("meter histogram bar"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				barB.Record(ctx, 100, withAB)
 			},
 			options:               []Option{WithoutUnits()},
@@ -758,13 +758,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				counter, err := meterA.Int64Counter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				counter.Add(ctx, 100, withTypeFoo)
 
 				gauge, err := meterA.Int64UpDownCounter("foo_total",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				gauge.Add(ctx, 200, withTypeFoo)
 			},
 			options: []Option{WithoutUnits()},
@@ -779,13 +779,13 @@ func TestDuplicateMetrics(t *testing.T) {
 				fooA, err := meterA.Int64UpDownCounter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter gauge foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooA.Add(ctx, 100, withAB)
 
 				fooHistogramA, err := meterA.Int64Histogram("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter histogram foo"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				fooHistogramA.Record(ctx, 100, withAB)
 			},
 			possibleExpectedFiles: []string{
@@ -908,7 +908,7 @@ func TestIncompatibleMeterName(t *testing.T) {
 
 	// A second collect shouldn't trigger new errors
 	_, err = file.Seek(0, io.SeekStart)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
 	assert.Len(t, errs, 1)

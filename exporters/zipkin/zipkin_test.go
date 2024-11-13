@@ -51,8 +51,7 @@ func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
 		"localhost",
 	)
 
-	assert.Error(t, err)
-	assert.EqualError(t, err, "invalid collector URL \"localhost\": no scheme or host")
+	require.EqualError(t, err, "invalid collector URL \"localhost\": no scheme or host")
 	assert.Nil(t, exp)
 }
 
@@ -65,7 +64,7 @@ func TestNewRawExporterEmptyDefaultCollectorURL(t *testing.T) {
 	// use default collector URL if not specified
 	exp, err = New("")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, defaultCollectorURL, exp.url)
 }
 
@@ -79,14 +78,14 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 	envStore, err := ottest.SetEnvVariables(map[string]string{
 		envEndpoint: expectedEndpoint,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, envStore.Restore())
 	}()
 
 	exp, err = New("")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedEndpoint, exp.url)
 }
 
