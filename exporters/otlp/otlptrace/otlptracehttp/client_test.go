@@ -265,7 +265,7 @@ func TestNoRetry(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	require.Error(t, err)
 	unwrapped := errors.Unwrap(err)
-	assert.EqualError(t, unwrapped, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint))
+	require.EqualError(t, unwrapped, fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint))
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 	assert.Empty(t, mc.GetSpans())
 }
