@@ -47,7 +47,7 @@ func TestJSONValue(t *testing.T) {
 
 	data, err := json.Marshal(kvs)
 	require.NoError(t, err)
-	require.Equal(t,
+	require.JSONEq(t,
 		`[{"Key":"A","Value":{"Type":"STRING","Value":"B"}},{"Key":"C","Value":{"Type":"INT64","Value":1}}]`,
 		string(data))
 }
