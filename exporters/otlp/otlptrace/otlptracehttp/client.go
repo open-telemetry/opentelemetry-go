@@ -327,7 +327,7 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func (e retryableError) Error() string {
 	if e.err != nil {
-		return fmt.Sprintf("retry-able request failure: %s", e.err.Error())
+		return "retry-able request failure: " + e.err.Error()
 	}
 
 	return "retry-able request failure"
