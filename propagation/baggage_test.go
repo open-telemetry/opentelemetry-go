@@ -128,6 +128,55 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 	}
 }
 
+func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
+	prop := propagation.TextMapPropagator(propagation.Baggage{})
+	tests := []struct {
+		name    string
+		headers []string
+		want    members
+	}{
+		{
+			name:    "non conflicting headers",
+			headers: []string{"key1=val1", "key2=val2"},
+			want: members{
+				{Key: "key1", Value: "val1"},
+				{Key: "key2", Value: "val2"},
+			},
+		},
+		{
+			name:    "conflicting keys, uses last val",
+			headers: []string{"key1=val1", "key1=val2"},
+			want: members{
+				{Key: "key1", Value: "val2"},
+			},
+		},
+		{
+			name:    "single empty",
+			headers: []string{"", "key1=val1"},
+			want: members{
+				{Key: "key1", Value: "val1"},
+			},
+		},
+		{
+			name:    "all empty",
+			headers: []string{"", ""},
+			want:    members{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			req.Header["Baggage"] = tt.headers
+
+			ctx := context.Background()
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
+			expected := tt.want.Baggage(t)
+			assert.Equal(t, expected, baggage.FromContext(ctx))
+		})
+	}
+}
+
 func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
