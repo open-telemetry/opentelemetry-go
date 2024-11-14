@@ -126,7 +126,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: ./coverage.txt
+          files: ./coverage.txt
           verbose: true
 
   compatibility-test:
