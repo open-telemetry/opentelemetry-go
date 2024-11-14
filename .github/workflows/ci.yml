@@ -123,8 +123,6 @@ jobs:
           pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.0.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           fail_ci_if_error: true
           files: ./coverage.txt
