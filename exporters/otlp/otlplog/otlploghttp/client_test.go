@@ -778,40 +778,24 @@ func TestConfig(t *testing.T) {
 		require.Contains(t, got, headerKeySetInProxy)
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
-}
 
-// borrows from TestConfig.
-func TestNonRetryable(t *testing.T) {
-	factoryFunc := func(ePt string, rCh <-chan exportResult, o ...Option) (log.Exporter, *httpCollector) {
-		coll, err := newHTTPCollector(ePt, rCh)
-		require.NoError(t, err)
+	t.Run("non-retryable errors are propagated", func(t *testing.T) {
+		exporterErr := errors.New("missing required attribute aaaa")
+		rCh := make(chan exportResult, 1)
+		rCh <- exportResult{Err: &httpResponseError{
+			Status: http.StatusBadRequest,
+			Err:    exporterErr,
+		}}
 
-		opts := []Option{WithEndpoint(coll.Addr().String())}
-		if !strings.HasPrefix(strings.ToLower(ePt), "https") {
-			opts = append(opts, WithInsecure())
-		}
-		opts = append(opts, o...)
-
+		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
+			Enabled: false,
+		}))
 		ctx := context.Background()
-		exp, err := New(ctx, opts...)
-		require.NoError(t, err)
-		return exp, coll
-	}
-	exporterErr := errors.New("missing required attribute aaaa")
-	rCh := make(chan exportResult, 1)
-	rCh <- exportResult{Err: &httpResponseError{
-		Status: http.StatusBadRequest,
-		Err:    exporterErr,
-	}}
-
-	exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
-		Enabled: false,
-	}))
-	ctx := context.Background()
-	t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-	// Push this after Shutdown so the HTTP server doesn't hang.
-	t.Cleanup(func() { close(rCh) })
-	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-	err := exp.Export(ctx, make([]log.Record, 1))
-	assert.ErrorContains(t, err, exporterErr.Error())
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		// Push this after Shutdown so the HTTP server doesn't hang.
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		err := exp.Export(ctx, make([]log.Record, 1))
+		assert.ErrorContains(t, err, exporterErr.Error())
+	})
 }

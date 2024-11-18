@@ -200,6 +200,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
+		if len(respStr) == 0 {
+			respStr = "(empty)"
+		}
+		bodyErr := fmt.Errorf("body: %s", respStr)
 
 		switch resp.StatusCode {
 		case http.StatusTooManyRequests,
@@ -207,22 +211,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			http.StatusServiceUnavailable,
 			http.StatusGatewayTimeout:
 			// Retryable failure.
-
-			var err error
-			if len(respStr) > 0 {
-				// include response body for context
-				err = errors.New(respStr)
-			}
-			return newResponseError(resp.Header, err)
+			return newResponseError(resp.Header, bodyErr)
 		default:
 			// Non-retryable failure.
-
-			if len(respStr) > 0 {
-				// include response body for context
-				e := errors.New(respStr)
-				return fmt.Errorf("failed to send metrics to %s: %s (%w)", request.URL, resp.Status, e)
-			}
-			return fmt.Errorf("failed to send metrics to %s: %s", request.URL, resp.Status)
+			return fmt.Errorf("failed to send metrics to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	})
 }
