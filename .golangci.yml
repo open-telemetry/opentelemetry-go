@@ -157,11 +157,11 @@ linters-settings:
     ignore-words:
       - cancelled
   perfsprint:
-    err-error: false
-    errorf: false
+    err-error: true
+    errorf: true
     int-conversion: true
-    sprintf1: false
-    strconcat: false
+    sprintf1: true
+    strconcat: true
   revive:
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.
