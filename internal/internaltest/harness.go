@@ -9,6 +9,7 @@ package internaltest // import "go.opentelemetry.io/otel/internal/internaltest"
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -58,7 +59,7 @@ func (h *Harness) TestTracerProvider(subjectFactory func() trace.TracerProvider)
 						go func(name, version string) {
 							_ = tp.Tracer(name, trace.WithInstrumentationVersion(version))
 							wg.Done()
-						}(fmt.Sprintf("tracer %d", i%5), fmt.Sprintf("%d", i))
+						}(fmt.Sprintf("tracer %d", i%5), strconv.Itoa(i))
 					}
 					wg.Wait()
 					done <- struct{}{}

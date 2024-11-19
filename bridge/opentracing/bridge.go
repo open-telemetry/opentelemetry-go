@@ -6,6 +6,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -532,7 +533,7 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 	case int64:
 		return key.Int64(val)
 	case uint64:
-		return key.String(fmt.Sprintf("%d", val))
+		return key.String(strconv.FormatUint(val, 10))
 	case float64:
 		return key.Float64(val)
 	case int8:
@@ -552,7 +553,7 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 	case int:
 		return key.Int(val)
 	case uint:
-		return key.String(fmt.Sprintf("%d", val))
+		return key.String(strconv.FormatUint(uint64(val), 10))
 	case string:
 		return key.String(val)
 	default:

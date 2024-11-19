@@ -45,7 +45,7 @@ jobs:
       - name: Generate
         run: make generate
       - name: Run linters
-        run: make license-check lint vanity-import-check verify-readmes verify-mods
+        run: make toolchain-check license-check lint vanity-import-check verify-readmes verify-mods
       - name: Build
         run: make build
       - name: Check clean repository
@@ -122,11 +122,10 @@ jobs:
         with:
           pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.6.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@v5.0.2
         with:
-          file: ./coverage.txt
+          fail_ci_if_error: true
+          files: ./coverage.txt
           verbose: true
 
   compatibility-test:
