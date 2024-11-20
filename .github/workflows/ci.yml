@@ -122,7 +122,7 @@ jobs:
         with:
           pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
       - name: Upload coverage report
-        uses: codecov/codecov-action@v5.0.3
+        uses: codecov/codecov-action@v5.0.4
         with:
           fail_ci_if_error: true
           files: ./coverage.txt
