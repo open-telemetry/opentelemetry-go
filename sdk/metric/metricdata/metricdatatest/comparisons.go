@@ -32,7 +32,7 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons 
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics not equal:\n%s", r))
+		reasons = append(reasons, "ResourceMetrics ScopeMetrics not equal:\n"+r)
 	}
 	return reasons
 }
@@ -56,7 +56,7 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []stri
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("ScopeMetrics Metrics not equal:\n%s", r))
+		reasons = append(reasons, "ScopeMetrics Metrics not equal:\n"+r)
 	}
 	return reasons
 }
@@ -172,7 +172,7 @@ func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reaso
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("Gauge DataPoints not equal:\n%s", r))
+		reasons = append(reasons, "Gauge DataPoints not equal:\n"+r)
 	}
 	return reasons
 }
@@ -199,7 +199,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("Sum DataPoints not equal:\n%s", r))
+		reasons = append(reasons, "Sum DataPoints not equal:\n"+r)
 	}
 	return reasons
 }
@@ -223,7 +223,7 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
+		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
 	}
 	return reasons
 }
@@ -264,7 +264,7 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 			},
 		))
 		if r != "" {
-			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
 	}
 	return reasons
@@ -318,7 +318,7 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 			},
 		))
 		if r != "" {
-			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
 	}
 	return reasons
@@ -343,7 +343,7 @@ func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHi
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("Histogram DataPoints not equal:\n%s", r))
+		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
 	}
 	return reasons
 }
@@ -406,7 +406,7 @@ func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.Expo
 			},
 		))
 		if r != "" {
-			reasons = append(reasons, fmt.Sprintf("Exemplars not equal:\n%s", r))
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
 	}
 	return reasons
@@ -432,7 +432,7 @@ func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
 		},
 	))
 	if r != "" {
-		reasons = append(reasons, fmt.Sprintf("Summary DataPoints not equal:\n%s", r))
+		reasons = append(reasons, "Summary DataPoints not equal:\n"+r)
 	}
 	return reasons
 }
@@ -634,7 +634,7 @@ func compareDiff[T any](extraExpected, extraActual []T) string {
 }
 
 func missingAttrStr(name string) string {
-	return fmt.Sprintf("missing attribute %s", name)
+	return "missing attribute " + name
 }
 
 func hasAttributesExemplars[T int64 | float64](exemplar metricdata.Exemplar[T], attrs ...attribute.KeyValue) (reasons []string) {

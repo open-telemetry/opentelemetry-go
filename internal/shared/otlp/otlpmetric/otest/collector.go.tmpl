@@ -413,8 +413,8 @@ func weakCertificate() (tls.Certificate, error) {
 	}
 	notBefore := time.Now()
 	notAfter := notBefore.Add(time.Hour)
-	max := new(big.Int).Lsh(big.NewInt(1), 128)
-	sn, err := rand.Int(rand.Reader, max)
+	m := new(big.Int).Lsh(big.NewInt(1), 128)
+	sn, err := rand.Int(rand.Reader, m)
 	if err != nil {
 		return tls.Certificate{}, err
 	}

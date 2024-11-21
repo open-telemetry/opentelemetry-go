@@ -434,8 +434,8 @@ func newWeakCertificate() (tls.Certificate, error) {
 	}
 	notBefore := time.Now()
 	notAfter := notBefore.Add(time.Hour)
-	max := new(big.Int).Lsh(big.NewInt(1), 128)
-	sn, err := rand.Int(rand.Reader, max)
+	m := new(big.Int).Lsh(big.NewInt(1), 128)
+	sn, err := rand.Int(rand.Reader, m)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
@@ -777,5 +777,25 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Contains(t, got, headerKeySetInProxy)
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
+	})
+
+	t.Run("non-retryable errors are propagated", func(t *testing.T) {
+		exporterErr := errors.New("missing required attribute aaaa")
+		rCh := make(chan exportResult, 1)
+		rCh <- exportResult{Err: &httpResponseError{
+			Status: http.StatusBadRequest,
+			Err:    exporterErr,
+		}}
+
+		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
+			Enabled: false,
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		// Push this after Shutdown so the HTTP server doesn't hang.
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		err := exp.Export(ctx, make([]log.Record, 1))
+		assert.ErrorContains(t, err, exporterErr.Error())
 	})
 }
