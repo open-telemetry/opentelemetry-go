@@ -97,6 +97,13 @@ linters-settings:
           - pkg: "crypto/md5"
           - pkg: "crypto/sha1"
           - pkg: "crypto/**/pkix"
+      auto/sdk:
+        files:
+          - "!internal/global/trace.go"
+          - "~internal/global/trace_test.go"
+        deny:
+          - pkg: "go.opentelemetry.io/auto/sdk"
+            desc: Do not use SDK from automatic instrumentation.
       otlp-internal:
         files:
           - "!**/exporters/otlp/internal/**/*.go"
