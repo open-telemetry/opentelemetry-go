@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/auto/sdk"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -273,4 +274,20 @@ func TestTracerIdentity(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestNewSpanType(t *testing.T) {
+	tracer := new(tracer)
+	ctx := context.Background()
+	_, got := tracer.newSpan(ctx, autoInstEnabled, "", nil)
+	assert.IsType(t, nonRecordingSpan{}, got, "default span type")
+
+	orig := *autoInstEnabled
+	*autoInstEnabled = true
+	t.Cleanup(func() { *autoInstEnabled = orig })
+
+	_, got = tracer.newSpan(ctx, autoInstEnabled, "", nil)
+	autoTracer := sdk.TracerProvider().Tracer("")
+	_, span := autoTracer.Start(ctx, "")
+	assert.IsType(t, span, got, "auto span type")
 }
