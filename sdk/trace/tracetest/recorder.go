@@ -74,12 +74,12 @@ func (sr *SpanRecorder) Started() []sdktrace.ReadWriteSpan {
 // This method is safe to be called concurrently.
 func (sr *SpanRecorder) Reset() {
 	sr.startedMu.Lock()
-	sr.started = nil
-	sr.startedMu.Unlock()
-
 	sr.endedMu.Lock()
+	defer sr.startedMu.Unlock()
+	defer sr.endedMu.Unlock()
+
+	sr.started = nil
 	sr.ended = nil
-	sr.endedMu.Unlock()
 }
 
 // Ended returns a copy of all ended spans that have been recorded.
