@@ -333,6 +333,28 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func BenchmarkTruncate(b *testing.B) {
+	run := func(limit int, input string) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				var out string
+				for pb.Next() {
+					out = safeTruncate(input, limit)
+				}
+				_ = out
+			})
+		}
+	}
+	b.Run("Unlimited", run(-1, "hello 😊 world 🌍🚀"))
+	b.Run("Zero", run(0, "Some text"))
+	b.Run("Short", run(10, "Short Text"))
+	b.Run("ASCII", run(5, "Hello, World!"))
+	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
+	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
+}
+
 func TestLogDropAttrs(t *testing.T) {
 	orig := logDropAttrs
 	t.Cleanup(func() { logDropAttrs = orig })
