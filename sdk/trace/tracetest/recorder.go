@@ -78,8 +78,8 @@ func (sr *SpanRecorder) Reset() {
 	sr.startedMu.Unlock()
 
 	sr.endedMu.Lock()
-	defer sr.endedMu.Unlock()
 	sr.ended = nil
+	r.endedMu.Unlock()
 }
 
 // Ended returns a copy of all ended spans that have been recorded.
