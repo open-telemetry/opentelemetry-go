@@ -547,7 +547,8 @@ func addExemplars[N int64 | float64](m prometheus.Metric, exemplars []metricdata
 func attributesToLabels(attrs []attribute.KeyValue) prometheus.Labels {
 	labels := make(map[string]string)
 	for _, attr := range attrs {
-		labels[string(attr.Key)] = attr.Value.Emit()
+		key := model.EscapeName(string(attr.Key), model.NameEscapingScheme)
+		labels[key] = attr.Value.Emit()
 	}
 	return labels
 }

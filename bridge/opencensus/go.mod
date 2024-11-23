@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel/bridge/opencensus
 go 1.22.0
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/sdk v1.32.0

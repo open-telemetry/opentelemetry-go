@@ -219,7 +219,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 		},
 	})
 
-	assert.NotSame(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+	assert.NotEqual(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 }
 
 func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {

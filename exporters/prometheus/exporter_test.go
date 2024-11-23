@@ -949,37 +949,94 @@ func TestShutdownExporter(t *testing.T) {
 
 func TestExemplars(t *testing.T) {
 	attrsOpt := otelmetric.WithAttributes(
-		attribute.Key("A").String("B"),
-		attribute.Key("C").String("D"),
-		attribute.Key("E").Bool(true),
-		attribute.Key("F").Int(42),
+		attribute.Key("A.1").String("B"),
+		attribute.Key("C.2").String("D"),
+		attribute.Key("E.3").Bool(true),
+		attribute.Key("F.4").Int(42),
 	)
+	expectedNonEscapedLabels := map[string]string{
+		traceIDExemplarKey: "01000000000000000000000000000000",
+		spanIDExemplarKey:  "0100000000000000",
+		"A.1":              "B",
+		"C.2":              "D",
+		"E.3":              "true",
+		"F.4":              "42",
+	}
+	expectedEscapedLabels := map[string]string{
+		traceIDExemplarKey: "01000000000000000000000000000000",
+		spanIDExemplarKey:  "0100000000000000",
+		"A_1":              "B",
+		"C_2":              "D",
+		"E_3":              "true",
+		"F_4":              "42",
+	}
 	for _, tc := range []struct {
 		name                  string
 		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
 		expectedExemplarValue float64
+		expectedLabels        map[string]string
+		escapingScheme        model.EscapingScheme
+		validationScheme      model.ValidationScheme
 	}{
 		{
-			name: "counter",
+			name: "escaped counter",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				counter, err := meter.Float64Counter("foo")
 				require.NoError(t, err)
 				counter.Add(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			escapingScheme:        model.UnderscoreEscaping,
+			validationScheme:      model.LegacyValidation,
 		},
 		{
-			name: "histogram",
+			name: "escaped histogram",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				hist, err := meter.Int64Histogram("foo")
 				require.NoError(t, err)
 				hist.Record(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			escapingScheme:        model.UnderscoreEscaping,
+			validationScheme:      model.LegacyValidation,
+		},
+		{
+			name: "non-escaped counter",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Float64Counter("foo")
+				require.NoError(t, err)
+				counter.Add(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
+		},
+		{
+			name: "non-escaped histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("foo")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+			originalEscapingScheme := model.NameEscapingScheme
+			originalValidationScheme := model.NameValidationScheme
+			model.NameEscapingScheme = tc.escapingScheme
+			model.NameValidationScheme = tc.validationScheme
+			// Restore original value after the test is complete
+			defer func() {
+				model.NameEscapingScheme = originalEscapingScheme
+				model.NameValidationScheme = originalValidationScheme
+			}()
 			// initialize registry exporter
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
@@ -1044,17 +1101,9 @@ func TestExemplars(t *testing.T) {
 			}
 			require.NotNil(t, exemplar)
 			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
-			expectedLabels := map[string]string{
-				traceIDExemplarKey: "01000000000000000000000000000000",
-				spanIDExemplarKey:  "0100000000000000",
-				"A":                "B",
-				"C":                "D",
-				"E":                "true",
-				"F":                "42",
-			}
-			require.Equal(t, len(expectedLabels), len(exemplar.GetLabel()))
+			require.Equal(t, len(tc.expectedLabels), len(exemplar.GetLabel()))
 			for _, label := range exemplar.GetLabel() {
-				val, ok := expectedLabels[label.GetName()]
+				val, ok := tc.expectedLabels[label.GetName()]
 				require.True(t, ok)
 				require.Equal(t, label.GetValue(), val)
 			}
