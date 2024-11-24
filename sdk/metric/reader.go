@@ -61,7 +61,7 @@ type Reader interface {
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in rm. An error is returned if this is called
-	// after Shutdown or if rm is nil resourceMetrics.
+	// after Shutdown or if rm is nil.
 	//
 	// This method needs to be concurrent safe, and the cancellation of the
 	// passed context is expected to be honored.
