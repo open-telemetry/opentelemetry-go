@@ -56,7 +56,7 @@ func BenchmarkExtract(b *testing.B) {
 
 func extractSubBenchmarks(b *testing.B, fn func(*testing.B, *http.Request)) {
 	b.Run("Sampled", func(b *testing.B) {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
+		req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 		req.Header.Set("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
 		b.ReportAllocs()
 
@@ -64,14 +64,14 @@ func extractSubBenchmarks(b *testing.B, fn func(*testing.B, *http.Request)) {
 	})
 
 	b.Run("BogusVersion", func(b *testing.B) {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
+		req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 		req.Header.Set("traceparent", "qw-00000000000000000000000000000000-0000000000000000-01")
 		b.ReportAllocs()
 		fn(b, req)
 	})
 
 	b.Run("FutureAdditionalData", func(b *testing.B) {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
+		req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 		req.Header.Set("traceparent", "02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09-XYZxsf09")
 		b.ReportAllocs()
 		fn(b, req)
