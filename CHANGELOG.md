@@ -22,7 +22,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix inconsistent request body closing in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#5954)
 - Fix inconsistent request body closing in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#5954)
 - Fix invalid exemplar keys in `go.opentelemetry.io/otel/exporters/prometheus`. (#5995)
-- Correct comment for `Reader.Collect` in `go.opentelemetry.io/otel/sdk/metric`. (#5999)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
