@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `Reset` method to `SpanRecorder` in `go.opentelemetry.io/otel/sdk/trace/tracetest`. (#5994)
+
 ### Changed
 
 - The default global API now supports full auto-instrumentation from the `go.opentelemetry.io/auto` package.
