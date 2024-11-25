@@ -65,7 +65,7 @@ func TestHTTPSClientRequest(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.String("http.method", "GET"),
+			attribute.String("http.method", http.MethodGet),
 			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
@@ -100,7 +100,7 @@ func TestHTTPClientRequest(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.String("http.method", "GET"),
+			attribute.String("http.method", http.MethodGet),
 			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
@@ -118,7 +118,7 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	var got []attribute.KeyValue
 	assert.NotPanics(t, func() { got = hc.ClientRequest(req) })
 	want := []attribute.KeyValue{
-		attribute.String("http.method", "GET"),
+		attribute.String("http.method", http.MethodGet),
 		attribute.String("http.flavor", ""),
 		attribute.String("http.url", ""),
 		attribute.String("net.peer.name", ""),
@@ -156,7 +156,7 @@ func TestHTTPServerRequest(t *testing.T) {
 
 	assert.ElementsMatch(t,
 		[]attribute.KeyValue{
-			attribute.String("http.method", "GET"),
+			attribute.String("http.method", http.MethodGet),
 			attribute.String("http.scheme", "http"),
 			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
@@ -196,7 +196,7 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	var got []attribute.KeyValue
 	assert.NotPanics(t, func() { got = hc.ServerRequest("", req) })
 	want := []attribute.KeyValue{
-		attribute.String("http.method", "GET"),
+		attribute.String("http.method", http.MethodGet),
 		attribute.String("http.scheme", "http"),
 		attribute.String("http.flavor", ""),
 		attribute.String("net.host.name", ""),
@@ -205,8 +205,8 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 }
 
 func TestMethod(t *testing.T) {
-	assert.Equal(t, attribute.String("http.method", "POST"), hc.method("POST"))
-	assert.Equal(t, attribute.String("http.method", "GET"), hc.method(""))
+	assert.Equal(t, attribute.String("http.method", http.MethodPost), hc.method(http.MethodPost))
+	assert.Equal(t, attribute.String("http.method", http.MethodGet), hc.method(""))
 	assert.Equal(t, attribute.String("http.method", "garbage"), hc.method("garbage"))
 }
 
