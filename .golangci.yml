@@ -31,6 +31,7 @@ linters:
     - unconvert
     - unused
     - unparam
+    - usestdlibvars
 
 issues:
   # Maximum issues count per one linter.
