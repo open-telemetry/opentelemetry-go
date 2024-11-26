@@ -183,7 +183,7 @@ func TestSpanLimits(t *testing.T) {
 		// Ensure string and string slice attributes are truncated.
 		assert.Contains(t, attrs, attribute.String("string", "ab"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
-		assert.Contains(t, attrs, attribute.String("euro", ""))
+		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 0
 		attrs = testSpanLimits(t, limits).Attributes()
