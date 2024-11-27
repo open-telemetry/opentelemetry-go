@@ -438,8 +438,8 @@ func truncate(limit int, s string) string {
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
-// The only SpanEndOption currently supported is WithTimestamp which will set the
-// end time for a Span's life-cycle.
+// The only SpanEndOption currently supported are [trace.WithTimestamp], and
+// [trace.WithStackTrace].
 //
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
