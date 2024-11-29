@@ -68,17 +68,17 @@ func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 
 func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
-		name                   string
-		options                []Option
-		ctx                    context.Context
-		buildEnabledParameters func() log.EnabledParams
+		name               string
+		options            []Option
+		ctx                context.Context
+		buildEnabledParams func() log.EnabledParams
 
 		isEnabled bool
 	}{
 		{
 			name: "the default option enables every log entry",
 			ctx:  context.Background(),
-			buildEnabledParameters: func() log.EnabledParams {
+			buildEnabledParams: func() log.EnabledParams {
 				return log.EnabledParams{}
 			},
 
@@ -92,7 +92,7 @@ func TestLoggerEnabled(t *testing.T) {
 				}),
 			},
 			ctx: context.Background(),
-			buildEnabledParameters: func() log.EnabledParams {
+			buildEnabledParams: func() log.EnabledParams {
 				return log.EnabledParams{}
 			},
 
@@ -100,7 +100,7 @@ func TestLoggerEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildEnabledParameters())
+			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildEnabledParams())
 			assert.Equal(t, tt.isEnabled, e)
 		})
 	}
