@@ -14,9 +14,9 @@ linters:
     - depguard
     - errcheck
     - errorlint
+    - gci
     - godot
     - gofumpt
-    - goimports
     - gosec
     - gosimple
     - govet
@@ -150,6 +150,11 @@ linters-settings:
             desc: Do not use cross-module internal packages.
           - pkg: "go.opentelemetry.io/otel/internal/matchers"
             desc: Do not use cross-module internal packages.
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(go.opentelemetry.io)
   godot:
     exclude:
       # Exclude links.
@@ -158,8 +163,6 @@ linters-settings:
       - '^[ ]*[-•]'
       # Exclude sentences prefixing a list.
       - ':$'
-  goimports:
-    local-prefixes: go.opentelemetry.io
   misspell:
     locale: US
     ignore-words:

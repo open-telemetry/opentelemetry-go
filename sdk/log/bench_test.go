@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/log"
-
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/log"
 )
 
 func BenchmarkProcessor(b *testing.B) {

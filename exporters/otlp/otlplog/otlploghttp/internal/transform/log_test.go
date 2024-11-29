@@ -12,10 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
-
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -24,6 +20,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 var (

@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"

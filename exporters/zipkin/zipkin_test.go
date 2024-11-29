@@ -17,14 +17,13 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
-
 	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/codes"
+	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
