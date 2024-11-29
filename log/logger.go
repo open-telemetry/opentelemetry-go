@@ -56,7 +56,7 @@ type Logger interface {
 	//
 	// Notice: Enabled is intended to be used by log bridges.
 	// Is should not be used for writing instrumentation.
-	Enabled(ctx context.Context, param EnabledParameters) bool
+	Enabled(ctx context.Context, param EnabledParams) bool
 }
 
 // LoggerOption applies configuration options to a [Logger].
@@ -136,7 +136,7 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 	})
 }
 
-// EnabledParameters represents payload for [Logger]'s Enabled method.
-type EnabledParameters struct {
+// EnabledParams represents payload for [Logger]'s Enabled method.
+type EnabledParams struct {
 	Severity Severity
 }

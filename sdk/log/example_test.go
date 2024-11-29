@@ -90,7 +90,7 @@ type ContextFilterProcessor struct {
 }
 
 type filter interface {
-	Enabled(ctx context.Context, param logapi.EnabledParameters) bool
+	Enabled(ctx context.Context, param logapi.EnabledParams) bool
 }
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
@@ -100,7 +100,7 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, param logapi.EnabledParameters) bool {
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, param logapi.EnabledParams) bool {
 	p.lazyFilter.Do(func() {
 		if f, ok := p.Processor.(filter); ok {
 			p.filter = f
