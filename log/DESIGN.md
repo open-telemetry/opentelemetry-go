@@ -261,12 +261,12 @@ is accepted as a `context.Context` method argument.
 Calls to `Enabled` are supposed to be on the hot path and the list of arguments
 can be extendend in future. Therefore, in order to reduce the number of heap
 allocations and make it possible to handle new arguments, `Enabled` accepts
-a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
+a `EnabledParams` struct, defined in [logger.go](logger.go), as the second
 method argument.
 
-The `EnabledParameters` getters are returning values using the `(value, ok)`
-idiom in order to indicate if the values were actually set by the caller or if
-there are unspecified.
+The `EnabledParams` uses fields, instead of getters and setters, to allow
+simpler usage which allows configuring the `EnabledParams` in the same line
+where `Enabled` is called.
 
 ### noop package
 
