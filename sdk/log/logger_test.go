@@ -280,10 +280,9 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 		WithProcessor(newFltrProcessor("0", false)),
 		WithProcessor(newFltrProcessor("1", true)),
 	)
-	logger := provider.Logger("BenchmarkLoggerEnabled")
-	ctx, param := context.Background(), log.EnabledParameters{}
-	param.SetSeverity(log.SeverityDebug)
-
+	logger := provider.Logger(b.Name())
+	ctx := context.Background()
+	param := log.EnabledParameters{Severity: log.SeverityDebug}
 	var enabled bool
 
 	b.ReportAllocs()
