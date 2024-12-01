@@ -436,7 +436,7 @@ func New(members ...Member) (Baggage, error) {
 		return Baggage{}, nil
 	}
 
-	b := make(baggage.List)
+	b := make(baggage.List, len(members))
 	for _, m := range members {
 		if !m.hasData {
 			return Baggage{}, errInvalidMember
