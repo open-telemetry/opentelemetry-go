@@ -90,7 +90,12 @@ func DefaultEncoder() Encoder {
 // Encode is a part of an implementation of the AttributeEncoder interface.
 func (d *defaultAttrEncoder) Encode(iter Iterator) string {
 	buf := d.pool.Get().(*bytes.Buffer)
-	defer d.pool.Put(buf)
+	defer func() {
+		if buf.Cap() > 8*1024 {
+			return
+		}
+		d.pool.Put(buf)
+	}()
 	buf.Reset()
 
 	for iter.Next() {
