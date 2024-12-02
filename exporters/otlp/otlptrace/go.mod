@@ -2,7 +2,6 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace
 
 go 1.22.7
 
-toolchain go1.23.3
 
 require (
 	github.com/google/go-cmp v0.6.0
