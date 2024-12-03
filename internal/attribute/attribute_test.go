@@ -133,3 +133,13 @@ func BenchmarkStringSliceValue(b *testing.B) {
 		sync = StringSliceValue(s)
 	}
 }
+
+func BenchmarkAsFloat64Slice(b *testing.B) {
+	b.ReportAllocs()
+	var in interface{} = [2]float64{1, 2.3}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		sync = AsFloat64Slice(in)
+	}
+}
