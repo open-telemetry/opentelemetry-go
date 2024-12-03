@@ -264,9 +264,9 @@ allocations and make it possible to handle new arguments, `Enabled` accepts
 a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
 method argument.
 
-The `EnabledParameters` getters are returning values using the `(value, ok)`
-idiom in order to indicate if the values were actually set by the caller or if
-there are unspecified.
+The `EnabledParameters` uses fields, instead of getters and setters, to allow
+simpler usage which allows configuring the `EnabledParameters` in the same line
+where `Enabled` is called.
 
 ### noop package
 

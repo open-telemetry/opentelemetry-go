@@ -138,18 +138,5 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 
 // EnabledParameters represents payload for [Logger]'s Enabled method.
 type EnabledParameters struct {
-	severity    Severity
-	severitySet bool
-}
-
-// Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
-// The ok result indicates whether the value was set.
-func (r *EnabledParameters) Severity() (value Severity, ok bool) {
-	return r.severity, r.severitySet
-}
-
-// SetSeverity sets the [Severity] level.
-func (r *EnabledParameters) SetSeverity(level Severity) {
-	r.severity = level
-	r.severitySet = true
+	Severity Severity
 }
