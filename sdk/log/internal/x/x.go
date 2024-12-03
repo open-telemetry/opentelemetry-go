@@ -43,5 +43,5 @@ type FilterProcessor interface {
 	// indeterminate state.
 	//
 	// Implementations should not modify the param.
-	Enabled(ctx context.Context, param log.EnabledParams) bool
+	Enabled(ctx context.Context, param log.EnabledParameters) bool
 }

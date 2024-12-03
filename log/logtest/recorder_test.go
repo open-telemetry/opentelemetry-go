@@ -71,15 +71,15 @@ func TestLoggerEnabled(t *testing.T) {
 		name               string
 		options            []Option
 		ctx                context.Context
-		buildEnabledParams func() log.EnabledParams
+		buildEnabledParams func() log.EnabledParameters
 
 		isEnabled bool
 	}{
 		{
 			name: "the default option enables every log entry",
 			ctx:  context.Background(),
-			buildEnabledParams: func() log.EnabledParams {
-				return log.EnabledParams{}
+			buildEnabledParams: func() log.EnabledParameters {
+				return log.EnabledParameters{}
 			},
 
 			isEnabled: true,
@@ -87,13 +87,13 @@ func TestLoggerEnabled(t *testing.T) {
 		{
 			name: "with everything disabled",
 			options: []Option{
-				WithEnabledFunc(func(context.Context, log.EnabledParams) bool {
+				WithEnabledFunc(func(context.Context, log.EnabledParameters) bool {
 					return false
 				}),
 			},
 			ctx: context.Background(),
-			buildEnabledParams: func() log.EnabledParams {
-				return log.EnabledParams{}
+			buildEnabledParams: func() log.EnabledParameters {
+				return log.EnabledParameters{}
 			},
 
 			isEnabled: false,
@@ -108,7 +108,7 @@ func TestLoggerEnabled(t *testing.T) {
 
 func TestLoggerEnabledFnUnset(t *testing.T) {
 	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.EnabledParams{}))
+	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
 }
 
 func TestRecorderEmitAndReset(t *testing.T) {
@@ -161,7 +161,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 			defer wg.Done()
 
 			nr := r.Logger("test")
-			nr.Enabled(context.Background(), log.EnabledParams{})
+			nr.Enabled(context.Background(), log.EnabledParameters{})
 			nr.Emit(context.Background(), log.Record{})
 
 			r.Result()

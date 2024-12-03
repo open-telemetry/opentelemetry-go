@@ -52,7 +52,7 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 
 		ctx := context.Background()
 		var r log.Record
-		var param log.EnabledParams
+		var param log.EnabledParameters
 
 		var enabled bool
 		for {
@@ -105,14 +105,14 @@ type testLogger struct {
 }
 
 func (l *testLogger) Emit(context.Context, log.Record) { l.emitN++ }
-func (l *testLogger) Enabled(context.Context, log.EnabledParams) bool {
+func (l *testLogger) Enabled(context.Context, log.EnabledParameters) bool {
 	l.enabledN++
 	return true
 }
 
 func emitRecord(l log.Logger) {
 	ctx := context.Background()
-	var param log.EnabledParams
+	var param log.EnabledParameters
 	var r log.Record
 
 	_ = l.Enabled(ctx, param)
