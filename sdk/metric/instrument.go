@@ -184,7 +184,6 @@ type int64Inst struct {
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
 	embedded.Int64Gauge
-	x.EnabledInstrument
 }
 
 var (
@@ -192,6 +191,7 @@ var (
 	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
 	_ metric.Int64Histogram     = (*int64Inst)(nil)
 	_ metric.Int64Gauge         = (*int64Inst)(nil)
+	_ x.EnabledInstrument       = (*int64Inst)(nil)
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
@@ -204,7 +204,7 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *int64Inst) Enabled() bool {
+func (i *int64Inst) Enabled(_ context.Context) bool {
 	return len(i.measures) != 0
 }
 
@@ -221,7 +221,6 @@ type float64Inst struct {
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
 	embedded.Float64Gauge
-	x.EnabledInstrument
 }
 
 var (
@@ -229,6 +228,7 @@ var (
 	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
 	_ metric.Float64Histogram     = (*float64Inst)(nil)
 	_ metric.Float64Gauge         = (*float64Inst)(nil)
+	_ x.EnabledInstrument         = (*float64Inst)(nil)
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
@@ -241,7 +241,7 @@ func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.Re
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *float64Inst) Enabled() bool {
+func (i *float64Inst) Enabled(_ context.Context) bool {
 	return len(i.measures) != 0
 }
 

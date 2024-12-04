@@ -8,6 +8,7 @@
 package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
 
 import (
+	"context"
 	"os"
 	"strconv"
 )
@@ -76,5 +77,5 @@ type EnabledInstrument interface {
 	//
 	// This function can be used in places where measuring an instrument
 	// would result in computationally expensive operations.
-	Enabled() bool
+	Enabled(context.Context) bool
 }

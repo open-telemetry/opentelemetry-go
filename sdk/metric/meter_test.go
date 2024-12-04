@@ -390,8 +390,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				assert.NoError(t, err)
 
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.True(t, c.Enabled())
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -412,8 +412,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				assert.NoError(t, err)
 
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.True(t, c.Enabled())
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -460,8 +460,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				assert.NoError(t, err)
 
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.True(t, c.Enabled())
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -482,8 +482,8 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				assert.NoError(t, err)
 
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.True(t, c.Enabled())
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -557,7 +557,7 @@ func TestMeterWithDropView(t *testing.T) {
 				assert.NoError(t, err)
 				c, ok := ctr.(x.EnabledInstrument)
 				require.True(t, ok)
-				assert.False(t, c.Enabled())
+				assert.False(t, c.Enabled(context.Background()))
 			},
 		},
 		{
@@ -566,8 +566,8 @@ func TestMeterWithDropView(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, c.Enabled())
+				require.True(t, ok)
+				assert.False(t, c.Enabled(context.Background()))
 			},
 		},
 		{
@@ -576,8 +576,8 @@ func TestMeterWithDropView(t *testing.T) {
 				gauge, err := m.Int64Gauge("sint")
 				assert.NoError(t, err)
 				g, ok := gauge.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, g.Enabled())
+				require.True(t, ok)
+				assert.False(t, g.Enabled(context.Background()))
 			},
 		},
 		{
@@ -586,8 +586,8 @@ func TestMeterWithDropView(t *testing.T) {
 				histo, err := m.Int64Histogram("histogram")
 				assert.NoError(t, err)
 				h, ok := histo.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, h.Enabled())
+				require.True(t, ok)
+				assert.False(t, h.Enabled(context.Background()))
 			},
 		},
 		{
@@ -596,8 +596,8 @@ func TestMeterWithDropView(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, c.Enabled())
+				require.True(t, ok)
+				assert.False(t, c.Enabled(context.Background()))
 			},
 		},
 		{
@@ -606,8 +606,8 @@ func TestMeterWithDropView(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, c.Enabled())
+				require.True(t, ok)
+				assert.False(t, c.Enabled(context.Background()))
 			},
 		},
 		{
@@ -616,8 +616,8 @@ func TestMeterWithDropView(t *testing.T) {
 				gauge, err := m.Float64Gauge("sfloat")
 				assert.NoError(t, err)
 				g, ok := gauge.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, g.Enabled())
+				require.True(t, ok)
+				assert.False(t, g.Enabled(context.Background()))
 			},
 		},
 		{
@@ -626,8 +626,8 @@ func TestMeterWithDropView(t *testing.T) {
 				histo, err := m.Float64Histogram("histogram")
 				assert.NoError(t, err)
 				h, ok := histo.(x.EnabledInstrument)
-				assert.True(t, ok)
-				assert.False(t, h.Enabled())
+				require.True(t, ok)
+				assert.False(t, h.Enabled(context.Background()))
 			},
 		},
 	}
