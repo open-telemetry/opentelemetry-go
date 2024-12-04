@@ -15,6 +15,14 @@ import (
 
 var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
+func TestRecordEventName(t *testing.T) {
+	const text = "testing text"
+
+	var r log.Record
+	r.SetEventName(text)
+	assert.Equal(t, text, r.EventName())
+}
+
 func TestRecordTimestamp(t *testing.T) {
 	var r log.Record
 	r.SetTimestamp(y2k)
