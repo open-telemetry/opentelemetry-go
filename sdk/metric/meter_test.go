@@ -430,10 +430,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncInt64Histogram",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.Int64Histogram("histogram")
+				histo, err := m.Int64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(ctx, 7)
+				histo.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -500,10 +500,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 		{
 			name: "SyncFloat64Histogram",
 			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.Float64Histogram("histogram")
+				histo, err := m.Float64Histogram("histogram")
 				assert.NoError(t, err)
 
-				gauge.Record(ctx, 7)
+				histo.Record(ctx, 7)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
