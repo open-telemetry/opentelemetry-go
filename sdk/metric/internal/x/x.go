@@ -68,11 +68,11 @@ func (f Feature[T]) Enabled() bool {
 	return ok
 }
 
-// EnabledInstrument provides the interface for synchronous
-// instruments to returned whether or not they are enabled.
+// EnabledInstrument informs whether the instrument is enabled.
+//
+// EnabledInstrument interface is implemented by synchronous instruments.
 type EnabledInstrument interface {
-	// Enabled returns whether the instrument has any measurements
-	// associated with it.
+	// Enabled returns whether the instrument will process measurements for the given context.
 	//
 	// This function can be used in places where measuring an instrument
 	// would result in computationally expensive operations.

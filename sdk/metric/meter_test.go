@@ -556,7 +556,7 @@ func TestMeterWithDropView(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 				c, ok := ctr.(x.EnabledInstrument)
-				assert.True(t, ok)
+				require.True(t, ok)
 				assert.False(t, c.Enabled())
 			},
 		},
