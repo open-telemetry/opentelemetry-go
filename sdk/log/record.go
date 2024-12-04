@@ -50,6 +50,8 @@ type Record struct {
 	// Do not embed the log.Record. Attributes need to be overwrite-able and
 	// deep-copying needs to be possible.
 
+	eventName string
+
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          log.Severity
@@ -102,6 +104,16 @@ func (r *Record) addDropped(n int) {
 func (r *Record) setDropped(n int) {
 	logAttrDropped()
 	r.dropped = n
+}
+
+// EventName returns the event name.
+func (r *Record) EventName() string {
+	return r.eventName
+}
+
+// SetEventName sets the event name.
+func (r *Record) SetEventName(s string) {
+	r.eventName = s
 }
 
 // Timestamp returns the time when the log record occurred.

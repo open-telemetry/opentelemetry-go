@@ -48,3 +48,9 @@ func (Logger) Emit(context.Context, log.Record) {}
 
 // Enabled returns false. No log records are ever emitted.
 func (Logger) Enabled(context.Context, log.EnabledParameters) bool { return false }
+
+// EmitEvent does nothing.
+func (Logger) EmitEvent(context.Context, string, log.Event) {}
+
+// EnabledEvent returns false. No events are ever emitted.
+func (Logger) EnabledEvent(context.Context, string, log.EnabledEventParameters) bool { return false }

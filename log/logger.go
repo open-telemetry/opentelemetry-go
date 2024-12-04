@@ -33,8 +33,8 @@ type Logger interface {
 	// Is should not be used for writing instrumentation.
 	Emit(ctx context.Context, record Record)
 
-	// Enabled returns whether the Logger emits for the given context and
-	// param.
+	// Enabled returns whether the Logger emits a log record for the given
+	// context and param.
 	//
 	// The passed param is likely to be a partial record with only the
 	// bridge-relevant information being provided (e.g a param with only the
@@ -57,6 +57,36 @@ type Logger interface {
 	// Notice: Enabled is intended to be used by log bridges.
 	// Is should not be used for writing instrumentation.
 	Enabled(ctx context.Context, param EnabledParameters) bool
+
+	// EmitEvent emits an event.
+	//
+	// The event may be held by the implementation. Callers should not mutate
+	// the event after passed.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	//
+	// Notice: EmitEvent is intended to be used for writing instrumentation.
+	EmitEvent(ctx context.Context, eventName string, event Event)
+
+	// EnabledEvent returns whether the Logger emits an event for the given
+	// context, eventName, and param.
+	//
+	// The returned value will be true when the Logger will emit for the
+	// provided context and param, and will be false if the Logger will not
+	// emit. The returned value may be true or false in an indeterminate state.
+	// An implementation should default to returning true for an indeterminate
+	// state, but may return false if valid reasons in particular circumstances
+	// exist (e.g. performance, correctness).
+	//
+	// The param should not be held by the implementation. A copy should be
+	// made if the record needs to be held after the call returns.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	//
+	// Notice: EnabledEvent is intended to be used for writing instrumentation.
+	EnabledEvent(ctx context.Context, eventName string, param EnabledEventParameters) bool
 }
 
 // LoggerOption applies configuration options to a [Logger].
@@ -138,5 +168,10 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 
 // EnabledParameters represents payload for [Logger]'s Enabled method.
 type EnabledParameters struct {
+	Severity Severity
+}
+
+// EnabledEventParameters represents payload for [Logger]'s Enabled method.
+type EnabledEventParameters struct {
 	Severity Severity
 }

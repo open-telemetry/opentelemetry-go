@@ -73,6 +73,10 @@ type ScopeRecords struct {
 	// Records are the log records, and their associated context this
 	// instrumentation scope recorded.
 	Records []EmittedRecord
+
+	// Events are the events, and their associated context this
+	// instrumentation scope recorded.
+	Events []EmittedEvent
 }
 
 // EmittedRecord holds a log record the instrumentation received, alongside its
@@ -86,6 +90,25 @@ type EmittedRecord struct {
 // Context provides the context emitted with the record.
 func (rwc EmittedRecord) Context() context.Context {
 	return rwc.ctx
+}
+
+// EmittedEvent holds an event the instrumentation received, alongside its
+// context and event name.
+type EmittedEvent struct {
+	log.Event
+
+	ctx       context.Context
+	eventName string
+}
+
+// Context provides the context emitted with the event.
+func (rwc EmittedEvent) Context() context.Context {
+	return rwc.ctx
+}
+
+// EventName provides the context emitted with the event.
+func (rwc EmittedEvent) EventName() string {
+	return rwc.eventName
 }
 
 // Recorder is a recorder that stores all received log records
@@ -181,4 +204,18 @@ func (l *logger) Reset() {
 	defer l.mu.Unlock()
 
 	l.scopeRecord.Records = nil
+}
+
+// Enabled indicates whether a specific event should be stored.
+func (l *logger) EnabledEvent(ctx context.Context, eventName string, opts log.EnabledEventParameters) bool {
+	// TODO:
+	return true
+}
+
+// EmitEvent stores the event.
+func (l *logger) EmitEvent(ctx context.Context, eventName string, event log.Event) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.scopeRecord.Events = append(l.scopeRecord.Events, EmittedEvent{event, ctx, eventName})
 }
