@@ -114,6 +114,8 @@ func (r *Record) EventName() string {
 }
 
 // SetEventName sets the event name.
+// A record with non-empty event name is an OpenTelemetry Event.
+// A record with empty event name is an OpenTelemetry Log Record.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
