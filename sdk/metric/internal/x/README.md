@@ -112,11 +112,11 @@ To help users avoid performing computationally expensive operations when recordi
 The following code shows an example of how to check if an instrument implements the `EnabledInstrument` interface before using the `Enabled` function to avoid doing an expensive computation:
 
 ```go
-type enabledInstrument interface { Enabled() bool }
+type enabledInstrument interface { Enabled(context.Context) bool }
 
 ctr, err := m.Int64Counter("expensive-counter")
 c, ok := ctr.(enabledInstrument)
-if c.Enabled() {
+if !ok || c.Enabled(context.Background()) {
     c.Add(expensiveComputation())
 }
 ```
