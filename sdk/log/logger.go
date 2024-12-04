@@ -73,6 +73,8 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
 
 	newRecord := Record{
+		eventName: r.EventName(),
+
 		timestamp:         r.Timestamp(),
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
