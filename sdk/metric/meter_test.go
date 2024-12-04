@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -388,6 +389,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.True(t, c.Enabled())
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -407,6 +411,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.True(t, c.Enabled())
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -452,6 +459,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.True(t, c.Enabled())
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -471,6 +481,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.True(t, c.Enabled())
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -528,6 +541,106 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			require.Len(t, sm.Metrics, 1)
 			got := sm.Metrics[0]
 			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+func TestMeterWithDropView(t *testing.T) {
+	testCases := []struct {
+		name string
+		fn   func(*testing.T, metric.Meter)
+	}{
+		{
+			name: "SyncInt64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint")
+				assert.NoError(t, err)
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, c.Enabled())
+			},
+		},
+		{
+			name: "SyncInt64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64UpDownCounter("sint")
+				assert.NoError(t, err)
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, c.Enabled())
+			},
+		},
+		{
+			name: "SyncInt64Gauge",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.Int64Gauge("sint")
+				assert.NoError(t, err)
+				g, ok := gauge.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, g.Enabled())
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Int64Histogram("histogram")
+				assert.NoError(t, err)
+				h, ok := histo.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, h.Enabled())
+			},
+		},
+		{
+			name: "SyncFloat64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64Counter("sfloat")
+				assert.NoError(t, err)
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, c.Enabled())
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64UpDownCounter("sfloat")
+				assert.NoError(t, err)
+				c, ok := ctr.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, c.Enabled())
+			},
+		},
+		{
+			name: "SyncFloat64Gauge",
+			fn: func(t *testing.T, m metric.Meter) {
+				gauge, err := m.Float64Gauge("sfloat")
+				assert.NoError(t, err)
+				g, ok := gauge.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, g.Enabled())
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Float64Histogram("histogram")
+				assert.NoError(t, err)
+				h, ok := histo.(x.EnabledInstrument)
+				assert.True(t, ok)
+				assert.False(t, h.Enabled())
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewManualReader()
+			dropView := NewView(
+				Instrument{Name: "*"},
+				Stream{Aggregation: AggregationDrop{}},
+			)
+			m := NewMeterProvider(WithReader(rdr), WithView(dropView)).Meter("testInstruments")
+			tt.fn(t, m)
 		})
 	}
 }

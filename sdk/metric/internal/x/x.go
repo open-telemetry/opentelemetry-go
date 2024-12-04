@@ -67,3 +67,14 @@ func (f Feature[T]) Enabled() bool {
 	_, ok := f.Lookup()
 	return ok
 }
+
+// EnabledInstrument provides the interface for synchronous
+// instruments to returned whether or not they are enabled.
+type EnabledInstrument interface {
+	// Enabled returns whether the instrument has any measurements
+	// associated with it.
+	//
+	// This function can be used in places where measuring an instrument
+	// would result in computationally expensive operations.
+	Enabled() bool
+}

@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 )
 
 var zeroScope instrumentation.Scope
@@ -183,6 +184,7 @@ type int64Inst struct {
 	embedded.Int64UpDownCounter
 	embedded.Int64Histogram
 	embedded.Int64Gauge
+	x.EnabledInstrument
 }
 
 var (
@@ -202,6 +204,10 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 	i.aggregate(ctx, val, c.Attributes())
 }
 
+func (i *int64Inst) Enabled() bool {
+	return len(i.measures) != 0
+}
+
 func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
 		in(ctx, val, s)
@@ -215,6 +221,7 @@ type float64Inst struct {
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
 	embedded.Float64Gauge
+	x.EnabledInstrument
 }
 
 var (
@@ -232,6 +239,10 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
+}
+
+func (i *float64Inst) Enabled() bool {
+	return len(i.measures) != 0
 }
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
