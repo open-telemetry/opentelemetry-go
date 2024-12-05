@@ -14,9 +14,8 @@ import (
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
 
-// Record represents a log record and event.
-// A record with non-empty event name is an OpenTelemetry Event.
-// A record with empty event name is an OpenTelemetry Log Record.
+// Record represents a log record.
+// A log record with non-empty event name is interpreted as an event record.
 type Record struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -49,15 +48,13 @@ type Record struct {
 }
 
 // Event returns the event name.
-// A record with non-empty event name is an OpenTelemetry Event.
-// A record with empty event name is an OpenTelemetry Log Record.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName
 }
 
 // SetEventName sets the event name.
-// A record with non-empty event name is an OpenTelemetry Event.
-// A record with empty event name is an OpenTelemetry Log Record.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }

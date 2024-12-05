@@ -41,7 +41,8 @@ func putIndex(index map[string]int) {
 	indexPool.Put(index)
 }
 
-// Record is a log record or event emitted by the Logger.
+// Record is a log record emitted by the Logger.
+// A log record with non-empty event name is interpreted as an event record.
 //
 // Do not create instances of Record on your own in production code.
 // You can use [go.opentelemetry.io/otel/sdk/log/logtest.RecordFactory]
@@ -107,15 +108,13 @@ func (r *Record) setDropped(n int) {
 }
 
 // Event returns the event name.
-// A record with non-empty event name is an OpenTelemetry Event.
-// A record with empty event name is an OpenTelemetry Log Record.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName
 }
 
 // SetEventName sets the event name.
-// A record with non-empty event name is an OpenTelemetry Event.
-// A record with empty event name is an OpenTelemetry Log Record.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
