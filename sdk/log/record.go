@@ -107,11 +107,13 @@ func (r *Record) setDropped(n int) {
 }
 
 // EventName returns the event name.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName
 }
 
 // SetEventName sets the event name.
+// A log record with non-empty event name is interpreted as an event record.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
