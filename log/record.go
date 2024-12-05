@@ -59,32 +59,32 @@ func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
 
-// Timestamp returns the time when the record occurred.
+// Timestamp returns the time when the log record occurred.
 func (r *Record) Timestamp() time.Time {
 	return r.timestamp
 }
 
-// SetTimestamp sets the time when the record occurred.
+// SetTimestamp sets the time when the log record occurred.
 func (r *Record) SetTimestamp(t time.Time) {
 	r.timestamp = t
 }
 
-// ObservedTimestamp returns the time when the record was observed.
+// ObservedTimestamp returns the time when the log record was observed.
 func (r *Record) ObservedTimestamp() time.Time {
 	return r.observedTimestamp
 }
 
-// SetObservedTimestamp sets the time when the record was observed.
+// SetObservedTimestamp sets the time when the log record was observed.
 func (r *Record) SetObservedTimestamp(t time.Time) {
 	r.observedTimestamp = t
 }
 
-// Severity returns the [Severity] of the record.
+// Severity returns the [Severity] of the log record.
 func (r *Record) Severity() Severity {
 	return r.severity
 }
 
-// SetSeverity sets the [Severity] level of the record.
+// SetSeverity sets the [Severity] level of the log record.
 func (r *Record) SetSeverity(level Severity) {
 	r.severity = level
 }
@@ -101,17 +101,17 @@ func (r *Record) SetSeverityText(text string) {
 	r.severityText = text
 }
 
-// Body returns the body of the record.
+// Body returns the body of the log record.
 func (r *Record) Body() Value {
 	return r.body
 }
 
-// SetBody sets the body of the record.
+// SetBody sets the body of the log record.
 func (r *Record) SetBody(v Value) {
 	r.body = v
 }
 
-// WalkAttributes walks all attributes the record holds by calling f for
+// WalkAttributes walks all attributes the log record holds by calling f for
 // each on each [KeyValue] in the [Record]. Iteration stops if f returns false.
 func (r *Record) WalkAttributes(f func(KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
@@ -126,7 +126,7 @@ func (r *Record) WalkAttributes(f func(KeyValue) bool) {
 	}
 }
 
-// AddAttributes adds attributes to the record.
+// AddAttributes adds attributes to the log record.
 func (r *Record) AddAttributes(attrs ...KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
@@ -139,7 +139,7 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
-// AttributesLen returns the number of attributes in the record.
+// AttributesLen returns the number of attributes in the log record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
 }
