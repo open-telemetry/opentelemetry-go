@@ -12,7 +12,7 @@ import (
 // stored in an array within an Event.
 const eventAttributesInlineCount = 5
 
-// Event represents an OpenTelemetry event.
+// Event represents an event record.
 type Event struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
