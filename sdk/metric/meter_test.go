@@ -546,101 +546,73 @@ func TestMeterCreatesInstruments(t *testing.T) {
 }
 
 func TestMeterWithDropView(t *testing.T) {
+	dropView := NewView(
+		Instrument{Name: "*"},
+		Stream{Aggregation: AggregationDrop{}},
+	)
+	m := NewMeterProvider(WithView(dropView)).Meter(t.Name())
+
 	testCases := []struct {
 		name string
-		fn   func(*testing.T, metric.Meter)
+		fn   func(*testing.T) (any, error)
 	}{
 		{
-			name: "SyncInt64Count",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.Int64Counter("sint")
-				assert.NoError(t, err)
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, c.Enabled(context.Background()))
+			name: "Int64Counter",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Counter("sint")
 			},
 		},
 		{
-			name: "SyncInt64UpDownCount",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.Int64UpDownCounter("sint")
-				assert.NoError(t, err)
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, c.Enabled(context.Background()))
+			name: "Int64UpDownCounter",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64UpDownCounter("sint")
 			},
 		},
 		{
-			name: "SyncInt64Gauge",
-			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.Int64Gauge("sint")
-				assert.NoError(t, err)
-				g, ok := gauge.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, g.Enabled(context.Background()))
+			name: "Int64Gauge",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Gauge("sint")
 			},
 		},
 		{
-			name: "SyncInt64Histogram",
-			fn: func(t *testing.T, m metric.Meter) {
-				histo, err := m.Int64Histogram("histogram")
-				assert.NoError(t, err)
-				h, ok := histo.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, h.Enabled(context.Background()))
+			name: "Int64Histogram",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Histogram("histogram")
 			},
 		},
 		{
-			name: "SyncFloat64Count",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.Float64Counter("sfloat")
-				assert.NoError(t, err)
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, c.Enabled(context.Background()))
+			name: "Float64Counter",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Counter("sfloat")
 			},
 		},
 		{
-			name: "SyncFloat64UpDownCount",
-			fn: func(t *testing.T, m metric.Meter) {
-				ctr, err := m.Float64UpDownCounter("sfloat")
-				assert.NoError(t, err)
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, c.Enabled(context.Background()))
+			name: "Float64UpDownCounter",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64UpDownCounter("sfloat")
 			},
 		},
 		{
-			name: "SyncFloat64Gauge",
-			fn: func(t *testing.T, m metric.Meter) {
-				gauge, err := m.Float64Gauge("sfloat")
-				assert.NoError(t, err)
-				g, ok := gauge.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, g.Enabled(context.Background()))
+			name: "Float64Gauge",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Gauge("sfloat")
 			},
 		},
 		{
-			name: "SyncFloat64Histogram",
-			fn: func(t *testing.T, m metric.Meter) {
-				histo, err := m.Float64Histogram("histogram")
-				assert.NoError(t, err)
-				h, ok := histo.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.False(t, h.Enabled(context.Background()))
+			name: "Float64Histogram",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Histogram("histogram")
 			},
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			rdr := NewManualReader()
-			dropView := NewView(
-				Instrument{Name: "*"},
-				Stream{Aggregation: AggregationDrop{}},
-			)
-			m := NewMeterProvider(WithReader(rdr), WithView(dropView)).Meter("testInstruments")
-			tt.fn(t, m)
+			got, err := tt.fn(t)
+			require.NoError(t, err)
+			c, ok := got.(x.EnabledInstrument)
+			require.True(t, ok)
+			assert.False(t, c.Enabled(context.Background()))
 		})
 	}
 }
