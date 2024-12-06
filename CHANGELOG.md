@@ -11,6 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Reset` method to `SpanRecorder` in `go.opentelemetry.io/otel/sdk/trace/tracetest`. (#5994)
+- Add `EnabledInstrument` interface in `go.opentelemetry.io/otel/sdk/metric/internal/x`.
+  This is an experimental interface that is implemented by synchronous instruments provided by `go.opentelemetry.io/otel/sdk/metric`.
+  Users can use it to avoid performing computationally expensive operations when recording measurements.
+  It does not fall within the scope of the OpenTelemetry Go versioning and stability [policy](./VERSIONING.md) and it may be changed in backwards incompatible ways or removed in feature releases. (#6016)
 
 ### Changed
 
