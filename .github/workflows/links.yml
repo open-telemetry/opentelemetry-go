@@ -30,7 +30,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-          args: --max-concurrency 1 --cache --max-cache-age 1d .
+          args: --max-concurrency 1 --cache --max-cache-age 1d --cache-exclude-status 300..=599 .
 
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
