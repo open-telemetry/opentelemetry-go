@@ -18,7 +18,8 @@ jobs:
 
 
     - name: Restore lychee cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
+      id: cache-restore
       with:
         path: .lycheecache
         key: cache-lychee-${{ github.sha }}
@@ -31,6 +32,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
           args: --max-concurrency 1 --cache --max-cache-age 1d --cache-exclude-status 300..=599 .
+
+    - name: Save lychee cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: .lycheecache
+        key: ${{ steps.cache-restore.outputs.cache-primary-key }}
 
     - name: Create Issue From File
       if: steps.lychee.outputs.exit_code != 0
