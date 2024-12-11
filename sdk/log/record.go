@@ -406,7 +406,7 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 	case log.KindString:
 		s := val.AsString()
 		if len(s) > r.attributeValueLengthLimit {
-			val = log.StringValue(truncate(s, r.attributeValueLengthLimit))
+			val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
 		}
 	case log.KindSlice:
 		sl := val.AsSlice()
@@ -427,40 +427,78 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 	return val
 }
 
-// truncate returns a copy of str truncated to have a length of at most n
-// characters. If the length of str is less than n, str itself is returned.
+// truncate returns a truncated version of s such that it contains less than
+// the limit number of characters. Truncation is applied by returning the limit
+// number of valid characters contained in s.
 //
-// The truncate of str ensures that no valid UTF-8 code point is split. The
-// copy returned will be less than n if a characters straddles the length
-// limit.
+// If limit is negative, it returns the original string.
 //
-// No truncation is performed if n is less than zero.
-func truncate(str string, n int) string {
-	if n < 0 {
-		return str
+// UTF-8 is supported. When truncating, all invalid characters are dropped
+// before applying truncation.
+//
+// If s already contains less than the limit number of bytes, it is returned
+// unchanged. No invalid characters are removed.
+func truncate(limit int, s string) string {
+	// This prioritize performance in the following order based on the most
+	// common expected use-cases.
+	//
+	//  - Short values less than the default limit (128).
+	//  - Strings with valid encodings that exceed the limit.
+	//  - No limit.
+	//  - Strings with invalid encodings that exceed the limit.
+	if limit < 0 || len(s) <= limit {
+		return s
 	}
 
-	// cut returns a copy of the s truncated to not exceed a length of n. If
-	// invalid UTF-8 is encountered, s is returned with false. Otherwise, the
-	// truncated copy will be returned with true.
-	cut := func(s string) (string, bool) {
-		var i int
-		for i = 0; i < n; {
-			r, size := utf8.DecodeRuneInString(s[i:])
-			if r == utf8.RuneError {
-				return s, false
+	// Optimistically, assume all valid UTF-8.
+	var b strings.Builder
+	count := 0
+	for i, c := range s {
+		if c != utf8.RuneError {
+			count++
+			if count > limit {
+				return s[:i]
 			}
-			if i+size > n {
-				break
-			}
-			i += size
+			continue
 		}
-		return s[:i], true
+
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size == 1 {
+			// Invalid encoding.
+			b.Grow(len(s) - 1)
+			_, _ = b.WriteString(s[:i])
+			s = s[i:]
+			break
+		}
 	}
 
-	cp, ok := cut(str)
-	if !ok {
-		cp, _ = cut(strings.ToValidUTF8(str, ""))
+	// Fast-path, no invalid input.
+	if b.Cap() == 0 {
+		return s
 	}
-	return cp
+
+	// Truncate while validating UTF-8.
+	for i := 0; i < len(s) && count < limit; {
+		c := s[i]
+		if c < utf8.RuneSelf {
+			// Optimization for single byte runes (common case).
+			_ = b.WriteByte(c)
+			i++
+			count++
+			continue
+		}
+
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size == 1 {
+			// We checked for all 1-byte runes above, this is a RuneError.
+			i++
+			continue
+		}
+
+		_, _ = b.WriteString(s[i : i+size])
+		i += size
+		count++
+	}
+
+	return b.String()
 }

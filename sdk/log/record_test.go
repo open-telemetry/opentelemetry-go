@@ -678,7 +678,7 @@ func TestTruncate(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
-				got := truncate(g.input, g.limit)
+				got := truncate(g.limit, g.input)
 				assert.Equalf(
 					t, g.expected, got,
 					"input: %q([]rune%v))\ngot: %q([]rune%v)\nwant %q([]rune%v)",
@@ -698,7 +698,7 @@ func BenchmarkTruncate(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				var out string
 				for pb.Next() {
-					out = truncate(input, limit)
+					out = truncate(limit, input)
 				}
 				_ = out
 			})
