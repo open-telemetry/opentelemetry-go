@@ -156,3 +156,44 @@ func (p *RedactTokensProcessor) Shutdown(ctx context.Context) error {
 func (p *RedactTokensProcessor) ForceFlush(ctx context.Context) error {
 	return nil
 }
+
+func ExampleMultiLoggerProvider() {
+	// Set up a pipeline that emits redacted logs via OTLP with batching.
+	var otlpExporter log.Exporter // exporter, err := otlploghttp.New(ctx)
+	redactProcessor := &RedactTokensProcessor{}
+	processor := log.NewBatchProcessor(otlpExporter)
+	provider1 := log.NewLoggerProvider(
+		log.WithProcessor(redactProcessor),
+		log.WithProcessor(processor),
+	)
+	defer func() {
+		err := provider1.Shutdown(context.Background())
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	// Set up a pipeline that synchrnously emits logs to stdout.
+	var stdoutExporter log.Exporter // exporter, err := stdoutlog.New(ctx)
+	provider2 := log.NewLoggerProvider(
+		log.WithProcessor(
+			log.NewSimpleProcessor(stdoutExporter),
+		),
+	)
+	defer func() {
+		err := provider2.Shutdown(context.Background())
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	// Create a multi provider which handles both pipelines.
+	multiProvider := log.MultiLoggerProvider(provider1, provider2)
+
+	// Register as global logger provider so that it can be used via global.Meter
+	// and accessed using global.GetMeterProvider.
+	// Most log bridges use the global logger provider as default.
+	// If the global logger provider is not set then a no-op implementation
+	// is used, which fails to generate data.
+	global.SetLoggerProvider(multiProvider)
+}
