@@ -13,8 +13,8 @@ require (
 	github.com/opentracing-contrib/go-grpc/test v0.0.0-20241210001447-ca80a956138c
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.32.0
-	go.opentelemetry.io/otel/bridge/opentracing v1.32.0
+	go.opentelemetry.io/otel v1.33.0
+	go.opentelemetry.io/otel/bridge/opentracing v1.33.0
 	google.golang.org/grpc v1.68.1
 )
 
@@ -25,8 +25,8 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/metric v1.32.0 // indirect
-	go.opentelemetry.io/otel/trace v1.32.0 // indirect
+	go.opentelemetry.io/otel/metric v1.33.0 // indirect
+	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
