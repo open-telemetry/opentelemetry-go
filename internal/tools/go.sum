@@ -78,8 +78,8 @@ github.com/charithe/durationcheck v0.0.10 h1:wgw73BiocdBDQPik+zcEoBG/ob8uyBHf2iy
 github.com/charithe/durationcheck v0.0.10/go.mod h1:bCWXb7gYRysD1CU3C+u4ceO49LoGOY1C1L6uouGNreQ=
 github.com/chavacava/garif v0.1.0 h1:2JHa3hbYf5D9dsgseMKAmc/MZ109otzgNFk5s87H9Pc=
 github.com/chavacava/garif v0.1.0/go.mod h1:XMyYCkEL58DF0oyW4qDjjnPWONs2HBqYKI+UIPD+Gww=
-github.com/ckaznocha/intrange v0.2.1 h1:M07spnNEQoALOJhwrImSrJLaxwuiQK+hA2DeajBlwYk=
-github.com/ckaznocha/intrange v0.2.1/go.mod h1:7NEhVyf8fzZO5Ds7CRaqPEm52Ut83hsTiL5zbER/HYk=
+github.com/ckaznocha/intrange v0.3.0 h1:VqnxtK32pxgkhJgYQEeOArVidIPg+ahLP7WBOXZd5ZY=
+github.com/ckaznocha/intrange v0.3.0/go.mod h1:+I/o2d2A1FBHgGELbGxzIcyd3/9l9DuwjM8FsbSS3Lo=
 github.com/client9/misspell v0.3.4 h1:ta993UF76GwbvJcIo3Y68y/M3WxlpEHPWIGDkJYwzJI=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudflare/circl v1.3.3/go.mod h1:5XYMA4rFBvNIrhs50XuiBJ15vF2pZn4nnUKZrLbUZFA=
@@ -210,8 +210,8 @@ github.com/gostaticanalysis/forcetypeassert v0.1.0/go.mod h1:qZEedyP/sY1lTGV1uJ3
 github.com/gostaticanalysis/nilerr v0.1.1 h1:ThE+hJP0fEp4zWLkWHWcRyI2Od0p7DlgYG3Uqrmrcpk=
 github.com/gostaticanalysis/nilerr v0.1.1/go.mod h1:wZYb6YI5YAxxq0i1+VJbY0s2YONW0HU0GPE3+5PWN4A=
 github.com/gostaticanalysis/testutil v0.3.1-0.20210208050101-bfb5c8eec0e4/go.mod h1:D+FIZ+7OahH3ePw/izIEeH5I06eKs1IKI4Xr64/Am3M=
-github.com/gostaticanalysis/testutil v0.4.0 h1:nhdCmubdmDF6VEatUNjgUZBJKWRqugoISdUv3PPQgHY=
-github.com/gostaticanalysis/testutil v0.4.0/go.mod h1:bLIoPefWXrRi/ssLFWX1dx7Repi5x3CuviD3dgAZaBU=
+github.com/gostaticanalysis/testutil v0.5.0 h1:Dq4wT1DdTwTGCQQv3rl3IvD5Ld0E6HiY+3Zh0sUGqw8=
+github.com/gostaticanalysis/testutil v0.5.0/go.mod h1:OLQSbuM6zw2EvCcXTz1lVq5unyoNft372msDY0nY5Hs=
 github.com/hashicorp/go-version v1.2.1/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKeRZfjY=
 github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
