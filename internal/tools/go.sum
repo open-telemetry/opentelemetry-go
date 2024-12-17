@@ -18,8 +18,8 @@ github.com/BurntSushi/toml v1.4.1-0.20241028111116-b7406c026f5a h1:jvCp1xfUeIIse
 github.com/BurntSushi/toml v1.4.1-0.20241028111116-b7406c026f5a/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/Crocmagnon/fatcontext v0.5.3 h1:zCh/wjc9oyeF+Gmp+V60wetm8ph2tlsxocgg/J0hOps=
 github.com/Crocmagnon/fatcontext v0.5.3/go.mod h1:XoCQYY1J+XTfyv74qLXvNw4xFunr3L1wkopIIKG7wGM=
-github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 h1:sHglBQTwgx+rWPdisA5ynNEsoARbiCBOyGcJM4/OzsM=
-github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24/go.mod h1:4UJr5HIiMZrwgkSPdsjy2uOQExX/WEILpIrO9UPGuXs=
+github.com/Djarvur/go-err113 v0.1.0 h1:uCRZZOdMQ0TZPHYTdYpoC0bLYJKPEHPUJ8MeAa51lNU=
+github.com/Djarvur/go-err113 v0.1.0/go.mod h1:4UJr5HIiMZrwgkSPdsjy2uOQExX/WEILpIrO9UPGuXs=
 github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.0 h1:/fTUt5vmbkAcMBt4YQiuC23cV0kEsN1MVMNqeOW43cU=
 github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.0/go.mod h1:ONJg5sxcbsdQQ4pOW8TGdTidT2TMAUy/2Xhr8mrYaao=
 github.com/Masterminds/semver/v3 v3.3.1 h1:QtNSWtVZ3nBfk8mAOu/B6v7FMJ+NHTIgUPi7rj+4nv4=
