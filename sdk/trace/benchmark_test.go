@@ -226,6 +226,104 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 	})
 }
 
+func BenchmarkSpanWithEvents_Attributes_50(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With an Event", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1", trace.WithAttributes(attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123),
+				attribute.Bool("key21", false),
+				attribute.String("key22", "hello"),
+				attribute.Int64("key23", 123),
+				attribute.Float64("key27", 123.456),
+				attribute.Int("key210", 123),
+				attribute.Bool("key31", false),
+				attribute.String("key32", "hello"),
+				attribute.Int64("key33", 123),
+				attribute.Float64("key37", 123.456),
+				attribute.Int("key310", 123),
+				attribute.Bool("key321", false),
+				attribute.String("key322", "hello"),
+				attribute.Int64("key323", 123),
+				attribute.Float64("key327", 123.456),
+				attribute.Int("key3210", 123),
+				attribute.Bool("key41", false),
+				attribute.String("key42", "hello"),
+				attribute.Int64("key43", 123),
+				attribute.Float64("key47", 123.456),
+				attribute.Int("key410", 123),
+				attribute.Bool("key421", false),
+				attribute.String("key422", "hello"),
+				attribute.Int64("key423", 123),
+				attribute.Float64("key427", 123.456),
+				attribute.Int("key4210", 123),
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key510", 123),
+				attribute.Bool("key521", false),
+				attribute.String("key522", "hello"),
+				attribute.Int64("key523", 123),
+				attribute.Float64("key527", 123.456),
+				attribute.Int("key5210", 123),
+				attribute.Bool("key61", false),
+				attribute.String("key62", "hello"),
+				attribute.Int64("key63", 123),
+				attribute.Float64("key67", 123.456),
+				attribute.Int("key610", 123),
+				attribute.Bool("key621", false),
+				attribute.String("key622", "hello"),
+				attribute.Int64("key623", 123),
+				attribute.Float64("key627", 123.456),
+				attribute.Int("key6210", 123)))
+			span.End()
+		}
+	})
+}
+
+func BenchmarkSpanWithEvents_Attributes_5(b *testing.B) {
+	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo")
+			span.AddEvent("event1", trace.WithAttributes(
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123)))
+			span.AddEvent("event2", trace.WithAttributes(
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123)))
+			span.AddEvent("event3", trace.WithAttributes(
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123)))
+			span.AddEvent("event4", trace.WithAttributes(
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key10", 123)))
+			span.End()
+		}
+	})
+}
+
 func BenchmarkSpanWithEvents_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
 		ctx := context.Background()

@@ -205,6 +205,10 @@ func (o attributeOption) applySpan(c SpanConfig) SpanConfig {
 }
 func (o attributeOption) applySpanStart(c SpanConfig) SpanConfig { return o.applySpan(c) }
 func (o attributeOption) applyEvent(c EventConfig) EventConfig {
+	if len(c.attributes) == 0 {
+		c.attributes = o
+		return c
+	}
 	c.attributes = append(c.attributes, []attribute.KeyValue(o)...)
 	return c
 }
