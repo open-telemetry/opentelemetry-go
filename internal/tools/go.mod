@@ -187,7 +187,7 @@ require (
 	github.com/timonwong/loggercheck v0.10.1 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.10.0 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1 // indirect
-	github.com/ultraware/funlen v0.1.0 // indirect
+	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.1.1 // indirect
 	github.com/uudashr/gocognit v1.1.3 // indirect
 	github.com/uudashr/iface v1.2.1 // indirect
