@@ -23,7 +23,7 @@ jobs:
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v2.1.0
+        uses: lycheeverse/lychee-action@v2.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
